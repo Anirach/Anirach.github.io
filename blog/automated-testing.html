@@ -148,6 +148,8 @@
 
     <h2>Testing Pyramid + Static Analysis</h2>
 
+    <p>ก่อนจะดำน้ำลงไปในแต่ละ level มาเข้าใจ <strong>Testing Pyramid</strong> กันก่อน — แนวคิดที่บอกว่าเราควรเขียน test แต่ละประเภทมากน้อยแค่ไหน ฐานล่างสุด (Unit Tests) ควรเขียนเยอะที่สุดเพราะเร็วและถูก ยิ่งขึ้นไปด้านบน (E2E Tests) ยิ่งควรเขียนน้อยลงเพราะช้าและแพง แต่ทุก level มีความสำคัญและขาดไม่ได้</p>
+
     <div class="pyramid">
       <div class="pyramid__level pyramid__level--e2e">🖥️ E2E Tests (Playwright)<div class="pyramid__label">น้อย, ช้า, แพง — critical paths เท่านั้น</div></div>
       <div class="pyramid__level pyramid__level--int">🔗 Integration Tests (API + DB)<div class="pyramid__label">กลาง, ปานกลาง — services ร่วมกัน</div></div>
@@ -159,7 +161,11 @@
 
     <h2>⚡ Level 1: Static Analysis — เจอ bug โดยไม่ต้องรัน</h2>
 
+    <p><strong>Static Analysis</strong> คือการวิเคราะห์ code โดยไม่ต้อง "รัน" มัน — เหมือนการตรวจสอบสะกดคำก่อนส่งอีเมล เครื่องมือพวกนี้จะสแกน code ของคุณและบอกว่ามีปัญหาตรงไหน ตั้งแต่ตัวแปรที่ประกาศแล้วไม่ได้ใช้ ไปจนถึงช่องโหว่ด้านความปลอดภัย ข้อดีคือเร็วมาก (ไม่กี่วินาที) และเจอ bug ได้ก่อนที่ code จะถูกรัน</p>
+
     <h3>ESLint + Prettier + TypeScript</h3>
+
+    <p>สามเครื่องมือนี้ทำงานร่วมกันเพื่อรักษาคุณภาพ code ใน JavaScript/TypeScript projects — <strong>ESLint</strong> หา bugs และ enforce coding rules, <strong>Prettier</strong> จัด format ให้สวยเหมือนกันทั้ง team, และ <strong>TypeScript</strong> ตรวจสอบ type safety เมื่อ setup ใน GitHub Actions ทุก PR จะถูกตรวจสอบอัตโนมัติ:</p>
 
     <pre><code># .github/workflows/static-analysis.yml
 name: Static Analysis
@@ -198,6 +204,8 @@ jobs:
 
     <h3>Python — Ruff + mypy</h3>
 
+    <p>สำหรับ Python มี <strong>Ruff</strong> ซึ่งเป็น linter ตัวใหม่ที่เร็วกว่า flake8 + isort + black รวมกัน 10-100 เท่า (เขียนด้วย Rust) ส่วน <strong>mypy</strong> ทำหน้าที่ type checking เหมือน TypeScript ช่วยเจอ bug ที่เกิดจากการส่ง type ผิด:</p>
+
     <pre><code>  python-lint:
     runs-on: ubuntu-latest
     steps:
@@ -220,6 +228,8 @@ jobs:
         run: mypy src/ --strict</code></pre>
 
     <h3>GitHub CodeQL — Security Analysis (SAST)</h3>
+
+    <p><strong>CodeQL</strong> คือ SAST (Static Application Security Testing) tool ของ GitHub ที่วิเคราะห์ code เพื่อหาช่องโหว่ด้านความปลอดภัย เช่น SQL Injection, XSS, Path Traversal ฟรีสำหรับ public repos และแสดงผลลัพธ์เป็น annotation ตรง line ที่มีปัญหาใน PR เลย — เหมือนมี security expert review code ให้อัตโนมัติ:</p>
 
     <pre><code># .github/workflows/codeql.yml
 name: CodeQL Security Analysis
@@ -264,7 +274,11 @@ jobs:
 
     <h2>🧪 Level 2: Unit Tests — ทดสอบทีละ function</h2>
 
+    <p><strong>Unit Tests</strong> คือการทดสอบ function หรือ class ทีละตัวแบบแยกส่วน (isolated) โดยไม่พึ่ง database, API, หรือ external services เป้าหมายคือยืนยันว่า "ถ้าใส่ input นี้ ต้องได้ output นั้น" Unit tests เป็นฐานล่างสุดของ pyramid — เขียนเยอะ, รันเร็ว (ไม่กี่วินาที), และเจอ bug ได้ตั้งแต่เนิ่นๆ</p>
+
     <h3>Jest (TypeScript)</h3>
+
+    <p><strong>Jest</strong> เป็น testing framework ยอดนิยมสำหรับ JavaScript/TypeScript ที่ครบครัน — มี test runner, assertion, mocking built-in ตัวอย่างด้านล่างแสดงการเขียน unit tests ที่ดี ครอบคลุมทั้ง happy path, edge cases, และ error handling:</p>
 
     <pre><code>// src/utils/calculator.ts
 export function calculateDiscount(price: number, percent: number): number {
@@ -298,6 +312,8 @@ describe('calculateDiscount', () => {
 
     <h3>pytest (Python) — Parametrized Tests</h3>
 
+    <p>สำหรับ Python, <strong>pytest</strong> เป็น framework ที่ทรงพลังด้วย fixtures (setup/teardown ที่ใช้ซ้ำได้) และ parametrized tests (ทดสอบหลาย cases ด้วย decorator ตัวเดียว) ช่วยลด code ซ้ำและครอบคลุม edge cases ได้ง่าย:</p>
+
     <pre><code># tests/test_user_service.py
 import pytest
 from datetime import date
@@ -329,6 +345,8 @@ class TestUser:
         assert user.can_access(resource) is expected</code></pre>
 
     <h3>GitHub Actions — Unit Tests + Coverage</h3>
+
+    <p>เมื่อเขียน unit tests แล้ว ขั้นตอนถัดไปคือให้ <strong>GitHub Actions รันอัตโนมัติทุก PR</strong> พร้อมรายงาน coverage ว่า code ส่วนไหนยังไม่มี test ครอบคลุม สิ่งสำคัญคือการ setup ให้ test results แสดงเป็น annotation ใน PR และ coverage report แสดงเป็น comment:</p>
 
     <pre><code># .github/workflows/unit-tests.yml
 name: Unit Tests
@@ -363,6 +381,8 @@ jobs:
     <hr>
 
     <h2>🔗 Level 3: Integration Tests — หลาย components ร่วมกัน</h2>
+
+    <p><strong>Integration Tests</strong> ทดสอบว่าหลาย components ทำงานร่วมกันได้จริง — เช่น API endpoint → business logic → database → response ต่างจาก unit tests ตรงที่ต้องมี "ของจริง" มาเกี่ยวข้อง (database, Redis, etc.) GitHub Actions รองรับ <code>services</code> ที่สร้าง PostgreSQL, Redis, MongoDB containers ให้อัตโนมัติ ทำให้เขียน integration tests ใน CI ได้ง่ายมาก:</p>
 
     <pre><code># .github/workflows/integration-tests.yml
 name: Integration Tests
@@ -403,6 +423,8 @@ jobs:
         timeout-minutes: 10</code></pre>
 
     <h3>API Integration Test Example</h3>
+
+    <p>ตัวอย่างด้านล่างแสดง integration test ที่ทดสอบ Users API จริงๆ — สร้าง user, ดึงข้อมูล, ตรวจสอบ validation, ทดสอบ authentication สังเกตว่าใช้ <strong>supertest</strong> ส่ง HTTP request จริงไปที่ app และใช้ <code>beforeAll/afterAll</code> จัดการ database setup/teardown:</p>
 
     <pre><code>// tests/integration/api/users.test.ts
 import request from 'supertest';
@@ -453,6 +475,10 @@ describe('POST /api/users', () => {
 
     <h2>🌐 Level 4: E2E Tests — Playwright</h2>
 
+    <p><strong>End-to-End (E2E) Tests</strong> ทดสอบจากมุมมองผู้ใช้จริง — เปิด browser, กดปุ่ม, กรอกฟอร์ม, ตรวจว่าหน้าจอแสดงผลถูกต้อง <strong>Playwright</strong> เป็น E2E framework ที่ดีที่สุดในปี 2026 — เร็วกว่า Cypress, รองรับ multi-browser (Chrome, Firefox, Safari), มี auto-wait ที่ฉลาด, และถ่าย screenshot/video เมื่อ test fail อัตโนมัติ</p>
+
+    <p>⚠️ E2E tests อยู่บนสุดของ pyramid — ควรเขียนเฉพาะ <strong>critical paths</strong> เท่านั้น (login, checkout, registration) เพราะรันช้า (10-20 นาที) และ maintain ยาก ถ้าเขียนเยอะเกินไปจะ flaky และเสียเวลาแก้ test มากกว่าแก้ code จริง</p>
+
     <pre><code># .github/workflows/e2e-tests.yml
 name: E2E Tests
 on:
@@ -488,6 +514,8 @@ jobs:
           path: playwright-report/</code></pre>
 
     <h3>Playwright Test — Login + Shopping Cart</h3>
+
+    <p>ตัวอย่างด้านล่างแสดง E2E tests สำหรับ 2 critical paths ที่สำคัญที่สุด — <strong>Authentication Flow</strong> (login, registration) และ <strong>Shopping Cart Flow</strong> (เพิ่มสินค้า, อัพเดทจำนวน, checkout) สังเกตว่าใช้ <code>data-testid</code> attributes สำหรับ selectors แทน CSS classes — เพราะ classes อาจเปลี่ยนได้ แต่ test IDs ตั้งมาเพื่อ testing โดยเฉพาะ:</p>
 
     <pre><code>// e2e/tests/auth.spec.ts
 import { test, expect } from '@playwright/test';
@@ -538,6 +566,8 @@ test('add items → update quantity → checkout', async ({ page }) => {
 
     <h3>Playwright Config — Multi-browser</h3>
 
+    <p>Playwright config ด้านล่างแสดงการตั้งค่าที่สำคัญ — <code>retries: 2</code> ใน CI ป้องกัน flaky tests, <code>trace: 'on-first-retry'</code> บันทึก trace สำหรับ debug, และ <code>projects</code> กำหนด browsers + devices ที่จะทดสอบ รวมถึง mobile viewport:</p>
+
     <pre><code>// playwright.config.ts
 export default defineConfig({
   testDir: './e2e/tests',
@@ -562,7 +592,11 @@ export default defineConfig({
 
     <h2>🛡️ Level 5: Security Testing</h2>
 
+    <p>นอกจาก functional testing แล้ว <strong>Security Testing</strong> ก็สำคัญไม่แพ้กัน — dependencies ที่ใช้อาจมีช่องโหว่, code อาจมี hardcoded secrets, Docker images อาจมี vulnerabilities การ setup security scanning อัตโนมัติใน CI จะช่วยเจอปัญหาเหล่านี้ก่อนที่จะถึง production</p>
+
     <h3>Dependabot — Auto-update Dependencies</h3>
+
+    <p><strong>Dependabot</strong> เป็น built-in feature ของ GitHub ที่สแกน dependencies และสร้าง PR อัตโนมัติเมื่อมี security patch หรือ version ใหม่ ช่วยให้ไม่ต้องตรวจสอบ dependencies ด้วยมือ:</p>
 
     <pre><code># .github/dependabot.yml
 version: 2
@@ -589,6 +623,8 @@ updates:
       interval: "weekly"</code></pre>
 
     <h3>Trivy + Gitleaks + License Check</h3>
+
+    <p>นอกจาก Dependabot แล้ว ยังมี security tools อื่นที่ควร setup — <strong>Trivy</strong> สแกน vulnerabilities ใน source code และ Docker images, <strong>Gitleaks</strong> ตรวจจับ secrets ที่ถูก commit เผลอ (API keys, passwords), และ <strong>license-checker</strong> ตรวจว่า dependencies ไม่มี GPL license ที่อาจกระทบ commercial use:</p>
 
     <pre><code># .github/workflows/security-scan.yml
 jobs:
@@ -618,6 +654,8 @@ jobs:
 
     <h2>📊 Coverage Gates — บังคับ Coverage ขั้นต่ำ</h2>
 
+    <p><strong>Coverage Gates</strong> คือการตั้งกฎว่า "ถ้า test coverage ต่ำกว่า X% ห้าม merge" — ช่วยป้องกันไม่ให้ทีมเขียน code ใหม่โดยไม่มี tests Coverage ที่แนะนำคือ 80-90% สำหรับ code ทั่วไป และ 90-95% สำหรับ critical code เช่น auth, payments:</p>
+
     <pre><code>// jest.config.js
 module.exports = {
   coverageThreshold: {
@@ -639,6 +677,8 @@ module.exports = {
     <hr>
 
     <h2>🔄 Complete Testing Pipeline</h2>
+
+    <p>ถึงเวลารวมทุกอย่างเข้าด้วยกัน! Pipeline ด้านล่างแสดง <strong>complete testing workflow</strong> ที่ใช้ได้กับโปรเจกต์จริง — เริ่มจาก static analysis (เร็วที่สุด) แล้วค่อยๆ ไล่ขึ้นไปถึง E2E tests (ช้าที่สุด) โดยใช้ parallelism ให้เต็มที่เพื่อลดเวลารอ จาก 45 นาทีแบบ sequential เหลือแค่ ~15 นาทีแบบ parallel:</p>
 
     <div class="pipeline">
       <div class="pipeline__stage">
