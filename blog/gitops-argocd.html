@@ -1,0 +1,927 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>GitOps & ArgoCD — Git-driven Deployments ที่ทุกคนต้องรู้ | Anirach Mingkhwan</title>
+  <meta name="description" content="เรียนรู้ GitOps Principles, ArgoCD, Helm Charts, Kustomize, Sealed Secrets, App-of-Apps Pattern และ Multi-Environment Promotion">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --navy: #0f172a; --blue: #6366f1; --blue-dark: #4f46e5; --blue-light: #818cf8;
+      --slate: #334155; --slate-light: #64748b; --gray: #94a3b8;
+      --bg: #f8fafc; --white: #ffffff; --code-bg: #1e293b;
+      --font: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+      --mono: 'JetBrains Mono', 'Fira Code', monospace;
+      --orange: #f97316; --green: #22c55e; --red: #ef4444;
+    }
+    html { scroll-behavior: smooth; }
+    body { font-family: var(--font); font-size: 17px; line-height: 1.8; color: var(--slate); background: var(--bg); -webkit-font-smoothing: antialiased; }
+    .blog-nav { position: fixed; top: 0; left: 0; right: 0; z-index: 100; background: rgba(248,250,252,0.85); backdrop-filter: blur(20px); border-bottom: 1px solid rgba(0,0,0,0.05); }
+    .blog-nav__inner { max-width: 860px; margin: 0 auto; padding: 0 2rem; height: 56px; display: flex; align-items: center; justify-content: space-between; }
+    .blog-nav__back { font-size: 0.85rem; font-weight: 500; color: var(--blue); text-decoration: none; }
+    .blog-nav__back:hover { color: #4f46e5; }
+    .blog-nav__title { font-size: 0.85rem; font-weight: 600; color: var(--navy); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 50%; }
+
+    .post-hero { padding: 8rem 2rem 3rem; background: linear-gradient(135deg, #1a0533 0%, #2d1b69 40%, #4c1d95 100%); text-align: center; }
+    .post-hero__tags { display: flex; gap: 0.5rem; justify-content: center; margin-bottom: 1.25rem; flex-wrap: wrap; }
+    .post-hero__tag { font-size: 0.7rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.1em; color: #c084fc; background: rgba(192,132,252,0.15); padding: 0.3rem 0.75rem; border-radius: 20px; }
+    .post-hero__title { font-size: clamp(1.8rem, 5vw, 3rem); font-weight: 800; color: #fff; line-height: 1.2; margin-bottom: 1rem; max-width: 720px; margin-left: auto; margin-right: auto; }
+    .post-hero__meta { font-size: 0.85rem; color: rgba(255,255,255,0.6); display: flex; align-items: center; justify-content: center; gap: 1.5rem; }
+    .post-hero__series { font-weight: 600; color: #c084fc; }
+    .post-hero__cover { max-width: 380px; margin: 2.5rem auto 0; border-radius: 16px; overflow: hidden; box-shadow: 0 20px 60px rgba(0,0,0,0.4); }
+    .post-hero__cover img { width: 100%; display: block; }
+
+    .post-body { max-width: 720px; margin: 0 auto; padding: 3rem 2rem 6rem; }
+    .post-body h2 { font-size: 1.6rem; font-weight: 800; color: var(--navy); margin: 3rem 0 1rem; padding-bottom: 0.5rem; border-bottom: 2px solid rgba(99,102,241,0.15); }
+    .post-body h3 { font-size: 1.25rem; font-weight: 700; color: var(--navy); margin: 2.25rem 0 0.75rem; }
+    .post-body h4 { font-size: 1.05rem; font-weight: 700; color: var(--navy); margin: 1.75rem 0 0.6rem; }
+    .post-body p { margin-bottom: 1.25rem; }
+    .post-body strong { font-weight: 700; color: var(--navy); }
+    .post-body a { color: var(--blue); text-decoration: underline; text-decoration-thickness: 1px; text-underline-offset: 2px; }
+    .post-body pre { background: var(--code-bg); border-radius: 12px; padding: 1.5rem; margin: 1.25rem 0 1.5rem; overflow-x: auto; border: 1px solid rgba(255,255,255,0.05); }
+    .post-body pre code { font-family: var(--mono); font-size: 0.82rem; color: #e2e8f0; line-height: 1.7; }
+    .post-body code { font-family: var(--mono); font-size: 0.88em; background: rgba(99,102,241,0.08); color: #4f46e5; padding: 0.15em 0.45em; border-radius: 5px; }
+    .post-body pre code { background: none; color: #e2e8f0; padding: 0; }
+    .post-body ul, .post-body ol { margin: 0.5rem 0 1.25rem 1.5rem; }
+    .post-body li { margin-bottom: 0.4rem; }
+    .post-body table { width: 100%; border-collapse: collapse; margin: 1.25rem 0 1.5rem; font-size: 0.9rem; }
+    .post-body th { background: rgba(99,102,241,0.06); font-weight: 700; color: var(--navy); padding: 0.75rem 1rem; text-align: left; border-bottom: 2px solid rgba(99,102,241,0.15); }
+    .post-body td { padding: 0.65rem 1rem; border-bottom: 1px solid #e2e8f0; }
+    .post-body blockquote { background: rgba(99,102,241,0.06); border-left: 4px solid var(--blue); padding: 1rem 1.25rem; border-radius: 0 10px 10px 0; margin: 1.25rem 0; font-size: 0.95rem; color: var(--navy); }
+    .post-body hr { border: none; height: 1px; background: linear-gradient(90deg, transparent, rgba(99,102,241,0.2), transparent); margin: 3rem 0; }
+    .post-series-footer { text-align: center; font-size: 0.85rem; color: var(--gray); font-style: italic; margin-top: 2rem; padding-top: 2rem; border-top: 1px solid #e2e8f0; }
+
+    .post-nav { max-width: 720px; margin: 0 auto; padding: 0 2rem 3rem; display: flex; gap: 1.5rem; flex-wrap: wrap; }
+    .post-nav__link { flex: 1; min-width: 200px; padding: 1.25rem 1.5rem; border-radius: 12px; background: rgba(255,255,255,0.85); backdrop-filter: blur(16px); border: 1px solid rgba(255,255,255,0.6); box-shadow: 0 4px 16px rgba(0,0,0,0.05); text-decoration: none; color: inherit; transition: transform 0.2s, box-shadow 0.2s; }
+    .post-nav__link:hover { transform: translateY(-2px); box-shadow: 0 8px 24px rgba(99,102,241,0.1); }
+    .post-nav__dir { font-size: 0.75rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.1em; color: var(--blue); margin-bottom: 0.35rem; }
+    .post-nav__title { font-size: 0.9rem; font-weight: 600; color: var(--navy); line-height: 1.4; }
+    .blog-footer { background: var(--navy); padding: 2rem 0; text-align: center; }
+    .blog-footer a { color: var(--blue-light); text-decoration: none; font-weight: 600; font-size: 0.9rem; }
+    .blog-footer span { color: var(--gray); font-size: 0.8rem; display: block; margin-top: 0.4rem; }
+
+    /* Architecture diagrams */
+    .arch-diagram { margin: 1.5rem 0 2rem; }
+    .arch-box { border: 2px solid rgba(99,102,241,0.25); border-radius: 12px; padding: 1.25rem; background: linear-gradient(135deg, rgba(99,102,241,0.03), rgba(99,102,241,0.06)); }
+    .arch-label { font-size: 0.75rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.1em; color: var(--blue); text-align: center; margin-bottom: 0.75rem; }
+    .arch-row { display: flex; gap: 0.75rem; justify-content: center; flex-wrap: wrap; margin-bottom: 0.75rem; }
+    .arch-container { border: 2px solid rgba(99,102,241,0.2); border-radius: 10px; padding: 0.75rem; background: rgba(238,242,255,0.8); min-width: 120px; text-align: center; }
+    .arch-item { font-size: 0.78rem; font-weight: 600; color: var(--navy); padding: 0.3rem 0.6rem; margin: 0.25rem 0; background: rgba(99,102,241,0.08); border-radius: 6px; }
+    .arch-name { font-size: 0.72rem; font-weight: 700; color: var(--blue); margin-bottom: 0.35rem; }
+    .arch-arrow-down { text-align: center; font-size: 1rem; color: var(--blue); font-weight: 700; margin: 0.5rem 0; }
+
+    .flow-diagram { display: flex; align-items: center; justify-content: center; gap: 0.5rem; flex-wrap: wrap; margin: 1.5rem 0 2rem; padding: 1.5rem; background: rgba(99,102,241,0.04); border-radius: 12px; }
+    .flow-step { text-align: center; padding: 0.75rem 1.25rem; background: white; border-radius: 10px; border: 1.5px solid rgba(99,102,241,0.15); box-shadow: 0 2px 8px rgba(0,0,0,0.04); }
+    .flow-step__title { font-size: 0.9rem; font-weight: 700; color: var(--navy); }
+    .flow-step__sub { font-size: 0.72rem; color: var(--gray); margin-top: 0.15rem; }
+    .flow-arrow { font-size: 1.2rem; color: var(--blue); font-weight: 700; }
+
+    /* Compare box */
+    .compare-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin: 1.5rem 0 2rem; }
+    .compare-box { border-radius: 12px; padding: 1.25rem; }
+    .compare-box--old { background: rgba(239,68,68,0.06); border: 1.5px solid rgba(239,68,68,0.15); }
+    .compare-box--new { background: rgba(34,197,94,0.06); border: 1.5px solid rgba(34,197,94,0.15); }
+    .compare-box__title { font-size: 0.85rem; font-weight: 700; margin-bottom: 0.5rem; }
+    .compare-box--old .compare-box__title { color: #dc2626; }
+    .compare-box--new .compare-box__title { color: #16a34a; }
+    .compare-box__list { list-style: none; margin: 0; padding: 0; font-size: 0.82rem; }
+    .compare-box__list li { padding: 0.25rem 0; color: var(--slate); }
+
+    /* Checklist levels */
+    .level-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 1rem; margin: 1.5rem 0 2rem; }
+    .level-card { border-radius: 12px; padding: 1.25rem; text-align: center; }
+    .level-card--1 { background: rgba(34,197,94,0.06); border: 1.5px solid rgba(34,197,94,0.15); }
+    .level-card--2 { background: rgba(59,130,246,0.06); border: 1.5px solid rgba(59,130,246,0.15); }
+    .level-card--3 { background: rgba(168,85,247,0.06); border: 1.5px solid rgba(168,85,247,0.15); }
+    .level-card__title { font-size: 0.85rem; font-weight: 800; margin-bottom: 0.5rem; }
+    .level-card--1 .level-card__title { color: #16a34a; }
+    .level-card--2 .level-card__title { color: #2563eb; }
+    .level-card--3 .level-card__title { color: #9333ea; }
+    .level-card__list { list-style: none; margin: 0; padding: 0; font-size: 0.78rem; text-align: left; }
+    .level-card__list li { padding: 0.2rem 0; color: var(--slate); }
+
+    /* Promotion pipeline */
+    .promo-pipeline { display: flex; flex-direction: column; gap: 0.5rem; align-items: center; margin: 1.5rem 0 2rem; padding: 1.5rem; background: rgba(99,102,241,0.04); border-radius: 12px; }
+    .promo-step { width: 80%; max-width: 400px; text-align: center; padding: 0.75rem 1.25rem; border-radius: 10px; font-weight: 700; font-size: 0.88rem; color: #fff; }
+    .promo-step--dev { background: linear-gradient(135deg, #22c55e, #16a34a); }
+    .promo-step--staging { background: linear-gradient(135deg, #f59e0b, #d97706); }
+    .promo-step--prod { background: linear-gradient(135deg, #ef4444, #dc2626); }
+    .promo-label { font-size: 0.72rem; color: var(--gray); font-weight: 600; }
+    .promo-arrow { font-size: 1.2rem; color: var(--blue); font-weight: 700; }
+
+    @media (max-width: 600px) {
+      .post-hero { padding: 7rem 1.25rem 2.5rem; }
+      .post-body { padding: 2rem 1.25rem 4rem; }
+      .post-body pre { padding: 1rem; border-radius: 8px; }
+      .post-hero__meta { flex-direction: column; gap: 0.4rem; }
+      .post-nav { padding: 0 1.25rem 3rem; }
+      .flow-diagram { flex-direction: column; }
+      .compare-grid { grid-template-columns: 1fr; }
+      .level-grid { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+
+  <nav class="blog-nav">
+    <div class="blog-nav__inner">
+      <a href="./" class="blog-nav__back">‹ Blog</a>
+      <div class="blog-nav__title">GitOps & ArgoCD</div>
+    </div>
+  </nav>
+
+  <header class="post-hero">
+    <div class="post-hero__tags">
+      <span class="post-hero__tag">GitOps</span>
+      <span class="post-hero__tag">ArgoCD</span>
+      <span class="post-hero__tag">DevOps</span>
+    </div>
+    <h1 class="post-hero__title">GitOps & ArgoCD — Git-driven Deployments ที่ทุกคนต้องรู้ 🔄</h1>
+    <div class="post-hero__meta">
+      <span>By <strong style="color:#fff">Anirach Mingkhwan</strong></span>
+      <span class="post-hero__series">DevOps & Vibe Coding 2026</span>
+    </div>
+    <div class="post-hero__cover">
+      <img src="../images/gitops-cover.jpg" alt="GitOps & ArgoCD">
+    </div>
+  </header>
+
+  <article class="post-body">
+
+    <p>จากซีรีส์ที่ผ่านมา เราเรียน CI/CD, Docker, Kubernetes, Monitoring, Testing... แต่คำถามสำคัญคือ <strong>ใครเป็นคน deploy? แล้วถ้า production drift จาก config ที่ตั้งไว้ จะรู้ได้ยังไง?</strong></p>
+
+    <p>คำตอบคือ <strong>GitOps</strong> — ใช้ Git เป็น single source of truth สำหรับ infrastructure และ application deployment ทั้งหมด 🔄🐕</p>
+
+    <hr>
+
+    <h2>🐕 GitOps คืออะไร? ทำไมต้อง Git เป็นศูนย์กลาง?</h2>
+
+    <div class="compare-grid">
+      <div class="compare-box compare-box--old">
+        <div class="compare-box__title">❌ แบบเดิม: Push-based</div>
+        <ul class="compare-box__list">
+          <li>Dev → CI → <code>kubectl apply</code> → Cluster</li>
+          <li>CI ต้องมี kubeconfig credentials</li>
+          <li>ถ้า CI พัง = deploy ไม่ได้</li>
+          <li>ไม่รู้ว่า cluster มีอะไรรันอยู่</li>
+          <li>คนแก้ด้วยมือ → drift จาก desired state</li>
+        </ul>
+      </div>
+      <div class="compare-box compare-box--new">
+        <div class="compare-box__title">✅ แบบใหม่: GitOps (Pull-based)</div>
+        <ul class="compare-box__list">
+          <li>Dev → Git push → Git Repo ← ArgoCD</li>
+          <li>Git = single source of truth</li>
+          <li>ทุกการเปลี่ยนแปลงผ่าน PR</li>
+          <li>Audit trail อัตโนมัติ (git log)</li>
+          <li>Rollback = <code>git revert</code></li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="flow-diagram">
+      <div class="flow-step">
+        <div class="flow-step__title">👨‍💻 Dev</div>
+        <div class="flow-step__sub">git push</div>
+      </div>
+      <span class="flow-arrow">→</span>
+      <div class="flow-step" style="border-color: rgba(34,197,94,0.3); background: rgba(34,197,94,0.04);">
+        <div class="flow-step__title">📦 Git Repo</div>
+        <div class="flow-step__sub">Source of Truth</div>
+      </div>
+      <span class="flow-arrow">←</span>
+      <div class="flow-step" style="border-color: rgba(249,115,22,0.3); background: rgba(249,115,22,0.04);">
+        <div class="flow-step__title">🔄 ArgoCD</div>
+        <div class="flow-step__sub">Auto-sync (pull)</div>
+      </div>
+      <span class="flow-arrow">→</span>
+      <div class="flow-step" style="border-color: rgba(99,102,241,0.3); background: rgba(99,102,241,0.04);">
+        <div class="flow-step__title">☸️ Cluster</div>
+        <div class="flow-step__sub">Deploy</div>
+      </div>
+    </div>
+
+    <blockquote>
+      <strong>GitOps</strong> = ใช้ Git เป็น single source of truth สำหรับ infrastructure และ application deployment ทั้งหมด
+    </blockquote>
+
+    <hr>
+
+    <h2>📜 GitOps Principles — 4 หลักการสำคัญ</h2>
+
+    <ol>
+      <li><strong>Declarative</strong> — อธิบาย "ต้องการอะไร" ไม่ใช่ "ทำยังไง" → YAML manifests, Helm charts, Kustomize</li>
+      <li><strong>Versioned &amp; Immutable</strong> — ทุกอย่างอยู่ใน Git → มี history ทุกการเปลี่ยนแปลง (<code>git log</code>, <code>git diff</code>, <code>git blame</code>)</li>
+      <li><strong>Pulled Automatically</strong> — Agent ใน cluster ดึงจาก Git เอง → ไม่ต้องให้ CI push เข้า cluster</li>
+      <li><strong>Continuously Reconciled</strong> — ถ้า actual state ≠ desired state → แก้อัตโนมัติ (self-healing, drift detection)</li>
+    </ol>
+
+    <h3>GitOps vs Traditional CI/CD</h3>
+
+    <table>
+      <thead><tr><th>Feature</th><th>Traditional CI/CD</th><th>GitOps</th></tr></thead>
+      <tbody>
+        <tr><td><strong>Deployment</strong></td><td>CI push → cluster</td><td>Agent pull ← Git</td></tr>
+        <tr><td><strong>Source of Truth</strong></td><td>CI pipeline</td><td>Git repo</td></tr>
+        <tr><td><strong>Credentials</strong></td><td>CI ต้องมี kubeconfig</td><td>Agent ใน cluster มีสิทธิ์อยู่แล้ว</td></tr>
+        <tr><td><strong>Drift</strong></td><td>ไม่รู้ ต้องเช็คเอง</td><td>Auto-detect &amp; fix</td></tr>
+        <tr><td><strong>Rollback</strong></td><td>Re-run pipeline</td><td><code>git revert</code></td></tr>
+        <tr><td><strong>Audit</strong></td><td>CI logs</td><td><code>git log</code> (ครบ 100%)</td></tr>
+        <tr><td><strong>Multi-cluster</strong></td><td>ซับซ้อน</td><td>1 repo = N clusters</td></tr>
+        <tr><td><strong>ใครเปลี่ยนอะไร</strong></td><td>ดู CI logs</td><td><code>git blame</code></td></tr>
+      </tbody>
+    </table>
+
+    <hr>
+
+    <h2>🔶 ArgoCD — GitOps Controller ยอดนิยม</h2>
+
+    <div class="arch-diagram">
+      <div class="arch-box">
+        <div class="arch-label">ArgoCD Architecture</div>
+        <div class="arch-row">
+          <div class="arch-container">
+            <div class="arch-name">📦 Git Repo</div>
+            <div class="arch-item">manifests/</div>
+            <div class="arch-item">helm/</div>
+            <div class="arch-item">kustomize/</div>
+          </div>
+          <div style="display:flex;align-items:center;font-size:1.2rem;color:var(--blue);font-weight:700;">← poll 3 min →</div>
+          <div class="arch-container" style="background: rgba(249,115,22,0.08); border-color: rgba(249,115,22,0.25);">
+            <div class="arch-name" style="color:#ea580c;">☸️ Kubernetes Cluster</div>
+            <div class="arch-item">ArgoCD Server</div>
+            <div class="arch-item">Repo Server</div>
+            <div class="arch-item">App Controller</div>
+          </div>
+        </div>
+        <div class="arch-row" style="margin-top: 0.5rem;">
+          <div class="arch-container" style="background: rgba(99,102,241,0.06);">
+            <div class="arch-name">🖥️ ArgoCD UI</div>
+            <div class="arch-item">Web Dashboard 📊</div>
+          </div>
+          <div class="arch-container" style="background: rgba(99,102,241,0.06);">
+            <div class="arch-name">💻 argocd CLI</div>
+            <div class="arch-item">Terminal commands</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <h3>ติดตั้ง ArgoCD</h3>
+
+    <pre><code># 1. สร้าง namespace
+kubectl create namespace argocd
+
+# 2. ติดตั้ง ArgoCD
+kubectl apply -n argocd -f \
+  https://raw.githubusercontent.com/argoproj/argo-cd/stable/manifests/install.yaml
+
+# 3. รอ pods พร้อม
+kubectl wait --for=condition=Ready pods --all -n argocd --timeout=300s
+
+# 4. เข้า ArgoCD UI (port forward)
+kubectl port-forward svc/argocd-server -n argocd 8080:443
+# → https://localhost:8080
+
+# 5. ดึง initial admin password
+kubectl -n argocd get secret argocd-initial-admin-secret \
+  -o jsonpath="{.data.password}" | base64 -d
+
+# 6. Login ด้วย CLI
+argocd login localhost:8080 --username admin --password &lt;password&gt;
+
+# 7. เปลี่ยน password
+argocd account update-password</code></pre>
+
+    <h3>สร้าง Application แรก</h3>
+
+    <pre><code># argocd-app.yaml
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: myapp
+  namespace: argocd
+spec:
+  project: default
+
+  # Source — ดึงจากไหน
+  source:
+    repoURL: https://github.com/myorg/myapp-manifests.git
+    targetRevision: main
+    path: overlays/production
+
+  # Destination — deploy ไปไหน
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: production
+
+  # Sync Policy
+  syncPolicy:
+    automated:
+      prune: true          # ลบ resources ที่ไม่อยู่ใน Git
+      selfHeal: true       # แก้ drift อัตโนมัติ
+      allowEmpty: false     # ไม่ deploy ถ้า manifests ว่าง
+    syncOptions:
+      - CreateNamespace=true
+      - PrunePropagationPolicy=foreground
+    retry:
+      limit: 5
+      backoff:
+        duration: 5s
+        factor: 2
+        maxDuration: 3m</code></pre>
+
+    <pre><code># Apply ด้วย kubectl
+kubectl apply -f argocd-app.yaml
+
+# หรือใช้ CLI
+argocd app create myapp \
+  --repo https://github.com/myorg/myapp-manifests.git \
+  --path overlays/production \
+  --dest-server https://kubernetes.default.svc \
+  --dest-namespace production \
+  --sync-policy automated \
+  --auto-prune \
+  --self-heal</code></pre>
+
+    <h3>ArgoCD CLI — คำสั่งที่ใช้บ่อย</h3>
+
+    <pre><code># ดู apps
+argocd app list
+argocd app get myapp
+
+# Sync (deploy)
+argocd app sync myapp                 # sync ตอนนี้
+argocd app sync myapp --prune         # + ลบ resources ที่ไม่ต้องการ
+
+# ดู diff (อะไรจะเปลี่ยน)
+argocd app diff myapp
+
+# History & Rollback
+argocd app history myapp
+argocd app rollback myapp &lt;revision&gt;
+
+# ดู resources & logs
+argocd app resources myapp
+argocd app logs myapp
+
+# Health check
+argocd app wait myapp --health</code></pre>
+
+    <hr>
+
+    <h2>📁 Git Repository Structure</h2>
+
+    <h3>แยก App Code กับ Manifests (แนะนำ!)</h3>
+
+    <div class="compare-grid">
+      <div class="compare-box compare-box--old">
+        <div class="compare-box__title">❌ Mono-repo (รวมกัน)</div>
+        <ul class="compare-box__list">
+          <li><code>myapp/src/</code></li>
+          <li><code>myapp/Dockerfile</code></li>
+          <li><code>myapp/k8s/deployment.yaml</code></li>
+          <li style="color:#dc2626;font-weight:600;margin-top:0.5rem">⚠️ ทุก code commit trigger deploy!</li>
+        </ul>
+      </div>
+      <div class="compare-box compare-box--new">
+        <div class="compare-box__title">✅ แยก Repos (แนะนำ)</div>
+        <ul class="compare-box__list">
+          <li><strong>Repo 1:</strong> myapp (code)</li>
+          <li>→ CI: build + test + push image</li>
+          <li><strong>Repo 2:</strong> myapp-manifests</li>
+          <li>→ ArgoCD watches this repo</li>
+          <li style="color:#16a34a;font-weight:600;margin-top:0.5rem">✅ Deploy เฉพาะเมื่อ config เปลี่ยน</li>
+        </ul>
+      </div>
+    </div>
+
+    <h3>Manifests Repo Structure (Kustomize)</h3>
+
+    <pre><code>myapp-manifests/
+├── base/                      # shared base
+│   ├── deployment.yaml
+│   ├── service.yaml
+│   └── kustomization.yaml
+├── overlays/
+│   ├── dev/                   # dev overrides
+│   │   ├── kustomization.yaml
+│   │   ├── replicas-patch.yaml
+│   │   └── env-patch.yaml
+│   ├── staging/
+│   │   ├── kustomization.yaml
+│   │   └── replicas-patch.yaml
+│   └── production/            # prod overrides
+│       ├── kustomization.yaml
+│       ├── replicas-patch.yaml
+│       ├── resources-patch.yaml
+│       └── hpa.yaml</code></pre>
+
+    <h3>CI/CD Flow แบบ GitOps</h3>
+
+    <div class="arch-diagram">
+      <div class="arch-box">
+        <div class="arch-label">GitOps CI/CD Flow</div>
+        <div class="arch-row">
+          <div class="arch-container">
+            <div class="arch-name">App Repo</div>
+            <div class="arch-item">git push (code)</div>
+          </div>
+          <div style="display:flex;align-items:center;font-size:1.2rem;color:var(--blue);font-weight:700;">→</div>
+          <div class="arch-container" style="background: rgba(249,115,22,0.08);">
+            <div class="arch-name" style="color:#ea580c;">CI/CD</div>
+            <div class="arch-item">1. Test</div>
+            <div class="arch-item">2. Build image</div>
+            <div class="arch-item">3. Push to registry</div>
+          </div>
+          <div style="display:flex;align-items:center;font-size:0.8rem;color:var(--blue);font-weight:600;">update tag →</div>
+          <div class="arch-container" style="background: rgba(34,197,94,0.08);">
+            <div class="arch-name" style="color:#16a34a;">Manifests Repo</div>
+            <div class="arch-item">image: myapp:v3</div>
+          </div>
+        </div>
+        <div class="arch-arrow-down">↓ ArgoCD detects change</div>
+        <div class="arch-row">
+          <div class="arch-container" style="background: rgba(99,102,241,0.08); min-width: 200px;">
+            <div class="arch-name">☸️ Kubernetes</div>
+            <div class="arch-item">Deploy new image 🚀</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <h3>CI Pipeline — Auto-update Manifests</h3>
+
+    <pre><code># .github/workflows/ci.yml (App Repo)
+name: CI/CD
+on:
+  push:
+    branches: [main]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set version
+        id: version
+        run: echo "tag=$(git rev-parse --short HEAD)" >> $GITHUB_OUTPUT
+
+      - name: Build & Push Docker Image
+        run: |
+          docker build -t ghcr.io/myorg/myapp:${{ steps.version.outputs.tag }} .
+          docker push ghcr.io/myorg/myapp:${{ steps.version.outputs.tag }}
+
+      # 🔑 อัพเดต manifests repo อัตโนมัติ
+      - name: Update manifests repo
+        run: |
+          git clone https://x-access-token:${{ secrets.MANIFESTS_TOKEN }}@github.com/myorg/myapp-manifests.git
+          cd myapp-manifests/overlays/production
+          kustomize edit set image ghcr.io/myorg/myapp:${{ steps.version.outputs.tag }}
+
+          git config user.name "CI Bot"
+          git config user.email "ci@myorg.com"
+          git add .
+          git commit -m "chore: update image to ${{ steps.version.outputs.tag }}"
+          git push
+          # → ArgoCD จะ detect change และ deploy อัตโนมัติ</code></pre>
+
+    <hr>
+
+    <h2>📦 Helm Charts — Package Manager สำหรับ K8s</h2>
+
+    <p>Helm คือ <strong>"apt/brew สำหรับ Kubernetes"</strong> — template engine ที่ช่วยจัดการ K8s manifests ด้วย <code>values.yaml</code>:</p>
+
+    <pre><code># สร้าง chart ใหม่
+helm create myapp
+
+# โครงสร้าง
+myapp/
+├── Chart.yaml          # metadata (name, version)
+├── values.yaml         # default values
+├── templates/
+│   ├── deployment.yaml
+│   ├── service.yaml
+│   ├── ingress.yaml
+│   ├── hpa.yaml
+│   ├── _helpers.tpl    # template helpers
+│   └── NOTES.txt       # post-install message
+└── charts/             # dependencies</code></pre>
+
+    <pre><code># values.yaml — ค่า default
+replicaCount: 2
+
+image:
+  repository: ghcr.io/myorg/myapp
+  tag: "latest"
+  pullPolicy: IfNotPresent
+
+service:
+  type: ClusterIP
+  port: 80
+
+ingress:
+  enabled: true
+  host: myapp.example.com
+
+resources:
+  limits:
+    cpu: 500m
+    memory: 256Mi
+  requests:
+    cpu: 100m
+    memory: 128Mi
+
+autoscaling:
+  enabled: true
+  minReplicas: 2
+  maxReplicas: 10
+  targetCPUUtilizationPercentage: 80</code></pre>
+
+    <pre><code># templates/deployment.yaml — ใช้ Go template
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "myapp.fullname" . }}
+  labels:
+    {{- include "myapp.labels" . | nindent 4 }}
+spec:
+  replicas: {{ .Values.replicaCount }}
+  selector:
+    matchLabels:
+      {{- include "myapp.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "myapp.selectorLabels" . | nindent 8 }}
+    spec:
+      containers:
+        - name: {{ .Chart.Name }}
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+          ports:
+            - containerPort: 8080
+          resources:
+            {{- toYaml .Values.resources | nindent 12 }}
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 8080
+          readinessProbe:
+            httpGet:
+              path: /ready
+              port: 8080</code></pre>
+
+    <pre><code># ใช้งาน Helm
+helm install myapp ./myapp                     # install
+helm install myapp ./myapp -f prod-values.yaml  # custom values
+helm upgrade myapp ./myapp                      # upgrade
+helm rollback myapp 1                           # rollback to revision 1
+helm uninstall myapp                            # ลบ
+helm list                                       # ดู installed releases
+helm template myapp ./myapp                     # ดู rendered manifests</code></pre>
+
+    <h3>ArgoCD + Helm</h3>
+
+    <pre><code># ArgoCD Application ที่ใช้ Helm
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: myapp
+  namespace: argocd
+spec:
+  source:
+    repoURL: https://github.com/myorg/myapp-manifests.git
+    targetRevision: main
+    path: charts/myapp
+    helm:
+      valueFiles:
+        - values-production.yaml
+      parameters:
+        - name: image.tag
+          value: "abc1234"
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: production
+  syncPolicy:
+    automated:
+      selfHeal: true
+      prune: true</code></pre>
+
+    <hr>
+
+    <h2>🎨 Kustomize — Template-free Configuration</h2>
+
+    <table>
+      <thead><tr><th>Feature</th><th>Helm</th><th>Kustomize</th></tr></thead>
+      <tbody>
+        <tr><td><strong>แนวคิด</strong></td><td>Template engine (Go templates)</td><td>Overlay patches (pure YAML)</td></tr>
+        <tr><td><strong>Syntax</strong></td><td><code>{{ .Values.x }}</code></td><td>YAML patches ธรรมดา</td></tr>
+        <tr><td><strong>เหมาะกับ</strong></td><td>แจก chart ให้คนอื่น, config ซับซ้อน</td><td>Internal teams, simple overlays</td></tr>
+        <tr><td><strong>Built-in</strong></td><td>ต้องติดตั้ง</td><td>Built-in <code>kubectl</code></td></tr>
+      </tbody>
+    </table>
+
+    <pre><code># base/deployment.yaml — ของจริง ไม่มี template
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: myapp
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: myapp
+  template:
+    metadata:
+      labels:
+        app: myapp
+    spec:
+      containers:
+        - name: myapp
+          image: ghcr.io/myorg/myapp:latest
+          ports:
+            - containerPort: 8080
+          resources:
+            requests:
+              cpu: 100m
+              memory: 128Mi</code></pre>
+
+    <pre><code># overlays/production/kustomization.yaml
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+resources:
+  - ../../base
+  - hpa.yaml
+
+namespace: production
+
+# เปลี่ยน image tag
+images:
+  - name: ghcr.io/myorg/myapp
+    newTag: v2.1.0
+
+# เพิ่ม labels
+commonLabels:
+  env: production
+
+# เพิ่ม prefix
+namePrefix: prod-
+
+# Patch replicas
+patches:
+  - target:
+      kind: Deployment
+      name: myapp
+    patch: |
+      - op: replace
+        path: /spec/replicas
+        value: 5
+  - path: resources-patch.yaml</code></pre>
+
+    <pre><code># ใช้งาน Kustomize
+kubectl kustomize overlays/production      # ดู rendered output
+kubectl apply -k overlays/production       # apply
+kubectl diff -k overlays/production        # ดู diff ก่อน apply
+
+# อัพเดต image tag (ใช้ใน CI)
+cd overlays/production
+kustomize edit set image ghcr.io/myorg/myapp:v2.2.0</code></pre>
+
+    <hr>
+
+    <h2>🔄 ArgoCD vs Flux — เลือกอะไรดี?</h2>
+
+    <table>
+      <thead><tr><th>Feature</th><th>ArgoCD</th><th>Flux</th></tr></thead>
+      <tbody>
+        <tr><td><strong>UI</strong></td><td>✅ Web UI สวยมาก</td><td>❌ ไม่มี (CLI only)</td></tr>
+        <tr><td><strong>Setup</strong></td><td>ง่าย (install.yaml)</td><td>ง่าย (flux bootstrap)</td></tr>
+        <tr><td><strong>Multi-cluster</strong></td><td>✅ ดีมาก</td><td>✅ ได้ (ต่าง approach)</td></tr>
+        <tr><td><strong>Helm</strong></td><td>✅ native</td><td>✅ HelmRelease CRD</td></tr>
+        <tr><td><strong>Kustomize</strong></td><td>✅ native</td><td>✅ Kustomization CRD</td></tr>
+        <tr><td><strong>SSO</strong></td><td>✅ OIDC, SAML</td><td>❌</td></tr>
+        <tr><td><strong>Image Update</strong></td><td>Argo Image Updater</td><td>✅ built-in</td></tr>
+        <tr><td><strong>Community</strong></td><td>⭐⭐⭐ CNCF Graduated</td><td>⭐⭐⭐ CNCF Graduated</td></tr>
+        <tr><td><strong>เหมาะกับ</strong></td><td>ทีมใหญ่, ต้องการ UI</td><td>ทีมเล็ก, CLI-first</td></tr>
+      </tbody>
+    </table>
+
+    <blockquote>
+      <strong>💡</strong> ส่วนใหญ่เลือก ArgoCD เพราะ UI ดีมาก — ทั้งคู่เป็น CNCF Graduated = production-ready
+    </blockquote>
+
+    <hr>
+
+    <h2>🌍 Multi-Environment GitOps</h2>
+
+    <h3>App-of-Apps Pattern</h3>
+
+    <pre><code># apps/root-app.yaml — "App ที่สร้าง Apps อื่น"
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: root
+  namespace: argocd
+spec:
+  source:
+    repoURL: https://github.com/myorg/myapp-manifests.git
+    targetRevision: main
+    path: apps          # ← folder ที่มี Application manifests
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: argocd
+  syncPolicy:
+    automated:
+      selfHeal: true
+      prune: true</code></pre>
+
+    <pre><code># apps/ folder — เพิ่ม file = deploy service ใหม่, ลบ file = ลบ service
+apps/
+├── myapp-dev.yaml            # → deploy to dev namespace
+├── myapp-staging.yaml        # → deploy to staging namespace
+├── myapp-production.yaml     # → deploy to production namespace
+├── monitoring.yaml           # → deploy Prometheus + Grafana
+├── cert-manager.yaml         # → deploy cert-manager
+└── ingress-nginx.yaml        # → deploy ingress controller</code></pre>
+
+    <h3>Promotion Flow (Dev → Staging → Prod)</h3>
+
+    <div class="promo-pipeline">
+      <div class="promo-step promo-step--dev">🟢 Dev — Auto-deploy (latest)</div>
+      <div class="promo-label">✅ Tests pass</div>
+      <div class="promo-arrow">↓</div>
+      <div class="promo-step promo-step--staging">🟡 Staging — Auto-deploy (tagged)</div>
+      <div class="promo-label">✅ QA approved</div>
+      <div class="promo-arrow">↓</div>
+      <div class="promo-step promo-step--prod">🔴 Production — Manual sync / PR approve</div>
+    </div>
+
+    <ol>
+      <li>CI builds image → push <code>:abc123</code></li>
+      <li>Bot updates <code>dev/kustomization.yaml</code> → auto-deploy</li>
+      <li>Dev tests pass → Bot opens PR for staging</li>
+      <li>Merge PR → staging auto-deploy</li>
+      <li>QA approved → Bot opens PR for production</li>
+      <li>Team lead approves PR → production deploy ✅</li>
+    </ol>
+
+    <hr>
+
+    <h2>🛡️ GitOps Security</h2>
+
+    <h3>Sealed Secrets — Encrypt secrets ใน Git</h3>
+
+    <p>ปัญหา: Kubernetes Secret เป็น base64 (ไม่ encrypted) → <strong>ห้ามเก็บใน Git!</strong></p>
+
+    <pre><code># ติดตั้ง Sealed Secrets controller
+helm repo add sealed-secrets https://bitnami-labs.github.io/sealed-secrets
+helm install sealed-secrets sealed-secrets/sealed-secrets -n kube-system
+
+# ติดตั้ง CLI
+brew install kubeseal
+
+# สร้าง sealed secret
+kubectl create secret generic db-creds \
+  --from-literal=password=super-secret \
+  --dry-run=client -o yaml | \
+  kubeseal --format yaml > sealed-db-creds.yaml
+
+# → sealed-db-creds.yaml สามารถ commit ได้อย่างปลอดภัย!
+# → Controller ใน cluster จะ decrypt ให้</code></pre>
+
+    <pre><code># sealed-db-creds.yaml (safe to commit!)
+apiVersion: bitnami.com/v1alpha1
+kind: SealedSecret
+metadata:
+  name: db-creds
+  namespace: production
+spec:
+  encryptedData:
+    password: AgBy3i...long-encrypted-string...</code></pre>
+
+    <h3>RBAC — จำกัดสิทธิ์ ArgoCD</h3>
+
+    <pre><code># ArgoCD RBAC ConfigMap
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: argocd-rbac-cm
+  namespace: argocd
+data:
+  policy.csv: |
+    # role: dev → ดูได้ sync dev ได้
+    p, role:dev, applications, get, */dev-*, allow
+    p, role:dev, applications, sync, */dev-*, allow
+
+    # role: ops → ทำได้ทุกอย่าง
+    p, role:ops, applications, *, */*, allow
+
+    # role: viewer → ดูอย่างเดียว
+    p, role:viewer, applications, get, */*, allow
+
+    # assign groups
+    g, dev-team, role:dev
+    g, ops-team, role:ops
+    g, management, role:viewer
+  policy.default: role:viewer</code></pre>
+
+    <hr>
+
+    <h2>📋 GitOps Cheat Sheet</h2>
+
+    <div class="level-grid">
+      <div class="level-card level-card--1">
+        <div class="level-card__title">⭐ เริ่มต้น</div>
+        <ul class="level-card__list">
+          <li>✅ แยก app repo กับ manifests repo</li>
+          <li>✅ ติดตั้ง ArgoCD</li>
+          <li>✅ สร้าง Application manifest</li>
+          <li>✅ Auto-sync dev environment</li>
+          <li>✅ Manual sync for production</li>
+        </ul>
+      </div>
+      <div class="level-card level-card--2">
+        <div class="level-card__title">⭐⭐ Growing</div>
+        <ul class="level-card__list">
+          <li>✅ Kustomize overlays (dev/staging/prod)</li>
+          <li>✅ CI auto-update image tags</li>
+          <li>✅ Sealed Secrets</li>
+          <li>✅ App-of-Apps pattern</li>
+          <li>✅ ArgoCD notifications (Slack)</li>
+        </ul>
+      </div>
+      <div class="level-card level-card--3">
+        <div class="level-card__title">⭐⭐⭐ Production</div>
+        <ul class="level-card__list">
+          <li>✅ Helm charts for shared services</li>
+          <li>✅ Multi-cluster deployment</li>
+          <li>✅ PR-based promotion</li>
+          <li>✅ RBAC & SSO integration</li>
+          <li>✅ Image Updater (auto tags)</li>
+          <li>✅ Rollback automation</li>
+        </ul>
+      </div>
+    </div>
+
+    <h3>Quick Commands</h3>
+
+    <pre><code># ─── ArgoCD ───
+argocd app list                  # ดูทุก apps
+argocd app get myapp             # ดูรายละเอียด
+argocd app sync myapp            # sync (deploy)
+argocd app history myapp         # ดู history
+argocd app rollback myapp 3      # rollback to rev 3
+argocd app diff myapp            # ดู diff ก่อน sync
+
+# ─── Kustomize ───
+kubectl kustomize overlays/prod  # render output
+kustomize edit set image app:v2  # update image tag
+kubectl apply -k overlays/prod   # apply
+
+# ─── Helm ───
+helm template myapp ./chart      # render templates
+helm install myapp ./chart       # install
+helm upgrade myapp ./chart       # upgrade
+helm rollback myapp 1            # rollback</code></pre>
+
+    <hr>
+
+    <h2>🔑 Key Takeaways</h2>
+
+    <ol>
+      <li><strong>GitOps</strong> = Git เป็น single source of truth → ทุก change ผ่าน PR</li>
+      <li><strong>Pull-based</strong> ปลอดภัยกว่า push-based — agent ดึงจาก Git ไม่ต้องให้ CI มี cluster credentials</li>
+      <li><strong>ArgoCD</strong> = GitOps controller ยอดนิยม — UI สวย, multi-cluster, CNCF Graduated</li>
+      <li><strong>แยก repos</strong> — app code repo + manifests repo ป้องกัน deploy ทุก commit</li>
+      <li><strong>Kustomize</strong> สำหรับ simple overlays, <strong>Helm</strong> สำหรับ complex/shared charts</li>
+      <li><strong>Sealed Secrets</strong> — encrypt secrets ก่อน commit ใน Git</li>
+      <li><strong>App-of-Apps</strong> pattern — จัดการหลาย apps/environments ง่ายขึ้น</li>
+      <li><strong>Rollback = <code>git revert</code></strong> — ง่ายที่สุดเท่าที่จะง่ายได้ 🔄🐕</li>
+    </ol>
+
+    <div class="post-series-footer">
+      บทความจากซีรีส์ DevOps & Vibe Coding 2026
+    </div>
+
+  </article>
+
+  <!-- Post Navigation -->
+  <div class="post-nav">
+    <a href="docker-compose.html" class="post-nav__link">
+      <div class="post-nav__dir">← Previous</div>
+      <div class="post-nav__title">Docker Compose — จัดการหลาย Containers ด้วยไฟล์เดียว</div>
+    </a>
+  </div>
+
+  <footer class="blog-footer">
+    <a href="./">← Back to Blog</a>
+    <span>© 2025 Anirach Mingkhwan — Associate Professor, KMUTNB</span>
+  </footer>
+
+</body>
+</html>
