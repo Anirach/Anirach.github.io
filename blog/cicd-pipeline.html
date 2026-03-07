@@ -1,0 +1,495 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CI/CD Pipeline — ส่ง Code ขึ้น Production แบบอัตโนมัติ | Anirach Mingkhwan</title>
+  <meta name="description" content="เรียนรู้ CI/CD Pipeline ตั้งแต่พื้นฐาน Build, Test, Deploy อัตโนมัติ ไปจนถึง GitHub Actions และ Best Practices">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --navy: #0f172a; --blue: #6366f1; --blue-light: #818cf8;
+      --slate: #334155; --slate-light: #64748b; --gray: #94a3b8;
+      --bg: #f8fafc; --white: #ffffff; --code-bg: #1e293b;
+      --font: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+      --mono: 'JetBrains Mono', 'Fira Code', monospace;
+    }
+    html { scroll-behavior: smooth; }
+    body {
+      font-family: var(--font); font-size: 17px; line-height: 1.8;
+      color: var(--slate); background: var(--bg); -webkit-font-smoothing: antialiased;
+    }
+    .blog-nav {
+      position: fixed; top: 0; left: 0; right: 0; z-index: 100;
+      background: rgba(248,250,252,0.85); backdrop-filter: blur(20px);
+      border-bottom: 1px solid rgba(0,0,0,0.05);
+    }
+    .blog-nav__inner {
+      max-width: 860px; margin: 0 auto; padding: 0 2rem; height: 56px;
+      display: flex; align-items: center; justify-content: space-between;
+    }
+    .blog-nav__back {
+      font-size: 0.85rem; font-weight: 500; color: var(--blue);
+      text-decoration: none; display: flex; align-items: center; gap: 0.4rem;
+    }
+    .blog-nav__back:hover { color: #4f46e5; }
+    .blog-nav__title {
+      font-size: 0.85rem; font-weight: 600; color: var(--navy);
+      overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 50%;
+    }
+    .post-hero {
+      padding: 8rem 2rem 3rem;
+      background: linear-gradient(135deg, #e8f0fe 0%, #ddd6fe 50%, #c7d2fe 100%);
+      text-align: center;
+    }
+    .post-hero__tags { display: flex; gap: 0.5rem; justify-content: center; margin-bottom: 1.25rem; }
+    .post-hero__tag {
+      font-size: 0.7rem; font-weight: 600; text-transform: uppercase;
+      letter-spacing: 0.1em; color: var(--blue);
+      background: rgba(99,102,241,0.1); padding: 0.3rem 0.75rem; border-radius: 20px;
+    }
+    .post-hero__title {
+      font-size: clamp(1.8rem, 5vw, 3rem); font-weight: 800;
+      color: var(--navy); line-height: 1.2; margin-bottom: 1rem;
+      max-width: 720px; margin-left: auto; margin-right: auto;
+    }
+    .post-hero__meta {
+      font-size: 0.85rem; color: var(--slate-light);
+      display: flex; align-items: center; justify-content: center; gap: 1.5rem;
+    }
+    .post-hero__series { font-weight: 600; color: var(--blue); }
+    .post-hero__cover {
+      max-width: 480px; margin: 2.5rem auto 0;
+      border-radius: 16px; overflow: hidden;
+      box-shadow: 0 20px 60px rgba(99,102,241,0.15);
+    }
+    .post-hero__cover img { width: 100%; display: block; }
+    .post-body { max-width: 720px; margin: 0 auto; padding: 3rem 2rem 6rem; }
+    .post-body h2 {
+      font-size: 1.6rem; font-weight: 800; color: var(--navy);
+      margin: 3rem 0 1rem; padding-bottom: 0.5rem;
+      border-bottom: 2px solid rgba(99,102,241,0.15);
+    }
+    .post-body h3 { font-size: 1.25rem; font-weight: 700; color: var(--navy); margin: 2.25rem 0 0.75rem; }
+    .post-body h4 { font-size: 1.05rem; font-weight: 700; color: var(--navy); margin: 1.75rem 0 0.6rem; }
+    .post-body p { margin-bottom: 1.25rem; }
+    .post-body strong { font-weight: 700; color: var(--navy); }
+    .post-body a { color: var(--blue); text-decoration: underline; text-decoration-thickness: 1px; text-underline-offset: 2px; }
+    .post-body pre {
+      background: var(--code-bg); border-radius: 12px; padding: 1.5rem;
+      margin: 1.25rem 0 1.5rem; overflow-x: auto; border: 1px solid rgba(255,255,255,0.05);
+    }
+    .post-body pre code {
+      font-family: var(--mono); font-size: 0.85rem; color: #e2e8f0; line-height: 1.7;
+    }
+    .post-body code {
+      font-family: var(--mono); font-size: 0.88em;
+      background: rgba(99,102,241,0.08); color: #4f46e5;
+      padding: 0.15em 0.45em; border-radius: 5px;
+    }
+    .post-body pre code { background: none; color: #e2e8f0; padding: 0; }
+    .post-body ul, .post-body ol { margin: 0.5rem 0 1.25rem 1.5rem; }
+    .post-body li { margin-bottom: 0.4rem; }
+    .post-body table { width: 100%; border-collapse: collapse; margin: 1.25rem 0 1.5rem; font-size: 0.9rem; }
+    .post-body th {
+      background: rgba(99,102,241,0.06); font-weight: 700; color: var(--navy);
+      padding: 0.75rem 1rem; text-align: left; border-bottom: 2px solid rgba(99,102,241,0.15);
+    }
+    .post-body td { padding: 0.65rem 1rem; border-bottom: 1px solid #e2e8f0; }
+    .post-body blockquote, .tip {
+      background: rgba(99,102,241,0.06); border-left: 4px solid var(--blue);
+      padding: 1rem 1.25rem; border-radius: 0 10px 10px 0;
+      margin: 1.25rem 0; font-size: 0.95rem; color: var(--navy);
+    }
+    .post-body hr {
+      border: none; height: 1px;
+      background: linear-gradient(90deg, transparent, rgba(99,102,241,0.2), transparent);
+      margin: 3rem 0;
+    }
+    .post-series-footer {
+      text-align: center; font-size: 0.85rem; color: var(--gray);
+      font-style: italic; margin-top: 2rem; padding-top: 2rem; border-top: 1px solid #e2e8f0;
+    }
+    /* Nav between posts */
+    .post-nav { max-width: 720px; margin: 0 auto; padding: 0 2rem 3rem; display: flex; gap: 1.5rem; flex-wrap: wrap; }
+    .post-nav__link {
+      flex: 1; min-width: 200px; padding: 1.25rem 1.5rem; border-radius: 12px;
+      background: rgba(255,255,255,0.85); backdrop-filter: blur(16px);
+      border: 1px solid rgba(255,255,255,0.6); box-shadow: 0 4px 16px rgba(0,0,0,0.05);
+      text-decoration: none; color: inherit; transition: transform 0.2s, box-shadow 0.2s;
+    }
+    .post-nav__link:hover { transform: translateY(-2px); box-shadow: 0 8px 24px rgba(99,102,241,0.1); }
+    .post-nav__dir { font-size: 0.75rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.1em; color: var(--blue); margin-bottom: 0.35rem; }
+    .post-nav__title { font-size: 0.9rem; font-weight: 600; color: var(--navy); line-height: 1.4; }
+    .blog-footer { background: var(--navy); padding: 2rem 0; text-align: center; }
+    .blog-footer a { color: var(--blue-light); text-decoration: none; font-weight: 600; font-size: 0.9rem; }
+    .blog-footer span { color: var(--gray); font-size: 0.8rem; display: block; margin-top: 0.4rem; }
+    @media (max-width: 600px) {
+      .post-hero { padding: 7rem 1.25rem 2.5rem; }
+      .post-body { padding: 2rem 1.25rem 4rem; }
+      .post-body pre { padding: 1rem; border-radius: 8px; }
+      .post-hero__meta { flex-direction: column; gap: 0.4rem; }
+      .post-nav { padding: 0 1.25rem 3rem; }
+    }
+  </style>
+</head>
+<body>
+
+  <nav class="blog-nav">
+    <div class="blog-nav__inner">
+      <a href="../index.html#blog" class="blog-nav__back">‹ Back to Home</a>
+      <div class="blog-nav__title">CI/CD Pipeline</div>
+    </div>
+  </nav>
+
+  <header class="post-hero">
+    <div class="post-hero__tags">
+      <span class="post-hero__tag">CI/CD</span>
+      <span class="post-hero__tag">DevOps</span>
+      <span class="post-hero__tag">Automation</span>
+    </div>
+    <h1 class="post-hero__title">CI/CD Pipeline — ส่ง Code ขึ้น Production แบบอัตโนมัติ</h1>
+    <div class="post-hero__meta">
+      <span>By <strong>Anirach Mingkhwan</strong></span>
+      <span class="post-hero__series">DevOps & Vibe Coding 2026</span>
+    </div>
+    <div class="post-hero__cover">
+      <img src="../images/cicd-cover.png" alt="CI/CD Pipeline — cute dog illustration">
+    </div>
+  </header>
+
+  <article class="post-body">
+
+    <p>จากโพสต์ที่แล้วเราได้พูดถึง Git Branching ว่าแตก branch ยังไง merge กลับยังไง แล้วก็มี branching strategy แบบไหนบ้าง แต่พอ merge เสร็จแล้ว... <strong>แล้วยังไงต่อ?</strong></p>
+
+    <p>ถ้าต้อง build เอง test เอง deploy เอง ทุกครั้งที่มี code ใหม่ มันก็เหนื่อยและเสี่ยงพลาดมาก ยิ่งทีมใหญ่ขึ้น deploy บ่อยขึ้น ยิ่งวุ่น</p>
+
+    <p>นี่คือที่มาของ <strong>CI/CD Pipeline</strong> — ระบบที่จัดการทุกอย่างตั้งแต่ code เข้า repo จนถึง deploy ขึ้น production ให้เราแบบอัตโนมัติ</p>
+
+    <hr>
+
+    <h2>CI/CD คืออะไร?</h2>
+
+    <p>CI/CD ย่อมาจาก 2 คำ:</p>
+
+    <h3>CI — Continuous Integration</h3>
+    <p><strong>"รวม code บ่อยๆ ทดสอบอัตโนมัติทุกครั้ง"</strong></p>
+    <p>ทุกครั้งที่ developer push code ขึ้น repo ระบบจะ:</p>
+    <ol>
+      <li>ดึง code มา build อัตโนมัติ</li>
+      <li>รัน test ทั้งหมด</li>
+      <li>แจ้งผลว่า ✅ ผ่าน หรือ ❌ ไม่ผ่าน</li>
+    </ol>
+    <p>ถ้าไม่มี CI → developer push code → ไม่มีใครรู้ว่าพังจนกว่าจะไป deploy จริง 💀</p>
+
+    <h3>CD — Continuous Delivery / Continuous Deployment</h3>
+    <p><strong>Continuous Delivery:</strong> code ที่ผ่าน test แล้ว <strong>พร้อม deploy ได้ทันที</strong> แต่ยังต้องกดปุ่ม deploy เอง</p>
+    <p><strong>Continuous Deployment:</strong> code ที่ผ่าน test แล้ว <strong>deploy ขึ้น production อัตโนมัติเลย</strong> ไม่ต้องกดอะไร</p>
+
+<pre><code>Continuous Integration → Continuous Delivery → Continuous Deployment
+(build + test            (พร้อม deploy          (deploy อัตโนมัติ
+ อัตโนมัติ)               แต่กดเอง)              ไม่ต้องทำอะไร)</code></pre>
+
+    <hr>
+
+    <h2>Pipeline คืออะไร?</h2>
+
+    <p>Pipeline = <strong>ลำดับขั้นตอนที่ทำงานต่อเนื่องกัน</strong> ตั้งแต่ code เข้า repo จนถึง deploy</p>
+
+    <p>ลองนึกภาพโรงงานผลิตรถยนต์: วัตถุดิบเข้า → ประกอบชิ้นส่วน → ตรวจสอบคุณภาพ → ทาสี → ส่งมอบ</p>
+
+<pre><code>┌──────────┐   ┌──────────┐   ┌──────────┐   ┌──────────┐   ┌──────────┐
+│  Source  │ → │  Build   │ → │   Test   │ → │  Stage   │ → │  Deploy  │
+│  (code)  │   │ (compile)│   │ (verify) │   │ (preview)│   │  (prod)  │
+└──────────┘   └──────────┘   └──────────┘   └──────────┘   └──────────┘</code></pre>
+
+    <p>ถ้าขั้นตอนใด <strong>fail</strong> → pipeline หยุดทันที → แจ้ง developer → ไม่มี code พังหลุดไป production</p>
+
+    <hr>
+
+    <h2>แต่ละขั้นตอนทำอะไรบ้าง?</h2>
+
+    <h3>1. Source — รับ Code เข้ามา</h3>
+    <p>Pipeline เริ่มทำงานเมื่อมี <strong>trigger</strong> เช่น:</p>
+    <ul>
+      <li>Push code ขึ้น branch</li>
+      <li>เปิด Pull Request</li>
+      <li>Merge เข้า main</li>
+      <li>ตั้งเวลา (cron schedule)</li>
+    </ul>
+
+<pre><code># ตัวอย่าง GitHub Actions trigger
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main]</code></pre>
+
+    <h3>2. Build — สร้างโปรเจกต์</h3>
+    <p>ขั้นตอนนี้คือการ <strong>compile code และติดตั้ง dependencies</strong> ให้พร้อมใช้งาน</p>
+    <p>ตัวอย่างสิ่งที่เกิดขึ้น:</p>
+    <ul>
+      <li><code>npm install</code> → ติดตั้ง packages</li>
+      <li><code>npm run build</code> → compile TypeScript, bundle React, etc.</li>
+      <li>สร้าง Docker image</li>
+      <li>สร้าง artifact (.jar, .whl, binary)</li>
+    </ul>
+
+<pre><code>jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - run: npm ci
+      - run: npm run build</code></pre>
+
+    <p>ถ้า build fail → มักเป็นเพราะ:</p>
+    <ul>
+      <li>Syntax error</li>
+      <li>Missing dependency</li>
+      <li>Version conflict</li>
+    </ul>
+
+    <h3>3. Test — ทดสอบ</h3>
+    <p><strong>ขั้นตอนสำคัญที่สุด</strong> — ถ้าไม่มี test ก็ไม่ต่างจากการ deploy แบบลุ้นดวง 🎲</p>
+
+    <p>ระดับของ Test:</p>
+
+    <table>
+      <thead>
+        <tr><th>ระดับ</th><th>ทดสอบอะไร</th><th>ความเร็ว</th><th>ตัวอย่าง</th></tr>
+      </thead>
+      <tbody>
+        <tr><td><strong>Unit Test</strong></td><td>ฟังก์ชันเดี่ยวๆ</td><td>เร็วมาก (วินาที)</td><td><code>calculate(2,3)</code> ต้องได้ <code>5</code></td></tr>
+        <tr><td><strong>Integration Test</strong></td><td>หลายส่วนทำงานร่วมกัน</td><td>ปานกลาง</td><td>API + Database</td></tr>
+        <tr><td><strong>E2E Test</strong></td><td>ทั้งระบบจากมุม user</td><td>ช้า (นาที)</td><td>กด Login → เห็น Dashboard</td></tr>
+      </tbody>
+    </table>
+
+<pre><code>- run: npm test          # Unit tests
+- run: npm run test:e2e  # E2E tests
+- run: npm run lint      # Code style check
+- run: npm audit         # Security check</code></pre>
+
+    <p><strong>Testing Pyramid:</strong></p>
+<pre><code>         /\
+        /  \         E2E Tests (น้อย แต่ครอบคลุม)
+       /----\
+      /      \       Integration Tests (ปานกลาง)
+     /--------\
+    /          \     Unit Tests (เยอะที่สุด เร็วที่สุด)
+   /____________\</code></pre>
+
+    <h3>4. Stage — Preview ก่อน Deploy จริง</h3>
+    <p>บาง pipeline จะมีขั้นตอน <strong>staging</strong> คือ deploy ไปที่ environment ที่เหมือน production ทุกอย่าง แต่ยังไม่ใช่ของจริง</p>
+    <p>ประโยชน์:</p>
+    <ul>
+      <li>ทดสอบกับ data ที่เหมือนจริง</li>
+      <li>ให้ QA team หรือ PM มา review ได้</li>
+      <li>ตรวจจับปัญหาที่ test อัตโนมัติจับไม่ได้</li>
+    </ul>
+
+    <h3>5. Deploy — ขึ้น Production</h3>
+    <p>ขั้นตอนสุดท้าย — code ไปถึงมือ user จริงๆ</p>
+    <p>วิธี deploy ที่นิยม:</p>
+
+    <h4>Rolling Update</h4>
+<pre><code>Server 1: v1 → v2 ✅
+Server 2: v1 → v2 ✅  (ทีละเครื่อง)
+Server 3: v1 → v2 ✅</code></pre>
+
+    <h4>Blue-Green Deployment</h4>
+<pre><code>Blue  (v1): ████████ ← traffic อยู่ที่นี่
+Green (v2): ████████ ← deploy ใหม่ที่นี่
+
+สลับ traffic:
+Blue  (v1): ████████
+Green (v2): ████████ ← traffic มาที่นี่แล้ว ✅</code></pre>
+
+    <h4>Canary Deployment</h4>
+<pre><code>v1: 90% traffic  ████████████████████
+v2: 10% traffic  ██  ← ทดสอบกับ user จริงส่วนน้อย
+
+ถ้า OK → ค่อยๆเพิ่ม:
+v1: 50% traffic  ██████████
+v2: 50% traffic  ██████████
+
+จนสุดท้าย:
+v2: 100% traffic ████████████████████ ✅</code></pre>
+
+    <hr>
+
+    <h2>ตัวอย่าง Pipeline จริงด้วย GitHub Actions</h2>
+
+<pre><code>name: CI/CD Pipeline
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  # ===== CI =====
+  build-and-test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Build
+        run: npm run build
+
+      - name: Unit Tests
+        run: npm test -- --coverage
+
+      - name: Upload coverage
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage
+          path: coverage/
+
+  # ===== CD =====
+  deploy:
+    needs: build-and-test    # รอ CI ผ่านก่อน
+    if: github.ref == 'refs/heads/main'  # deploy เฉพาะ main
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Deploy to production
+        run: |
+          echo "Deploying to production..."
+          # คำสั่ง deploy จริงๆ เช่น:
+          # ssh user@server 'cd /app && git pull && npm ci && pm2 restart all'
+          # หรือ docker push + kubectl apply</code></pre>
+
+    <hr>
+
+    <h2>เครื่องมือ CI/CD ยอดนิยม</h2>
+
+    <table>
+      <thead>
+        <tr><th>เครื่องมือ</th><th>ประเภท</th><th>จุดเด่น</th><th>เหมาะกับ</th></tr>
+      </thead>
+      <tbody>
+        <tr><td><strong>GitHub Actions</strong></td><td>Cloud</td><td>ใช้ง่าย, ฟรีสำหรับ public repo</td><td>โปรเจกต์บน GitHub</td></tr>
+        <tr><td><strong>GitLab CI/CD</strong></td><td>Cloud/Self-hosted</td><td>Pipeline ดี, มี container registry</td><td>องค์กรที่ใช้ GitLab</td></tr>
+        <tr><td><strong>Jenkins</strong></td><td>Self-hosted</td><td>Plugin เยอะ, ปรับแต่งได้มาก</td><td>องค์กรใหญ่</td></tr>
+        <tr><td><strong>CircleCI</strong></td><td>Cloud</td><td>เร็ว, config ง่าย</td><td>Startup/ทีมเล็ก</td></tr>
+        <tr><td><strong>ArgoCD</strong></td><td>Self-hosted</td><td>GitOps สำหรับ Kubernetes</td><td>ทีมที่ใช้ K8s</td></tr>
+      </tbody>
+    </table>
+
+    <hr>
+
+    <h2>Best Practices</h2>
+
+    <h3>1. Keep Pipeline Fast ⚡</h3>
+    <p>Pipeline ที่ช้าเกินไป developer จะไม่อยากรอ → เริ่มข้าม → เสียประโยชน์</p>
+    <p>เป้าหมาย:</p>
+    <ul>
+      <li><strong>Build + Unit Test:</strong> &lt; 5 นาที</li>
+      <li><strong>ทั้ง pipeline:</strong> &lt; 15 นาที</li>
+    </ul>
+    <div class="tip"><strong>เคล็ดลับ:</strong> cache dependencies, รัน test แบบ parallel, แยก slow test ออก</div>
+
+    <h3>2. Test ให้ครอบคลุม 🧪</h3>
+    <ul>
+      <li>ตั้งเป้า code coverage &gt; 80%</li>
+      <li>มี unit test สำหรับ business logic ที่สำคัญ</li>
+      <li>อย่าลืม edge case และ error handling</li>
+    </ul>
+
+    <h3>3. Fail Fast, Fix Fast 🔴</h3>
+    <ul>
+      <li>ถ้า pipeline fail → แก้เป็นอันดับแรก ก่อนทำอย่างอื่น</li>
+      <li>อย่าปล่อยให้ pipeline แดงค้าง → ทีมจะชินกับ "แดงก็แดง"</li>
+    </ul>
+
+    <h3>4. ใช้ Environment Variables สำหรับ Secrets 🔐</h3>
+<pre><code># ❌ อย่าทำ
+- run: mysql -u root -p mypassword123
+
+# ✅ ทำแบบนี้
+- run: mysql -u $DB_USER -p $DB_PASSWORD
+  env:
+    DB_USER: ${{ secrets.DB_USER }}
+    DB_PASSWORD: ${{ secrets.DB_PASSWORD }}</code></pre>
+
+    <h3>5. ทำให้ Pipeline เหมือนกันทุก Environment 🔄</h3>
+    <p>Development → Staging → Production ควรใช้ pipeline เดียวกัน ต่างกันแค่ config</p>
+
+    <hr>
+
+    <h2>เปรียบเทียบ: ก่อน vs หลังใช้ CI/CD</h2>
+
+    <table>
+      <thead>
+        <tr><th></th><th>ก่อน CI/CD</th><th>หลัง CI/CD</th></tr>
+      </thead>
+      <tbody>
+        <tr><td><strong>Build</strong></td><td>ทำมือ, "ลืม build"</td><td>อัตโนมัติทุก push</td></tr>
+        <tr><td><strong>Test</strong></td><td>"เดี๋ยว test ทีหลัง"</td><td>test ทุกครั้ง ถ้าไม่ผ่านหยุดเลย</td></tr>
+        <tr><td><strong>Deploy</strong></td><td>SSH เข้าเซิร์ฟเวอร์ ลาก file ด้วยมือ</td><td>กดปุ่มเดียว หรืออัตโนมัติ</td></tr>
+        <tr><td><strong>Bug พบตอนไหน</strong></td><td>ตอน user โทรมาด่า</td><td>ตอน pipeline fail (ก่อน deploy)</td></tr>
+        <tr><td><strong>ความมั่นใจ</strong></td><td>"หวังว่าจะไม่พัง" 🤞</td><td>"test ผ่านแล้ว มั่นใจ" ✅</td></tr>
+        <tr><td><strong>Deploy frequency</strong></td><td>เดือนละครั้ง (กลัวพัง)</td><td>วันละหลายครั้ง</td></tr>
+      </tbody>
+    </table>
+
+    <hr>
+
+    <h2>สรุป</h2>
+
+    <ul>
+      <li><strong>CI (Continuous Integration)</strong> = build + test อัตโนมัติทุกครั้งที่ push code</li>
+      <li><strong>CD (Continuous Delivery/Deployment)</strong> = deploy อัตโนมัติ (หรือกึ่งอัตโนมัติ) ไป production</li>
+      <li><strong>Pipeline</strong> = ลำดับขั้นตอน: Source → Build → Test → Stage → Deploy</li>
+      <li>ถ้าขั้นตอนใด fail → pipeline หยุด → <strong>ไม่มี code พังหลุดไป production</strong></li>
+      <li>เลือกเครื่องมือตามทีมและโปรเจกต์: <strong>GitHub Actions</strong> เหมาะสำหรับเริ่มต้น</li>
+      <li><strong>Pipeline เร็ว + test ครอบคลุม + fix fast</strong> = DevOps ที่ดี</li>
+    </ul>
+
+    <p>ในโพสต์หน้าเราจะมาพูดถึง <strong>Docker</strong> — เครื่องมือที่ทำให้ "It works on my machine" กลายเป็นเรื่องในอดีต! 🐳🐕</p>
+
+    <div class="post-series-footer">
+      บทความจากซีรีส์ DevOps & Vibe Coding 2026
+    </div>
+
+  </article>
+
+  <!-- Post Navigation -->
+  <div class="post-nav">
+    <a href="git-branching.html" class="post-nav__link">
+      <div class="post-nav__dir">← Previous</div>
+      <div class="post-nav__title">Git Branching — แตกกิ่งก้านสาขาให้เป็นระบบ</div>
+    </a>
+  </div>
+
+  <footer class="blog-footer">
+    <a href="../index.html#blog">← Back to Blog</a>
+    <span>© 2025 Anirach Mingkhwan — Associate Professor, KMUTNB</span>
+  </footer>
+
+</body>
+</html>
