@@ -403,6 +403,8 @@ jobs:
 
     <h3>Security Testing Types</h3>
 
+    <p>การทำ security testing ใน CI/CD มีหลายแบบที่ทำงานร่วมกันเป็น defense in depth แต่ละประเภทมีจุดแข็งและจุดอ่อนต่างกัน การเข้าใจความแตกต่างจะช่วยให้เราเลือกใช้ tools ได้เหมาะสมและไม่ทำ security testing ซ้ำซ้อนหรือเสียเวลาโดยเปล่าประโยชน์</p>
+
     <table>
       <thead><tr><th>Type</th><th>ตัวย่อ</th><th>ทำอะไร</th><th>เครื่องมือ</th></tr></thead>
       <tbody>
@@ -415,9 +417,17 @@ jobs:
       </tbody>
     </table>
 
+    <p>SAST (Static Application Security Testing) ทำงานโดยวิเคราะห์ source code โดยไม่ต้องรัน application จริง ข้อดีคือเร็วและสามารถหาช่องโหว่ได้ตั้งแต่เริ่มเขียน code แต่ข้อเสียคืออาจมี false positives สูงและไม่สามารถตรวจหาปัญหาที่เกิดจาก runtime behavior ได้ SCA (Software Composition Analysis) เน้นไปที่ third-party dependencies ซึ่งในปัจจุบันคิดเป็นส่วนใหญ่ของ modern applications</p>
+
+    <p>DAST (Dynamic Application Security Testing) ทำงานโดยจำลองการโจมตี application ที่กำลังรันอยู่ ข้อดีคือสามารถหาปัญหาที่ SAST หาไม่ได้ เช่น configuration issues หรือ runtime-specific vulnerabilities แต่ข้อเสียคือใช้เวลานานและต้องมี running application Container scanning, IaC scanning, และ secret scanning เป็น specialized tools สำหรับ cloud-native environments ที่ complement SAST/DAST แต่ focus ไปที่ attack vectors ใหม่ๆ ที่เกิดจาก containerization และ infrastructure as code</p>
+
     <hr>
 
     <h2>🏰 Server Hardening</h2>
+
+    <p>Server Hardening คือกระบวนการลด attack surface ของ server โดยการปิดใช้งาน services ที่ไม่จำเป็น กำหนด security configurations และติดตั้ง defensive mechanisms ต่างๆ เป็นขั้นตอนสำคัญที่ทุก server ที่จะเปิดให้ public access ต้องทำก่อน deploy applications ขึ้นไป</p>
+
+    <p>หลักการของ server hardening ยึดตาม defense in depth และ principle of least privilege นั่นคือสร้างการป้องกันหลายชั้น และให้สิทธิ์เฉพาะที่จำเป็นเท่านั้น การ hardening ที่ดีต้องสมดุลระหว่างความปลอดภัยและ usability - ป้องกันดี แต่ไม่ทำให้การบริหารจัดการ server ยากจนเกินไป</p>
 
     <pre><code>#!/bin/bash
 # server-hardening.sh — Basic hardening for Ubuntu
@@ -455,11 +465,21 @@ sudo dpkg-reconfigure -plow unattended-upgrades
 sudo systemctl disable bluetooth
 sudo systemctl disable cups</code></pre>
 
+    <p>Script นี้ครอบคลุม hardening พื้นฐานที่จำเป็น ขั้นแรกคือการ update ระบบให้เป็นปัจจุบันเพื่อได้ security patches ล่าสุด การสร้าง non-root user สำหรับการจัดการประจำป้องกันไม่ให้ต้องใช้ root account ซึ่งมีสิทธิ์เต็มระบบ SSH hardening ปิดการ login ด้วย root และบังคับให้ใช้ SSH keys แทน passwords ซึ่งป้องกัน brute force attacks ได้ดีกว่า</p>
+
+    <p>UFW (Uncomplicated Firewall) เป็น interface ที่ใช้งานง่ายสำหรับ iptables ซึ่งเป็น Linux firewall การตั้งค่าให้ deny incoming ทั้งหมดแล้วอนุญาตเฉพาะ ports ที่จำเป็นเป็นการใช้ default deny principle Fail2ban ทำหน้าที่ monitor logs แล้ว automatically ban IP addresses ที่มี suspicious activities เช่น failed login attempts หลายครั้ง</p>
+
+    <p>Automatic security updates ช่วยให้ระบบได้รับ security patches โดยอัตโนมัติโดยไม่ต้องรอให้ administrator มา manually update การ disable unused services ลด attack surface โดยการปิด services ที่ไม่จำเป็น เช่น Bluetooth หรือ printing services บน server ที่ไม่ต้องใช้ features เหล่านี้ ซึ่งเป็นการประยุกต์ใช้หลักการ minimize attack surface</p>
+
     <hr>
 
     <h2>🔐 Supply Chain Security</h2>
 
     <p>ช่องโหว่ไม่ได้มาจาก code เราเสมอ — มาจาก <strong>dependencies</strong> ที่เราใช้!</p>
+
+    <p>Supply Chain Security เป็นเรื่องที่ได้รับความสนใจมากขึ้นในช่วงหลังๆ เนื่องจาก modern applications ส่วนใหญ่ใช้ open source libraries และ dependencies จำนวนมาก แต่ละ library อาจมี sub-dependencies อีกหลายต่อ ทำให้เกิด dependency tree ที่ซับซ้อนและยากต่อการควบคุม</p>
+
+    <p>ปัญหาคือ dependencies เหล่านี้กลายเป็น attack vector ใหม่ที่ attackers สามารถใช้โจมตีได้ ไม่ว่าจะเป็นการ inject malicious code เข้าไปใน popular packages (เช่น กรณี event-stream ใน npm) การใช้ typosquatting ล่อให้ developers install packages ที่มีชื่อคล้ายๆ หรือการ compromise maintainer accounts ของ popular libraries การป้องกัน supply chain attacks ต้องใช้แนวทางหลายด้าน</p>
 
     <pre><code># 1. Pin versions (อย่าใช้ latest!)
 # ❌ BAD
@@ -494,9 +514,17 @@ updates:
 npm info suspicious-package
 npx is-my-node-vulnerable</code></pre>
 
+    <p>การ pin versions เป็นวิธีการป้องกันที่สำคัญที่สุด การใช้ `latest` tags หรือ wildcard versions (เช่น `^1.0.0`) อาจดูสะดวก แต่เสี่ยงต่อการได้ malicious updates โดยไม่ได้ตั้งใจ การใช้ SHA256 digests ใน container images ยิ่งเพิ่มความมั่นใจว่าเราได้ image ที่เป็นตัวเดียวกันกับที่เราเทสไว้</p>
+
+    <p>Lock files เป็นกลไกสำคัญในการทำ reproducible builds และป้องกัน unexpected dependency changes แต่หลายๆ ทีมลืม commit lock files เข้า Git หรือ ignore พวกมัน ทำให้แต่ละครั้งที่ build อาจได้ dependency versions ที่ต่างกัน npm audit และ Dependabot ช่วยตรวจสอบ known vulnerabilities และสร้าง automated pull requests เพื่อ update vulnerable packages แต่ต้องระวังเรื่อง alert fatigue และต้องมีกระบวนการ review updates อย่างถูกต้อง</p>
+
     <hr>
 
     <h2>📋 Security Checklist สำหรับ DevOps</h2>
+
+    <p>Security checklist เป็นเครื่องมือสำคัญในการทำให้ security practices เป็น systematic และ repeatable ไม่ใช่แค่การพึ่งพา tribal knowledge หรือความจำของแต่ละคน การมี checklist ที่ชัดเจนช่วยให้ทีมสามารถ audit security posture ได้เป็นระยะ และช่วยให้ onboarding สมาชิกใหม่ทำได้ง่ายขึ้น</p>
+
+    <p>Checklist นี้ออกแบบมาให้ครอบคลุมพื้นที่สำคัญของ DevSecOps โดยแบ่งเป็นหมวดหมู่ตาม technical domains แต่ละรายการควรจะมี acceptance criteria ที่ชัดเจน และ verification method ที่สามารถ automate ได้เมื่อเป็นไปได้ ไม่ควรใช้ checklist นี้เป็น one-size-fits-all แต่ควร customize ตามความต้องการและ threat model ของแต่ละองค์กร</p>
 
     <h4>🔐 Secrets</h4>
     <ul>
@@ -546,9 +574,15 @@ npx is-my-node-vulnerable</code></pre>
       <li>☐ Incident response plan พร้อม</li>
     </ul>
 
+    <p>การใช้ checklist อย่างมีประสิทธิภาพต้องมีการ review และ update เป็นระยะ เพราะ threat landscape เปลี่ยนแปลงตลอดเวลา และ technology stacks ก็พัฒนาไปเรื่อยๆ นอกจากนี้ควรมีการ track compliance rate และ identify ข้อที่ทีมทำได้ยากหรือ skip บ่อยๆ เพื่อ improve processes หรือ tooling การมี automated checking เมื่อเป็นไปได้จะช่วยลด manual workload และเพิ่มความน่าเชื่อถือของการ audit</p>
+
     <hr>
 
     <h2>สรุป</h2>
+
+    <p>DevSecOps ไม่ใช่แค่ buzzword หรือ trend ที่จะผ่านไป แต่เป็น evolution ที่จำเป็นของ software development ในยุคที่ cyber threats เพิ่มขึ้นทั้งความซับซ้อนและความถี่ การนำ security เข้ามาเป็นส่วนหนึ่งของ development workflow ไม่ใช่แค่การเพิ่ม steps ใน pipeline แต่เป็นการเปลี่ยน mindset ของทั้งทีม</p>
+
+    <p>สิ่งสำคัญที่สุดคือการเริ่มต้นจากพื้นฐาน ไม่ต้องทำทุกอย่างพร้อมกัน เริ่มจากการไม่ commit secrets เข้า Git ใช้ HTTPS ทุกที่ และติดตั้ง basic security scanning ใน CI/CD แล้วค่อยๆ เพิ่ม sophistication ไปเรื่อยๆ การสร้าง security culture ที่ดีสำคัญกว่าการมี expensive security tools</p>
 
     <ul>
       <li><strong>DevSecOps</strong> = ฝัง security ในทุกขั้นตอน ไม่ใช่แค่ตอนท้าย (Shift Left)</li>
@@ -560,6 +594,10 @@ npx is-my-node-vulnerable</code></pre>
       <li><strong>Supply Chain</strong> = pin versions, lock files, Dependabot</li>
       <li><strong>Server Hardening</strong> = firewall, fail2ban, no root, auto updates 🔐🐕</li>
     </ul>
+
+    <p>DevOps & Vibe Coding series นี้เริ่มจาก Git basics และตามด้วย Docker, Kubernetes, Infrastructure as Code, Monitoring, จนมาถึง Security ในโพสต์สุดท้าย แต่ความจริงแล้ว security ไม่ใช่ "เรื่องสุดท้าย" แต่ควรเป็นเรื่องที่อยู่ใน DNA ของทุก practices ที่เราได้เรียนรู้มา ไม่ว่าจะเป็นการเขียน Dockerfiles, การออกแบบ Kubernetes manifests, หรือการเขียน Terraform configs</p>
+
+    <p>การเป็น DevOps Engineer ที่ดีในยุคปัจจุบันต้องคิด security first ไม่ใช่ security last เพราะในโลกที่ everything is connected และ attacks automated การมี security mindset จะช่วยป้องกันปัญหาใหญ่ที่อาจเกิดขึ้นกับธุรกิจและผู้ใช้งานของเรา 🔐🐕</p>
 
     <div class="post-series-footer">
       🎉 ครบ 10 โพสต์! DevOps & Vibe Coding 2026 Series Complete! 🚀<br>
