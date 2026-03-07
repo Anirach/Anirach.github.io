@@ -1,0 +1,688 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Docker Compose — จัดการหลาย Containers ด้วยไฟล์เดียว | Anirach Mingkhwan</title>
+  <meta name="description" content="เรียนรู้ Docker Compose ตั้งแต่พื้นฐาน services, volumes, networks ไปจนถึง multi-environment, health checks และ production patterns">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --navy: #0f172a; --blue: #6366f1; --blue-dark: #4f46e5; --blue-light: #818cf8;
+      --slate: #334155; --slate-light: #64748b; --gray: #94a3b8;
+      --bg: #f8fafc; --white: #ffffff; --code-bg: #1e293b;
+      --font: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+      --mono: 'JetBrains Mono', 'Fira Code', monospace;
+      --docker-blue: #2496ed;
+    }
+    html { scroll-behavior: smooth; }
+    body { font-family: var(--font); font-size: 17px; line-height: 1.8; color: var(--slate); background: var(--bg); -webkit-font-smoothing: antialiased; }
+    .blog-nav { position: fixed; top: 0; left: 0; right: 0; z-index: 100; background: rgba(248,250,252,0.85); backdrop-filter: blur(20px); border-bottom: 1px solid rgba(0,0,0,0.05); }
+    .blog-nav__inner { max-width: 860px; margin: 0 auto; padding: 0 2rem; height: 56px; display: flex; align-items: center; justify-content: space-between; }
+    .blog-nav__back { font-size: 0.85rem; font-weight: 500; color: var(--blue); text-decoration: none; }
+    .blog-nav__back:hover { color: #4f46e5; }
+    .blog-nav__title { font-size: 0.85rem; font-weight: 600; color: var(--navy); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 50%; }
+    .post-hero { padding: 8rem 2rem 3rem; background: linear-gradient(135deg, #0c1929 0%, #1a2744 50%, #1e3a5f 100%); text-align: center; }
+    .post-hero__tags { display: flex; gap: 0.5rem; justify-content: center; margin-bottom: 1.25rem; flex-wrap: wrap; }
+    .post-hero__tag { font-size: 0.7rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.1em; color: #60a5fa; background: rgba(96,165,250,0.15); padding: 0.3rem 0.75rem; border-radius: 20px; }
+    .post-hero__title { font-size: clamp(1.8rem, 5vw, 3rem); font-weight: 800; color: #fff; line-height: 1.2; margin-bottom: 1rem; max-width: 720px; margin-left: auto; margin-right: auto; }
+    .post-hero__meta { font-size: 0.85rem; color: rgba(255,255,255,0.6); display: flex; align-items: center; justify-content: center; gap: 1.5rem; }
+    .post-hero__series { font-weight: 600; color: #60a5fa; }
+    .post-hero__cover { max-width: 380px; margin: 2.5rem auto 0; border-radius: 16px; overflow: hidden; box-shadow: 0 20px 60px rgba(0,0,0,0.4); }
+    .post-hero__cover img { width: 100%; display: block; }
+    .post-body { max-width: 720px; margin: 0 auto; padding: 3rem 2rem 6rem; }
+    .post-body h2 { font-size: 1.6rem; font-weight: 800; color: var(--navy); margin: 3rem 0 1rem; padding-bottom: 0.5rem; border-bottom: 2px solid rgba(99,102,241,0.15); }
+    .post-body h3 { font-size: 1.25rem; font-weight: 700; color: var(--navy); margin: 2.25rem 0 0.75rem; }
+    .post-body h4 { font-size: 1.05rem; font-weight: 700; color: var(--navy); margin: 1.75rem 0 0.6rem; }
+    .post-body p { margin-bottom: 1.25rem; }
+    .post-body strong { font-weight: 700; color: var(--navy); }
+    .post-body a { color: var(--blue); text-decoration: underline; text-decoration-thickness: 1px; text-underline-offset: 2px; }
+    .post-body pre { background: var(--code-bg); border-radius: 12px; padding: 1.5rem; margin: 1.25rem 0 1.5rem; overflow-x: auto; border: 1px solid rgba(255,255,255,0.05); }
+    .post-body pre code { font-family: var(--mono); font-size: 0.82rem; color: #e2e8f0; line-height: 1.7; }
+    .post-body code { font-family: var(--mono); font-size: 0.88em; background: rgba(99,102,241,0.08); color: #4f46e5; padding: 0.15em 0.45em; border-radius: 5px; }
+    .post-body pre code { background: none; color: #e2e8f0; padding: 0; }
+    .post-body ul, .post-body ol { margin: 0.5rem 0 1.25rem 1.5rem; }
+    .post-body li { margin-bottom: 0.4rem; }
+    .post-body table { width: 100%; border-collapse: collapse; margin: 1.25rem 0 1.5rem; font-size: 0.9rem; }
+    .post-body th { background: rgba(99,102,241,0.06); font-weight: 700; color: var(--navy); padding: 0.75rem 1rem; text-align: left; border-bottom: 2px solid rgba(99,102,241,0.15); }
+    .post-body td { padding: 0.65rem 1rem; border-bottom: 1px solid #e2e8f0; }
+    .post-body blockquote { background: rgba(99,102,241,0.06); border-left: 4px solid var(--blue); padding: 1rem 1.25rem; border-radius: 0 10px 10px 0; margin: 1.25rem 0; font-size: 0.95rem; color: var(--navy); }
+    .post-body hr { border: none; height: 1px; background: linear-gradient(90deg, transparent, rgba(99,102,241,0.2), transparent); margin: 3rem 0; }
+    .post-series-footer { text-align: center; font-size: 0.85rem; color: var(--gray); font-style: italic; margin-top: 2rem; padding-top: 2rem; border-top: 1px solid #e2e8f0; }
+    .post-nav { max-width: 720px; margin: 0 auto; padding: 0 2rem 3rem; display: flex; gap: 1.5rem; flex-wrap: wrap; }
+    .post-nav__link { flex: 1; min-width: 200px; padding: 1.25rem 1.5rem; border-radius: 12px; background: rgba(255,255,255,0.85); backdrop-filter: blur(16px); border: 1px solid rgba(255,255,255,0.6); box-shadow: 0 4px 16px rgba(0,0,0,0.05); text-decoration: none; color: inherit; transition: transform 0.2s, box-shadow 0.2s; }
+    .post-nav__link:hover { transform: translateY(-2px); box-shadow: 0 8px 24px rgba(99,102,241,0.1); }
+    .post-nav__dir { font-size: 0.75rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.1em; color: var(--blue); margin-bottom: 0.35rem; }
+    .post-nav__title { font-size: 0.9rem; font-weight: 600; color: var(--navy); line-height: 1.4; }
+    .blog-footer { background: var(--navy); padding: 2rem 0; text-align: center; }
+    .blog-footer a { color: var(--blue-light); text-decoration: none; font-weight: 600; font-size: 0.9rem; }
+    .blog-footer span { color: var(--gray); font-size: 0.8rem; display: block; margin-top: 0.4rem; }
+    .arch-diagram { margin: 1.5rem 0 2rem; font-family: var(--font); }
+    .arch-box { border: 2px solid rgba(99,102,241,0.25); border-radius: 12px; padding: 1.25rem; background: linear-gradient(135deg, rgba(99,102,241,0.03), rgba(99,102,241,0.06)); }
+    .arch-label { font-size: 0.75rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.1em; color: var(--blue); text-align: center; margin-bottom: 0.75rem; }
+    .arch-row { display: flex; gap: 0.75rem; justify-content: center; flex-wrap: wrap; margin-bottom: 0.75rem; }
+    .arch-container { border: 2px solid rgba(99,102,241,0.2); border-radius: 10px; padding: 0.75rem; background: rgba(238,242,255,0.8); min-width: 120px; text-align: center; }
+    .arch-item { font-size: 0.78rem; font-weight: 600; color: var(--navy); padding: 0.3rem 0.6rem; margin: 0.25rem 0; background: rgba(99,102,241,0.08); border-radius: 6px; }
+    .arch-name { font-size: 0.72rem; font-weight: 700; color: var(--blue); margin-bottom: 0.35rem; }
+    .flow-diagram { display: flex; align-items: center; justify-content: center; gap: 0.5rem; flex-wrap: wrap; margin: 1.5rem 0 2rem; padding: 1.5rem; background: rgba(99,102,241,0.04); border-radius: 12px; }
+    .flow-step { text-align: center; padding: 0.75rem 1.25rem; background: white; border-radius: 10px; border: 1.5px solid rgba(99,102,241,0.15); box-shadow: 0 2px 8px rgba(0,0,0,0.04); }
+    .flow-step__title { font-size: 0.9rem; font-weight: 700; color: var(--navy); }
+    .flow-step__sub { font-size: 0.72rem; color: var(--gray); margin-top: 0.15rem; }
+    .flow-arrow { font-size: 1.2rem; color: var(--blue); font-weight: 700; }
+    @media (max-width: 600px) {
+      .post-hero { padding: 7rem 1.25rem 2.5rem; }
+      .post-body { padding: 2rem 1.25rem 4rem; }
+      .post-body pre { padding: 1rem; border-radius: 8px; }
+      .post-hero__meta { flex-direction: column; gap: 0.4rem; }
+      .post-nav { padding: 0 1.25rem 3rem; }
+      .flow-diagram { flex-direction: column; }
+    }
+  </style>
+</head>
+<body>
+
+  <nav class="blog-nav">
+    <div class="blog-nav__inner">
+      <a href="./" class="blog-nav__back">‹ Blog</a>
+      <div class="blog-nav__title">Docker Compose</div>
+    </div>
+  </nav>
+
+  <header class="post-hero">
+    <div class="post-hero__tags">
+      <span class="post-hero__tag">Docker Compose</span>
+      <span class="post-hero__tag">DevOps</span>
+      <span class="post-hero__tag">Containers</span>
+    </div>
+    <h1 class="post-hero__title">Docker Compose — จัดการหลาย Containers ด้วยไฟล์เดียว 🐳</h1>
+    <div class="post-hero__meta">
+      <span>By <strong style="color:#fff">Anirach Mingkhwan</strong></span>
+      <span class="post-hero__series">DevOps & Vibe Coding 2026</span>
+    </div>
+    <div class="post-hero__cover">
+      <img src="../images/docker-compose-cover.jpg" alt="Docker Compose — captain dog orchestrating containers">
+    </div>
+  </header>
+
+  <article class="post-body">
+
+    <p>ในโพสต์ Docker vs VMs เราเรียนรู้ว่า Docker สร้าง container ได้ง่าย แต่ <strong>app จริงมักใช้หลาย services</strong> — web server, API, database, cache, queue...</p>
+
+    <p>ถ้าต้อง <code>docker run</code> ทีละตัว ตั้ง network เอง ตั้ง volume เอง... <strong>จะบ้าตาย!</strong> 😵</p>
+
+    <p><strong>Docker Compose</strong> แก้ปัญหานี้ — กำหนดทุก service ในไฟล์ YAML เดียว แล้วรันด้วยคำสั่งเดียว! 🐳🐕</p>
+
+    <hr>
+
+    <h2>Docker Compose คืออะไร?</h2>
+
+    <p>Docker Compose คือเครื่องมือที่ช่วย <strong>กำหนด + รันหลาย containers พร้อมกัน</strong> ด้วยไฟล์ <code>docker-compose.yml</code> (หรือ <code>compose.yml</code>)</p>
+
+    <div class="flow-diagram">
+      <div class="flow-step">
+        <div class="flow-step__title">📝 เขียน YAML</div>
+        <div class="flow-step__sub">กำหนด services</div>
+      </div>
+      <span class="flow-arrow">→</span>
+      <div class="flow-step">
+        <div class="flow-step__title">🚀 docker compose up</div>
+        <div class="flow-step__sub">รันทุก service</div>
+      </div>
+      <span class="flow-arrow">→</span>
+      <div class="flow-step">
+        <div class="flow-step__title">✅ ทำงานร่วมกัน!</div>
+        <div class="flow-step__sub">network + volumes พร้อม</div>
+      </div>
+    </div>
+
+    <blockquote>
+      <strong>💡 จำง่ายๆ:</strong> Dockerfile = สูตรทำ 1 container | Docker Compose = สูตรทำทั้งร้านอาหาร (หลาย containers)
+    </blockquote>
+
+    <hr>
+
+    <h2>ตัวอย่างแรก — Web App + Database</h2>
+
+    <pre><code># docker-compose.yml
+services:
+  # Web Application
+  app:
+    build: .                     # build จาก Dockerfile ใน directory นี้
+    ports:
+      - "3000:3000"              # host:container
+    environment:
+      - DATABASE_URL=postgres://myuser:mypass@db:5432/mydb
+      - NODE_ENV=development
+    volumes:
+      - .:/app                   # mount code เข้าไป (dev mode)
+      - /app/node_modules        # ไม่ mount node_modules
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: unless-stopped
+
+  # PostgreSQL Database
+  db:
+    image: postgres:16-alpine
+    environment:
+      - POSTGRES_USER=myuser
+      - POSTGRES_PASSWORD=mypass
+      - POSTGRES_DB=mydb
+    volumes:
+      - pgdata:/var/lib/postgresql/data    # persist data
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: pg_isready -U myuser
+      interval: 10s
+      retries: 5
+
+volumes:
+  pgdata:                        # named volume สำหรับ DB data</code></pre>
+
+    <pre><code># รันทุก service
+docker compose up -d
+# [+] Running 3/3
+#  ✔ Network myapp_default  Created
+#  ✔ Container myapp-db-1   Started
+#  ✔ Container myapp-app-1  Started
+
+# ดูสถานะ
+docker compose ps
+# NAME           SERVICE   STATUS    PORTS
+# myapp-app-1    app       running   0.0.0.0:3000->3000/tcp
+# myapp-db-1     db        running   0.0.0.0:5432->5432/tcp
+
+# ดู logs
+docker compose logs -f app      # follow logs ของ app
+docker compose logs              # logs ทุก service
+
+# หยุดทุก service
+docker compose down              # หยุด + ลบ containers
+docker compose down -v           # + ลบ volumes ด้วย (⚠️ data หาย!)</code></pre>
+
+    <hr>
+
+    <h2>Full Stack — React + API + DB + Redis + Nginx</h2>
+
+    <div class="arch-diagram">
+      <div class="arch-box">
+        <div class="arch-label">Docker Compose Stack</div>
+        <div class="arch-row">
+          <div class="arch-container" style="background: rgba(59,130,246,0.1);">
+            <div class="arch-name">Nginx</div>
+            <div class="arch-item">:80 → frontend</div>
+            <div class="arch-item">/api → backend</div>
+          </div>
+        </div>
+        <div style="text-align: center; font-size: 1rem; color: var(--blue); font-weight: 700; margin: 0.5rem 0;">↓ reverse proxy ↓</div>
+        <div class="arch-row">
+          <div class="arch-container">
+            <div class="arch-name">Frontend</div>
+            <div class="arch-item">React :3000</div>
+          </div>
+          <div class="arch-container">
+            <div class="arch-name">Backend</div>
+            <div class="arch-item">Node.js :8080</div>
+          </div>
+        </div>
+        <div style="text-align: center; font-size: 1rem; color: var(--blue); font-weight: 700; margin: 0.5rem 0;">↓</div>
+        <div class="arch-row">
+          <div class="arch-container" style="background: rgba(34,197,94,0.08);">
+            <div class="arch-name">PostgreSQL</div>
+            <div class="arch-item">:5432</div>
+          </div>
+          <div class="arch-container" style="background: rgba(239,68,68,0.06);">
+            <div class="arch-name">Redis</div>
+            <div class="arch-item">:6379</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <pre><code># docker-compose.yml — Full Stack
+services:
+  # ─── Nginx Reverse Proxy ───
+  nginx:
+    image: nginx:alpine
+    ports:
+      - "80:80"
+    volumes:
+      - ./nginx/default.conf:/etc/nginx/conf.d/default.conf
+    depends_on:
+      - frontend
+      - backend
+    restart: always
+
+  # ─── React Frontend ───
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    environment:
+      - REACT_APP_API_URL=/api
+    expose:
+      - "3000"                   # expose ให้ nginx เห็น (ไม่เปิด host)
+
+  # ─── Node.js Backend ───
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    environment:
+      - DATABASE_URL=postgres://app:secret@db:5432/appdb
+      - REDIS_URL=redis://redis:6379
+      - JWT_SECRET=${JWT_SECRET}  # อ่านจาก .env file
+    expose:
+      - "8080"
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_started
+    restart: unless-stopped
+
+  # ─── PostgreSQL ───
+  db:
+    image: postgres:16-alpine
+    environment:
+      - POSTGRES_USER=app
+      - POSTGRES_PASSWORD=secret
+      - POSTGRES_DB=appdb
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ./db/init.sql:/docker-entrypoint-initdb.d/init.sql
+    healthcheck:
+      test: pg_isready -U app
+      interval: 10s
+      retries: 5
+    restart: unless-stopped
+
+  # ─── Redis Cache ───
+  redis:
+    image: redis:7-alpine
+    command: redis-server --appendonly yes
+    volumes:
+      - redisdata:/data
+    restart: unless-stopped
+
+volumes:
+  pgdata:
+  redisdata:</code></pre>
+
+    <h3>Nginx Config</h3>
+
+    <pre><code># nginx/default.conf
+upstream frontend {
+    server frontend:3000;
+}
+
+upstream backend {
+    server backend:8080;
+}
+
+server {
+    listen 80;
+
+    # Frontend
+    location / {
+        proxy_pass http://frontend;
+        proxy_set_header Host $host;
+    }
+
+    # API → Backend
+    location /api/ {
+        proxy_pass http://backend/;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+    }
+
+    # WebSocket support
+    location /ws {
+        proxy_pass http://backend;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection "upgrade";
+    }
+}</code></pre>
+
+    <hr>
+
+    <h2>🔧 Docker Compose คำสั่งสำคัญ</h2>
+
+    <pre><code># ─── Lifecycle ───
+docker compose up                # รัน (foreground)
+docker compose up -d             # รัน (background) ⭐
+docker compose down              # หยุด + ลบ containers
+docker compose down -v           # + ลบ volumes
+docker compose restart           # restart ทุก service
+docker compose stop              # หยุด (ไม่ลบ)
+docker compose start             # เริ่มจาก stop
+
+# ─── Build ───
+docker compose build             # build ทุก service
+docker compose build --no-cache  # build ใหม่ ไม่ใช้ cache
+docker compose up --build        # build แล้วรันเลย ⭐
+
+# ─── Status & Logs ───
+docker compose ps                # ดูสถานะ
+docker compose logs              # ดู logs ทั้งหมด
+docker compose logs -f backend   # follow logs ของ backend
+docker compose top               # ดู processes ในแต่ละ container
+
+# ─── Execute ───
+docker compose exec backend sh   # เข้าไปใน container ⭐
+docker compose exec db psql -U app appdb   # เข้า PostgreSQL
+docker compose run --rm backend npm test   # รันแล้วลบ container
+
+# ─── Scale ───
+docker compose up -d --scale backend=3   # รัน backend 3 ตัว!</code></pre>
+
+    <hr>
+
+    <h2>📁 .env File — แยก Config ออกจาก YAML</h2>
+
+    <pre><code># .env (อยู่ข้างๆ docker-compose.yml)
+POSTGRES_USER=app
+POSTGRES_PASSWORD=supersecret
+POSTGRES_DB=myapp
+JWT_SECRET=my-jwt-secret-key
+NODE_ENV=development
+APP_PORT=3000</code></pre>
+
+    <pre><code># docker-compose.yml — ใช้ตัวแปรจาก .env
+services:
+  backend:
+    build: ./backend
+    ports:
+      - "${APP_PORT}:${APP_PORT}"
+    environment:
+      - DATABASE_URL=postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}
+      - JWT_SECRET=${JWT_SECRET}
+      - NODE_ENV=${NODE_ENV}
+      - PORT=${APP_PORT}
+
+  db:
+    image: postgres:16-alpine
+    environment:
+      - POSTGRES_USER=${POSTGRES_USER}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+      - POSTGRES_DB=${POSTGRES_DB}</code></pre>
+
+    <blockquote>
+      <strong>🐕 สำคัญ!</strong> อย่าลืมใส่ <code>.env</code> ใน <code>.gitignore</code> — ไม่ commit secrets เข้า Git!
+    </blockquote>
+
+    <hr>
+
+    <h2>🔀 Multi-Environment — Dev vs Production</h2>
+
+    <h3>วิธีที่ 1: Override Files</h3>
+
+    <pre><code># docker-compose.yml (base — shared config)
+services:
+  backend:
+    build: ./backend
+    environment:
+      - DATABASE_URL=postgres://app:pass@db:5432/mydb
+    depends_on:
+      - db
+  db:
+    image: postgres:16-alpine
+
+# docker-compose.override.yml (dev — auto-loaded!)
+services:
+  backend:
+    volumes:
+      - ./backend:/app           # hot reload
+    ports:
+      - "8080:8080"
+      - "9229:9229"              # debug port
+    environment:
+      - NODE_ENV=development
+    command: npm run dev
+
+# docker-compose.prod.yml (production)
+services:
+  backend:
+    restart: always
+    environment:
+      - NODE_ENV=production
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+          cpus: '1.0'</code></pre>
+
+    <pre><code># Development (auto-loads override)
+docker compose up
+
+# Production (explicit file)
+docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d</code></pre>
+
+    <h3>วิธีที่ 2: Profiles</h3>
+
+    <pre><code>services:
+  backend:
+    build: ./backend
+    # ไม่มี profile = รันเสมอ
+
+  db:
+    image: postgres:16-alpine
+    # ไม่มี profile = รันเสมอ
+
+  # Dev tools — รันเฉพาะ dev
+  adminer:
+    image: adminer
+    ports:
+      - "8888:8080"
+    profiles:
+      - dev                      # รันเมื่อ --profile dev
+
+  mailhog:
+    image: mailhog/mailhog
+    ports:
+      - "8025:8025"
+    profiles:
+      - dev
+
+  # Monitoring — รันเฉพาะ monitoring
+  prometheus:
+    image: prom/prometheus
+    profiles:
+      - monitoring</code></pre>
+
+    <pre><code># รันแค่ base services
+docker compose up -d
+
+# รัน + dev tools
+docker compose --profile dev up -d
+
+# รัน + monitoring
+docker compose --profile monitoring up -d
+
+# รันทั้งหมด
+docker compose --profile dev --profile monitoring up -d</code></pre>
+
+    <hr>
+
+    <h2>💾 Volumes — เก็บข้อมูลถาวร</h2>
+
+    <pre><code>services:
+  db:
+    image: postgres:16-alpine
+    volumes:
+      # Named volume — Docker จัดการให้ (production)
+      - pgdata:/var/lib/postgresql/data
+
+      # Bind mount — map folder จาก host (dev)
+      - ./db/init.sql:/docker-entrypoint-initdb.d/init.sql
+
+  backend:
+    build: ./backend
+    volumes:
+      # Bind mount — hot reload สำหรับ dev
+      - ./backend/src:/app/src
+
+      # Anonymous volume — ป้องกัน overwrite
+      - /app/node_modules
+
+volumes:
+  pgdata:                        # ประกาศ named volume
+    driver: local</code></pre>
+
+    <pre><code># ดู volumes
+docker volume ls
+
+# ลบ volumes ที่ไม่ใช้
+docker volume prune
+
+# Backup database
+docker compose exec db pg_dump -U app mydb > backup.sql
+
+# Restore database
+cat backup.sql | docker compose exec -T db psql -U app mydb</code></pre>
+
+    <hr>
+
+    <h2>🌐 Networks — Container คุยกันยังไง</h2>
+
+    <pre><code>services:
+  frontend:
+    networks:
+      - frontend-net             # เข้าถึงได้จาก nginx
+
+  backend:
+    networks:
+      - frontend-net             # nginx เข้าถึงได้
+      - backend-net              # เข้าถึง db ได้
+
+  db:
+    networks:
+      - backend-net              # เฉพาะ backend เข้าถึง ✅
+                                 # frontend เข้าไม่ได้ ✅ (security!)
+
+networks:
+  frontend-net:
+  backend-net:</code></pre>
+
+    <blockquote>
+      <strong>💡 Security Tip:</strong> แยก network เพื่อ <strong>จำกัดการเข้าถึง</strong> — frontend ไม่ควรเข้า DB ตรงได้!
+    </blockquote>
+
+    <hr>
+
+    <h2>❤️ Health Checks — ตรวจสุขภาพ</h2>
+
+    <pre><code>services:
+  backend:
+    build: ./backend
+    healthcheck:
+      test: curl -f http://localhost:8080/health || exit 1
+      interval: 30s              # ตรวจทุก 30 วินาที
+      timeout: 10s               # timeout 10 วินาที
+      retries: 3                 # ลองใหม่ 3 ครั้ง
+      start_period: 40s          # รอ 40 วินาทีก่อนเริ่มตรวจ
+    depends_on:
+      db:
+        condition: service_healthy   # รอจน db healthy ก่อน!
+
+  db:
+    image: postgres:16-alpine
+    healthcheck:
+      test: pg_isready -U app
+      interval: 10s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    healthcheck:
+      test: redis-cli ping
+      interval: 10s
+      retries: 3</code></pre>
+
+    <hr>
+
+    <h2>🚀 Production Tips</h2>
+
+    <pre><code># docker-compose.prod.yml
+services:
+  backend:
+    image: myregistry.com/myapp:v2.1.0   # ใช้ image จาก registry (ไม่ build)
+    restart: always
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+          cpus: '1.0'
+        reservations:
+          memory: 256M
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"          # จำกัดขนาด log file
+        max-file: "3"            # เก็บแค่ 3 ไฟล์
+    read_only: true              # filesystem read-only (security)
+    tmpfs:
+      - /tmp                     # ให้เขียนได้แค่ /tmp
+    security_opt:
+      - no-new-privileges:true</code></pre>
+
+    <h3>Docker Compose vs Kubernetes</h3>
+
+    <table>
+      <thead><tr><th>Feature</th><th>Docker Compose</th><th>Kubernetes</th></tr></thead>
+      <tbody>
+        <tr><td>เหมาะกับ</td><td>Dev, small production</td><td>Large-scale production</td></tr>
+        <tr><td>เครื่อง</td><td>เครื่องเดียว</td><td>หลายเครื่อง (cluster)</td></tr>
+        <tr><td>Auto-scaling</td><td>❌ Manual scale</td><td>✅ HPA auto-scale</td></tr>
+        <tr><td>Self-healing</td><td>⚠️ restart policy</td><td>✅ Full self-healing</td></tr>
+        <tr><td>Rolling update</td><td>⚠️ Basic</td><td>✅ Zero-downtime</td></tr>
+        <tr><td>ความซับซ้อน</td><td>ง่าย (1 YAML file)</td><td>ซับซ้อน (many manifests)</td></tr>
+        <tr><td>Learning curve</td><td>30 นาที</td><td>30 วัน+</td></tr>
+      </tbody>
+    </table>
+
+    <blockquote>
+      <strong>💡 กฎง่ายๆ:</strong> เครื่องเดียว + ทีมเล็ก = Docker Compose | หลายเครื่อง + scale = Kubernetes
+    </blockquote>
+
+    <hr>
+
+    <h2>สรุป</h2>
+
+    <ul>
+      <li><strong>Docker Compose</strong> = จัดการหลาย containers ด้วย <code>docker-compose.yml</code> ไฟล์เดียว</li>
+      <li><strong>คำสั่งหลัก</strong> = <code>up -d</code> (รัน), <code>down</code> (หยุด), <code>logs -f</code> (ดู log), <code>exec</code> (เข้า container)</li>
+      <li><strong>.env file</strong> = แยก secrets/config ออกจาก YAML (อย่า commit!)</li>
+      <li><strong>Multi-env</strong> = Override files หรือ Profiles แยก dev/prod</li>
+      <li><strong>Volumes</strong> = Named volumes สำหรับ data, Bind mounts สำหรับ dev</li>
+      <li><strong>Networks</strong> = แยก network เพื่อ security (frontend ≠ database)</li>
+      <li><strong>Health checks</strong> = ตรวจสุขภาพ + <code>depends_on condition: service_healthy</code></li>
+      <li><strong>Production</strong> = resource limits, logging, read-only filesystem 🐳🐕</li>
+    </ul>
+
+    <div class="post-series-footer">
+      บทความจากซีรีส์ DevOps & Vibe Coding 2026
+    </div>
+
+  </article>
+
+  <!-- Post Navigation -->
+  <div class="post-nav">
+    <a href="software-testing.html" class="post-nav__link">
+      <div class="post-nav__dir">← Previous</div>
+      <div class="post-nav__title">Software Testing — ทดสอบยังไงให้มั่นใจก่อน Deploy</div>
+    </a>
+  </div>
+
+  <footer class="blog-footer">
+    <a href="./">← Back to Blog</a>
+    <span>© 2025 Anirach Mingkhwan — Associate Professor, KMUTNB</span>
+  </footer>
+
+</body>
+</html>
