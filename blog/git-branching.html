@@ -1,0 +1,483 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Git Branching — แตกกิ่งก้านสาขาให้เป็นระบบ | Anirach Mingkhwan</title>
+  <meta name="description" content="เรียนรู้ Git Branching ตั้งแต่พื้นฐาน ไปจนถึง Merge, Conflict, และ Branching Strategy ยอดนิยม">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --navy: #0f172a;
+      --blue: #6366f1;
+      --blue-light: #818cf8;
+      --slate: #334155;
+      --slate-light: #64748b;
+      --gray: #94a3b8;
+      --bg: #f8fafc;
+      --white: #ffffff;
+      --code-bg: #1e293b;
+      --font: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+      --mono: 'JetBrains Mono', 'Fira Code', monospace;
+    }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      font-family: var(--font);
+      font-size: 17px;
+      line-height: 1.8;
+      color: var(--slate);
+      background: var(--bg);
+      -webkit-font-smoothing: antialiased;
+    }
+
+    /* ── NAV ── */
+    .blog-nav {
+      position: fixed; top: 0; left: 0; right: 0; z-index: 100;
+      background: rgba(248,250,252,0.85);
+      backdrop-filter: blur(20px);
+      border-bottom: 1px solid rgba(0,0,0,0.05);
+    }
+    .blog-nav__inner {
+      max-width: 860px; margin: 0 auto;
+      padding: 0 2rem; height: 56px;
+      display: flex; align-items: center; justify-content: space-between;
+    }
+    .blog-nav__back {
+      font-size: 0.85rem; font-weight: 500; color: var(--blue);
+      text-decoration: none; display: flex; align-items: center; gap: 0.4rem;
+    }
+    .blog-nav__back:hover { color: #4f46e5; }
+    .blog-nav__title {
+      font-size: 0.85rem; font-weight: 600; color: var(--navy);
+      overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+      max-width: 50%;
+    }
+
+    /* ── HERO ── */
+    .post-hero {
+      padding: 8rem 2rem 3rem;
+      background: linear-gradient(135deg, #e8f0fe 0%, #ddd6fe 50%, #c7d2fe 100%);
+      text-align: center;
+    }
+    .post-hero__tags {
+      display: flex; gap: 0.5rem; justify-content: center; margin-bottom: 1.25rem;
+    }
+    .post-hero__tag {
+      font-size: 0.7rem; font-weight: 600; text-transform: uppercase;
+      letter-spacing: 0.1em; color: var(--blue);
+      background: rgba(99,102,241,0.1); padding: 0.3rem 0.75rem;
+      border-radius: 20px;
+    }
+    .post-hero__title {
+      font-size: clamp(1.8rem, 5vw, 3rem); font-weight: 800;
+      color: var(--navy); line-height: 1.2; margin-bottom: 1rem;
+      max-width: 720px; margin-left: auto; margin-right: auto;
+    }
+    .post-hero__meta {
+      font-size: 0.85rem; color: var(--slate-light);
+      display: flex; align-items: center; justify-content: center; gap: 1.5rem;
+    }
+    .post-hero__series {
+      font-weight: 600; color: var(--blue);
+    }
+    .post-hero__cover {
+      max-width: 480px; margin: 2.5rem auto 0;
+      border-radius: 16px; overflow: hidden;
+      box-shadow: 0 20px 60px rgba(99,102,241,0.15);
+    }
+    .post-hero__cover img {
+      width: 100%; display: block;
+    }
+
+    /* ── ARTICLE ── */
+    .post-body {
+      max-width: 720px; margin: 0 auto;
+      padding: 3rem 2rem 6rem;
+    }
+
+    .post-body h2 {
+      font-size: 1.6rem; font-weight: 800; color: var(--navy);
+      margin: 3rem 0 1rem;
+      padding-bottom: 0.5rem;
+      border-bottom: 2px solid rgba(99,102,241,0.15);
+    }
+    .post-body h3 {
+      font-size: 1.25rem; font-weight: 700; color: var(--navy);
+      margin: 2.25rem 0 0.75rem;
+    }
+    .post-body h4 {
+      font-size: 1.05rem; font-weight: 700; color: var(--navy);
+      margin: 1.75rem 0 0.6rem;
+    }
+    .post-body p {
+      margin-bottom: 1.25rem;
+    }
+    .post-body strong {
+      font-weight: 700; color: var(--navy);
+    }
+    .post-body a {
+      color: var(--blue); text-decoration: underline;
+      text-decoration-thickness: 1px; text-underline-offset: 2px;
+    }
+
+    /* Code blocks */
+    .post-body pre {
+      background: var(--code-bg);
+      border-radius: 12px;
+      padding: 1.5rem;
+      margin: 1.25rem 0 1.5rem;
+      overflow-x: auto;
+      border: 1px solid rgba(255,255,255,0.05);
+    }
+    .post-body pre code {
+      font-family: var(--mono);
+      font-size: 0.85rem;
+      color: #e2e8f0;
+      line-height: 1.7;
+    }
+    .post-body code {
+      font-family: var(--mono);
+      font-size: 0.88em;
+      background: rgba(99,102,241,0.08);
+      color: #4f46e5;
+      padding: 0.15em 0.45em;
+      border-radius: 5px;
+    }
+    .post-body pre code {
+      background: none; color: #e2e8f0; padding: 0;
+    }
+
+    /* Lists */
+    .post-body ul, .post-body ol {
+      margin: 0.5rem 0 1.25rem 1.5rem;
+    }
+    .post-body li {
+      margin-bottom: 0.4rem;
+    }
+
+    /* Tables */
+    .post-body table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 1.25rem 0 1.5rem;
+      font-size: 0.9rem;
+    }
+    .post-body th {
+      background: rgba(99,102,241,0.06);
+      font-weight: 700; color: var(--navy);
+      padding: 0.75rem 1rem;
+      text-align: left;
+      border-bottom: 2px solid rgba(99,102,241,0.15);
+    }
+    .post-body td {
+      padding: 0.65rem 1rem;
+      border-bottom: 1px solid #e2e8f0;
+    }
+
+    /* Blockquote / tips */
+    .post-body blockquote, .tip {
+      background: rgba(99,102,241,0.06);
+      border-left: 4px solid var(--blue);
+      padding: 1rem 1.25rem;
+      border-radius: 0 10px 10px 0;
+      margin: 1.25rem 0;
+      font-size: 0.95rem;
+      color: var(--navy);
+    }
+
+    /* HR */
+    .post-body hr {
+      border: none;
+      height: 1px;
+      background: linear-gradient(90deg, transparent, rgba(99,102,241,0.2), transparent);
+      margin: 3rem 0;
+    }
+
+    /* Series tag at bottom */
+    .post-series-footer {
+      text-align: center; font-size: 0.85rem;
+      color: var(--gray); font-style: italic;
+      margin-top: 2rem; padding-top: 2rem;
+      border-top: 1px solid #e2e8f0;
+    }
+
+    /* ── FOOTER ── */
+    .blog-footer {
+      background: var(--navy); padding: 2rem 0;
+      text-align: center;
+    }
+    .blog-footer a {
+      color: var(--blue-light); text-decoration: none; font-weight: 600;
+      font-size: 0.9rem;
+    }
+    .blog-footer span {
+      color: var(--gray); font-size: 0.8rem; display: block; margin-top: 0.4rem;
+    }
+
+    /* ── RESPONSIVE ── */
+    @media (max-width: 600px) {
+      .post-hero { padding: 7rem 1.25rem 2.5rem; }
+      .post-body { padding: 2rem 1.25rem 4rem; }
+      .post-body pre { padding: 1rem; border-radius: 8px; }
+      .post-hero__meta { flex-direction: column; gap: 0.4rem; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- NAV -->
+  <nav class="blog-nav">
+    <div class="blog-nav__inner">
+      <a href="../index.html#blog" class="blog-nav__back">‹ Back to Home</a>
+      <div class="blog-nav__title">Git Branching</div>
+    </div>
+  </nav>
+
+  <!-- HERO -->
+  <header class="post-hero">
+    <div class="post-hero__tags">
+      <span class="post-hero__tag">Git</span>
+      <span class="post-hero__tag">DevOps</span>
+      <span class="post-hero__tag">Tutorial</span>
+    </div>
+    <h1 class="post-hero__title">Git Branching — แตกกิ่งก้านสาขาให้เป็นระบบ</h1>
+    <div class="post-hero__meta">
+      <span>By <strong>Anirach Mingkhwan</strong></span>
+      <span class="post-hero__series">DevOps & Vibe Coding 2026</span>
+    </div>
+    <div class="post-hero__cover">
+      <img src="../images/git-branching-cover.png" alt="Git Branching — cute dog illustration">
+    </div>
+  </header>
+
+  <!-- ARTICLE -->
+  <article class="post-body">
+
+    <p>ก่อนหน้านี้เราได้พูดถึงพื้นฐานของ Git ว่ามันคืออะไร ทำไมต้องใช้ แล้วมี commit กับ repository ยังไงบ้าง พอเราใช้ Git เป็นแล้ว คำถามต่อมาคือ <strong>ถ้ามีหลายคนทำงานบนโปรเจกต์เดียวกัน หรือเราอยากลองทำฟีเจอร์ใหม่โดยไม่พัง code หลัก จะทำยังไงดี?</strong></p>
+
+    <p>คำตอบคือ <strong>Branching</strong> — หรือการ "แตกกิ่ง" ออกจากสายหลักของ code เพื่อทำงานแยก แล้วค่อย merge กลับมาทีหลัง</p>
+
+    <hr>
+
+    <h2>Branch คืออะไร?</h2>
+
+    <p>Branch ใน Git ก็คือ <strong>ตัวชี้ (pointer) ไปยัง commit ตัวหนึ่ง</strong> เวลาเราสร้าง branch ใหม่ Git ไม่ได้ copy ไฟล์ทั้งหมด แค่สร้าง pointer ตัวใหม่ขึ้นมาชี้ไปที่ commit เดิม ทำให้การสร้าง branch <strong>เร็วมากและแทบไม่เปลืองพื้นที่เลย</strong></p>
+
+<pre><code>main:    A --- B --- C
+                      \
+feature:               D --- E</code></pre>
+
+    <p>จากตัวอย่าง:</p>
+    <ul>
+      <li><code>main</code> เป็น branch หลัก มี commit A, B, C</li>
+      <li><code>feature</code> แตกออกจาก C แล้วมี commit D, E ต่อไปเอง</li>
+      <li>ทั้งสอง branch <strong>ไม่กระทบกัน</strong> จนกว่าจะ merge</li>
+    </ul>
+
+    <hr>
+
+    <h2>ทำไมต้อง Branch?</h2>
+
+    <h3>1. ทำงานพร้อมกันได้</h3>
+    <p>สมมติทีมมี 3 คน:</p>
+    <ul>
+      <li>คนที่ 1 ทำ <strong>Login page</strong></li>
+      <li>คนที่ 2 ทำ <strong>Dashboard</strong></li>
+      <li>คนที่ 3 แก้ <strong>Bug ด่วน</strong></li>
+    </ul>
+    <p>ถ้าทุกคนทำบน branch เดียวกัน จะวุ่นวายมาก code ชนกัน commit ทับกัน ทำให้เสียเวลาแก้ conflict แต่ถ้าแต่ละคน <strong>แตก branch ของตัวเอง</strong> ก็ทำงานได้อิสระ เสร็จแล้วค่อย merge กลับ</p>
+
+    <h3>2. ลองของใหม่ได้โดยไม่เสี่ยง</h3>
+    <p>อยากลอง refactor ครั้งใหญ่? แตก branch ทดลองเลย ถ้าพัง ก็แค่ลบ branch ทิ้ง main ไม่โดนผลกระทบเลย</p>
+
+    <h3>3. Review code ก่อน merge</h3>
+    <p>ในทีมที่ทำงานจริง เราจะไม่ merge เข้า main ตรงๆ แต่จะเปิด <strong>Pull Request (PR)</strong> เพื่อให้คนอื่นมา review code ก่อน ซึ่งต้องใช้ branch ในการทำ</p>
+
+    <hr>
+
+    <h2>คำสั่งพื้นฐาน</h2>
+
+    <h3>สร้าง Branch ใหม่</h3>
+<pre><code>git branch feature-login</code></pre>
+    <p>คำสั่งนี้สร้าง branch ชื่อ <code>feature-login</code> แต่เรายังอยู่บน branch เดิมอยู่</p>
+
+    <h3>สลับไป Branch อื่น</h3>
+<pre><code>git checkout feature-login
+
+# หรือแบบสั้นกว่า (สร้าง + สลับในคำสั่งเดียว)
+git checkout -b feature-login</code></pre>
+
+    <p>ใน Git เวอร์ชันใหม่ (2.23+) สามารถใช้ <code>git switch</code> แทนได้:</p>
+<pre><code>git switch feature-login
+git switch -c feature-login  # สร้าง + สลับ</code></pre>
+
+    <h3>ดู Branch ทั้งหมด</h3>
+<pre><code>git branch       # ดูเฉพาะ local
+git branch -a    # ดูทั้ง local + remote</code></pre>
+
+    <h3>ลบ Branch</h3>
+<pre><code>git branch -d feature-login   # ลบ (ถ้า merge แล้ว)
+git branch -D feature-login   # ลบบังคับ (ยังไม่ merge ก็ลบ)</code></pre>
+
+    <hr>
+
+    <h2>Merge — รวม Branch กลับ</h2>
+
+    <p>เมื่อทำงานเสร็จแล้ว เราจะรวม branch กลับเข้า main:</p>
+<pre><code>git checkout main
+git merge feature-login</code></pre>
+
+    <h3>Fast-Forward Merge</h3>
+    <p>ถ้า main ไม่มี commit ใหม่ตั้งแต่แตก branch Git จะแค่ <strong>เลื่อน pointer ไปข้างหน้า</strong> เรียกว่า fast-forward:</p>
+<pre><code>ก่อน merge:
+main:    A --- B --- C
+                      \
+feature:               D --- E
+
+หลัง merge (fast-forward):
+main:    A --- B --- C --- D --- E</code></pre>
+
+    <h3>Three-Way Merge</h3>
+    <p>ถ้า main มี commit ใหม่เพิ่มมาด้วย Git จะสร้าง <strong>merge commit</strong> ขึ้นมาเชื่อมสอง branch:</p>
+<pre><code>ก่อน merge:
+main:    A --- B --- C --- F
+                      \
+feature:               D --- E
+
+หลัง merge (three-way):
+main:    A --- B --- C --- F --- M
+                      \         /
+feature:               D --- E</code></pre>
+    <p>โดย M คือ merge commit ที่รวมทั้งสอง branch เข้าด้วยกัน</p>
+
+    <hr>
+
+    <h2>Merge Conflict — เมื่อ code ชนกัน</h2>
+
+    <p>ถ้าทั้งสอง branch แก้ไข <strong>ไฟล์เดียวกัน บรรทัดเดียวกัน</strong> Git จะบอกว่า "เลือกเองนะ ไม่รู้จะเอาอันไหน" ซึ่งเรียกว่า <strong>conflict</strong></p>
+
+<pre><code>&lt;&lt;&lt;&lt;&lt;&lt;&lt; HEAD
+console.log("version from main");
+=======
+console.log("version from feature");
+&gt;&gt;&gt;&gt;&gt;&gt;&gt; feature-login</code></pre>
+
+    <p>วิธีแก้:</p>
+    <ol>
+      <li>เปิดไฟล์ที่ conflict</li>
+      <li>เลือกว่าจะเอา code ส่วนไหน (หรือรวมทั้งสอง)</li>
+      <li>ลบ <code>&lt;&lt;&lt;&lt;&lt;&lt;&lt;</code>, <code>=======</code>, <code>&gt;&gt;&gt;&gt;&gt;&gt;&gt;</code> ออก</li>
+      <li><code>git add</code> แล้ว <code>git commit</code></li>
+    </ol>
+
+    <div class="tip"><strong>เคล็ดลับ:</strong> merge บ่อยๆ conflict จะน้อย ถ้าปล่อยให้ branch แยกกันนานๆ conflict จะเยอะมาก</div>
+
+    <hr>
+
+    <h2>Branching Strategy ยอดนิยม</h2>
+
+    <h3>1. Git Flow</h3>
+    <p>เป็นรูปแบบที่เป็นระบบมากที่สุด เหมาะกับโปรเจกต์ที่มี release cycle ชัดเจน</p>
+
+    <table>
+      <thead>
+        <tr><th>Branch</th><th>หน้าที่</th></tr>
+      </thead>
+      <tbody>
+        <tr><td><code>main</code></td><td>code ที่ deploy อยู่บน production</td></tr>
+        <tr><td><code>develop</code></td><td>branch รวม feature ที่พัฒนาเสร็จแล้ว</td></tr>
+        <tr><td><code>feature/*</code></td><td>branch สำหรับแต่ละ feature</td></tr>
+        <tr><td><code>release/*</code></td><td>เตรียม release (ทดสอบ + แก้ bug)</td></tr>
+        <tr><td><code>hotfix/*</code></td><td>แก้ bug ด่วนบน production</td></tr>
+      </tbody>
+    </table>
+
+    <h3>2. GitHub Flow</h3>
+    <p>เรียบง่ายกว่ามาก เหมาะกับทีมที่ deploy บ่อยๆ (CI/CD):</p>
+    <ol>
+      <li>แตก branch จาก <code>main</code></li>
+      <li>ทำงาน + commit</li>
+      <li>เปิด Pull Request</li>
+      <li>Review + approve</li>
+      <li>Merge เข้า <code>main</code></li>
+      <li>Deploy</li>
+    </ol>
+
+    <h3>3. Trunk-Based Development</h3>
+    <p>เรียบง่ายสุดๆ ทุกคน commit เข้า <code>main</code> ตรงๆ แต่ใช้ <strong>feature flags</strong> เปิด/ปิดฟีเจอร์แทน เหมาะกับทีมที่มีประสบการณ์สูง + มี CI/CD ที่แข็งแกร่ง</p>
+
+    <hr>
+
+    <h2>เปรียบเทียบ Branching Strategy</h2>
+
+    <table>
+      <thead>
+        <tr><th></th><th>Git Flow</th><th>GitHub Flow</th><th>Trunk-Based</th></tr>
+      </thead>
+      <tbody>
+        <tr><td><strong>ความซับซ้อน</strong></td><td>สูง</td><td>ต่ำ</td><td>ต่ำมาก</td></tr>
+        <tr><td><strong>เหมาะกับ</strong></td><td>Release cycle ยาว</td><td>Deploy บ่อย</td><td>Deploy ทุก commit</td></tr>
+        <tr><td><strong>จำนวน branch</strong></td><td>เยอะ (5+ ประเภท)</td><td>น้อย (main + feature)</td><td>แทบไม่มี</td></tr>
+        <tr><td><strong>ข้อเสีย</strong></td><td>ซับซ้อนเกินไปสำหรับทีมเล็ก</td><td>ไม่เหมาะกับ release ที่ต้องวางแผน</td><td>ต้องมี CI/CD ที่ดีมาก</td></tr>
+      </tbody>
+    </table>
+
+    <hr>
+
+    <h2>คำสั่งที่ใช้บ่อย — สรุป</h2>
+
+<pre><code># สร้าง + สลับ branch
+git switch -c feature-name
+
+# push branch ไป remote
+git push -u origin feature-name
+
+# ดึง branch จาก remote
+git fetch origin
+git switch feature-name
+
+# merge กลับ main
+git switch main
+git merge feature-name
+
+# ลบ branch (local + remote)
+git branch -d feature-name
+git push origin --delete feature-name
+
+# ดู branch graph สวยๆ
+git log --oneline --graph --all</code></pre>
+
+    <hr>
+
+    <h2>สรุป</h2>
+
+    <ul>
+      <li><strong>Branch</strong> = pointer ไปยัง commit → สร้างเร็ว ไม่เปลืองพื้นที่</li>
+      <li>ใช้ branch เพื่อ <strong>ทำงานพร้อมกัน ทดลองของใหม่ และ review code</strong></li>
+      <li><strong>Merge</strong> คือการรวม branch กลับ → อาจเจอ conflict ถ้าแก้ไฟล์เดียวกัน</li>
+      <li>เลือก <strong>branching strategy</strong> ตามขนาดทีมและ deployment cycle</li>
+      <li><strong>merge บ่อยๆ</strong> = conflict น้อย → ชีวิตดี</li>
+    </ul>
+
+    <p>ในโพสต์หน้าเราจะมาพูดถึง <strong>Rebase</strong> — อีกวิธีในการรวม branch ที่ทำให้ประวัติ commit สะอาดขึ้น แต่มีข้อควรระวังที่สำคัญมาก! 🐕</p>
+
+    <div class="post-series-footer">
+      บทความจากซีรีส์ DevOps & Vibe Coding 2026
+    </div>
+
+  </article>
+
+  <!-- FOOTER -->
+  <footer class="blog-footer">
+    <a href="../index.html#blog">← Back to Blog</a>
+    <span>© 2025 Anirach Mingkhwan — Associate Professor, KMUTNB</span>
+  </footer>
+
+</body>
+</html>
