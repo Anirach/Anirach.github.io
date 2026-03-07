@@ -3,8 +3,8 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>CI/CD Pipeline — ส่ง Code ขึ้น Production แบบอัตโนมัติ | Anirach Mingkhwan</title>
-  <meta name="description" content="เรียนรู้ CI/CD Pipeline ตั้งแต่พื้นฐาน Build, Test, Deploy อัตโนมัติ ไปจนถึง GitHub Actions และ Best Practices">
+  <title>Docker Containers vs VMs — ต่างกันยังไง ใช้ตัวไหนดี? | Anirach Mingkhwan</title>
+  <meta name="description" content="เปรียบเทียบ Docker Containers กับ Virtual Machines ต่างกันยังไง ใช้ตัวไหนดี พร้อม Dockerfile, Docker Compose และคำสั่งที่ใช้บ่อย">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
@@ -141,336 +141,354 @@
   <nav class="blog-nav">
     <div class="blog-nav__inner">
       <a href="../index.html#blog" class="blog-nav__back">‹ Back to Home</a>
-      <div class="blog-nav__title">CI/CD Pipeline</div>
+      <div class="blog-nav__title">Docker vs VMs</div>
     </div>
   </nav>
 
   <header class="post-hero">
     <div class="post-hero__tags">
-      <span class="post-hero__tag">CI/CD</span>
+      <span class="post-hero__tag">Docker</span>
       <span class="post-hero__tag">DevOps</span>
-      <span class="post-hero__tag">Automation</span>
+      <span class="post-hero__tag">Infrastructure</span>
     </div>
-    <h1 class="post-hero__title">CI/CD Pipeline — ส่ง Code ขึ้น Production แบบอัตโนมัติ</h1>
+    <h1 class="post-hero__title">Docker Containers vs VMs — ต่างกันยังไง ใช้ตัวไหนดี?</h1>
     <div class="post-hero__meta">
       <span>By <strong>Anirach Mingkhwan</strong></span>
       <span class="post-hero__series">DevOps & Vibe Coding 2026</span>
     </div>
     <div class="post-hero__cover">
-      <img src="../images/cicd-cover.png" alt="CI/CD Pipeline — cute dog illustration">
+      <img src="../images/docker-vs-vms-cover.png" alt="Docker Containers vs VMs — cute dog illustration">
     </div>
   </header>
 
   <article class="post-body">
 
-    <p>จากโพสต์ที่แล้วเราได้พูดถึง Git Branching ว่าแตก branch ยังไง merge กลับยังไง แล้วก็มี branching strategy แบบไหนบ้าง แต่พอ merge เสร็จแล้ว... <strong>แล้วยังไงต่อ?</strong></p>
+    <p>จากโพสต์ที่แล้วเราพูดถึง CI/CD Pipeline ว่ามันช่วยให้เรา build, test, deploy แบบอัตโนมัติ</p>
 
-    <p>ถ้าต้อง build เอง test เอง deploy เอง ทุกครั้งที่มี code ใหม่ มันก็เหนื่อยและเสี่ยงพลาดมาก ยิ่งทีมใหญ่ขึ้น deploy บ่อยขึ้น ยิ่งวุ่น</p>
+    <p>แต่เคยมั้ยที่... <strong>"ในเครื่องฉันรันได้นะ แต่ขึ้น server แล้วพัง"</strong> 🤦</p>
 
-    <p>นี่คือที่มาของ <strong>CI/CD Pipeline</strong> — ระบบที่จัดการทุกอย่างตั้งแต่ code เข้า repo จนถึง deploy ขึ้น production ให้เราแบบอัตโนมัติ</p>
+    <p>ปัญหานี้เกิดจากความแตกต่างของ environment — เวอร์ชันของ OS, library, config ต่างกัน ทำให้ code ที่ทำงานได้ในเครื่องเรากลับพังในเครื่องอื่น</p>
 
-    <hr>
-
-    <h2>CI/CD คืออะไร?</h2>
-
-    <p>CI/CD ย่อมาจาก 2 คำ:</p>
-
-    <h3>CI — Continuous Integration</h3>
-    <p><strong>"รวม code บ่อยๆ ทดสอบอัตโนมัติทุกครั้ง"</strong></p>
-    <p>ทุกครั้งที่ developer push code ขึ้น repo ระบบจะ:</p>
+    <p>วิธีแก้คือ <strong>ทำให้ทุกที่ใช้ environment เดียวกัน</strong> ซึ่งมี 2 แนวทางหลัก:</p>
     <ol>
-      <li>ดึง code มา build อัตโนมัติ</li>
-      <li>รัน test ทั้งหมด</li>
-      <li>แจ้งผลว่า ✅ ผ่าน หรือ ❌ ไม่ผ่าน</li>
+      <li><strong>Virtual Machines (VMs)</strong> — จำลองเครื่องคอมพิวเตอร์ทั้งเครื่อง</li>
+      <li><strong>Docker Containers</strong> — จำลองแค่สิ่งที่ app ต้องการ</li>
     </ol>
-    <p>ถ้าไม่มี CI → developer push code → ไม่มีใครรู้ว่าพังจนกว่าจะไป deploy จริง 💀</p>
 
-    <h3>CD — Continuous Delivery / Continuous Deployment</h3>
-    <p><strong>Continuous Delivery:</strong> code ที่ผ่าน test แล้ว <strong>พร้อม deploy ได้ทันที</strong> แต่ยังต้องกดปุ่ม deploy เอง</p>
-    <p><strong>Continuous Deployment:</strong> code ที่ผ่าน test แล้ว <strong>deploy ขึ้น production อัตโนมัติเลย</strong> ไม่ต้องกดอะไร</p>
-
-<pre><code>Continuous Integration → Continuous Delivery → Continuous Deployment
-(build + test            (พร้อม deploy          (deploy อัตโนมัติ
- อัตโนมัติ)               แต่กดเอง)              ไม่ต้องทำอะไร)</code></pre>
+    <p>มาดูกันว่าทั้งสองอย่างคืออะไร ต่างกันยังไง แล้วควรใช้ตัวไหนเมื่อไหร่</p>
 
     <hr>
 
-    <h2>Pipeline คืออะไร?</h2>
+    <h2>Virtual Machine (VM) คืออะไร?</h2>
 
-    <p>Pipeline = <strong>ลำดับขั้นตอนที่ทำงานต่อเนื่องกัน</strong> ตั้งแต่ code เข้า repo จนถึง deploy</p>
+    <p>VM คือ <strong>การจำลองคอมพิวเตอร์ทั้งเครื่องด้วย software</strong> รันอยู่บนเครื่องจริง (Host) ผ่าน Hypervisor</p>
 
-    <p>ลองนึกภาพโรงงานผลิตรถยนต์: วัตถุดิบเข้า → ประกอบชิ้นส่วน → ตรวจสอบคุณภาพ → ทาสี → ส่งมอบ</p>
+<pre><code>┌─────────────────────────────────────────────┐
+│                Host Machine                  │
+│  ┌──────────────────────────────────────┐   │
+│  │           Hypervisor                  │   │
+│  │  ┌──────────┐  ┌──────────┐          │   │
+│  │  │  VM 1    │  │  VM 2    │          │   │
+│  │  │ ┌──────┐ │  │ ┌──────┐ │          │   │
+│  │  │ │ App  │ │  │ │ App  │ │          │   │
+│  │  │ ├──────┤ │  │ ├──────┤ │          │   │
+│  │  │ │ Libs │ │  │ │ Libs │ │          │   │
+│  │  │ ├──────┤ │  │ ├──────┤ │          │   │
+│  │  │ │Guest │ │  │ │Guest │ │          │   │
+│  │  │ │  OS  │ │  │ │  OS  │ │          │   │
+│  │  │ └──────┘ │  │ └──────┘ │          │   │
+│  │  └──────────┘  └──────────┘          │   │
+│  └──────────────────────────────────────┘   │
+│  ┌──────────────────────────────────────┐   │
+│  │            Host OS                    │   │
+│  └──────────────────────────────────────┘   │
+│  ┌──────────────────────────────────────┐   │
+│  │           Hardware                    │   │
+│  └──────────────────────────────────────┘   │
+└─────────────────────────────────────────────┘</code></pre>
 
-<pre><code>┌──────────┐   ┌──────────┐   ┌──────────┐   ┌──────────┐   ┌──────────┐
-│  Source  │ → │  Build   │ → │   Test   │ → │  Stage   │ → │  Deploy  │
-│  (code)  │   │ (compile)│   │ (verify) │   │ (preview)│   │  (prod)  │
-└──────────┘   └──────────┘   └──────────┘   └──────────┘   └──────────┘</code></pre>
+    <p>สังเกตว่า <strong>แต่ละ VM มี Guest OS ของตัวเอง</strong> ทำให้:</p>
+    <ul>
+      <li>✅ แยกจากกันสมบูรณ์ (isolation สูงมาก)</li>
+      <li>✅ รัน OS ต่างกันได้ (Windows บน Linux host)</li>
+      <li>❌ แต่กิน RAM, CPU, Disk เยอะมาก</li>
+      <li>❌ เปิดช้า (boot OS ทั้งเครื่อง)</li>
+    </ul>
 
-    <p>ถ้าขั้นตอนใด <strong>fail</strong> → pipeline หยุดทันที → แจ้ง developer → ไม่มี code พังหลุดไป production</p>
+    <p><strong>Hypervisor ยอดนิยม:</strong></p>
+    <ul>
+      <li><strong>Type 1 (Bare-metal):</strong> VMware ESXi, Hyper-V, Proxmox — รันบน hardware ตรงๆ</li>
+      <li><strong>Type 2 (Hosted):</strong> VirtualBox, VMware Workstation — รันบน OS อีกที</li>
+    </ul>
 
     <hr>
 
-    <h2>แต่ละขั้นตอนทำอะไรบ้าง?</h2>
+    <h2>Docker Container คืออะไร?</h2>
 
-    <h3>1. Source — รับ Code เข้ามา</h3>
-    <p>Pipeline เริ่มทำงานเมื่อมี <strong>trigger</strong> เช่น:</p>
+    <p>Container คือ <strong>การจำลองแค่ environment ที่ app ต้องการ</strong> โดยใช้ kernel ร่วมกับ Host OS</p>
+
+<pre><code>┌─────────────────────────────────────────────┐
+│                Host Machine                  │
+│  ┌──────────┐  ┌──────────┐  ┌──────────┐  │
+│  │Container1│  │Container2│  │Container3│  │
+│  │ ┌──────┐ │  │ ┌──────┐ │  │ ┌──────┐ │  │
+│  │ │ App  │ │  │ │ App  │ │  │ │ App  │ │  │
+│  │ ├──────┤ │  │ ├──────┤ │  │ ├──────┤ │  │
+│  │ │ Libs │ │  │ │ Libs │ │  │ │ Libs │ │  │
+│  │ └──────┘ │  │ └──────┘ │  │ └──────┘ │  │
+│  └──────────┘  └──────────┘  └──────────┘  │
+│  ┌──────────────────────────────────────┐   │
+│  │          Docker Engine                │   │
+│  └──────────────────────────────────────┘   │
+│  ┌──────────────────────────────────────┐   │
+│  │            Host OS                    │   │
+│  └──────────────────────────────────────┘   │
+│  ┌──────────────────────────────────────┐   │
+│  │           Hardware                    │   │
+│  └──────────────────────────────────────┘   │
+└─────────────────────────────────────────────┘</code></pre>
+
+    <p>สังเกตว่า <strong>ไม่มี Guest OS</strong> — container ใช้ kernel ของ Host OS ร่วมกัน ทำให้:</p>
     <ul>
-      <li>Push code ขึ้น branch</li>
-      <li>เปิด Pull Request</li>
-      <li>Merge เข้า main</li>
-      <li>ตั้งเวลา (cron schedule)</li>
+      <li>✅ เบามาก (MB vs GB)</li>
+      <li>✅ เปิดเร็วมาก (วินาที vs นาที)</li>
+      <li>✅ รันได้หลาย container พร้อมกัน</li>
+      <li>❌ ต้องเป็น Linux kernel เดียวกัน (บน Mac/Windows ใช้ VM เล็กๆ ซ่อนอยู่)</li>
+      <li>❌ isolation น้อยกว่า VM</li>
     </ul>
 
-<pre><code># ตัวอย่าง GitHub Actions trigger
-on:
-  push:
-    branches: [main, develop]
-  pull_request:
-    branches: [main]</code></pre>
+    <hr>
 
-    <h3>2. Build — สร้างโปรเจกต์</h3>
-    <p>ขั้นตอนนี้คือการ <strong>compile code และติดตั้ง dependencies</strong> ให้พร้อมใช้งาน</p>
-    <p>ตัวอย่างสิ่งที่เกิดขึ้น:</p>
-    <ul>
-      <li><code>npm install</code> → ติดตั้ง packages</li>
-      <li><code>npm run build</code> → compile TypeScript, bundle React, etc.</li>
-      <li>สร้าง Docker image</li>
-      <li>สร้าง artifact (.jar, .whl, binary)</li>
-    </ul>
-
-<pre><code>jobs:
-  build:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with:
-          node-version: '20'
-      - run: npm ci
-      - run: npm run build</code></pre>
-
-    <p>ถ้า build fail → มักเป็นเพราะ:</p>
-    <ul>
-      <li>Syntax error</li>
-      <li>Missing dependency</li>
-      <li>Version conflict</li>
-    </ul>
-
-    <h3>3. Test — ทดสอบ</h3>
-    <p><strong>ขั้นตอนสำคัญที่สุด</strong> — ถ้าไม่มี test ก็ไม่ต่างจากการ deploy แบบลุ้นดวง 🎲</p>
-
-    <p>ระดับของ Test:</p>
+    <h2>เปรียบเทียบ VM vs Container</h2>
 
     <table>
       <thead>
-        <tr><th>ระดับ</th><th>ทดสอบอะไร</th><th>ความเร็ว</th><th>ตัวอย่าง</th></tr>
+        <tr><th></th><th>Virtual Machine</th><th>Docker Container</th></tr>
       </thead>
       <tbody>
-        <tr><td><strong>Unit Test</strong></td><td>ฟังก์ชันเดี่ยวๆ</td><td>เร็วมาก (วินาที)</td><td><code>calculate(2,3)</code> ต้องได้ <code>5</code></td></tr>
-        <tr><td><strong>Integration Test</strong></td><td>หลายส่วนทำงานร่วมกัน</td><td>ปานกลาง</td><td>API + Database</td></tr>
-        <tr><td><strong>E2E Test</strong></td><td>ทั้งระบบจากมุม user</td><td>ช้า (นาที)</td><td>กด Login → เห็น Dashboard</td></tr>
-      </tbody>
-    </table>
-
-<pre><code>- run: npm test          # Unit tests
-- run: npm run test:e2e  # E2E tests
-- run: npm run lint      # Code style check
-- run: npm audit         # Security check</code></pre>
-
-    <p><strong>Testing Pyramid:</strong></p>
-<pre><code>         /\
-        /  \         E2E Tests (น้อย แต่ครอบคลุม)
-       /----\
-      /      \       Integration Tests (ปานกลาง)
-     /--------\
-    /          \     Unit Tests (เยอะที่สุด เร็วที่สุด)
-   /____________\</code></pre>
-
-    <h3>4. Stage — Preview ก่อน Deploy จริง</h3>
-    <p>บาง pipeline จะมีขั้นตอน <strong>staging</strong> คือ deploy ไปที่ environment ที่เหมือน production ทุกอย่าง แต่ยังไม่ใช่ของจริง</p>
-    <p>ประโยชน์:</p>
-    <ul>
-      <li>ทดสอบกับ data ที่เหมือนจริง</li>
-      <li>ให้ QA team หรือ PM มา review ได้</li>
-      <li>ตรวจจับปัญหาที่ test อัตโนมัติจับไม่ได้</li>
-    </ul>
-
-    <h3>5. Deploy — ขึ้น Production</h3>
-    <p>ขั้นตอนสุดท้าย — code ไปถึงมือ user จริงๆ</p>
-    <p>วิธี deploy ที่นิยม:</p>
-
-    <h4>Rolling Update</h4>
-<pre><code>Server 1: v1 → v2 ✅
-Server 2: v1 → v2 ✅  (ทีละเครื่อง)
-Server 3: v1 → v2 ✅</code></pre>
-
-    <h4>Blue-Green Deployment</h4>
-<pre><code>Blue  (v1): ████████ ← traffic อยู่ที่นี่
-Green (v2): ████████ ← deploy ใหม่ที่นี่
-
-สลับ traffic:
-Blue  (v1): ████████
-Green (v2): ████████ ← traffic มาที่นี่แล้ว ✅</code></pre>
-
-    <h4>Canary Deployment</h4>
-<pre><code>v1: 90% traffic  ████████████████████
-v2: 10% traffic  ██  ← ทดสอบกับ user จริงส่วนน้อย
-
-ถ้า OK → ค่อยๆเพิ่ม:
-v1: 50% traffic  ██████████
-v2: 50% traffic  ██████████
-
-จนสุดท้าย:
-v2: 100% traffic ████████████████████ ✅</code></pre>
-
-    <hr>
-
-    <h2>ตัวอย่าง Pipeline จริงด้วย GitHub Actions</h2>
-
-<pre><code>name: CI/CD Pipeline
-
-on:
-  push:
-    branches: [main]
-  pull_request:
-    branches: [main]
-
-jobs:
-  # ===== CI =====
-  build-and-test:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: '20'
-          cache: 'npm'
-
-      - name: Install dependencies
-        run: npm ci
-
-      - name: Lint
-        run: npm run lint
-
-      - name: Build
-        run: npm run build
-
-      - name: Unit Tests
-        run: npm test -- --coverage
-
-      - name: Upload coverage
-        uses: actions/upload-artifact@v4
-        with:
-          name: coverage
-          path: coverage/
-
-  # ===== CD =====
-  deploy:
-    needs: build-and-test    # รอ CI ผ่านก่อน
-    if: github.ref == 'refs/heads/main'  # deploy เฉพาะ main
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Deploy to production
-        run: |
-          echo "Deploying to production..."
-          # คำสั่ง deploy จริงๆ เช่น:
-          # ssh user@server 'cd /app && git pull && npm ci && pm2 restart all'
-          # หรือ docker push + kubectl apply</code></pre>
-
-    <hr>
-
-    <h2>เครื่องมือ CI/CD ยอดนิยม</h2>
-
-    <table>
-      <thead>
-        <tr><th>เครื่องมือ</th><th>ประเภท</th><th>จุดเด่น</th><th>เหมาะกับ</th></tr>
-      </thead>
-      <tbody>
-        <tr><td><strong>GitHub Actions</strong></td><td>Cloud</td><td>ใช้ง่าย, ฟรีสำหรับ public repo</td><td>โปรเจกต์บน GitHub</td></tr>
-        <tr><td><strong>GitLab CI/CD</strong></td><td>Cloud/Self-hosted</td><td>Pipeline ดี, มี container registry</td><td>องค์กรที่ใช้ GitLab</td></tr>
-        <tr><td><strong>Jenkins</strong></td><td>Self-hosted</td><td>Plugin เยอะ, ปรับแต่งได้มาก</td><td>องค์กรใหญ่</td></tr>
-        <tr><td><strong>CircleCI</strong></td><td>Cloud</td><td>เร็ว, config ง่าย</td><td>Startup/ทีมเล็ก</td></tr>
-        <tr><td><strong>ArgoCD</strong></td><td>Self-hosted</td><td>GitOps สำหรับ Kubernetes</td><td>ทีมที่ใช้ K8s</td></tr>
+        <tr><td><strong>ขนาด</strong></td><td>หลาย GB (มี OS เต็ม)</td><td>หลัก MB — ร้อย MB</td></tr>
+        <tr><td><strong>เวลาเปิด</strong></td><td>นาที (boot OS)</td><td>วินาที</td></tr>
+        <tr><td><strong>Performance</strong></td><td>Overhead จาก Hypervisor</td><td>ใกล้เคียง native</td></tr>
+        <tr><td><strong>Isolation</strong></td><td>สูงมาก (แยก OS)</td><td>ปานกลาง (แชร์ kernel)</td></tr>
+        <tr><td><strong>จำนวนที่รันได้</strong></td><td>5-20 ต่อเครื่อง</td><td>100+ ต่อเครื่อง</td></tr>
+        <tr><td><strong>OS ต่างกันได้</strong></td><td>ได้ (Windows บน Linux)</td><td>ไม่ได้ (ต้อง Linux kernel)</td></tr>
+        <tr><td><strong>ใช้ RAM</strong></td><td>จอง RAM ทั้งก้อน</td><td>ใช้เท่าที่ต้องการ</td></tr>
+        <tr><td><strong>Portability</strong></td><td>ย้ายยาก (ไฟล์ใหญ่)</td><td>ย้ายง่าย (Image เล็ก)</td></tr>
       </tbody>
     </table>
 
     <hr>
 
-    <h2>Best Practices</h2>
+    <h2>Docker ทำงานยังไง?</h2>
 
-    <h3>1. Keep Pipeline Fast ⚡</h3>
-    <p>Pipeline ที่ช้าเกินไป developer จะไม่อยากรอ → เริ่มข้าม → เสียประโยชน์</p>
-    <p>เป้าหมาย:</p>
-    <ul>
-      <li><strong>Build + Unit Test:</strong> &lt; 5 นาที</li>
-      <li><strong>ทั้ง pipeline:</strong> &lt; 15 นาที</li>
-    </ul>
-    <div class="tip"><strong>เคล็ดลับ:</strong> cache dependencies, รัน test แบบ parallel, แยก slow test ออก</div>
+    <p>Docker มี 3 concept หลัก:</p>
 
-    <h3>2. Test ให้ครอบคลุม 🧪</h3>
-    <ul>
-      <li>ตั้งเป้า code coverage &gt; 80%</li>
-      <li>มี unit test สำหรับ business logic ที่สำคัญ</li>
-      <li>อย่าลืม edge case และ error handling</li>
-    </ul>
+    <h3>1. Dockerfile — สูตรทำ Image</h3>
 
-    <h3>3. Fail Fast, Fix Fast 🔴</h3>
-    <ul>
-      <li>ถ้า pipeline fail → แก้เป็นอันดับแรก ก่อนทำอย่างอื่น</li>
-      <li>อย่าปล่อยให้ pipeline แดงค้าง → ทีมจะชินกับ "แดงก็แดง"</li>
-    </ul>
+    <p>Dockerfile คือ <strong>ไฟล์ที่บอกว่าต้องเตรียม environment ยังไง</strong> เหมือนสูตรทำอาหาร</p>
 
-    <h3>4. ใช้ Environment Variables สำหรับ Secrets 🔐</h3>
-<pre><code># ❌ อย่าทำ
-- run: mysql -u root -p mypassword123
+<pre><code># เริ่มจาก base image
+FROM node:20-alpine
 
-# ✅ ทำแบบนี้
-- run: mysql -u $DB_USER -p $DB_PASSWORD
-  env:
-    DB_USER: ${{ secrets.DB_USER }}
-    DB_PASSWORD: ${{ secrets.DB_PASSWORD }}</code></pre>
+# ตั้ง working directory
+WORKDIR /app
 
-    <h3>5. ทำให้ Pipeline เหมือนกันทุก Environment 🔄</h3>
-    <p>Development → Staging → Production ควรใช้ pipeline เดียวกัน ต่างกันแค่ config</p>
+# copy package.json แล้วติดตั้ง dependencies
+COPY package*.json ./
+RUN npm ci --production
+
+# copy source code
+COPY . .
+
+# บอกว่า app ใช้ port อะไร
+EXPOSE 3000
+
+# คำสั่งรัน app
+CMD ["node", "server.js"]</code></pre>
+
+    <h3>2. Image — สิ่งที่ได้จาก Dockerfile</h3>
+
+    <p>Image คือ <strong>snapshot ของ environment ที่พร้อมรัน</strong> เหมือนแผ่น CD ที่ burn แล้ว</p>
+
+<pre><code># สร้าง image จาก Dockerfile
+docker build -t my-app:v1 .
+
+# ดู images ทั้งหมด
+docker images</code></pre>
+
+    <p>Image เป็น <strong>read-only</strong> — เหมือน class ใน OOP</p>
+
+    <h3>3. Container — Instance ที่รันจาก Image</h3>
+
+    <p>Container คือ <strong>image ที่กำลังทำงานอยู่</strong> — เหมือน object ที่ new จาก class</p>
+
+<pre><code># รัน container จาก image
+docker run -d -p 3000:3000 --name my-app my-app:v1
+
+# ดู container ที่กำลังรัน
+docker ps
+
+# หยุด / ลบ container
+docker stop my-app
+docker rm my-app</code></pre>
+
+    <p><strong>ความสัมพันธ์:</strong></p>
+<pre><code>Dockerfile  →(build)→  Image  →(run)→  Container
+ (สูตร)                (แผ่น CD)        (เครื่องเล่น)</code></pre>
 
     <hr>
 
-    <h2>เปรียบเทียบ: ก่อน vs หลังใช้ CI/CD</h2>
+    <h2>ตัวอย่างจริง: Deploy Web App</h2>
 
-    <table>
-      <thead>
-        <tr><th></th><th>ก่อน CI/CD</th><th>หลัง CI/CD</th></tr>
-      </thead>
-      <tbody>
-        <tr><td><strong>Build</strong></td><td>ทำมือ, "ลืม build"</td><td>อัตโนมัติทุก push</td></tr>
-        <tr><td><strong>Test</strong></td><td>"เดี๋ยว test ทีหลัง"</td><td>test ทุกครั้ง ถ้าไม่ผ่านหยุดเลย</td></tr>
-        <tr><td><strong>Deploy</strong></td><td>SSH เข้าเซิร์ฟเวอร์ ลาก file ด้วยมือ</td><td>กดปุ่มเดียว หรืออัตโนมัติ</td></tr>
-        <tr><td><strong>Bug พบตอนไหน</strong></td><td>ตอน user โทรมาด่า</td><td>ตอน pipeline fail (ก่อน deploy)</td></tr>
-        <tr><td><strong>ความมั่นใจ</strong></td><td>"หวังว่าจะไม่พัง" 🤞</td><td>"test ผ่านแล้ว มั่นใจ" ✅</td></tr>
-        <tr><td><strong>Deploy frequency</strong></td><td>เดือนละครั้ง (กลัวพัง)</td><td>วันละหลายครั้ง</td></tr>
-      </tbody>
-    </table>
+    <h3>แบบ VM (วิธีเดิม)</h3>
+
+<pre><code># 1. สร้าง VM ใหม่
+# 2. ติดตั้ง Ubuntu
+# 3. ติดตั้ง Node.js
+sudo apt update
+sudo apt install nodejs npm
+
+# 4. copy code ไปที่ VM
+scp -r ./my-app user@vm-ip:/home/user/
+
+# 5. ติดตั้ง dependencies
+cd /home/user/my-app && npm install
+
+# 6. รัน app
+node server.js
+
+# ใช้เวลา: 15-30 นาที 😩
+# ถ้ามี 3 servers = ทำ 3 รอบ 😩😩😩</code></pre>
+
+    <h3>แบบ Docker</h3>
+
+<pre><code># 1. สร้าง image (ครั้งเดียว)
+docker build -t my-app:v1 .
+
+# 2. รัน (ที่ไหนก็ได้)
+docker run -d -p 3000:3000 my-app:v1
+
+# ใช้เวลา: 1-2 นาที 🎉
+# ถ้ามี 3 servers = docker run 3 ที 🎉🎉🎉</code></pre>
+
+    <hr>
+
+    <h2>Docker Compose — รันหลาย Container พร้อมกัน</h2>
+
+    <p>app จริงมักมีหลาย service: web server + database + cache + ...</p>
+
+    <p>Docker Compose ช่วยจัดการทุก service ในไฟล์เดียว:</p>
+
+<pre><code># docker-compose.yml
+version: '3.8'
+
+services:
+  web:
+    build: .
+    ports:
+      - "3000:3000"
+    environment:
+      - DATABASE_URL=postgres://db:5432/myapp
+    depends_on:
+      - db
+      - redis
+
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: myapp
+      POSTGRES_PASSWORD: secret
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+
+  redis:
+    image: redis:7-alpine
+
+volumes:
+  pgdata:</code></pre>
+
+<pre><code># เปิดทุก service พร้อมกัน
+docker compose up -d
+
+# ปิดทุก service
+docker compose down</code></pre>
+
+    <p>แค่คำสั่งเดียว ได้ web + database + cache พร้อมรัน ✅</p>
+
+    <hr>
+
+    <h2>แล้วเมื่อไหร่ควรใช้อะไร?</h2>
+
+    <h3>ใช้ Docker Container เมื่อ:</h3>
+    <ul>
+      <li>🐳 ต้องการ deploy app เร็วๆ</li>
+      <li>🐳 อยาก environment เหมือนกันทุกที่ (dev = staging = production)</li>
+      <li>🐳 ต้องรัน microservices หลายตัว</li>
+      <li>🐳 ใช้กับ CI/CD pipeline</li>
+      <li>🐳 ต้อง scale ขึ้น/ลงเร็ว (Kubernetes)</li>
+    </ul>
+
+    <h3>ใช้ VM เมื่อ:</h3>
+    <ul>
+      <li>🖥️ ต้องรัน OS ต่างกัน (Windows app บน Linux host)</li>
+      <li>🖥️ ต้องการ security isolation สูงมาก (multi-tenant, compliance)</li>
+      <li>🖥️ รัน legacy app ที่ต้องการ OS เฉพาะ</li>
+      <li>🖥️ ต้องการ full control ของ OS (kernel tuning, custom drivers)</li>
+    </ul>
+
+    <h3>ใช้ทั้งสอง:</h3>
+    <p>ในองค์กรขนาดใหญ่มักใช้ทั้งคู่: <strong>VM เป็น infrastructure layer</strong> + <strong>Container รันอยู่บน VM</strong></p>
+    <p>Cloud providers (AWS, GCP, Azure) ใช้ VM เป็น backend แล้วให้เรารัน container บน VM อีกที</p>
+
+<pre><code>┌─────────────────────────────┐
+│        Kubernetes           │
+│  ┌─────┐ ┌─────┐ ┌─────┐  │
+│  │ Pod │ │ Pod │ │ Pod │  │  ← Containers
+│  └─────┘ └─────┘ └─────┘  │
+├─────────────────────────────┤
+│         VM (EC2)            │  ← Virtual Machine
+├─────────────────────────────┤
+│     Physical Server         │  ← Hardware
+└─────────────────────────────┘</code></pre>
+
+    <hr>
+
+    <h2>คำสั่ง Docker ที่ใช้บ่อย — สรุป</h2>
+
+<pre><code># === Images ===
+docker build -t app:v1 .           # สร้าง image
+docker images                       # ดู images ทั้งหมด
+docker pull nginx:latest            # ดึง image จาก Docker Hub
+docker rmi app:v1                   # ลบ image
+
+# === Containers ===
+docker run -d -p 8080:80 nginx     # รัน container
+docker ps                           # ดู container ที่รันอยู่
+docker ps -a                        # ดูทั้งหมด (รวมที่หยุดแล้ว)
+docker stop &lt;container_id&gt;          # หยุด
+docker rm &lt;container_id&gt;            # ลบ
+docker logs &lt;container_id&gt;          # ดู logs
+docker exec -it &lt;id&gt; /bin/sh        # เข้าไปใน container
+
+# === Docker Compose ===
+docker compose up -d                # เปิดทุก service
+docker compose down                 # ปิดทุก service
+docker compose logs -f              # ดู logs แบบ realtime</code></pre>
 
     <hr>
 
     <h2>สรุป</h2>
 
     <ul>
-      <li><strong>CI (Continuous Integration)</strong> = build + test อัตโนมัติทุกครั้งที่ push code</li>
-      <li><strong>CD (Continuous Delivery/Deployment)</strong> = deploy อัตโนมัติ (หรือกึ่งอัตโนมัติ) ไป production</li>
-      <li><strong>Pipeline</strong> = ลำดับขั้นตอน: Source → Build → Test → Stage → Deploy</li>
-      <li>ถ้าขั้นตอนใด fail → pipeline หยุด → <strong>ไม่มี code พังหลุดไป production</strong></li>
-      <li>เลือกเครื่องมือตามทีมและโปรเจกต์: <strong>GitHub Actions</strong> เหมาะสำหรับเริ่มต้น</li>
-      <li><strong>Pipeline เร็ว + test ครอบคลุม + fix fast</strong> = DevOps ที่ดี</li>
+      <li><strong>VM</strong> = จำลองเครื่องทั้งเครื่อง (มี Guest OS) → หนัก แต่ isolation สูง</li>
+      <li><strong>Container</strong> = จำลองแค่ environment (แชร์ kernel) → เบา เร็ว portable</li>
+      <li><strong>Dockerfile</strong> → <strong>Image</strong> → <strong>Container</strong> (สูตร → แผ่น CD → เครื่องเล่น)</li>
+      <li><strong>Docker Compose</strong> = รันหลาย container พร้อมกันด้วยไฟล์เดียว</li>
+      <li>ในโลกจริง <strong>ใช้ทั้งคู่</strong> — VM เป็น infrastructure, Container รัน app</li>
+      <li>Docker แก้ปัญหา <strong>"It works on my machine"</strong> ได้จริง 🐳</li>
     </ul>
 
-    <p>ในโพสต์หน้าเราจะมาพูดถึง <strong>Docker</strong> — เครื่องมือที่ทำให้ "It works on my machine" กลายเป็นเรื่องในอดีต! 🐳🐕</p>
+    <p>ในโพสต์หน้าเราจะมาพูดถึง <strong>API Request Lifecycle</strong> — เวลากด send request ไป server มันเกิดอะไรขึ้นบ้าง? 🌐🐕</p>
 
     <div class="post-series-footer">
       บทความจากซีรีส์ DevOps & Vibe Coding 2026
@@ -480,13 +498,9 @@ jobs:
 
   <!-- Post Navigation -->
   <div class="post-nav">
-    <a href="git-branching.html" class="post-nav__link">
+    <a href="cicd-pipeline.html" class="post-nav__link">
       <div class="post-nav__dir">← Previous</div>
-      <div class="post-nav__title">Git Branching — แตกกิ่งก้านสาขาให้เป็นระบบ</div>
-    </a>
-    <a href="docker-vs-vms.html" class="post-nav__link" style="text-align:right;">
-      <div class="post-nav__dir">Next →</div>
-      <div class="post-nav__title">Docker Containers vs VMs — ต่างกันยังไง ใช้ตัวไหนดี?</div>
+      <div class="post-nav__title">CI/CD Pipeline — ส่ง Code ขึ้น Production แบบอัตโนมัติ</div>
     </a>
   </div>
 
@@ -497,3 +511,4 @@ jobs:
 
 </body>
 </html>
+<!-- v2 -->
