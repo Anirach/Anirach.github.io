@@ -1,0 +1,689 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SRE — Site Reliability Engineering ที่ DevOps ต้องรู้ | Anirach Mingkhwan</title>
+  <meta name="description" content="เรียนรู้ SRE ตั้งแต่ SLI/SLO/SLA, Error Budgets, Incident Management, Postmortem, Toil Reduction, Capacity Planning และ On-Call Best Practices">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --navy: #0f172a; --blue: #6366f1; --blue-dark: #4f46e5; --blue-light: #818cf8;
+      --slate: #334155; --slate-light: #64748b; --gray: #94a3b8;
+      --bg: #f8fafc; --white: #ffffff; --code-bg: #1e293b;
+      --font: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+      --mono: 'JetBrains Mono', 'Fira Code', monospace;
+      --teal: #14b8a6; --green: #22c55e; --red: #ef4444; --amber: #f59e0b;
+    }
+    html { scroll-behavior: smooth; }
+    body { font-family: var(--font); font-size: 17px; line-height: 1.8; color: var(--slate); background: var(--bg); -webkit-font-smoothing: antialiased; }
+    .blog-nav { position: fixed; top: 0; left: 0; right: 0; z-index: 100; background: rgba(248,250,252,0.85); backdrop-filter: blur(20px); border-bottom: 1px solid rgba(0,0,0,0.05); }
+    .blog-nav__inner { max-width: 860px; margin: 0 auto; padding: 0 2rem; height: 56px; display: flex; align-items: center; justify-content: space-between; }
+    .blog-nav__back { font-size: 0.85rem; font-weight: 500; color: var(--blue); text-decoration: none; }
+    .blog-nav__back:hover { color: #4f46e5; }
+    .blog-nav__title { font-size: 0.85rem; font-weight: 600; color: var(--navy); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 50%; }
+
+    .post-hero { padding: 8rem 2rem 3rem; background: linear-gradient(135deg, #134e4a 0%, #115e59 40%, #0f766e 100%); text-align: center; }
+    .post-hero__tags { display: flex; gap: 0.5rem; justify-content: center; margin-bottom: 1.25rem; flex-wrap: wrap; }
+    .post-hero__tag { font-size: 0.7rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.1em; color: #5eead4; background: rgba(94,234,212,0.15); padding: 0.3rem 0.75rem; border-radius: 20px; }
+    .post-hero__title { font-size: clamp(1.8rem, 5vw, 3rem); font-weight: 800; color: #fff; line-height: 1.2; margin-bottom: 1rem; max-width: 720px; margin-left: auto; margin-right: auto; }
+    .post-hero__meta { font-size: 0.85rem; color: rgba(255,255,255,0.6); display: flex; align-items: center; justify-content: center; gap: 1.5rem; }
+    .post-hero__series { font-weight: 600; color: #5eead4; }
+    .post-hero__cover { max-width: 380px; margin: 2.5rem auto 0; border-radius: 16px; overflow: hidden; box-shadow: 0 20px 60px rgba(0,0,0,0.4); }
+    .post-hero__cover img { width: 100%; display: block; }
+
+    .post-body { max-width: 720px; margin: 0 auto; padding: 3rem 2rem 6rem; }
+    .post-body h2 { font-size: 1.6rem; font-weight: 800; color: var(--navy); margin: 3rem 0 1rem; padding-bottom: 0.5rem; border-bottom: 2px solid rgba(99,102,241,0.15); }
+    .post-body h3 { font-size: 1.25rem; font-weight: 700; color: var(--navy); margin: 2.25rem 0 0.75rem; }
+    .post-body h4 { font-size: 1.05rem; font-weight: 700; color: var(--navy); margin: 1.75rem 0 0.6rem; }
+    .post-body p { margin-bottom: 1.25rem; }
+    .post-body strong { font-weight: 700; color: var(--navy); }
+    .post-body a { color: var(--blue); text-decoration: underline; text-decoration-thickness: 1px; text-underline-offset: 2px; }
+    .post-body pre { background: var(--code-bg); border-radius: 12px; padding: 1.5rem; margin: 1.25rem 0 1.5rem; overflow-x: auto; border: 1px solid rgba(255,255,255,0.05); }
+    .post-body pre code { font-family: var(--mono); font-size: 0.82rem; color: #e2e8f0; line-height: 1.7; }
+    .post-body code { font-family: var(--mono); font-size: 0.88em; background: rgba(99,102,241,0.08); color: #4f46e5; padding: 0.15em 0.45em; border-radius: 5px; }
+    .post-body pre code { background: none; color: #e2e8f0; padding: 0; }
+    .post-body ul, .post-body ol { margin: 0.5rem 0 1.25rem 1.5rem; }
+    .post-body li { margin-bottom: 0.4rem; }
+    .post-body table { width: 100%; border-collapse: collapse; margin: 1.25rem 0 1.5rem; font-size: 0.9rem; }
+    .post-body th { background: rgba(99,102,241,0.06); font-weight: 700; color: var(--navy); padding: 0.75rem 1rem; text-align: left; border-bottom: 2px solid rgba(99,102,241,0.15); }
+    .post-body td { padding: 0.65rem 1rem; border-bottom: 1px solid #e2e8f0; }
+    .post-body blockquote { background: rgba(99,102,241,0.06); border-left: 4px solid var(--blue); padding: 1rem 1.25rem; border-radius: 0 10px 10px 0; margin: 1.25rem 0; font-size: 0.95rem; color: var(--navy); }
+    .post-body hr { border: none; height: 1px; background: linear-gradient(90deg, transparent, rgba(99,102,241,0.2), transparent); margin: 3rem 0; }
+    .post-series-footer { text-align: center; font-size: 0.85rem; color: var(--gray); font-style: italic; margin-top: 2rem; padding-top: 2rem; border-top: 1px solid #e2e8f0; }
+
+    .post-nav { max-width: 720px; margin: 0 auto; padding: 0 2rem 3rem; display: flex; gap: 1.5rem; flex-wrap: wrap; }
+    .post-nav__link { flex: 1; min-width: 200px; padding: 1.25rem 1.5rem; border-radius: 12px; background: rgba(255,255,255,0.85); backdrop-filter: blur(16px); border: 1px solid rgba(255,255,255,0.6); box-shadow: 0 4px 16px rgba(0,0,0,0.05); text-decoration: none; color: inherit; transition: transform 0.2s, box-shadow 0.2s; }
+    .post-nav__link:hover { transform: translateY(-2px); box-shadow: 0 8px 24px rgba(99,102,241,0.1); }
+    .post-nav__dir { font-size: 0.75rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.1em; color: var(--blue); margin-bottom: 0.35rem; }
+    .post-nav__title { font-size: 0.9rem; font-weight: 600; color: var(--navy); line-height: 1.4; }
+    .blog-footer { background: var(--navy); padding: 2rem 0; text-align: center; }
+    .blog-footer a { color: var(--blue-light); text-decoration: none; font-weight: 600; font-size: 0.9rem; }
+    .blog-footer span { color: var(--gray); font-size: 0.8rem; display: block; margin-top: 0.4rem; }
+
+    /* Diagrams */
+    .arch-diagram { margin: 1.5rem 0 2rem; }
+    .arch-box { border: 2px solid rgba(99,102,241,0.25); border-radius: 12px; padding: 1.25rem; background: linear-gradient(135deg, rgba(99,102,241,0.03), rgba(99,102,241,0.06)); }
+    .arch-label { font-size: 0.75rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.1em; color: var(--blue); text-align: center; margin-bottom: 0.75rem; }
+    .arch-row { display: flex; gap: 0.75rem; justify-content: center; flex-wrap: wrap; margin-bottom: 0.75rem; }
+    .arch-container { border: 2px solid rgba(99,102,241,0.2); border-radius: 10px; padding: 0.75rem; background: rgba(238,242,255,0.8); min-width: 120px; text-align: center; }
+    .arch-item { font-size: 0.78rem; font-weight: 600; color: var(--navy); padding: 0.3rem 0.6rem; margin: 0.25rem 0; background: rgba(99,102,241,0.08); border-radius: 6px; }
+    .arch-name { font-size: 0.72rem; font-weight: 700; color: var(--blue); margin-bottom: 0.35rem; }
+    .arch-arrow-down { text-align: center; font-size: 1rem; color: var(--blue); font-weight: 700; margin: 0.5rem 0; }
+
+    .flow-diagram { display: flex; align-items: center; justify-content: center; gap: 0.5rem; flex-wrap: wrap; margin: 1.5rem 0 2rem; padding: 1.5rem; background: rgba(99,102,241,0.04); border-radius: 12px; }
+    .flow-step { text-align: center; padding: 0.75rem 1.25rem; background: white; border-radius: 10px; border: 1.5px solid rgba(99,102,241,0.15); box-shadow: 0 2px 8px rgba(0,0,0,0.04); }
+    .flow-step__title { font-size: 0.9rem; font-weight: 700; color: var(--navy); }
+    .flow-step__sub { font-size: 0.72rem; color: var(--gray); margin-top: 0.15rem; }
+    .flow-arrow { font-size: 1.2rem; color: var(--blue); font-weight: 700; }
+
+    /* SLO gauge */
+    .slo-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem; margin: 1.5rem 0 2rem; }
+    .slo-card { border-radius: 12px; padding: 1.25rem; text-align: center; background: white; border: 1.5px solid rgba(99,102,241,0.12); box-shadow: 0 2px 8px rgba(0,0,0,0.03); }
+    .slo-card__icon { font-size: 1.5rem; margin-bottom: 0.3rem; }
+    .slo-card__name { font-size: 0.85rem; font-weight: 800; color: var(--navy); }
+    .slo-card__desc { font-size: 0.72rem; color: var(--gray); margin-top: 0.25rem; line-height: 1.4; }
+    .slo-card__example { font-size: 0.72rem; color: var(--blue); margin-top: 0.4rem; font-weight: 600; font-family: var(--mono); }
+
+    /* Severity badges */
+    .sev-badge { display: inline-block; font-size: 0.72rem; font-weight: 700; padding: 0.15rem 0.6rem; border-radius: 20px; color: #fff; }
+    .sev-badge--p1 { background: #dc2626; }
+    .sev-badge--p2 { background: #ea580c; }
+    .sev-badge--p3 { background: #d97706; }
+    .sev-badge--p4 { background: #65a30d; }
+
+    /* Incident timeline */
+    .timeline { margin: 1.5rem 0 2rem; padding-left: 1.5rem; border-left: 3px solid rgba(99,102,241,0.2); }
+    .timeline__item { margin-bottom: 1rem; position: relative; }
+    .timeline__item::before { content: ''; position: absolute; left: -1.72rem; top: 0.5rem; width: 10px; height: 10px; background: var(--blue); border-radius: 50%; }
+    .timeline__time { font-size: 0.72rem; font-weight: 700; color: var(--blue); font-family: var(--mono); }
+    .timeline__text { font-size: 0.85rem; color: var(--slate); margin-top: 0.15rem; }
+
+    /* Error budget bar */
+    .budget-bar { margin: 1.5rem 0; }
+    .budget-bar__label { display: flex; justify-content: space-between; font-size: 0.8rem; font-weight: 600; color: var(--navy); margin-bottom: 0.35rem; }
+    .budget-bar__track { height: 24px; background: #e2e8f0; border-radius: 12px; overflow: hidden; position: relative; }
+    .budget-bar__fill { height: 100%; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 0.7rem; font-weight: 700; color: #fff; }
+    .budget-bar__fill--good { background: linear-gradient(90deg, #22c55e, #16a34a); }
+    .budget-bar__fill--warn { background: linear-gradient(90deg, #f59e0b, #d97706); }
+    .budget-bar__fill--danger { background: linear-gradient(90deg, #ef4444, #dc2626); }
+
+    @media (max-width: 600px) {
+      .post-hero { padding: 7rem 1.25rem 2.5rem; }
+      .post-body { padding: 2rem 1.25rem 4rem; }
+      .post-body pre { padding: 1rem; border-radius: 8px; }
+      .post-hero__meta { flex-direction: column; gap: 0.4rem; }
+      .post-nav { padding: 0 1.25rem 3rem; }
+      .flow-diagram { flex-direction: column; }
+      .slo-grid { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+
+  <nav class="blog-nav">
+    <div class="blog-nav__inner">
+      <a href="./" class="blog-nav__back">‹ Blog</a>
+      <div class="blog-nav__title">SRE Fundamentals</div>
+    </div>
+  </nav>
+
+  <header class="post-hero">
+    <div class="post-hero__tags">
+      <span class="post-hero__tag">SRE</span>
+      <span class="post-hero__tag">Reliability</span>
+      <span class="post-hero__tag">DevOps</span>
+    </div>
+    <h1 class="post-hero__title">SRE — Site Reliability Engineering ที่ DevOps ต้องรู้ 🚒</h1>
+    <div class="post-hero__meta">
+      <span>By <strong style="color:#fff">Anirach Mingkhwan</strong></span>
+      <span class="post-hero__series">DevOps & Vibe Coding 2026</span>
+    </div>
+    <div class="post-hero__cover">
+      <img src="../images/sre-cover.jpg" alt="SRE — firefighter dog guarding servers">
+    </div>
+  </header>
+
+  <article class="post-body">
+
+    <p>จากโพสต์ที่แล้วเราเรียน Cloud Architecture — ออกแบบระบบบน Cloud ให้แข็งแกร่ง แต่สร้างเสร็จแล้ว... <strong>ใครจะดูแลให้มันทำงานต่อเนื่อง 24/7?</strong></p>
+
+    <p>คำตอบคือ <strong>SRE — Site Reliability Engineering</strong> — แนวคิดจาก Google ที่ทำให้ "ระบบไม่ล่ม" เป็นเรื่องของ engineering ไม่ใช่โชค 🚒🐕</p>
+
+    <blockquote>
+      <strong>"SRE is what happens when you ask a software engineer to design an operations team."</strong> — Ben Treynor, VP Engineering @ Google (ผู้ก่อตั้ง SRE)
+    </blockquote>
+
+    <hr>
+
+    <h2>🤔 SRE คืออะไร? ต่างจาก DevOps ยังไง?</h2>
+
+    <p><strong>SRE (Site Reliability Engineering)</strong> คือ discipline ที่ใช้ software engineering approach มาแก้ปัญหา operations:</p>
+
+    <table>
+      <thead><tr><th>Feature</th><th>Traditional Ops</th><th>DevOps</th><th>SRE</th></tr></thead>
+      <tbody>
+        <tr><td><strong>Focus</strong></td><td>ดูแลระบบ</td><td>Culture + CI/CD</td><td>Reliability engineering</td></tr>
+        <tr><td><strong>แนวคิด</strong></td><td>Manual, ticket-based</td><td>Automate everything</td><td>Error budgets + engineering</td></tr>
+        <tr><td><strong>เป้าหมาย</strong></td><td>ระบบรัน</td><td>Deploy เร็ว</td><td>Reliable + Deploy เร็ว</td></tr>
+        <tr><td><strong>Toil</strong></td><td>ยอมรับ</td><td>ลดทีละนิด</td><td>จำกัด &lt; 50% ของเวลา</td></tr>
+        <tr><td><strong>Risk</strong></td><td>หลีกเลี่ยง</td><td>ยอมรับ</td><td>คำนวณด้วย Error Budget</td></tr>
+        <tr><td><strong>On-call</strong></td><td>ทุกปัญหา</td><td>แชร์กัน</td><td>มีนโยบายชัดเจน</td></tr>
+      </tbody>
+    </table>
+
+    <blockquote>
+      <strong>💡 จำง่ายๆ:</strong> DevOps = "วัฒนธรรม" (philosophy) | SRE = "วิธีทำจริง" (implementation) — SRE implements DevOps
+    </blockquote>
+
+    <hr>
+
+    <h2>📊 SLI / SLO / SLA — วัด Reliability ยังไง?</h2>
+
+    <p>หัวใจของ SRE คือการ <strong>วัด reliability ด้วยตัวเลข</strong> ไม่ใช่ความรู้สึก:</p>
+
+    <div class="slo-grid">
+      <div class="slo-card">
+        <div class="slo-card__icon">📏</div>
+        <div class="slo-card__name">SLI</div>
+        <div class="slo-card__desc">Service Level Indicator<br>ตัววัด (metric)</div>
+        <div class="slo-card__example">latency p99 = 200ms</div>
+      </div>
+      <div class="slo-card">
+        <div class="slo-card__icon">🎯</div>
+        <div class="slo-card__name">SLO</div>
+        <div class="slo-card__desc">Service Level Objective<br>เป้าหมาย (target)</div>
+        <div class="slo-card__example">p99 &lt; 300ms 99.9%</div>
+      </div>
+      <div class="slo-card">
+        <div class="slo-card__icon">📜</div>
+        <div class="slo-card__name">SLA</div>
+        <div class="slo-card__desc">Service Level Agreement<br>สัญญา (contract)</div>
+        <div class="slo-card__example">99.9% uptime or refund</div>
+      </div>
+    </div>
+
+    <h3>SLI ที่สำคัญ — "The Four Golden Signals"</h3>
+
+    <table>
+      <thead><tr><th>Signal</th><th>วัดอะไร</th><th>ตัวอย่าง SLI</th></tr></thead>
+      <tbody>
+        <tr><td><strong>🕐 Latency</strong></td><td>เวลาตอบสนอง</td><td>p50 = 50ms, p99 = 200ms</td></tr>
+        <tr><td><strong>📊 Traffic</strong></td><td>ปริมาณ request</td><td>1,500 req/sec</td></tr>
+        <tr><td><strong>❌ Errors</strong></td><td>อัตรา error</td><td>0.1% of requests = 5xx</td></tr>
+        <tr><td><strong>💾 Saturation</strong></td><td>ใช้ resource เท่าไร</td><td>CPU 70%, Memory 80%</td></tr>
+      </tbody>
+    </table>
+
+    <pre><code># Prometheus — วัด SLI
+# Latency (p99)
+histogram_quantile(0.99,
+  rate(http_request_duration_seconds_bucket[5m])
+)
+
+# Error Rate
+sum(rate(http_requests_total{status=~"5.."}[5m]))
+/
+sum(rate(http_requests_total[5m]))
+
+# Availability (ใน 30 วัน)
+1 - (
+  sum(rate(http_requests_total{status=~"5.."}[30d]))
+  /
+  sum(rate(http_requests_total[30d]))
+)</code></pre>
+
+    <h3>ตัวอย่าง SLO Document</h3>
+
+    <pre><code># SLO: User API Service
+# ──────────────────────
+# SLI: Availability
+#   Definition: % of non-5xx responses
+#   SLO: 99.9% over 30-day rolling window
+#   Error Budget: 0.1% = ~43 minutes/month
+#
+# SLI: Latency
+#   Definition: p99 response time
+#   SLO: p99 < 300ms for 99% of requests
+#
+# SLI: Freshness
+#   Definition: data staleness
+#   SLO: 95% of reads return data < 1 min old
+#
+# Consequences:
+#   If error budget exhausted:
+#   → Freeze feature deployments
+#   → Focus on reliability improvements
+#   → Require SRE approval for any change</code></pre>
+
+    <hr>
+
+    <h2>💰 Error Budget — งบสำหรับ "พลาด"</h2>
+
+    <p><strong>Error Budget</strong> คือ "งบ" ที่ระบบ "ผิดพลาดได้" — คำนวณจาก SLO:</p>
+
+    <table>
+      <thead><tr><th>SLO</th><th>Error Budget/เดือน</th><th>Error Budget/ปี</th></tr></thead>
+      <tbody>
+        <tr><td><strong>99%</strong></td><td>7.3 ชั่วโมง</td><td>3.65 วัน</td></tr>
+        <tr><td><strong>99.9%</strong></td><td>43.8 นาที</td><td>8.76 ชั่วโมง</td></tr>
+        <tr><td><strong>99.95%</strong></td><td>21.9 นาที</td><td>4.38 ชั่วโมง</td></tr>
+        <tr><td><strong>99.99%</strong></td><td>4.38 นาที</td><td>52.6 นาที</td></tr>
+      </tbody>
+    </table>
+
+    <div class="budget-bar">
+      <div class="budget-bar__label"><span>Error Budget (99.9% SLO) — เดือนนี้</span><span>เหลือ 65%</span></div>
+      <div class="budget-bar__track">
+        <div class="budget-bar__fill budget-bar__fill--good" style="width:65%;">28 min remaining</div>
+      </div>
+    </div>
+
+    <div class="budget-bar">
+      <div class="budget-bar__label"><span>Error Budget (99.9% SLO) — เดือนหน้า</span><span>⚠️ เหลือ 15%</span></div>
+      <div class="budget-bar__track">
+        <div class="budget-bar__fill budget-bar__fill--warn" style="width:15%;">6.5 min left!</div>
+      </div>
+    </div>
+
+    <div class="budget-bar">
+      <div class="budget-bar__label"><span>Error Budget (99.9% SLO) — หมด!</span><span>🔴 0% — FREEZE</span></div>
+      <div class="budget-bar__track">
+        <div class="budget-bar__fill budget-bar__fill--danger" style="width:100%;">BUDGET EXHAUSTED — Feature freeze!</div>
+      </div>
+    </div>
+
+    <blockquote>
+      <strong>💡 หลักการ:</strong> Error Budget เหลือเยอะ → deploy features เร็วได้ | Error Budget ใกล้หมด → ชะลอ focus reliability | Error Budget หมด → <strong>Feature Freeze!</strong>
+    </blockquote>
+
+    <pre><code># Grafana Dashboard — Error Budget Tracker
+# ─────────────────────────────────────────
+# Total requests (30d)
+total = sum(increase(http_requests_total[30d]))
+
+# Failed requests (30d)
+failed = sum(increase(http_requests_total{status=~"5.."}[30d]))
+
+# Error budget (SLO 99.9%)
+budget_total = total * 0.001        # 0.1% allowed failures
+budget_used  = failed
+budget_remaining = (budget_total - budget_used) / budget_total * 100
+
+# Alert เมื่อ budget < 20%
+# → Slack notification to team
+# → Require SRE review for deploys</code></pre>
+
+    <hr>
+
+    <h2>🚨 Incident Management — เมื่อระบบล่ม</h2>
+
+    <h3>Severity Levels</h3>
+
+    <table>
+      <thead><tr><th>Level</th><th>Impact</th><th>Response Time</th><th>ตัวอย่าง</th></tr></thead>
+      <tbody>
+        <tr><td><span class="sev-badge sev-badge--p1">P1 Critical</span></td><td>Service down ทั้งหมด</td><td>&lt; 5 นาที</td><td>Production database down</td></tr>
+        <tr><td><span class="sev-badge sev-badge--p2">P2 High</span></td><td>Major feature พัง</td><td>&lt; 30 นาที</td><td>Payment ไม่ทำงาน</td></tr>
+        <tr><td><span class="sev-badge sev-badge--p3">P3 Medium</span></td><td>Minor feature พัง</td><td>&lt; 4 ชั่วโมง</td><td>Search ช้ากว่าปกติ</td></tr>
+        <tr><td><span class="sev-badge sev-badge--p4">P4 Low</span></td><td>Cosmetic / minor</td><td>Next business day</td><td>Typo ในหน้า error</td></tr>
+      </tbody>
+    </table>
+
+    <h3>Incident Response Flow</h3>
+
+    <div class="flow-diagram">
+      <div class="flow-step" style="border-color:rgba(239,68,68,0.3);background:rgba(239,68,68,0.04);">
+        <div class="flow-step__title">🚨 Detect</div>
+        <div class="flow-step__sub">Alert fired</div>
+      </div>
+      <span class="flow-arrow">→</span>
+      <div class="flow-step" style="border-color:rgba(249,115,22,0.3);background:rgba(249,115,22,0.04);">
+        <div class="flow-step__title">📞 Triage</div>
+        <div class="flow-step__sub">Assess severity</div>
+      </div>
+      <span class="flow-arrow">→</span>
+      <div class="flow-step" style="border-color:rgba(245,158,11,0.3);background:rgba(245,158,11,0.04);">
+        <div class="flow-step__title">🔧 Mitigate</div>
+        <div class="flow-step__sub">Stop bleeding</div>
+      </div>
+      <span class="flow-arrow">→</span>
+      <div class="flow-step" style="border-color:rgba(34,197,94,0.3);background:rgba(34,197,94,0.04);">
+        <div class="flow-step__title">✅ Resolve</div>
+        <div class="flow-step__sub">Fix root cause</div>
+      </div>
+      <span class="flow-arrow">→</span>
+      <div class="flow-step">
+        <div class="flow-step__title">📝 Postmortem</div>
+        <div class="flow-step__sub">Learn & prevent</div>
+      </div>
+    </div>
+
+    <h3>Incident Timeline ตัวอย่าง</h3>
+
+    <div class="timeline">
+      <div class="timeline__item">
+        <div class="timeline__time">14:23 UTC — Alert Fired</div>
+        <div class="timeline__text">PagerDuty: "Error rate > 5%" — On-call SRE notified</div>
+      </div>
+      <div class="timeline__item">
+        <div class="timeline__time">14:25 UTC — Acknowledged</div>
+        <div class="timeline__text">SRE สมชาย joined war room, opened incident channel #inc-2026-042</div>
+      </div>
+      <div class="timeline__item">
+        <div class="timeline__time">14:30 UTC — Root Cause Found</div>
+        <div class="timeline__text">Deploy v2.4.1 มี memory leak → pods OOMKilled → cascading failure</div>
+      </div>
+      <div class="timeline__item">
+        <div class="timeline__time">14:32 UTC — Mitigated</div>
+        <div class="timeline__text">Rollback to v2.4.0 via <code>argocd app rollback</code></div>
+      </div>
+      <div class="timeline__item">
+        <div class="timeline__time">14:35 UTC — Resolved</div>
+        <div class="timeline__text">Error rate back to normal, all pods healthy</div>
+      </div>
+      <div class="timeline__item">
+        <div class="timeline__time">14:40 UTC — Comms</div>
+        <div class="timeline__text">Status page updated, customer notification sent</div>
+      </div>
+    </div>
+
+    <h3>Incident Commander — Roles</h3>
+
+    <pre><code># Incident Roles (P1/P2)
+# ──────────────────────
+# 🎖️ Incident Commander (IC)
+#    - ตัดสินใจ, coordinate, สั่งการ
+#    - ไม่ต้อง debug เอง
+#
+# 🔧 Technical Lead
+#    - วิเคราะห์ root cause
+#    - Execute mitigation
+#
+# 📢 Communications Lead
+#    - อัพเดท status page
+#    - แจ้ง stakeholders
+#    - เขียน customer comms
+#
+# 📝 Scribe
+#    - จด timeline ทุกอย่าง
+#    - Record decisions & actions</code></pre>
+
+    <hr>
+
+    <h2>📝 Blameless Postmortem — เรียนรู้จากความผิดพลาด</h2>
+
+    <p><strong>Postmortem</strong> คือ document ที่เขียนหลังเกิด incident — เน้น <strong>"เรียนรู้" ไม่ใช่ "โทษคน"</strong> (blameless!):</p>
+
+    <pre><code># Postmortem Template
+# ═══════════════════
+
+## Incident: Production API Outage
+## Date: 2026-03-07 14:23-14:35 UTC
+## Duration: 12 minutes
+## Severity: P1
+## Impact: 100% of API requests failed for 12 minutes
+##         ~18,000 failed requests, ~2,400 users affected
+
+## Summary
+Deploy v2.4.1 contained a memory leak in the user session
+handler. Under load, pods exceeded memory limits and were
+OOMKilled. The auto-scaler created new pods that also crashed,
+causing a cascading failure.
+
+## Root Cause
+Memory leak in UserSessionMiddleware — each request allocated
+a new 2MB buffer that was never garbage collected due to a
+circular reference. Under 500 req/s, memory grew ~1GB/min.
+
+## Timeline
+- 14:20 — Deploy v2.4.1 rolled out (3/6 pods)
+- 14:23 — Alert: Error rate > 5%
+- 14:25 — IC assigned, war room opened
+- 14:30 — Identified memory leak in v2.4.1
+- 14:32 — Rollback to v2.4.0
+- 14:35 — Service restored
+
+## What Went Well
+- Alert fired within 3 minutes of impact
+- Quick rollback via ArgoCD (2 minutes)
+- Clear incident response process followed
+
+## What Went Wrong
+- No memory profiling in CI pipeline
+- Load test only ran at 100 req/s (prod = 500 req/s)
+- Canary deployment was skipped for "small change"
+
+## Action Items
+1. [P1] Add memory leak detection to CI — @somchai — Due: Mar 14
+2. [P1] Load test at 2x production traffic — @somying — Due: Mar 14
+3. [P2] Enforce canary deployment for all changes — @team — Due: Mar 21
+4. [P3] Add OOMKill alert (before cascade) — @ops — Due: Mar 28
+
+## Lessons Learned
+- "Small changes" can have big impacts — always canary
+- Memory profiling should be part of CI, not manual
+- Rollback capability (ArgoCD) saved us — invest in it</code></pre>
+
+    <blockquote>
+      <strong>🐕 Blameless Culture:</strong> "สมชาย deploy code ที่มี bug" → ❌ | "ระบบไม่มี memory check ใน CI pipeline ที่จะ catch bug นี้" → ✅
+    </blockquote>
+
+    <hr>
+
+    <h2>🔧 Toil Reduction — ลดงาน manual</h2>
+
+    <p><strong>Toil</strong> = งานที่ manual, ซ้ำๆ, automate ได้, ไม่มี lasting value — Google กำหนดว่า SRE ต้องใช้เวลาทำ toil <strong>ไม่เกิน 50%</strong>:</p>
+
+    <table>
+      <thead><tr><th>Toil (ลดให้ได้)</th><th>Engineering (เพิ่มให้ได้)</th></tr></thead>
+      <tbody>
+        <tr><td>Restart services ด้วยมือ</td><td>สร้าง auto-restart + self-healing</td></tr>
+        <tr><td>Manually scale servers</td><td>Auto-scaling policies</td></tr>
+        <tr><td>Copy-paste deployment steps</td><td>CI/CD pipeline automation</td></tr>
+        <tr><td>ตอบ ticket "reset password"</td><td>Self-service password reset</td></tr>
+        <tr><td>ดู logs ด้วยตา</td><td>Automated anomaly detection</td></tr>
+        <tr><td>Manual certificate renewal</td><td>cert-manager auto-renew</td></tr>
+      </tbody>
+    </table>
+
+    <pre><code># วัด Toil — track เวลาที่ใช้
+# ──────────────────────────
+# Week 1: SRE Team Time Breakdown
+#
+# Engineering work:  25 hours (50%)  ← target: > 50%
+# Toil:              15 hours (30%)  ← target: < 50%
+# On-call:            5 hours (10%)
+# Training/misc:      5 hours (10%)
+#
+# Top Toil Items:
+# 1. Manual DB backups         — 4h/week → AUTOMATE
+# 2. Certificate renewals      — 3h/week → cert-manager
+# 3. Capacity request tickets  — 3h/week → self-service
+# 4. Log investigation         — 5h/week → better alerting</code></pre>
+
+    <hr>
+
+    <h2>📟 On-Call Best Practices</h2>
+
+    <h3>On-Call Rotation</h3>
+
+    <pre><code># PagerDuty Schedule Example
+# ──────────────────────────
+# Primary:   สมชาย → สมหญิง → สมศักดิ์ (rotate weekly)
+# Secondary: สมศักดิ์ → สมชาย → สมหญิง (backup)
+#
+# Rules:
+# - Primary responds within 5 min (P1) / 30 min (P2)
+# - If no response in 10 min → escalate to Secondary
+# - If no response in 20 min → escalate to Engineering Manager
+#
+# Compensation:
+# - On-call allowance per week
+# - Time off after high-severity incidents
+# - No more than 25% of time on-call per quarter</code></pre>
+
+    <h3>Alerting — Alert ที่ดี vs Alert ที่แย่</h3>
+
+    <table>
+      <thead><tr><th>✅ Alert ที่ดี</th><th>❌ Alert ที่แย่</th></tr></thead>
+      <tbody>
+        <tr><td>Actionable — ต้องทำอะไรสักอย่าง</td><td>Informational — แค่รู้ไว้</td></tr>
+        <tr><td>User-facing impact</td><td>Internal metric spike</td></tr>
+        <tr><td>"Error rate > 1% for 5 min"</td><td>"CPU > 80% for 1 min"</td></tr>
+        <tr><td>มี runbook link</td><td>ไม่มีบอกว่าต้องทำอะไร</td></tr>
+        <tr><td>Alert fatigue ต่ำ</td><td>Alert ทุก 5 นาที (noise!)</td></tr>
+      </tbody>
+    </table>
+
+    <pre><code># Prometheus Alert Rules
+groups:
+  - name: sre-alerts
+    rules:
+      # ✅ ดี: User-facing, actionable
+      - alert: HighErrorRate
+        expr: |
+          sum(rate(http_requests_total{status=~"5.."}[5m]))
+          / sum(rate(http_requests_total[5m])) > 0.01
+        for: 5m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Error rate > 1% for 5 minutes"
+          runbook: "https://wiki.example.com/runbooks/high-error-rate"
+          dashboard: "https://grafana.example.com/d/api-overview"
+
+      # ✅ ดี: SLO-based alert
+      - alert: ErrorBudgetBurnRate
+        expr: |
+          error_budget_remaining < 0.2
+        labels:
+          severity: warning
+        annotations:
+          summary: "Error budget < 20% remaining this month"
+          action: "Consider slowing deployments"
+
+      # ❌ แย่: CPU alert (not user-facing)
+      # - alert: HighCPU
+      #   expr: cpu_usage > 80
+      #   → CPU สูงไม่ได้แปลว่า user ได้รับผลกระทบ!</code></pre>
+
+    <hr>
+
+    <h2>📈 Capacity Planning</h2>
+
+    <pre><code># Capacity Planning Questions
+# ──────────────────────────
+# 1. ปัจจุบันใช้ resource เท่าไร? (baseline)
+# 2. Growth rate เท่าไร? (trend)
+# 3. เมื่อไรจะถึง limit? (forecast)
+# 4. ต้องเพิ่มอะไร เมื่อไร? (plan)
+
+# PromQL — Forecast disk full
+predict_linear(
+  node_filesystem_avail_bytes{mountpoint="/"}[7d],
+  30 * 24 * 3600    # predict 30 days ahead
+) < 0
+# → Alert: "Disk will be full in < 30 days"
+
+# PromQL — Traffic growth trend
+rate(http_requests_total[30d])
+# → ถ้าโต 20%/month → plan capacity 3 months ahead</code></pre>
+
+    <hr>
+
+    <h2>🛡️ Chaos Engineering — ทดสอบความแข็งแกร่ง</h2>
+
+    <p>Chaos Engineering = <strong>ทำลายระบบตัวเองก่อนที่ระบบจริงจะพัง</strong> เพื่อหาจุดอ่อน:</p>
+
+    <pre><code># Chaos Experiments ที่ควรทำ
+# ──────────────────────────
+# 1. Kill random pod       → K8s จะสร้างใหม่มั้ย?
+# 2. Increase latency      → App handle timeout ดีมั้ย?
+# 3. Fill disk 100%        → Alert ทันมั้ย? App crash มั้ย?
+# 4. Kill database primary → Failover ทำงานมั้ย?
+# 5. DNS failure           → Retry logic ทำงานมั้ย?
+# 6. Network partition     → Split-brain มั้ย?
+
+# LitmusChaos — K8s Chaos Engineering
+apiVersion: litmuschaos.io/v1alpha1
+kind: ChaosEngine
+metadata:
+  name: pod-kill-test
+spec:
+  appinfo:
+    appns: production
+    applabel: app=myapp
+  chaosServiceAccount: litmus-admin
+  experiments:
+    - name: pod-delete
+      spec:
+        components:
+          env:
+            - name: TOTAL_CHAOS_DURATION
+              value: '30'          # 30 seconds of chaos
+            - name: CHAOS_INTERVAL
+              value: '10'          # kill pod every 10 sec
+            - name: FORCE
+              value: 'true'</code></pre>
+
+    <blockquote>
+      <strong>💡 กฎ Chaos:</strong> เริ่มจาก staging ก่อน → ค่อยทำ production | ทำในเวลาทำการ (มีคนดู) | มี rollback plan เสมอ
+    </blockquote>
+
+    <hr>
+
+    <h2>📋 SRE Checklist — เริ่มต้นยังไง?</h2>
+
+    <ol>
+      <li><strong>กำหนด SLIs</strong> — วัด latency, error rate, availability</li>
+      <li><strong>ตั้ง SLOs</strong> — เป้าหมายที่สมเหตุสมผล (ไม่ต้อง 100%!)</li>
+      <li><strong>Track Error Budget</strong> — dashboard แสดง budget remaining</li>
+      <li><strong>Setup Alerting</strong> — SLO-based alerts, ไม่ใช่ CPU/memory alerts</li>
+      <li><strong>Incident Process</strong> — severity levels, response playbooks, war room</li>
+      <li><strong>Blameless Postmortems</strong> — เขียนทุก P1/P2, track action items</li>
+      <li><strong>Reduce Toil</strong> — measure → automate → measure อีก</li>
+      <li><strong>On-Call Policy</strong> — rotation, compensation, escalation</li>
+      <li><strong>Capacity Planning</strong> — forecast growth, plan ahead</li>
+      <li><strong>Chaos Engineering</strong> — break it before it breaks itself</li>
+    </ol>
+
+    <hr>
+
+    <h2>สรุป</h2>
+
+    <ul>
+      <li><strong>SRE</strong> = Software engineering approach to operations — "SRE implements DevOps"</li>
+      <li><strong>SLI/SLO/SLA</strong> = วัด reliability ด้วยตัวเลข (Indicator → Objective → Agreement)</li>
+      <li><strong>Four Golden Signals</strong> = Latency, Traffic, Errors, Saturation</li>
+      <li><strong>Error Budget</strong> = "งบสำหรับพลาด" — หมด = feature freeze!</li>
+      <li><strong>Incident Management</strong> = Detect → Triage → Mitigate → Resolve → Postmortem</li>
+      <li><strong>Blameless Postmortem</strong> = โทษระบบ ไม่โทษคน → สร้าง culture ที่เรียนรู้</li>
+      <li><strong>Toil &lt; 50%</strong> = วัด manual work แล้ว automate ให้ได้</li>
+      <li><strong>Chaos Engineering</strong> = ทดสอบความแข็งแกร่งก่อนจะพังจริง 🚒🐕</li>
+    </ul>
+
+    <div class="post-series-footer">
+      บทความจากซีรีส์ DevOps & Vibe Coding 2026
+    </div>
+
+  </article>
+
+  <!-- Post Navigation -->
+  <div class="post-nav">
+    <a href="cloud-architecture.html" class="post-nav__link">
+      <div class="post-nav__dir">← Previous</div>
+      <div class="post-nav__title">Cloud Architecture — ออกแบบระบบบน Cloud ให้แข็งแกร่ง</div>
+    </a>
+  </div>
+
+  <footer class="blog-footer">
+    <a href="./">← Back to Blog</a>
+    <span>© 2025 Anirach Mingkhwan — Associate Professor, KMUTNB</span>
+  </footer>
+
+</body>
+</html>
