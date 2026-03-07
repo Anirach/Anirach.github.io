@@ -129,6 +129,8 @@
 
     <h2>Testing Pyramid — ทดสอบกี่ระดับ?</h2>
 
+    <p><strong>Testing Pyramid</strong> เป็นแนวคิดที่บอกว่าเราควรเขียน test กี่ประเภทและสัดส่วนเท่าไร ฐานล่างสุด (Unit Tests) ควรเขียนเยอะที่สุดเพราะเร็วและง่าย ยิ่งขึ้นไปด้านบน (Integration → E2E) ยิ่งเขียนน้อยลงเพราะช้า แพง และ maintain ยาก ถ้าเขียน E2E มากเกินไป pipeline จะช้ามาก ถ้าเขียน Unit อย่างเดียว จะไม่รู้ว่า components ทำงานร่วมกันได้จริงไหม — ต้องหา balance:</p>
+
     <div class="pyramid">
       <div class="pyramid__level pyramid__level--e2e">🖥️ E2E Tests<div class="pyramid__label">น้อยที่สุด — ช้า แต่ทดสอบทั้งระบบ</div></div>
       <div class="pyramid__level pyramid__level--int">🔗 Integration Tests<div class="pyramid__label">ปานกลาง — ทดสอบหลาย components ร่วมกัน</div></div>
@@ -152,9 +154,11 @@
 
     <h2>⚡ Unit Testing — ทดสอบทีละชิ้น</h2>
 
-    <p>Unit test ทดสอบ <strong>function เดียว</strong> แยกจาก dependencies ทั้งหมด:</p>
+    <p><strong>Unit test</strong> ทดสอบ function หรือ class ทีละตัวแบบ isolated — ไม่พึ่ง database, API หรือ external services เป้าหมายคือยืนยันว่า "ใส่ input นี้ ต้องได้ output นั้น" ถ้า unit test fail จะรู้ทันทีว่า bug อยู่ที่ function ไหน ไม่ต้องไล่หาทั้งระบบ เร็วมาก (มิลลิวินาที) รันได้ทุกครั้งที่ save</p>
 
     <h3>JavaScript (Jest)</h3>
+
+    <p><strong>Jest</strong> เป็น testing framework ยอดนิยมที่สุดสำหรับ JavaScript/TypeScript — มี test runner, assertions, mocking built-in ตัวอย่างด้านล่างแสดงการเขียน unit tests ที่ดี ครอบคลุม happy path, edge cases และ error handling:</p>
 
     <pre><code>// math.js
 function add(a, b) {
@@ -215,6 +219,8 @@ npx jest
 
     <h3>Python (pytest)</h3>
 
+    <p><strong>pytest</strong> เป็น testing framework ของ Python ที่ทรงพลัง — จุดเด่นคือ <code>fixtures</code> (setup/teardown ที่ reuse ได้) และ <code>parametrize</code> (ทดสอบหลาย cases ด้วย decorator ตัวเดียว) เขียน test ได้สั้นกว่า unittest มาก:</p>
+
     <pre><code># calculator.py
 class Calculator:
     def add(self, a, b):
@@ -257,6 +263,8 @@ pytest -v
 
     <h3>Mocking — จำลอง Dependencies</h3>
 
+    <p><strong>Mocking</strong> คือการสร้าง "ของจำลอง" แทน dependencies จริง — เช่น จำลอง database call, HTTP request หรือ email service ทำให้ unit test ไม่ต้องพึ่ง external services (เร็วขึ้น, stable ขึ้น) และสามารถทดสอบ error cases ได้ (เช่น จำลองว่า DB ล่ม):</p>
+
     <pre><code>// userService.test.js
 const { getUserName } = require('./userService');
 const db = require('./database');
@@ -288,7 +296,7 @@ test('returns "Unknown" when user not found', async () => {
 
     <h2>🔗 Integration Testing — ทดสอบร่วมกัน</h2>
 
-    <p>Integration test ทดสอบว่า <strong>หลาย components ทำงานร่วมกันได้</strong> เช่น API + Database:</p>
+    <p><strong>Integration test</strong> ทดสอบว่าหลาย components ทำงานร่วมกันได้จริง — เช่น API endpoint → business logic → database → response ต่างจาก unit test ตรงที่ใช้ "ของจริง" (database, Redis, external APIs) ทำให้เจอ bugs ที่ unit test จับไม่ได้ เช่น SQL query ผิด, connection pooling issues, serialization problems:</p>
 
     <pre><code>// api.integration.test.js
 const request = require('supertest');
@@ -340,6 +348,8 @@ describe('POST /api/users', () => {
 
     <h3>Docker Compose สำหรับ Integration Tests</h3>
 
+    <p>ปัญหาของ integration tests คือต้องมี database, Redis, etc. รันอยู่ <strong>Docker Compose</strong> แก้ปัญหานี้สมบูรณ์แบบ — สร้าง services ที่ต้องการทั้งหมดด้วยคำสั่งเดียว รันใน CI ได้ด้วย ทุกคนได้ environment เดียวกัน:</p>
+
     <pre><code># docker-compose.test.yml
 version: '3.8'
 services:
@@ -370,9 +380,13 @@ docker compose -f docker-compose.test.yml run --rm app npm test</code></pre>
 
     <h2>🖥️ E2E Testing — ทดสอบเหมือน User จริง</h2>
 
-    <p>E2E (End-to-End) test จำลอง <strong>user เปิด browser แล้วใช้งานจริงๆ</strong>:</p>
+    <p><strong>E2E (End-to-End) test</strong> จำลอง user จริง — เปิด browser, กดปุ่ม, กรอกฟอร์ม, ตรวจว่าหน้าจอแสดงผลถูกต้อง ทดสอบทุกอย่างตั้งแต่ frontend → API → database → response เจอ bugs ที่ unit + integration test จับไม่ได้ (เช่น ปุ่ม disabled, responsive layout พัง, JS error บน browser จริง)</p>
+
+    <p>⚠️ แต่ E2E tests ช้า (นาที ไม่ใช่วินาที) และ flaky (ขึ้นอยู่กับ timing, network, browser version) ควรเขียนเฉพาะ <strong>critical paths</strong> เท่านั้น เช่น login, checkout, registration ไม่ใช่ทุก feature</p>
 
     <h3>Playwright (แนะนำ!)</h3>
+
+    <p><strong>Playwright</strong> เป็น E2E framework ที่ดีที่สุดในปัจจุบัน — เร็วกว่า Cypress, รองรับ multi-browser (Chrome, Firefox, Safari), มี auto-wait ที่ฉลาด, ถ่าย screenshot + video เมื่อ test fail อัตโนมัติ, และมี codegen tool ที่บันทึกการใช้งาน browser แล้วสร้าง test ให้:</p>
 
     <pre><code>// tests/login.spec.js
 const { test, expect } = require('@playwright/test');
@@ -437,6 +451,8 @@ npx playwright show-report</code></pre>
 
     <h3>Cypress (อีกตัวเลือกยอดนิยม)</h3>
 
+    <p><strong>Cypress</strong> เคยเป็น E2E framework ที่ได้รับความนิยมสูงสุด — จุดเด่นคือ time-travel debugging (ดู snapshot ทุก step) และ developer experience ที่ดี แต่รองรับแค่ Chromium-based browsers และช้ากว่า Playwright ปัจจุบัน Playwright กำลังแซง แต่ Cypress ยังเป็นตัวเลือกที่ดี:</p>
+
     <pre><code>// cypress/e2e/login.cy.js
 describe('Login', () => {
   it('logs in successfully', () => {
@@ -453,7 +469,7 @@ describe('Login', () => {
 
     <h2>📊 Code Coverage — ทดสอบครอบคลุมแค่ไหน?</h2>
 
-    <p><strong>Code coverage</strong> วัดว่า test ของเราครอบคลุมกี่ % ของ code:</p>
+    <p><strong>Code coverage</strong> วัดว่า test ของเรา "ผ่าน" code กี่เปอร์เซ็นต์ — มี 4 ประเภท: Line coverage (ผ่านกี่ line), Branch coverage (ผ่านทุก if/else ไหม), Function coverage (เรียกทุก function ไหม), Statement coverage ตัวเลขที่แนะนำคือ 80% ขึ้นไป แต่ <strong>100% ไม่ได้แปลว่าไม่มี bugs</strong> — coverage บอกแค่ว่า code ถูก "ผ่าน" ไม่ได้บอกว่า test ตรวจ output ถูกต้อง:</p>
 
     <pre><code># Jest + Coverage
 npx jest --coverage
@@ -488,7 +504,7 @@ pytest --cov=src --cov-report=html
 
     <h2>🔄 TDD — Test-Driven Development</h2>
 
-    <p>TDD คือวิธีเขียน code ที่ <strong>เขียน test ก่อน เขียน code ทีหลัง</strong>:</p>
+    <p><strong>TDD (Test-Driven Development)</strong> คือวิธีเขียน code แบบ "กลับหัว" — เขียน test ก่อน (จะ fail เพราะยังไม่มี code) → เขียน code ให้ test ผ่าน → refactor ให้สวย แล้ววนซ้ำ เรียกว่า <strong>Red-Green-Refactor</strong> ข้อดีคือ code ทุก line มี test ครอบคลุม 100% ตั้งแต่เริ่ม และ design ออกมาดีเพราะถูกบังคับให้คิดจาก "ผู้ใช้" (test) ก่อน:</p>
 
     <div class="flow-diagram">
       <div class="flow-step" style="border-color: rgba(239,68,68,0.3); background: rgba(239,68,68,0.04);">
@@ -534,7 +550,11 @@ function isValidEmail(email) {
 
     <h2>🚀 Testing ใน CI/CD Pipeline</h2>
 
+    <p>เขียน test แล้วต้องรันอัตโนมัติทุก PR — ไม่ใช่พึ่ง "ความขยัน" ของ developer! GitHub Actions ช่วยให้รัน test ทั้งหมดเมื่อมี push หรือ PR โดยอัตโนมัติ ถ้า test fail → PR merge ไม่ได้ ป้องกัน bug เข้า production:</p>
+
     <h3>GitHub Actions</h3>
+
+    <p>ตัวอย่าง pipeline ที่รัน test ครบทั้ง 3 ระดับ — เริ่มจาก unit tests (เร็วที่สุด), integration tests (ต้องมี PostgreSQL container), E2E tests (ต้องมี browser) เรียงจากเร็วไปช้าเพื่อ fail fast:</p>
 
     <pre><code># .github/workflows/test.yml
 name: Test
@@ -591,6 +611,8 @@ jobs:
 
     <h2>🛠️ Testing Tools — เลือกใช้ตัวไหน?</h2>
 
+    <p>แต่ละภาษามี testing tools หลายตัว — ตารางด้านล่างสรุปตัวเลือกยอดนิยมแยกตามประเภท test ช่วยให้เลือกได้เร็ว เริ่มจาก framework หลักก่อน (Jest/pytest) แล้วเพิ่ม E2E + coverage ทีหลัง:</p>
+
     <table>
       <thead><tr><th>ภาษา</th><th>Unit / Integration</th><th>E2E</th></tr></thead>
       <tbody>
@@ -606,6 +628,8 @@ jobs:
     <hr>
 
     <h2>📋 Testing Best Practices</h2>
+
+    <p>เขียน test ที่ดีไม่ใช่แค่ "มี test" — ต้องอ่านง่าย, maintain ง่าย, รันเร็ว, และเชื่อถือได้ (ไม่ flaky) Best practices ที่ควรทำตาม:</p>
 
     <ol>
       <li><strong>Test Pyramid:</strong> Unit เยอะ → Integration กลาง → E2E น้อย</li>
@@ -625,6 +649,8 @@ jobs:
     <hr>
 
     <h2>สรุป</h2>
+
+    <p>Software Testing ไม่ใช่ "งานเพิ่ม" — มันคือ investment ที่คุ้มค่ามากที่สุดใน software development เขียน test วันนี้ ประหยัดเวลา debug หลายชั่วโมงในอนาคต ทีมที่มี test ดีจะ deploy ได้เร็วกว่าและมั่นใจกว่า:</p>
 
     <ul>
       <li><strong>Testing Pyramid</strong> = Unit (เยอะ เร็ว) → Integration (กลาง) → E2E (น้อย ช้า)</li>
