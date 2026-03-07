@@ -1,0 +1,505 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>API Request Lifecycle — เมื่อกด Send เกิดอะไรขึ้นบ้าง? | Anirach Mingkhwan</title>
+  <meta name="description" content="เข้าใจ API Request Lifecycle ตั้งแต่ Client ส่ง Request ไปจนถึง Server ตอบกลับ พร้อม HTTP Methods, Status Codes และตัวอย่างจริง">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --navy: #0f172a; --blue: #6366f1; --blue-dark: #4f46e5; --blue-light: #818cf8;
+      --slate: #334155; --slate-light: #64748b; --gray: #94a3b8;
+      --bg: #f8fafc; --white: #ffffff; --code-bg: #1e293b;
+      --font: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+      --mono: 'JetBrains Mono', 'Fira Code', monospace;
+    }
+    html { scroll-behavior: smooth; }
+    body {
+      font-family: var(--font); font-size: 17px; line-height: 1.8;
+      color: var(--slate); background: var(--bg); -webkit-font-smoothing: antialiased;
+    }
+    .blog-nav {
+      position: fixed; top: 0; left: 0; right: 0; z-index: 100;
+      background: rgba(248,250,252,0.85); backdrop-filter: blur(20px);
+      border-bottom: 1px solid rgba(0,0,0,0.05);
+    }
+    .blog-nav__inner {
+      max-width: 860px; margin: 0 auto; padding: 0 2rem; height: 56px;
+      display: flex; align-items: center; justify-content: space-between;
+    }
+    .blog-nav__back {
+      font-size: 0.85rem; font-weight: 500; color: var(--blue);
+      text-decoration: none; display: flex; align-items: center; gap: 0.4rem;
+    }
+    .blog-nav__back:hover { color: #4f46e5; }
+    .blog-nav__title {
+      font-size: 0.85rem; font-weight: 600; color: var(--navy);
+      overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 50%;
+    }
+    .post-hero {
+      padding: 8rem 2rem 3rem;
+      background: linear-gradient(135deg, #e8f0fe 0%, #ddd6fe 50%, #c7d2fe 100%);
+      text-align: center;
+    }
+    .post-hero__tags { display: flex; gap: 0.5rem; justify-content: center; margin-bottom: 1.25rem; }
+    .post-hero__tag {
+      font-size: 0.7rem; font-weight: 600; text-transform: uppercase;
+      letter-spacing: 0.1em; color: var(--blue);
+      background: rgba(99,102,241,0.1); padding: 0.3rem 0.75rem; border-radius: 20px;
+    }
+    .post-hero__title {
+      font-size: clamp(1.8rem, 5vw, 3rem); font-weight: 800;
+      color: var(--navy); line-height: 1.2; margin-bottom: 1rem;
+      max-width: 720px; margin-left: auto; margin-right: auto;
+    }
+    .post-hero__meta {
+      font-size: 0.85rem; color: var(--slate-light);
+      display: flex; align-items: center; justify-content: center; gap: 1.5rem;
+    }
+    .post-hero__series { font-weight: 600; color: var(--blue); }
+    .post-hero__cover {
+      max-width: 480px; margin: 2.5rem auto 0;
+      border-radius: 16px; overflow: hidden;
+      box-shadow: 0 20px 60px rgba(99,102,241,0.15);
+    }
+    .post-hero__cover img { width: 100%; display: block; }
+    .post-body { max-width: 720px; margin: 0 auto; padding: 3rem 2rem 6rem; }
+    .post-body h2 {
+      font-size: 1.6rem; font-weight: 800; color: var(--navy);
+      margin: 3rem 0 1rem; padding-bottom: 0.5rem;
+      border-bottom: 2px solid rgba(99,102,241,0.15);
+    }
+    .post-body h3 { font-size: 1.25rem; font-weight: 700; color: var(--navy); margin: 2.25rem 0 0.75rem; }
+    .post-body h4 { font-size: 1.05rem; font-weight: 700; color: var(--navy); margin: 1.75rem 0 0.6rem; }
+    .post-body p { margin-bottom: 1.25rem; }
+    .post-body strong { font-weight: 700; color: var(--navy); }
+    .post-body a { color: var(--blue); text-decoration: underline; text-decoration-thickness: 1px; text-underline-offset: 2px; }
+    .post-body pre {
+      background: var(--code-bg); border-radius: 12px; padding: 1.5rem;
+      margin: 1.25rem 0 1.5rem; overflow-x: auto; border: 1px solid rgba(255,255,255,0.05);
+    }
+    .post-body pre code {
+      font-family: var(--mono); font-size: 0.85rem; color: #e2e8f0; line-height: 1.7;
+    }
+    .post-body code {
+      font-family: var(--mono); font-size: 0.88em;
+      background: rgba(99,102,241,0.08); color: #4f46e5;
+      padding: 0.15em 0.45em; border-radius: 5px;
+    }
+    .post-body pre code { background: none; color: #e2e8f0; padding: 0; }
+    .post-body ul, .post-body ol { margin: 0.5rem 0 1.25rem 1.5rem; }
+    .post-body li { margin-bottom: 0.4rem; }
+    .post-body table { width: 100%; border-collapse: collapse; margin: 1.25rem 0 1.5rem; font-size: 0.9rem; }
+    .post-body th {
+      background: rgba(99,102,241,0.06); font-weight: 700; color: var(--navy);
+      padding: 0.75rem 1rem; text-align: left; border-bottom: 2px solid rgba(99,102,241,0.15);
+    }
+    .post-body td { padding: 0.65rem 1rem; border-bottom: 1px solid #e2e8f0; }
+    .post-body blockquote, .tip {
+      background: rgba(99,102,241,0.06); border-left: 4px solid var(--blue);
+      padding: 1rem 1.25rem; border-radius: 0 10px 10px 0;
+      margin: 1.25rem 0; font-size: 0.95rem; color: var(--navy);
+    }
+    .post-body hr {
+      border: none; height: 1px;
+      background: linear-gradient(90deg, transparent, rgba(99,102,241,0.2), transparent);
+      margin: 3rem 0;
+    }
+    .post-series-footer {
+      text-align: center; font-size: 0.85rem; color: var(--gray);
+      font-style: italic; margin-top: 2rem; padding-top: 2rem; border-top: 1px solid #e2e8f0;
+    }
+    .post-nav { max-width: 720px; margin: 0 auto; padding: 0 2rem 3rem; display: flex; gap: 1.5rem; flex-wrap: wrap; }
+    .post-nav__link {
+      flex: 1; min-width: 200px; padding: 1.25rem 1.5rem; border-radius: 12px;
+      background: rgba(255,255,255,0.85); backdrop-filter: blur(16px);
+      border: 1px solid rgba(255,255,255,0.6); box-shadow: 0 4px 16px rgba(0,0,0,0.05);
+      text-decoration: none; color: inherit; transition: transform 0.2s, box-shadow 0.2s;
+    }
+    .post-nav__link:hover { transform: translateY(-2px); box-shadow: 0 8px 24px rgba(99,102,241,0.1); }
+    .post-nav__dir { font-size: 0.75rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.1em; color: var(--blue); margin-bottom: 0.35rem; }
+    .post-nav__title { font-size: 0.9rem; font-weight: 600; color: var(--navy); line-height: 1.4; }
+    .blog-footer { background: var(--navy); padding: 2rem 0; text-align: center; }
+    .blog-footer a { color: var(--blue-light); text-decoration: none; font-weight: 600; font-size: 0.9rem; }
+    .blog-footer span { color: var(--gray); font-size: 0.8rem; display: block; margin-top: 0.4rem; }
+
+    /* ── Flow Diagram ── */
+    .flow-diagram {
+      display: flex; align-items: center; justify-content: center;
+      gap: 0.5rem; flex-wrap: wrap; margin: 1.5rem 0 2rem;
+      padding: 1.5rem; background: rgba(99,102,241,0.04);
+      border-radius: 12px;
+    }
+    .flow-step {
+      text-align: center; padding: 0.75rem 1.25rem;
+      background: white; border-radius: 10px;
+      border: 1.5px solid rgba(99,102,241,0.15);
+      box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+    }
+    .flow-step__title { font-size: 0.9rem; font-weight: 700; color: var(--navy); }
+    .flow-step__sub { font-size: 0.72rem; color: var(--gray); margin-top: 0.15rem; }
+    .flow-arrow { font-size: 1.2rem; color: var(--blue); font-weight: 700; }
+
+    /* ── Method Badge ── */
+    .method-badge {
+      display: inline-block; font-family: var(--mono); font-size: 0.78rem; font-weight: 700;
+      padding: 0.2rem 0.6rem; border-radius: 6px; color: #fff; margin-right: 0.3rem;
+    }
+    .method-badge--get { background: #22c55e; }
+    .method-badge--post { background: #3b82f6; }
+    .method-badge--put { background: #f59e0b; }
+    .method-badge--patch { background: #8b5cf6; }
+    .method-badge--delete { background: #ef4444; }
+
+    /* ── Status Badge ── */
+    .status-badge {
+      display: inline-block; font-family: var(--mono); font-size: 0.78rem; font-weight: 700;
+      padding: 0.2rem 0.6rem; border-radius: 6px; margin-right: 0.3rem;
+    }
+    .status-badge--2xx { background: rgba(34,197,94,0.12); color: #16a34a; }
+    .status-badge--3xx { background: rgba(59,130,246,0.12); color: #2563eb; }
+    .status-badge--4xx { background: rgba(245,158,11,0.12); color: #d97706; }
+    .status-badge--5xx { background: rgba(239,68,68,0.12); color: #dc2626; }
+
+    @media (max-width: 600px) {
+      .post-hero { padding: 7rem 1.25rem 2.5rem; }
+      .post-body { padding: 2rem 1.25rem 4rem; }
+      .post-body pre { padding: 1rem; border-radius: 8px; }
+      .post-hero__meta { flex-direction: column; gap: 0.4rem; }
+      .post-nav { padding: 0 1.25rem 3rem; }
+      .flow-diagram { flex-direction: column; }
+    }
+  </style>
+</head>
+<body>
+
+  <nav class="blog-nav">
+    <div class="blog-nav__inner">
+      <a href="./" class="blog-nav__back">‹ Blog</a>
+      <div class="blog-nav__title">API Request Lifecycle</div>
+    </div>
+  </nav>
+
+  <header class="post-hero">
+    <div class="post-hero__tags">
+      <span class="post-hero__tag">API</span>
+      <span class="post-hero__tag">HTTP</span>
+      <span class="post-hero__tag">Backend</span>
+    </div>
+    <h1 class="post-hero__title">API Request Lifecycle — เมื่อกด Send เกิดอะไรขึ้นบ้าง?</h1>
+    <div class="post-hero__meta">
+      <span>By <strong>Anirach Mingkhwan</strong></span>
+      <span class="post-hero__series">DevOps & Vibe Coding 2026</span>
+    </div>
+    <div class="post-hero__cover">
+      <img src="../images/api-lifecycle-cover.jpg" alt="API Request Lifecycle — cute dog illustration">
+    </div>
+  </header>
+
+  <article class="post-body">
+
+    <p>จากโพสต์ที่แล้วเราพูดถึง Docker ว่ามันช่วยให้เรา pack environment ให้เหมือนกันทุกที่</p>
+
+    <p>แต่เวลาเราเปิดแอปขึ้นมาแล้วกดปุ่มอะไรสักอย่าง... <strong>เคยสงสัยมั้ยว่ามันเกิดอะไรขึ้นระหว่าง "กดปุ่ม" กับ "ได้ข้อมูลมา"?</strong> 🤔</p>
+
+    <p>นั่นแหละครับ — นั่นคือ <strong>API Request Lifecycle</strong> กระบวนการที่ Client (เช่น เว็บ, แอป) คุยกับ Server ผ่าน API</p>
+
+    <hr>
+
+    <h2>API คืออะไร?</h2>
+
+    <p><strong>API (Application Programming Interface)</strong> คือ "ช่องทางสื่อสาร" ระหว่าง software สองตัว เหมือนบริกรในร้านอาหาร — คุณ (Client) สั่งอาหาร ผ่านบริกร (API) ไปยังครัว (Server) แล้วบริกรก็เอาอาหารกลับมาให้คุณ</p>
+
+    <blockquote>
+      <strong>💡 จำง่ายๆ:</strong> API = บริกร | Client = ลูกค้า | Server = ครัว
+    </blockquote>
+
+    <hr>
+
+    <h2>API Request Lifecycle ทำงานยังไง?</h2>
+
+    <p>เมื่อ Client ต้องการข้อมูลจาก Server จะเกิดขั้นตอนดังนี้:</p>
+
+    <!-- Flow Diagram -->
+    <div class="flow-diagram">
+      <div class="flow-step">
+        <div class="flow-step__title">1. Client Request</div>
+        <div class="flow-step__sub">ส่ง HTTP Request</div>
+      </div>
+      <span class="flow-arrow">→</span>
+      <div class="flow-step">
+        <div class="flow-step__title">2. Server Receives</div>
+        <div class="flow-step__sub">รับ request เข้ามา</div>
+      </div>
+      <span class="flow-arrow">→</span>
+      <div class="flow-step">
+        <div class="flow-step__title">3. Server Processes</div>
+        <div class="flow-step__sub">ประมวลผล + query DB</div>
+      </div>
+      <span class="flow-arrow">→</span>
+      <div class="flow-step">
+        <div class="flow-step__title">4. Server Responds</div>
+        <div class="flow-step__sub">ส่ง response กลับ</div>
+      </div>
+      <span class="flow-arrow">→</span>
+      <div class="flow-step">
+        <div class="flow-step__title">5. Client Renders</div>
+        <div class="flow-step__sub">แสดงผลให้ user</div>
+      </div>
+    </div>
+
+    <h3>Step 1: Client ส่ง Request</h3>
+
+    <p>Client (เว็บ, แอปมือถือ, Postman) จะส่ง <strong>HTTP Request</strong> ไปยัง Server โดยระบุ:</p>
+
+    <ul>
+      <li><strong>URL</strong> — ปลายทางที่ต้องการ เช่น <code>https://api.example.com/users</code></li>
+      <li><strong>HTTP Method</strong> — บอกว่าจะทำอะไร (GET, POST, PUT, DELETE)</li>
+      <li><strong>Headers</strong> — ข้อมูลเพิ่มเติม เช่น Authorization token</li>
+      <li><strong>Body</strong> — ข้อมูลที่แนบไป (สำหรับ POST, PUT)</li>
+    </ul>
+
+    <pre><code>GET /api/users/42 HTTP/1.1
+Host: api.example.com
+Authorization: Bearer eyJhbGciOiJIUzI1NiIs...
+Accept: application/json</code></pre>
+
+    <h3>Step 2: Server รับ Request</h3>
+
+    <p>Server ได้รับ request แล้วจะผ่านหลายชั้น:</p>
+
+    <ol>
+      <li><strong>DNS Resolution</strong> — แปลง domain name เป็น IP address</li>
+      <li><strong>Load Balancer</strong> — กระจาย request ไปยัง server ที่ว่าง</li>
+      <li><strong>Middleware</strong> — ตรวจ authentication, logging, rate limiting</li>
+      <li><strong>Router</strong> — จับคู่ URL + Method ไปยัง handler ที่ถูกต้อง</li>
+    </ol>
+
+    <h3>Step 3: Server ประมวลผล</h3>
+
+    <p>Handler function จะดำเนินการตามที่ request บอก เช่น:</p>
+
+    <ul>
+      <li>Query ข้อมูลจาก Database</li>
+      <li>คำนวณ business logic</li>
+      <li>เรียก external API อื่นต่อ (microservices)</li>
+      <li>Validate ข้อมูล</li>
+    </ul>
+
+    <pre><code>// Express.js example
+app.get('/api/users/:id', async (req, res) => {
+  const user = await db.users.findById(req.params.id);
+  if (!user) {
+    return res.status(404).json({ error: 'User not found' });
+  }
+  res.status(200).json(user);
+});</code></pre>
+
+    <h3>Step 4: Server ส่ง Response กลับ</h3>
+
+    <p>Server สร้าง <strong>HTTP Response</strong> กลับไปหา Client ประกอบด้วย:</p>
+
+    <ul>
+      <li><strong>Status Code</strong> — บอกผลลัพธ์ (200, 404, 500 ฯลฯ)</li>
+      <li><strong>Headers</strong> — เช่น Content-Type, Cache-Control</li>
+      <li><strong>Body</strong> — ข้อมูลที่ส่งกลับ (มักเป็น JSON)</li>
+    </ul>
+
+    <pre><code>HTTP/1.1 200 OK
+Content-Type: application/json
+
+{
+  "id": 42,
+  "name": "สมชาย",
+  "email": "somchai@example.com",
+  "role": "developer"
+}</code></pre>
+
+    <h3>Step 5: Client แสดงผล</h3>
+
+    <p>Client รับ response มาแล้ว parse ข้อมูล แล้วแสดงผลให้ user เห็น — ไม่ว่าจะเป็นหน้าเว็บ, แอปมือถือ, หรือ terminal</p>
+
+    <hr>
+
+    <h2>HTTP Methods — ทำอะไรได้บ้าง?</h2>
+
+    <p>แต่ละ method บอก server ว่า client ต้องการ "ทำอะไร" กับ resource:</p>
+
+    <table>
+      <thead>
+        <tr>
+          <th>Method</th>
+          <th>ใช้ทำอะไร</th>
+          <th>ตัวอย่าง</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><span class="method-badge method-badge--get">GET</span></td>
+          <td>ดึงข้อมูล (อ่านอย่างเดียว)</td>
+          <td><code>GET /api/users</code></td>
+        </tr>
+        <tr>
+          <td><span class="method-badge method-badge--post">POST</span></td>
+          <td>สร้างข้อมูลใหม่</td>
+          <td><code>POST /api/users</code></td>
+        </tr>
+        <tr>
+          <td><span class="method-badge method-badge--put">PUT</span></td>
+          <td>แก้ไขข้อมูลทั้งหมด</td>
+          <td><code>PUT /api/users/42</code></td>
+        </tr>
+        <tr>
+          <td><span class="method-badge method-badge--patch">PATCH</span></td>
+          <td>แก้ไขบางฟิลด์</td>
+          <td><code>PATCH /api/users/42</code></td>
+        </tr>
+        <tr>
+          <td><span class="method-badge method-badge--delete">DELETE</span></td>
+          <td>ลบข้อมูล</td>
+          <td><code>DELETE /api/users/42</code></td>
+        </tr>
+      </tbody>
+    </table>
+
+    <blockquote>
+      <strong>💡 CRUD Mapping:</strong> Create = POST, Read = GET, Update = PUT/PATCH, Delete = DELETE
+    </blockquote>
+
+    <hr>
+
+    <h2>HTTP Status Codes — Server ตอบกลับอะไร?</h2>
+
+    <p>Status code เป็นตัวเลข 3 หลักที่บอกผลลัพธ์ของ request:</p>
+
+    <h3>2xx — สำเร็จ ✅</h3>
+    <ul>
+      <li><span class="status-badge status-badge--2xx">200</span> <strong>OK</strong> — ทำสำเร็จแล้ว</li>
+      <li><span class="status-badge status-badge--2xx">201</span> <strong>Created</strong> — สร้างข้อมูลใหม่สำเร็จ</li>
+      <li><span class="status-badge status-badge--2xx">204</span> <strong>No Content</strong> — สำเร็จแต่ไม่มีข้อมูลส่งกลับ</li>
+    </ul>
+
+    <h3>3xx — Redirect 🔄</h3>
+    <ul>
+      <li><span class="status-badge status-badge--3xx">301</span> <strong>Moved Permanently</strong> — ย้ายถาวร</li>
+      <li><span class="status-badge status-badge--3xx">304</span> <strong>Not Modified</strong> — ใช้ cache ได้เลย</li>
+    </ul>
+
+    <h3>4xx — Client Error ⚠️</h3>
+    <ul>
+      <li><span class="status-badge status-badge--4xx">400</span> <strong>Bad Request</strong> — request ผิดรูปแบบ</li>
+      <li><span class="status-badge status-badge--4xx">401</span> <strong>Unauthorized</strong> — ยังไม่ login</li>
+      <li><span class="status-badge status-badge--4xx">403</span> <strong>Forbidden</strong> — ไม่มีสิทธิ์</li>
+      <li><span class="status-badge status-badge--4xx">404</span> <strong>Not Found</strong> — หาไม่เจอ</li>
+      <li><span class="status-badge status-badge--4xx">429</span> <strong>Too Many Requests</strong> — ส่งบ่อยเกินไป (rate limited)</li>
+    </ul>
+
+    <h3>5xx — Server Error 🔥</h3>
+    <ul>
+      <li><span class="status-badge status-badge--5xx">500</span> <strong>Internal Server Error</strong> — server พัง</li>
+      <li><span class="status-badge status-badge--5xx">502</span> <strong>Bad Gateway</strong> — proxy/server ตัวกลางมีปัญหา</li>
+      <li><span class="status-badge status-badge--5xx">503</span> <strong>Service Unavailable</strong> — server โหลดเกินหรือกำลังซ่อม</li>
+    </ul>
+
+    <blockquote>
+      <strong>💡 จำง่ายๆ:</strong> 2xx = สำเร็จ | 4xx = ผิดที่ client | 5xx = ผิดที่ server
+    </blockquote>
+
+    <hr>
+
+    <h2>ตัวอย่างจริง — สร้าง User ด้วย POST</h2>
+
+    <h4>Request:</h4>
+    <pre><code>POST /api/users HTTP/1.1
+Host: api.example.com
+Content-Type: application/json
+Authorization: Bearer eyJhbGci...
+
+{
+  "name": "สมหญิง",
+  "email": "somying@example.com",
+  "role": "student"
+}</code></pre>
+
+    <h4>Response (สำเร็จ):</h4>
+    <pre><code>HTTP/1.1 201 Created
+Content-Type: application/json
+Location: /api/users/99
+
+{
+  "id": 99,
+  "name": "สมหญิง",
+  "email": "somying@example.com",
+  "role": "student",
+  "createdAt": "2026-03-07T08:00:00Z"
+}</code></pre>
+
+    <h4>Response (ผิดพลาด):</h4>
+    <pre><code>HTTP/1.1 400 Bad Request
+Content-Type: application/json
+
+{
+  "error": "Validation failed",
+  "details": [
+    { "field": "email", "message": "Invalid email format" }
+  ]
+}</code></pre>
+
+    <hr>
+
+    <h2>ลองเล่นด้วย cURL</h2>
+
+    <p>เปิด terminal แล้วลองส่ง request จริงๆ ได้เลย:</p>
+
+    <pre><code># GET — ดึงข้อมูล
+curl -X GET https://jsonplaceholder.typicode.com/users/1
+
+# POST — สร้างข้อมูลใหม่
+curl -X POST https://jsonplaceholder.typicode.com/posts \
+  -H "Content-Type: application/json" \
+  -d '{"title": "Hello API", "body": "ทดสอบ!", "userId": 1}'
+
+# DELETE — ลบข้อมูล
+curl -X DELETE https://jsonplaceholder.typicode.com/posts/1</code></pre>
+
+    <blockquote>
+      <strong>🐕 Tip:</strong> ลองใช้ <a href="https://httpie.io" target="_blank">HTTPie</a> หรือ <a href="https://www.postman.com" target="_blank">Postman</a> สำหรับการทดสอบ API ที่สะดวกกว่า cURL
+    </blockquote>
+
+    <hr>
+
+    <h2>สรุป</h2>
+
+    <ul>
+      <li><strong>API</strong> = ช่องทางสื่อสารระหว่าง Client กับ Server</li>
+      <li><strong>Request Lifecycle</strong> = Client Request → Server Receives → Processes → Responds → Client Renders</li>
+      <li><strong>HTTP Methods</strong> = GET (อ่าน), POST (สร้าง), PUT/PATCH (แก้ไข), DELETE (ลบ)</li>
+      <li><strong>Status Codes</strong> = 2xx สำเร็จ, 4xx ผิดที่ client, 5xx ผิดที่ server</li>
+      <li><strong>REST API</strong> คือรูปแบบที่นิยมที่สุดในการออกแบบ API ปัจจุบัน</li>
+    </ul>
+
+    <div class="post-series-footer">
+      บทความจากซีรีส์ DevOps & Vibe Coding 2026
+    </div>
+
+  </article>
+
+  <!-- Post Navigation -->
+  <div class="post-nav">
+    <a href="docker-vs-vms.html" class="post-nav__link">
+      <div class="post-nav__dir">← Previous</div>
+      <div class="post-nav__title">Docker Containers vs VMs — ต่างกันยังไง ใช้ตัวไหนดี?</div>
+    </a>
+  </div>
+
+  <footer class="blog-footer">
+    <a href="./">← Back to Blog</a>
+    <span>© 2025 Anirach Mingkhwan — Associate Professor, KMUTNB</span>
+  </footer>
+
+</body>
+</html>
