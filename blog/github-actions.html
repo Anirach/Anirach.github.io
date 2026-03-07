@@ -1,0 +1,831 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>GitHub Actions — Automate ทุกอย่างใน CI/CD Pipeline | Anirach Mingkhwan</title>
+  <meta name="description" content="เรียนรู้ GitHub Actions ตั้งแต่ Workflows, Jobs, Steps, Triggers, Secrets, Matrix Builds, Reusable Workflows, Self-hosted Runners และ Best Practices">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --navy: #0f172a; --blue: #6366f1; --blue-dark: #4f46e5; --blue-light: #818cf8;
+      --slate: #334155; --slate-light: #64748b; --gray: #94a3b8;
+      --bg: #f8fafc; --white: #ffffff; --code-bg: #1e293b;
+      --font: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+      --mono: 'JetBrains Mono', 'Fira Code', monospace;
+      --gh-dark: #0d1117; --gh-blue: #58a6ff; --gh-green: #3fb950; --gh-orange: #d29922;
+    }
+    html { scroll-behavior: smooth; }
+    body { font-family: var(--font); font-size: 17px; line-height: 1.8; color: var(--slate); background: var(--bg); -webkit-font-smoothing: antialiased; }
+    .blog-nav { position: fixed; top: 0; left: 0; right: 0; z-index: 100; background: rgba(248,250,252,0.85); backdrop-filter: blur(20px); border-bottom: 1px solid rgba(0,0,0,0.05); }
+    .blog-nav__inner { max-width: 860px; margin: 0 auto; padding: 0 2rem; height: 56px; display: flex; align-items: center; justify-content: space-between; }
+    .blog-nav__back { font-size: 0.85rem; font-weight: 500; color: var(--blue); text-decoration: none; }
+    .blog-nav__back:hover { color: #4f46e5; }
+    .blog-nav__title { font-size: 0.85rem; font-weight: 600; color: var(--navy); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 50%; }
+
+    .post-hero { padding: 8rem 2rem 3rem; background: linear-gradient(135deg, #0d1117 0%, #161b22 40%, #21262d 100%); text-align: center; }
+    .post-hero__tags { display: flex; gap: 0.5rem; justify-content: center; margin-bottom: 1.25rem; flex-wrap: wrap; }
+    .post-hero__tag { font-size: 0.7rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.1em; color: #58a6ff; background: rgba(88,166,255,0.15); padding: 0.3rem 0.75rem; border-radius: 20px; }
+    .post-hero__title { font-size: clamp(1.8rem, 5vw, 3rem); font-weight: 800; color: #fff; line-height: 1.2; margin-bottom: 1rem; max-width: 720px; margin-left: auto; margin-right: auto; }
+    .post-hero__meta { font-size: 0.85rem; color: rgba(255,255,255,0.6); display: flex; align-items: center; justify-content: center; gap: 1.5rem; }
+    .post-hero__series { font-weight: 600; color: #58a6ff; }
+    .post-hero__cover { max-width: 420px; margin: 2.5rem auto 0; border-radius: 16px; overflow: hidden; box-shadow: 0 20px 60px rgba(0,0,0,0.5); }
+    .post-hero__cover img { width: 100%; display: block; }
+
+    .post-body { max-width: 720px; margin: 0 auto; padding: 3rem 2rem 6rem; }
+    .post-body h2 { font-size: 1.6rem; font-weight: 800; color: var(--navy); margin: 3rem 0 1rem; padding-bottom: 0.5rem; border-bottom: 2px solid rgba(99,102,241,0.15); }
+    .post-body h3 { font-size: 1.25rem; font-weight: 700; color: var(--navy); margin: 2.25rem 0 0.75rem; }
+    .post-body h4 { font-size: 1.05rem; font-weight: 700; color: var(--navy); margin: 1.75rem 0 0.6rem; }
+    .post-body p { margin-bottom: 1.25rem; }
+    .post-body strong { font-weight: 700; color: var(--navy); }
+    .post-body a { color: var(--blue); text-decoration: underline; text-decoration-thickness: 1px; text-underline-offset: 2px; }
+    .post-body pre { background: var(--code-bg); border-radius: 12px; padding: 1.5rem; margin: 1.25rem 0 1.5rem; overflow-x: auto; border: 1px solid rgba(255,255,255,0.05); }
+    .post-body pre code { font-family: var(--mono); font-size: 0.82rem; color: #e2e8f0; line-height: 1.7; }
+    .post-body code { font-family: var(--mono); font-size: 0.88em; background: rgba(99,102,241,0.08); color: #4f46e5; padding: 0.15em 0.45em; border-radius: 5px; }
+    .post-body pre code { background: none; color: #e2e8f0; padding: 0; }
+    .post-body ul, .post-body ol { margin: 0.5rem 0 1.25rem 1.5rem; }
+    .post-body li { margin-bottom: 0.4rem; }
+    .post-body table { width: 100%; border-collapse: collapse; margin: 1.25rem 0 1.5rem; font-size: 0.9rem; }
+    .post-body th { background: rgba(99,102,241,0.06); font-weight: 700; color: var(--navy); padding: 0.75rem 1rem; text-align: left; border-bottom: 2px solid rgba(99,102,241,0.15); }
+    .post-body td { padding: 0.65rem 1rem; border-bottom: 1px solid #e2e8f0; }
+    .post-body blockquote { background: rgba(99,102,241,0.06); border-left: 4px solid var(--blue); padding: 1rem 1.25rem; border-radius: 0 10px 10px 0; margin: 1.25rem 0; font-size: 0.95rem; color: var(--navy); }
+    .post-body hr { border: none; height: 1px; background: linear-gradient(90deg, transparent, rgba(99,102,241,0.2), transparent); margin: 3rem 0; }
+    .post-series-footer { text-align: center; font-size: 0.85rem; color: var(--gray); font-style: italic; margin-top: 2rem; padding-top: 2rem; border-top: 1px solid #e2e8f0; }
+
+    .post-nav { max-width: 720px; margin: 0 auto; padding: 0 2rem 3rem; display: flex; gap: 1.5rem; flex-wrap: wrap; }
+    .post-nav__link { flex: 1; min-width: 200px; padding: 1.25rem 1.5rem; border-radius: 12px; background: rgba(255,255,255,0.85); backdrop-filter: blur(16px); border: 1px solid rgba(255,255,255,0.6); box-shadow: 0 4px 16px rgba(0,0,0,0.05); text-decoration: none; color: inherit; transition: transform 0.2s, box-shadow 0.2s; }
+    .post-nav__link:hover { transform: translateY(-2px); box-shadow: 0 8px 24px rgba(99,102,241,0.1); }
+    .post-nav__dir { font-size: 0.75rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.1em; color: var(--blue); margin-bottom: 0.35rem; }
+    .post-nav__title { font-size: 0.9rem; font-weight: 600; color: var(--navy); line-height: 1.4; }
+    .blog-footer { background: var(--navy); padding: 2rem 0; text-align: center; }
+    .blog-footer a { color: var(--blue-light); text-decoration: none; font-weight: 600; font-size: 0.9rem; }
+    .blog-footer span { color: var(--gray); font-size: 0.8rem; display: block; margin-top: 0.4rem; }
+
+    .arch-diagram { margin: 1.5rem 0 2rem; }
+    .arch-box { border: 2px solid rgba(99,102,241,0.25); border-radius: 12px; padding: 1.25rem; background: linear-gradient(135deg, rgba(99,102,241,0.03), rgba(99,102,241,0.06)); }
+    .arch-label { font-size: 0.75rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.1em; color: var(--blue); text-align: center; margin-bottom: 0.75rem; }
+    .arch-row { display: flex; gap: 0.75rem; justify-content: center; flex-wrap: wrap; margin-bottom: 0.75rem; }
+    .arch-container { border: 2px solid rgba(99,102,241,0.2); border-radius: 10px; padding: 0.75rem; background: rgba(238,242,255,0.8); min-width: 120px; text-align: center; }
+    .arch-item { font-size: 0.78rem; font-weight: 600; color: var(--navy); padding: 0.3rem 0.6rem; margin: 0.25rem 0; background: rgba(99,102,241,0.08); border-radius: 6px; }
+    .arch-name { font-size: 0.72rem; font-weight: 700; color: var(--blue); margin-bottom: 0.35rem; }
+    .arch-arrow-down { text-align: center; font-size: 1rem; color: var(--blue); font-weight: 700; margin: 0.5rem 0; }
+
+    .flow-diagram { display: flex; align-items: center; justify-content: center; gap: 0.5rem; flex-wrap: wrap; margin: 1.5rem 0 2rem; padding: 1.5rem; background: rgba(99,102,241,0.04); border-radius: 12px; }
+    .flow-step { text-align: center; padding: 0.75rem 1.25rem; background: white; border-radius: 10px; border: 1.5px solid rgba(99,102,241,0.15); box-shadow: 0 2px 8px rgba(0,0,0,0.04); }
+    .flow-step__title { font-size: 0.9rem; font-weight: 700; color: var(--navy); }
+    .flow-step__sub { font-size: 0.72rem; color: var(--gray); margin-top: 0.15rem; }
+    .flow-arrow { font-size: 1.2rem; color: var(--blue); font-weight: 700; }
+
+    @media (max-width: 600px) {
+      .post-hero { padding: 7rem 1.25rem 2.5rem; }
+      .post-body { padding: 2rem 1.25rem 4rem; }
+      .post-body pre { padding: 1rem; border-radius: 8px; }
+      .post-hero__meta { flex-direction: column; gap: 0.4rem; }
+      .post-nav { padding: 0 1.25rem 3rem; }
+      .flow-diagram { flex-direction: column; }
+    }
+  </style>
+</head>
+<body>
+
+  <nav class="blog-nav">
+    <div class="blog-nav__inner">
+      <a href="./" class="blog-nav__back">‹ Blog</a>
+      <div class="blog-nav__title">GitHub Actions</div>
+    </div>
+  </nav>
+
+  <header class="post-hero">
+    <div class="post-hero__tags">
+      <span class="post-hero__tag">GitHub Actions</span>
+      <span class="post-hero__tag">CI/CD</span>
+      <span class="post-hero__tag">DevOps</span>
+    </div>
+    <h1 class="post-hero__title">GitHub Actions — Automate ทุกอย่างใน CI/CD Pipeline 🤖</h1>
+    <div class="post-hero__meta">
+      <span>By <strong style="color:#fff">Anirach Mingkhwan</strong></span>
+      <span class="post-hero__series">DevOps & Vibe Coding 2026</span>
+    </div>
+    <div class="post-hero__cover">
+      <img src="../images/github-actions-cover.jpg" alt="GitHub Actions — hoodie dog at multi-monitor desk">
+    </div>
+  </header>
+
+  <article class="post-body">
+
+    <p>ในโพสต์ CI/CD Pipeline เราเรียนแนวคิด CI/CD ทั่วไป แต่ถ้าถามว่า <strong>CI/CD tool ตัวไหนนิยมที่สุดตอนนี้?</strong> คำตอบคือ <strong>GitHub Actions</strong> — ฟรี, อยู่ใน GitHub เลย, ไม่ต้อง setup server แยก!</p>
+
+    <p>วันนี้มาเรียนรู้ GitHub Actions แบบละเอียด ตั้งแต่พื้นฐานไปจนถึง production-grade workflows 🤖🐕</p>
+
+    <hr>
+
+    <h2>🤖 GitHub Actions คืออะไร?</h2>
+
+    <p>GitHub Actions คือ <strong>CI/CD platform ที่ built-in อยู่ใน GitHub</strong> — เขียน workflow เป็น YAML แล้ว GitHub รันให้อัตโนมัติ:</p>
+
+    <div class="flow-diagram">
+      <div class="flow-step">
+        <div class="flow-step__title">📝 git push</div>
+        <div class="flow-step__sub">Trigger event</div>
+      </div>
+      <span class="flow-arrow">→</span>
+      <div class="flow-step" style="border-color:rgba(88,166,255,0.3);background:rgba(88,166,255,0.04);">
+        <div class="flow-step__title">⚙️ Workflow</div>
+        <div class="flow-step__sub">.github/workflows/</div>
+      </div>
+      <span class="flow-arrow">→</span>
+      <div class="flow-step" style="border-color:rgba(63,185,80,0.3);background:rgba(63,185,80,0.04);">
+        <div class="flow-step__title">🏃 Jobs</div>
+        <div class="flow-step__sub">Run on runners</div>
+      </div>
+      <span class="flow-arrow">→</span>
+      <div class="flow-step" style="border-color:rgba(34,197,94,0.3);background:rgba(34,197,94,0.04);">
+        <div class="flow-step__title">✅ Steps</div>
+        <div class="flow-step__sub">Actions + commands</div>
+      </div>
+    </div>
+
+    <h3>Key Concepts</h3>
+
+    <table>
+      <thead><tr><th>Concept</th><th>คืออะไร</th><th>ตัวอย่าง</th></tr></thead>
+      <tbody>
+        <tr><td><strong>Workflow</strong></td><td>ไฟล์ YAML ที่กำหนด automation</td><td><code>.github/workflows/ci.yml</code></td></tr>
+        <tr><td><strong>Event</strong></td><td>สิ่งที่ trigger workflow</td><td><code>push</code>, <code>pull_request</code>, <code>schedule</code></td></tr>
+        <tr><td><strong>Job</strong></td><td>ชุดของ steps ที่รันบน runner เดียว</td><td><code>build</code>, <code>test</code>, <code>deploy</code></td></tr>
+        <tr><td><strong>Step</strong></td><td>คำสั่งหรือ action ทีละตัว</td><td><code>run: npm test</code></td></tr>
+        <tr><td><strong>Action</strong></td><td>Reusable unit of code</td><td><code>actions/checkout@v4</code></td></tr>
+        <tr><td><strong>Runner</strong></td><td>เครื่องที่รัน job</td><td><code>ubuntu-latest</code>, self-hosted</td></tr>
+      </tbody>
+    </table>
+
+    <hr>
+
+    <h2>📝 Workflow แรก — Hello GitHub Actions</h2>
+
+    <pre><code># .github/workflows/hello.yml
+name: Hello CI
+
+# ─── Triggers ───
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+# ─── Jobs ───
+jobs:
+  hello:
+    runs-on: ubuntu-latest        # ใช้ Ubuntu runner
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4  # ดึง code จาก repo
+
+      - name: Say hello
+        run: echo "Hello from GitHub Actions! 🤖"
+
+      - name: Show info
+        run: |
+          echo "Event: ${{ github.event_name }}"
+          echo "Branch: ${{ github.ref_name }}"
+          echo "Commit: ${{ github.sha }}"
+          echo "Actor: ${{ github.actor }}"</code></pre>
+
+    <blockquote>
+      <strong>💡</strong> ไฟล์ต้องอยู่ใน <code>.github/workflows/</code> เท่านั้น GitHub จะ detect อัตโนมัติ!
+    </blockquote>
+
+    <hr>
+
+    <h2>🚀 Real-World CI/CD Pipeline</h2>
+
+    <h3>Node.js — Test + Build + Deploy</h3>
+
+    <pre><code># .github/workflows/ci-cd.yml
+name: CI/CD Pipeline
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+env:
+  NODE_VERSION: 20
+  REGISTRY: ghcr.io
+  IMAGE_NAME: ${{ github.repository }}
+
+jobs:
+  # ─── Job 1: Test ───
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'                    # cache node_modules
+
+      - name: Install dependencies
+        run: npm ci                        # clean install (ใช้ lockfile)
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Unit Tests
+        run: npm test -- --coverage
+
+      - name: Upload coverage
+        uses: codecov/codecov-action@v4
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+
+  # ─── Job 2: Build Docker Image ───
+  build:
+    needs: test                            # รอ test ผ่านก่อน
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push'        # build เฉพาะ push (ไม่ build PR)
+
+    permissions:
+      contents: read
+      packages: write
+
+    outputs:
+      image-tag: ${{ steps.meta.outputs.tags }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Login to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Docker metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+          tags: |
+            type=sha,prefix=
+            type=ref,event=branch
+
+      - name: Build & Push
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          cache-from: type=gha             # GitHub Actions cache
+          cache-to: type=gha,mode=max
+
+  # ─── Job 3: Deploy ───
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main'    # deploy เฉพาะ main
+    environment: production                 # require approval
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Deploy to production
+        run: |
+          echo "Deploying ${{ needs.build.outputs.image-tag }}"
+          # kubectl set image deployment/app app=$IMAGE_TAG
+          # หรือ update ArgoCD manifests</code></pre>
+
+    <div class="arch-diagram">
+      <div class="arch-box">
+        <div class="arch-label">CI/CD Pipeline Flow</div>
+        <div class="arch-row">
+          <div class="arch-container" style="background:rgba(88,166,255,0.08);">
+            <div class="arch-name" style="color:#58a6ff;">🧪 Test Job</div>
+            <div class="arch-item">Lint</div>
+            <div class="arch-item">Unit Tests</div>
+            <div class="arch-item">Coverage</div>
+          </div>
+          <div style="display:flex;align-items:center;font-size:1.2rem;color:var(--blue);font-weight:700;">→</div>
+          <div class="arch-container" style="background:rgba(63,185,80,0.08);">
+            <div class="arch-name" style="color:#3fb950;">🐳 Build Job</div>
+            <div class="arch-item">Docker Build</div>
+            <div class="arch-item">Push to GHCR</div>
+            <div class="arch-item">Cache layers</div>
+          </div>
+          <div style="display:flex;align-items:center;font-size:1.2rem;color:var(--blue);font-weight:700;">→</div>
+          <div class="arch-container" style="background:rgba(210,153,34,0.08);">
+            <div class="arch-name" style="color:#d29922;">🚀 Deploy Job</div>
+            <div class="arch-item">Production env</div>
+            <div class="arch-item">Approval gate</div>
+            <div class="arch-item">Rollout</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <hr>
+
+    <h2>🎯 Triggers — เมื่อไรจะรัน?</h2>
+
+    <pre><code>on:
+  # Push to specific branches
+  push:
+    branches: [main, develop]
+    paths:                               # รันเฉพาะเมื่อไฟล์เหล่านี้เปลี่ยน
+      - 'src/**'
+      - 'package.json'
+    paths-ignore:
+      - '**.md'                          # ไม่รันเมื่อแก้ docs
+
+  # Pull Request
+  pull_request:
+    branches: [main]
+    types: [opened, synchronize, reopened]
+
+  # Schedule (cron)
+  schedule:
+    - cron: '0 2 * * 1'                 # ทุกวันจันทร์ 02:00 UTC
+
+  # Manual trigger (ปุ่มกด)
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Deploy environment'
+        required: true
+        default: 'staging'
+        type: choice
+        options:
+          - staging
+          - production
+
+  # Tag/Release
+  release:
+    types: [published]
+
+  # Triggered by another workflow
+  workflow_call:                          # reusable workflow</code></pre>
+
+    <hr>
+
+    <h2>🔐 Secrets & Variables</h2>
+
+    <pre><code># ตั้ง Secrets ใน GitHub:
+# Settings → Secrets and variables → Actions → New repository secret
+
+# ใช้ใน workflow:
+jobs:
+  deploy:
+    steps:
+      - name: Deploy
+        env:
+          API_KEY: ${{ secrets.API_KEY }}
+          DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
+        run: |
+          echo "Deploying with secret credentials..."
+          # $API_KEY และ $DB_PASSWORD ใช้ได้ใน step นี้
+          # ⚠️ GitHub จะ mask secrets ใน logs อัตโนมัติ
+
+      - name: Use GitHub Token
+        # GITHUB_TOKEN สร้างให้อัตโนมัติ ไม่ต้องตั้งเอง!
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh pr list
+          gh release create v1.0.0</code></pre>
+
+    <h3>Environment Secrets</h3>
+
+    <pre><code>jobs:
+  deploy-staging:
+    environment: staging               # ใช้ secrets ของ staging
+    steps:
+      - run: echo "DB=${{ secrets.DATABASE_URL }}"
+        # → ได้ staging DB URL
+
+  deploy-production:
+    environment: production            # ใช้ secrets ของ production
+    # + สามารถตั้ง required reviewers ได้!
+    steps:
+      - run: echo "DB=${{ secrets.DATABASE_URL }}"
+        # → ได้ production DB URL (คนละค่ากับ staging)</code></pre>
+
+    <hr>
+
+    <h2>🔀 Matrix Strategy — ทดสอบหลาย versions</h2>
+
+    <pre><code>jobs:
+  test:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+        node-version: [18, 20, 22]
+        # รัน 3 OS × 3 Node = 9 jobs พร้อมกัน!
+      fail-fast: false                  # ไม่หยุดถ้า 1 job fail
+
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node-version }}
+      - run: npm ci
+      - run: npm test
+
+  # Matrix with include/exclude
+  test-python:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python: ['3.10', '3.11', '3.12']
+        django: ['4.2', '5.0']
+        exclude:
+          - python: '3.10'
+            django: '5.0'              # Django 5 ไม่รองรับ Python 3.10
+        include:
+          - python: '3.12'
+            django: '5.0'
+            experimental: true         # เพิ่ม flag พิเศษ</code></pre>
+
+    <hr>
+
+    <h2>📦 Caching — เร็วขึ้น 10x!</h2>
+
+    <pre><code># ❌ ช้า: install ทุกครั้ง (2-3 นาที)
+- run: npm ci
+
+# ✅ เร็ว: cache node_modules (10 วินาที)
+- uses: actions/setup-node@v4
+  with:
+    node-version: 20
+    cache: 'npm'                        # built-in cache!
+
+# หรือ cache manual
+- uses: actions/cache@v4
+  with:
+    path: ~/.npm
+    key: ${{ runner.os }}-npm-${{ hashFiles('**/package-lock.json') }}
+    restore-keys: |
+      ${{ runner.os }}-npm-
+
+# Python
+- uses: actions/setup-python@v5
+  with:
+    python-version: '3.12'
+    cache: 'pip'
+
+# Docker layer caching
+- uses: docker/build-push-action@v5
+  with:
+    cache-from: type=gha
+    cache-to: type=gha,mode=max</code></pre>
+
+    <hr>
+
+    <h2>🧩 Marketplace Actions — อย่าเขียนเอง!</h2>
+
+    <p>GitHub Marketplace มี <strong>actions สำเร็จรูปมากกว่า 20,000 ตัว</strong> — ใช้เลย ไม่ต้องเขียนเอง:</p>
+
+    <table>
+      <thead><tr><th>หมวด</th><th>Action</th><th>ทำอะไร</th></tr></thead>
+      <tbody>
+        <tr><td><strong>Checkout</strong></td><td><code>actions/checkout@v4</code></td><td>ดึง code จาก repo</td></tr>
+        <tr><td><strong>Node.js</strong></td><td><code>actions/setup-node@v4</code></td><td>ติดตั้ง Node.js</td></tr>
+        <tr><td><strong>Python</strong></td><td><code>actions/setup-python@v5</code></td><td>ติดตั้ง Python</td></tr>
+        <tr><td><strong>Docker</strong></td><td><code>docker/build-push-action@v5</code></td><td>Build + push image</td></tr>
+        <tr><td><strong>Cache</strong></td><td><code>actions/cache@v4</code></td><td>Cache dependencies</td></tr>
+        <tr><td><strong>Coverage</strong></td><td><code>codecov/codecov-action@v4</code></td><td>Upload test coverage</td></tr>
+        <tr><td><strong>Deploy</strong></td><td><code>aws-actions/configure-aws-credentials@v4</code></td><td>AWS authentication</td></tr>
+        <tr><td><strong>Release</strong></td><td><code>softprops/action-gh-release@v2</code></td><td>สร้าง GitHub Release</td></tr>
+        <tr><td><strong>Slack</strong></td><td><code>slackapi/slack-github-action@v1</code></td><td>ส่ง notification</td></tr>
+        <tr><td><strong>Security</strong></td><td><code>github/codeql-action@v3</code></td><td>Code scanning (SAST)</td></tr>
+      </tbody>
+    </table>
+
+    <pre><code># Pin action versions ด้วย SHA (security best practice)
+# ❌ ไม่ปลอดภัย
+- uses: actions/checkout@v4
+
+# ✅ ปลอดภัยกว่า (pin SHA)
+- uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4.1.1</code></pre>
+
+    <hr>
+
+    <h2>♻️ Reusable Workflows — DRY!</h2>
+
+    <pre><code># .github/workflows/reusable-deploy.yml
+# Workflow ที่ re-use ได้
+name: Deploy
+
+on:
+  workflow_call:                         # เปิดให้เรียกจาก workflow อื่น
+    inputs:
+      environment:
+        required: true
+        type: string
+      image-tag:
+        required: true
+        type: string
+    secrets:
+      DEPLOY_KEY:
+        required: true
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment: ${{ inputs.environment }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Deploy to ${{ inputs.environment }}
+        env:
+          DEPLOY_KEY: ${{ secrets.DEPLOY_KEY }}
+        run: |
+          echo "Deploying ${{ inputs.image-tag }} to ${{ inputs.environment }}"</code></pre>
+
+    <pre><code># .github/workflows/main.yml
+# เรียกใช้ reusable workflow
+name: Main Pipeline
+
+on:
+  push:
+    branches: [main]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: npm ci && npm test
+
+  deploy-staging:
+    needs: test
+    uses: ./.github/workflows/reusable-deploy.yml    # เรียก reusable!
+    with:
+      environment: staging
+      image-tag: ${{ github.sha }}
+    secrets:
+      DEPLOY_KEY: ${{ secrets.STAGING_DEPLOY_KEY }}
+
+  deploy-production:
+    needs: deploy-staging
+    uses: ./.github/workflows/reusable-deploy.yml    # เรียกซ้ำ!
+    with:
+      environment: production
+      image-tag: ${{ github.sha }}
+    secrets:
+      DEPLOY_KEY: ${{ secrets.PROD_DEPLOY_KEY }}</code></pre>
+
+    <hr>
+
+    <h2>🔒 Security Scanning</h2>
+
+    <pre><code># .github/workflows/security.yml
+name: Security
+
+on:
+  push:
+    branches: [main]
+  schedule:
+    - cron: '0 6 * * 1'                 # scan ทุกวันจันทร์
+
+jobs:
+  # Code scanning (SAST)
+  codeql:
+    runs-on: ubuntu-latest
+    permissions:
+      security-events: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: github/codeql-action/init@v3
+        with:
+          languages: javascript
+      - uses: github/codeql-action/analyze@v3
+
+  # Dependency scanning
+  dependency-review:
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/dependency-review-action@v4
+        with:
+          fail-on-severity: high
+
+  # Container scanning
+  trivy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build image
+        run: docker build -t myapp:test .
+      - uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: myapp:test
+          severity: CRITICAL,HIGH
+          exit-code: 1                   # fail ถ้ามี critical/high
+
+  # Secret scanning
+  trufflehog:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0                 # full history
+      - uses: trufflesecurity/trufflehog@main
+        with:
+          extra_args: --only-verified</code></pre>
+
+    <hr>
+
+    <h2>🏠 Self-hosted Runners</h2>
+
+    <p>ถ้า GitHub-hosted runner ไม่พอ (เร็วไม่พอ, ต้องการ GPU, network access พิเศษ):</p>
+
+    <pre><code># ติดตั้ง self-hosted runner
+# Settings → Actions → Runners → New self-hosted runner
+# ทำตาม instructions: download, configure, run
+
+# ใช้ใน workflow
+jobs:
+  build:
+    runs-on: self-hosted                 # ใช้เครื่องตัวเอง!
+    steps:
+      - uses: actions/checkout@v4
+      - run: npm ci && npm test
+
+  # หรือ label specific
+  gpu-test:
+    runs-on: [self-hosted, gpu, linux]   # เครื่องที่มี GPU
+    steps:
+      - run: nvidia-smi                  # check GPU
+      - run: python train.py</code></pre>
+
+    <h3>GitHub-hosted vs Self-hosted</h3>
+
+    <table>
+      <thead><tr><th>Feature</th><th>GitHub-hosted</th><th>Self-hosted</th></tr></thead>
+      <tbody>
+        <tr><td><strong>Setup</strong></td><td>ไม่ต้อง</td><td>ต้อง setup + maintain</td></tr>
+        <tr><td><strong>Cost</strong></td><td>Free tier (2,000 min/month)</td><td>ค่าเครื่องเอง</td></tr>
+        <tr><td><strong>Speed</strong></td><td>2-core, 7GB RAM</td><td>ตามที่มี (ได้ 64-core!)</td></tr>
+        <tr><td><strong>Customization</strong></td><td>Limited</td><td>Full control</td></tr>
+        <tr><td><strong>Network</strong></td><td>Public internet</td><td>Private network access</td></tr>
+        <tr><td><strong>GPU</strong></td><td>❌</td><td>✅</td></tr>
+        <tr><td><strong>เหมาะกับ</strong></td><td>ทั่วไป, open source</td><td>Enterprise, ML, heavy builds</td></tr>
+      </tbody>
+    </table>
+
+    <hr>
+
+    <h2>💡 Advanced Patterns</h2>
+
+    <h3>Conditional Steps</h3>
+
+    <pre><code>steps:
+  - name: Deploy to staging
+    if: github.ref == 'refs/heads/develop'
+    run: deploy-staging.sh
+
+  - name: Deploy to production
+    if: github.ref == 'refs/heads/main'
+    run: deploy-production.sh
+
+  - name: Comment on PR
+    if: github.event_name == 'pull_request'
+    uses: actions/github-script@v7
+    with:
+      script: |
+        github.rest.issues.createComment({
+          issue_number: context.issue.number,
+          owner: context.repo.owner,
+          repo: context.repo.repo,
+          body: '✅ Tests passed! Ready to merge.'
+        })
+
+  - name: Notify on failure
+    if: failure()                         # รันเมื่อ step ก่อนหน้า fail
+    run: |
+      curl -X POST "${{ secrets.SLACK_WEBHOOK }}" \
+        -d '{"text":"❌ CI failed on ${{ github.ref }}"}'</code></pre>
+
+    <h3>Artifacts — ส่งไฟล์ระหว่าง Jobs</h3>
+
+    <pre><code>jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: npm ci && npm run build
+
+      - name: Upload build
+        uses: actions/upload-artifact@v4
+        with:
+          name: build-output
+          path: dist/
+          retention-days: 7
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download build
+        uses: actions/download-artifact@v4
+        with:
+          name: build-output
+          path: dist/
+
+      - name: Deploy
+        run: aws s3 sync dist/ s3://my-bucket/</code></pre>
+
+    <h3>Concurrency — ป้องกัน deploy ซ้อน</h3>
+
+    <pre><code>name: Deploy
+concurrency:
+  group: deploy-${{ github.ref }}        # 1 deploy per branch
+  cancel-in-progress: true               # cancel ตัวเก่า ถ้ามีตัวใหม่
+
+# ป้องกัน: push 3 ครั้งติดกัน → รันแค่ตัวล่าสุด</code></pre>
+
+    <hr>
+
+    <h2>📋 Best Practices</h2>
+
+    <ol>
+      <li><strong>Pin action versions</strong> — ใช้ SHA แทน tag (<code>@v4</code> → <code>@sha</code>)</li>
+      <li><strong>Use <code>npm ci</code></strong> ไม่ใช่ <code>npm install</code> — ใช้ lockfile, เร็วกว่า, deterministic</li>
+      <li><strong>Cache dependencies</strong> — ลดเวลา install จาก 2 นาที → 10 วินาที</li>
+      <li><strong>Fail fast</strong> — lint ก่อน → unit test → integration → deploy</li>
+      <li><strong>Use environments</strong> — แยก secrets staging/production + require approvals</li>
+      <li><strong>Limit permissions</strong> — <code>permissions: contents: read</code> ไม่ให้ write ถ้าไม่จำเป็น</li>
+      <li><strong>Concurrency control</strong> — ป้องกัน deploy ซ้อนกัน</li>
+      <li><strong>Reusable workflows</strong> — DRY! อย่า copy-paste workflow</li>
+      <li><strong>Timeout</strong> — ตั้ง <code>timeout-minutes: 15</code> ป้องกัน stuck jobs</li>
+      <li><strong>Status badges</strong> — ใส่ใน README ให้รู้สถานะ CI</li>
+    </ol>
+
+    <pre><code># README.md — CI badge
+![CI](https://github.com/myorg/myapp/actions/workflows/ci.yml/badge.svg)</code></pre>
+
+    <hr>
+
+    <h2>💰 Pricing — ฟรีแค่ไหน?</h2>
+
+    <table>
+      <thead><tr><th>Plan</th><th>Minutes/month</th><th>Storage</th></tr></thead>
+      <tbody>
+        <tr><td><strong>Free</strong></td><td>2,000 min</td><td>500 MB</td></tr>
+        <tr><td><strong>Team</strong></td><td>3,000 min</td><td>2 GB</td></tr>
+        <tr><td><strong>Enterprise</strong></td><td>50,000 min</td><td>50 GB</td></tr>
+        <tr><td><strong>Public repos</strong></td><td>∞ (ไม่จำกัด!)</td><td>∞</td></tr>
+      </tbody>
+    </table>
+
+    <blockquote>
+      <strong>💡</strong> Open source projects ได้ <strong>unlimited minutes ฟรี!</strong> — อีกเหตุผลที่ open source นิยม GitHub Actions
+    </blockquote>
+
+    <hr>
+
+    <h2>สรุป</h2>
+
+    <ul>
+      <li><strong>GitHub Actions</strong> = CI/CD built-in GitHub — เขียน YAML, รันอัตโนมัติ</li>
+      <li><strong>Workflow</strong> = Event → Jobs → Steps — ไฟล์อยู่ใน <code>.github/workflows/</code></li>
+      <li><strong>Triggers</strong> = push, PR, schedule, manual, release, workflow_call</li>
+      <li><strong>Secrets</strong> = เก็บ credentials ปลอดภัย + Environment secrets แยก staging/prod</li>
+      <li><strong>Matrix</strong> = ทดสอบหลาย OS × versions พร้อมกัน</li>
+      <li><strong>Caching</strong> = เร็วขึ้น 10x ด้วย dependency cache</li>
+      <li><strong>Marketplace</strong> = 20,000+ actions สำเร็จรูป อย่าเขียนเอง!</li>
+      <li><strong>Reusable Workflows</strong> = DRY! เรียก workflow ซ้ำได้</li>
+      <li><strong>Security</strong> = CodeQL, Trivy, dependency review, secret scanning</li>
+      <li><strong>Self-hosted</strong> = เครื่องตัวเอง สำหรับ GPU/heavy builds 🤖🐕</li>
+    </ul>
+
+    <div class="post-series-footer">
+      บทความจากซีรีส์ DevOps & Vibe Coding 2026
+    </div>
+
+  </article>
+
+  <!-- Post Navigation -->
+  <div class="post-nav">
+    <a href="sre-fundamentals.html" class="post-nav__link">
+      <div class="post-nav__dir">← Previous</div>
+      <div class="post-nav__title">SRE — Site Reliability Engineering ที่ DevOps ต้องรู้</div>
+    </a>
+  </div>
+
+  <footer class="blog-footer">
+    <a href="./">← Back to Blog</a>
+    <span>© 2025 Anirach Mingkhwan — Associate Professor, KMUTNB</span>
+  </footer>
+
+</body>
+</html>
