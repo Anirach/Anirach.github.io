@@ -172,6 +172,12 @@
 
     <h2>🐕 Authentication vs Authorization — ต่างกันยังไง?</h2>
 
+    <p>คนส่วนใหญ่มักเข้าใจผิดว่า Authentication กับ Authorization เป็นเรื่องเดียวกัน แต่จริงๆ แล้วมันต่างกันมาก! <strong>Authentication (AuthN)</strong> คือการพิสูจน์ว่า "คุณคือใครจริงๆ" ส่วน <strong>Authorization (AuthZ)</strong> คือการกำหนดว่า "คุณทำอะไรได้บ้างหลังจากที่เรารู้แล้วว่าคุณคือใคร"</p>
+
+    <p>ลองนึกภาพ<strong>โรงแรม</strong> — Authentication เหมือนการที่คุณต้องแสดง Passport ตอนเช็คอิน (พิสูจน์ตัวตน) และได้รับ Key Card Authorization เหมือนการที่ Key Card ตัวนั้นเปิดได้แค่ห้อง 401 ของคุณ ไม่ใช่ห้องอื่น และเข้า Pool ได้แค่เวลา 6-20 น. เท่านั้น</p>
+
+    <p>ทำไมต้องมีทั้งสองอย่าง? เพราะแค่รู้ว่าคุณคือใครไม่พอ — ต้องกำหนดสิทธิ์ด้วยว่าคุณเข้าถึงอะไรได้บ้าง ไม่งั้นทุกคนจะเข้าถึงทุกอย่างได้หมดแบบ Admin ซึ่งเป็นความเสี่ยงอย่างมาก</p>
+
     <div class="auth-comparison">
       <div class="auth-concept">
         <div class="auth-concept__title">🔑 Authentication (AuthN)</div>
@@ -212,6 +218,12 @@
     <hr>
 
     <h2>🔑 Password Security — ทำยังไงให้ปลอดภัย</h2>
+
+    <p>Password Security เป็นหัวใจสำคัญของระบบ Authentication — หากทำผิด จะส่งผลร้ายต่อผู้ใช้ทุกคน การเก็บ password แบบ plaintext คือความผิดที่ร้ายแรงที่สุด เพราะหาก database รั่วไหล ผู้โจมตีจะได้ password จริงของทุกคนไปใช้ทันที</p>
+
+    <p>แม้แต่การใช้ Hash algorithms แบบเก่าอย่าง MD5 หรือ SHA-256 ก็ยังไม่ปลอดภัย เพราะสามารถใช้ <strong>Rainbow Tables</strong> (ตารางที่เก็บ password ยอดนิยมกับ hash value ที่ถูกคำนวณไว้แล้ว) มา crack ได้ภายในวินาที</p>
+
+    <p>วิธีแก้คือการใช้ algorithms ที่ออกแบบมาให้ <strong>"ช้าโดยเจตนา"</strong> อย่าง bcrypt, scrypt หรือ Argon2 เพื่อทำให้การ brute force ใช้เวลานานขึ้นมาก พร้อมกับ <strong>Salt</strong> (ข้อมูลสุ่มที่เพิ่มเข้าไปก่อน hash) เพื่อให้ password เดียวกันได้ hash ที่ต่างกันในแต่ละ user</p>
 
     <h3>Password Hashing — ห้ามเก็บ plaintext เด็ดขาด!</h3>
 
@@ -298,7 +310,47 @@ async function loginUser(email: string, password: string) {
   return user;
 }</code></pre>
 
+    <pre><code>// ═══════════════════════════════
+// Python — bcrypt / passlib
+// ═══════════════════════════════
+from passlib.hash import bcrypt
+
+# Hash
+password_hash = bcrypt.hash("MySecret123")
+# → "$2b$12$LJ3m4ys3Rz..."
+
+# Verify
+is_valid = bcrypt.verify("MySecret123", password_hash)
+# → True
+
+// ═══════════════════════════════
+// Python — Argon2 (recommended for new projects)
+// ═══════════════════════════════
+from argon2 import PasswordHasher
+
+ph = PasswordHasher(
+    time_cost=3,       # iterations
+    memory_cost=65536,  # 64 MB
+    parallelism=4       # threads
+)
+
+# Hash
+hash = ph.hash("MySecret123")
+# → "$argon2id$v=19$m=65536,t=3,p=4$..."
+
+# Verify
+try:
+    ph.verify(hash, "MySecret123")  # → True
+except VerifyMismatchError:
+    print("Invalid password")</code></pre>
+
+    <p><strong>อธิบาย SALT_ROUNDS:</strong> ค่านี้กำหนดว่าจะทำ hashing กี่รอบ — ยิ่งเยอะยิ่งช้า ยิ่งปลอดภัย แต่ใช้ CPU มากขึ้น สำหรับ production แนะนำ 10-12 rounds (ประมาณ 100-300ms ต่อครั้ง) ห้ามใช้ต่ำกว่า 10!</p>
+
+    <p><strong>ทำไม error message ต้องเหมือนกัน:</strong> ไม่ว่า email จะไม่มีในระบบ หรือ password ผิด ต้อง return error เดียวกัน ("Invalid credentials") เพื่อไม่ให้ attacker รู้ว่า email ไหนมีในระบบบ้าง (Username Enumeration Attack)</p>
+
     <h3>Password Hashing Algorithms Comparison</h3>
+
+    <p>การเลือก password hashing algorithm ต้องพิจารณา 3 ปัจจัย: <strong>ความปลอดภัย</strong>, <strong>ความเร็ว</strong>, และ <strong>การใช้ memory</strong> Algorithms เก่าอย่าง MD5/SHA ถูกออกแบบมาให้เร็ว จึงไม่เหมาะสำหรับ password ส่วน Algorithms ใหม่ถูกออกแบบมาให้ช้า เพื่อทำให้การ brute force ยากขึ้น</p>
 
     <div class="comparison-table">
       <table>
@@ -362,7 +414,63 @@ async function loginUser(email: string, password: string) {
 
     <h2>🎟️ Session vs Token — เก็บ state ยังไง?</h2>
 
+    <p>หลังจาก Authentication สำเร็จแล้ว ระบบต้องจำได้ว่าผู้ใช้คนนี้ล็อกอินแล้ว ไม่งั้นจะต้องล็อกอินใหม่ทุก request มีวิธีเก็บ state นี้ 2 แบบหลัก: <strong>Session-based</strong> (เก็บข้อมูลฝั่ง server) และ <strong>Token-based</strong> (เก็บข้อมูลฝั่ง client)</p>
+
     <h3>Session-based Authentication</h3>
+
+    <p>Session-based authentication คือวิธีแบบดั้งเดิมที่เก็บข้อมูล user ไว้ฝั่ง server (ใน database หรือ Redis) แล้วส่ง <strong>Session ID</strong> กลับไปให้ client ใน Cookie เมื่อ client ส่ง request ครั้งถัดไป server จะใช้ Session ID นี้ค้นหาข้อมูล user จาก database</p>
+
+    <p><strong>Cookies สำคัญยังไง:</strong> httpOnly flag ทำให้ JavaScript อ่าน cookie ไม่ได้ (ป้องกัน XSS), secure flag ทำให้ส่งผ่าน HTTPS เท่านั้น, sameSite=strict ป้องกัน CSRF attacks การตั้งค่าเหล่านี้จึงเป็นเรื่องสำคัญมาก</p>
+
+    <pre><code>// ═══════════════════════════════
+// Express.js — Session-based
+// ═══════════════════════════════
+import session from 'express-session';
+import RedisStore from 'connect-redis';
+import { createClient } from 'redis';
+
+const redisClient = createClient({ url: 'redis://localhost:6379' });
+await redisClient.connect();
+
+app.use(session({
+  store: new RedisStore({ client: redisClient }),
+  secret: process.env.SESSION_SECRET,
+  resave: false,
+  saveUninitialized: false,
+  cookie: {
+    secure: true,        // HTTPS only
+    httpOnly: true,      // ป้องกัน XSS อ่าน cookie
+    sameSite: 'strict',  // ป้องกัน CSRF
+    maxAge: 24 * 60 * 60 * 1000,  // 24 hours
+  }
+}));
+
+// Login
+app.post('/login', async (req, res) => {
+  const { email, password } = req.body;
+  const user = await verifyCredentials(email, password);
+
+  // Store user info in session
+  req.session.userId = user.id;
+  req.session.role = user.role;
+
+  res.json({ message: 'Logged in' });
+});
+
+// Protected route
+app.get('/api/profile', (req, res) => {
+  if (!req.session.userId) {
+    return res.status(401).json({ error: 'Not authenticated' });
+  }
+  // ... return profile
+});
+
+// Logout
+app.post('/logout', (req, res) => {
+  req.session.destroy();
+  res.clearCookie('connect.sid');
+  res.json({ message: 'Logged out' });
+});</code></pre>
 
     <div class="flow-diagram">
       <div style="margin-bottom: 1.5rem; font-weight: 700; color: var(--navy);">Session-based Authentication Flow</div>
@@ -407,6 +515,12 @@ async function loginUser(email: string, password: string) {
     </div>
 
     <h3>Token-based Authentication (JWT)</h3>
+
+    <p>Token-based authentication ใช้ <strong>JSON Web Tokens (JWT)</strong> ซึ่งเป็นวิธีการ <strong>stateless</strong> — หมายความว่า server ไม่ต้องเก็บข้อมูล session ใดๆ เลย เพราะข้อมูลทั้งหมดอยู่ใน token ที่ client ถือไว้</p>
+
+    <p><strong>ทำไมต้องมี Access + Refresh Token:</strong> Access token มีอายุสั้น (15 นาที) เพื่อลดความเสี่ยงหากโดนขโมย ส่วน Refresh token มีอายุยาว (7 วัน) แต่เก็บใน httpOnly cookie และใช้แค่สำหรับขอ access token ใหม่เท่านั้น</p>
+
+    <p>ข้อดีคือ server ไม่ต้อง query database ทุกครั้ง (เพราะข้อมูลอยู่ใน JWT แล้ว) ทำให้ scale ง่าย และใช้ได้กับ microservices แต่ข้อเสียคือยาก revoke token ก่อนหมดอายุ</p>
 
     <div class="flow-diagram">
       <div style="margin-bottom: 1.5rem; font-weight: 700; color: var(--navy);">Token-based (JWT) Authentication Flow</div>
@@ -499,6 +613,155 @@ async function loginUser(email: string, password: string) {
       </p>
     </div>
 
+    <p><strong>เข้าใจ JWT Structure:</strong> Header บอกว่าใช้ algorithm ไหนใน signing, Payload เก็บข้อมูล user และ timestamps, ส่วน Signature เป็นการรับรองว่าข้อมูลไม่ถูกแก้ไข</p>
+
+    <p><strong>ข้อระวัง!</strong> คนไหนก็สามารถ decode Base64 ใน Payload ได้ (ลองดูได้ที่ jwt.io) ดังนั้นห้ามใส่ข้อมูลลับ เช่น password, credit card number, social security number ใน JWT โดยเด็ดขาด!</p>
+
+    <h3>JWT Implementation</h3>
+
+    <pre><code>// ═══════════════════════════════
+// Node.js — JWT with Access + Refresh Tokens
+// ═══════════════════════════════
+import jwt from 'jsonwebtoken';
+
+const ACCESS_SECRET = process.env.JWT_ACCESS_SECRET;   // ใช้ env variable!
+const REFRESH_SECRET = process.env.JWT_REFRESH_SECRET;
+const ACCESS_EXPIRY = '15m';     // 15 minutes
+const REFRESH_EXPIRY = '7d';     // 7 days
+
+// ═══════════════════════════════
+// Generate Tokens
+// ═══════════════════════════════
+function generateTokens(user) {
+  const accessToken = jwt.sign(
+    {
+      userId: user.id,
+      email: user.email,
+      role: user.role,
+    },
+    ACCESS_SECRET,
+    { expiresIn: ACCESS_EXPIRY }
+  );
+
+  const refreshToken = jwt.sign(
+    { userId: user.id },
+    REFRESH_SECRET,
+    { expiresIn: REFRESH_EXPIRY }
+  );
+
+  return { accessToken, refreshToken };
+}
+
+// ═══════════════════════════════
+// Login Endpoint
+// ═══════════════════════════════
+app.post('/api/auth/login', async (req, res) => {
+  const { email, password } = req.body;
+  const user = await verifyCredentials(email, password);
+
+  const { accessToken, refreshToken } = generateTokens(user);
+
+  // Store refresh token hash in DB (for revocation)
+  const refreshHash = await bcrypt.hash(refreshToken, 10);
+  await db.query(
+    'INSERT INTO refresh_tokens (user_id, token_hash, expires_at) VALUES ($1, $2, $3)',
+    [user.id, refreshHash, new Date(Date.now() + 7 * 24 * 60 * 60 * 1000)]
+  );
+
+  // Set refresh token as httpOnly cookie
+  res.cookie('refreshToken', refreshToken, {
+    httpOnly: true,
+    secure: true,
+    sameSite: 'strict',
+    maxAge: 7 * 24 * 60 * 60 * 1000,
+    path: '/api/auth/refresh',  // Only sent to refresh endpoint
+  });
+
+  res.json({ accessToken });
+});
+
+// ═══════════════════════════════
+// Auth Middleware
+// ═══════════════════════════════
+function authenticate(req, res, next) {
+  const authHeader = req.headers.authorization;
+  if (!authHeader?.startsWith('Bearer ')) {
+    return res.status(401).json({ error: 'No token provided' });
+  }
+
+  const token = authHeader.split(' ')[1];
+
+  try {
+    const decoded = jwt.verify(token, ACCESS_SECRET);
+    req.user = decoded;  // { userId, email, role }
+    next();
+  } catch (err) {
+    if (err.name === 'TokenExpiredError') {
+      return res.status(401).json({ error: 'Token expired', code: 'TOKEN_EXPIRED' });
+    }
+    return res.status(401).json({ error: 'Invalid token' });
+  }
+}
+
+// ═══════════════════════════════
+// Refresh Token Endpoint
+// ═══════════════════════════════
+app.post('/api/auth/refresh', async (req, res) => {
+  const refreshToken = req.cookies.refreshToken;
+  if (!refreshToken) return res.status(401).json({ error: 'No refresh token' });
+
+  try {
+    const decoded = jwt.verify(refreshToken, REFRESH_SECRET);
+
+    // Check refresh token exists in DB (not revoked)
+    const stored = await db.query(
+      'SELECT * FROM refresh_tokens WHERE user_id = $1 AND expires_at > NOW()',
+      [decoded.userId]
+    );
+
+    if (!stored.rows.length) {
+      return res.status(401).json({ error: 'Refresh token revoked' });
+    }
+
+    // Verify against stored hash
+    const isValid = await bcrypt.compare(refreshToken, stored.rows[0].token_hash);
+    if (!isValid) return res.status(401).json({ error: 'Invalid refresh token' });
+
+    // Get fresh user data
+    const user = await db.query('SELECT * FROM users WHERE id = $1', [decoded.userId]);
+
+    // Issue new access token
+    const accessToken = jwt.sign(
+      { userId: user.id, email: user.email, role: user.role },
+      ACCESS_SECRET,
+      { expiresIn: ACCESS_EXPIRY }
+    );
+
+    res.json({ accessToken });
+  } catch (err) {
+    return res.status(401).json({ error: 'Invalid refresh token' });
+  }
+});
+
+// ═══════════════════════════════
+// Logout — Revoke refresh token
+// ═══════════════════════════════
+app.post('/api/auth/logout', authenticate, async (req, res) => {
+  // Delete all refresh tokens for this user
+  await db.query('DELETE FROM refresh_tokens WHERE user_id = $1', [req.user.userId]);
+
+  res.clearCookie('refreshToken', { path: '/api/auth/refresh' });
+  res.json({ message: 'Logged out' });
+});
+
+// ═══════════════════════════════
+// Protected Route Example
+// ═══════════════════════════════
+app.get('/api/profile', authenticate, async (req, res) => {
+  const user = await db.query('SELECT * FROM users WHERE id = $1', [req.user.userId]);
+  res.json({ user });
+});</code></pre>
+
     <h3>Session vs Token — เลือกยังไง?</h3>
 
     <div class="comparison-table">
@@ -572,6 +835,12 @@ async function loginUser(email: string, password: string) {
 
     <h2>🌐 OAuth 2.0 — "Login with Google/GitHub"</h2>
 
+    <p>OAuth 2.0 เป็นมาตรฐานที่ให้ผู้ใช้ล็อกอินด้วยบัญชีจากผู้ให้บริการอื่น (เช่น Google, GitHub, Facebook) โดยไม่ต้องให้ password กับเรา วิธีนี้ปลอดภัยกว่าเพราะเราไม่ต้องจัดการ password และผู้ใช้ไม่ต้องจำ password ใหม่</p>
+
+    <p><strong>ทำไม OAuth ถึงปลอดภัย:</strong> ระหว่างกระบวนการ user ไม่เคยให้ password กับเรา แต่ให้กับ Google/GitHub โดยตรง เราได้รับแค่ <strong>Authorization Code</strong> ซึ่งใช้แลกกับ <strong>Access Token</strong> เพื่อเข้าถึงข้อมูลพื้นฐาน (email, name) เท่านั้น</p>
+
+    <p>หลัก OAuth 2.0 Authorization Code Flow เป็น flow ที่ปลอดภัยที่สุด เหมาะสำหรับ web applications แต่ต้องมี backend server เพื่อเก็บ client secret (ห้าม expose ฝั่ง frontend!) และแลก authorization code กับ access token</p>
+
     <div class="flow-diagram">
       <div style="margin-bottom: 1.5rem; font-weight: 700; color: var(--navy);">OAuth 2.0 Authorization Code Flow</div>
       
@@ -634,9 +903,151 @@ async function loginUser(email: string, password: string) {
       </div>
     </div>
 
+    <p><strong>OAuth Database Schema:</strong> เพื่อรองรับ multiple OAuth providers ต้องออกแบบ database ให้ user หนึ่งคนสามารถมีหลาย auth methods ได้ — เช่น ล็อกอินได้ทั้งด้วย email+password, Google OAuth, และ GitHub OAuth ในบัญชีเดียวกัน</p>
+
+    <p>วิธีที่ดีคือมี <code>user_auth_providers</code> table แยกต่างหาก เก็บ mapping ระหว่าง user กับ provider ต่างๆ พร้อมทั้ง provider_id และ access/refresh tokens (ที่ต้อง encrypt ก่อนเก็บ!) วิธีนี้ยืดหยุ่นกว่าการเพิ่ม column `google_id`, `facebook_id` ใน users table</p>
+
+    <h3>OAuth Implementation with Passport.js</h3>
+
+    <pre><code>// ═══════════════════════════════
+// Google OAuth 2.0 — Passport.js
+// ═══════════════════════════════
+import passport from 'passport';
+import { Strategy as GoogleStrategy } from 'passport-google-oauth20';
+
+passport.use(new GoogleStrategy(
+  {
+    clientID: process.env.GOOGLE_CLIENT_ID,
+    clientSecret: process.env.GOOGLE_CLIENT_SECRET,
+    callbackURL: '/api/auth/google/callback',
+  },
+  async (accessToken, refreshToken, profile, done) => {
+    try {
+      // Find or create user
+      let user = await db.query(
+        'SELECT * FROM users WHERE google_id = $1 OR email = $2',
+        [profile.id, profile.emails[0].value]
+      );
+
+      if (!user.rows.length) {
+        // Create new user
+        user = await db.query(
+          `INSERT INTO users (google_id, email, name, avatar_url, email_verified) 
+           VALUES ($1, $2, $3, $4, true) RETURNING *`,
+          [profile.id, profile.emails[0].value, profile.displayName, profile.photos[0]?.value]
+        );
+      } else if (!user.rows[0].google_id) {
+        // Link Google account to existing user
+        await db.query(
+          'UPDATE users SET google_id = $1, avatar_url = COALESCE(avatar_url, $2) WHERE id = $3',
+          [profile.id, profile.photos[0]?.value, user.rows[0].id]
+        );
+      }
+
+      done(null, user.rows[0]);
+    } catch (err) {
+      done(err, null);
+    }
+  }
+));
+
+// Routes
+app.get('/api/auth/google', 
+  passport.authenticate('google', { 
+    scope: ['profile', 'email'] 
+  })
+);
+
+app.get('/api/auth/google/callback',
+  passport.authenticate('google', { session: false }),
+  (req, res) => {
+    // Generate YOUR JWT
+    const { accessToken, refreshToken } = generateTokens(req.user);
+
+    // Redirect to frontend with token
+    res.redirect(`${FRONTEND_URL}/auth/callback?token=${accessToken}`);
+  }
+);
+
+// ═══════════════════════════════
+// GitHub OAuth — Passport.js
+// ═══════════════════════════════
+import { Strategy as GitHubStrategy } from 'passport-github2';
+
+passport.use(new GitHubStrategy(
+  {
+    clientID: process.env.GITHUB_CLIENT_ID,
+    clientSecret: process.env.GITHUB_CLIENT_SECRET,
+    callbackURL: '/api/auth/github/callback',
+    scope: ['user:email'],
+  },
+  async (accessToken, refreshToken, profile, done) => {
+    const email = profile.emails?.[0]?.value;
+    
+    let user = await findOrCreateUser({
+      github_id: profile.id,
+      email: email,
+      name: profile.displayName || profile.username,
+      avatar_url: profile.photos[0]?.value,
+    });
+
+    done(null, user);
+  }
+));
+
+app.get('/api/auth/github',
+  passport.authenticate('github', { scope: ['user:email'] })
+);
+
+app.get('/api/auth/github/callback',
+  passport.authenticate('github', { session: false }),
+  (req, res) => {
+    const { accessToken } = generateTokens(req.user);
+    res.redirect(`${FRONTEND_URL}/auth/callback?token=${accessToken}`);
+  }
+);</code></pre>
+
+    <h3>Database Schema for OAuth</h3>
+
+    <pre><code>CREATE TABLE users (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  email VARCHAR(255) UNIQUE NOT NULL,
+  name VARCHAR(100),
+  avatar_url VARCHAR(500),
+  password_hash VARCHAR(255),       -- NULL ถ้า login ผ่าน OAuth only
+  email_verified BOOLEAN DEFAULT false,
+  
+  -- OAuth provider IDs
+  google_id VARCHAR(255) UNIQUE,
+  github_id VARCHAR(255) UNIQUE,
+  facebook_id VARCHAR(255) UNIQUE,
+  
+  role VARCHAR(20) DEFAULT 'member',
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- Allow multiple auth methods per user
+CREATE TABLE user_auth_providers (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  provider VARCHAR(50) NOT NULL,     -- 'google', 'github', 'email'
+  provider_id VARCHAR(255) NOT NULL, -- Provider's user ID
+  access_token TEXT,                  -- Encrypted!
+  refresh_token TEXT,                 -- Encrypted!
+  token_expires_at TIMESTAMPTZ,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  
+  UNIQUE(provider, provider_id)
+);</code></pre>
+
     <hr>
 
     <h2>🔒 Multi-Factor Authentication (MFA/2FA)</h2>
+
+    <p>Multi-Factor Authentication (MFA) หรือ 2FA เป็นชั้นป้องกันเพิ่มเติมที่ต้องใช้ <strong>"สิ่งที่คุณรู้"</strong> (password) + <strong>"สิ่งที่คุณมี"</strong> (โทรศัพท์) แม้ว่า password จะรั่วไหล attacker ก็ยังเข้าระบบไม่ได้เพราะไม่มีโทรศัพท์ของคุณ</p>
+
+    <p><strong>TOTP (Time-based One-Time Password)</strong> ทำงานโดยใช้ shared secret key ร่วมกับ current timestamp ในการสร้างรหัส 6 หลัก ที่เปลี่ยนทุก 30 วินาที ระบบนี้ทำงานแม้ไม่มีอินเทอร์เน็ต เพราะทั้ง server และ authenticator app ใช้นาฬิกาเดียวกัน</p>
 
     <div class="flow-diagram">
       <div style="margin-bottom: 1.5rem; font-weight: 700; color: var(--navy);">MFA with TOTP (Time-based One-Time Password)</div>
@@ -698,9 +1109,130 @@ async function loginUser(email: string, password: string) {
       <strong>⚠️ Even if password is stolen:</strong> Attacker ยังต้องการ physical phone เพื่อเอา code!
     </p>
 
+    <p><strong>QR Code Setup:</strong> เมื่อ user เปิด MFA ครั้งแรก server จะสร้าง secret key และแสดงเป็น QR code ที่ใส่ข้อมูล: service name, user email, และ secret key User scan QR code นี้ด้วย Google Authenticator หรือ Authy เพื่อบันทึก secret</p>
+
+    <p><strong>Backup Codes สำคัญมาก!</strong> ต้องสร้าง backup codes (เช่น 10 codes แบบใช้ครั้งเดียว) ให้ user เก็บไว้ในที่ปลอดภัย เผื่อโทรศัพท์หาย หรือ authenticator app เสีย โดย backup codes เหล่านี้ต้อง hash ก่อนเก็บใน database เหมือน password</p>
+
+    <h3>TOTP Implementation</h3>
+
+    <pre><code>// ═══════════════════════════════
+// TOTP Implementation — speakeasy
+// ═══════════════════════════════
+import speakeasy from 'speakeasy';
+import qrcode from 'qrcode';
+
+// 1. Generate secret for user
+app.post('/api/auth/mfa/setup', authenticate, async (req, res) => {
+  const secret = speakeasy.generateSecret({
+    name: `MyApp (${req.user.email})`,
+    issuer: 'MyApp',
+    length: 32,
+  });
+
+  // Store secret temporarily (verify before enabling)
+  await db.query(
+    'UPDATE users SET mfa_secret_temp = $1 WHERE id = $2',
+    [secret.base32, req.user.userId]
+  );
+
+  // Generate QR code
+  const qrCodeUrl = await qrcode.toDataURL(secret.otpauth_url);
+
+  res.json({
+    qrCode: qrCodeUrl,        // Display to user
+    manualKey: secret.base32,  // Manual entry fallback
+  });
+});
+
+// 2. Verify and enable MFA
+app.post('/api/auth/mfa/verify', authenticate, async (req, res) => {
+  const { code } = req.body;
+  
+  const user = await db.query(
+    'SELECT mfa_secret_temp FROM users WHERE id = $1',
+    [req.user.userId]
+  );
+
+  const isValid = speakeasy.totp.verify({
+    secret: user.rows[0].mfa_secret_temp,
+    encoding: 'base32',
+    token: code,
+    window: 1,  // Allow 1 step before/after (±30 sec)
+  });
+
+  if (!isValid) {
+    return res.status(400).json({ error: 'Invalid code' });
+  }
+
+  // Generate backup codes
+  const backupCodes = Array.from({ length: 10 }, () =>
+    Math.random().toString(36).substring(2, 10).toUpperCase()
+  );
+
+  // Enable MFA
+  await db.query(
+    `UPDATE users SET 
+       mfa_enabled = true, 
+       mfa_secret = mfa_secret_temp, 
+       mfa_secret_temp = NULL,
+       mfa_backup_codes = $1
+     WHERE id = $2`,
+    [JSON.stringify(backupCodes.map(c => bcrypt.hashSync(c, 10))), req.user.userId]
+  );
+
+  res.json({ 
+    message: 'MFA enabled!',
+    backupCodes,  // Show ONCE, user must save them
+  });
+});
+
+// 3. Login with MFA
+app.post('/api/auth/login', async (req, res) => {
+  const { email, password, mfaCode } = req.body;
+  
+  // Step 1: Verify password
+  const user = await verifyCredentials(email, password);
+  
+  // Step 2: Check if MFA enabled
+  if (user.mfa_enabled) {
+    if (!mfaCode) {
+      return res.status(200).json({ 
+        requiresMfa: true,
+        message: 'Please enter your 2FA code' 
+      });
+    }
+
+    // Verify TOTP code
+    const isValid = speakeasy.totp.verify({
+      secret: user.mfa_secret,
+      encoding: 'base32',
+      token: mfaCode,
+      window: 1,
+    });
+
+    if (!isValid) {
+      // Check backup codes
+      const isBackup = await verifyBackupCode(user.id, mfaCode);
+      if (!isBackup) {
+        return res.status(401).json({ error: 'Invalid 2FA code' });
+      }
+    }
+  }
+
+  // Step 3: Issue tokens
+  const tokens = generateTokens(user);
+  res.json(tokens);
+});</code></pre>
+
     <hr>
 
     <h2>🛡️ Authorization — RBAC, ABAC, Permissions</h2>
+
+    <p>หลังจาก Authentication สำเร็จแล้ว ขั้นตอนถัดไปคือ <strong>Authorization</strong> — การกำหนดว่าผู้ใช้คนนี้ทำอะไรได้บ้าง RBAC (Role-Based Access Control) เป็นรูปแบบที่ใช้กันมากที่สุด โดยกำหนด <strong>Roles</strong> (บทบาท) แต่ละ Role มี <strong>Permissions</strong> (สิทธิ์) ต่างๆ</p>
+
+    <p><strong>RBAC ทำงานยังไง:</strong> แทนที่จะกำหนดสิทธิ์ให้ user โดยตรง เรากำหนด Role ให้ user แล้ว Role นั้นจะมี permissions ชุดหนึ่ง วิธีนี้จัดการง่ายกว่า — เช่น เมื่อต้องการให้ user เป็น editor แค่เปลี่ยน role เดียว ไม่ต้องไปแก้ permissions ทีละตัว</p>
+
+    <p><strong>Principle of Least Privilege:</strong> ให้สิทธิ์น้อยที่สุดที่จำเป็นต่อการทำงาน — member ไม่ควรลบ post ของคนอื่น, editor ไม่ควรจัดการ user accounts มี middleware ตรวจสอบทั้ง permission และ ownership (เจ้าของ resource)</p>
 
     <h3>Role-Based Access Control (RBAC)</h3>
 
@@ -743,11 +1275,174 @@ async function loginUser(email: string, password: string) {
       </div>
     </div>
 
+    <p><strong>RBAC Database Schema ที่ยืดหยุ่น:</strong> การออกแบบ database สำหรับ RBAC ต้องคิดถึงอนาคต — user อาจมีหลาย roles, role อาจมี permissions ที่ซับซ้อน ดีที่สุดคือแยก tables: `roles`, `permissions`, `role_permissions` (many-to-many), `user_roles` (many-to-many)</p>
+
+    <p><strong>Middleware Pattern:</strong> ใน Express.js สร้าง middleware functions เช่น `requirePermission('posts:update')` และ `requireOwnership('user_id')` เพื่อตรวจสอบสิทธิ์ก่อนเข้าถึง route ทำให้โค้ดอ่านง่าย และมั่นใจว่าทุก endpoint ตรวจสอบสิทธิ์</p>
+
+    <h3>RBAC Implementation</h3>
+
+    <pre><code>// ═══════════════════════════════
+// Permission-based RBAC
+// ═══════════════════════════════
+
+const PERMISSIONS = {
+  admin: [
+    'users:read', 'users:create', 'users:update', 'users:delete',
+    'posts:read', 'posts:create', 'posts:update', 'posts:delete',
+    'settings:read', 'settings:update',
+    'analytics:read',
+  ],
+  editor: [
+    'posts:read', 'posts:create', 'posts:update', 'posts:delete',
+    'analytics:read',
+  ],
+  member: [
+    'posts:read', 'posts:create',  // Can create own posts
+  ],
+  guest: [
+    'posts:read',                   // Read-only
+  ],
+};
+
+// Middleware: Check permission
+function requirePermission(...requiredPermissions) {
+  return (req, res, next) => {
+    const userRole = req.user.role;
+    const userPermissions = PERMISSIONS[userRole] || [];
+
+    const hasPermission = requiredPermissions.every(
+      perm => userPermissions.includes(perm)
+    );
+
+    if (!hasPermission) {
+      return res.status(403).json({ 
+        error: 'Forbidden',
+        message: `Required: ${requiredPermissions.join(', ')}`,
+        yourRole: userRole,
+      });
+    }
+
+    next();
+  };
+}
+
+// Middleware: Check resource ownership
+function requireOwnership(resourceField = 'user_id') {
+  return async (req, res, next) => {
+    // Admins bypass ownership check
+    if (req.user.role === 'admin') return next();
+
+    const resource = await db.query(
+      `SELECT ${resourceField} FROM ${req.resourceTable} WHERE id = $1`,
+      [req.params.id]
+    );
+
+    if (resource.rows[0]?.[resourceField] !== req.user.userId) {
+      return res.status(403).json({ error: 'Not your resource' });
+    }
+
+    next();
+  };
+}
+
+// ═══════════════════════════════
+// Routes with RBAC
+// ═══════════════════════════════
+
+// Anyone can read posts
+app.get('/api/posts', 
+  authenticate, 
+  requirePermission('posts:read'), 
+  getPosts
+);
+
+// Members+ can create posts
+app.post('/api/posts', 
+  authenticate, 
+  requirePermission('posts:create'), 
+  createPost
+);
+
+// Editors+ can update any post, members only own posts
+app.put('/api/posts/:id', 
+  authenticate, 
+  requirePermission('posts:update'), 
+  requireOwnership('user_id'),  // Editors bypass, members checked
+  updatePost
+);
+
+// Admin-only routes
+app.get('/api/admin/users', 
+  authenticate, 
+  requirePermission('users:read'), 
+  listUsers
+);
+
+app.delete('/api/admin/users/:id', 
+  authenticate, 
+  requirePermission('users:delete'), 
+  deleteUser
+);</code></pre>
+
+    <h3>Database Schema for RBAC (Advanced)</h3>
+
+    <pre><code>-- ═══════════════════════════════
+-- Flexible RBAC with DB
+-- ═══════════════════════════════
+
+CREATE TABLE roles (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  name VARCHAR(50) UNIQUE NOT NULL,  -- admin, editor, member
+  description TEXT,
+  is_default BOOLEAN DEFAULT false,   -- Default role for new users
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE TABLE permissions (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  name VARCHAR(100) UNIQUE NOT NULL,  -- posts:create, users:delete
+  description TEXT,
+  resource VARCHAR(50) NOT NULL,       -- posts, users, settings
+  action VARCHAR(50) NOT NULL,         -- create, read, update, delete
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  
+  UNIQUE(resource, action)
+);
+
+CREATE TABLE role_permissions (
+  role_id UUID REFERENCES roles(id) ON DELETE CASCADE,
+  permission_id UUID REFERENCES permissions(id) ON DELETE CASCADE,
+  PRIMARY KEY (role_id, permission_id)
+);
+
+CREATE TABLE user_roles (
+  user_id UUID REFERENCES users(id) ON DELETE CASCADE,
+  role_id UUID REFERENCES roles(id) ON DELETE CASCADE,
+  PRIMARY KEY (user_id, role_id)
+);
+
+-- ═══════════════════════════════
+-- Query: Get user permissions
+-- ═══════════════════════════════
+SELECT DISTINCT p.name as permission
+FROM users u
+JOIN user_roles ur ON u.id = ur.user_id
+JOIN roles r ON ur.role_id = r.id
+JOIN role_permissions rp ON r.id = rp.role_id
+JOIN permissions p ON rp.permission_id = p.id
+WHERE u.id = $1;</code></pre>
+
     <hr>
 
     <h2>🔐 Security Best Practices — Checklist</h2>
 
+    <p>ระบบ Authentication/Authorization มี attack vectors เยอะมาก การป้องกันต้องครอบคลุมทุกด้าน: ป้องกัน brute force, SQL injection, XSS, CSRF, token theft ขาดจุดไหนจุดหนึ่ง ความปลอดภัยทั้งหมดจะพัง</p>
+
     <h3>Common Attacks & Prevention</h3>
+
+    <p><strong>Rate Limiting:</strong> endpoint ต่างๆ ต้องมี rate limit ที่เหมาะสม — login endpoint เข้มงวดที่สุด (5 ครั้ง/15นาที) เพราะเป็นเป้าหมายของ brute force, API endpoints ทั่วไปใช้ 100 requests/15นาที, password reset ต้องจำกัดเพื่อป้องกัน DoS</p>
+
+    <p><strong>Input Validation:</strong> validate ทุก input ทั้ง type, length, format ใช้ whitelist แทน blacklist — เช่น email ต้องตรง regex pattern, password ต้องมี uppercase/lowercase/number/special char</p>
 
     <div class="security-threats">
       <div class="security-threat">
@@ -801,11 +1496,88 @@ async function loginUser(email: string, password: string) {
       </div>
     </div>
 
+    <p><strong>Security Headers ด้วย Helmet:</strong> Helmet.js ตั้งค่า security headers ที่สำคัญ — Content Security Policy (CSP) ป้องกัน XSS โดยจำกัดแหล่ง script ที่ browser จะรัน, HSTS บังคับใช้ HTTPS, X-Frame-Options ป้องกัน clickjacking</p>
+
+    <p><strong>CORS Configuration:</strong> ตั้งค่า CORS ให้เข้มงวด — ระบุ origin ที่อนุญาตชัดเจน (ไม่ใช้ wildcard *), กำหนด allowed headers, credentials: true สำหรับ cookies แต่ต้องระวัง preflight cache</p>
+
+    <h3>Rate Limiting</h3>
+
+    <pre><code>// ═══════════════════════════════
+// Rate Limiting — express-rate-limit
+// ═══════════════════════════════
+import rateLimit from 'express-rate-limit';
+
+// General API rate limit
+const apiLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,  // 15 minutes
+  max: 100,                   // 100 requests per window
+  message: { error: 'Too many requests, try again later' },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+app.use('/api/', apiLimiter);
+
+// Strict login rate limit
+const loginLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,  // 15 minutes
+  max: 5,                     // 5 login attempts
+  skipSuccessfulRequests: true,
+  message: { error: 'Too many login attempts. Try again in 15 minutes.' },
+});
+app.use('/api/auth/login', loginLimiter);
+
+// Password reset rate limit
+const resetLimiter = rateLimit({
+  windowMs: 60 * 60 * 1000,  // 1 hour
+  max: 3,                     // 3 reset requests per hour
+});
+app.use('/api/auth/reset-password', resetLimiter);</code></pre>
+
+    <h3>Security Headers</h3>
+
+    <pre><code>// ═══════════════════════════════
+// Helmet.js — Security Headers
+// ═══════════════════════════════
+import helmet from 'helmet';
+
+app.use(helmet({
+  contentSecurityPolicy: {
+    directives: {
+      defaultSrc: ["'self'"],
+      scriptSrc: ["'self'"],
+      styleSrc: ["'self'", "'unsafe-inline'"],
+      imgSrc: ["'self'", "data:", "https:"],
+      connectSrc: ["'self'", "https://api.myapp.com"],
+    },
+  },
+  hsts: {
+    maxAge: 31536000,      // 1 year
+    includeSubDomains: true,
+    preload: true,
+  },
+  referrerPolicy: { policy: 'strict-origin-when-cross-origin' },
+}));
+
+// CORS configuration
+import cors from 'cors';
+
+app.use(cors({
+  origin: ['https://myapp.com', 'https://admin.myapp.com'],
+  methods: ['GET', 'POST', 'PUT', 'DELETE'],
+  allowedHeaders: ['Content-Type', 'Authorization'],
+  credentials: true,
+  maxAge: 86400,  // Preflight cache 24h
+}));</code></pre>
+
     <hr>
 
     <h2>🏢 Single Sign-On (SSO) — Enterprise</h2>
 
     <p><strong>SSO = เข้าสู่ระบบ 1 ครั้ง → ใช้ได้ทุก app ในองค์กร</strong></p>
+
+    <p>Single Sign-On เป็นมาตรฐานสำหรับองค์กรขนาดใหญ่ เพื่อให้พนักงานไม่ต้องจำ password หลายตัว และ IT team จัดการ user accounts ได้จากจุดเดียว เมื่อพนักงานลาออก ก็ปิดบัญชีครั้งเดียวแล้วเข้าระบบอะไรไม่ได้ทั้งหมด</p>
+
+    <p><strong>SAML vs OIDC:</strong> SAML 2.0 เป็นมาตรฐานเก่าที่ใช้ XML ซับซ้อนแต่รองรับ enterprise features ครบ ส่วน OpenID Connect (OIDC) เป็นมาตรฐานใหม่ที่สร้างบน OAuth 2.0 ใช้ JSON/JWT อ่านง่ายกว่า เหมาะสำหรับ modern applications</p>
 
     <div style="margin: 1.5rem 0; padding: 1.5rem; background: rgba(139,92,246,0.04); border-radius: 12px;">
       <div style="margin-bottom: 1rem; font-weight: 700; color: var(--navy);">SSO Ecosystem</div>
@@ -856,20 +1628,93 @@ async function loginUser(email: string, password: string) {
 
     <hr>
 
+    <h2>📊 Complete Authentication Architecture — มาดูภาพรวม</h2>
+
+    <p>ระบบ Authentication/Authorization ที่สมบูรณ์ประกอบด้วยหลายชั้น: <strong>Frontend</strong> (จัดการ UX + store tokens), <strong>API Gateway/Backend</strong> (verify tokens + enforce permissions), <strong>Database</strong> (เก็บ users, roles, sessions)</p>
+
+    <p><strong>Frontend Layer:</strong> แสดง login form, จัดการ OAuth redirects, เก็บ access token ใน memory (ไม่ใช่ localStorage เพื่อป้องกัน XSS), ใช้ Axios interceptors เพิ่ม Bearer token ทุก request, handle 401 errors ด้วย automatic token refresh</p>
+
+    <p><strong>API Gateway Layer:</strong> Rate limiting มาก่อน, followed by CORS + security headers, auth middleware ตรวจ JWT signature, RBAC middleware ตรวจ permissions, ถึงจะไปถึง business logic</p>
+
+    <p><strong>Database Layer:</strong> users table เก็บ basic info + password hash + MFA settings, refresh_tokens table เก็บ valid tokens (for revocation), roles/permissions tables สำหรับ RBAC, login_attempts table สำหรับ track brute force</p>
+
+    <hr>
+
     <h2>🔑 Key Takeaways</h2>
 
-    <ol>
-      <li><strong>Authentication ≠ Authorization</strong> → AuthN = ตัวตน, AuthZ = สิทธิ์ — ต้องทำทั้ง 2 อย่าง</li>
-      <li><strong>bcrypt/Argon2 เท่านั้น</strong> → ห้ามเก็บ plaintext, ห้าม MD5/SHA — Argon2id ดีที่สุดในปี 2026</li>
-      <li><strong>JWT = Access (15min) + Refresh (7d)</strong> → Access token สั้น, refresh token เก็บ httpOnly cookie</li>
-      <li><strong>Session vs Token</strong> → SSR ใช้ session, SPA/API/mobile ใช้ JWT</li>
-      <li><strong>OAuth 2.0</strong> → "Login with Google/GitHub" — ไม่ต้องจัดการ password เอง</li>
-      <li><strong>MFA/2FA</strong> → TOTP + backup codes — ป้องกัน password theft</li>
-      <li><strong>RBAC</strong> → Role → Permissions → Middleware — ตรวจสอบสิทธิ์ทุก endpoint</li>
-      <li><strong>Rate limiting</strong> → 5 login attempts per 15 min — ป้องกัน brute force</li>
-      <li><strong>Security headers</strong> → Helmet, CORS, CSP, HSTS — ตั้งค่าให้ครบ</li>
-      <li><strong>Never trust the client</strong> → Validate ทุกอย่างฝั่ง server — client-side validation แค่ UX</li>
-    </ol>
+    <div style="background: rgba(139,92,246,0.04); padding: 2rem; border-radius: 12px; margin-bottom: 2rem;">
+      <ol style="counter-reset: takeaway-counter; list-style: none; margin: 0; padding: 0;">
+        <li style="counter-increment: takeaway-counter; margin-bottom: 1.5rem; padding: 1rem; background: white; border-radius: 8px; border-left: 4px solid var(--purple); position: relative;">
+          <div style="position: absolute; top: 1rem; left: -0.5rem; width: 1.5rem; height: 1.5rem; background: var(--purple); color: white; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 0.8rem;">1</div>
+          <div style="padding-left: 1.5rem;">
+            <strong>Authentication ≠ Authorization</strong> → AuthN = "คุณคือใคร?" (ตัวตน), AuthZ = "คุณทำอะไรได้?" (สิทธิ์) — ต้องทำทั้ง 2 อย่าง ขาดอันไหนระบบไม่สมบูรณ์
+          </div>
+        </li>
+        
+        <li style="counter-increment: takeaway-counter; margin-bottom: 1.5rem; padding: 1rem; background: white; border-radius: 8px; border-left: 4px solid var(--purple); position: relative;">
+          <div style="position: absolute; top: 1rem; left: -0.5rem; width: 1.5rem; height: 1.5rem; background: var(--purple); color: white; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 0.8rem;">2</div>
+          <div style="padding-left: 1.5rem;">
+            <strong>bcrypt/Argon2 เท่านั้น</strong> → ห้ามเก็บ plaintext เด็ดขาด, ห้าม MD5/SHA (vulnerable to rainbow tables) — Argon2id ดีที่สุดในปี 2026, bcrypt ยังใช้ได้
+          </div>
+        </li>
+        
+        <li style="counter-increment: takeaway-counter; margin-bottom: 1.5rem; padding: 1rem; background: white; border-radius: 8px; border-left: 4px solid var(--purple); position: relative;">
+          <div style="position: absolute; top: 1rem; left: -0.5rem; width: 1.5rem; height: 1.5rem; background: var(--purple); color: white; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 0.8rem;">3</div>
+          <div style="padding-left: 1.5rem;">
+            <strong>JWT = Access (15min) + Refresh (7d)</strong> → Access token สั้นเพื่อลดความเสี่ยงหากโดนขโมย, refresh token เก็บ httpOnly cookie เพื่อป้องกัน XSS
+          </div>
+        </li>
+        
+        <li style="counter-increment: takeaway-counter; margin-bottom: 1.5rem; padding: 1rem; background: white; border-radius: 8px; border-left: 4px solid var(--purple); position: relative;">
+          <div style="position: absolute; top: 1rem; left: -0.5rem; width: 1.5rem; height: 1.5rem; background: var(--purple); color: white; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 0.8rem;">4</div>
+          <div style="padding-left: 1.5rem;">
+            <strong>Session vs Token</strong> → Traditional web (SSR) ใช้ session + Redis, SPA/API/mobile ใช้ JWT — เลือกตาม architecture และ requirements
+          </div>
+        </li>
+        
+        <li style="counter-increment: takeaway-counter; margin-bottom: 1.5rem; padding: 1rem; background: white; border-radius: 8px; border-left: 4px solid var(--purple); position: relative;">
+          <div style="position: absolute; top: 1rem; left: -0.5rem; width: 1.5rem; height: 1.5rem; background: var(--purple); color: white; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 0.8rem;">5</div>
+          <div style="padding-left: 1.5rem;">
+            <strong>OAuth 2.0</strong> → "Login with Google/GitHub" — ปลอดภัยกว่าเพราะไม่ต้องจัดการ password เอง, ใช้ Authorization Code flow, ต้องมี backend เก็บ client secret
+          </div>
+        </li>
+        
+        <li style="counter-increment: takeaway-counter; margin-bottom: 1.5rem; padding: 1rem; background: white; border-radius: 8px; border-left: 4px solid var(--purple); position: relative;">
+          <div style="position: absolute; top: 1rem; left: -0.5rem; width: 1.5rem; height: 1.5rem; background: var(--purple); color: white; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 0.8rem;">6</div>
+          <div style="padding-left: 1.5rem;">
+            <strong>MFA/2FA</strong> → TOTP (Google Authenticator) + backup codes — ป้องกัน password theft, แม้ password รั่วก็ยังเข้าไม่ได้เพราะไม่มีโทรศัพท์
+          </div>
+        </li>
+        
+        <li style="counter-increment: takeaway-counter; margin-bottom: 1.5rem; padding: 1rem; background: white; border-radius: 8px; border-left: 4px solid var(--purple); position: relative;">
+          <div style="position: absolute; top: 1rem; left: -0.5rem; width: 1.5rem; height: 1.5rem; background: var(--purple); color: white; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 0.8rem;">7</div>
+          <div style="padding-left: 1.5rem;">
+            <strong>RBAC</strong> → Role → Permissions → Middleware pattern — ตรวจสอบสิทธิ์ทุก endpoint, principle of least privilege, แยก ownership checks
+          </div>
+        </li>
+        
+        <li style="counter-increment: takeaway-counter; margin-bottom: 1.5rem; padding: 1rem; background: white; border-radius: 8px; border-left: 4px solid var(--purple); position: relative;">
+          <div style="position: absolute; top: 1rem; left: -0.5rem; width: 1.5rem; height: 1.5rem; background: var(--purple); color: white; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 0.8rem;">8</div>
+          <div style="padding-left: 1.5rem;">
+            <strong>Rate limiting</strong> → 5 login attempts per 15 min — ป้องกัน brute force, endpoint ต่างๆ ใช้ limit ต่างกัน (login < API < reset password)
+          </div>
+        </li>
+        
+        <li style="counter-increment: takeaway-counter; margin-bottom: 1.5rem; padding: 1rem; background: white; border-radius: 8px; border-left: 4px solid var(--purple); position: relative;">
+          <div style="position: absolute; top: 1rem; left: -0.5rem; width: 1.5rem; height: 1.5rem; background: var(--purple); color: white; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 0.8rem;">9</div>
+          <div style="padding-left: 1.5rem;">
+            <strong>Security headers</strong> → Helmet.js (CSP, HSTS, X-Frame), CORS configuration — ป้องกัน XSS, CSRF, clickjacking ตั้งค่าให้ครบถ้วน
+          </div>
+        </li>
+        
+        <li style="counter-increment: takeaway-counter; margin-bottom: 0; padding: 1rem; background: white; border-radius: 8px; border-left: 4px solid var(--purple); position: relative;">
+          <div style="position: absolute; top: 1rem; left: -0.5rem; width: 1.5rem; height: 1.5rem; background: var(--purple); color: white; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 0.8rem;">10</div>
+          <div style="padding-left: 1.5rem;">
+            <strong>Never trust the client</strong> → Validate ทุกอย่างฝั่ง server — client-side validation แค่ UX, real validation + authorization ต้องทำฝั่ง backend เสมอ
+          </div>
+        </li>
+      </ol>
+    </div>
 
     <div class="post-series-footer">
       บทความจากซีรีส์ DevOps & Vibe Coding 2026
