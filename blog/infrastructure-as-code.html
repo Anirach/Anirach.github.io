@@ -1,0 +1,752 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Infrastructure as Code — จัดการ Server ด้วย Terraform & Ansible | Anirach Mingkhwan</title>
+  <meta name="description" content="เรียนรู้ Infrastructure as Code (IaC) ตั้งแต่แนวคิด ไปจนถึง Terraform สร้าง infrastructure และ Ansible จัดการ configuration อัตโนมัติ">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --navy: #0f172a; --blue: #6366f1; --blue-dark: #4f46e5; --blue-light: #818cf8;
+      --slate: #334155; --slate-light: #64748b; --gray: #94a3b8;
+      --bg: #f8fafc; --white: #ffffff; --code-bg: #1e293b;
+      --font: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+      --mono: 'JetBrains Mono', 'Fira Code', monospace;
+    }
+    html { scroll-behavior: smooth; }
+    body {
+      font-family: var(--font); font-size: 17px; line-height: 1.8;
+      color: var(--slate); background: var(--bg); -webkit-font-smoothing: antialiased;
+    }
+    .blog-nav {
+      position: fixed; top: 0; left: 0; right: 0; z-index: 100;
+      background: rgba(248,250,252,0.85); backdrop-filter: blur(20px);
+      border-bottom: 1px solid rgba(0,0,0,0.05);
+    }
+    .blog-nav__inner {
+      max-width: 860px; margin: 0 auto; padding: 0 2rem; height: 56px;
+      display: flex; align-items: center; justify-content: space-between;
+    }
+    .blog-nav__back {
+      font-size: 0.85rem; font-weight: 500; color: var(--blue);
+      text-decoration: none; display: flex; align-items: center; gap: 0.4rem;
+    }
+    .blog-nav__back:hover { color: #4f46e5; }
+    .blog-nav__title {
+      font-size: 0.85rem; font-weight: 600; color: var(--navy);
+      overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 50%;
+    }
+    .post-hero {
+      padding: 8rem 2rem 3rem;
+      background: linear-gradient(135deg, #e8f0fe 0%, #ddd6fe 50%, #c7d2fe 100%);
+      text-align: center;
+    }
+    .post-hero__tags { display: flex; gap: 0.5rem; justify-content: center; margin-bottom: 1.25rem; }
+    .post-hero__tag {
+      font-size: 0.7rem; font-weight: 600; text-transform: uppercase;
+      letter-spacing: 0.1em; color: var(--blue);
+      background: rgba(99,102,241,0.1); padding: 0.3rem 0.75rem; border-radius: 20px;
+    }
+    .post-hero__title {
+      font-size: clamp(1.8rem, 5vw, 3rem); font-weight: 800;
+      color: var(--navy); line-height: 1.2; margin-bottom: 1rem;
+      max-width: 720px; margin-left: auto; margin-right: auto;
+    }
+    .post-hero__meta {
+      font-size: 0.85rem; color: var(--slate-light);
+      display: flex; align-items: center; justify-content: center; gap: 1.5rem;
+    }
+    .post-hero__series { font-weight: 600; color: var(--blue); }
+    .post-hero__cover {
+      max-width: 560px; margin: 2.5rem auto 0;
+      border-radius: 16px; overflow: hidden;
+      box-shadow: 0 20px 60px rgba(99,102,241,0.15);
+    }
+    .post-hero__cover img { width: 100%; display: block; }
+    .post-body { max-width: 720px; margin: 0 auto; padding: 3rem 2rem 6rem; }
+    .post-body h2 {
+      font-size: 1.6rem; font-weight: 800; color: var(--navy);
+      margin: 3rem 0 1rem; padding-bottom: 0.5rem;
+      border-bottom: 2px solid rgba(99,102,241,0.15);
+    }
+    .post-body h3 { font-size: 1.25rem; font-weight: 700; color: var(--navy); margin: 2.25rem 0 0.75rem; }
+    .post-body h4 { font-size: 1.05rem; font-weight: 700; color: var(--navy); margin: 1.75rem 0 0.6rem; }
+    .post-body p { margin-bottom: 1.25rem; }
+    .post-body strong { font-weight: 700; color: var(--navy); }
+    .post-body a { color: var(--blue); text-decoration: underline; text-decoration-thickness: 1px; text-underline-offset: 2px; }
+    .post-body pre {
+      background: var(--code-bg); border-radius: 12px; padding: 1.5rem;
+      margin: 1.25rem 0 1.5rem; overflow-x: auto; border: 1px solid rgba(255,255,255,0.05);
+    }
+    .post-body pre code {
+      font-family: var(--mono); font-size: 0.85rem; color: #e2e8f0; line-height: 1.7;
+    }
+    .post-body code {
+      font-family: var(--mono); font-size: 0.88em;
+      background: rgba(99,102,241,0.08); color: #4f46e5;
+      padding: 0.15em 0.45em; border-radius: 5px;
+    }
+    .post-body pre code { background: none; color: #e2e8f0; padding: 0; }
+    .post-body ul, .post-body ol { margin: 0.5rem 0 1.25rem 1.5rem; }
+    .post-body li { margin-bottom: 0.4rem; }
+    .post-body table { width: 100%; border-collapse: collapse; margin: 1.25rem 0 1.5rem; font-size: 0.9rem; }
+    .post-body th {
+      background: rgba(99,102,241,0.06); font-weight: 700; color: var(--navy);
+      padding: 0.75rem 1rem; text-align: left; border-bottom: 2px solid rgba(99,102,241,0.15);
+    }
+    .post-body td { padding: 0.65rem 1rem; border-bottom: 1px solid #e2e8f0; }
+    .post-body blockquote, .tip {
+      background: rgba(99,102,241,0.06); border-left: 4px solid var(--blue);
+      padding: 1rem 1.25rem; border-radius: 0 10px 10px 0;
+      margin: 1.25rem 0; font-size: 0.95rem; color: var(--navy);
+    }
+    .post-body hr {
+      border: none; height: 1px;
+      background: linear-gradient(90deg, transparent, rgba(99,102,241,0.2), transparent);
+      margin: 3rem 0;
+    }
+    .post-series-footer {
+      text-align: center; font-size: 0.85rem; color: var(--gray);
+      font-style: italic; margin-top: 2rem; padding-top: 2rem; border-top: 1px solid #e2e8f0;
+    }
+    .post-nav { max-width: 720px; margin: 0 auto; padding: 0 2rem 3rem; display: flex; gap: 1.5rem; flex-wrap: wrap; }
+    .post-nav__link {
+      flex: 1; min-width: 200px; padding: 1.25rem 1.5rem; border-radius: 12px;
+      background: rgba(255,255,255,0.85); backdrop-filter: blur(16px);
+      border: 1px solid rgba(255,255,255,0.6); box-shadow: 0 4px 16px rgba(0,0,0,0.05);
+      text-decoration: none; color: inherit; transition: transform 0.2s, box-shadow 0.2s;
+    }
+    .post-nav__link:hover { transform: translateY(-2px); box-shadow: 0 8px 24px rgba(99,102,241,0.1); }
+    .post-nav__dir { font-size: 0.75rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.1em; color: var(--blue); margin-bottom: 0.35rem; }
+    .post-nav__title { font-size: 0.9rem; font-weight: 600; color: var(--navy); line-height: 1.4; }
+    .blog-footer { background: var(--navy); padding: 2rem 0; text-align: center; }
+    .blog-footer a { color: var(--blue-light); text-decoration: none; font-weight: 600; font-size: 0.9rem; }
+    .blog-footer span { color: var(--gray); font-size: 0.8rem; display: block; margin-top: 0.4rem; }
+
+    /* ── Diagrams ── */
+    .flow-diagram {
+      display: flex; align-items: center; justify-content: center;
+      gap: 0.5rem; flex-wrap: wrap; margin: 1.5rem 0 2rem;
+      padding: 1.5rem; background: rgba(99,102,241,0.04); border-radius: 12px;
+    }
+    .flow-step {
+      text-align: center; padding: 0.75rem 1.25rem;
+      background: white; border-radius: 10px;
+      border: 1.5px solid rgba(99,102,241,0.15);
+      box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+    }
+    .flow-step__title { font-size: 0.9rem; font-weight: 700; color: var(--navy); }
+    .flow-step__sub { font-size: 0.72rem; color: var(--gray); margin-top: 0.15rem; }
+    .flow-arrow { font-size: 1.2rem; color: var(--blue); font-weight: 700; }
+
+    .arch-diagram { margin: 1.5rem 0 2rem; font-family: var(--font); }
+    .arch-box {
+      border: 2px solid rgba(99,102,241,0.25); border-radius: 12px; padding: 1.25rem;
+      background: linear-gradient(135deg, rgba(99,102,241,0.03), rgba(99,102,241,0.06));
+    }
+    .arch-label {
+      font-size: 0.75rem; font-weight: 700; text-transform: uppercase;
+      letter-spacing: 0.1em; color: var(--blue); text-align: center; margin-bottom: 0.75rem;
+    }
+    .arch-row { display: flex; gap: 0.75rem; justify-content: center; flex-wrap: wrap; margin-bottom: 0.75rem; }
+    .arch-container {
+      border: 2px solid rgba(99,102,241,0.2); border-radius: 10px;
+      padding: 0.75rem; background: rgba(238,242,255,0.8); min-width: 120px; text-align: center;
+    }
+    .arch-item {
+      font-size: 0.78rem; font-weight: 600; color: var(--navy);
+      padding: 0.3rem 0.6rem; margin: 0.25rem 0;
+      background: rgba(99,102,241,0.08); border-radius: 6px;
+    }
+    .arch-name { font-size: 0.72rem; font-weight: 700; color: var(--blue); margin-bottom: 0.35rem; }
+
+    /* Tool badge */
+    .tool-badge {
+      display: inline-flex; align-items: center; gap: 0.3rem;
+      font-size: 0.78rem; font-weight: 700; padding: 0.25rem 0.7rem;
+      border-radius: 6px; margin-right: 0.3rem;
+    }
+    .tool-badge--terraform { background: rgba(99,66,236,0.1); color: #6342ec; }
+    .tool-badge--ansible { background: rgba(239,68,68,0.1); color: #dc2626; }
+    .tool-badge--pulumi { background: rgba(59,130,246,0.1); color: #2563eb; }
+
+    @media (max-width: 600px) {
+      .post-hero { padding: 7rem 1.25rem 2.5rem; }
+      .post-body { padding: 2rem 1.25rem 4rem; }
+      .post-body pre { padding: 1rem; border-radius: 8px; }
+      .post-hero__meta { flex-direction: column; gap: 0.4rem; }
+      .post-nav { padding: 0 1.25rem 3rem; }
+      .flow-diagram { flex-direction: column; }
+    }
+  </style>
+</head>
+<body>
+
+  <nav class="blog-nav">
+    <div class="blog-nav__inner">
+      <a href="./" class="blog-nav__back">‹ Blog</a>
+      <div class="blog-nav__title">Infrastructure as Code</div>
+    </div>
+  </nav>
+
+  <header class="post-hero">
+    <div class="post-hero__tags">
+      <span class="post-hero__tag">IaC</span>
+      <span class="post-hero__tag">Terraform</span>
+      <span class="post-hero__tag">Ansible</span>
+      <span class="post-hero__tag">DevOps</span>
+    </div>
+    <h1 class="post-hero__title">Infrastructure as Code — จัดการ Server ด้วย Terraform & Ansible</h1>
+    <div class="post-hero__meta">
+      <span>By <strong>Anirach Mingkhwan</strong></span>
+      <span class="post-hero__series">DevOps & Vibe Coding 2026</span>
+    </div>
+    <div class="post-hero__cover">
+      <img src="../images/iac-cover.jpg" alt="Infrastructure as Code — dog with Terraform and Ansible">
+    </div>
+  </header>
+
+  <article class="post-body">
+
+    <p>จากโพสต์ที่แล้วเราเรียนรู้ Networking พื้นฐาน — DNS, Firewall, Load Balancer, SSH</p>
+
+    <p>แต่ลองนึกภาพว่าต้อง setup server 50 เครื่อง... <strong>จะ SSH เข้าไปตั้งค่าทีละเครื่องจริงเหรอ?</strong> 😰</p>
+
+    <p>นี่คือที่มาของ <strong>Infrastructure as Code (IaC)</strong> — เขียน code เพื่อสร้างและจัดการ infrastructure ทั้งหมด แทนที่จะทำด้วยมือ เหมือนเขียนสูตรอาหารแทนที่จะจำในหัว 📝🐕</p>
+
+    <hr>
+
+    <h2>IaC คืออะไร?</h2>
+
+    <p><strong>Infrastructure as Code</strong> คือแนวคิดที่ว่า — infrastructure (server, network, database, firewall) ควรถูก <strong>กำหนดด้วย code</strong> ไม่ใช่การคลิกบน console หรือพิมพ์คำสั่งทีละบรรทัด</p>
+
+    <h3>ก่อน IaC (Manual) 😩</h3>
+    <ol>
+      <li>Login เข้า AWS Console</li>
+      <li>คลิก "Create EC2 Instance"</li>
+      <li>เลือก Ubuntu, t3.medium, 50GB disk...</li>
+      <li>SSH เข้าไปติดตั้ง Nginx, Node.js, PostgreSQL...</li>
+      <li>ทำ 50 ครั้ง ❌</li>
+    </ol>
+
+    <h3>หลัง IaC (Automated) 🚀</h3>
+    <ol>
+      <li>เขียน Terraform → สร้าง 50 servers</li>
+      <li>เขียน Ansible → ติดตั้ง software ทั้ง 50 เครื่อง</li>
+      <li>รัน 1 คำสั่ง ✅</li>
+    </ol>
+
+    <blockquote>
+      <strong>💡 หลักการสำคัญ:</strong><br>
+      ✅ <strong>Repeatable</strong> — ทำซ้ำได้ผลเหมือนเดิมทุกครั้ง<br>
+      ✅ <strong>Version-controlled</strong> — เก็บใน Git, ดู history ได้<br>
+      ✅ <strong>Reviewable</strong> — ทีม review ก่อน apply<br>
+      ✅ <strong>Testable</strong> — ทดสอบก่อน deploy ได้
+    </blockquote>
+
+    <hr>
+
+    <h2>Terraform vs Ansible — ใช้ตัวไหน?</h2>
+
+    <p>คำตอบคือ <strong>ใช้ทั้งคู่!</strong> เพราะทำหน้าที่ต่างกัน:</p>
+
+    <div class="flow-diagram">
+      <div class="flow-step">
+        <div class="flow-step__title">📐 Terraform</div>
+        <div class="flow-step__sub">สร้าง Infrastructure</div>
+      </div>
+      <span class="flow-arrow">→</span>
+      <div class="flow-step">
+        <div class="flow-step__title">⚙️ Ansible</div>
+        <div class="flow-step__sub">ตั้งค่า Software</div>
+      </div>
+      <span class="flow-arrow">→</span>
+      <div class="flow-step">
+        <div class="flow-step__title">🚀 Production</div>
+        <div class="flow-step__sub">พร้อมใช้งาน!</div>
+      </div>
+    </div>
+
+    <table>
+      <thead>
+        <tr>
+          <th>Feature</th>
+          <th><span class="tool-badge tool-badge--terraform">Terraform</span></th>
+          <th><span class="tool-badge tool-badge--ansible">Ansible</span></th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>หน้าที่หลัก</td>
+          <td>สร้าง/จัดการ infrastructure</td>
+          <td>ตั้งค่า/ติดตั้ง software</td>
+        </tr>
+        <tr>
+          <td>ประเภท</td>
+          <td><strong>Provisioning</strong> tool</td>
+          <td><strong>Configuration Management</strong> tool</td>
+        </tr>
+        <tr>
+          <td>ภาษา</td>
+          <td>HCL (HashiCorp Config Language)</td>
+          <td>YAML (Playbooks)</td>
+        </tr>
+        <tr>
+          <td>วิธีทำงาน</td>
+          <td>Declarative — บอก "ต้องการอะไร"</td>
+          <td>Procedural + Declarative</td>
+        </tr>
+        <tr>
+          <td>State</td>
+          <td>✅ มี state file ติดตาม</td>
+          <td>❌ Agentless, ไม่มี state</td>
+        </tr>
+        <tr>
+          <td>ตัวอย่าง</td>
+          <td>สร้าง EC2, VPC, RDS, S3</td>
+          <td>ติดตั้ง Nginx, Deploy app</td>
+        </tr>
+        <tr>
+          <td>Cloud Support</td>
+          <td>AWS, GCP, Azure, DigitalOcean, +100 providers</td>
+          <td>SSH เข้าเครื่องไหนก็ได้</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <blockquote>
+      <strong>💡 จำง่ายๆ:</strong> Terraform = สร้างเครื่อง | Ansible = ตั้งค่าเครื่อง
+    </blockquote>
+
+    <hr>
+
+    <h2>Terraform — สร้าง Infrastructure ด้วย Code</h2>
+
+    <h3>Terraform ทำงานยังไง?</h3>
+
+    <div class="flow-diagram">
+      <div class="flow-step">
+        <div class="flow-step__title">📝 Write</div>
+        <div class="flow-step__sub">เขียน .tf files</div>
+      </div>
+      <span class="flow-arrow">→</span>
+      <div class="flow-step">
+        <div class="flow-step__title">📋 Plan</div>
+        <div class="flow-step__sub">ดู preview การเปลี่ยนแปลง</div>
+      </div>
+      <span class="flow-arrow">→</span>
+      <div class="flow-step">
+        <div class="flow-step__title">🚀 Apply</div>
+        <div class="flow-step__sub">สร้างจริง!</div>
+      </div>
+      <span class="flow-arrow">→</span>
+      <div class="flow-step">
+        <div class="flow-step__title">💾 State</div>
+        <div class="flow-step__sub">บันทึกสถานะ</div>
+      </div>
+    </div>
+
+    <h3>ตัวอย่าง: สร้าง AWS EC2 Instance</h3>
+
+    <p>ไฟล์ <code>main.tf</code>:</p>
+
+    <pre><code># กำหนด provider (Cloud ที่จะใช้)
+terraform {
+  required_providers {
+    aws = {
+      source  = "hashicorp/aws"
+      version = "~> 5.0"
+    }
+  }
+}
+
+provider "aws" {
+  region = "ap-southeast-1"    # Singapore
+}
+
+# สร้าง EC2 Instance
+resource "aws_instance" "web_server" {
+  ami           = "ami-0c55b159cbfafe1f0"   # Ubuntu 22.04
+  instance_type = "t3.medium"
+
+  tags = {
+    Name        = "web-server-01"
+    Environment = "production"
+    ManagedBy   = "terraform"
+  }
+
+  # Security Group
+  vpc_security_group_ids = [aws_security_group.web_sg.id]
+}
+
+# สร้าง Security Group
+resource "aws_security_group" "web_sg" {
+  name        = "web-sg"
+  description = "Allow HTTP and SSH"
+
+  ingress {
+    from_port   = 80
+    to_port     = 80
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]     # HTTP จากทุกที่
+  }
+
+  ingress {
+    from_port   = 22
+    to_port     = 22
+    protocol    = "tcp"
+    cidr_blocks = ["10.0.0.0/8"]    # SSH จาก private network เท่านั้น
+  }
+
+  egress {
+    from_port   = 0
+    to_port     = 0
+    protocol    = "-1"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+}
+
+# Output — แสดง IP ที่ได้
+output "server_ip" {
+  value = aws_instance.web_server.public_ip
+}</code></pre>
+
+    <pre><code># Terraform commands
+terraform init      # ดาวน์โหลด provider plugins
+terraform plan      # ดู preview ว่าจะสร้างอะไร
+terraform apply     # สร้างจริง! (ถาม yes/no)
+terraform destroy   # ลบทั้งหมด (ระวัง!)
+
+# ตัวอย่าง output ของ terraform plan:
+# + aws_instance.web_server
+#     ami:           "ami-0c55b159cbfafe1f0"
+#     instance_type: "t3.medium"
+#
+# Plan: 2 to add, 0 to change, 0 to destroy.</code></pre>
+
+    <h3>Terraform สร้างหลายเครื่องพร้อมกัน</h3>
+
+    <pre><code># ใช้ count สร้าง 5 เครื่องรวด!
+resource "aws_instance" "web_cluster" {
+  count         = 5
+  ami           = "ami-0c55b159cbfafe1f0"
+  instance_type = "t3.medium"
+
+  tags = {
+    Name = "web-server-${count.index + 1}"
+  }
+}
+
+# Output ทุก IP
+output "server_ips" {
+  value = aws_instance.web_cluster[*].public_ip
+}
+# → ["10.0.1.1", "10.0.1.2", "10.0.1.3", "10.0.1.4", "10.0.1.5"]</code></pre>
+
+    <hr>
+
+    <h2>Ansible — ตั้งค่า Server อัตโนมัติ</h2>
+
+    <h3>Ansible ทำงานยังไง?</h3>
+
+    <p>Ansible เป็น <strong>agentless</strong> — ไม่ต้องติดตั้งอะไรบนเครื่องเป้าหมาย ใช้ SSH เข้าไปรันคำสั่งเลย!</p>
+
+    <div class="arch-diagram">
+      <div class="arch-box">
+        <div class="arch-label">Ansible Architecture</div>
+        <div class="arch-row">
+          <div class="arch-container" style="min-width: 180px; background: rgba(99,102,241,0.12);">
+            <div class="arch-name">Control Node (เครื่องเรา)</div>
+            <div class="arch-item">Playbook (YAML)</div>
+            <div class="arch-item">Inventory (host list)</div>
+            <div class="arch-item">Ansible Engine</div>
+          </div>
+        </div>
+        <div style="text-align: center; font-size: 1rem; color: var(--blue); font-weight: 700; margin: 0.5rem 0;">SSH ↓ ↓ ↓</div>
+        <div class="arch-row">
+          <div class="arch-container">
+            <div class="arch-name">Server 1</div>
+            <div class="arch-item">ไม่ต้องติดตั้งอะไร!</div>
+          </div>
+          <div class="arch-container">
+            <div class="arch-name">Server 2</div>
+            <div class="arch-item">ไม่ต้องติดตั้งอะไร!</div>
+          </div>
+          <div class="arch-container">
+            <div class="arch-name">Server 3</div>
+            <div class="arch-item">ไม่ต้องติดตั้งอะไร!</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <h3>Step 1: Inventory — บอกว่ามี server อะไรบ้าง</h3>
+
+    <p>ไฟล์ <code>inventory.yml</code>:</p>
+
+    <pre><code>all:
+  children:
+    webservers:
+      hosts:
+        web1:
+          ansible_host: 10.0.1.1
+        web2:
+          ansible_host: 10.0.1.2
+        web3:
+          ansible_host: 10.0.1.3
+    databases:
+      hosts:
+        db1:
+          ansible_host: 10.0.2.1
+  vars:
+    ansible_user: deploy
+    ansible_ssh_private_key_file: ~/.ssh/id_ed25519</code></pre>
+
+    <h3>Step 2: Playbook — บอกว่าต้องทำอะไร</h3>
+
+    <p>ไฟล์ <code>setup-webserver.yml</code>:</p>
+
+    <pre><code>---
+- name: Setup Web Servers
+  hosts: webservers
+  become: yes          # ใช้ sudo
+
+  tasks:
+    # อัพเดท system
+    - name: Update apt cache
+      apt:
+        update_cache: yes
+        cache_valid_time: 3600
+
+    # ติดตั้ง Nginx
+    - name: Install Nginx
+      apt:
+        name: nginx
+        state: present
+
+    # ติดตั้ง Node.js 20
+    - name: Add NodeSource repository
+      shell: curl -fsSL https://deb.nodesource.com/setup_20.x | bash -
+
+    - name: Install Node.js
+      apt:
+        name: nodejs
+        state: present
+
+    # Copy config file
+    - name: Deploy Nginx config
+      template:
+        src: templates/nginx.conf.j2
+        dest: /etc/nginx/sites-available/myapp
+      notify: Restart Nginx
+
+    # เปิด firewall
+    - name: Allow HTTP through firewall
+      ufw:
+        rule: allow
+        port: "80"
+        proto: tcp
+
+    # ตรวจสอบว่า Nginx ทำงาน
+    - name: Ensure Nginx is running
+      service:
+        name: nginx
+        state: started
+        enabled: yes
+
+  handlers:
+    - name: Restart Nginx
+      service:
+        name: nginx
+        state: restarted</code></pre>
+
+    <pre><code># รัน playbook
+ansible-playbook -i inventory.yml setup-webserver.yml
+
+# ดูผลลัพธ์:
+# PLAY [Setup Web Servers] *************************************
+# TASK [Install Nginx] *****************************************
+# changed: [web1]
+# changed: [web2]
+# changed: [web3]
+#
+# PLAY RECAP ***************************************************
+# web1: ok=7  changed=5  unreachable=0  failed=0
+# web2: ok=7  changed=5  unreachable=0  failed=0
+# web3: ok=7  changed=5  unreachable=0  failed=0</code></pre>
+
+    <h3>Ansible Ad-hoc Commands — ไม่ต้องเขียน playbook</h3>
+
+    <pre><code># Ping ทุกเครื่อง
+ansible all -i inventory.yml -m ping
+
+# ดู disk space ทุก webserver
+ansible webservers -i inventory.yml -a "df -h"
+
+# ติดตั้ง package ด่วน
+ansible webservers -i inventory.yml -m apt -a "name=htop state=present" --become
+
+# Restart service
+ansible webservers -i inventory.yml -m service -a "name=nginx state=restarted" --become</code></pre>
+
+    <hr>
+
+    <h2>Terraform + Ansible ทำงานร่วมกัน</h2>
+
+    <p>Workflow ที่ดีที่สุดคือใช้ <strong>ทั้งคู่ร่วมกัน</strong>:</p>
+
+    <div class="arch-diagram">
+      <div class="arch-box">
+        <div class="arch-label">Complete IaC Pipeline</div>
+        <div class="arch-row">
+          <div class="arch-container" style="background: rgba(99,66,236,0.1);">
+            <div class="arch-name" style="color: #6342ec;">Terraform</div>
+            <div class="arch-item">สร้าง VPC</div>
+            <div class="arch-item">สร้าง EC2 × 5</div>
+            <div class="arch-item">สร้าง RDS</div>
+            <div class="arch-item">สร้าง Load Balancer</div>
+          </div>
+          <div style="display: flex; align-items: center; font-size: 1.5rem; color: var(--blue); font-weight: 700;">→</div>
+          <div class="arch-container" style="background: rgba(239,68,68,0.06);">
+            <div class="arch-name" style="color: #dc2626;">Ansible</div>
+            <div class="arch-item">ติดตั้ง Docker</div>
+            <div class="arch-item">Deploy Application</div>
+            <div class="arch-item">ตั้งค่า Monitoring</div>
+            <div class="arch-item">Harden Security</div>
+          </div>
+          <div style="display: flex; align-items: center; font-size: 1.5rem; color: var(--blue); font-weight: 700;">→</div>
+          <div class="arch-container" style="background: rgba(34,197,94,0.08);">
+            <div class="arch-name" style="color: #16a34a;">Production</div>
+            <div class="arch-item">✅ Ready!</div>
+            <div class="arch-item">🔒 Secured</div>
+            <div class="arch-item">📊 Monitored</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <pre><code># 1. Terraform สร้าง infrastructure
+cd terraform/
+terraform apply -auto-approve
+
+# 2. Export IP ที่ได้ เป็น Ansible inventory
+terraform output -json server_ips | \
+  jq -r '.[] | "  " + . ' > ../ansible/hosts.txt
+
+# 3. Ansible ตั้งค่าทุกเครื่อง
+cd ../ansible/
+ansible-playbook -i inventory.yml setup-all.yml</code></pre>
+
+    <hr>
+
+    <h2>IaC Tools อื่นๆ ที่น่ารู้</h2>
+
+    <table>
+      <thead>
+        <tr>
+          <th>Tool</th>
+          <th>ประเภท</th>
+          <th>จุดเด่น</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><strong>Terraform</strong></td>
+          <td>Provisioning</td>
+          <td>HCL, multi-cloud, state management</td>
+        </tr>
+        <tr>
+          <td><strong>Ansible</strong></td>
+          <td>Config Management</td>
+          <td>YAML, agentless, simple</td>
+        </tr>
+        <tr>
+          <td><strong>Pulumi</strong></td>
+          <td>Provisioning</td>
+          <td>เขียนด้วย Python/TypeScript/Go แทน HCL</td>
+        </tr>
+        <tr>
+          <td><strong>CloudFormation</strong></td>
+          <td>Provisioning</td>
+          <td>AWS native, JSON/YAML</td>
+        </tr>
+        <tr>
+          <td><strong>Chef / Puppet</strong></td>
+          <td>Config Management</td>
+          <td>Enterprise-grade, agent-based</td>
+        </tr>
+        <tr>
+          <td><strong>OpenTofu</strong></td>
+          <td>Provisioning</td>
+          <td>Terraform fork (open-source)</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <hr>
+
+    <h2>Best Practices</h2>
+
+    <ol>
+      <li><strong>เก็บ IaC ใน Git</strong> — ทุก infrastructure change ต้องผ่าน PR review</li>
+      <li><strong>ใช้ modules</strong> — แยก code เป็น module ที่ reuse ได้</li>
+      <li><strong>แยก environment</strong> — dev / staging / production ใช้ config คนละชุด</li>
+      <li><strong>อย่าเก็บ secrets ใน code</strong> — ใช้ Vault, AWS Secrets Manager, หรือ environment variables</li>
+      <li><strong>ใช้ remote state</strong> — Terraform state เก็บใน S3 + DynamoDB lock ไม่ใช่ local</li>
+      <li><strong>Plan ก่อน Apply เสมอ</strong> — อ่าน plan ให้ดีก่อนกด yes!</li>
+      <li><strong>Idempotent</strong> — รันกี่ครั้งก็ได้ผลเหมือนเดิม</li>
+    </ol>
+
+    <pre><code># Terraform remote state (best practice)
+terraform {
+  backend "s3" {
+    bucket         = "my-terraform-state"
+    key            = "prod/terraform.tfstate"
+    region         = "ap-southeast-1"
+    dynamodb_table = "terraform-locks"
+    encrypt        = true
+  }
+}</code></pre>
+
+    <blockquote>
+      <strong>🐕 กฎทอง:</strong> ถ้า infrastructure ไม่ได้อยู่ใน code = มันไม่มีอยู่จริง ทุกอย่างต้อง reproducible!
+    </blockquote>
+
+    <hr>
+
+    <h2>สรุป</h2>
+
+    <ul>
+      <li><strong>IaC</strong> = จัดการ infrastructure ด้วย code แทนการทำมือ</li>
+      <li><strong>Terraform</strong> = สร้าง infrastructure (EC2, VPC, RDS) ด้วย HCL → <code>plan</code> → <code>apply</code></li>
+      <li><strong>Ansible</strong> = ตั้งค่า software (Nginx, Docker, app) ด้วย YAML Playbooks ผ่าน SSH</li>
+      <li><strong>ใช้ทั้งคู่</strong> = Terraform สร้างเครื่อง → Ansible ตั้งค่าเครื่อง → Production ready!</li>
+      <li><strong>Best Practices</strong> = Git, modules, remote state, แยก env, ไม่เก็บ secrets ใน code</li>
+      <li>เริ่มต้นง่ายๆ: <code>terraform init → plan → apply</code> + <code>ansible-playbook</code> 📝🐕</li>
+    </ul>
+
+    <div class="post-series-footer">
+      บทความจากซีรีส์ DevOps & Vibe Coding 2026
+    </div>
+
+  </article>
+
+  <!-- Post Navigation -->
+  <div class="post-nav">
+    <a href="networking-fundamentals.html" class="post-nav__link">
+      <div class="post-nav__dir">← Previous</div>
+      <div class="post-nav__title">Networking พื้นฐานสำหรับ DevOps — รู้จักเครือข่ายก่อน Deploy</div>
+    </a>
+  </div>
+
+  <footer class="blog-footer">
+    <a href="./">← Back to Blog</a>
+    <span>© 2025 Anirach Mingkhwan — Associate Professor, KMUTNB</span>
+  </footer>
+
+</body>
+</html>
