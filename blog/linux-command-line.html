@@ -1,0 +1,631 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Linux Command Line — คำสั่งพื้นฐานที่ DevOps ต้องรู้ | Anirach Mingkhwan</title>
+  <meta name="description" content="เรียนรู้คำสั่ง Linux ที่ DevOps ต้องใช้ทุกวัน ตั้งแต่ไฟล์, process, permission, package ไปจนถึง shell scripting และ cron jobs">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --navy: #0f172a; --blue: #6366f1; --blue-dark: #4f46e5; --blue-light: #818cf8;
+      --slate: #334155; --slate-light: #64748b; --gray: #94a3b8;
+      --bg: #f8fafc; --white: #ffffff; --code-bg: #1e293b;
+      --font: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+      --mono: 'JetBrains Mono', 'Fira Code', monospace;
+    }
+    html { scroll-behavior: smooth; }
+    body {
+      font-family: var(--font); font-size: 17px; line-height: 1.8;
+      color: var(--slate); background: var(--bg); -webkit-font-smoothing: antialiased;
+    }
+    .blog-nav {
+      position: fixed; top: 0; left: 0; right: 0; z-index: 100;
+      background: rgba(248,250,252,0.85); backdrop-filter: blur(20px);
+      border-bottom: 1px solid rgba(0,0,0,0.05);
+    }
+    .blog-nav__inner {
+      max-width: 860px; margin: 0 auto; padding: 0 2rem; height: 56px;
+      display: flex; align-items: center; justify-content: space-between;
+    }
+    .blog-nav__back {
+      font-size: 0.85rem; font-weight: 500; color: var(--blue);
+      text-decoration: none; display: flex; align-items: center; gap: 0.4rem;
+    }
+    .blog-nav__back:hover { color: #4f46e5; }
+    .blog-nav__title {
+      font-size: 0.85rem; font-weight: 600; color: var(--navy);
+      overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 50%;
+    }
+    .post-hero {
+      padding: 8rem 2rem 3rem;
+      background: linear-gradient(135deg, #e8f0fe 0%, #ddd6fe 50%, #c7d2fe 100%);
+      text-align: center;
+    }
+    .post-hero__tags { display: flex; gap: 0.5rem; justify-content: center; margin-bottom: 1.25rem; }
+    .post-hero__tag {
+      font-size: 0.7rem; font-weight: 600; text-transform: uppercase;
+      letter-spacing: 0.1em; color: var(--blue);
+      background: rgba(99,102,241,0.1); padding: 0.3rem 0.75rem; border-radius: 20px;
+    }
+    .post-hero__title {
+      font-size: clamp(1.8rem, 5vw, 3rem); font-weight: 800;
+      color: var(--navy); line-height: 1.2; margin-bottom: 1rem;
+      max-width: 720px; margin-left: auto; margin-right: auto;
+    }
+    .post-hero__meta {
+      font-size: 0.85rem; color: var(--slate-light);
+      display: flex; align-items: center; justify-content: center; gap: 1.5rem;
+    }
+    .post-hero__series { font-weight: 600; color: var(--blue); }
+    .post-hero__cover {
+      max-width: 520px; margin: 2.5rem auto 0;
+      border-radius: 16px; overflow: hidden;
+      box-shadow: 0 20px 60px rgba(99,102,241,0.15);
+    }
+    .post-hero__cover img { width: 100%; display: block; }
+    .post-body { max-width: 720px; margin: 0 auto; padding: 3rem 2rem 6rem; }
+    .post-body h2 {
+      font-size: 1.6rem; font-weight: 800; color: var(--navy);
+      margin: 3rem 0 1rem; padding-bottom: 0.5rem;
+      border-bottom: 2px solid rgba(99,102,241,0.15);
+    }
+    .post-body h3 { font-size: 1.25rem; font-weight: 700; color: var(--navy); margin: 2.25rem 0 0.75rem; }
+    .post-body h4 { font-size: 1.05rem; font-weight: 700; color: var(--navy); margin: 1.75rem 0 0.6rem; }
+    .post-body p { margin-bottom: 1.25rem; }
+    .post-body strong { font-weight: 700; color: var(--navy); }
+    .post-body a { color: var(--blue); text-decoration: underline; text-decoration-thickness: 1px; text-underline-offset: 2px; }
+    .post-body pre {
+      background: var(--code-bg); border-radius: 12px; padding: 1.5rem;
+      margin: 1.25rem 0 1.5rem; overflow-x: auto; border: 1px solid rgba(255,255,255,0.05);
+    }
+    .post-body pre code {
+      font-family: var(--mono); font-size: 0.85rem; color: #e2e8f0; line-height: 1.7;
+    }
+    .post-body code {
+      font-family: var(--mono); font-size: 0.88em;
+      background: rgba(99,102,241,0.08); color: #4f46e5;
+      padding: 0.15em 0.45em; border-radius: 5px;
+    }
+    .post-body pre code { background: none; color: #e2e8f0; padding: 0; }
+    .post-body ul, .post-body ol { margin: 0.5rem 0 1.25rem 1.5rem; }
+    .post-body li { margin-bottom: 0.4rem; }
+    .post-body table { width: 100%; border-collapse: collapse; margin: 1.25rem 0 1.5rem; font-size: 0.9rem; }
+    .post-body th {
+      background: rgba(99,102,241,0.06); font-weight: 700; color: var(--navy);
+      padding: 0.75rem 1rem; text-align: left; border-bottom: 2px solid rgba(99,102,241,0.15);
+    }
+    .post-body td { padding: 0.65rem 1rem; border-bottom: 1px solid #e2e8f0; }
+    .post-body blockquote, .tip {
+      background: rgba(99,102,241,0.06); border-left: 4px solid var(--blue);
+      padding: 1rem 1.25rem; border-radius: 0 10px 10px 0;
+      margin: 1.25rem 0; font-size: 0.95rem; color: var(--navy);
+    }
+    .post-body hr {
+      border: none; height: 1px;
+      background: linear-gradient(90deg, transparent, rgba(99,102,241,0.2), transparent);
+      margin: 3rem 0;
+    }
+    .post-series-footer {
+      text-align: center; font-size: 0.85rem; color: var(--gray);
+      font-style: italic; margin-top: 2rem; padding-top: 2rem; border-top: 1px solid #e2e8f0;
+    }
+    .post-nav { max-width: 720px; margin: 0 auto; padding: 0 2rem 3rem; display: flex; gap: 1.5rem; flex-wrap: wrap; }
+    .post-nav__link {
+      flex: 1; min-width: 200px; padding: 1.25rem 1.5rem; border-radius: 12px;
+      background: rgba(255,255,255,0.85); backdrop-filter: blur(16px);
+      border: 1px solid rgba(255,255,255,0.6); box-shadow: 0 4px 16px rgba(0,0,0,0.05);
+      text-decoration: none; color: inherit; transition: transform 0.2s, box-shadow 0.2s;
+    }
+    .post-nav__link:hover { transform: translateY(-2px); box-shadow: 0 8px 24px rgba(99,102,241,0.1); }
+    .post-nav__dir { font-size: 0.75rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.1em; color: var(--blue); margin-bottom: 0.35rem; }
+    .post-nav__title { font-size: 0.9rem; font-weight: 600; color: var(--navy); line-height: 1.4; }
+    .blog-footer { background: var(--navy); padding: 2rem 0; text-align: center; }
+    .blog-footer a { color: var(--blue-light); text-decoration: none; font-weight: 600; font-size: 0.9rem; }
+    .blog-footer span { color: var(--gray); font-size: 0.8rem; display: block; margin-top: 0.4rem; }
+
+    @media (max-width: 600px) {
+      .post-hero { padding: 7rem 1.25rem 2.5rem; }
+      .post-body { padding: 2rem 1.25rem 4rem; }
+      .post-body pre { padding: 1rem; border-radius: 8px; }
+      .post-hero__meta { flex-direction: column; gap: 0.4rem; }
+      .post-nav { padding: 0 1.25rem 3rem; }
+    }
+  </style>
+</head>
+<body>
+
+  <nav class="blog-nav">
+    <div class="blog-nav__inner">
+      <a href="./" class="blog-nav__back">‹ Blog</a>
+      <div class="blog-nav__title">Linux Command Line</div>
+    </div>
+  </nav>
+
+  <header class="post-hero">
+    <div class="post-hero__tags">
+      <span class="post-hero__tag">Linux</span>
+      <span class="post-hero__tag">CLI</span>
+      <span class="post-hero__tag">DevOps</span>
+    </div>
+    <h1 class="post-hero__title">Linux Command Line — คำสั่งพื้นฐานที่ DevOps ต้องรู้</h1>
+    <div class="post-hero__meta">
+      <span>By <strong>Anirach Mingkhwan</strong></span>
+      <span class="post-hero__series">DevOps & Vibe Coding 2026</span>
+    </div>
+    <div class="post-hero__cover">
+      <img src="../images/linux-cli-cover.jpg" alt="Linux Command Line — dog with Tux penguin">
+    </div>
+  </header>
+
+  <article class="post-body">
+
+    <p>ในซีรีส์ DevOps เราพูดถึง Docker, K8s, Terraform, Ansible มาเยอะแล้ว แต่ทุกเครื่องมือเหล่านั้นล้วนรันบน <strong>Linux</strong> ทั้งนั้น!</p>
+
+    <p>ถ้าใช้ Linux command ไม่เป็น... <strong>เหมือนเชฟที่ถือมีดไม่เป็น 🔪</strong></p>
+
+    <p>มาเรียนรู้คำสั่ง Linux ที่ DevOps ใช้ทุกวัน ตั้งแต่พื้นฐานไปจนถึง shell scripting 🐧🐕</p>
+
+    <hr>
+
+    <h2>Navigation — เดินทางใน File System</h2>
+
+    <pre><code># อยู่ไหน?
+pwd
+# /home/deploy
+
+# ไปที่ไหน?
+cd /var/log           # ไปตาม path
+cd ~                  # กลับ home
+cd ..                 # ขึ้น 1 ระดับ
+cd -                  # กลับไปที่เดิม (toggle)
+
+# มีอะไรอยู่?
+ls                    # list files
+ls -la                # list แบบละเอียด + hidden files
+ls -lh                # ขนาดอ่านง่าย (1.5M, 2.3G)
+ls -lt                # เรียงตามเวลา (ใหม่สุดบน)
+
+# หา path แบบ tree
+tree -L 2             # แสดงโครงสร้าง 2 ระดับ</code></pre>
+
+    <blockquote>
+      <strong>💡 Tip:</strong> กด <code>Tab</code> เพื่อ auto-complete ชื่อไฟล์/โฟลเดอร์ — กด 2 ครั้งเพื่อดูตัวเลือก
+    </blockquote>
+
+    <hr>
+
+    <h2>จัดการไฟล์ — สร้าง ลบ ย้าย คัดลอก</h2>
+
+    <pre><code># สร้าง
+mkdir -p projects/myapp/src    # สร้างโฟลเดอร์ (nested)
+touch index.js                  # สร้างไฟล์เปล่า
+
+# คัดลอก
+cp file.txt backup.txt          # copy ไฟล์
+cp -r src/ src-backup/          # copy โฟลเดอร์ (recursive)
+
+# ย้าย / เปลี่ยนชื่อ
+mv old.txt new.txt              # rename
+mv file.txt /tmp/               # ย้ายไป /tmp
+
+# ลบ (ระวัง! ไม่มี Recycle Bin)
+rm file.txt                     # ลบไฟล์
+rm -r folder/                   # ลบโฟลเดอร์
+rm -rf node_modules/            # ลบแบบ force (ไม่ถาม)
+
+# ลิงก์
+ln -s /usr/bin/python3 /usr/bin/python   # symbolic link</code></pre>
+
+    <blockquote>
+      <strong>🐕 ระวัง!</strong> <code>rm -rf /</code> จะลบทุกอย่างในเครื่อง — อย่าทำเด็ดขาด! ใช้ <code>rm -ri</code> (ถามก่อนลบ) ถ้าไม่แน่ใจ
+    </blockquote>
+
+    <hr>
+
+    <h2>อ่านไฟล์ — ดูเนื้อหาแบบต่างๆ</h2>
+
+    <pre><code># ดูทั้งไฟล์
+cat config.yml                  # แสดงทั้งหมด
+less /var/log/syslog            # เลื่อนดูได้ (กด q ออก)
+more /var/log/syslog            # เหมือน less แต่ทำได้น้อยกว่า
+
+# ดูเฉพาะส่วน
+head -20 access.log             # 20 บรรทัดแรก
+tail -50 error.log              # 50 บรรทัดท้าย
+tail -f /var/log/nginx/access.log   # ดู real-time! (follow)
+
+# นับ
+wc -l file.txt                  # จำนวนบรรทัด
+wc -w file.txt                  # จำนวนคำ
+du -sh folder/                  # ขนาดโฟลเดอร์
+df -h                           # ขนาด disk ที่เหลือ</code></pre>
+
+    <hr>
+
+    <h2>Search & Filter — หาของเก่ง</h2>
+
+    <pre><code># grep — ค้นหาข้อความในไฟล์
+grep "error" /var/log/syslog              # หาบรรทัดที่มี "error"
+grep -i "warning" app.log                 # case-insensitive
+grep -r "TODO" src/                       # ค้นหาในทุกไฟล์ (recursive)
+grep -n "password" config.yml             # แสดงเลขบรรทัด
+grep -c "404" access.log                  # นับจำนวนที่เจอ
+grep -v "DEBUG" app.log                   # แสดงบรรทัดที่ไม่มี "DEBUG"
+
+# find — หาไฟล์
+find / -name "nginx.conf"                 # หาไฟล์ชื่อ nginx.conf
+find . -name "*.log" -mtime -7            # ไฟล์ .log ที่แก้ไขใน 7 วัน
+find /var -size +100M                     # ไฟล์ที่ใหญ่กว่า 100MB
+find . -type d -name "node_modules"       # หาโฟลเดอร์ชื่อ node_modules
+find . -name "*.tmp" -delete              # หาแล้วลบ
+
+# awk & sed — text processing
+awk '{print $1}' access.log               # แสดงคอลัมน์แรก
+awk -F: '{print $1}' /etc/passwd          # แสดง username ทั้งหมด
+sed 's/old/new/g' file.txt                # แทนที่ข้อความ
+sed -i 's/8080/3000/g' config.yml         # แทนที่ในไฟล์จริง</code></pre>
+
+    <hr>
+
+    <h2>Pipes & Redirection — ต่อท่อ</h2>
+
+    <p>พลังที่แท้จริงของ Linux คือการ <strong>ต่อคำสั่งเข้าด้วยกัน</strong> ด้วย pipe <code>|</code>:</p>
+
+    <pre><code># Pipe: output ของคำสั่งซ้าย → input ของคำสั่งขวา
+cat access.log | grep "POST" | wc -l
+# → นับจำนวน POST requests
+
+# หา 10 IP ที่เข้ามาบ่อยสุด
+awk '{print $1}' access.log | sort | uniq -c | sort -rn | head -10
+
+# หา process ที่ใช้ memory เยอะสุด
+ps aux | sort -k4 -rn | head -5
+
+# Redirect: บันทึก output ลงไฟล์
+echo "Hello" > file.txt          # เขียนทับ
+echo "World" >> file.txt         # เขียนต่อท้าย
+ls /fake 2> errors.txt           # redirect error
+ls /fake > output.txt 2>&1       # redirect ทั้ง output + error
+
+# /dev/null — หลุมดำ (ทิ้ง output)
+command > /dev/null 2>&1         # ไม่แสดงอะไรเลย</code></pre>
+
+    <blockquote>
+      <strong>💡 DevOps Pro Tip:</strong> <code>|</code> (pipe) คือสิ่งที่ทำให้ Linux ทรงพลัง — คำสั่งเล็กๆ หลายตัว ต่อกันแล้วทำสิ่งซับซ้อนได้!
+    </blockquote>
+
+    <hr>
+
+    <h2>Process Management — จัดการโปรเซส</h2>
+
+    <pre><code># ดู process
+ps aux                          # แสดงทุก process
+ps aux | grep nginx             # หา process nginx
+top                             # real-time monitor (กด q ออก)
+htop                            # top เวอร์ชันสวยกว่า
+
+# จัดการ process
+kill 1234                       # ส่ง SIGTERM (ปิดอย่างสุภาพ)
+kill -9 1234                    # ส่ง SIGKILL (บังคับปิด)
+killall nginx                   # kill ทุก process ชื่อ nginx
+pkill -f "node server.js"       # kill ตาม pattern
+
+# Background / Foreground
+./script.sh &                   # รันใน background
+nohup ./script.sh &             # รัน background + ไม่ตายเมื่อปิด terminal
+jobs                            # ดู background jobs
+fg %1                           # ดึงกลับมา foreground
+
+# systemd — จัดการ services
+sudo systemctl start nginx      # เริ่ม
+sudo systemctl stop nginx       # หยุด
+sudo systemctl restart nginx    # restart
+sudo systemctl status nginx     # ดูสถานะ
+sudo systemctl enable nginx     # เปิดอัตโนมัติตอน boot
+sudo journalctl -u nginx -f     # ดู log real-time</code></pre>
+
+    <hr>
+
+    <h2>Permissions — สิทธิ์การเข้าถึง</h2>
+
+    <pre><code># ดู permissions
+ls -la
+# -rw-r--r-- 1 deploy deploy 1234 Mar  7 09:00 app.js
+# │├─┤├─┤├─┤
+# │ │  │  └── Others: r-- (read only)
+# │ │  └───── Group:  r-- (read only)
+# │ └──────── Owner:  rw- (read + write)
+# └────────── Type:   - (file) / d (directory)
+
+# เปลี่ยน permissions
+chmod 755 script.sh             # rwxr-xr-x (owner ทำได้หมด, คนอื่น read+execute)
+chmod 644 config.yml            # rw-r--r-- (owner อ่าน+เขียน, คนอื่นอ่านอย่างเดียว)
+chmod +x deploy.sh              # เพิ่มสิทธิ์ execute
+chmod -R 755 /var/www           # recursive ทั้งโฟลเดอร์
+
+# เปลี่ยนเจ้าของ
+chown deploy:deploy app.js      # เปลี่ยน owner + group
+chown -R www-data:www-data /var/www   # recursive</code></pre>
+
+    <table>
+      <thead>
+        <tr>
+          <th>ตัวเลข</th>
+          <th>สิทธิ์</th>
+          <th>ใช้กับ</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><code>755</code></td>
+          <td><code>rwxr-xr-x</code></td>
+          <td>Scripts, โฟลเดอร์</td>
+        </tr>
+        <tr>
+          <td><code>644</code></td>
+          <td><code>rw-r--r--</code></td>
+          <td>Config files, HTML</td>
+        </tr>
+        <tr>
+          <td><code>600</code></td>
+          <td><code>rw-------</code></td>
+          <td>SSH keys, secrets</td>
+        </tr>
+        <tr>
+          <td><code>700</code></td>
+          <td><code>rwx------</code></td>
+          <td>.ssh directory</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <hr>
+
+    <h2>Package Management — ติดตั้ง software</h2>
+
+    <pre><code># Ubuntu/Debian (apt)
+sudo apt update                 # อัพเดท package list
+sudo apt upgrade                # อัพเดท software ทั้งหมด
+sudo apt install nginx          # ติดตั้ง
+sudo apt remove nginx           # ลบ
+sudo apt autoremove             # ลบ dependencies ที่ไม่ใช้
+apt search docker               # ค้นหา package
+dpkg -l | grep nginx            # ดู package ที่ติดตั้ง
+
+# CentOS/RHEL (yum/dnf)
+sudo dnf install nginx
+sudo dnf update
+sudo dnf remove nginx
+
+# Alpine (apk) — ใช้ใน Docker images
+apk add --no-cache nginx curl</code></pre>
+
+    <hr>
+
+    <h2>User Management — จัดการ users</h2>
+
+    <pre><code># สร้าง user
+sudo adduser deploy             # สร้าง user + home directory
+sudo usermod -aG sudo deploy    # เพิ่มเข้ากลุ่ม sudo
+sudo usermod -aG docker deploy  # เพิ่มเข้ากลุ่ม docker
+
+# ข้อมูล user
+whoami                          # เราเป็นใคร
+id deploy                       # ดู uid, gid, groups
+groups deploy                   # ดู groups
+
+# สลับ user
+su - deploy                     # สลับเป็น deploy
+sudo -i                         # สลับเป็น root
+sudo -u deploy command          # รันคำสั่งในฐานะ deploy</code></pre>
+
+    <hr>
+
+    <h2>Networking Commands — เครือข่าย</h2>
+
+    <pre><code># IP & Interface
+ip addr show                    # ดู IP address
+ip route show                   # ดู routing table
+hostname -I                     # ดู IP อย่างย่อ
+
+# ทดสอบ connection
+ping -c 4 google.com            # ping 4 ครั้ง
+curl -I https://example.com     # ดู HTTP headers
+curl -s https://api.example.com/status | jq .   # ดู JSON สวยๆ
+wget https://example.com/file.zip   # ดาวน์โหลดไฟล์
+
+# Port & Connection
+ss -tlnp                        # ดู port ที่เปิด + process
+netstat -tlnp                   # เหมือน ss (เก่ากว่า)
+lsof -i :3000                   # ใครใช้ port 3000?
+
+# DNS
+dig example.com A +short        # ดู IP ของ domain
+nslookup example.com            # ดู DNS record</code></pre>
+
+    <hr>
+
+    <h2>Shell Scripting — เขียน script อัตโนมัติ</h2>
+
+    <p>Shell script คือพลังสูงสุดของ Linux CLI — รวมคำสั่งหลายตัวเป็น automation!</p>
+
+    <h3>Script พื้นฐาน</h3>
+
+    <pre><code>#!/bin/bash
+# deploy.sh — Deploy script
+
+set -e  # หยุดทันทีถ้ามี error
+
+APP_NAME="myapp"
+DEPLOY_DIR="/var/www/$APP_NAME"
+BACKUP_DIR="/var/backups/$APP_NAME"
+TIMESTAMP=$(date +%Y%m%d_%H%M%S)
+
+echo "🚀 Deploying $APP_NAME..."
+
+# 1. Backup current version
+echo "📦 Creating backup..."
+mkdir -p "$BACKUP_DIR"
+cp -r "$DEPLOY_DIR" "$BACKUP_DIR/backup_$TIMESTAMP"
+
+# 2. Pull latest code
+echo "⬇️ Pulling latest code..."
+cd "$DEPLOY_DIR"
+git pull origin main
+
+# 3. Install dependencies
+echo "📥 Installing dependencies..."
+npm ci --production
+
+# 4. Restart service
+echo "🔄 Restarting service..."
+sudo systemctl restart "$APP_NAME"
+
+# 5. Health check
+echo "🏥 Health check..."
+sleep 3
+if curl -sf http://localhost:3000/health > /dev/null; then
+    echo "✅ Deploy successful!"
+else
+    echo "❌ Health check failed! Rolling back..."
+    cp -r "$BACKUP_DIR/backup_$TIMESTAMP"/* "$DEPLOY_DIR/"
+    sudo systemctl restart "$APP_NAME"
+    echo "⏪ Rolled back to previous version"
+    exit 1
+fi</code></pre>
+
+    <pre><code># ทำให้รันได้ แล้วรัน
+chmod +x deploy.sh
+./deploy.sh</code></pre>
+
+    <h3>Variables, Conditions, Loops</h3>
+
+    <pre><code>#!/bin/bash
+# ตัวแปร
+NAME="World"
+echo "Hello, $NAME!"
+
+# Condition
+if [ -f "/etc/nginx/nginx.conf" ]; then
+    echo "Nginx config exists"
+else
+    echo "Nginx not installed"
+fi
+
+# Loop
+for server in web1 web2 web3; do
+    echo "Checking $server..."
+    ssh "$server" "uptime"
+done
+
+# Loop ตามไฟล์
+for log in /var/log/*.log; do
+    echo "$log: $(wc -l < "$log") lines"
+done
+
+# While loop
+while true; do
+    if curl -sf http://localhost:3000/health > /dev/null; then
+        echo "$(date): OK"
+    else
+        echo "$(date): DOWN!"
+    fi
+    sleep 30
+done</code></pre>
+
+    <hr>
+
+    <h2>Cron Jobs — ตั้งเวลารันอัตโนมัติ</h2>
+
+    <pre><code># แก้ไข crontab
+crontab -e
+
+# รูปแบบ:
+# ┌───────── minute (0-59)
+# │ ┌─────── hour (0-23)
+# │ │ ┌───── day of month (1-31)
+# │ │ │ ┌─── month (1-12)
+# │ │ │ │ ┌─ day of week (0-7, 0=Sun)
+# │ │ │ │ │
+# * * * * * command
+
+# ตัวอย่าง
+0 2 * * *   /home/deploy/backup.sh       # ทุกวัน 02:00
+*/5 * * * * curl -s http://localhost:3000/health   # ทุก 5 นาที
+0 9 * * 1   /home/deploy/weekly-report.sh   # ทุกวันจันทร์ 09:00
+0 0 1 * *   /home/deploy/monthly-cleanup.sh   # วันที่ 1 ทุกเดือน
+
+# ดู crontab ปัจจุบัน
+crontab -l
+
+# ดู cron logs
+grep CRON /var/log/syslog</code></pre>
+
+    <hr>
+
+    <h2>คำสั่งที่ DevOps ใช้บ่อยที่สุด (Cheat Sheet)</h2>
+
+    <table>
+      <thead>
+        <tr>
+          <th>หมวด</th>
+          <th>คำสั่ง</th>
+          <th>ทำอะไร</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr><td>📁 Files</td><td><code>ls -la</code></td><td>list ไฟล์แบบละเอียด</td></tr>
+        <tr><td>📁 Files</td><td><code>find . -name "*.log"</code></td><td>หาไฟล์ .log</td></tr>
+        <tr><td>🔍 Search</td><td><code>grep -r "error" .</code></td><td>ค้นหาข้อความ</td></tr>
+        <tr><td>📊 Monitor</td><td><code>htop</code></td><td>ดู CPU/Memory real-time</td></tr>
+        <tr><td>📊 Monitor</td><td><code>df -h</code></td><td>ดู disk space</td></tr>
+        <tr><td>📊 Monitor</td><td><code>free -h</code></td><td>ดู memory</td></tr>
+        <tr><td>🔄 Process</td><td><code>ps aux | grep app</code></td><td>หา process</td></tr>
+        <tr><td>🔄 Process</td><td><code>systemctl status nginx</code></td><td>ดูสถานะ service</td></tr>
+        <tr><td>🌐 Network</td><td><code>ss -tlnp</code></td><td>ดู port ที่เปิด</td></tr>
+        <tr><td>🌐 Network</td><td><code>curl -sf URL</code></td><td>ทดสอบ HTTP</td></tr>
+        <tr><td>📝 Logs</td><td><code>tail -f /var/log/app.log</code></td><td>ดู log real-time</td></tr>
+        <tr><td>📝 Logs</td><td><code>journalctl -u service -f</code></td><td>ดู systemd log</td></tr>
+      </tbody>
+    </table>
+
+    <hr>
+
+    <h2>สรุป</h2>
+
+    <ul>
+      <li><strong>Navigation</strong> = <code>cd</code>, <code>ls</code>, <code>pwd</code>, <code>tree</code></li>
+      <li><strong>File ops</strong> = <code>cp</code>, <code>mv</code>, <code>rm</code>, <code>mkdir</code>, <code>chmod</code>, <code>chown</code></li>
+      <li><strong>Search</strong> = <code>grep</code> (ค้นข้อความ), <code>find</code> (ค้นไฟล์), <code>awk</code>/<code>sed</code> (text processing)</li>
+      <li><strong>Pipes</strong> = <code>|</code> ต่อคำสั่ง, <code>></code> redirect output — พลังที่แท้จริงของ Linux!</li>
+      <li><strong>Process</strong> = <code>ps</code>, <code>top</code>, <code>kill</code>, <code>systemctl</code></li>
+      <li><strong>Permissions</strong> = <code>chmod 755</code> (scripts), <code>600</code> (secrets), <code>644</code> (configs)</li>
+      <li><strong>Shell Script</strong> = รวมคำสั่งเป็น automation — deploy, backup, health check</li>
+      <li><strong>Cron</strong> = ตั้งเวลารันอัตโนมัติ 🐧🐕</li>
+    </ul>
+
+    <div class="post-series-footer">
+      บทความจากซีรีส์ DevOps & Vibe Coding 2026
+    </div>
+
+  </article>
+
+  <!-- Post Navigation -->
+  <div class="post-nav">
+    <a href="monitoring-observability.html" class="post-nav__link">
+      <div class="post-nav__dir">← Previous</div>
+      <div class="post-nav__title">Monitoring & Observability — รู้ทุกอย่างที่เกิดขึ้นใน System</div>
+    </a>
+  </div>
+
+  <footer class="blog-footer">
+    <a href="./">← Back to Blog</a>
+    <span>© 2025 Anirach Mingkhwan — Associate Professor, KMUTNB</span>
+  </footer>
+
+</body>
+</html>
