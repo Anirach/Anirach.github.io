@@ -1,0 +1,618 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Kubernetes — จัดการ Container ให้เป็นระบบด้วย K8s | Anirach Mingkhwan</title>
+  <meta name="description" content="เรียนรู้ Kubernetes (K8s) ตั้งแต่พื้นฐาน Pod, Service, Deployment ไปจนถึง Scaling, Self-healing และการ deploy จริง">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --navy: #0f172a; --blue: #6366f1; --blue-dark: #4f46e5; --blue-light: #818cf8;
+      --slate: #334155; --slate-light: #64748b; --gray: #94a3b8;
+      --bg: #f8fafc; --white: #ffffff; --code-bg: #1e293b;
+      --font: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+      --mono: 'JetBrains Mono', 'Fira Code', monospace;
+    }
+    html { scroll-behavior: smooth; }
+    body {
+      font-family: var(--font); font-size: 17px; line-height: 1.8;
+      color: var(--slate); background: var(--bg); -webkit-font-smoothing: antialiased;
+    }
+    .blog-nav {
+      position: fixed; top: 0; left: 0; right: 0; z-index: 100;
+      background: rgba(248,250,252,0.85); backdrop-filter: blur(20px);
+      border-bottom: 1px solid rgba(0,0,0,0.05);
+    }
+    .blog-nav__inner {
+      max-width: 860px; margin: 0 auto; padding: 0 2rem; height: 56px;
+      display: flex; align-items: center; justify-content: space-between;
+    }
+    .blog-nav__back {
+      font-size: 0.85rem; font-weight: 500; color: var(--blue);
+      text-decoration: none; display: flex; align-items: center; gap: 0.4rem;
+    }
+    .blog-nav__back:hover { color: #4f46e5; }
+    .blog-nav__title {
+      font-size: 0.85rem; font-weight: 600; color: var(--navy);
+      overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 50%;
+    }
+    .post-hero {
+      padding: 8rem 2rem 3rem;
+      background: linear-gradient(135deg, #e8f0fe 0%, #ddd6fe 50%, #c7d2fe 100%);
+      text-align: center;
+    }
+    .post-hero__tags { display: flex; gap: 0.5rem; justify-content: center; margin-bottom: 1.25rem; }
+    .post-hero__tag {
+      font-size: 0.7rem; font-weight: 600; text-transform: uppercase;
+      letter-spacing: 0.1em; color: var(--blue);
+      background: rgba(99,102,241,0.1); padding: 0.3rem 0.75rem; border-radius: 20px;
+    }
+    .post-hero__title {
+      font-size: clamp(1.8rem, 5vw, 3rem); font-weight: 800;
+      color: var(--navy); line-height: 1.2; margin-bottom: 1rem;
+      max-width: 720px; margin-left: auto; margin-right: auto;
+    }
+    .post-hero__meta {
+      font-size: 0.85rem; color: var(--slate-light);
+      display: flex; align-items: center; justify-content: center; gap: 1.5rem;
+    }
+    .post-hero__series { font-weight: 600; color: var(--blue); }
+    .post-hero__cover {
+      max-width: 520px; margin: 2.5rem auto 0;
+      border-radius: 16px; overflow: hidden;
+      box-shadow: 0 20px 60px rgba(99,102,241,0.15);
+    }
+    .post-hero__cover img { width: 100%; display: block; }
+    .post-body { max-width: 720px; margin: 0 auto; padding: 3rem 2rem 6rem; }
+    .post-body h2 {
+      font-size: 1.6rem; font-weight: 800; color: var(--navy);
+      margin: 3rem 0 1rem; padding-bottom: 0.5rem;
+      border-bottom: 2px solid rgba(99,102,241,0.15);
+    }
+    .post-body h3 { font-size: 1.25rem; font-weight: 700; color: var(--navy); margin: 2.25rem 0 0.75rem; }
+    .post-body h4 { font-size: 1.05rem; font-weight: 700; color: var(--navy); margin: 1.75rem 0 0.6rem; }
+    .post-body p { margin-bottom: 1.25rem; }
+    .post-body strong { font-weight: 700; color: var(--navy); }
+    .post-body a { color: var(--blue); text-decoration: underline; text-decoration-thickness: 1px; text-underline-offset: 2px; }
+    .post-body pre {
+      background: var(--code-bg); border-radius: 12px; padding: 1.5rem;
+      margin: 1.25rem 0 1.5rem; overflow-x: auto; border: 1px solid rgba(255,255,255,0.05);
+    }
+    .post-body pre code {
+      font-family: var(--mono); font-size: 0.85rem; color: #e2e8f0; line-height: 1.7;
+    }
+    .post-body code {
+      font-family: var(--mono); font-size: 0.88em;
+      background: rgba(99,102,241,0.08); color: #4f46e5;
+      padding: 0.15em 0.45em; border-radius: 5px;
+    }
+    .post-body pre code { background: none; color: #e2e8f0; padding: 0; }
+    .post-body ul, .post-body ol { margin: 0.5rem 0 1.25rem 1.5rem; }
+    .post-body li { margin-bottom: 0.4rem; }
+    .post-body table { width: 100%; border-collapse: collapse; margin: 1.25rem 0 1.5rem; font-size: 0.9rem; }
+    .post-body th {
+      background: rgba(99,102,241,0.06); font-weight: 700; color: var(--navy);
+      padding: 0.75rem 1rem; text-align: left; border-bottom: 2px solid rgba(99,102,241,0.15);
+    }
+    .post-body td { padding: 0.65rem 1rem; border-bottom: 1px solid #e2e8f0; }
+    .post-body blockquote, .tip {
+      background: rgba(99,102,241,0.06); border-left: 4px solid var(--blue);
+      padding: 1rem 1.25rem; border-radius: 0 10px 10px 0;
+      margin: 1.25rem 0; font-size: 0.95rem; color: var(--navy);
+    }
+    .post-body hr {
+      border: none; height: 1px;
+      background: linear-gradient(90deg, transparent, rgba(99,102,241,0.2), transparent);
+      margin: 3rem 0;
+    }
+    .post-series-footer {
+      text-align: center; font-size: 0.85rem; color: var(--gray);
+      font-style: italic; margin-top: 2rem; padding-top: 2rem; border-top: 1px solid #e2e8f0;
+    }
+    .post-nav { max-width: 720px; margin: 0 auto; padding: 0 2rem 3rem; display: flex; gap: 1.5rem; flex-wrap: wrap; }
+    .post-nav__link {
+      flex: 1; min-width: 200px; padding: 1.25rem 1.5rem; border-radius: 12px;
+      background: rgba(255,255,255,0.85); backdrop-filter: blur(16px);
+      border: 1px solid rgba(255,255,255,0.6); box-shadow: 0 4px 16px rgba(0,0,0,0.05);
+      text-decoration: none; color: inherit; transition: transform 0.2s, box-shadow 0.2s;
+    }
+    .post-nav__link:hover { transform: translateY(-2px); box-shadow: 0 8px 24px rgba(99,102,241,0.1); }
+    .post-nav__dir { font-size: 0.75rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.1em; color: var(--blue); margin-bottom: 0.35rem; }
+    .post-nav__title { font-size: 0.9rem; font-weight: 600; color: var(--navy); line-height: 1.4; }
+    .blog-footer { background: var(--navy); padding: 2rem 0; text-align: center; }
+    .blog-footer a { color: var(--blue-light); text-decoration: none; font-weight: 600; font-size: 0.9rem; }
+    .blog-footer span { color: var(--gray); font-size: 0.8rem; display: block; margin-top: 0.4rem; }
+
+    /* ── Architecture Diagrams ── */
+    .arch-diagram { margin: 1.5rem 0 2rem; font-family: var(--font); }
+    .arch-box {
+      border: 2px solid rgba(99,102,241,0.25); border-radius: 12px;
+      padding: 1.25rem;
+      background: linear-gradient(135deg, rgba(99,102,241,0.03), rgba(99,102,241,0.06));
+    }
+    .arch-label {
+      font-size: 0.75rem; font-weight: 700; text-transform: uppercase;
+      letter-spacing: 0.1em; color: var(--blue); text-align: center; margin-bottom: 0.75rem;
+    }
+    .arch-row {
+      display: flex; gap: 0.75rem; justify-content: center; flex-wrap: wrap; margin-bottom: 0.75rem;
+    }
+    .arch-container {
+      border: 2px solid rgba(99,102,241,0.2); border-radius: 10px;
+      padding: 0.75rem; background: rgba(238,242,255,0.8); min-width: 120px; text-align: center;
+    }
+    .arch-item {
+      font-size: 0.78rem; font-weight: 600; color: var(--navy);
+      padding: 0.3rem 0.6rem; margin: 0.25rem 0;
+      background: rgba(99,102,241,0.08); border-radius: 6px;
+    }
+    .arch-layer {
+      border: 1.5px solid rgba(99,102,241,0.15); border-radius: 8px;
+      padding: 0.6rem 1rem; text-align: center; font-size: 0.82rem;
+      font-weight: 600; color: var(--navy); background: rgba(255,255,255,0.5); margin-top: 0.5rem;
+    }
+    .arch-layer--engine { background: rgba(99,102,241,0.08); color: var(--blue); }
+    .arch-layer--os { background: rgba(34,197,94,0.06); color: #16a34a; }
+    .arch-layer--hw { background: rgba(245,158,11,0.06); color: #d97706; }
+    .arch-name { font-size: 0.72rem; font-weight: 700; color: var(--blue); margin-bottom: 0.35rem; }
+
+    /* ── Flow diagram ── */
+    .flow-diagram {
+      display: flex; align-items: center; justify-content: center;
+      gap: 0.5rem; flex-wrap: wrap; margin: 1.5rem 0 2rem;
+      padding: 1.5rem; background: rgba(99,102,241,0.04); border-radius: 12px;
+    }
+    .flow-step {
+      text-align: center; padding: 0.75rem 1.25rem;
+      background: white; border-radius: 10px;
+      border: 1.5px solid rgba(99,102,241,0.15);
+      box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+    }
+    .flow-step__title { font-size: 0.9rem; font-weight: 700; color: var(--navy); }
+    .flow-step__sub { font-size: 0.72rem; color: var(--gray); margin-top: 0.15rem; }
+    .flow-arrow { font-size: 1.2rem; color: var(--blue); font-weight: 700; }
+
+    /* ── Stack diagram ── */
+    .stack-diagram { margin: 1.5rem 0 2rem; }
+    .stack-layer {
+      padding: 0.75rem 1rem; text-align: center; font-size: 0.85rem; font-weight: 600;
+      border: 1.5px solid rgba(99,102,241,0.15);
+    }
+    .stack-layer:first-child { border-radius: 10px 10px 0 0; }
+    .stack-layer:last-child { border-radius: 0 0 10px 10px; }
+    .stack-layer--app { background: rgba(99,102,241,0.08); color: var(--blue); }
+    .stack-layer--k8s { background: rgba(59,130,246,0.08); color: #2563eb; }
+    .stack-layer--runtime { background: rgba(34,197,94,0.06); color: #16a34a; }
+    .stack-layer--os { background: rgba(245,158,11,0.06); color: #d97706; }
+    .stack-layer--hw { background: rgba(239,68,68,0.06); color: #dc2626; }
+    .stack-layer__label { font-size: 0.7rem; color: var(--gray); font-weight: 400; margin-left: 0.5rem; }
+
+    @media (max-width: 600px) {
+      .post-hero { padding: 7rem 1.25rem 2.5rem; }
+      .post-body { padding: 2rem 1.25rem 4rem; }
+      .post-body pre { padding: 1rem; border-radius: 8px; }
+      .post-hero__meta { flex-direction: column; gap: 0.4rem; }
+      .post-nav { padding: 0 1.25rem 3rem; }
+      .flow-diagram { flex-direction: column; }
+    }
+  </style>
+</head>
+<body>
+
+  <nav class="blog-nav">
+    <div class="blog-nav__inner">
+      <a href="./" class="blog-nav__back">‹ Blog</a>
+      <div class="blog-nav__title">Kubernetes Orchestration</div>
+    </div>
+  </nav>
+
+  <header class="post-hero">
+    <div class="post-hero__tags">
+      <span class="post-hero__tag">Kubernetes</span>
+      <span class="post-hero__tag">DevOps</span>
+      <span class="post-hero__tag">Container Orchestration</span>
+    </div>
+    <h1 class="post-hero__title">Kubernetes — จัดการ Container ให้เป็นระบบด้วย K8s</h1>
+    <div class="post-hero__meta">
+      <span>By <strong>Anirach Mingkhwan</strong></span>
+      <span class="post-hero__series">DevOps & Vibe Coding 2026</span>
+    </div>
+    <div class="post-hero__cover">
+      <img src="../images/kubernetes-cover.jpg" alt="Kubernetes — captain dog steering containers">
+    </div>
+  </header>
+
+  <article class="post-body">
+
+    <p>จากโพสต์ที่แล้วเราเรียนรู้ Docker ว่ามันช่วยให้เรา pack app + dependencies ไว้ใน Container เดียว ทำให้ deploy ได้ทุกที่</p>
+
+    <p>แต่ถ้าเรามี Container เป็น <strong>สิบ... ร้อย... พัน</strong> ตัวล่ะ? ใครจะมานั่งสั่ง <code>docker run</code> ทีละตัว? 😵</p>
+
+    <p>นี่คือปัญหาที่ <strong>Kubernetes (K8s)</strong> มาแก้ — มันเป็น <strong>Container Orchestrator</strong> ที่ช่วยจัดการ container ให้ทำงานร่วมกันอย่างเป็นระบบ เหมือนกัปตันเรือที่คุมตู้สินค้า (container) ทั้งลำ ⚓🐕</p>
+
+    <hr>
+
+    <h2>Kubernetes คืออะไร?</h2>
+
+    <p><strong>Kubernetes</strong> (อ่านว่า คู-เบอร์-เน-ทิส, ย่อว่า K8s) คือ open-source container orchestration platform ที่พัฒนาโดย Google ปัจจุบันดูแลโดย <a href="https://www.cncf.io/" target="_blank">CNCF</a></p>
+
+    <p>หน้าที่หลักคือ:</p>
+    <ul>
+      <li><strong>จัดวาง Container</strong> — เลือกว่า container ไหนรันบนเครื่องไหน (Scheduling)</li>
+      <li><strong>Scaling</strong> — เพิ่ม/ลด container ตาม traffic อัตโนมัติ</li>
+      <li><strong>Self-healing</strong> — container ตาย? K8s สร้างตัวใหม่ทันที</li>
+      <li><strong>Load Balancing</strong> — กระจาย traffic ให้เท่าๆ กัน</li>
+      <li><strong>Rolling Updates</strong> — อัปเดตแอปโดยไม่ downtime</li>
+    </ul>
+
+    <blockquote>
+      <strong>💡 จำง่ายๆ:</strong> Docker = สร้าง Container | Kubernetes = จัดการ Container
+    </blockquote>
+
+    <hr>
+
+    <h2>ทำไมต้อง Kubernetes?</h2>
+
+    <p>ลองนึกภาพว่าเรามี web app ที่ใช้ 3 services:</p>
+
+    <div class="flow-diagram">
+      <div class="flow-step">
+        <div class="flow-step__title">🌐 Frontend</div>
+        <div class="flow-step__sub">React App × 3</div>
+      </div>
+      <span class="flow-arrow">→</span>
+      <div class="flow-step">
+        <div class="flow-step__title">⚙️ Backend</div>
+        <div class="flow-step__sub">Node.js API × 5</div>
+      </div>
+      <span class="flow-arrow">→</span>
+      <div class="flow-step">
+        <div class="flow-step__title">🗄️ Database</div>
+        <div class="flow-step__sub">PostgreSQL × 2</div>
+      </div>
+    </div>
+
+    <p>รวม 10 containers — ถ้าจัดการด้วยมือจะต้อง:</p>
+    <ul>
+      <li>สั่ง <code>docker run</code> ทีละตัว</li>
+      <li>ถ้า container ตาย ต้อง restart เอง</li>
+      <li>Traffic เพิ่ม? ต้อง scale เอง</li>
+      <li>Deploy version ใหม่? ต้องหยุดทีละตัว</li>
+    </ul>
+
+    <p><strong>Kubernetes ทำทั้งหมดนี้ให้อัตโนมัติ!</strong> 🚀</p>
+
+    <hr>
+
+    <h2>K8s Architecture — มีอะไรอยู่ข้างใน?</h2>
+
+    <p>Kubernetes แบ่งเป็น 2 ส่วนหลัก:</p>
+
+    <div class="arch-diagram">
+      <div class="arch-box">
+        <div class="arch-label">Kubernetes Cluster</div>
+        <div class="arch-row">
+          <div class="arch-container" style="min-width: 200px;">
+            <div class="arch-name">Control Plane (Master)</div>
+            <div class="arch-item">API Server</div>
+            <div class="arch-item">Scheduler</div>
+            <div class="arch-item">Controller Manager</div>
+            <div class="arch-item">etcd (Database)</div>
+          </div>
+          <div class="arch-container" style="min-width: 140px;">
+            <div class="arch-name">Worker Node 1</div>
+            <div class="arch-item">kubelet</div>
+            <div class="arch-item">kube-proxy</div>
+            <div class="arch-item">Pod (App A)</div>
+            <div class="arch-item">Pod (App B)</div>
+          </div>
+          <div class="arch-container" style="min-width: 140px;">
+            <div class="arch-name">Worker Node 2</div>
+            <div class="arch-item">kubelet</div>
+            <div class="arch-item">kube-proxy</div>
+            <div class="arch-item">Pod (App A)</div>
+            <div class="arch-item">Pod (App C)</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <h3>Control Plane (สมอง)</h3>
+    <ul>
+      <li><strong>API Server</strong> — ประตูหน้าบ้าน ทุกคำสั่งต้องผ่านตรงนี้</li>
+      <li><strong>Scheduler</strong> — เลือกว่า Pod ไหนจะรันบน Node ไหน</li>
+      <li><strong>Controller Manager</strong> — ดูแลให้ state ตรงกับที่เรากำหนด</li>
+      <li><strong>etcd</strong> — ฐานข้อมูลที่เก็บ config ทั้งหมดของ cluster</li>
+    </ul>
+
+    <h3>Worker Node (แรงงาน)</h3>
+    <ul>
+      <li><strong>kubelet</strong> — agent ที่รันบนทุก Node คอยดูแล Pod</li>
+      <li><strong>kube-proxy</strong> — จัดการ networking ให้ Pod คุยกันได้</li>
+      <li><strong>Pod</strong> — หน่วยที่เล็กที่สุดใน K8s (ข้างในมี container)</li>
+    </ul>
+
+    <hr>
+
+    <h2>K8s Core Concepts — คำศัพท์ที่ต้องรู้</h2>
+
+    <table>
+      <thead>
+        <tr>
+          <th>Concept</th>
+          <th>คืออะไร</th>
+          <th>เปรียบเทียบ</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><strong>Pod</strong></td>
+          <td>หน่วยเล็กสุด (1+ containers)</td>
+          <td>ห้องพัก 1 ห้อง</td>
+        </tr>
+        <tr>
+          <td><strong>Deployment</strong></td>
+          <td>จัดการ Pod ให้มีจำนวนตามที่กำหนด</td>
+          <td>ผู้จัดการโรงแรม</td>
+        </tr>
+        <tr>
+          <td><strong>Service</strong></td>
+          <td>เปิดทางให้เข้าถึง Pod ได้</td>
+          <td>ประตูทางเข้า</td>
+        </tr>
+        <tr>
+          <td><strong>Node</strong></td>
+          <td>เครื่อง (physical/VM) ที่รัน Pod</td>
+          <td>ตึกอาคาร</td>
+        </tr>
+        <tr>
+          <td><strong>Namespace</strong></td>
+          <td>แบ่งกลุ่ม resources</td>
+          <td>ชั้นของตึก</td>
+        </tr>
+        <tr>
+          <td><strong>ConfigMap</strong></td>
+          <td>เก็บ config (key-value)</td>
+          <td>ป้ายติดห้อง</td>
+        </tr>
+        <tr>
+          <td><strong>Secret</strong></td>
+          <td>เก็บข้อมูลลับ (encoded)</td>
+          <td>ตู้เซฟ</td>
+        </tr>
+        <tr>
+          <td><strong>Ingress</strong></td>
+          <td>จัดการ HTTP routing จากภายนอก</td>
+          <td>ล็อบบี้โรงแรม</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <hr>
+
+    <h2>Hands-on — Deploy แอปแรกด้วย K8s</h2>
+
+    <h3>1. สร้าง Deployment</h3>
+
+    <p>ไฟล์ <code>deployment.yaml</code>:</p>
+
+    <pre><code>apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: my-web-app
+  labels:
+    app: web
+spec:
+  replicas: 3          # รัน 3 pods
+  selector:
+    matchLabels:
+      app: web
+  template:
+    metadata:
+      labels:
+        app: web
+    spec:
+      containers:
+      - name: web
+        image: nginx:alpine
+        ports:
+        - containerPort: 80
+        resources:
+          requests:
+            memory: "64Mi"
+            cpu: "100m"
+          limits:
+            memory: "128Mi"
+            cpu: "250m"</code></pre>
+
+    <pre><code># สร้าง deployment
+kubectl apply -f deployment.yaml
+
+# ดูสถานะ
+kubectl get pods
+# NAME                          READY   STATUS    RESTARTS   AGE
+# my-web-app-6d8f7b4c5-abc12   1/1     Running   0          10s
+# my-web-app-6d8f7b4c5-def34   1/1     Running   0          10s
+# my-web-app-6d8f7b4c5-ghi56   1/1     Running   0          10s</code></pre>
+
+    <h3>2. สร้าง Service</h3>
+
+    <p>ไฟล์ <code>service.yaml</code>:</p>
+
+    <pre><code>apiVersion: v1
+kind: Service
+metadata:
+  name: web-service
+spec:
+  type: LoadBalancer
+  selector:
+    app: web         # เชื่อมกับ Pod ที่มี label app=web
+  ports:
+  - port: 80         # port ที่เปิดให้ภายนอก
+    targetPort: 80   # port ของ container</code></pre>
+
+    <pre><code># สร้าง service
+kubectl apply -f service.yaml
+
+# ดู service
+kubectl get svc
+# NAME          TYPE           CLUSTER-IP     EXTERNAL-IP     PORT(S)
+# web-service   LoadBalancer   10.96.45.123   203.0.113.50    80:31234/TCP</code></pre>
+
+    <h3>3. Scaling — เพิ่ม/ลด Pod</h3>
+
+    <pre><code># Scale เป็น 5 pods
+kubectl scale deployment my-web-app --replicas=5
+
+# ดูผล
+kubectl get pods
+# จะเห็น 5 pods running!</code></pre>
+
+    <h3>4. Rolling Update — อัปเดตโดยไม่ downtime</h3>
+
+    <pre><code># เปลี่ยน image เป็น version ใหม่
+kubectl set image deployment/my-web-app web=nginx:1.25
+
+# ดูสถานะ update
+kubectl rollout status deployment/my-web-app
+# Waiting for deployment "my-web-app" rollout to finish...
+# deployment "my-web-app" successfully rolled out
+
+# ผิดพลาด? Rollback!
+kubectl rollout undo deployment/my-web-app</code></pre>
+
+    <hr>
+
+    <h2>Self-healing — K8s ซ่อมตัวเอง</h2>
+
+    <p>หนึ่งในฟีเจอร์เด่นที่สุดของ K8s — ถ้า Pod ตาย มันจะสร้างตัวใหม่อัตโนมัติ:</p>
+
+    <pre><code># ลอง kill pod ทิ้ง
+kubectl delete pod my-web-app-6d8f7b4c5-abc12
+
+# ดูอีกที — K8s สร้างตัวใหม่มาแทนแล้ว!
+kubectl get pods
+# my-web-app-6d8f7b4c5-xyz99   1/1     Running   0          3s  ← ตัวใหม่!
+# my-web-app-6d8f7b4c5-def34   1/1     Running   0          5m
+# my-web-app-6d8f7b4c5-ghi56   1/1     Running   0          5m</code></pre>
+
+    <blockquote>
+      <strong>🐕 K8s จำ "desired state" ไว้เสมอ:</strong> เราบอกว่าต้องการ 3 pods → ถ้าเหลือ 2 มันจะสร้างเพิ่มจนครบ 3 เอง!
+    </blockquote>
+
+    <hr>
+
+    <h2>Docker Compose vs Kubernetes</h2>
+
+    <table>
+      <thead>
+        <tr>
+          <th>Feature</th>
+          <th>Docker Compose</th>
+          <th>Kubernetes</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>เหมาะกับ</td>
+          <td>Development, เครื่องเดียว</td>
+          <td>Production, หลายเครื่อง</td>
+        </tr>
+        <tr>
+          <td>Scaling</td>
+          <td>Manual</td>
+          <td>Auto-scaling ได้</td>
+        </tr>
+        <tr>
+          <td>Self-healing</td>
+          <td>❌ ไม่มี</td>
+          <td>✅ อัตโนมัติ</td>
+        </tr>
+        <tr>
+          <td>Load Balancing</td>
+          <td>ต้องตั้งเอง</td>
+          <td>Built-in</td>
+        </tr>
+        <tr>
+          <td>Rolling Update</td>
+          <td>❌ ต้อง down</td>
+          <td>✅ Zero-downtime</td>
+        </tr>
+        <tr>
+          <td>ความซับซ้อน</td>
+          <td>ง่าย</td>
+          <td>ซับซ้อนกว่า</td>
+        </tr>
+        <tr>
+          <td>Config ไฟล์</td>
+          <td><code>docker-compose.yml</code></td>
+          <td>YAML manifests</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <blockquote>
+      <strong>💡 กฎง่ายๆ:</strong> Dev ใช้ Docker Compose, Production ใช้ Kubernetes
+    </blockquote>
+
+    <hr>
+
+    <h2>เริ่มต้นลองเล่น K8s</h2>
+
+    <p>ไม่ต้องมี cluster จริงก็ลองได้! เครื่องมือสำหรับ local:</p>
+
+    <ul>
+      <li><strong><a href="https://minikube.sigs.k8s.io/" target="_blank">Minikube</a></strong> — K8s บนเครื่องตัวเอง (แนะนำสำหรับมือใหม่)</li>
+      <li><strong><a href="https://kind.sigs.k8s.io/" target="_blank">Kind</a></strong> — K8s ใน Docker container</li>
+      <li><strong><a href="https://k3s.io/" target="_blank">K3s</a></strong> — K8s เวอร์ชันเบาๆ สำหรับ Raspberry Pi / Edge</li>
+      <li><strong>Docker Desktop</strong> — เปิด K8s ได้ในตัว (Settings → Kubernetes → Enable)</li>
+    </ul>
+
+    <pre><code># ติดตั้ง minikube แล้วเริ่ม cluster
+minikube start
+
+# ลอง deploy
+kubectl create deployment hello --image=nginx
+kubectl expose deployment hello --port=80 --type=NodePort
+
+# เปิดดูในเบราว์เซอร์
+minikube service hello</code></pre>
+
+    <hr>
+
+    <h2>สรุป</h2>
+
+    <ul>
+      <li><strong>Kubernetes</strong> = Container Orchestrator ที่จัดการ deploy, scale, heal อัตโนมัติ</li>
+      <li><strong>Pod</strong> = หน่วยเล็กสุด | <strong>Deployment</strong> = จัดการ Pod | <strong>Service</strong> = เปิดทางเข้า</li>
+      <li><strong>Control Plane</strong> = สมอง (API Server, Scheduler, etcd) | <strong>Worker Node</strong> = แรงงาน (kubelet, pods)</li>
+      <li><strong>Self-healing + Auto-scaling + Rolling Updates</strong> = ฟีเจอร์หลักที่ทำให้ K8s จำเป็นใน Production</li>
+      <li><strong>Docker Compose</strong> สำหรับ dev, <strong>Kubernetes</strong> สำหรับ production</li>
+      <li>เริ่มเล่นง่ายๆ ด้วย <strong>Minikube</strong> หรือ <strong>Docker Desktop</strong> ⚓🐕</li>
+    </ul>
+
+    <div class="post-series-footer">
+      บทความจากซีรีส์ DevOps & Vibe Coding 2026
+    </div>
+
+  </article>
+
+  <!-- Post Navigation -->
+  <div class="post-nav">
+    <a href="api-request-lifecycle.html" class="post-nav__link">
+      <div class="post-nav__dir">← Previous</div>
+      <div class="post-nav__title">API Request Lifecycle — เมื่อกด Send เกิดอะไรขึ้นบ้าง?</div>
+    </a>
+  </div>
+
+  <footer class="blog-footer">
+    <a href="./">← Back to Blog</a>
+    <span>© 2025 Anirach Mingkhwan — Associate Professor, KMUTNB</span>
+  </footer>
+
+</body>
+</html>
