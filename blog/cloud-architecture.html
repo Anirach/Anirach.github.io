@@ -1,0 +1,824 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Cloud Architecture — ออกแบบระบบบน Cloud ให้แข็งแกร่ง | Anirach Mingkhwan</title>
+  <meta name="description" content="เรียนรู้ Cloud Architecture ตั้งแต่ AWS/GCP/Azure Services, Well-Architected Framework, Serverless, Microservices, High Availability และ Cost Optimization">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --navy: #0f172a; --blue: #6366f1; --blue-dark: #4f46e5; --blue-light: #818cf8;
+      --slate: #334155; --slate-light: #64748b; --gray: #94a3b8;
+      --bg: #f8fafc; --white: #ffffff; --code-bg: #1e293b;
+      --font: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+      --mono: 'JetBrains Mono', 'Fira Code', monospace;
+      --sky: #0ea5e9; --amber: #f59e0b; --green: #22c55e; --red: #ef4444;
+    }
+    html { scroll-behavior: smooth; }
+    body { font-family: var(--font); font-size: 17px; line-height: 1.8; color: var(--slate); background: var(--bg); -webkit-font-smoothing: antialiased; }
+    .blog-nav { position: fixed; top: 0; left: 0; right: 0; z-index: 100; background: rgba(248,250,252,0.85); backdrop-filter: blur(20px); border-bottom: 1px solid rgba(0,0,0,0.05); }
+    .blog-nav__inner { max-width: 860px; margin: 0 auto; padding: 0 2rem; height: 56px; display: flex; align-items: center; justify-content: space-between; }
+    .blog-nav__back { font-size: 0.85rem; font-weight: 500; color: var(--blue); text-decoration: none; }
+    .blog-nav__back:hover { color: #4f46e5; }
+    .blog-nav__title { font-size: 0.85rem; font-weight: 600; color: var(--navy); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 50%; }
+
+    .post-hero { padding: 8rem 2rem 3rem; background: linear-gradient(135deg, #0369a1 0%, #0284c7 40%, #38bdf8 100%); text-align: center; }
+    .post-hero__tags { display: flex; gap: 0.5rem; justify-content: center; margin-bottom: 1.25rem; flex-wrap: wrap; }
+    .post-hero__tag { font-size: 0.7rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.1em; color: #bae6fd; background: rgba(186,230,253,0.15); padding: 0.3rem 0.75rem; border-radius: 20px; }
+    .post-hero__title { font-size: clamp(1.8rem, 5vw, 3rem); font-weight: 800; color: #fff; line-height: 1.2; margin-bottom: 1rem; max-width: 720px; margin-left: auto; margin-right: auto; }
+    .post-hero__meta { font-size: 0.85rem; color: rgba(255,255,255,0.6); display: flex; align-items: center; justify-content: center; gap: 1.5rem; }
+    .post-hero__series { font-weight: 600; color: #bae6fd; }
+    .post-hero__cover { max-width: 380px; margin: 2.5rem auto 0; border-radius: 16px; overflow: hidden; box-shadow: 0 20px 60px rgba(0,0,0,0.3); }
+    .post-hero__cover img { width: 100%; display: block; }
+
+    .post-body { max-width: 720px; margin: 0 auto; padding: 3rem 2rem 6rem; }
+    .post-body h2 { font-size: 1.6rem; font-weight: 800; color: var(--navy); margin: 3rem 0 1rem; padding-bottom: 0.5rem; border-bottom: 2px solid rgba(99,102,241,0.15); }
+    .post-body h3 { font-size: 1.25rem; font-weight: 700; color: var(--navy); margin: 2.25rem 0 0.75rem; }
+    .post-body h4 { font-size: 1.05rem; font-weight: 700; color: var(--navy); margin: 1.75rem 0 0.6rem; }
+    .post-body p { margin-bottom: 1.25rem; }
+    .post-body strong { font-weight: 700; color: var(--navy); }
+    .post-body a { color: var(--blue); text-decoration: underline; text-decoration-thickness: 1px; text-underline-offset: 2px; }
+    .post-body pre { background: var(--code-bg); border-radius: 12px; padding: 1.5rem; margin: 1.25rem 0 1.5rem; overflow-x: auto; border: 1px solid rgba(255,255,255,0.05); }
+    .post-body pre code { font-family: var(--mono); font-size: 0.82rem; color: #e2e8f0; line-height: 1.7; }
+    .post-body code { font-family: var(--mono); font-size: 0.88em; background: rgba(99,102,241,0.08); color: #4f46e5; padding: 0.15em 0.45em; border-radius: 5px; }
+    .post-body pre code { background: none; color: #e2e8f0; padding: 0; }
+    .post-body ul, .post-body ol { margin: 0.5rem 0 1.25rem 1.5rem; }
+    .post-body li { margin-bottom: 0.4rem; }
+    .post-body table { width: 100%; border-collapse: collapse; margin: 1.25rem 0 1.5rem; font-size: 0.9rem; }
+    .post-body th { background: rgba(99,102,241,0.06); font-weight: 700; color: var(--navy); padding: 0.75rem 1rem; text-align: left; border-bottom: 2px solid rgba(99,102,241,0.15); }
+    .post-body td { padding: 0.65rem 1rem; border-bottom: 1px solid #e2e8f0; }
+    .post-body blockquote { background: rgba(99,102,241,0.06); border-left: 4px solid var(--blue); padding: 1rem 1.25rem; border-radius: 0 10px 10px 0; margin: 1.25rem 0; font-size: 0.95rem; color: var(--navy); }
+    .post-body hr { border: none; height: 1px; background: linear-gradient(90deg, transparent, rgba(99,102,241,0.2), transparent); margin: 3rem 0; }
+    .post-series-footer { text-align: center; font-size: 0.85rem; color: var(--gray); font-style: italic; margin-top: 2rem; padding-top: 2rem; border-top: 1px solid #e2e8f0; }
+
+    .post-nav { max-width: 720px; margin: 0 auto; padding: 0 2rem 3rem; display: flex; gap: 1.5rem; flex-wrap: wrap; }
+    .post-nav__link { flex: 1; min-width: 200px; padding: 1.25rem 1.5rem; border-radius: 12px; background: rgba(255,255,255,0.85); backdrop-filter: blur(16px); border: 1px solid rgba(255,255,255,0.6); box-shadow: 0 4px 16px rgba(0,0,0,0.05); text-decoration: none; color: inherit; transition: transform 0.2s, box-shadow 0.2s; }
+    .post-nav__link:hover { transform: translateY(-2px); box-shadow: 0 8px 24px rgba(99,102,241,0.1); }
+    .post-nav__dir { font-size: 0.75rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.1em; color: var(--blue); margin-bottom: 0.35rem; }
+    .post-nav__title { font-size: 0.9rem; font-weight: 600; color: var(--navy); line-height: 1.4; }
+    .blog-footer { background: var(--navy); padding: 2rem 0; text-align: center; }
+    .blog-footer a { color: var(--blue-light); text-decoration: none; font-weight: 600; font-size: 0.9rem; }
+    .blog-footer span { color: var(--gray); font-size: 0.8rem; display: block; margin-top: 0.4rem; }
+
+    /* Architecture diagrams */
+    .arch-diagram { margin: 1.5rem 0 2rem; }
+    .arch-box { border: 2px solid rgba(99,102,241,0.25); border-radius: 12px; padding: 1.25rem; background: linear-gradient(135deg, rgba(99,102,241,0.03), rgba(99,102,241,0.06)); }
+    .arch-label { font-size: 0.75rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.1em; color: var(--blue); text-align: center; margin-bottom: 0.75rem; }
+    .arch-row { display: flex; gap: 0.75rem; justify-content: center; flex-wrap: wrap; margin-bottom: 0.75rem; }
+    .arch-container { border: 2px solid rgba(99,102,241,0.2); border-radius: 10px; padding: 0.75rem; background: rgba(238,242,255,0.8); min-width: 120px; text-align: center; }
+    .arch-item { font-size: 0.78rem; font-weight: 600; color: var(--navy); padding: 0.3rem 0.6rem; margin: 0.25rem 0; background: rgba(99,102,241,0.08); border-radius: 6px; }
+    .arch-name { font-size: 0.72rem; font-weight: 700; color: var(--blue); margin-bottom: 0.35rem; }
+    .arch-arrow-down { text-align: center; font-size: 1rem; color: var(--blue); font-weight: 700; margin: 0.5rem 0; }
+
+    .flow-diagram { display: flex; align-items: center; justify-content: center; gap: 0.5rem; flex-wrap: wrap; margin: 1.5rem 0 2rem; padding: 1.5rem; background: rgba(99,102,241,0.04); border-radius: 12px; }
+    .flow-step { text-align: center; padding: 0.75rem 1.25rem; background: white; border-radius: 10px; border: 1.5px solid rgba(99,102,241,0.15); box-shadow: 0 2px 8px rgba(0,0,0,0.04); }
+    .flow-step__title { font-size: 0.9rem; font-weight: 700; color: var(--navy); }
+    .flow-step__sub { font-size: 0.72rem; color: var(--gray); margin-top: 0.15rem; }
+    .flow-arrow { font-size: 1.2rem; color: var(--blue); font-weight: 700; }
+
+    /* Cloud provider badges */
+    .provider-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem; margin: 1.5rem 0 2rem; }
+    .provider-card { border-radius: 12px; padding: 1.25rem; text-align: center; }
+    .provider-card--aws { background: rgba(255,153,0,0.06); border: 1.5px solid rgba(255,153,0,0.2); }
+    .provider-card--azure { background: rgba(0,120,212,0.06); border: 1.5px solid rgba(0,120,212,0.2); }
+    .provider-card--gcp { background: rgba(66,133,244,0.06); border: 1.5px solid rgba(66,133,244,0.2); }
+    .provider-card__title { font-size: 1rem; font-weight: 800; margin-bottom: 0.5rem; }
+    .provider-card--aws .provider-card__title { color: #c2410c; }
+    .provider-card--azure .provider-card__title { color: #0078d4; }
+    .provider-card--gcp .provider-card__title { color: #4285f4; }
+    .provider-card__list { list-style: none; margin: 0; padding: 0; font-size: 0.78rem; text-align: left; }
+    .provider-card__list li { padding: 0.2rem 0; color: var(--slate); }
+
+    /* Pillar cards */
+    .pillar-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 0.75rem; margin: 1.5rem 0 2rem; }
+    .pillar-card { border-radius: 12px; padding: 1rem; text-align: center; background: white; border: 1.5px solid rgba(99,102,241,0.12); box-shadow: 0 2px 8px rgba(0,0,0,0.03); }
+    .pillar-card__icon { font-size: 1.5rem; margin-bottom: 0.3rem; }
+    .pillar-card__name { font-size: 0.82rem; font-weight: 700; color: var(--navy); }
+    .pillar-card__desc { font-size: 0.7rem; color: var(--gray); margin-top: 0.15rem; }
+
+    @media (max-width: 600px) {
+      .post-hero { padding: 7rem 1.25rem 2.5rem; }
+      .post-body { padding: 2rem 1.25rem 4rem; }
+      .post-body pre { padding: 1rem; border-radius: 8px; }
+      .post-hero__meta { flex-direction: column; gap: 0.4rem; }
+      .post-nav { padding: 0 1.25rem 3rem; }
+      .flow-diagram { flex-direction: column; }
+      .provider-grid { grid-template-columns: 1fr; }
+      .pillar-grid { grid-template-columns: 1fr 1fr; }
+    }
+  </style>
+</head>
+<body>
+
+  <nav class="blog-nav">
+    <div class="blog-nav__inner">
+      <a href="./" class="blog-nav__back">‹ Blog</a>
+      <div class="blog-nav__title">Cloud Architecture</div>
+    </div>
+  </nav>
+
+  <header class="post-hero">
+    <div class="post-hero__tags">
+      <span class="post-hero__tag">Cloud</span>
+      <span class="post-hero__tag">Architecture</span>
+      <span class="post-hero__tag">DevOps</span>
+    </div>
+    <h1 class="post-hero__title">Cloud Architecture — ออกแบบระบบบน Cloud ให้แข็งแกร่ง ☁️</h1>
+    <div class="post-hero__meta">
+      <span>By <strong style="color:#fff">Anirach Mingkhwan</strong></span>
+      <span class="post-hero__series">DevOps & Vibe Coding 2026</span>
+    </div>
+    <div class="post-hero__cover">
+      <img src="../images/cloud-architecture-cover.jpg" alt="Cloud Architecture — superhero dog in the clouds">
+    </div>
+  </header>
+
+  <article class="post-body">
+
+    <p>จากซีรีส์ที่ผ่านมา เราเรียน Docker, Kubernetes, IaC, GitOps — แต่ทั้งหมดรันอยู่บน <strong>infrastructure</strong> ไม่ว่าจะเป็นเครื่องตัวเอง, VPS หรือ Cloud</p>
+
+    <p>วันนี้มาเรียนรู้ <strong>Cloud Architecture</strong> — วิธีออกแบบระบบบน Cloud ให้ <strong>แข็งแกร่ง, scale ได้, ปลอดภัย และคุ้มค่า</strong> ☁️🐕</p>
+
+    <hr>
+
+    <h2>☁️ Cloud Computing คืออะไร?</h2>
+
+    <p>Cloud Computing คือการใช้ <strong>computing resources (servers, storage, databases, networking)</strong> ผ่าน internet แทนที่จะซื้อเครื่องเอง:</p>
+
+    <div class="flow-diagram">
+      <div class="flow-step" style="border-color: rgba(239,68,68,0.3); background: rgba(239,68,68,0.04);">
+        <div class="flow-step__title">🏢 On-premise</div>
+        <div class="flow-step__sub">ซื้อเครื่อง ดูแลเอง</div>
+      </div>
+      <span class="flow-arrow">→</span>
+      <div class="flow-step" style="border-color: rgba(14,165,233,0.3); background: rgba(14,165,233,0.04);">
+        <div class="flow-step__title">☁️ Cloud</div>
+        <div class="flow-step__sub">เช่าใช้ จ่ายตามใช้งาน</div>
+      </div>
+      <span class="flow-arrow">→</span>
+      <div class="flow-step" style="border-color: rgba(168,85,247,0.3); background: rgba(168,85,247,0.04);">
+        <div class="flow-step__title">🔀 Hybrid</div>
+        <div class="flow-step__sub">ผสม on-prem + cloud</div>
+      </div>
+    </div>
+
+    <h3>Cloud Service Models — IaaS / PaaS / SaaS</h3>
+
+    <table>
+      <thead><tr><th>Model</th><th>คุณจัดการ</th><th>Cloud จัดการ</th><th>ตัวอย่าง</th></tr></thead>
+      <tbody>
+        <tr><td><strong>IaaS</strong></td><td>OS, Runtime, App, Data</td><td>Server, Storage, Network</td><td>EC2, GCE, Azure VM</td></tr>
+        <tr><td><strong>PaaS</strong></td><td>App, Data</td><td>OS, Runtime, Server</td><td>Heroku, App Engine, Elastic Beanstalk</td></tr>
+        <tr><td><strong>SaaS</strong></td><td>แค่ใช้งาน</td><td>ทุกอย่าง</td><td>Gmail, Slack, Salesforce</td></tr>
+        <tr><td><strong>FaaS</strong></td><td>แค่ code (functions)</td><td>ทุกอย่าง + scaling</td><td>Lambda, Cloud Functions</td></tr>
+      </tbody>
+    </table>
+
+    <blockquote>
+      <strong>💡 จำง่ายๆ:</strong> IaaS = เช่าเครื่อง | PaaS = เช่า platform | SaaS = เช่า app | FaaS = เช่า function
+    </blockquote>
+
+    <hr>
+
+    <h2>🏢 3 Cloud Providers หลัก</h2>
+
+    <div class="provider-grid">
+      <div class="provider-card provider-card--aws">
+        <div class="provider-card__title">☁️ AWS</div>
+        <ul class="provider-card__list">
+          <li><strong>Compute:</strong> EC2, Lambda, ECS, EKS</li>
+          <li><strong>Storage:</strong> S3, EBS, EFS</li>
+          <li><strong>Database:</strong> RDS, DynamoDB, ElastiCache</li>
+          <li><strong>Network:</strong> VPC, ALB, CloudFront, Route53</li>
+          <li><strong>Monitor:</strong> CloudWatch, X-Ray</li>
+          <li>Market share: ~31%</li>
+        </ul>
+      </div>
+      <div class="provider-card provider-card--azure">
+        <div class="provider-card__title">🔷 Azure</div>
+        <ul class="provider-card__list">
+          <li><strong>Compute:</strong> VMs, Functions, AKS</li>
+          <li><strong>Storage:</strong> Blob, Disk, Files</li>
+          <li><strong>Database:</strong> SQL DB, Cosmos DB, Redis</li>
+          <li><strong>Network:</strong> VNet, App Gateway, Front Door</li>
+          <li><strong>Monitor:</strong> Monitor, App Insights</li>
+          <li>Market share: ~25%</li>
+        </ul>
+      </div>
+      <div class="provider-card provider-card--gcp">
+        <div class="provider-card__title">🔵 GCP</div>
+        <ul class="provider-card__list">
+          <li><strong>Compute:</strong> GCE, Cloud Run, GKE</li>
+          <li><strong>Storage:</strong> Cloud Storage, Persistent Disk</li>
+          <li><strong>Database:</strong> Cloud SQL, Firestore, Bigtable</li>
+          <li><strong>Network:</strong> VPC, Cloud Load Balancing, CDN</li>
+          <li><strong>Monitor:</strong> Cloud Monitoring, Trace</li>
+          <li>Market share: ~11%</li>
+        </ul>
+      </div>
+    </div>
+
+    <h3>Service Mapping — เปรียบเทียบ 3 Providers</h3>
+
+    <table>
+      <thead><tr><th>Category</th><th>AWS</th><th>Azure</th><th>GCP</th></tr></thead>
+      <tbody>
+        <tr><td><strong>VM</strong></td><td>EC2</td><td>Virtual Machines</td><td>Compute Engine</td></tr>
+        <tr><td><strong>Serverless</strong></td><td>Lambda</td><td>Functions</td><td>Cloud Functions / Cloud Run</td></tr>
+        <tr><td><strong>Kubernetes</strong></td><td>EKS</td><td>AKS</td><td>GKE</td></tr>
+        <tr><td><strong>Object Storage</strong></td><td>S3</td><td>Blob Storage</td><td>Cloud Storage</td></tr>
+        <tr><td><strong>SQL Database</strong></td><td>RDS / Aurora</td><td>SQL Database</td><td>Cloud SQL / Spanner</td></tr>
+        <tr><td><strong>NoSQL</strong></td><td>DynamoDB</td><td>Cosmos DB</td><td>Firestore / Bigtable</td></tr>
+        <tr><td><strong>Cache</strong></td><td>ElastiCache</td><td>Azure Redis</td><td>Memorystore</td></tr>
+        <tr><td><strong>CDN</strong></td><td>CloudFront</td><td>Front Door</td><td>Cloud CDN</td></tr>
+        <tr><td><strong>DNS</strong></td><td>Route 53</td><td>Azure DNS</td><td>Cloud DNS</td></tr>
+        <tr><td><strong>Message Queue</strong></td><td>SQS / SNS</td><td>Service Bus</td><td>Pub/Sub</td></tr>
+        <tr><td><strong>IaC</strong></td><td>CloudFormation</td><td>ARM / Bicep</td><td>Deployment Manager</td></tr>
+      </tbody>
+    </table>
+
+    <hr>
+
+    <h2>🏗️ Well-Architected Framework</h2>
+
+    <p>AWS, Azure และ GCP ต่างมี <strong>Well-Architected Framework</strong> — แนวทางออกแบบระบบบน cloud ที่ดี ประกอบด้วย 6 pillars:</p>
+
+    <div class="pillar-grid">
+      <div class="pillar-card">
+        <div class="pillar-card__icon">🔒</div>
+        <div class="pillar-card__name">Security</div>
+        <div class="pillar-card__desc">ปกป้องข้อมูลและระบบ</div>
+      </div>
+      <div class="pillar-card">
+        <div class="pillar-card__icon">⚡</div>
+        <div class="pillar-card__name">Reliability</div>
+        <div class="pillar-card__desc">ทำงานถูกต้อง ทนต่อ failure</div>
+      </div>
+      <div class="pillar-card">
+        <div class="pillar-card__icon">🚀</div>
+        <div class="pillar-card__name">Performance</div>
+        <div class="pillar-card__desc">ใช้ resource อย่างมีประสิทธิภาพ</div>
+      </div>
+      <div class="pillar-card">
+        <div class="pillar-card__icon">💰</div>
+        <div class="pillar-card__name">Cost Optimization</div>
+        <div class="pillar-card__desc">ลดค่าใช้จ่ายที่ไม่จำเป็น</div>
+      </div>
+      <div class="pillar-card">
+        <div class="pillar-card__icon">⚙️</div>
+        <div class="pillar-card__name">Operational Excellence</div>
+        <div class="pillar-card__desc">ดูแลรักษาระบบ ปรับปรุงต่อเนื่อง</div>
+      </div>
+      <div class="pillar-card">
+        <div class="pillar-card__icon">🌱</div>
+        <div class="pillar-card__name">Sustainability</div>
+        <div class="pillar-card__desc">ลด environmental impact</div>
+      </div>
+    </div>
+
+    <hr>
+
+    <h2>🌐 VPC & Networking — เครือข่ายบน Cloud</h2>
+
+    <div class="arch-diagram">
+      <div class="arch-box">
+        <div class="arch-label">VPC Architecture</div>
+        <div class="arch-row">
+          <div class="arch-container" style="background: rgba(14,165,233,0.08); min-width: 280px;">
+            <div class="arch-name" style="color: #0369a1;">🌐 VPC (10.0.0.0/16)</div>
+            <div style="display:flex;gap:0.5rem;flex-wrap:wrap;justify-content:center;margin-top:0.5rem;">
+              <div style="border:1.5px solid rgba(34,197,94,0.25);border-radius:8px;padding:0.5rem;background:rgba(34,197,94,0.04);flex:1;min-width:110px;">
+                <div style="font-size:0.68rem;font-weight:700;color:#16a34a;">Public Subnet</div>
+                <div class="arch-item">ALB / Nginx</div>
+                <div class="arch-item">NAT Gateway</div>
+                <div class="arch-item">Bastion Host</div>
+              </div>
+              <div style="border:1.5px solid rgba(239,68,68,0.25);border-radius:8px;padding:0.5rem;background:rgba(239,68,68,0.04);flex:1;min-width:110px;">
+                <div style="font-size:0.68rem;font-weight:700;color:#dc2626;">Private Subnet</div>
+                <div class="arch-item">App Servers</div>
+                <div class="arch-item">Database (RDS)</div>
+                <div class="arch-item">Cache (Redis)</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <pre><code># Terraform — สร้าง VPC + Subnets
+resource "aws_vpc" "main" {
+  cidr_block           = "10.0.0.0/16"
+  enable_dns_hostnames = true
+  tags = { Name = "production-vpc" }
+}
+
+# Public Subnet — internet access
+resource "aws_subnet" "public" {
+  vpc_id                  = aws_vpc.main.id
+  cidr_block              = "10.0.1.0/24"
+  availability_zone       = "ap-southeast-1a"
+  map_public_ip_on_launch = true
+  tags = { Name = "public-subnet-1a" }
+}
+
+# Private Subnet — no direct internet
+resource "aws_subnet" "private" {
+  vpc_id            = aws_vpc.main.id
+  cidr_block        = "10.0.10.0/24"
+  availability_zone = "ap-southeast-1a"
+  tags = { Name = "private-subnet-1a" }
+}
+
+# Internet Gateway (public subnet access)
+resource "aws_internet_gateway" "igw" {
+  vpc_id = aws_vpc.main.id
+}
+
+# NAT Gateway (private subnet → internet)
+resource "aws_nat_gateway" "nat" {
+  subnet_id     = aws_subnet.public.id
+  allocation_id = aws_eip.nat.id
+}
+
+# Security Group
+resource "aws_security_group" "web" {
+  vpc_id = aws_vpc.main.id
+
+  ingress {
+    from_port   = 443
+    to_port     = 443
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]     # HTTPS from anywhere
+  }
+
+  ingress {
+    from_port   = 80
+    to_port     = 80
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]     # HTTP → redirect to HTTPS
+  }
+
+  egress {
+    from_port   = 0
+    to_port     = 0
+    protocol    = "-1"
+    cidr_blocks = ["0.0.0.0/0"]     # Allow all outbound
+  }
+}</code></pre>
+
+    <blockquote>
+      <strong>💡 กฎทอง:</strong> Web/App servers → Public Subnet | Database/Cache → Private Subnet (ไม่เปิด internet ตรง!)
+    </blockquote>
+
+    <hr>
+
+    <h2>⚡ High Availability — ระบบล่มไม่ได้!</h2>
+
+    <div class="arch-diagram">
+      <div class="arch-box">
+        <div class="arch-label">Multi-AZ High Availability</div>
+        <div class="arch-row">
+          <div class="arch-container" style="background:rgba(14,165,233,0.08);">
+            <div class="arch-name" style="color:#0369a1;">🌍 Route 53 (DNS)</div>
+            <div class="arch-item">Health check + failover</div>
+          </div>
+        </div>
+        <div class="arch-arrow-down">↓</div>
+        <div class="arch-row">
+          <div class="arch-container" style="background:rgba(249,115,22,0.06);">
+            <div class="arch-name" style="color:#ea580c;">⚖️ Application Load Balancer</div>
+            <div class="arch-item">Distribute traffic across AZs</div>
+          </div>
+        </div>
+        <div class="arch-arrow-down">↓</div>
+        <div class="arch-row">
+          <div class="arch-container" style="background:rgba(34,197,94,0.06);">
+            <div class="arch-name" style="color:#16a34a;">AZ-1a</div>
+            <div class="arch-item">App Server × 2</div>
+            <div class="arch-item">RDS Primary</div>
+          </div>
+          <div class="arch-container" style="background:rgba(34,197,94,0.06);">
+            <div class="arch-name" style="color:#16a34a;">AZ-1b</div>
+            <div class="arch-item">App Server × 2</div>
+            <div class="arch-item">RDS Standby</div>
+          </div>
+          <div class="arch-container" style="background:rgba(34,197,94,0.06);">
+            <div class="arch-name" style="color:#16a34a;">AZ-1c</div>
+            <div class="arch-item">App Server × 2</div>
+            <div class="arch-item">Redis Replica</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <table>
+      <thead><tr><th>Availability</th><th>Downtime/year</th><th>วิธีทำ</th></tr></thead>
+      <tbody>
+        <tr><td><strong>99%</strong></td><td>3.65 วัน</td><td>Single server</td></tr>
+        <tr><td><strong>99.9%</strong></td><td>8.76 ชม.</td><td>Load balancer + multiple servers</td></tr>
+        <tr><td><strong>99.99%</strong></td><td>52.6 นาที</td><td>Multi-AZ + auto-failover</td></tr>
+        <tr><td><strong>99.999%</strong></td><td>5.26 นาที</td><td>Multi-region + active-active</td></tr>
+      </tbody>
+    </table>
+
+    <pre><code># Terraform — Auto Scaling Group
+resource "aws_autoscaling_group" "app" {
+  name                = "app-asg"
+  min_size            = 2
+  max_size            = 10
+  desired_capacity    = 4
+  vpc_zone_identifier = [
+    aws_subnet.private_1a.id,
+    aws_subnet.private_1b.id,
+    aws_subnet.private_1c.id,       # กระจาย 3 AZs
+  ]
+
+  launch_template {
+    id      = aws_launch_template.app.id
+    version = "$Latest"
+  }
+
+  target_group_arns = [aws_lb_target_group.app.arn]
+
+  health_check_type         = "ELB"
+  health_check_grace_period = 300
+}
+
+# Auto Scaling Policy — CPU > 70% → scale up
+resource "aws_autoscaling_policy" "scale_up" {
+  name                   = "scale-up"
+  autoscaling_group_name = aws_autoscaling_group.app.name
+  policy_type            = "TargetTrackingScaling"
+
+  target_tracking_configuration {
+    predefined_metric_specification {
+      predefined_metric_type = "ASGAverageCPUUtilization"
+    }
+    target_value = 70.0
+  }
+}</code></pre>
+
+    <hr>
+
+    <h2>🚀 Serverless Architecture</h2>
+
+    <p><strong>Serverless</strong> = ไม่ต้องจัดการ server เลย แค่เขียน code แล้ว deploy — cloud จัดการ scaling, patching, HA ให้หมด:</p>
+
+    <div class="arch-diagram">
+      <div class="arch-box">
+        <div class="arch-label">Serverless Web App Architecture</div>
+        <div class="arch-row">
+          <div class="arch-container">
+            <div class="arch-name">👤 Users</div>
+            <div class="arch-item">Browser / Mobile</div>
+          </div>
+          <div style="display:flex;align-items:center;font-size:1.2rem;color:var(--blue);font-weight:700;">→</div>
+          <div class="arch-container" style="background:rgba(14,165,233,0.06);">
+            <div class="arch-name" style="color:#0369a1;">CloudFront + S3</div>
+            <div class="arch-item">Static frontend</div>
+          </div>
+        </div>
+        <div class="arch-arrow-down">API calls ↓</div>
+        <div class="arch-row">
+          <div class="arch-container" style="background:rgba(249,115,22,0.06);">
+            <div class="arch-name" style="color:#ea580c;">API Gateway</div>
+            <div class="arch-item">REST / GraphQL</div>
+          </div>
+          <div style="display:flex;align-items:center;font-size:1.2rem;color:var(--blue);font-weight:700;">→</div>
+          <div class="arch-container" style="background:rgba(168,85,247,0.06);">
+            <div class="arch-name" style="color:#9333ea;">Lambda Functions</div>
+            <div class="arch-item">Business logic</div>
+          </div>
+        </div>
+        <div class="arch-arrow-down">↓</div>
+        <div class="arch-row">
+          <div class="arch-container" style="background:rgba(34,197,94,0.06);">
+            <div class="arch-name" style="color:#16a34a;">DynamoDB</div>
+            <div class="arch-item">Database</div>
+          </div>
+          <div class="arch-container" style="background:rgba(34,197,94,0.06);">
+            <div class="arch-name" style="color:#16a34a;">S3</div>
+            <div class="arch-item">File storage</div>
+          </div>
+          <div class="arch-container" style="background:rgba(34,197,94,0.06);">
+            <div class="arch-name" style="color:#16a34a;">SQS / SNS</div>
+            <div class="arch-item">Async messaging</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <pre><code># AWS Lambda + API Gateway (Serverless Framework)
+# serverless.yml
+service: my-api
+
+provider:
+  name: aws
+  runtime: nodejs20.x
+  region: ap-southeast-1
+  memorySize: 256
+  timeout: 30
+  environment:
+    TABLE_NAME: ${self:service}-${sls:stage}
+
+functions:
+  getUser:
+    handler: src/handlers/getUser.handler
+    events:
+      - http:
+          path: /users/{id}
+          method: get
+          cors: true
+
+  createUser:
+    handler: src/handlers/createUser.handler
+    events:
+      - http:
+          path: /users
+          method: post
+          cors: true
+
+  processOrder:
+    handler: src/handlers/processOrder.handler
+    events:
+      - sqs:                      # Trigger จาก SQS queue
+          arn: !GetAtt OrderQueue.Arn
+          batchSize: 10
+
+resources:
+  Resources:
+    UsersTable:
+      Type: AWS::DynamoDB::Table
+      Properties:
+        TableName: ${self:service}-${sls:stage}
+        BillingMode: PAY_PER_REQUEST
+        AttributeDefinitions:
+          - AttributeName: id
+            AttributeType: S
+        KeySchema:
+          - AttributeName: id
+            KeyType: HASH</code></pre>
+
+    <pre><code># Deploy
+serverless deploy --stage production
+
+# ได้ endpoint เช่น:
+# https://abc123.execute-api.ap-southeast-1.amazonaws.com/production/users</code></pre>
+
+    <h3>Serverless: ข้อดี vs ข้อเสีย</h3>
+
+    <table>
+      <thead><tr><th>✅ ข้อดี</th><th>⚠️ ข้อเสีย</th></tr></thead>
+      <tbody>
+        <tr><td>ไม่ต้องจัดการ server</td><td>Cold start (ช้าตอน function ตื่น)</td></tr>
+        <tr><td>Scale อัตโนมัติ (0 → ∞)</td><td>Timeout limit (Lambda max 15 min)</td></tr>
+        <tr><td>จ่ายตามใช้งาน (pay-per-request)</td><td>Vendor lock-in</td></tr>
+        <tr><td>HA built-in</td><td>Debug ยากกว่า</td></tr>
+        <tr><td>เร็วในการ deploy</td><td>ไม่เหมาะกับ long-running tasks</td></tr>
+      </tbody>
+    </table>
+
+    <hr>
+
+    <h2>💰 Cost Optimization — ลดค่า Cloud</h2>
+
+    <p>Cloud แพงได้ถ้าไม่ระวัง! นี่คือวิธีลดค่าใช้จ่าย:</p>
+
+    <h3>1. Right-sizing — เลือก instance ให้เหมาะ</h3>
+
+    <pre><code># ตรวจ CPU/Memory utilization
+# ถ้า avg CPU < 20% → downsize!
+
+# AWS Cost Explorer recommendation
+aws ce get-rightsizing-recommendation \
+  --service EC2 \
+  --configuration '{"RecommendationTarget":"SAME_INSTANCE_FAMILY"}'</code></pre>
+
+    <h3>2. Reserved / Savings Plans</h3>
+
+    <table>
+      <thead><tr><th>Pricing Model</th><th>ส่วนลด</th><th>เหมาะกับ</th></tr></thead>
+      <tbody>
+        <tr><td><strong>On-Demand</strong></td><td>0% (ราคาเต็ม)</td><td>ทดสอบ, traffic ไม่แน่นอน</td></tr>
+        <tr><td><strong>Reserved (1yr)</strong></td><td>~30-40%</td><td>Workload คงที่</td></tr>
+        <tr><td><strong>Reserved (3yr)</strong></td><td>~50-60%</td><td>Workload คงที่ระยะยาว</td></tr>
+        <tr><td><strong>Spot Instances</strong></td><td>~60-90%!</td><td>Batch jobs, CI/CD, stateless</td></tr>
+        <tr><td><strong>Savings Plans</strong></td><td>~30-50%</td><td>ยืดหยุ่นกว่า Reserved</td></tr>
+      </tbody>
+    </table>
+
+    <h3>3. Auto-shutdown Dev/Staging</h3>
+
+    <pre><code># Lambda function — ปิด dev instances ตอนกลางคืน
+import boto3
+
+def handler(event, context):
+    ec2 = boto3.client('ec2')
+
+    # หา instances ที่มี tag Environment=dev
+    instances = ec2.describe_instances(
+        Filters=[
+            {'Name': 'tag:Environment', 'Values': ['dev', 'staging']},
+            {'Name': 'instance-state-name', 'Values': ['running']}
+        ]
+    )
+
+    ids = []
+    for r in instances['Reservations']:
+        for i in r['Instances']:
+            ids.append(i['InstanceId'])
+
+    if ids:
+        ec2.stop_instances(InstanceIds=ids)
+        print(f"Stopped {len(ids)} instances: {ids}")
+
+# Schedule: ปิดทุก 20:00 เปิดทุก 08:00
+# → ประหยัด ~50% ค่า dev/staging!</code></pre>
+
+    <h3>4. Storage Lifecycle</h3>
+
+    <pre><code># S3 Lifecycle — ย้ายข้อมูลเก่าไป storage ถูกกว่า
+resource "aws_s3_bucket_lifecycle_configuration" "logs" {
+  bucket = aws_s3_bucket.logs.id
+
+  rule {
+    id     = "archive-old-logs"
+    status = "Enabled"
+
+    transition {
+      days          = 30
+      storage_class = "STANDARD_IA"       # 30 วัน → Infrequent Access (-40%)
+    }
+
+    transition {
+      days          = 90
+      storage_class = "GLACIER"            # 90 วัน → Glacier (-80%)
+    }
+
+    expiration {
+      days = 365                           # 1 ปี → ลบทิ้ง
+    }
+  }
+}</code></pre>
+
+    <blockquote>
+      <strong>🐕 สำคัญ!</strong> ตั้ง <strong>billing alerts</strong> เสมอ! ไม่งั้นตื่นมาเจอบิล $10,000 จะร้องไห้
+    </blockquote>
+
+    <pre><code># AWS Budget Alert — แจ้งเตือนเมื่อค่าใช้จ่ายเกิน
+resource "aws_budgets_budget" "monthly" {
+  name         = "monthly-budget"
+  budget_type  = "COST"
+  limit_amount = "500"
+  limit_unit   = "USD"
+  time_unit    = "MONTHLY"
+
+  notification {
+    comparison_operator       = "GREATER_THAN"
+    threshold                 = 80           # แจ้งเมื่อถึง 80%
+    threshold_type            = "PERCENTAGE"
+    notification_type         = "ACTUAL"
+    subscriber_email_addresses = ["team@example.com"]
+  }
+}</code></pre>
+
+    <hr>
+
+    <h2>🔒 Cloud Security — ปกป้องระบบ</h2>
+
+    <h3>IAM — Identity & Access Management</h3>
+
+    <pre><code># Principle of Least Privilege — ให้สิทธิ์น้อยที่สุด
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Effect": "Allow",
+      "Action": [
+        "s3:GetObject",
+        "s3:PutObject"
+      ],
+      "Resource": "arn:aws:s3:::my-bucket/uploads/*"
+    }
+  ]
+}
+
+# ❌ อย่าทำ!
+# "Action": "*"
+# "Resource": "*"
+# → Full admin access ทุก service = อันตราย!</code></pre>
+
+    <h3>Security Checklist</h3>
+
+    <ol>
+      <li><strong>MFA</strong> — เปิด Multi-Factor Auth ทุก account โดยเฉพาะ root</li>
+      <li><strong>Least Privilege</strong> — ให้สิทธิ์น้อยที่สุดเท่าที่ต้องใช้</li>
+      <li><strong>Encrypt</strong> — encrypt data at rest (KMS) และ in transit (TLS)</li>
+      <li><strong>Private Subnets</strong> — DB/cache อยู่ใน private subnet เท่านั้น</li>
+      <li><strong>Security Groups</strong> — เปิด port เฉพาะที่ต้องใช้ (ไม่ 0.0.0.0/0 ทุก port!)</li>
+      <li><strong>Secrets Manager</strong> — อย่า hardcode credentials ใน code!</li>
+      <li><strong>CloudTrail</strong> — เปิด audit log ทุก API call</li>
+      <li><strong>GuardDuty</strong> — threat detection อัตโนมัติ</li>
+    </ol>
+
+    <hr>
+
+    <h2>📊 Cloud Architecture Patterns</h2>
+
+    <h3>1. Three-Tier Architecture (คลาสสิค)</h3>
+
+    <div class="flow-diagram">
+      <div class="flow-step" style="border-color:rgba(14,165,233,0.3);background:rgba(14,165,233,0.04);">
+        <div class="flow-step__title">🖥️ Presentation</div>
+        <div class="flow-step__sub">React/Vue (S3+CDN)</div>
+      </div>
+      <span class="flow-arrow">→</span>
+      <div class="flow-step" style="border-color:rgba(249,115,22,0.3);background:rgba(249,115,22,0.04);">
+        <div class="flow-step__title">⚙️ Application</div>
+        <div class="flow-step__sub">Node/Python (EC2/ECS)</div>
+      </div>
+      <span class="flow-arrow">→</span>
+      <div class="flow-step" style="border-color:rgba(34,197,94,0.3);background:rgba(34,197,94,0.04);">
+        <div class="flow-step__title">💾 Data</div>
+        <div class="flow-step__sub">PostgreSQL (RDS)</div>
+      </div>
+    </div>
+
+    <h3>2. Event-Driven Architecture</h3>
+
+    <div class="flow-diagram">
+      <div class="flow-step">
+        <div class="flow-step__title">📱 Event</div>
+        <div class="flow-step__sub">User action</div>
+      </div>
+      <span class="flow-arrow">→</span>
+      <div class="flow-step" style="border-color:rgba(249,115,22,0.3);background:rgba(249,115,22,0.04);">
+        <div class="flow-step__title">📨 Event Bus</div>
+        <div class="flow-step__sub">SQS / SNS / EventBridge</div>
+      </div>
+      <span class="flow-arrow">→</span>
+      <div class="flow-step" style="border-color:rgba(168,85,247,0.3);background:rgba(168,85,247,0.04);">
+        <div class="flow-step__title">⚡ Consumers</div>
+        <div class="flow-step__sub">Lambda / ECS tasks</div>
+      </div>
+      <span class="flow-arrow">→</span>
+      <div class="flow-step" style="border-color:rgba(34,197,94,0.3);background:rgba(34,197,94,0.04);">
+        <div class="flow-step__title">💾 Store</div>
+        <div class="flow-step__sub">DB / S3</div>
+      </div>
+    </div>
+
+    <h3>3. Microservices on Kubernetes</h3>
+
+    <pre><code># แต่ละ service เป็น independent deployment
+services:
+  ├── user-service       (EKS pod, own DynamoDB table)
+  ├── order-service      (EKS pod, own RDS database)
+  ├── payment-service    (EKS pod, connects Stripe)
+  ├── notification-svc   (Lambda, triggered by SQS)
+  └── api-gateway        (Kong / AWS API Gateway)
+
+# Communication:
+  sync  → REST / gRPC (service-to-service)
+  async → SQS / SNS / EventBridge (event-driven)</code></pre>
+
+    <hr>
+
+    <h2>สรุป</h2>
+
+    <ul>
+      <li><strong>Cloud Computing</strong> = เช่าใช้ resources จ่ายตามใช้งาน (IaaS / PaaS / SaaS / FaaS)</li>
+      <li><strong>3 Providers</strong> = AWS (~31%), Azure (~25%), GCP (~11%) — services คล้ายกัน ชื่อต่าง</li>
+      <li><strong>Well-Architected</strong> = 6 pillars: Security, Reliability, Performance, Cost, Operations, Sustainability</li>
+      <li><strong>VPC</strong> = แยก public/private subnet, Security Groups จำกัด port</li>
+      <li><strong>High Availability</strong> = Multi-AZ, Auto Scaling, Load Balancer → 99.99% uptime</li>
+      <li><strong>Serverless</strong> = Lambda/Cloud Functions ไม่ต้องจัดการ server, scale อัตโนมัติ</li>
+      <li><strong>Cost</strong> = Right-size, Reserved/Spot instances, auto-shutdown dev, storage lifecycle</li>
+      <li><strong>Security</strong> = IAM least privilege, MFA, encrypt everything, private subnets ☁️🐕</li>
+    </ul>
+
+    <div class="post-series-footer">
+      บทความจากซีรีส์ DevOps & Vibe Coding 2026
+    </div>
+
+  </article>
+
+  <!-- Post Navigation -->
+  <div class="post-nav">
+    <a href="gitops-argocd.html" class="post-nav__link">
+      <div class="post-nav__dir">← Previous</div>
+      <div class="post-nav__title">GitOps & ArgoCD — Git-driven Deployments</div>
+    </a>
+  </div>
+
+  <footer class="blog-footer">
+    <a href="./">← Back to Blog</a>
+    <span>© 2025 Anirach Mingkhwan — Associate Professor, KMUTNB</span>
+  </footer>
+
+</body>
+</html>
