@@ -1,0 +1,894 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Authentication & Authorization — ระบบยืนยันตัวตนและจัดการสิทธิ์อย่างปลอดภัย | Anirach Mingkhwan</title>
+  <meta name="description" content="เรียนรู้ Authentication vs Authorization, Password Security, JWT, OAuth 2.0, MFA/2FA, RBAC, และ Security Best Practices สำหรับ Developer ทุกระดับ">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --navy: #0f172a; --blue: #6366f1; --blue-dark: #4f46e5; --blue-light: #818cf8;
+      --slate: #334155; --slate-light: #64748b; --gray: #94a3b8;
+      --bg: #f8fafc; --white: #ffffff; --code-bg: #1e293b;
+      --font: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+      --mono: 'JetBrains Mono', 'Fira Code', monospace;
+      --green: #22c55e; --red: #ef4444; --amber: #f59e0b;
+      --emerald: #10b981; --emerald-dark: #065f46;
+      --purple: #8b5cf6; --purple-dark: #7c3aed; --indigo: #6366f1;
+    }
+    html { scroll-behavior: smooth; }
+    body { font-family: var(--font); font-size: 17px; line-height: 1.8; color: var(--slate); background: var(--bg); -webkit-font-smoothing: antialiased; }
+    .blog-nav { position: fixed; top: 0; left: 0; right: 0; z-index: 100; background: rgba(248,250,252,0.85); backdrop-filter: blur(20px); border-bottom: 1px solid rgba(0,0,0,0.05); }
+    .blog-nav__inner { max-width: 860px; margin: 0 auto; padding: 0 2rem; height: 56px; display: flex; align-items: center; justify-content: space-between; }
+    .blog-nav__back { font-size: 0.85rem; font-weight: 500; color: var(--blue); text-decoration: none; }
+    .blog-nav__back:hover { color: #4f46e5; }
+    .blog-nav__title { font-size: 0.85rem; font-weight: 600; color: var(--navy); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 50%; }
+    .post-hero { padding: 8rem 2rem 3rem; background: linear-gradient(135deg, #1e1b4b 0%, #312e81 40%, #3730a3 100%); text-align: center; }
+    .post-hero__tags { display: flex; gap: 0.5rem; justify-content: center; margin-bottom: 1.25rem; flex-wrap: wrap; }
+    .post-hero__tag { font-size: 0.7rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.1em; color: #c7d2fe; background: rgba(199,210,254,0.15); padding: 0.3rem 0.75rem; border-radius: 20px; }
+    .post-hero__title { font-size: clamp(1.8rem, 5vw, 3rem); font-weight: 800; color: #fff; line-height: 1.2; margin-bottom: 1rem; max-width: 720px; margin-left: auto; margin-right: auto; }
+    .post-hero__meta { font-size: 0.85rem; color: rgba(255,255,255,0.6); display: flex; align-items: center; justify-content: center; gap: 1.5rem; }
+    .post-hero__series { font-weight: 600; color: #c7d2fe; }
+    .post-hero__cover { max-width: 380px; margin: 2.5rem auto 0; border-radius: 16px; overflow: hidden; box-shadow: 0 20px 60px rgba(0,0,0,0.4); }
+    .post-hero__cover img { width: 100%; display: block; }
+    .post-body { max-width: 720px; margin: 0 auto; padding: 3rem 2rem 6rem; }
+    .post-body h2 { font-size: 1.6rem; font-weight: 800; color: var(--navy); margin: 3rem 0 1rem; padding-bottom: 0.5rem; border-bottom: 2px solid rgba(139,92,246,0.15); }
+    .post-body h3 { font-size: 1.25rem; font-weight: 700; color: var(--navy); margin: 2.25rem 0 0.75rem; }
+    .post-body h4 { font-size: 1.05rem; font-weight: 700; color: var(--navy); margin: 1.75rem 0 0.6rem; }
+    .post-body p { margin-bottom: 1.25rem; }
+    .post-body strong { font-weight: 700; color: var(--navy); }
+    .post-body pre { background: var(--code-bg); border-radius: 12px; padding: 1.5rem; margin: 1.25rem 0 1.5rem; overflow-x: auto; border: 1px solid rgba(255,255,255,0.05); }
+    .post-body pre code { font-family: var(--mono); font-size: 0.82rem; color: #e2e8f0; line-height: 1.7; }
+    .post-body code { font-family: var(--mono); font-size: 0.88em; background: rgba(139,92,246,0.08); color: #6b21a8; padding: 0.15em 0.45em; border-radius: 5px; }
+    .post-body pre code { background: none; color: #e2e8f0; padding: 0; }
+    .post-body ul, .post-body ol { margin: 0.5rem 0 1.25rem 1.5rem; }
+    .post-body li { margin-bottom: 0.4rem; }
+    .post-body table { width: 100%; border-collapse: collapse; margin: 1.25rem 0 1.5rem; font-size: 0.9rem; }
+    .post-body th { background: rgba(139,92,246,0.06); font-weight: 700; color: var(--navy); padding: 0.75rem 1rem; text-align: left; border-bottom: 2px solid rgba(139,92,246,0.15); }
+    .post-body td { padding: 0.65rem 1rem; border-bottom: 1px solid #e2e8f0; }
+    .post-body blockquote { background: rgba(139,92,246,0.06); border-left: 4px solid var(--purple); padding: 1rem 1.25rem; border-radius: 0 10px 10px 0; margin: 1.25rem 0; font-size: 0.95rem; color: var(--navy); }
+    .post-body hr { border: none; height: 1px; background: linear-gradient(90deg, transparent, rgba(139,92,246,0.2), transparent); margin: 3rem 0; }
+    .post-series-footer { text-align: center; font-size: 0.85rem; color: var(--gray); font-style: italic; margin-top: 2rem; padding-top: 2rem; border-top: 1px solid #e2e8f0; }
+    .post-nav { max-width: 720px; margin: 0 auto; padding: 0 2rem 3rem; display: flex; gap: 1.5rem; flex-wrap: wrap; }
+    .post-nav__link { flex: 1; min-width: 200px; padding: 1.25rem 1.5rem; border-radius: 12px; background: rgba(255,255,255,0.85); backdrop-filter: blur(16px); border: 1px solid rgba(255,255,255,0.6); box-shadow: 0 4px 16px rgba(0,0,0,0.05); text-decoration: none; color: inherit; transition: transform 0.2s, box-shadow 0.2s; }
+    .post-nav__link:hover { transform: translateY(-2px); box-shadow: 0 8px 24px rgba(139,92,246,0.1); }
+    .post-nav__dir { font-size: 0.75rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.1em; color: var(--purple); margin-bottom: 0.35rem; }
+    .post-nav__title { font-size: 0.9rem; font-weight: 600; color: var(--navy); line-height: 1.4; }
+    .blog-footer { background: var(--navy); padding: 2rem 0; text-align: center; }
+    .blog-footer a { color: var(--blue-light); text-decoration: none; font-weight: 600; font-size: 0.9rem; }
+    .blog-footer span { color: var(--gray); font-size: 0.8rem; display: block; margin-top: 0.4rem; }
+    
+    /* Authentication-specific components */
+    .auth-comparison { display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; margin: 1.5rem 0 2rem; padding: 1.5rem; background: rgba(139,92,246,0.04); border-radius: 12px; }
+    .auth-concept { text-align: center; padding: 1.25rem; background: white; border-radius: 10px; border: 1.5px solid rgba(139,92,246,0.15); }
+    .auth-concept__title { font-size: 1.1rem; font-weight: 700; color: var(--navy); margin-bottom: 0.5rem; }
+    .auth-concept__subtitle { font-size: 0.9rem; color: var(--purple-dark); margin-bottom: 0.75rem; }
+    .auth-concept__examples { display: flex; flex-direction: column; gap: 0.4rem; margin-bottom: 1rem; }
+    .auth-example { font-size: 0.85rem; font-weight: 600; padding: 0.3rem 0.7rem; border-radius: 8px; background: rgba(139,92,246,0.08); color: #6b21a8; }
+    .auth-analogy { font-size: 0.8rem; color: var(--slate-light); text-align: left; padding: 1rem; background: rgba(139,92,246,0.03); border-radius: 8px; margin-top: 0.75rem; }
+    .auth-analogy__title { font-weight: 600; color: var(--purple-dark); margin-bottom: 0.5rem; }
+    
+    .flow-diagram { margin: 1.5rem 0 2rem; padding: 1.5rem; background: rgba(139,92,246,0.04); border-radius: 12px; }
+    .flow-step { display: flex; align-items: center; margin-bottom: 1rem; padding: 1rem; background: white; border-radius: 10px; border: 1.5px solid rgba(139,92,246,0.1); }
+    .flow-step__number { flex-shrink: 0; width: 2rem; height: 2rem; background: var(--purple); color: white; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 0.85rem; margin-right: 1rem; }
+    .flow-step__content { flex: 1; }
+    .flow-step__title { font-weight: 600; color: var(--navy); margin-bottom: 0.25rem; }
+    .flow-step__desc { font-size: 0.85rem; color: var(--slate-light); }
+    .flow-arrow { text-align: center; margin: 0.5rem 0; font-size: 1.2rem; color: var(--purple); }
+    
+    .jwt-structure { margin: 1.5rem 0 2rem; padding: 1.5rem; background: rgba(139,92,246,0.04); border-radius: 12px; }
+    .jwt-token { font-family: var(--mono); font-size: 0.75rem; background: var(--code-bg); color: #e2e8f0; padding: 1rem; border-radius: 8px; margin-bottom: 1.5rem; word-break: break-all; text-align: center; }
+    .jwt-parts { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 1rem; }
+    .jwt-part { padding: 1rem; background: white; border-radius: 10px; border: 1.5px solid rgba(139,92,246,0.15); }
+    .jwt-part__title { font-weight: 700; color: var(--navy); margin-bottom: 0.75rem; text-align: center; }
+    .jwt-part__content { font-family: var(--mono); font-size: 0.8rem; background: #f8fafc; padding: 0.75rem; border-radius: 6px; margin-bottom: 0.75rem; }
+    .jwt-part__note { font-size: 0.8rem; color: var(--slate-light); }
+    
+    .password-strength { margin: 1.5rem 0 2rem; }
+    .password-wrong, .password-right { padding: 1.5rem; margin-bottom: 1.5rem; border-radius: 12px; }
+    .password-wrong { background: rgba(239,68,68,0.06); border-left: 4px solid var(--red); }
+    .password-right { background: rgba(34,197,94,0.06); border-left: 4px solid var(--green); }
+    .password-label { font-size: 1.05rem; font-weight: 700; margin-bottom: 1rem; }
+    .password-wrong .password-label { color: #dc2626; }
+    .password-right .password-label { color: #059669; }
+    
+    .comparison-table { margin: 1.5rem 0 2rem; overflow-x: auto; }
+    .comparison-table table { width: 100%; min-width: 600px; }
+    .comparison-table th:first-child { width: 120px; }
+    .comparison-table td:first-child { font-weight: 600; color: var(--navy); }
+    
+    .rbac-diagram { margin: 1.5rem 0 2rem; }
+    .rbac-roles { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem; margin-bottom: 1.5rem; }
+    .rbac-role { padding: 1rem; background: white; border-radius: 10px; border: 1.5px solid rgba(139,92,246,0.15); text-align: center; }
+    .rbac-role__name { font-size: 1rem; font-weight: 700; color: var(--navy); margin-bottom: 0.5rem; }
+    .rbac-role__permissions { display: flex; flex-direction: column; gap: 0.3rem; }
+    .rbac-permission { font-size: 0.75rem; padding: 0.25rem 0.5rem; background: rgba(139,92,246,0.08); color: #6b21a8; border-radius: 6px; }
+    
+    .security-threats { margin: 1.5rem 0 2rem; }
+    .security-threat { margin-bottom: 1.5rem; padding: 1.25rem; background: white; border-radius: 12px; border-left: 4px solid var(--red); }
+    .security-threat__title { font-size: 1.05rem; font-weight: 700; color: #dc2626; margin-bottom: 0.75rem; }
+    .security-threat__defenses { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 0.5rem; }
+    .security-defense { font-size: 0.85rem; padding: 0.4rem 0.7rem; background: rgba(34,197,94,0.08); color: #059669; border-radius: 6px; }
+    
+    .checklist-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 1.25rem; margin: 1.5rem 0 2rem; }
+    .checklist-section { padding: 1.25rem; background: white; border-radius: 12px; border: 1.5px solid rgba(139,92,246,0.15); }
+    .checklist-section__title { font-size: 1rem; font-weight: 700; color: var(--purple-dark); margin-bottom: 0.75rem; }
+    .checklist-section__icon { display: inline-block; margin-right: 0.5rem; }
+    .checklist-items { display: flex; flex-direction: column; gap: 0.4rem; }
+    .checklist-item { font-size: 0.85rem; display: flex; align-items: flex-start; gap: 0.5rem; }
+    .checklist-item__check { color: var(--purple); font-weight: 700; flex-shrink: 0; margin-top: 0.1rem; }
+    
+    @media (max-width: 600px) {
+      .post-hero { padding: 7rem 1.25rem 2.5rem; }
+      .post-body { padding: 2rem 1.25rem 4rem; }
+      .post-body pre { padding: 1rem; border-radius: 8px; }
+      .post-hero__meta { flex-direction: column; gap: 0.4rem; }
+      .post-nav { padding: 0 1.25rem 3rem; }
+      .auth-comparison { grid-template-columns: 1fr; }
+      .jwt-parts { grid-template-columns: 1fr; }
+      .rbac-roles { grid-template-columns: 1fr; }
+      .checklist-grid { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+
+  <nav class="blog-nav">
+    <div class="blog-nav__inner">
+      <a href="./" class="blog-nav__back">‹ Blog</a>
+      <div class="blog-nav__title">Authentication & Authorization</div>
+    </div>
+  </nav>
+
+  <header class="post-hero">
+    <div class="post-hero__tags">
+      <span class="post-hero__tag">Security</span>
+      <span class="post-hero__tag">Authentication</span>
+      <span class="post-hero__tag">Authorization</span>
+    </div>
+    <h1 class="post-hero__title">Authentication & Authorization — ระบบยืนยันตัวตนและจัดการสิทธิ์อย่างปลอดภัย 🔐</h1>
+    <div class="post-hero__meta">
+      <span>By <strong style="color:#fff">Anirach Mingkhwan</strong></span>
+      <span class="post-hero__series">DevOps & Vibe Coding 2026</span>
+    </div>
+    <div class="post-hero__cover">
+      <img src="../images/auth-cover.jpg" alt="Authentication & Authorization">
+    </div>
+  </header>
+
+  <article class="post-body">
+
+    <p>ทุก App ที่คุณใช้ทุกวันต้องรู้ว่าคุณคือใคร และควรเข้าถึงอะไรได้บ้าง — <strong>LINE</strong> (login + ดูได้แค่ chat ของตัวเอง), <strong>Banking App</strong> (OTP + ดูได้แค่บัญชีตัวเอง), <strong>GitHub</strong> (OAuth + edit ได้แค่ repo ที่มีสิทธิ์) 🔐</p>
+
+    <blockquote>
+      <strong>🚨</strong> "99% of data breaches = authentication/authorization failures" — ระบบ auth ที่อ่อนแอ = ประตูหน้าบ้านที่เปิดค้างไว้
+    </blockquote>
+
+    <hr>
+
+    <h2>🐕 Authentication vs Authorization — ต่างกันยังไง?</h2>
+
+    <div class="auth-comparison">
+      <div class="auth-concept">
+        <div class="auth-concept__title">🔑 Authentication (AuthN)</div>
+        <div class="auth-concept__subtitle">"คุณคือใคร?"</div>
+        <div class="auth-concept__examples">
+          <div class="auth-example">Username + Password</div>
+          <div class="auth-example">Biometric (ลายนิ้วมือ)</div>
+          <div class="auth-example">OTP/MFA</div>
+          <div class="auth-example">Social Login (Google/GitHub)</div>
+        </div>
+        <div class="auth-analogy">
+          <div class="auth-analogy__title">🏨 Hotel Check-in</div>
+          "พิสูจน์ตัวตนด้วย passport"<br>
+          "ลงทะเบียนเช็คอิน"<br>
+          "ได้ key card"
+        </div>
+      </div>
+      
+      <div class="auth-concept">
+        <div class="auth-concept__title">🛡️ Authorization (AuthZ)</div>
+        <div class="auth-concept__subtitle">"คุณทำอะไรได้?"</div>
+        <div class="auth-concept__examples">
+          <div class="auth-example">Admin: ✅✅✅</div>
+          <div class="auth-example">Editor: ✅✅❌</div>
+          <div class="auth-example">User: ✅❌❌</div>
+        </div>
+        <div class="auth-analogy">
+          <div class="auth-analogy__title">🔑 Room Key Card</div>
+          "เข้าได้แค่ห้อง 401"<br>
+          "เข้า pool ได้ตอน 6-20"<br>
+          "เข้า gym ไม่ได้ (ไม่ได้จ่ายเพิ่ม)"
+        </div>
+      </div>
+    </div>
+
+    <p><strong>สิ่งสำคัญ:</strong> Authentication ต้องมาก่อน → แล้วค่อย Authorization</p>
+
+    <hr>
+
+    <h2>🔑 Password Security — ทำยังไงให้ปลอดภัย</h2>
+
+    <h3>Password Hashing — ห้ามเก็บ plaintext เด็ดขาด!</h3>
+
+    <div class="password-strength">
+      <div class="password-wrong">
+        <div class="password-label">❌ NEVER DO THIS</div>
+        <p><strong>users table:</strong></p>
+        <table style="margin-top: 0.5rem;">
+          <tr>
+            <th>email</th>
+            <th>password</th>
+          </tr>
+          <tr>
+            <td>alice@test.com</td>
+            <td>MySecret123 ← Plaintext!</td>
+          </tr>
+          <tr>
+            <td>bob@test.com</td>
+            <td>password456 ← Plaintext!</td>
+          </tr>
+        </table>
+        <p style="margin-top: 1rem;"><strong>ถ้าโดน hack → ได้ password ทุกคนเลย 💀</strong></p>
+      </div>
+
+      <div class="password-wrong">
+        <div class="password-label">❌ DON'T: Simple hash (MD5, SHA-256)</div>
+        <p>MD5("MySecret123") → "8b1a9953c4611296..."</p>
+        <p><strong>ปัญหา:</strong> Rainbow table attack ได้ง่าย</p>
+      </div>
+
+      <div class="password-right">
+        <div class="password-label">✅ DO: bcrypt / scrypt / Argon2</div>
+        <p>bcrypt("MySecret123", salt) → "$2b$12$LJ3m4ys3Rz.../K0Zy6VeO3Gk2..."</p>
+        <ul style="margin-top: 1rem;">
+          <li>Salt unique ทุก user (random)</li>
+          <li>Slow by design (cost factor: 12 rounds)</li>
+          <li>Rainbow tables ใช้ไม่ได้</li>
+          <li>GPU brute-force ยากมาก</li>
+        </ul>
+      </div>
+    </div>
+
+    <h3>Implementation — bcrypt</h3>
+
+    <pre><code>// ═══════════════════════════════
+// Node.js — bcrypt
+// ═══════════════════════════════
+import bcrypt from 'bcrypt';
+
+// Registration — Hash password
+const SALT_ROUNDS = 12;  // Cost factor (10-12 for production)
+
+async function registerUser(email: string, password: string) {
+  // Validate password strength
+  if (password.length < 8) throw new Error('Password too short');
+  if (!/[A-Z]/.test(password)) throw new Error('Need uppercase');
+  if (!/[0-9]/.test(password)) throw new Error('Need number');
+
+  // Hash with bcrypt (auto-generates salt)
+  const passwordHash = await bcrypt.hash(password, SALT_ROUNDS);
+  // → "$2b$12$LJ3m4ys3Rz0KZ1u8Hn5YHe..."
+
+  // Store ONLY the hash
+  await db.query(
+    'INSERT INTO users (email, password_hash) VALUES ($1, $2)',
+    [email, passwordHash]
+  );
+}
+
+// Login — Verify password
+async function loginUser(email: string, password: string) {
+  const user = await db.query(
+    'SELECT * FROM users WHERE email = $1', [email]
+  );
+
+  if (!user) throw new Error('Invalid credentials');
+
+  // bcrypt.compare handles salt extraction automatically
+  const isValid = await bcrypt.compare(password, user.password_hash);
+
+  if (!isValid) throw new Error('Invalid credentials');
+  // ⚠️ Same error message! Don't reveal if email exists
+
+  return user;
+}</code></pre>
+
+    <h3>Password Hashing Algorithms Comparison</h3>
+
+    <div class="comparison-table">
+      <table>
+        <thead>
+          <tr>
+            <th>Algorithm</th>
+            <th>Speed</th>
+            <th>Memory</th>
+            <th>Security</th>
+            <th>Use Case</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>MD5</td>
+            <td>⚡ Fast</td>
+            <td>Low</td>
+            <td>❌ Broken</td>
+            <td>Never for pwd</td>
+          </tr>
+          <tr>
+            <td>SHA-256</td>
+            <td>⚡ Fast</td>
+            <td>Low</td>
+            <td>❌ Weak</td>
+            <td>Checksums only</td>
+          </tr>
+          <tr>
+            <td>bcrypt</td>
+            <td>🐢 Slow</td>
+            <td>Low</td>
+            <td>✅ Good</td>
+            <td>Most apps</td>
+          </tr>
+          <tr>
+            <td>scrypt</td>
+            <td>🐢 Slow</td>
+            <td>🔴 High</td>
+            <td>✅ Better</td>
+            <td>High-security</td>
+          </tr>
+          <tr>
+            <td>Argon2id</td>
+            <td>🐢 Slow</td>
+            <td>🔴 High</td>
+            <td>✅ Best</td>
+            <td>New projects</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <blockquote>
+      <strong>💡 Recommendation 2026:</strong><br>
+      ├── New projects → Argon2id<br>
+      ├── Existing projects → bcrypt (still very good)<br>
+      └── Avoid → MD5, SHA-*, PBKDF2 (for passwords)
+    </blockquote>
+
+    <hr>
+
+    <h2>🎟️ Session vs Token — เก็บ state ยังไง?</h2>
+
+    <h3>Session-based Authentication</h3>
+
+    <div class="flow-diagram">
+      <div style="margin-bottom: 1.5rem; font-weight: 700; color: var(--navy);">Session-based Authentication Flow</div>
+      
+      <div class="flow-step">
+        <div class="flow-step__number">1</div>
+        <div class="flow-step__content">
+          <div class="flow-step__title">Login</div>
+          <div class="flow-step__desc">Client ส่ง POST /login { email, password } → Server verify password → สร้าง session → เก็บใน DB/Redis</div>
+        </div>
+      </div>
+      
+      <div class="flow-arrow">↓</div>
+      
+      <div class="flow-step">
+        <div class="flow-step__number">2</div>
+        <div class="flow-step__content">
+          <div class="flow-step__title">Set Cookie</div>
+          <div class="flow-step__desc">Server ส่ง Set-Cookie: sessionId=abc123 กลับไป</div>
+        </div>
+      </div>
+      
+      <div class="flow-arrow">↓</div>
+      
+      <div class="flow-step">
+        <div class="flow-step__number">3</div>
+        <div class="flow-step__content">
+          <div class="flow-step__title">Subsequent Requests</div>
+          <div class="flow-step__desc">Client ส่ง Cookie: sessionId=abc123 → Server lookup session ใน DB/Redis → return user data</div>
+        </div>
+      </div>
+      
+      <div class="flow-arrow">↓</div>
+      
+      <div class="flow-step">
+        <div class="flow-step__number">4</div>
+        <div class="flow-step__content">
+          <div class="flow-step__title">Logout</div>
+          <div class="flow-step__desc">Client ส่ง POST /logout → Server ลบ session จาก DB/Redis → Clear cookie</div>
+        </div>
+      </div>
+    </div>
+
+    <h3>Token-based Authentication (JWT)</h3>
+
+    <div class="flow-diagram">
+      <div style="margin-bottom: 1.5rem; font-weight: 700; color: var(--navy);">Token-based (JWT) Authentication Flow</div>
+      
+      <div class="flow-step">
+        <div class="flow-step__number">1</div>
+        <div class="flow-step__content">
+          <div class="flow-step__title">Login</div>
+          <div class="flow-step__desc">Client ส่ง POST /login { email, password } → Server verify password → Generate JWT (signed with secret)</div>
+        </div>
+      </div>
+      
+      <div class="flow-arrow">↓</div>
+      
+      <div class="flow-step">
+        <div class="flow-step__number">2</div>
+        <div class="flow-step__content">
+          <div class="flow-step__title">Return Tokens</div>
+          <div class="flow-step__desc">Server ส่ง { accessToken, refreshToken } กลับไป</div>
+        </div>
+      </div>
+      
+      <div class="flow-arrow">↓</div>
+      
+      <div class="flow-step">
+        <div class="flow-step__number">3</div>
+        <div class="flow-step__content">
+          <div class="flow-step__title">Subsequent Requests</div>
+          <div class="flow-step__desc">Client ส่ง Authorization: Bearer eyJhb... → Server verify JWT signature → decode payload → NO DB lookup!</div>
+        </div>
+      </div>
+      
+      <div class="flow-arrow">↓</div>
+      
+      <div class="flow-step">
+        <div class="flow-step__number">4</div>
+        <div class="flow-step__content">
+          <div class="flow-step__title">Token Refresh</div>
+          <div class="flow-step__desc">Client ส่ง POST /refresh { refreshToken } → Server verify refresh token → Issue new access token</div>
+        </div>
+      </div>
+    </div>
+
+    <h3>JWT Structure — มีอะไรอยู่ข้างใน?</h3>
+
+    <div class="jwt-structure">
+      <div style="margin-bottom: 1rem; font-weight: 700; color: var(--navy);">JWT Structure</div>
+      
+      <div class="jwt-token">
+        eyJhbGciOiJIUzI1NiJ9.eyJ1c2VyX2lkIjoxMjN9.SflKxw...
+      </div>
+      
+      <div class="jwt-parts">
+        <div class="jwt-part">
+          <div class="jwt-part__title">Header</div>
+          <div class="jwt-part__content">{
+  "alg": "HS256",
+  "typ": "JWT"
+}</div>
+          <div class="jwt-part__note">Algorithm และ type</div>
+        </div>
+        
+        <div class="jwt-part">
+          <div class="jwt-part__title">Payload</div>
+          <div class="jwt-part__content">{
+  "user_id": 123,
+  "email": "a@test.com",
+  "role": "admin",
+  "iat": 1709827200,
+  "exp": 1709830800
+}</div>
+          <div class="jwt-part__note">ข้อมูล user + timestamps</div>
+        </div>
+        
+        <div class="jwt-part">
+          <div class="jwt-part__title">Signature</div>
+          <div class="jwt-part__content">HMACSHA256(
+  base64(header) + "." +
+  base64(payload),
+  SECRET_KEY
+)</div>
+          <div class="jwt-part__note">พิสูจน์ว่าไม่ถูกแก้ไข</div>
+        </div>
+      </div>
+      
+      <p style="margin-top: 1rem; font-size: 0.9rem; color: var(--slate-light);">
+        <strong>⚠️ Payload is NOT encrypted!</strong> Anyone can decode it. Only signature proves it's authentic.<br>
+        <strong>❌ NEVER put in JWT:</strong> password, credit card, secrets<br>
+        <strong>✅ OK in JWT:</strong> user_id, role, permissions
+      </p>
+    </div>
+
+    <h3>Session vs Token — เลือกยังไง?</h3>
+
+    <div class="comparison-table">
+      <table>
+        <thead>
+          <tr>
+            <th></th>
+            <th>Session-based</th>
+            <th>Token-based (JWT)</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>State stored</td>
+            <td>Server (DB/Redis)</td>
+            <td>Client (token)</td>
+          </tr>
+          <tr>
+            <td>Scalability</td>
+            <td>⚠️ Needs shared session store</td>
+            <td>✅ Stateless (any server)</td>
+          </tr>
+          <tr>
+            <td>Revocation</td>
+            <td>✅ Easy (delete from DB)</td>
+            <td>⚠️ Hard (wait for expiry)</td>
+          </tr>
+          <tr>
+            <td>Mobile support</td>
+            <td>⚠️ Cookie issues</td>
+            <td>✅ Header-based</td>
+          </tr>
+          <tr>
+            <td>CSRF risk</td>
+            <td>⚠️ Yes (cookie)</td>
+            <td>✅ No</td>
+          </tr>
+          <tr>
+            <td>XSS risk</td>
+            <td>✅ httpOnly</td>
+            <td>⚠️ localStorage</td>
+          </tr>
+          <tr>
+            <td>Performance</td>
+            <td>⚠️ DB lookup</td>
+            <td>✅ No DB lookup</td>
+          </tr>
+          <tr>
+            <td>Cross-domain</td>
+            <td>⚠️ Complex</td>
+            <td>✅ Easy</td>
+          </tr>
+          <tr>
+            <td>Best for</td>
+            <td>Traditional web (SSR)</td>
+            <td>SPAs, APIs, mobile, microservices</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <blockquote>
+      <strong>💡 Recommendation:</strong><br>
+      ├── SPA + API → JWT (access 15min + refresh 7d)<br>
+      ├── Traditional web (SSR) → Session (Redis-backed)<br>
+      ├── Mobile app → JWT<br>
+      └── Both → JWT for API, Session for admin panel
+    </blockquote>
+
+    <hr>
+
+    <h2>🌐 OAuth 2.0 — "Login with Google/GitHub"</h2>
+
+    <div class="flow-diagram">
+      <div style="margin-bottom: 1.5rem; font-weight: 700; color: var(--navy);">OAuth 2.0 Authorization Code Flow</div>
+      
+      <div class="flow-step">
+        <div class="flow-step__number">1</div>
+        <div class="flow-step__content">
+          <div class="flow-step__title">User clicks "Login with Google"</div>
+          <div class="flow-step__desc">User กดปุ่ม → Your app redirect ไป Google login page</div>
+        </div>
+      </div>
+      
+      <div class="flow-arrow">↓</div>
+      
+      <div class="flow-step">
+        <div class="flow-step__number">2</div>
+        <div class="flow-step__content">
+          <div class="flow-step__title">User logs in to Google</div>
+          <div class="flow-step__desc">User ใส่ Google username/password + approve permissions</div>
+        </div>
+      </div>
+      
+      <div class="flow-arrow">↓</div>
+      
+      <div class="flow-step">
+        <div class="flow-step__number">3</div>
+        <div class="flow-step__content">
+          <div class="flow-step__title">Google redirects back with auth CODE</div>
+          <div class="flow-step__desc">Google redirect กลับมา your app พร้อม authorization code</div>
+        </div>
+      </div>
+      
+      <div class="flow-arrow">↓</div>
+      
+      <div class="flow-step">
+        <div class="flow-step__number">4</div>
+        <div class="flow-step__content">
+          <div class="flow-step__title">Exchange code for ACCESS TOKEN</div>
+          <div class="flow-step__desc">Your server แลก code กับ Google → ได้ access_token</div>
+        </div>
+      </div>
+      
+      <div class="flow-arrow">↓</div>
+      
+      <div class="flow-step">
+        <div class="flow-step__number">5</div>
+        <div class="flow-step__content">
+          <div class="flow-step__title">Get user info with access token</div>
+          <div class="flow-step__desc">Your server เรียก Google API ด้วย access_token → ได้ { name, email }</div>
+        </div>
+      </div>
+      
+      <div class="flow-arrow">↓</div>
+      
+      <div class="flow-step">
+        <div class="flow-step__number">6</div>
+        <div class="flow-step__content">
+          <div class="flow-step__title">Create/login user in YOUR database</div>
+          <div class="flow-step__desc">Your server สร้าง/update user → issue YOUR JWT → ส่งกลับ client</div>
+        </div>
+      </div>
+    </div>
+
+    <hr>
+
+    <h2>🔒 Multi-Factor Authentication (MFA/2FA)</h2>
+
+    <div class="flow-diagram">
+      <div style="margin-bottom: 1.5rem; font-weight: 700; color: var(--navy);">MFA with TOTP (Time-based One-Time Password)</div>
+      
+      <div style="margin-bottom: 1rem; font-weight: 600; color: var(--purple-dark);">Setup:</div>
+      
+      <div class="flow-step">
+        <div class="flow-step__number">1</div>
+        <div class="flow-step__content">
+          <div class="flow-step__title">Server generates QR Code</div>
+          <div class="flow-step__desc">Server สร้าง secret key → แสดงเป็น QR code</div>
+        </div>
+      </div>
+      
+      <div class="flow-step">
+        <div class="flow-step__number">2</div>
+        <div class="flow-step__content">
+          <div class="flow-step__title">User scans with Google Authenticator</div>
+          <div class="flow-step__desc">User scan QR → Authenticator app เก็บ secret</div>
+        </div>
+      </div>
+      
+      <div style="margin: 1.5rem 0 1rem 0; font-weight: 600; color: var(--purple-dark);">Login:</div>
+      
+      <div class="flow-step">
+        <div class="flow-step__number">3</div>
+        <div class="flow-step__content">
+          <div class="flow-step__title">User enters email + password ✅</div>
+          <div class="flow-step__desc">ผ่าน step 1: Authentication ด้วย password</div>
+        </div>
+      </div>
+      
+      <div class="flow-step">
+        <div class="flow-step__number">4</div>
+        <div class="flow-step__content">
+          <div class="flow-step__title">Server asks for TOTP code</div>
+          <div class="flow-step__desc">Server: "Please enter your 2FA code"</div>
+        </div>
+      </div>
+      
+      <div class="flow-step">
+        <div class="flow-step__number">5</div>
+        <div class="flow-step__content">
+          <div class="flow-step__title">User opens Authenticator app</div>
+          <div class="flow-step__desc">User เปิด app → เห็น: 847 293 (เปลี่ยนทุก 30 วินาที)</div>
+        </div>
+      </div>
+      
+      <div class="flow-step">
+        <div class="flow-step__number">6</div>
+        <div class="flow-step__content">
+          <div class="flow-step__title">Server verifies: HMAC(secret, time) == code? ✅</div>
+          <div class="flow-step__desc">Server คำนวณ TOTP จาก secret + current time → ตรวจสอบว่าตรงกับ code ที่ user ใส่</div>
+        </div>
+      </div>
+    </div>
+
+    <p style="margin: 1.5rem 0; padding: 1rem; background: rgba(239,68,68,0.06); border-left: 4px solid var(--red); border-radius: 8px;">
+      <strong>⚠️ Even if password is stolen:</strong> Attacker ยังต้องการ physical phone เพื่อเอา code!
+    </p>
+
+    <hr>
+
+    <h2>🛡️ Authorization — RBAC, ABAC, Permissions</h2>
+
+    <h3>Role-Based Access Control (RBAC)</h3>
+
+    <div class="rbac-diagram">
+      <div style="margin-bottom: 1rem; font-weight: 700; color: var(--navy);">RBAC System</div>
+      
+      <div class="rbac-roles">
+        <div class="rbac-role">
+          <div class="rbac-role__name">admin</div>
+          <div class="rbac-role__permissions">
+            <div class="rbac-permission">users.*</div>
+            <div class="rbac-permission">posts.*</div>
+            <div class="rbac-permission">admin.*</div>
+          </div>
+        </div>
+        
+        <div class="rbac-role">
+          <div class="rbac-role__name">editor</div>
+          <div class="rbac-role__permissions">
+            <div class="rbac-permission">posts.create</div>
+            <div class="rbac-permission">posts.edit</div>
+            <div class="rbac-permission">posts.delete (own only)</div>
+          </div>
+        </div>
+        
+        <div class="rbac-role">
+          <div class="rbac-role__name">member</div>
+          <div class="rbac-role__permissions">
+            <div class="rbac-permission">posts.read</div>
+            <div class="rbac-permission">profile.edit</div>
+          </div>
+        </div>
+        
+        <div class="rbac-role">
+          <div class="rbac-role__name">guest</div>
+          <div class="rbac-role__permissions">
+            <div class="rbac-permission">posts.read (public only)</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <hr>
+
+    <h2>🔐 Security Best Practices — Checklist</h2>
+
+    <h3>Common Attacks & Prevention</h3>
+
+    <div class="security-threats">
+      <div class="security-threat">
+        <div class="security-threat__title">🔴 Brute Force</div>
+        <div class="security-threat__defenses">
+          <div class="security-defense">Rate limiting (5 attempts per minute)</div>
+          <div class="security-defense">Account lockout after 10 failures</div>
+          <div class="security-defense">CAPTCHA after 3 failures</div>
+          <div class="security-defense">Progressive delays (1s, 2s, 4s, 8s...)</div>
+        </div>
+      </div>
+
+      <div class="security-threat">
+        <div class="security-threat__title">🔴 SQL Injection</div>
+        <div class="security-threat__defenses">
+          <div class="security-defense">Parameterized queries ALWAYS</div>
+          <div class="security-defense">ORM (auto-parameterized)</div>
+          <div class="security-defense">Input validation (whitelist)</div>
+          <div class="security-defense">Least-privilege DB accounts</div>
+        </div>
+      </div>
+
+      <div class="security-threat">
+        <div class="security-threat__title">🔴 XSS (Cross-Site Scripting)</div>
+        <div class="security-threat__defenses">
+          <div class="security-defense">Content Security Policy (CSP) headers</div>
+          <div class="security-defense">httpOnly cookies (JS can't read)</div>
+          <div class="security-defense">Input sanitization</div>
+          <div class="security-defense">Output encoding</div>
+        </div>
+      </div>
+
+      <div class="security-threat">
+        <div class="security-threat__title">🔴 CSRF (Cross-Site Request Forgery)</div>
+        <div class="security-threat__defenses">
+          <div class="security-defense">SameSite=Strict cookies</div>
+          <div class="security-defense">CSRF tokens in forms</div>
+          <div class="security-defense">Check Origin/Referer headers</div>
+          <div class="security-defense">JWT in Authorization header (immune)</div>
+        </div>
+      </div>
+
+      <div class="security-threat">
+        <div class="security-threat__title">🔴 Token Theft</div>
+        <div class="security-threat__defenses">
+          <div class="security-defense">Short-lived access tokens (15 min)</div>
+          <div class="security-defense">httpOnly cookies for refresh tokens</div>
+          <div class="security-defense">Token rotation on refresh</div>
+          <div class="security-defense">IP/device binding (optional)</div>
+        </div>
+      </div>
+    </div>
+
+    <hr>
+
+    <h2>🏢 Single Sign-On (SSO) — Enterprise</h2>
+
+    <p><strong>SSO = เข้าสู่ระบบ 1 ครั้ง → ใช้ได้ทุก app ในองค์กร</strong></p>
+
+    <div style="margin: 1.5rem 0; padding: 1.5rem; background: rgba(139,92,246,0.04); border-radius: 12px;">
+      <div style="margin-bottom: 1rem; font-weight: 700; color: var(--navy);">SSO Ecosystem</div>
+      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem; margin-bottom: 1.5rem;">
+        <div style="text-align: center; padding: 1rem; background: white; border-radius: 8px; border: 1px solid rgba(139,92,246,0.15);">App A (HR)</div>
+        <div style="text-align: center; padding: 1rem; background: white; border-radius: 8px; border: 1px solid rgba(139,92,246,0.15);">App B (Email)</div>
+        <div style="text-align: center; padding: 1rem; background: white; border-radius: 8px; border: 1px solid rgba(139,92,246,0.15);">App C (CRM)</div>
+      </div>
+      <div style="text-align: center; margin-bottom: 1rem; font-size: 1.5rem; color: var(--purple);">↕</div>
+      <div style="text-align: center; padding: 1rem; background: var(--purple); color: white; border-radius: 8px; font-weight: 600;">
+        SSO Provider<br>(Okta/Azure/Google)
+      </div>
+      <p style="margin-top: 1rem; text-align: center; font-size: 0.9rem; color: var(--slate-light);">
+        Login once → All apps authenticated
+      </p>
+    </div>
+
+    <div class="comparison-table">
+      <table>
+        <thead>
+          <tr>
+            <th>Protocol</th>
+            <th>Use Case</th>
+            <th>Format</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>SAML 2.0</td>
+            <td>Enterprise (legacy)</td>
+            <td>XML-based</td>
+          </tr>
+          <tr>
+            <td>OIDC (OpenID Connect)</td>
+            <td>Modern SSO</td>
+            <td>JSON/JWT</td>
+          </tr>
+          <tr>
+            <td>OAuth 2.0</td>
+            <td>API authorization</td>
+            <td>Not SSO per se</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <p><strong>Popular Providers:</strong> Okta, Auth0 (by Okta), Azure AD (Microsoft Entra ID), Google Workspace, Keycloak (open-source), AWS Cognito</p>
+
+    <hr>
+
+    <h2>🔑 Key Takeaways</h2>
+
+    <ol>
+      <li><strong>Authentication ≠ Authorization</strong> → AuthN = ตัวตน, AuthZ = สิทธิ์ — ต้องทำทั้ง 2 อย่าง</li>
+      <li><strong>bcrypt/Argon2 เท่านั้น</strong> → ห้ามเก็บ plaintext, ห้าม MD5/SHA — Argon2id ดีที่สุดในปี 2026</li>
+      <li><strong>JWT = Access (15min) + Refresh (7d)</strong> → Access token สั้น, refresh token เก็บ httpOnly cookie</li>
+      <li><strong>Session vs Token</strong> → SSR ใช้ session, SPA/API/mobile ใช้ JWT</li>
+      <li><strong>OAuth 2.0</strong> → "Login with Google/GitHub" — ไม่ต้องจัดการ password เอง</li>
+      <li><strong>MFA/2FA</strong> → TOTP + backup codes — ป้องกัน password theft</li>
+      <li><strong>RBAC</strong> → Role → Permissions → Middleware — ตรวจสอบสิทธิ์ทุก endpoint</li>
+      <li><strong>Rate limiting</strong> → 5 login attempts per 15 min — ป้องกัน brute force</li>
+      <li><strong>Security headers</strong> → Helmet, CORS, CSP, HSTS — ตั้งค่าให้ครบ</li>
+      <li><strong>Never trust the client</strong> → Validate ทุกอย่างฝั่ง server — client-side validation แค่ UX</li>
+    </ol>
+
+    <div class="post-series-footer">
+      บทความจากซีรีส์ DevOps & Vibe Coding 2026
+    </div>
+
+  </article>
+
+  <!-- Post Navigation -->
+  <div class="post-nav">
+    <a href="database-sql.html" class="post-nav__link">
+      <div class="post-nav__dir">← Previous</div>
+      <div class="post-nav__title">Database Design & SQL — ออกแบบฐานข้อมูลที่ดีและเขียน SQL อย่างมืออาชีพ</div>
+    </a>
+  </div>
+
+  <footer class="blog-footer">
+    <a href="./">← Back to Blog</a>
+    <span>© 2025 Anirach Mingkhwan — Associate Professor, KMUTNB</span>
+  </footer>
+
+</body>
+</html>
