@@ -5,22 +5,6 @@
 (function () {
   'use strict';
 
-  // --- Navbar scroll effect ---
-  const navbar = document.getElementById('navbar');
-  let lastScroll = 0;
-
-  function onScroll() {
-    const y = window.scrollY;
-    if (y > 50) {
-      navbar.classList.add('scrolled');
-    } else {
-      navbar.classList.remove('scrolled');
-    }
-    lastScroll = y;
-  }
-
-  window.addEventListener('scroll', onScroll, { passive: true });
-
   // --- Mobile nav toggle ---
   const navToggle = document.getElementById('navToggle');
   const navLinks = document.getElementById('navLinks');
