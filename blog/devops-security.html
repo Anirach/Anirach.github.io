@@ -1,0 +1,585 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>DevSecOps — Security พื้นฐานที่ DevOps ต้องรู้ | Anirach Mingkhwan</title>
+  <meta name="description" content="เรียนรู้ DevSecOps ตั้งแต่ OWASP Top 10, Secrets Management, Container Security, Supply Chain, SSL/TLS ไปจนถึง Security Automation">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --navy: #0f172a; --blue: #6366f1; --blue-dark: #4f46e5; --blue-light: #818cf8;
+      --slate: #334155; --slate-light: #64748b; --gray: #94a3b8;
+      --bg: #f8fafc; --white: #ffffff; --code-bg: #1e293b;
+      --font: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+      --mono: 'JetBrains Mono', 'Fira Code', monospace;
+    }
+    html { scroll-behavior: smooth; }
+    body { font-family: var(--font); font-size: 17px; line-height: 1.8; color: var(--slate); background: var(--bg); -webkit-font-smoothing: antialiased; }
+    .blog-nav { position: fixed; top: 0; left: 0; right: 0; z-index: 100; background: rgba(248,250,252,0.85); backdrop-filter: blur(20px); border-bottom: 1px solid rgba(0,0,0,0.05); }
+    .blog-nav__inner { max-width: 860px; margin: 0 auto; padding: 0 2rem; height: 56px; display: flex; align-items: center; justify-content: space-between; }
+    .blog-nav__back { font-size: 0.85rem; font-weight: 500; color: var(--blue); text-decoration: none; display: flex; align-items: center; gap: 0.4rem; }
+    .blog-nav__back:hover { color: #4f46e5; }
+    .blog-nav__title { font-size: 0.85rem; font-weight: 600; color: var(--navy); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 50%; }
+    .post-hero { padding: 8rem 2rem 3rem; background: linear-gradient(135deg, #0f172a 0%, #1e1b4b 50%, #312e81 100%); text-align: center; }
+    .post-hero__tags { display: flex; gap: 0.5rem; justify-content: center; margin-bottom: 1.25rem; flex-wrap: wrap; }
+    .post-hero__tag { font-size: 0.7rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.1em; color: #22d3ee; background: rgba(34,211,238,0.15); padding: 0.3rem 0.75rem; border-radius: 20px; }
+    .post-hero__title { font-size: clamp(1.8rem, 5vw, 3rem); font-weight: 800; color: #fff; line-height: 1.2; margin-bottom: 1rem; max-width: 720px; margin-left: auto; margin-right: auto; }
+    .post-hero__meta { font-size: 0.85rem; color: rgba(255,255,255,0.6); display: flex; align-items: center; justify-content: center; gap: 1.5rem; }
+    .post-hero__series { font-weight: 600; color: #818cf8; }
+    .post-hero__cover { max-width: 420px; margin: 2.5rem auto 0; border-radius: 16px; overflow: hidden; box-shadow: 0 20px 60px rgba(0,0,0,0.4); }
+    .post-hero__cover img { width: 100%; display: block; }
+    .post-body { max-width: 720px; margin: 0 auto; padding: 3rem 2rem 6rem; }
+    .post-body h2 { font-size: 1.6rem; font-weight: 800; color: var(--navy); margin: 3rem 0 1rem; padding-bottom: 0.5rem; border-bottom: 2px solid rgba(99,102,241,0.15); }
+    .post-body h3 { font-size: 1.25rem; font-weight: 700; color: var(--navy); margin: 2.25rem 0 0.75rem; }
+    .post-body h4 { font-size: 1.05rem; font-weight: 700; color: var(--navy); margin: 1.75rem 0 0.6rem; }
+    .post-body p { margin-bottom: 1.25rem; }
+    .post-body strong { font-weight: 700; color: var(--navy); }
+    .post-body a { color: var(--blue); text-decoration: underline; text-decoration-thickness: 1px; text-underline-offset: 2px; }
+    .post-body pre { background: var(--code-bg); border-radius: 12px; padding: 1.5rem; margin: 1.25rem 0 1.5rem; overflow-x: auto; border: 1px solid rgba(255,255,255,0.05); }
+    .post-body pre code { font-family: var(--mono); font-size: 0.82rem; color: #e2e8f0; line-height: 1.7; }
+    .post-body code { font-family: var(--mono); font-size: 0.88em; background: rgba(99,102,241,0.08); color: #4f46e5; padding: 0.15em 0.45em; border-radius: 5px; }
+    .post-body pre code { background: none; color: #e2e8f0; padding: 0; }
+    .post-body ul, .post-body ol { margin: 0.5rem 0 1.25rem 1.5rem; }
+    .post-body li { margin-bottom: 0.4rem; }
+    .post-body table { width: 100%; border-collapse: collapse; margin: 1.25rem 0 1.5rem; font-size: 0.9rem; }
+    .post-body th { background: rgba(99,102,241,0.06); font-weight: 700; color: var(--navy); padding: 0.75rem 1rem; text-align: left; border-bottom: 2px solid rgba(99,102,241,0.15); }
+    .post-body td { padding: 0.65rem 1rem; border-bottom: 1px solid #e2e8f0; }
+    .post-body blockquote { background: rgba(99,102,241,0.06); border-left: 4px solid var(--blue); padding: 1rem 1.25rem; border-radius: 0 10px 10px 0; margin: 1.25rem 0; font-size: 0.95rem; color: var(--navy); }
+    .post-body .warning { background: rgba(239,68,68,0.06); border-left: 4px solid #ef4444; padding: 1rem 1.25rem; border-radius: 0 10px 10px 0; margin: 1.25rem 0; font-size: 0.95rem; color: var(--navy); }
+    .post-body hr { border: none; height: 1px; background: linear-gradient(90deg, transparent, rgba(99,102,241,0.2), transparent); margin: 3rem 0; }
+    .post-series-footer { text-align: center; font-size: 0.85rem; color: var(--gray); font-style: italic; margin-top: 2rem; padding-top: 2rem; border-top: 1px solid #e2e8f0; }
+    .post-nav { max-width: 720px; margin: 0 auto; padding: 0 2rem 3rem; display: flex; gap: 1.5rem; flex-wrap: wrap; }
+    .post-nav__link { flex: 1; min-width: 200px; padding: 1.25rem 1.5rem; border-radius: 12px; background: rgba(255,255,255,0.85); backdrop-filter: blur(16px); border: 1px solid rgba(255,255,255,0.6); box-shadow: 0 4px 16px rgba(0,0,0,0.05); text-decoration: none; color: inherit; transition: transform 0.2s, box-shadow 0.2s; }
+    .post-nav__link:hover { transform: translateY(-2px); box-shadow: 0 8px 24px rgba(99,102,241,0.1); }
+    .post-nav__dir { font-size: 0.75rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.1em; color: var(--blue); margin-bottom: 0.35rem; }
+    .post-nav__title { font-size: 0.9rem; font-weight: 600; color: var(--navy); line-height: 1.4; }
+    .blog-footer { background: var(--navy); padding: 2rem 0; text-align: center; }
+    .blog-footer a { color: var(--blue-light); text-decoration: none; font-weight: 600; font-size: 0.9rem; }
+    .blog-footer span { color: var(--gray); font-size: 0.8rem; display: block; margin-top: 0.4rem; }
+
+    .flow-diagram { display: flex; align-items: center; justify-content: center; gap: 0.5rem; flex-wrap: wrap; margin: 1.5rem 0 2rem; padding: 1.5rem; background: rgba(99,102,241,0.04); border-radius: 12px; }
+    .flow-step { text-align: center; padding: 0.75rem 1.25rem; background: white; border-radius: 10px; border: 1.5px solid rgba(99,102,241,0.15); box-shadow: 0 2px 8px rgba(0,0,0,0.04); }
+    .flow-step__title { font-size: 0.9rem; font-weight: 700; color: var(--navy); }
+    .flow-step__sub { font-size: 0.72rem; color: var(--gray); margin-top: 0.15rem; }
+    .flow-arrow { font-size: 1.2rem; color: var(--blue); font-weight: 700; }
+
+    .severity-badge { display: inline-block; font-family: var(--mono); font-size: 0.75rem; font-weight: 700; padding: 0.2rem 0.6rem; border-radius: 6px; margin-right: 0.3rem; }
+    .severity-badge--critical { background: rgba(239,68,68,0.12); color: #dc2626; }
+    .severity-badge--high { background: rgba(245,158,11,0.12); color: #d97706; }
+    .severity-badge--medium { background: rgba(59,130,246,0.12); color: #2563eb; }
+    .severity-badge--low { background: rgba(34,197,94,0.12); color: #16a34a; }
+
+    @media (max-width: 600px) {
+      .post-hero { padding: 7rem 1.25rem 2.5rem; }
+      .post-body { padding: 2rem 1.25rem 4rem; }
+      .post-body pre { padding: 1rem; border-radius: 8px; }
+      .post-hero__meta { flex-direction: column; gap: 0.4rem; }
+      .post-nav { padding: 0 1.25rem 3rem; }
+      .flow-diagram { flex-direction: column; }
+    }
+  </style>
+</head>
+<body>
+
+  <nav class="blog-nav">
+    <div class="blog-nav__inner">
+      <a href="./" class="blog-nav__back">‹ Blog</a>
+      <div class="blog-nav__title">DevSecOps</div>
+    </div>
+  </nav>
+
+  <header class="post-hero">
+    <div class="post-hero__tags">
+      <span class="post-hero__tag">Security</span>
+      <span class="post-hero__tag">DevSecOps</span>
+      <span class="post-hero__tag">DevOps</span>
+    </div>
+    <h1 class="post-hero__title">DevSecOps — Security พื้นฐานที่ DevOps ต้องรู้ 🔐</h1>
+    <div class="post-hero__meta">
+      <span>By <strong style="color:#fff">Anirach Mingkhwan</strong></span>
+      <span class="post-hero__series">DevOps & Vibe Coding 2026</span>
+    </div>
+    <div class="post-hero__cover">
+      <img src="../images/security-cover.jpg" alt="DevSecOps — security dog with locks and shields">
+    </div>
+  </header>
+
+  <article class="post-body">
+
+    <p>ตลอด 9 โพสต์ที่ผ่านมาเราเรียนรู้ DevOps ตั้งแต่ Git, Docker, K8s, IaC, Monitoring ไปจนถึง Linux</p>
+
+    <p>แต่ถ้า deploy ทุกอย่างขึ้น production แล้ว <strong>โดน hack?</strong> ข้อมูล user หลุด? Server ถูกยึด? 😱</p>
+
+    <p>Security ไม่ใช่ "เรื่องของทีม security" — มันเป็น <strong>เรื่องของทุกคนที่ deploy code ขึ้น production</strong> นี่คือ <strong>DevSecOps</strong> — ฝัง security เข้าไปในทุกขั้นตอนของ DevOps 🔐🐕</p>
+
+    <hr>
+
+    <h2>DevSecOps คืออะไร?</h2>
+
+    <p><strong>DevSecOps = Development + Security + Operations</strong> — แทนที่จะเช็ค security ตอนท้าย ให้ทำตั้งแต่ต้น:</p>
+
+    <div class="flow-diagram">
+      <div class="flow-step">
+        <div class="flow-step__title">📝 Plan</div>
+        <div class="flow-step__sub">Threat modeling</div>
+      </div>
+      <span class="flow-arrow">→</span>
+      <div class="flow-step">
+        <div class="flow-step__title">💻 Code</div>
+        <div class="flow-step__sub">Secret scanning</div>
+      </div>
+      <span class="flow-arrow">→</span>
+      <div class="flow-step">
+        <div class="flow-step__title">🔨 Build</div>
+        <div class="flow-step__sub">SAST + SCA</div>
+      </div>
+      <span class="flow-arrow">→</span>
+      <div class="flow-step">
+        <div class="flow-step__title">🧪 Test</div>
+        <div class="flow-step__sub">DAST + Pen test</div>
+      </div>
+      <span class="flow-arrow">→</span>
+      <div class="flow-step">
+        <div class="flow-step__title">🚀 Deploy</div>
+        <div class="flow-step__sub">Image scanning</div>
+      </div>
+      <span class="flow-arrow">→</span>
+      <div class="flow-step">
+        <div class="flow-step__title">📊 Monitor</div>
+        <div class="flow-step__sub">Runtime protection</div>
+      </div>
+    </div>
+
+    <blockquote>
+      <strong>💡 Shift Left:</strong> ยิ่งเจอ bug/vulnerability เร็ว ยิ่งแก้ถูก — หาตอน code ถูกกว่าหาตอน production 100 เท่า!
+    </blockquote>
+
+    <hr>
+
+    <h2>OWASP Top 10 — ช่องโหว่ยอดฮิต</h2>
+
+    <p><a href="https://owasp.org/www-project-top-ten/" target="_blank">OWASP Top 10</a> คือรายการช่องโหว่ที่พบบ่อยที่สุดใน web applications:</p>
+
+    <table>
+      <thead><tr><th>#</th><th>ช่องโหว่</th><th>ตัวอย่าง</th><th>ป้องกัน</th></tr></thead>
+      <tbody>
+        <tr><td><span class="severity-badge severity-badge--critical">A01</span></td><td><strong>Broken Access Control</strong></td><td>User A เข้าถึงข้อมูล User B</td><td>RBAC, JWT validation</td></tr>
+        <tr><td><span class="severity-badge severity-badge--critical">A02</span></td><td><strong>Cryptographic Failures</strong></td><td>Password เก็บ plain text</td><td>bcrypt, AES-256, TLS</td></tr>
+        <tr><td><span class="severity-badge severity-badge--critical">A03</span></td><td><strong>Injection</strong></td><td>SQL Injection, XSS</td><td>Parameterized queries, sanitize</td></tr>
+        <tr><td><span class="severity-badge severity-badge--high">A04</span></td><td><strong>Insecure Design</strong></td><td>ไม่ rate limit login</td><td>Threat modeling, design review</td></tr>
+        <tr><td><span class="severity-badge severity-badge--high">A05</span></td><td><strong>Security Misconfiguration</strong></td><td>Debug mode on production</td><td>Hardening, IaC scan</td></tr>
+        <tr><td><span class="severity-badge severity-badge--high">A06</span></td><td><strong>Vulnerable Components</strong></td><td>ใช้ library เก่าที่มี CVE</td><td>SCA, Dependabot</td></tr>
+        <tr><td><span class="severity-badge severity-badge--medium">A07</span></td><td><strong>Auth Failures</strong></td><td>Weak password, no MFA</td><td>MFA, strong password policy</td></tr>
+        <tr><td><span class="severity-badge severity-badge--medium">A08</span></td><td><strong>Data Integrity Failures</strong></td><td>Untrusted CI/CD plugins</td><td>Verify signatures, pin versions</td></tr>
+        <tr><td><span class="severity-badge severity-badge--medium">A09</span></td><td><strong>Logging Failures</strong></td><td>ไม่ log login attempts</td><td>Audit logging, SIEM</td></tr>
+        <tr><td><span class="severity-badge severity-badge--low">A10</span></td><td><strong>SSRF</strong></td><td>Server เรียก internal API ให้</td><td>Allowlist, network segmentation</td></tr>
+      </tbody>
+    </table>
+
+    <hr>
+
+    <h2>🔑 Secrets Management — อย่าเก็บ secret ใน code!</h2>
+
+    <div class="warning">
+      <strong>❌ อย่าทำแบบนี้เด็ดขาด!</strong>
+    </div>
+
+    <pre><code># ❌ WRONG — secret ใน code
+DATABASE_URL="postgres://admin:P@ssw0rd@db.example.com:5432/mydb"
+API_KEY="sk-1234567890abcdef"
+
+# ❌ WRONG — secret ใน Dockerfile
+ENV AWS_SECRET_KEY=AKIAxxxxxxxxxxx
+
+# ❌ WRONG — secret ใน docker-compose.yml
+environment:
+  - DB_PASSWORD=mysecretpassword</code></pre>
+
+    <h3>✅ วิธีที่ถูกต้อง</h3>
+
+    <pre><code># 1. Environment Variables (ง่ายสุด)
+export DB_PASSWORD="$(cat /run/secrets/db_password)"
+
+# 2. Docker Secrets
+echo "mysecretpassword" | docker secret create db_password -
+# → ใช้ใน docker-compose:
+services:
+  app:
+    secrets:
+      - db_password
+secrets:
+  db_password:
+    external: true
+
+# 3. HashiCorp Vault (production-grade)
+vault kv put secret/myapp db_password="P@ssw0rd"
+vault kv get secret/myapp
+
+# 4. AWS Secrets Manager / GCP Secret Manager
+aws secretsmanager get-secret-value --secret-id myapp/db_password
+
+# 5. .env file (dev only — อย่า commit!)
+# .gitignore ต้องมี:
+.env
+.env.local
+*.pem
+*.key</code></pre>
+
+    <h3>Git Secret Scanning</h3>
+
+    <pre><code># ติดตั้ง git-secrets ป้องกัน commit secrets
+git secrets --install
+git secrets --register-aws     # ตรวจ AWS keys
+
+# ใช้ truffleHog scan repo ทั้งหมด
+trufflehog git https://github.com/myorg/myrepo
+
+# ใช้ gitleaks
+gitleaks detect --source . --verbose
+
+# GitHub: เปิด Secret Scanning (Settings → Security)
+# → แจ้งเตือนทันทีถ้ามี secret หลุดเข้า repo</code></pre>
+
+    <hr>
+
+    <h2>🐳 Container Security</h2>
+
+    <h3>Dockerfile Best Practices</h3>
+
+    <pre><code># ❌ BAD — ใช้ root, image ใหญ่, ไม่ pin version
+FROM node:latest
+COPY . .
+RUN npm install
+CMD ["node", "app.js"]
+
+# ✅ GOOD — non-root, minimal image, pinned version, multi-stage
+FROM node:20-alpine AS builder
+WORKDIR /app
+COPY package*.json ./
+RUN npm ci --only=production
+
+FROM node:20-alpine
+RUN addgroup -S app &amp;&amp; adduser -S app -G app
+WORKDIR /app
+COPY --from=builder /app/node_modules ./node_modules
+COPY --chown=app:app . .
+USER app
+EXPOSE 3000
+HEALTHCHECK CMD curl -f http://localhost:3000/health || exit 1
+CMD ["node", "app.js"]</code></pre>
+
+    <h3>Image Scanning</h3>
+
+    <pre><code># Trivy — scan Docker image
+trivy image myapp:latest
+# → แสดง CVE ทั้งหมดในทุก layer
+
+# Trivy scan ก่อน push ใน CI/CD
+trivy image --exit-code 1 --severity HIGH,CRITICAL myapp:latest
+# → fail build ถ้าเจอ HIGH หรือ CRITICAL
+
+# Snyk Container
+snyk container test myapp:latest
+
+# Docker Scout (built-in)
+docker scout cves myapp:latest</code></pre>
+
+    <h3>Runtime Security</h3>
+
+    <pre><code># ใช้ read-only filesystem
+docker run --read-only --tmpfs /tmp myapp
+
+# จำกัด resources
+docker run --memory=512m --cpus=1.0 myapp
+
+# Drop capabilities
+docker run --cap-drop=ALL --cap-add=NET_BIND_SERVICE myapp
+
+# No new privileges
+docker run --security-opt=no-new-privileges myapp
+
+# Kubernetes Pod Security
+apiVersion: v1
+kind: Pod
+spec:
+  securityContext:
+    runAsNonRoot: true
+    runAsUser: 1000
+    fsGroup: 1000
+  containers:
+  - name: app
+    securityContext:
+      allowPrivilegeEscalation: false
+      readOnlyRootFilesystem: true
+      capabilities:
+        drop: ["ALL"]</code></pre>
+
+    <hr>
+
+    <h2>🔒 SSL/TLS — เข้ารหัส Traffic</h2>
+
+    <pre><code># Let's Encrypt — SSL ฟรี!
+# ติดตั้ง certbot
+sudo apt install certbot python3-certbot-nginx
+
+# ขอ certificate
+sudo certbot --nginx -d example.com -d www.example.com
+
+# Auto-renew (certbot ตั้ง cron ให้อัตโนมัติ)
+sudo certbot renew --dry-run
+
+# ตรวจสอบ SSL
+curl -vI https://example.com 2>&amp;1 | grep -A5 "SSL connection"
+openssl s_client -connect example.com:443 -brief</code></pre>
+
+    <h3>Nginx SSL Config (Best Practice)</h3>
+
+    <pre><code>server {
+    listen 443 ssl http2;
+    server_name example.com;
+
+    # Certificate
+    ssl_certificate     /etc/letsencrypt/live/example.com/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/example.com/privkey.pem;
+
+    # Modern TLS only
+    ssl_protocols TLSv1.2 TLSv1.3;
+    ssl_ciphers ECDHE-ECDSA-AES128-GCM-SHA256:ECDHE-RSA-AES128-GCM-SHA256;
+    ssl_prefer_server_ciphers off;
+
+    # Security headers
+    add_header Strict-Transport-Security "max-age=63072000" always;
+    add_header X-Content-Type-Options "nosniff" always;
+    add_header X-Frame-Options "DENY" always;
+    add_header X-XSS-Protection "1; mode=block" always;
+    add_header Content-Security-Policy "default-src 'self'" always;
+    add_header Referrer-Policy "strict-origin-when-cross-origin" always;
+}</code></pre>
+
+    <hr>
+
+    <h2>🔍 Security Scanning ใน CI/CD</h2>
+
+    <h3>GitHub Actions Security Pipeline</h3>
+
+    <pre><code># .github/workflows/security.yml
+name: Security Scan
+on: [push, pull_request]
+
+jobs:
+  security:
+    runs-on: ubuntu-latest
+    steps:
+      # 1. Secret Scanning
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Gitleaks
+        uses: gitleaks/gitleaks-action@v2
+
+      # 2. Dependency Scanning (SCA)
+      - name: npm audit
+        run: npm audit --audit-level=high
+
+      # 3. Static Analysis (SAST)
+      - name: CodeQL Analysis
+        uses: github/codeql-action/analyze@v3
+
+      # 4. Container Scanning
+      - name: Trivy scan
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: myapp:${{ github.sha }}
+          severity: HIGH,CRITICAL
+          exit-code: 1
+
+      # 5. Infrastructure Scanning
+      - name: tfsec (Terraform)
+        uses: aquasecurity/tfsec-action@v1.0.0</code></pre>
+
+    <h3>Security Testing Types</h3>
+
+    <table>
+      <thead><tr><th>Type</th><th>ตัวย่อ</th><th>ทำอะไร</th><th>เครื่องมือ</th></tr></thead>
+      <tbody>
+        <tr><td>Static Analysis</td><td><strong>SAST</strong></td><td>วิเคราะห์ source code</td><td>CodeQL, SonarQube, Semgrep</td></tr>
+        <tr><td>Dependency Scan</td><td><strong>SCA</strong></td><td>ตรวจ library ที่มี CVE</td><td>Dependabot, Snyk, npm audit</td></tr>
+        <tr><td>Dynamic Testing</td><td><strong>DAST</strong></td><td>โจมตีแอปจริงๆ</td><td>OWASP ZAP, Burp Suite</td></tr>
+        <tr><td>Container Scan</td><td>—</td><td>ตรวจ Docker image</td><td>Trivy, Snyk Container</td></tr>
+        <tr><td>IaC Scan</td><td>—</td><td>ตรวจ Terraform/K8s config</td><td>tfsec, Checkov, kube-bench</td></tr>
+        <tr><td>Secret Scan</td><td>—</td><td>หา secrets ที่หลุด</td><td>Gitleaks, TruffleHog</td></tr>
+      </tbody>
+    </table>
+
+    <hr>
+
+    <h2>🏰 Server Hardening</h2>
+
+    <pre><code>#!/bin/bash
+# server-hardening.sh — Basic hardening for Ubuntu
+
+# 1. Update everything
+sudo apt update &amp;&amp; sudo apt upgrade -y
+
+# 2. Create non-root user
+sudo adduser deploy
+sudo usermod -aG sudo deploy
+
+# 3. SSH hardening
+sudo sed -i 's/PermitRootLogin yes/PermitRootLogin no/' /etc/ssh/sshd_config
+sudo sed -i 's/#PasswordAuthentication yes/PasswordAuthentication no/' /etc/ssh/sshd_config
+sudo systemctl restart sshd
+
+# 4. Firewall
+sudo ufw default deny incoming
+sudo ufw default allow outgoing
+sudo ufw allow 22/tcp      # SSH
+sudo ufw allow 80/tcp      # HTTP
+sudo ufw allow 443/tcp     # HTTPS
+sudo ufw enable
+
+# 5. Fail2ban — บล็อก brute force
+sudo apt install fail2ban -y
+sudo cp /etc/fail2ban/jail.conf /etc/fail2ban/jail.local
+sudo systemctl enable --now fail2ban
+
+# 6. Automatic security updates
+sudo apt install unattended-upgrades -y
+sudo dpkg-reconfigure -plow unattended-upgrades
+
+# 7. Disable unused services
+sudo systemctl disable bluetooth
+sudo systemctl disable cups</code></pre>
+
+    <hr>
+
+    <h2>🔐 Supply Chain Security</h2>
+
+    <p>ช่องโหว่ไม่ได้มาจาก code เราเสมอ — มาจาก <strong>dependencies</strong> ที่เราใช้!</p>
+
+    <pre><code># 1. Pin versions (อย่าใช้ latest!)
+# ❌ BAD
+FROM node:latest
+npm install express
+
+# ✅ GOOD
+FROM node:20.11.1-alpine3.19@sha256:abc123...
+npm install express@4.18.2
+
+# 2. Lock files — commit เสมอ!
+# package-lock.json (Node.js)
+# Pipfile.lock (Python)
+# go.sum (Go)
+# Gemfile.lock (Ruby)
+
+# 3. npm audit / pip audit
+npm audit --production
+pip audit
+
+# 4. Dependabot (GitHub)
+# .github/dependabot.yml
+version: 2
+updates:
+  - package-ecosystem: "npm"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    open-pull-requests-limit: 10
+
+# 5. ตรวจสอบ package ก่อนติดตั้ง
+npm info suspicious-package
+npx is-my-node-vulnerable</code></pre>
+
+    <hr>
+
+    <h2>📋 Security Checklist สำหรับ DevOps</h2>
+
+    <h4>🔐 Secrets</h4>
+    <ul>
+      <li>☐ ไม่มี secrets ใน code/Git</li>
+      <li>☐ ใช้ Vault / Secrets Manager</li>
+      <li>☐ เปิด Git secret scanning</li>
+      <li>☐ Rotate secrets เป็นประจำ</li>
+    </ul>
+
+    <h4>🐳 Containers</h4>
+    <ul>
+      <li>☐ ไม่รัน container เป็น root</li>
+      <li>☐ ใช้ minimal base image (Alpine)</li>
+      <li>☐ Pin image versions + digest</li>
+      <li>☐ Scan images ก่อน deploy</li>
+    </ul>
+
+    <h4>🌐 Network</h4>
+    <ul>
+      <li>☐ HTTPS ทุก endpoint (Let's Encrypt)</li>
+      <li>☐ Security headers ครบ</li>
+      <li>☐ Firewall — เปิดเฉพาะ port ที่จำเป็น</li>
+      <li>☐ Database ไม่เปิด public</li>
+    </ul>
+
+    <h4>🔑 Access</h4>
+    <ul>
+      <li>☐ SSH key only (ปิด password)</li>
+      <li>☐ ปิด root login</li>
+      <li>☐ MFA ทุก service (GitHub, AWS, etc.)</li>
+      <li>☐ Least privilege — ให้สิทธิ์เท่าที่จำเป็น</li>
+    </ul>
+
+    <h4>🔄 CI/CD</h4>
+    <ul>
+      <li>☐ SAST + SCA ใน pipeline</li>
+      <li>☐ Image scan ก่อน push</li>
+      <li>☐ IaC scan (tfsec, Checkov)</li>
+      <li>☐ Signed commits + artifacts</li>
+    </ul>
+
+    <h4>📊 Monitoring</h4>
+    <ul>
+      <li>☐ Audit logging ทุก action สำคัญ</li>
+      <li>☐ Alert เมื่อ login ผิดพลาดหลายครั้ง</li>
+      <li>☐ Monitor CVE ใน dependencies</li>
+      <li>☐ Incident response plan พร้อม</li>
+    </ul>
+
+    <hr>
+
+    <h2>สรุป</h2>
+
+    <ul>
+      <li><strong>DevSecOps</strong> = ฝัง security ในทุกขั้นตอน ไม่ใช่แค่ตอนท้าย (Shift Left)</li>
+      <li><strong>OWASP Top 10</strong> = ช่องโหว่ที่พบบ่อยสุด — ต้องรู้และป้องกัน</li>
+      <li><strong>Secrets</strong> = อย่าเก็บใน code! ใช้ Vault, Secrets Manager, environment variables</li>
+      <li><strong>Container Security</strong> = non-root, minimal image, scan ด้วย Trivy</li>
+      <li><strong>SSL/TLS</strong> = HTTPS ทุก endpoint + security headers ครบ</li>
+      <li><strong>CI/CD Security</strong> = SAST + SCA + image scan + secret scan ใน pipeline</li>
+      <li><strong>Supply Chain</strong> = pin versions, lock files, Dependabot</li>
+      <li><strong>Server Hardening</strong> = firewall, fail2ban, no root, auto updates 🔐🐕</li>
+    </ul>
+
+    <div class="post-series-footer">
+      🎉 ครบ 10 โพสต์! DevOps & Vibe Coding 2026 Series Complete! 🚀<br>
+      บทความจากซีรีส์ DevOps & Vibe Coding 2026
+    </div>
+
+  </article>
+
+  <!-- Post Navigation -->
+  <div class="post-nav">
+    <a href="linux-command-line.html" class="post-nav__link">
+      <div class="post-nav__dir">← Previous</div>
+      <div class="post-nav__title">Linux & Shell Essentials — พื้นฐานที่ DevOps ต้องรู้</div>
+    </a>
+  </div>
+
+  <footer class="blog-footer">
+    <a href="./">← Back to Blog</a>
+    <span>© 2025 Anirach Mingkhwan — Associate Professor, KMUTNB</span>
+  </footer>
+
+</body>
+</html>
