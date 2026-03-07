@@ -1,0 +1,752 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Monitoring & Observability — รู้ทุกอย่างที่เกิดขึ้นใน System | Anirach Mingkhwan</title>
+  <meta name="description" content="เรียนรู้ Monitoring & Observability ตั้งแต่ Metrics, Logs, Traces ไปจนถึง Prometheus, Grafana, ELK Stack และการตั้ง Alert">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --navy: #0f172a; --blue: #6366f1; --blue-dark: #4f46e5; --blue-light: #818cf8;
+      --slate: #334155; --slate-light: #64748b; --gray: #94a3b8;
+      --bg: #f8fafc; --white: #ffffff; --code-bg: #1e293b;
+      --font: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+      --mono: 'JetBrains Mono', 'Fira Code', monospace;
+    }
+    html { scroll-behavior: smooth; }
+    body {
+      font-family: var(--font); font-size: 17px; line-height: 1.8;
+      color: var(--slate); background: var(--bg); -webkit-font-smoothing: antialiased;
+    }
+    .blog-nav {
+      position: fixed; top: 0; left: 0; right: 0; z-index: 100;
+      background: rgba(248,250,252,0.85); backdrop-filter: blur(20px);
+      border-bottom: 1px solid rgba(0,0,0,0.05);
+    }
+    .blog-nav__inner {
+      max-width: 860px; margin: 0 auto; padding: 0 2rem; height: 56px;
+      display: flex; align-items: center; justify-content: space-between;
+    }
+    .blog-nav__back {
+      font-size: 0.85rem; font-weight: 500; color: var(--blue);
+      text-decoration: none; display: flex; align-items: center; gap: 0.4rem;
+    }
+    .blog-nav__back:hover { color: #4f46e5; }
+    .blog-nav__title {
+      font-size: 0.85rem; font-weight: 600; color: var(--navy);
+      overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 50%;
+    }
+    .post-hero {
+      padding: 8rem 2rem 3rem;
+      background: linear-gradient(135deg, #e8f0fe 0%, #ddd6fe 50%, #c7d2fe 100%);
+      text-align: center;
+    }
+    .post-hero__tags { display: flex; gap: 0.5rem; justify-content: center; margin-bottom: 1.25rem; }
+    .post-hero__tag {
+      font-size: 0.7rem; font-weight: 600; text-transform: uppercase;
+      letter-spacing: 0.1em; color: var(--blue);
+      background: rgba(99,102,241,0.1); padding: 0.3rem 0.75rem; border-radius: 20px;
+    }
+    .post-hero__title {
+      font-size: clamp(1.8rem, 5vw, 3rem); font-weight: 800;
+      color: var(--navy); line-height: 1.2; margin-bottom: 1rem;
+      max-width: 720px; margin-left: auto; margin-right: auto;
+    }
+    .post-hero__meta {
+      font-size: 0.85rem; color: var(--slate-light);
+      display: flex; align-items: center; justify-content: center; gap: 1.5rem;
+    }
+    .post-hero__series { font-weight: 600; color: var(--blue); }
+    .post-hero__cover {
+      max-width: 520px; margin: 2.5rem auto 0;
+      border-radius: 16px; overflow: hidden;
+      box-shadow: 0 20px 60px rgba(99,102,241,0.15);
+    }
+    .post-hero__cover img { width: 100%; display: block; }
+    .post-body { max-width: 720px; margin: 0 auto; padding: 3rem 2rem 6rem; }
+    .post-body h2 {
+      font-size: 1.6rem; font-weight: 800; color: var(--navy);
+      margin: 3rem 0 1rem; padding-bottom: 0.5rem;
+      border-bottom: 2px solid rgba(99,102,241,0.15);
+    }
+    .post-body h3 { font-size: 1.25rem; font-weight: 700; color: var(--navy); margin: 2.25rem 0 0.75rem; }
+    .post-body h4 { font-size: 1.05rem; font-weight: 700; color: var(--navy); margin: 1.75rem 0 0.6rem; }
+    .post-body p { margin-bottom: 1.25rem; }
+    .post-body strong { font-weight: 700; color: var(--navy); }
+    .post-body a { color: var(--blue); text-decoration: underline; text-decoration-thickness: 1px; text-underline-offset: 2px; }
+    .post-body pre {
+      background: var(--code-bg); border-radius: 12px; padding: 1.5rem;
+      margin: 1.25rem 0 1.5rem; overflow-x: auto; border: 1px solid rgba(255,255,255,0.05);
+    }
+    .post-body pre code {
+      font-family: var(--mono); font-size: 0.85rem; color: #e2e8f0; line-height: 1.7;
+    }
+    .post-body code {
+      font-family: var(--mono); font-size: 0.88em;
+      background: rgba(99,102,241,0.08); color: #4f46e5;
+      padding: 0.15em 0.45em; border-radius: 5px;
+    }
+    .post-body pre code { background: none; color: #e2e8f0; padding: 0; }
+    .post-body ul, .post-body ol { margin: 0.5rem 0 1.25rem 1.5rem; }
+    .post-body li { margin-bottom: 0.4rem; }
+    .post-body table { width: 100%; border-collapse: collapse; margin: 1.25rem 0 1.5rem; font-size: 0.9rem; }
+    .post-body th {
+      background: rgba(99,102,241,0.06); font-weight: 700; color: var(--navy);
+      padding: 0.75rem 1rem; text-align: left; border-bottom: 2px solid rgba(99,102,241,0.15);
+    }
+    .post-body td { padding: 0.65rem 1rem; border-bottom: 1px solid #e2e8f0; }
+    .post-body blockquote, .tip {
+      background: rgba(99,102,241,0.06); border-left: 4px solid var(--blue);
+      padding: 1rem 1.25rem; border-radius: 0 10px 10px 0;
+      margin: 1.25rem 0; font-size: 0.95rem; color: var(--navy);
+    }
+    .post-body hr {
+      border: none; height: 1px;
+      background: linear-gradient(90deg, transparent, rgba(99,102,241,0.2), transparent);
+      margin: 3rem 0;
+    }
+    .post-series-footer {
+      text-align: center; font-size: 0.85rem; color: var(--gray);
+      font-style: italic; margin-top: 2rem; padding-top: 2rem; border-top: 1px solid #e2e8f0;
+    }
+    .post-nav { max-width: 720px; margin: 0 auto; padding: 0 2rem 3rem; display: flex; gap: 1.5rem; flex-wrap: wrap; }
+    .post-nav__link {
+      flex: 1; min-width: 200px; padding: 1.25rem 1.5rem; border-radius: 12px;
+      background: rgba(255,255,255,0.85); backdrop-filter: blur(16px);
+      border: 1px solid rgba(255,255,255,0.6); box-shadow: 0 4px 16px rgba(0,0,0,0.05);
+      text-decoration: none; color: inherit; transition: transform 0.2s, box-shadow 0.2s;
+    }
+    .post-nav__link:hover { transform: translateY(-2px); box-shadow: 0 8px 24px rgba(99,102,241,0.1); }
+    .post-nav__dir { font-size: 0.75rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.1em; color: var(--blue); margin-bottom: 0.35rem; }
+    .post-nav__title { font-size: 0.9rem; font-weight: 600; color: var(--navy); line-height: 1.4; }
+    .blog-footer { background: var(--navy); padding: 2rem 0; text-align: center; }
+    .blog-footer a { color: var(--blue-light); text-decoration: none; font-weight: 600; font-size: 0.9rem; }
+    .blog-footer span { color: var(--gray); font-size: 0.8rem; display: block; margin-top: 0.4rem; }
+
+    /* ── Diagrams ── */
+    .flow-diagram {
+      display: flex; align-items: center; justify-content: center;
+      gap: 0.5rem; flex-wrap: wrap; margin: 1.5rem 0 2rem;
+      padding: 1.5rem; background: rgba(99,102,241,0.04); border-radius: 12px;
+    }
+    .flow-step {
+      text-align: center; padding: 0.75rem 1.25rem;
+      background: white; border-radius: 10px;
+      border: 1.5px solid rgba(99,102,241,0.15);
+      box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+    }
+    .flow-step__title { font-size: 0.9rem; font-weight: 700; color: var(--navy); }
+    .flow-step__sub { font-size: 0.72rem; color: var(--gray); margin-top: 0.15rem; }
+    .flow-arrow { font-size: 1.2rem; color: var(--blue); font-weight: 700; }
+    .arch-diagram { margin: 1.5rem 0 2rem; font-family: var(--font); }
+    .arch-box {
+      border: 2px solid rgba(99,102,241,0.25); border-radius: 12px; padding: 1.25rem;
+      background: linear-gradient(135deg, rgba(99,102,241,0.03), rgba(99,102,241,0.06));
+    }
+    .arch-label {
+      font-size: 0.75rem; font-weight: 700; text-transform: uppercase;
+      letter-spacing: 0.1em; color: var(--blue); text-align: center; margin-bottom: 0.75rem;
+    }
+    .arch-row { display: flex; gap: 0.75rem; justify-content: center; flex-wrap: wrap; margin-bottom: 0.75rem; }
+    .arch-container {
+      border: 2px solid rgba(99,102,241,0.2); border-radius: 10px;
+      padding: 0.75rem; background: rgba(238,242,255,0.8); min-width: 120px; text-align: center;
+    }
+    .arch-item {
+      font-size: 0.78rem; font-weight: 600; color: var(--navy);
+      padding: 0.3rem 0.6rem; margin: 0.25rem 0;
+      background: rgba(99,102,241,0.08); border-radius: 6px;
+    }
+    .arch-name { font-size: 0.72rem; font-weight: 700; color: var(--blue); margin-bottom: 0.35rem; }
+
+    /* Pillar cards */
+    .pillar-grid {
+      display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem;
+      margin: 1.5rem 0 2rem;
+    }
+    .pillar-card {
+      border: 2px solid rgba(99,102,241,0.15); border-radius: 12px;
+      padding: 1.25rem; text-align: center;
+      background: linear-gradient(135deg, rgba(255,255,255,0.8), rgba(238,242,255,0.4));
+    }
+    .pillar-card__icon { font-size: 2rem; margin-bottom: 0.5rem; }
+    .pillar-card__title { font-size: 1rem; font-weight: 700; color: var(--navy); margin-bottom: 0.35rem; }
+    .pillar-card__desc { font-size: 0.78rem; color: var(--slate-light); line-height: 1.5; }
+
+    /* Alert severity */
+    .alert-badge {
+      display: inline-block; font-family: var(--mono); font-size: 0.78rem; font-weight: 700;
+      padding: 0.2rem 0.6rem; border-radius: 6px; margin-right: 0.3rem;
+    }
+    .alert-badge--critical { background: rgba(239,68,68,0.12); color: #dc2626; }
+    .alert-badge--warning { background: rgba(245,158,11,0.12); color: #d97706; }
+    .alert-badge--info { background: rgba(59,130,246,0.12); color: #2563eb; }
+
+    @media (max-width: 600px) {
+      .post-hero { padding: 7rem 1.25rem 2.5rem; }
+      .post-body { padding: 2rem 1.25rem 4rem; }
+      .post-body pre { padding: 1rem; border-radius: 8px; }
+      .post-hero__meta { flex-direction: column; gap: 0.4rem; }
+      .post-nav { padding: 0 1.25rem 3rem; }
+      .flow-diagram { flex-direction: column; }
+      .pillar-grid { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+
+  <nav class="blog-nav">
+    <div class="blog-nav__inner">
+      <a href="./" class="blog-nav__back">‹ Blog</a>
+      <div class="blog-nav__title">Monitoring & Observability</div>
+    </div>
+  </nav>
+
+  <header class="post-hero">
+    <div class="post-hero__tags">
+      <span class="post-hero__tag">Monitoring</span>
+      <span class="post-hero__tag">DevOps</span>
+      <span class="post-hero__tag">Observability</span>
+    </div>
+    <h1 class="post-hero__title">Monitoring & Observability — รู้ทุกอย่างที่เกิดขึ้นใน System</h1>
+    <div class="post-hero__meta">
+      <span>By <strong>Anirach Mingkhwan</strong></span>
+      <span class="post-hero__series">DevOps & Vibe Coding 2026</span>
+    </div>
+    <div class="post-hero__cover">
+      <img src="../images/monitoring-cover.jpg" alt="DevOps Engineer — dog monitoring dashboards">
+    </div>
+  </header>
+
+  <article class="post-body">
+
+    <p>จากโพสต์ที่แล้วเราเรียนรู้ IaC — ใช้ Terraform สร้าง infrastructure และ Ansible ตั้งค่า server อัตโนมัติ</p>
+
+    <p>แต่หลังจาก deploy ขึ้น production แล้ว... <strong>จะรู้ได้ยังไงว่า app ทำงานปกติ? Server จะล่มตอนไหน? User กำลังเจอ error อะไร?</strong> 🔍</p>
+
+    <p>นี่คือที่มาของ <strong>Monitoring & Observability</strong> — ระบบที่ทำให้เรา "มองเห็น" ทุกอย่างที่เกิดขึ้นข้างใน เหมือน DevOps Engineer ที่นั่งจ้องจอ dashboard ตลอดเวลา 🐕‍🦺📊</p>
+
+    <hr>
+
+    <h2>Monitoring vs Observability — ต่างกันยังไง?</h2>
+
+    <table>
+      <thead>
+        <tr>
+          <th>Monitoring</th>
+          <th>Observability</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>ตอบว่า <strong>"มีปัญหามั้ย?"</strong></td>
+          <td>ตอบว่า <strong>"ทำไมถึงมีปัญหา?"</strong></td>
+        </tr>
+        <tr>
+          <td>ตรวจสิ่งที่เรา <strong>รู้ล่วงหน้า</strong></td>
+          <td>หาสิ่งที่เรา <strong>ไม่เคยคิดถึง</strong></td>
+        </tr>
+        <tr>
+          <td>Dashboard + Alerts</td>
+          <td>Explore + Drill-down + Correlate</td>
+        </tr>
+        <tr>
+          <td>CPU สูง → แจ้งเตือน</td>
+          <td>ทำไม CPU สูง? → trace → พบ query ช้า</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <blockquote>
+      <strong>💡 จำง่ายๆ:</strong> Monitoring = ติดกล้องวงจรปิด | Observability = มีนักสืบวิเคราะห์ภาพ
+    </blockquote>
+
+    <hr>
+
+    <h2>3 Pillars of Observability</h2>
+
+    <p>ระบบ Observability ที่ดีต้องมีข้อมูล 3 ประเภท:</p>
+
+    <div class="pillar-grid">
+      <div class="pillar-card">
+        <div class="pillar-card__icon">📊</div>
+        <div class="pillar-card__title">Metrics</div>
+        <div class="pillar-card__desc">ตัวเลขที่วัดได้ เช่น CPU %, memory, request/sec, error rate</div>
+      </div>
+      <div class="pillar-card">
+        <div class="pillar-card__icon">📝</div>
+        <div class="pillar-card__title">Logs</div>
+        <div class="pillar-card__desc">บันทึกเหตุการณ์ เช่น error messages, access logs, debug info</div>
+      </div>
+      <div class="pillar-card">
+        <div class="pillar-card__icon">🔗</div>
+        <div class="pillar-card__title">Traces</div>
+        <div class="pillar-card__desc">ติดตาม request ผ่านทุก service ว่าช้าตรงไหน</div>
+      </div>
+    </div>
+
+    <hr>
+
+    <h2>Pillar 1: Metrics — ตัวเลขที่ต้องจับตา</h2>
+
+    <h3>System Metrics</h3>
+    <ul>
+      <li><strong>CPU Usage</strong> — เครื่องทำงานหนักแค่ไหน</li>
+      <li><strong>Memory Usage</strong> — RAM เหลือเท่าไหร่</li>
+      <li><strong>Disk I/O</strong> — อ่าน/เขียน disk เร็วแค่ไหน</li>
+      <li><strong>Network I/O</strong> — bandwidth ใช้ไปเท่าไหร่</li>
+    </ul>
+
+    <h3>Application Metrics (RED Method)</h3>
+    <ul>
+      <li><strong>Rate</strong> — จำนวน request/sec</li>
+      <li><strong>Errors</strong> — เปอร์เซ็นต์ error (5xx)</li>
+      <li><strong>Duration</strong> — response time (p50, p95, p99)</li>
+    </ul>
+
+    <h3>Business Metrics</h3>
+    <ul>
+      <li><strong>Active Users</strong> — คนใช้งานอยู่กี่คน</li>
+      <li><strong>Orders/min</strong> — คำสั่งซื้อต่อนาที</li>
+      <li><strong>Revenue</strong> — รายได้ real-time</li>
+    </ul>
+
+    <blockquote>
+      <strong>💡 RED Method:</strong> ใช้กับ services (Rate, Errors, Duration)<br>
+      <strong>USE Method:</strong> ใช้กับ resources (Utilization, Saturation, Errors)
+    </blockquote>
+
+    <hr>
+
+    <h2>Prometheus + Grafana — Metrics Stack ยอดนิยม</h2>
+
+    <div class="flow-diagram">
+      <div class="flow-step">
+        <div class="flow-step__title">🎯 App</div>
+        <div class="flow-step__sub">expose /metrics</div>
+      </div>
+      <span class="flow-arrow">→</span>
+      <div class="flow-step">
+        <div class="flow-step__title">📦 Prometheus</div>
+        <div class="flow-step__sub">scrape + store</div>
+      </div>
+      <span class="flow-arrow">→</span>
+      <div class="flow-step">
+        <div class="flow-step__title">📊 Grafana</div>
+        <div class="flow-step__sub">visualize + alert</div>
+      </div>
+    </div>
+
+    <h3>ตั้งค่า Prometheus</h3>
+
+    <p>ไฟล์ <code>prometheus.yml</code>:</p>
+
+    <pre><code>global:
+  scrape_interval: 15s        # ดึง metrics ทุก 15 วินาที
+
+scrape_configs:
+  # Monitor ตัว Prometheus เอง
+  - job_name: 'prometheus'
+    static_configs:
+      - targets: ['localhost:9090']
+
+  # Monitor Node (เครื่อง server)
+  - job_name: 'node'
+    static_configs:
+      - targets:
+        - 'server1:9100'
+        - 'server2:9100'
+        - 'server3:9100'
+
+  # Monitor App
+  - job_name: 'myapp'
+    metrics_path: '/metrics'
+    static_configs:
+      - targets: ['app:3000']</code></pre>
+
+    <h3>Docker Compose สำหรับ Monitoring Stack</h3>
+
+    <pre><code>version: '3.8'
+services:
+  prometheus:
+    image: prom/prometheus:latest
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml
+      - prometheus_data:/prometheus
+
+  grafana:
+    image: grafana/grafana:latest
+    ports:
+      - "3001:3000"
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=secret
+    volumes:
+      - grafana_data:/var/lib/grafana
+
+  node-exporter:
+    image: prom/node-exporter:latest
+    ports:
+      - "9100:9100"
+    volumes:
+      - /proc:/host/proc:ro
+      - /sys:/host/sys:ro
+
+volumes:
+  prometheus_data:
+  grafana_data:</code></pre>
+
+    <pre><code># รัน monitoring stack
+docker compose up -d
+
+# เข้า Prometheus: http://localhost:9090
+# เข้า Grafana:    http://localhost:3001 (admin/secret)</code></pre>
+
+    <h3>PromQL — Query ข้อมูลจาก Prometheus</h3>
+
+    <pre><code># CPU usage เฉลี่ย 5 นาที
+100 - (avg by(instance) (rate(node_cpu_seconds_total{mode="idle"}[5m])) * 100)
+
+# Request rate ต่อวินาที
+rate(http_requests_total[5m])
+
+# Error rate (%)
+rate(http_requests_total{status=~"5.."}[5m]) / rate(http_requests_total[5m]) * 100
+
+# 95th percentile response time
+histogram_quantile(0.95, rate(http_request_duration_seconds_bucket[5m]))
+
+# Memory usage (%)
+(1 - node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes) * 100</code></pre>
+
+    <hr>
+
+    <h2>Pillar 2: Logs — บันทึกเหตุการณ์</h2>
+
+    <h3>Structured Logging — ดีกว่า plain text!</h3>
+
+    <pre><code>// ❌ Bad — ยากต่อการ parse
+console.log("User login failed for user123");
+
+// ✅ Good — structured JSON
+logger.error({
+  event: "login_failed",
+  userId: "user123",
+  reason: "invalid_password",
+  ip: "203.0.113.50",
+  timestamp: "2026-03-07T09:00:00Z"
+});</code></pre>
+
+    <h3>Log Levels</h3>
+
+    <table>
+      <thead>
+        <tr>
+          <th>Level</th>
+          <th>ใช้เมื่อ</th>
+          <th>ตัวอย่าง</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><span class="alert-badge alert-badge--critical">ERROR</span></td>
+          <td>เกิดข้อผิดพลาดจริง</td>
+          <td>Database connection failed</td>
+        </tr>
+        <tr>
+          <td><span class="alert-badge alert-badge--warning">WARN</span></td>
+          <td>อาจมีปัญหาในอนาคต</td>
+          <td>Disk usage > 80%</td>
+        </tr>
+        <tr>
+          <td><span class="alert-badge alert-badge--info">INFO</span></td>
+          <td>เหตุการณ์ปกติที่สำคัญ</td>
+          <td>Server started on port 3000</td>
+        </tr>
+        <tr>
+          <td><code>DEBUG</code></td>
+          <td>รายละเอียดสำหรับ debug</td>
+          <td>Query result: 42 rows</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <h3>ELK Stack — Centralized Logging</h3>
+
+    <div class="flow-diagram">
+      <div class="flow-step">
+        <div class="flow-step__title">📱 Apps</div>
+        <div class="flow-step__sub">ส่ง logs</div>
+      </div>
+      <span class="flow-arrow">→</span>
+      <div class="flow-step">
+        <div class="flow-step__title">🚛 Logstash</div>
+        <div class="flow-step__sub">collect + transform</div>
+      </div>
+      <span class="flow-arrow">→</span>
+      <div class="flow-step">
+        <div class="flow-step__title">🔍 Elasticsearch</div>
+        <div class="flow-step__sub">store + search</div>
+      </div>
+      <span class="flow-arrow">→</span>
+      <div class="flow-step">
+        <div class="flow-step__title">📊 Kibana</div>
+        <div class="flow-step__sub">visualize + explore</div>
+      </div>
+    </div>
+
+    <p>ทางเลือกที่เบากว่า: <strong>Loki + Promtail + Grafana</strong> (ใช้ Grafana เดิมได้เลย!)</p>
+
+    <pre><code># Loki + Promtail Docker Compose
+services:
+  loki:
+    image: grafana/loki:latest
+    ports:
+      - "3100:3100"
+
+  promtail:
+    image: grafana/promtail:latest
+    volumes:
+      - /var/log:/var/log:ro
+      - ./promtail.yml:/etc/promtail/config.yml</code></pre>
+
+    <hr>
+
+    <h2>Pillar 3: Traces — ติดตาม Request</h2>
+
+    <p>เมื่อ 1 request ต้องผ่านหลาย services (microservices) เราจะรู้ได้ยังไงว่า <strong>ช้าตรงไหน?</strong></p>
+
+    <div class="flow-diagram">
+      <div class="flow-step">
+        <div class="flow-step__title">🌐 API Gateway</div>
+        <div class="flow-step__sub">2ms</div>
+      </div>
+      <span class="flow-arrow">→</span>
+      <div class="flow-step">
+        <div class="flow-step__title">👤 User Service</div>
+        <div class="flow-step__sub">15ms</div>
+      </div>
+      <span class="flow-arrow">→</span>
+      <div class="flow-step" style="border-color: rgba(239,68,68,0.4); background: rgba(239,68,68,0.04);">
+        <div class="flow-step__title">💳 Payment Service</div>
+        <div class="flow-step__sub" style="color: #dc2626; font-weight: 600;">850ms ⚠️</div>
+      </div>
+      <span class="flow-arrow">→</span>
+      <div class="flow-step">
+        <div class="flow-step__title">📧 Email Service</div>
+        <div class="flow-step__sub">45ms</div>
+      </div>
+    </div>
+
+    <p>Trace ช่วยให้เห็นว่า <strong>Payment Service ใช้เวลา 850ms</strong> — นั่นคือ bottleneck!</p>
+
+    <h3>เครื่องมือ Tracing</h3>
+    <ul>
+      <li><strong><a href="https://www.jaegertracing.io/" target="_blank">Jaeger</a></strong> — open-source, จาก Uber</li>
+      <li><strong><a href="https://zipkin.io/" target="_blank">Zipkin</a></strong> — open-source, จาก Twitter</li>
+      <li><strong><a href="https://opentelemetry.io/" target="_blank">OpenTelemetry</a></strong> — standard ใหม่ (รวม metrics + logs + traces)</li>
+      <li><strong>Datadog APM / New Relic</strong> — commercial (ง่ายแต่แพง)</li>
+    </ul>
+
+    <pre><code>// OpenTelemetry ตัวอย่าง (Node.js)
+const { trace } = require('@opentelemetry/api');
+
+const tracer = trace.getTracer('my-service');
+
+app.get('/api/checkout', async (req, res) => {
+  const span = tracer.startSpan('checkout');
+
+  try {
+    // แต่ละขั้นตอนมี child span
+    const userSpan = tracer.startSpan('get-user', { parent: span });
+    const user = await getUser(req.userId);
+    userSpan.end();
+
+    const paySpan = tracer.startSpan('process-payment', { parent: span });
+    await processPayment(user, req.amount);
+    paySpan.end();
+
+    res.json({ status: 'success' });
+  } catch (err) {
+    span.setStatus({ code: 2, message: err.message });
+    res.status(500).json({ error: err.message });
+  } finally {
+    span.end();
+  }
+});</code></pre>
+
+    <hr>
+
+    <h2>Alerting — แจ้งเตือนก่อนพัง</h2>
+
+    <p>Dashboard สวยแค่ไหนก็ไม่ช่วย <strong>ถ้าไม่มีใครดู</strong> — ต้องมี Alert!</p>
+
+    <h3>Alert Rules (Prometheus)</h3>
+
+    <pre><code># alert-rules.yml
+groups:
+  - name: critical
+    rules:
+      # Server down
+      - alert: InstanceDown
+        expr: up == 0
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "{{ $labels.instance }} is down!"
+
+      # CPU สูงเกิน 90% นาน 5 นาที
+      - alert: HighCPU
+        expr: 100 - (avg by(instance) (rate(node_cpu_seconds_total{mode="idle"}[5m])) * 100) > 90
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "CPU > 90% on {{ $labels.instance }}"
+
+      # Error rate สูงเกิน 5%
+      - alert: HighErrorRate
+        expr: rate(http_requests_total{status=~"5.."}[5m]) / rate(http_requests_total[5m]) * 100 > 5
+        for: 2m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Error rate > 5% on {{ $labels.job }}"
+
+      # Disk เหลือน้อยกว่า 10%
+      - alert: DiskSpaceLow
+        expr: (node_filesystem_avail_bytes / node_filesystem_size_bytes) * 100 < 10
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Disk < 10% on {{ $labels.instance }}"</code></pre>
+
+    <h3>Alert ส่งไปไหน? (Alertmanager)</h3>
+
+    <pre><code># alertmanager.yml
+route:
+  receiver: 'team-slack'
+  routes:
+    - match:
+        severity: critical
+      receiver: 'pagerduty'     # Critical → ปลุกคนมาแก้!
+    - match:
+        severity: warning
+      receiver: 'team-slack'    # Warning → แจ้งใน Slack
+
+receivers:
+  - name: 'team-slack'
+    slack_configs:
+      - api_url: 'https://hooks.slack.com/services/xxx'
+        channel: '#alerts'
+        title: '🚨 {{ .GroupLabels.alertname }}'
+        text: '{{ .CommonAnnotations.summary }}'
+
+  - name: 'pagerduty'
+    pagerduty_configs:
+      - service_key: 'your-pagerduty-key'</code></pre>
+
+    <blockquote>
+      <strong>🐕 Alert Fatigue:</strong> อย่าตั้ง alert ทุกอย่าง! ถ้าแจ้งเตือนเยอะเกิน คนจะเพิกเฉย → Critical = ต้อง action ทันที | Warning = ดูภายในวัน | Info = ดูเมื่อว่าง
+    </blockquote>
+
+    <hr>
+
+    <h2>Monitoring Stack ยอดนิยม</h2>
+
+    <table>
+      <thead>
+        <tr>
+          <th>Stack</th>
+          <th>ส่วนประกอบ</th>
+          <th>จุดเด่น</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><strong>PLG</strong></td>
+          <td>Prometheus + Loki + Grafana</td>
+          <td>Open-source, K8s friendly, ครบ 3 pillars</td>
+        </tr>
+        <tr>
+          <td><strong>ELK</strong></td>
+          <td>Elasticsearch + Logstash + Kibana</td>
+          <td>Log search ดีมาก, enterprise</td>
+        </tr>
+        <tr>
+          <td><strong>TIG</strong></td>
+          <td>Telegraf + InfluxDB + Grafana</td>
+          <td>IoT/time-series ดี</td>
+        </tr>
+        <tr>
+          <td><strong>Datadog</strong></td>
+          <td>All-in-one SaaS</td>
+          <td>ง่ายสุด แต่แพง</td>
+        </tr>
+        <tr>
+          <td><strong>New Relic</strong></td>
+          <td>All-in-one SaaS</td>
+          <td>APM ดี, free tier</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <hr>
+
+    <h2>4 Golden Signals (Google SRE)</h2>
+
+    <p>Google SRE แนะนำให้ monitor 4 สิ่งนี้เป็นหลัก:</p>
+
+    <ol>
+      <li><strong>Latency</strong> — ใช้เวลาตอบนานแค่ไหน? (p50, p95, p99)</li>
+      <li><strong>Traffic</strong> — มี request เข้ามากี่ครั้ง/วินาที?</li>
+      <li><strong>Errors</strong> — กี่ % ที่ error? (HTTP 5xx)</li>
+      <li><strong>Saturation</strong> — ระบบเต็มแค่ไหน? (CPU, memory, disk, queue)</li>
+    </ol>
+
+    <blockquote>
+      <strong>💡 SLO Tip:</strong> กำหนด <strong>SLO (Service Level Objective)</strong> เช่น "99.9% uptime" หรือ "p95 latency < 200ms" แล้ว monitor ว่าทำได้จริงมั้ย — อันนี้คือ <strong>SLI (Service Level Indicator)</strong>
+    </blockquote>
+
+    <hr>
+
+    <h2>สรุป</h2>
+
+    <ul>
+      <li><strong>Monitoring</strong> = "มีปัญหามั้ย?" | <strong>Observability</strong> = "ทำไมถึงมีปัญหา?"</li>
+      <li><strong>3 Pillars</strong> = Metrics (ตัวเลข) + Logs (บันทึก) + Traces (ติดตาม request)</li>
+      <li><strong>Prometheus + Grafana</strong> = metrics stack ยอดนิยม ใช้ PromQL query</li>
+      <li><strong>Loki / ELK</strong> = centralized logging — รวม log จากทุก server มาที่เดียว</li>
+      <li><strong>Jaeger / OpenTelemetry</strong> = distributed tracing หา bottleneck ใน microservices</li>
+      <li><strong>Alerting</strong> = แจ้งเตือนผ่าน Slack/PagerDuty — ระวัง alert fatigue!</li>
+      <li><strong>4 Golden Signals</strong> = Latency, Traffic, Errors, Saturation 📊🐕</li>
+    </ul>
+
+    <div class="post-series-footer">
+      บทความจากซีรีส์ DevOps & Vibe Coding 2026
+    </div>
+
+  </article>
+
+  <!-- Post Navigation -->
+  <div class="post-nav">
+    <a href="infrastructure-as-code.html" class="post-nav__link">
+      <div class="post-nav__dir">← Previous</div>
+      <div class="post-nav__title">Infrastructure as Code — จัดการ Server ด้วย Terraform & Ansible</div>
+    </a>
+  </div>
+
+  <footer class="blog-footer">
+    <a href="./">← Back to Blog</a>
+    <span>© 2025 Anirach Mingkhwan — Associate Professor, KMUTNB</span>
+  </footer>
+
+</body>
+</html>
