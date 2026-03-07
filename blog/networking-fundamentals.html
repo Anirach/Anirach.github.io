@@ -1,0 +1,730 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Networking พื้นฐานสำหรับ DevOps — รู้จักเครือข่ายก่อน Deploy | Anirach Mingkhwan</title>
+  <meta name="description" content="เรียนรู้ Networking พื้นฐานที่ DevOps ต้องรู้ ตั้งแต่ TCP/IP, DNS, Ports, Firewall ไปจนถึง Load Balancer และ Reverse Proxy">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --navy: #0f172a; --blue: #6366f1; --blue-dark: #4f46e5; --blue-light: #818cf8;
+      --slate: #334155; --slate-light: #64748b; --gray: #94a3b8;
+      --bg: #f8fafc; --white: #ffffff; --code-bg: #1e293b;
+      --font: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+      --mono: 'JetBrains Mono', 'Fira Code', monospace;
+    }
+    html { scroll-behavior: smooth; }
+    body {
+      font-family: var(--font); font-size: 17px; line-height: 1.8;
+      color: var(--slate); background: var(--bg); -webkit-font-smoothing: antialiased;
+    }
+    .blog-nav {
+      position: fixed; top: 0; left: 0; right: 0; z-index: 100;
+      background: rgba(248,250,252,0.85); backdrop-filter: blur(20px);
+      border-bottom: 1px solid rgba(0,0,0,0.05);
+    }
+    .blog-nav__inner {
+      max-width: 860px; margin: 0 auto; padding: 0 2rem; height: 56px;
+      display: flex; align-items: center; justify-content: space-between;
+    }
+    .blog-nav__back {
+      font-size: 0.85rem; font-weight: 500; color: var(--blue);
+      text-decoration: none; display: flex; align-items: center; gap: 0.4rem;
+    }
+    .blog-nav__back:hover { color: #4f46e5; }
+    .blog-nav__title {
+      font-size: 0.85rem; font-weight: 600; color: var(--navy);
+      overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 50%;
+    }
+    .post-hero {
+      padding: 8rem 2rem 3rem;
+      background: linear-gradient(135deg, #e8f0fe 0%, #ddd6fe 50%, #c7d2fe 100%);
+      text-align: center;
+    }
+    .post-hero__tags { display: flex; gap: 0.5rem; justify-content: center; margin-bottom: 1.25rem; }
+    .post-hero__tag {
+      font-size: 0.7rem; font-weight: 600; text-transform: uppercase;
+      letter-spacing: 0.1em; color: var(--blue);
+      background: rgba(99,102,241,0.1); padding: 0.3rem 0.75rem; border-radius: 20px;
+    }
+    .post-hero__title {
+      font-size: clamp(1.8rem, 5vw, 3rem); font-weight: 800;
+      color: var(--navy); line-height: 1.2; margin-bottom: 1rem;
+      max-width: 720px; margin-left: auto; margin-right: auto;
+    }
+    .post-hero__meta {
+      font-size: 0.85rem; color: var(--slate-light);
+      display: flex; align-items: center; justify-content: center; gap: 1.5rem;
+    }
+    .post-hero__series { font-weight: 600; color: var(--blue); }
+    .post-hero__cover {
+      max-width: 520px; margin: 2.5rem auto 0;
+      border-radius: 16px; overflow: hidden;
+      box-shadow: 0 20px 60px rgba(99,102,241,0.15);
+    }
+    .post-hero__cover img { width: 100%; display: block; }
+    .post-body { max-width: 720px; margin: 0 auto; padding: 3rem 2rem 6rem; }
+    .post-body h2 {
+      font-size: 1.6rem; font-weight: 800; color: var(--navy);
+      margin: 3rem 0 1rem; padding-bottom: 0.5rem;
+      border-bottom: 2px solid rgba(99,102,241,0.15);
+    }
+    .post-body h3 { font-size: 1.25rem; font-weight: 700; color: var(--navy); margin: 2.25rem 0 0.75rem; }
+    .post-body h4 { font-size: 1.05rem; font-weight: 700; color: var(--navy); margin: 1.75rem 0 0.6rem; }
+    .post-body p { margin-bottom: 1.25rem; }
+    .post-body strong { font-weight: 700; color: var(--navy); }
+    .post-body a { color: var(--blue); text-decoration: underline; text-decoration-thickness: 1px; text-underline-offset: 2px; }
+    .post-body pre {
+      background: var(--code-bg); border-radius: 12px; padding: 1.5rem;
+      margin: 1.25rem 0 1.5rem; overflow-x: auto; border: 1px solid rgba(255,255,255,0.05);
+    }
+    .post-body pre code {
+      font-family: var(--mono); font-size: 0.85rem; color: #e2e8f0; line-height: 1.7;
+    }
+    .post-body code {
+      font-family: var(--mono); font-size: 0.88em;
+      background: rgba(99,102,241,0.08); color: #4f46e5;
+      padding: 0.15em 0.45em; border-radius: 5px;
+    }
+    .post-body pre code { background: none; color: #e2e8f0; padding: 0; }
+    .post-body ul, .post-body ol { margin: 0.5rem 0 1.25rem 1.5rem; }
+    .post-body li { margin-bottom: 0.4rem; }
+    .post-body table { width: 100%; border-collapse: collapse; margin: 1.25rem 0 1.5rem; font-size: 0.9rem; }
+    .post-body th {
+      background: rgba(99,102,241,0.06); font-weight: 700; color: var(--navy);
+      padding: 0.75rem 1rem; text-align: left; border-bottom: 2px solid rgba(99,102,241,0.15);
+    }
+    .post-body td { padding: 0.65rem 1rem; border-bottom: 1px solid #e2e8f0; }
+    .post-body blockquote, .tip {
+      background: rgba(99,102,241,0.06); border-left: 4px solid var(--blue);
+      padding: 1rem 1.25rem; border-radius: 0 10px 10px 0;
+      margin: 1.25rem 0; font-size: 0.95rem; color: var(--navy);
+    }
+    .post-body hr {
+      border: none; height: 1px;
+      background: linear-gradient(90deg, transparent, rgba(99,102,241,0.2), transparent);
+      margin: 3rem 0;
+    }
+    .post-series-footer {
+      text-align: center; font-size: 0.85rem; color: var(--gray);
+      font-style: italic; margin-top: 2rem; padding-top: 2rem; border-top: 1px solid #e2e8f0;
+    }
+    .post-nav { max-width: 720px; margin: 0 auto; padding: 0 2rem 3rem; display: flex; gap: 1.5rem; flex-wrap: wrap; }
+    .post-nav__link {
+      flex: 1; min-width: 200px; padding: 1.25rem 1.5rem; border-radius: 12px;
+      background: rgba(255,255,255,0.85); backdrop-filter: blur(16px);
+      border: 1px solid rgba(255,255,255,0.6); box-shadow: 0 4px 16px rgba(0,0,0,0.05);
+      text-decoration: none; color: inherit; transition: transform 0.2s, box-shadow 0.2s;
+    }
+    .post-nav__link:hover { transform: translateY(-2px); box-shadow: 0 8px 24px rgba(99,102,241,0.1); }
+    .post-nav__dir { font-size: 0.75rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.1em; color: var(--blue); margin-bottom: 0.35rem; }
+    .post-nav__title { font-size: 0.9rem; font-weight: 600; color: var(--navy); line-height: 1.4; }
+    .blog-footer { background: var(--navy); padding: 2rem 0; text-align: center; }
+    .blog-footer a { color: var(--blue-light); text-decoration: none; font-weight: 600; font-size: 0.9rem; }
+    .blog-footer span { color: var(--gray); font-size: 0.8rem; display: block; margin-top: 0.4rem; }
+
+    /* ── Architecture / Flow Diagrams ── */
+    .arch-diagram { margin: 1.5rem 0 2rem; font-family: var(--font); }
+    .arch-box {
+      border: 2px solid rgba(99,102,241,0.25); border-radius: 12px; padding: 1.25rem;
+      background: linear-gradient(135deg, rgba(99,102,241,0.03), rgba(99,102,241,0.06));
+    }
+    .arch-label {
+      font-size: 0.75rem; font-weight: 700; text-transform: uppercase;
+      letter-spacing: 0.1em; color: var(--blue); text-align: center; margin-bottom: 0.75rem;
+    }
+    .arch-row { display: flex; gap: 0.75rem; justify-content: center; flex-wrap: wrap; margin-bottom: 0.75rem; }
+    .arch-container {
+      border: 2px solid rgba(99,102,241,0.2); border-radius: 10px;
+      padding: 0.75rem; background: rgba(238,242,255,0.8); min-width: 120px; text-align: center;
+    }
+    .arch-item {
+      font-size: 0.78rem; font-weight: 600; color: var(--navy);
+      padding: 0.3rem 0.6rem; margin: 0.25rem 0;
+      background: rgba(99,102,241,0.08); border-radius: 6px;
+    }
+    .arch-name { font-size: 0.72rem; font-weight: 700; color: var(--blue); margin-bottom: 0.35rem; }
+    .flow-diagram {
+      display: flex; align-items: center; justify-content: center;
+      gap: 0.5rem; flex-wrap: wrap; margin: 1.5rem 0 2rem;
+      padding: 1.5rem; background: rgba(99,102,241,0.04); border-radius: 12px;
+    }
+    .flow-step {
+      text-align: center; padding: 0.75rem 1.25rem;
+      background: white; border-radius: 10px;
+      border: 1.5px solid rgba(99,102,241,0.15);
+      box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+    }
+    .flow-step__title { font-size: 0.9rem; font-weight: 700; color: var(--navy); }
+    .flow-step__sub { font-size: 0.72rem; color: var(--gray); margin-top: 0.15rem; }
+    .flow-arrow { font-size: 1.2rem; color: var(--blue); font-weight: 700; }
+
+    /* ── Stack diagram ── */
+    .stack-diagram { margin: 1.5rem 0 2rem; }
+    .stack-layer {
+      padding: 0.75rem 1rem; text-align: center; font-size: 0.85rem; font-weight: 600;
+      border: 1.5px solid rgba(99,102,241,0.15);
+    }
+    .stack-layer:first-child { border-radius: 10px 10px 0 0; }
+    .stack-layer:last-child { border-radius: 0 0 10px 10px; }
+    .stack-layer--app { background: rgba(99,102,241,0.08); color: var(--blue); }
+    .stack-layer--transport { background: rgba(59,130,246,0.08); color: #2563eb; }
+    .stack-layer--network { background: rgba(34,197,94,0.06); color: #16a34a; }
+    .stack-layer--link { background: rgba(245,158,11,0.06); color: #d97706; }
+    .stack-layer--physical { background: rgba(239,68,68,0.06); color: #dc2626; }
+    .stack-layer__label { font-size: 0.7rem; color: var(--gray); font-weight: 400; margin-left: 0.5rem; }
+
+    /* ── Port badge ── */
+    .port-badge {
+      display: inline-block; font-family: var(--mono); font-size: 0.78rem; font-weight: 700;
+      padding: 0.2rem 0.6rem; border-radius: 6px;
+      background: rgba(99,102,241,0.1); color: var(--blue); margin-right: 0.3rem;
+    }
+
+    @media (max-width: 600px) {
+      .post-hero { padding: 7rem 1.25rem 2.5rem; }
+      .post-body { padding: 2rem 1.25rem 4rem; }
+      .post-body pre { padding: 1rem; border-radius: 8px; }
+      .post-hero__meta { flex-direction: column; gap: 0.4rem; }
+      .post-nav { padding: 0 1.25rem 3rem; }
+      .flow-diagram { flex-direction: column; }
+    }
+  </style>
+</head>
+<body>
+
+  <nav class="blog-nav">
+    <div class="blog-nav__inner">
+      <a href="./" class="blog-nav__back">‹ Blog</a>
+      <div class="blog-nav__title">Networking for DevOps</div>
+    </div>
+  </nav>
+
+  <header class="post-hero">
+    <div class="post-hero__tags">
+      <span class="post-hero__tag">Networking</span>
+      <span class="post-hero__tag">DevOps</span>
+      <span class="post-hero__tag">Infrastructure</span>
+    </div>
+    <h1 class="post-hero__title">Networking พื้นฐานสำหรับ DevOps — รู้จักเครือข่ายก่อน Deploy</h1>
+    <div class="post-hero__meta">
+      <span>By <strong>Anirach Mingkhwan</strong></span>
+      <span class="post-hero__series">DevOps & Vibe Coding 2026</span>
+    </div>
+    <div class="post-hero__cover">
+      <img src="../images/networking-cover.jpg" alt="Networking — engineer dog with server racks">
+    </div>
+  </header>
+
+  <article class="post-body">
+
+    <p>จากโพสต์ที่แล้วเราพูดถึง Kubernetes ว่าช่วยจัดการ container ให้ทำงานร่วมกันอย่างเป็นระบบ</p>
+
+    <p>แต่เคยสงสัยมั้ยว่า... <strong>container เหล่านั้น "คุยกัน" ยังไง? เว็บที่เรา deploy ส่งข้อมูลถึง user ได้อย่างไร?</strong> 🌐</p>
+
+    <p>คำตอบคือ <strong>Networking</strong> — พื้นฐานที่ DevOps ทุกคนต้องรู้ ก่อนจะ deploy อะไรขึ้น production ได้อย่างมั่นใจ 🐕‍🦺</p>
+
+    <hr>
+
+    <h2>TCP/IP Model — ภาษากลางของ Internet</h2>
+
+    <p>ทุกครั้งที่เราเปิดเว็บหรือส่งข้อมูล ข้อมูลจะเดินทางผ่าน <strong>4 ชั้น (layers)</strong> ของ TCP/IP model:</p>
+
+    <div class="stack-diagram">
+      <div class="stack-layer stack-layer--app">
+        🌐 Application Layer <span class="stack-layer__label">HTTP, HTTPS, DNS, SSH, FTP</span>
+      </div>
+      <div class="stack-layer stack-layer--transport">
+        📦 Transport Layer <span class="stack-layer__label">TCP, UDP</span>
+      </div>
+      <div class="stack-layer stack-layer--network">
+        🗺️ Network Layer <span class="stack-layer__label">IP, ICMP, Routing</span>
+      </div>
+      <div class="stack-layer stack-layer--link">
+        🔌 Link Layer <span class="stack-layer__label">Ethernet, Wi-Fi, MAC Address</span>
+      </div>
+    </div>
+
+    <blockquote>
+      <strong>💡 จำง่ายๆ:</strong> Application สร้างข้อมูล → Transport แบ่งเป็นชิ้น → Network หาเส้นทาง → Link ส่งผ่านสาย/ไร้สาย
+    </blockquote>
+
+    <h3>TCP vs UDP — ต่างกันยังไง?</h3>
+
+    <table>
+      <thead>
+        <tr>
+          <th>Feature</th>
+          <th>TCP</th>
+          <th>UDP</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>การเชื่อมต่อ</td>
+          <td>Connection-oriented (3-way handshake)</td>
+          <td>Connectionless</td>
+        </tr>
+        <tr>
+          <td>ความเชื่อถือได้</td>
+          <td>✅ รับประกันข้อมูลถึง</td>
+          <td>❌ ไม่รับประกัน</td>
+        </tr>
+        <tr>
+          <td>ลำดับข้อมูล</td>
+          <td>✅ เรียงลำดับ</td>
+          <td>❌ อาจสลับ</td>
+        </tr>
+        <tr>
+          <td>ความเร็ว</td>
+          <td>ช้ากว่า (overhead)</td>
+          <td>เร็วกว่า</td>
+        </tr>
+        <tr>
+          <td>ใช้กับ</td>
+          <td>HTTP, SSH, Email, Database</td>
+          <td>DNS, Video streaming, Gaming</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <hr>
+
+    <h2>IP Address — ที่อยู่บนโลก Internet</h2>
+
+    <p>ทุกอุปกรณ์บน network ต้องมี <strong>IP Address</strong> เหมือนบ้านต้องมีเลขที่อยู่:</p>
+
+    <h3>IPv4</h3>
+    <pre><code># รูปแบบ: 4 กลุ่ม, กลุ่มละ 0-255
+192.168.1.100      ← Private IP (ใช้ภายใน network)
+203.0.113.50       ← Public IP (ใช้บน internet)
+
+# ดู IP ของเครื่องตัวเอง
+ip addr show       # Linux
+ifconfig           # macOS
+ipconfig           # Windows</code></pre>
+
+    <h3>Private vs Public IP</h3>
+    <table>
+      <thead>
+        <tr>
+          <th>ประเภท</th>
+          <th>Range</th>
+          <th>ใช้ที่ไหน</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>Private</td>
+          <td><code>10.0.0.0/8</code>, <code>172.16.0.0/12</code>, <code>192.168.0.0/16</code></td>
+          <td>ภายใน LAN, Docker network</td>
+        </tr>
+        <tr>
+          <td>Public</td>
+          <td>ทุกอย่างที่เหลือ</td>
+          <td>บน Internet</td>
+        </tr>
+        <tr>
+          <td>Loopback</td>
+          <td><code>127.0.0.1</code> (localhost)</td>
+          <td>ตัวเครื่องเอง</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <blockquote>
+      <strong>💡 DevOps Tip:</strong> เวลา deploy app ถ้า bind ที่ <code>127.0.0.1</code> จะเข้าได้จากเครื่องเดียว ต้อง bind <code>0.0.0.0</code> ถึงจะเข้าจากภายนอกได้
+    </blockquote>
+
+    <hr>
+
+    <h2>Ports — ประตูของ Application</h2>
+
+    <p>IP Address บอกว่า "เครื่องไหน" แต่ <strong>Port</strong> บอกว่า "app ไหน" บนเครื่องนั้น:</p>
+
+    <table>
+      <thead>
+        <tr>
+          <th>Port</th>
+          <th>Service</th>
+          <th>คำอธิบาย</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><span class="port-badge">22</span></td>
+          <td>SSH</td>
+          <td>Remote login เข้าเครื่อง</td>
+        </tr>
+        <tr>
+          <td><span class="port-badge">80</span></td>
+          <td>HTTP</td>
+          <td>เว็บไซต์ (ไม่เข้ารหัส)</td>
+        </tr>
+        <tr>
+          <td><span class="port-badge">443</span></td>
+          <td>HTTPS</td>
+          <td>เว็บไซต์ (เข้ารหัส SSL/TLS)</td>
+        </tr>
+        <tr>
+          <td><span class="port-badge">3000</span></td>
+          <td>Dev Server</td>
+          <td>React, Next.js development</td>
+        </tr>
+        <tr>
+          <td><span class="port-badge">3306</span></td>
+          <td>MySQL</td>
+          <td>ฐานข้อมูล MySQL/MariaDB</td>
+        </tr>
+        <tr>
+          <td><span class="port-badge">5432</span></td>
+          <td>PostgreSQL</td>
+          <td>ฐานข้อมูล PostgreSQL</td>
+        </tr>
+        <tr>
+          <td><span class="port-badge">6379</span></td>
+          <td>Redis</td>
+          <td>Cache / Message queue</td>
+        </tr>
+        <tr>
+          <td><span class="port-badge">27017</span></td>
+          <td>MongoDB</td>
+          <td>ฐานข้อมูล NoSQL</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <pre><code># ดู port ที่กำลังใช้งาน
+sudo ss -tlnp       # Linux
+sudo lsof -i -P     # macOS
+netstat -an          # Windows
+
+# ตรวจว่า port เปิดอยู่มั้ย
+nc -zv server.com 443
+curl -I http://server.com:8080</code></pre>
+
+    <hr>
+
+    <h2>DNS — แปลงชื่อเป็น IP</h2>
+
+    <p>เราจำ <code>google.com</code> ได้ง่ายกว่า <code>142.250.199.46</code> — <strong>DNS</strong> ทำหน้าที่แปลงชื่อ domain เป็น IP address</p>
+
+    <div class="flow-diagram">
+      <div class="flow-step">
+        <div class="flow-step__title">🌐 Browser</div>
+        <div class="flow-step__sub">google.com</div>
+      </div>
+      <span class="flow-arrow">→</span>
+      <div class="flow-step">
+        <div class="flow-step__title">📖 DNS Resolver</div>
+        <div class="flow-step__sub">ถาม DNS Server</div>
+      </div>
+      <span class="flow-arrow">→</span>
+      <div class="flow-step">
+        <div class="flow-step__title">🏛️ Root → TLD → Auth</div>
+        <div class="flow-step__sub">ค้นหา IP</div>
+      </div>
+      <span class="flow-arrow">→</span>
+      <div class="flow-step">
+        <div class="flow-step__title">✅ 142.250.199.46</div>
+        <div class="flow-step__sub">ได้ IP แล้ว!</div>
+      </div>
+    </div>
+
+    <h3>DNS Record Types</h3>
+
+    <table>
+      <thead>
+        <tr>
+          <th>Record</th>
+          <th>หน้าที่</th>
+          <th>ตัวอย่าง</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><strong>A</strong></td>
+          <td>Domain → IPv4</td>
+          <td><code>example.com → 93.184.216.34</code></td>
+        </tr>
+        <tr>
+          <td><strong>AAAA</strong></td>
+          <td>Domain → IPv6</td>
+          <td><code>example.com → 2606:2800:...</code></td>
+        </tr>
+        <tr>
+          <td><strong>CNAME</strong></td>
+          <td>Alias ชี้ไป domain อื่น</td>
+          <td><code>www → example.com</code></td>
+        </tr>
+        <tr>
+          <td><strong>MX</strong></td>
+          <td>Mail server</td>
+          <td><code>example.com → mail.example.com</code></td>
+        </tr>
+        <tr>
+          <td><strong>NS</strong></td>
+          <td>Name server ที่ดูแล domain</td>
+          <td><code>ns1.cloudflare.com</code></td>
+        </tr>
+        <tr>
+          <td><strong>TXT</strong></td>
+          <td>ข้อความ (SPF, verification)</td>
+          <td><code>v=spf1 include:...</code></td>
+        </tr>
+      </tbody>
+    </table>
+
+    <pre><code># ดู DNS record
+dig example.com A
+dig example.com MX
+nslookup example.com
+
+# ตรวจว่า DNS propagate แล้วหรือยัง
+dig @8.8.8.8 mysite.com A      # ถาม Google DNS
+dig @1.1.1.1 mysite.com A      # ถาม Cloudflare DNS</code></pre>
+
+    <hr>
+
+    <h2>Firewall — กำแพงป้องกัน</h2>
+
+    <p><strong>Firewall</strong> คือตัวกรองที่ตัดสินว่า traffic ไหนเข้า-ออกได้ ไหนบล็อก:</p>
+
+    <pre><code># UFW (Ubuntu) — ง่ายที่สุด
+sudo ufw enable
+sudo ufw allow 22/tcp       # SSH
+sudo ufw allow 80/tcp       # HTTP
+sudo ufw allow 443/tcp      # HTTPS
+sudo ufw deny 3306/tcp      # บล็อก MySQL จากภายนอก
+sudo ufw status
+
+# iptables — ละเอียดกว่า
+sudo iptables -A INPUT -p tcp --dport 80 -j ACCEPT
+sudo iptables -A INPUT -p tcp --dport 3306 -s 10.0.0.0/8 -j ACCEPT
+sudo iptables -A INPUT -p tcp --dport 3306 -j DROP</code></pre>
+
+    <blockquote>
+      <strong>🐕 กฎเหล็ก:</strong> เปิดเฉพาะ port ที่จำเป็น! Database ports (3306, 5432, 27017) ไม่ควรเปิดให้ public
+    </blockquote>
+
+    <hr>
+
+    <h2>Load Balancer — กระจาย Traffic</h2>
+
+    <p>เมื่อ app มี traffic เยอะ เราใช้ <strong>Load Balancer</strong> กระจาย request ไปยังหลาย server:</p>
+
+    <div class="arch-diagram">
+      <div class="arch-box">
+        <div class="arch-label">Load Balancing Architecture</div>
+        <div class="arch-row">
+          <div class="arch-container" style="min-width: 100px;">
+            <div class="arch-name">Users</div>
+            <div class="arch-item">🌐 Client</div>
+          </div>
+        </div>
+        <div style="text-align: center; font-size: 1.2rem; color: var(--blue); font-weight: 700; margin: 0.5rem 0;">↓</div>
+        <div class="arch-row">
+          <div class="arch-container" style="background: rgba(99,102,241,0.12); min-width: 180px;">
+            <div class="arch-name">Load Balancer</div>
+            <div class="arch-item">Nginx / HAProxy / AWS ALB</div>
+          </div>
+        </div>
+        <div style="text-align: center; font-size: 1.2rem; color: var(--blue); font-weight: 700; margin: 0.5rem 0;">↓ ↓ ↓</div>
+        <div class="arch-row">
+          <div class="arch-container">
+            <div class="arch-name">Server 1</div>
+            <div class="arch-item">App Instance</div>
+          </div>
+          <div class="arch-container">
+            <div class="arch-name">Server 2</div>
+            <div class="arch-item">App Instance</div>
+          </div>
+          <div class="arch-container">
+            <div class="arch-name">Server 3</div>
+            <div class="arch-item">App Instance</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <h3>Load Balancing Strategies</h3>
+    <ul>
+      <li><strong>Round Robin</strong> — วนส่งทีละตัว (1 → 2 → 3 → 1 → ...)</li>
+      <li><strong>Least Connections</strong> — ส่งไปตัวที่ connection น้อยสุด</li>
+      <li><strong>IP Hash</strong> — user คนเดิมไป server เดิมเสมอ (sticky session)</li>
+      <li><strong>Weighted</strong> — server แรงกว่าได้ traffic มากกว่า</li>
+    </ul>
+
+    <hr>
+
+    <h2>Reverse Proxy — Nginx ตัวกลาง</h2>
+
+    <p><strong>Reverse Proxy</strong> รับ request จากภายนอกแล้วส่งต่อไปยัง app ข้างหลัง — ช่วยเรื่อง security, SSL, caching:</p>
+
+    <pre><code># /etc/nginx/sites-available/myapp
+server {
+    listen 80;
+    server_name myapp.com;
+
+    # Redirect HTTP → HTTPS
+    return 301 https://$host$request_uri;
+}
+
+server {
+    listen 443 ssl;
+    server_name myapp.com;
+
+    ssl_certificate     /etc/letsencrypt/live/myapp.com/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/myapp.com/privkey.pem;
+
+    location / {
+        proxy_pass http://localhost:3000;    # ส่งต่อไป Node.js app
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+
+    location /api {
+        proxy_pass http://localhost:8080;    # API server อีกตัว
+    }
+}</code></pre>
+
+    <blockquote>
+      <strong>💡 ทำไมใช้ Reverse Proxy?</strong><br>
+      ✅ SSL termination (จัดการ HTTPS ที่จุดเดียว)<br>
+      ✅ Load balancing ระหว่าง app instances<br>
+      ✅ Caching static files<br>
+      ✅ ซ่อน app server จากภายนอก (security)
+    </blockquote>
+
+    <hr>
+
+    <h2>SSH — Remote เข้า Server</h2>
+
+    <p>DevOps ต้องใช้ <strong>SSH</strong> เป็นเรื่องปกติ — เข้าจัดการ server จากระยะไกล:</p>
+
+    <pre><code># เข้า server
+ssh user@server.com
+
+# ใช้ key แทน password (ปลอดภัยกว่า!)
+ssh-keygen -t ed25519 -C "your@email.com"
+ssh-copy-id user@server.com
+
+# SSH tunneling — เข้าถึง port ที่ถูกบล็อก
+ssh -L 3306:localhost:3306 user@server.com
+# ตอนนี้เข้า localhost:3306 = เหมือนเข้า MySQL บน server
+
+# SCP — copy ไฟล์ไป server
+scp ./app.tar.gz user@server.com:/home/user/</code></pre>
+
+    <h4>SSH Config — ลดพิมพ์ซ้ำ</h4>
+    <pre><code># ~/.ssh/config
+Host prod
+    HostName 203.0.113.50
+    User deploy
+    IdentityFile ~/.ssh/id_ed25519
+    Port 22
+
+Host staging
+    HostName 10.0.1.100
+    User deploy
+    ProxyJump prod      # เข้าผ่าน prod (bastion host)
+
+# ใช้แค่:
+ssh prod
+ssh staging</code></pre>
+
+    <hr>
+
+    <h2>Docker Networking — Container คุยกันยังไง?</h2>
+
+    <p>กลับมาเชื่อมกับ Docker — container ใช้ virtual network ของตัวเอง:</p>
+
+    <pre><code># ดู network ที่มี
+docker network ls
+# NETWORK ID     NAME      DRIVER
+# abc123         bridge    bridge    ← default
+# def456         host      host
+# ghi789         none      null
+
+# สร้าง custom network (แนะนำ!)
+docker network create myapp-net
+
+# รัน container ใน network เดียวกัน
+docker run -d --name api --network myapp-net node-api
+docker run -d --name db  --network myapp-net postgres
+
+# container ใน network เดียวกัน เรียกกันด้วย "ชื่อ" ได้!
+# ใน api container: postgres://db:5432/mydb  ← ใช้ชื่อ "db" แทน IP</code></pre>
+
+    <blockquote>
+      <strong>🐕 Key Insight:</strong> Docker Compose สร้าง network ให้อัตโนมัติ ทุก service เรียกกันด้วยชื่อ service ได้เลย!
+    </blockquote>
+
+    <hr>
+
+    <h2>เครื่องมือ Networking ที่ DevOps ต้องรู้</h2>
+
+    <pre><code># ping — ทดสอบว่าเครื่องเปิดอยู่มั้ย
+ping google.com
+
+# traceroute — ดูเส้นทางข้อมูล
+traceroute google.com
+
+# curl — ทดสอบ HTTP request
+curl -I https://myapp.com        # ดูแค่ header
+curl -v https://myapp.com        # verbose mode
+
+# dig — ตรวจ DNS
+dig myapp.com A +short
+
+# ss / netstat — ดู port ที่เปิด
+ss -tlnp
+
+# tcpdump — จับ packet (advanced)
+sudo tcpdump -i eth0 port 80 -n
+
+# nmap — scan port (ระวังใช้กับ server ตัวเองเท่านั้น!)
+nmap -sT server.com</code></pre>
+
+    <hr>
+
+    <h2>สรุป</h2>
+
+    <ul>
+      <li><strong>TCP/IP 4 Layers</strong> = Application → Transport → Network → Link</li>
+      <li><strong>TCP</strong> = เชื่อถือได้ (เว็บ, API) | <strong>UDP</strong> = เร็ว (streaming, gaming)</li>
+      <li><strong>IP Address</strong> = ที่อยู่เครื่อง | <strong>Port</strong> = ประตูของ app</li>
+      <li><strong>DNS</strong> = แปลง domain → IP | ต้องรู้ A, CNAME, MX records</li>
+      <li><strong>Firewall</strong> = เปิดเฉพาะ port ที่จำเป็น (UFW ง่ายที่สุด)</li>
+      <li><strong>Load Balancer</strong> = กระจาย traffic | <strong>Reverse Proxy</strong> = Nginx ตัวกลาง</li>
+      <li><strong>SSH</strong> = remote เข้า server | ใช้ key + config file</li>
+      <li><strong>Docker Network</strong> = container คุยกันด้วยชื่อ ใน network เดียวกัน 🐕‍🦺</li>
+    </ul>
+
+    <div class="post-series-footer">
+      บทความจากซีรีส์ DevOps & Vibe Coding 2026
+    </div>
+
+  </article>
+
+  <!-- Post Navigation -->
+  <div class="post-nav">
+    <a href="kubernetes-orchestration.html" class="post-nav__link">
+      <div class="post-nav__dir">← Previous</div>
+      <div class="post-nav__title">Kubernetes — จัดการ Container ให้เป็นระบบด้วย K8s</div>
+    </a>
+  </div>
+
+  <footer class="blog-footer">
+    <a href="./">← Back to Blog</a>
+    <span>© 2025 Anirach Mingkhwan — Associate Professor, KMUTNB</span>
+  </footer>
+
+</body>
+</html>
