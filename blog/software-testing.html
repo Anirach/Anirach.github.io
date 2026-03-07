@@ -1,0 +1,659 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Software Testing — ทดสอบยังไงให้มั่นใจก่อน Deploy | Anirach Mingkhwan</title>
+  <meta name="description" content="เรียนรู้ Software Testing ตั้งแต่ Unit Test, Integration Test, E2E Test ไปจนถึง TDD, Code Coverage และ Testing ใน CI/CD Pipeline">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --navy: #0f172a; --blue: #6366f1; --blue-dark: #4f46e5; --blue-light: #818cf8;
+      --slate: #334155; --slate-light: #64748b; --gray: #94a3b8;
+      --bg: #f8fafc; --white: #ffffff; --code-bg: #1e293b;
+      --font: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+      --mono: 'JetBrains Mono', 'Fira Code', monospace;
+      --green: #22c55e; --red: #ef4444;
+    }
+    html { scroll-behavior: smooth; }
+    body { font-family: var(--font); font-size: 17px; line-height: 1.8; color: var(--slate); background: var(--bg); -webkit-font-smoothing: antialiased; }
+    .blog-nav { position: fixed; top: 0; left: 0; right: 0; z-index: 100; background: rgba(248,250,252,0.85); backdrop-filter: blur(20px); border-bottom: 1px solid rgba(0,0,0,0.05); }
+    .blog-nav__inner { max-width: 860px; margin: 0 auto; padding: 0 2rem; height: 56px; display: flex; align-items: center; justify-content: space-between; }
+    .blog-nav__back { font-size: 0.85rem; font-weight: 500; color: var(--blue); text-decoration: none; }
+    .blog-nav__back:hover { color: #4f46e5; }
+    .blog-nav__title { font-size: 0.85rem; font-weight: 600; color: var(--navy); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 50%; }
+    .post-hero { padding: 8rem 2rem 3rem; background: linear-gradient(135deg, #064e3b 0%, #065f46 40%, #047857 100%); text-align: center; }
+    .post-hero__tags { display: flex; gap: 0.5rem; justify-content: center; margin-bottom: 1.25rem; flex-wrap: wrap; }
+    .post-hero__tag { font-size: 0.7rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.1em; color: #34d399; background: rgba(52,211,153,0.15); padding: 0.3rem 0.75rem; border-radius: 20px; }
+    .post-hero__title { font-size: clamp(1.8rem, 5vw, 3rem); font-weight: 800; color: #fff; line-height: 1.2; margin-bottom: 1rem; max-width: 720px; margin-left: auto; margin-right: auto; }
+    .post-hero__meta { font-size: 0.85rem; color: rgba(255,255,255,0.6); display: flex; align-items: center; justify-content: center; gap: 1.5rem; }
+    .post-hero__series { font-weight: 600; color: #6ee7b7; }
+    .post-hero__cover { max-width: 420px; margin: 2.5rem auto 0; border-radius: 16px; overflow: hidden; box-shadow: 0 20px 60px rgba(0,0,0,0.3); }
+    .post-hero__cover img { width: 100%; display: block; }
+    .post-body { max-width: 720px; margin: 0 auto; padding: 3rem 2rem 6rem; }
+    .post-body h2 { font-size: 1.6rem; font-weight: 800; color: var(--navy); margin: 3rem 0 1rem; padding-bottom: 0.5rem; border-bottom: 2px solid rgba(99,102,241,0.15); }
+    .post-body h3 { font-size: 1.25rem; font-weight: 700; color: var(--navy); margin: 2.25rem 0 0.75rem; }
+    .post-body h4 { font-size: 1.05rem; font-weight: 700; color: var(--navy); margin: 1.75rem 0 0.6rem; }
+    .post-body p { margin-bottom: 1.25rem; }
+    .post-body strong { font-weight: 700; color: var(--navy); }
+    .post-body a { color: var(--blue); text-decoration: underline; text-decoration-thickness: 1px; text-underline-offset: 2px; }
+    .post-body pre { background: var(--code-bg); border-radius: 12px; padding: 1.5rem; margin: 1.25rem 0 1.5rem; overflow-x: auto; border: 1px solid rgba(255,255,255,0.05); }
+    .post-body pre code { font-family: var(--mono); font-size: 0.82rem; color: #e2e8f0; line-height: 1.7; }
+    .post-body code { font-family: var(--mono); font-size: 0.88em; background: rgba(99,102,241,0.08); color: #4f46e5; padding: 0.15em 0.45em; border-radius: 5px; }
+    .post-body pre code { background: none; color: #e2e8f0; padding: 0; }
+    .post-body ul, .post-body ol { margin: 0.5rem 0 1.25rem 1.5rem; }
+    .post-body li { margin-bottom: 0.4rem; }
+    .post-body table { width: 100%; border-collapse: collapse; margin: 1.25rem 0 1.5rem; font-size: 0.9rem; }
+    .post-body th { background: rgba(99,102,241,0.06); font-weight: 700; color: var(--navy); padding: 0.75rem 1rem; text-align: left; border-bottom: 2px solid rgba(99,102,241,0.15); }
+    .post-body td { padding: 0.65rem 1rem; border-bottom: 1px solid #e2e8f0; }
+    .post-body blockquote { background: rgba(99,102,241,0.06); border-left: 4px solid var(--blue); padding: 1rem 1.25rem; border-radius: 0 10px 10px 0; margin: 1.25rem 0; font-size: 0.95rem; color: var(--navy); }
+    .post-body hr { border: none; height: 1px; background: linear-gradient(90deg, transparent, rgba(99,102,241,0.2), transparent); margin: 3rem 0; }
+    .post-series-footer { text-align: center; font-size: 0.85rem; color: var(--gray); font-style: italic; margin-top: 2rem; padding-top: 2rem; border-top: 1px solid #e2e8f0; }
+    .post-nav { max-width: 720px; margin: 0 auto; padding: 0 2rem 3rem; display: flex; gap: 1.5rem; flex-wrap: wrap; }
+    .post-nav__link { flex: 1; min-width: 200px; padding: 1.25rem 1.5rem; border-radius: 12px; background: rgba(255,255,255,0.85); backdrop-filter: blur(16px); border: 1px solid rgba(255,255,255,0.6); box-shadow: 0 4px 16px rgba(0,0,0,0.05); text-decoration: none; color: inherit; transition: transform 0.2s, box-shadow 0.2s; }
+    .post-nav__link:hover { transform: translateY(-2px); box-shadow: 0 8px 24px rgba(99,102,241,0.1); }
+    .post-nav__dir { font-size: 0.75rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.1em; color: var(--blue); margin-bottom: 0.35rem; }
+    .post-nav__title { font-size: 0.9rem; font-weight: 600; color: var(--navy); line-height: 1.4; }
+    .blog-footer { background: var(--navy); padding: 2rem 0; text-align: center; }
+    .blog-footer a { color: var(--blue-light); text-decoration: none; font-weight: 600; font-size: 0.9rem; }
+    .blog-footer span { color: var(--gray); font-size: 0.8rem; display: block; margin-top: 0.4rem; }
+
+    /* Testing pyramid */
+    .pyramid { display: flex; flex-direction: column; align-items: center; margin: 1.5rem 0 2rem; gap: 4px; }
+    .pyramid__level { text-align: center; padding: 0.75rem 1rem; font-size: 0.85rem; font-weight: 700; border-radius: 8px; color: #fff; }
+    .pyramid__level--e2e { background: linear-gradient(135deg, #ef4444, #dc2626); width: 50%; }
+    .pyramid__level--int { background: linear-gradient(135deg, #f59e0b, #d97706); width: 70%; }
+    .pyramid__level--unit { background: linear-gradient(135deg, #22c55e, #16a34a); width: 90%; }
+    .pyramid__label { font-size: 0.72rem; color: var(--gray); margin-top: 0.15rem; font-weight: 400; }
+
+    .flow-diagram { display: flex; align-items: center; justify-content: center; gap: 0.5rem; flex-wrap: wrap; margin: 1.5rem 0 2rem; padding: 1.5rem; background: rgba(99,102,241,0.04); border-radius: 12px; }
+    .flow-step { text-align: center; padding: 0.75rem 1.25rem; background: white; border-radius: 10px; border: 1.5px solid rgba(99,102,241,0.15); box-shadow: 0 2px 8px rgba(0,0,0,0.04); }
+    .flow-step__title { font-size: 0.9rem; font-weight: 700; color: var(--navy); }
+    .flow-step__sub { font-size: 0.72rem; color: var(--gray); margin-top: 0.15rem; }
+    .flow-arrow { font-size: 1.2rem; color: var(--blue); font-weight: 700; }
+
+    /* Pass/fail badge */
+    .test-pass { color: #16a34a; font-weight: 700; }
+    .test-fail { color: #dc2626; font-weight: 700; }
+
+    @media (max-width: 600px) {
+      .post-hero { padding: 7rem 1.25rem 2.5rem; }
+      .post-body { padding: 2rem 1.25rem 4rem; }
+      .post-body pre { padding: 1rem; border-radius: 8px; }
+      .post-hero__meta { flex-direction: column; gap: 0.4rem; }
+      .post-nav { padding: 0 1.25rem 3rem; }
+      .flow-diagram { flex-direction: column; }
+      .pyramid__level--e2e { width: 60%; }
+      .pyramid__level--int { width: 80%; }
+      .pyramid__level--unit { width: 100%; }
+    }
+  </style>
+</head>
+<body>
+
+  <nav class="blog-nav">
+    <div class="blog-nav__inner">
+      <a href="./" class="blog-nav__back">‹ Blog</a>
+      <div class="blog-nav__title">Software Testing</div>
+    </div>
+  </nav>
+
+  <header class="post-hero">
+    <div class="post-hero__tags">
+      <span class="post-hero__tag">Testing</span>
+      <span class="post-hero__tag">QA</span>
+      <span class="post-hero__tag">DevOps</span>
+    </div>
+    <h1 class="post-hero__title">Software Testing — ทดสอบยังไงให้มั่นใจก่อน Deploy 🧪</h1>
+    <div class="post-hero__meta">
+      <span>By <strong style="color:#fff">Anirach Mingkhwan</strong></span>
+      <span class="post-hero__series">DevOps & Vibe Coding 2026</span>
+    </div>
+    <div class="post-hero__cover">
+      <img src="../images/testing-cover.jpg" alt="Software Testing — scientist dog with flask">
+    </div>
+  </header>
+
+  <article class="post-body">
+
+    <p>จากโพสต์ที่แล้วเราเรียนรู้ DevSecOps — ฝัง security ในทุกขั้นตอน</p>
+
+    <p>แต่ก่อนจะ deploy ขึ้น production ได้... <strong>เรามั่นใจได้ยังไงว่า code ทำงานถูกต้อง? แก้ bug ตรงนี้ แล้วพังตรงโน้นมั้ย?</strong> 🤔</p>
+
+    <p>คำตอบคือ <strong>Software Testing</strong> — เขียน code ทดสอบ code อีกที เหมือนนักวิทยาศาสตร์ที่ต้องทดลองซ้ำก่อนจะสรุปผล 🧪🐕</p>
+
+    <hr>
+
+    <h2>Testing Pyramid — ทดสอบกี่ระดับ?</h2>
+
+    <div class="pyramid">
+      <div class="pyramid__level pyramid__level--e2e">🖥️ E2E Tests<div class="pyramid__label">น้อยที่สุด — ช้า แต่ทดสอบทั้งระบบ</div></div>
+      <div class="pyramid__level pyramid__level--int">🔗 Integration Tests<div class="pyramid__label">ปานกลาง — ทดสอบหลาย components ร่วมกัน</div></div>
+      <div class="pyramid__level pyramid__level--unit">⚡ Unit Tests<div class="pyramid__label">มากที่สุด — เร็ว ทดสอบทีละ function</div></div>
+    </div>
+
+    <table>
+      <thead><tr><th>Level</th><th>ทดสอบอะไร</th><th>ความเร็ว</th><th>จำนวน</th></tr></thead>
+      <tbody>
+        <tr><td><strong>Unit</strong></td><td>แต่ละ function/method</td><td>⚡ เร็วมาก (ms)</td><td>เยอะที่สุด (70-80%)</td></tr>
+        <tr><td><strong>Integration</strong></td><td>หลาย components ร่วมกัน</td><td>🔄 ปานกลาง (s)</td><td>ปานกลาง (15-20%)</td></tr>
+        <tr><td><strong>E2E</strong></td><td>ทั้งระบบ จำลอง user</td><td>🐢 ช้า (min)</td><td>น้อยที่สุด (5-10%)</td></tr>
+      </tbody>
+    </table>
+
+    <blockquote>
+      <strong>💡 กฎทอง:</strong> Unit tests เยอะๆ (เร็ว ถูก), E2E tests น้อยๆ (ช้า แพง) — เหมือนพีระมิด ฐานกว้าง ยอดแคบ
+    </blockquote>
+
+    <hr>
+
+    <h2>⚡ Unit Testing — ทดสอบทีละชิ้น</h2>
+
+    <p>Unit test ทดสอบ <strong>function เดียว</strong> แยกจาก dependencies ทั้งหมด:</p>
+
+    <h3>JavaScript (Jest)</h3>
+
+    <pre><code>// math.js
+function add(a, b) {
+  return a + b;
+}
+
+function divide(a, b) {
+  if (b === 0) throw new Error('Cannot divide by zero');
+  return a / b;
+}
+
+module.exports = { add, divide };
+
+// math.test.js
+const { add, divide } = require('./math');
+
+describe('add', () => {
+  test('adds two positive numbers', () => {
+    expect(add(2, 3)).toBe(5);
+  });
+
+  test('adds negative numbers', () => {
+    expect(add(-1, -2)).toBe(-3);
+  });
+
+  test('adds zero', () => {
+    expect(add(5, 0)).toBe(5);
+  });
+});
+
+describe('divide', () => {
+  test('divides two numbers', () => {
+    expect(divide(10, 2)).toBe(5);
+  });
+
+  test('throws on divide by zero', () => {
+    expect(() => divide(10, 0)).toThrow('Cannot divide by zero');
+  });
+
+  test('returns float result', () => {
+    expect(divide(7, 2)).toBeCloseTo(3.5);
+  });
+});</code></pre>
+
+    <pre><code># รัน tests
+npx jest
+# PASS  ./math.test.js
+#   add
+#     ✓ adds two positive numbers (2ms)
+#     ✓ adds negative numbers (1ms)
+#     ✓ adds zero (1ms)
+#   divide
+#     ✓ divides two numbers (1ms)
+#     ✓ throws on divide by zero (1ms)
+#     ✓ returns float result (1ms)
+#
+# Tests: 6 passed, 6 total</code></pre>
+
+    <h3>Python (pytest)</h3>
+
+    <pre><code># calculator.py
+class Calculator:
+    def add(self, a, b):
+        return a + b
+
+    def divide(self, a, b):
+        if b == 0:
+            raise ValueError("Cannot divide by zero")
+        return a / b
+
+# test_calculator.py
+import pytest
+from calculator import Calculator
+
+@pytest.fixture
+def calc():
+    return Calculator()
+
+def test_add(calc):
+    assert calc.add(2, 3) == 5
+
+def test_add_negative(calc):
+    assert calc.add(-1, -2) == -3
+
+def test_divide(calc):
+    assert calc.divide(10, 2) == 5.0
+
+def test_divide_by_zero(calc):
+    with pytest.raises(ValueError, match="Cannot divide by zero"):
+        calc.divide(10, 0)</code></pre>
+
+    <pre><code># รัน tests
+pytest -v
+# test_calculator.py::test_add PASSED
+# test_calculator.py::test_add_negative PASSED
+# test_calculator.py::test_divide PASSED
+# test_calculator.py::test_divide_by_zero PASSED
+#
+# 4 passed in 0.02s</code></pre>
+
+    <h3>Mocking — จำลอง Dependencies</h3>
+
+    <pre><code>// userService.test.js
+const { getUserName } = require('./userService');
+const db = require('./database');
+
+// Mock database module
+jest.mock('./database');
+
+test('returns user name from database', async () => {
+  // จำลองว่า DB return ข้อมูลนี้
+  db.findUser.mockResolvedValue({ id: 1, name: 'สมชาย' });
+
+  const name = await getUserName(1);
+  expect(name).toBe('สมชาย');
+  expect(db.findUser).toHaveBeenCalledWith(1);
+});
+
+test('returns "Unknown" when user not found', async () => {
+  db.findUser.mockResolvedValue(null);
+
+  const name = await getUserName(999);
+  expect(name).toBe('Unknown');
+});</code></pre>
+
+    <blockquote>
+      <strong>💡 ทำไมต้อง Mock?</strong> Unit test ต้องเร็วและ isolated — ไม่ต้องเชื่อม DB จริง, API จริง, หรือ filesystem จริง
+    </blockquote>
+
+    <hr>
+
+    <h2>🔗 Integration Testing — ทดสอบร่วมกัน</h2>
+
+    <p>Integration test ทดสอบว่า <strong>หลาย components ทำงานร่วมกันได้</strong> เช่น API + Database:</p>
+
+    <pre><code>// api.integration.test.js
+const request = require('supertest');
+const app = require('./app');
+const db = require('./database');
+
+beforeAll(async () => {
+  await db.connect();        // ใช้ test database จริง
+  await db.seed();            // ใส่ข้อมูลทดสอบ
+});
+
+afterAll(async () => {
+  await db.cleanup();
+  await db.disconnect();
+});
+
+describe('GET /api/users', () => {
+  test('returns list of users', async () => {
+    const res = await request(app)
+      .get('/api/users')
+      .expect(200);
+
+    expect(res.body).toHaveLength(3);
+    expect(res.body[0]).toHaveProperty('name');
+    expect(res.body[0]).toHaveProperty('email');
+  });
+});
+
+describe('POST /api/users', () => {
+  test('creates a new user', async () => {
+    const res = await request(app)
+      .post('/api/users')
+      .send({ name: 'สมหญิง', email: 'somying@test.com' })
+      .expect(201);
+
+    expect(res.body.name).toBe('สมหญิง');
+    expect(res.body.id).toBeDefined();
+  });
+
+  test('returns 400 for invalid email', async () => {
+    const res = await request(app)
+      .post('/api/users')
+      .send({ name: 'Test', email: 'invalid' })
+      .expect(400);
+
+    expect(res.body.error).toContain('email');
+  });
+});</code></pre>
+
+    <h3>Docker Compose สำหรับ Integration Tests</h3>
+
+    <pre><code># docker-compose.test.yml
+version: '3.8'
+services:
+  app:
+    build: .
+    environment:
+      - DATABASE_URL=postgres://test:test@db:5432/testdb
+      - NODE_ENV=test
+    depends_on:
+      db:
+        condition: service_healthy
+
+  db:
+    image: postgres:16-alpine
+    environment:
+      - POSTGRES_USER=test
+      - POSTGRES_PASSWORD=test
+      - POSTGRES_DB=testdb
+    healthcheck:
+      test: pg_isready -U test
+      interval: 5s
+      retries: 5</code></pre>
+
+    <pre><code># รัน integration tests ใน Docker
+docker compose -f docker-compose.test.yml run --rm app npm test</code></pre>
+
+    <hr>
+
+    <h2>🖥️ E2E Testing — ทดสอบเหมือน User จริง</h2>
+
+    <p>E2E (End-to-End) test จำลอง <strong>user เปิด browser แล้วใช้งานจริงๆ</strong>:</p>
+
+    <h3>Playwright (แนะนำ!)</h3>
+
+    <pre><code>// tests/login.spec.js
+const { test, expect } = require('@playwright/test');
+
+test.describe('Login Flow', () => {
+  test('successful login', async ({ page }) => {
+    await page.goto('http://localhost:3000/login');
+
+    // กรอก form
+    await page.fill('[data-testid="email"]', 'user@test.com');
+    await page.fill('[data-testid="password"]', 'P@ssw0rd');
+    await page.click('[data-testid="login-btn"]');
+
+    // ตรวจว่า redirect ไป dashboard
+    await expect(page).toHaveURL('/dashboard');
+    await expect(page.locator('h1')).toContainText('Welcome');
+  });
+
+  test('shows error on wrong password', async ({ page }) => {
+    await page.goto('http://localhost:3000/login');
+
+    await page.fill('[data-testid="email"]', 'user@test.com');
+    await page.fill('[data-testid="password"]', 'wrongpassword');
+    await page.click('[data-testid="login-btn"]');
+
+    // ต้องแสดง error message
+    await expect(page.locator('.error-message')).toBeVisible();
+    await expect(page.locator('.error-message')).toContainText('Invalid');
+  });
+
+  test('checkout flow', async ({ page }) => {
+    await page.goto('http://localhost:3000');
+
+    // เลือกสินค้า
+    await page.click('[data-testid="product-1"]');
+    await page.click('[data-testid="add-to-cart"]');
+
+    // ไป checkout
+    await page.click('[data-testid="cart-icon"]');
+    await page.click('[data-testid="checkout-btn"]');
+
+    // กรอกข้อมูล
+    await page.fill('#address', '123 Bangkok');
+    await page.click('[data-testid="confirm-order"]');
+
+    // ตรวจว่าสำเร็จ
+    await expect(page.locator('.order-success')).toBeVisible();
+  });
+});</code></pre>
+
+    <pre><code># ติดตั้ง Playwright
+npm init playwright@latest
+
+# รัน tests
+npx playwright test
+
+# รัน + เปิด browser ให้ดู
+npx playwright test --headed
+
+# ดู HTML report
+npx playwright show-report</code></pre>
+
+    <h3>Cypress (อีกตัวเลือกยอดนิยม)</h3>
+
+    <pre><code>// cypress/e2e/login.cy.js
+describe('Login', () => {
+  it('logs in successfully', () => {
+    cy.visit('/login');
+    cy.get('[data-testid="email"]').type('user@test.com');
+    cy.get('[data-testid="password"]').type('P@ssw0rd');
+    cy.get('[data-testid="login-btn"]').click();
+    cy.url().should('include', '/dashboard');
+    cy.contains('h1', 'Welcome');
+  });
+});</code></pre>
+
+    <hr>
+
+    <h2>📊 Code Coverage — ทดสอบครอบคลุมแค่ไหน?</h2>
+
+    <p><strong>Code coverage</strong> วัดว่า test ของเราครอบคลุมกี่ % ของ code:</p>
+
+    <pre><code># Jest + Coverage
+npx jest --coverage
+
+# Output:
+# ----------|---------|----------|---------|---------|
+# File      | % Stmts | % Branch | % Funcs | % Lines |
+# ----------|---------|----------|---------|---------|
+# All files |   92.5  |   85.0   |   100   |   92.5  |
+#  math.js  |   100   |   100    |   100   |   100   |
+#  user.js  |   85.0  |   70.0   |   100   |   85.0  |
+# ----------|---------|----------|---------|---------|
+
+# pytest + Coverage
+pytest --cov=src --cov-report=html
+# → เปิด htmlcov/index.html ดู visual report</code></pre>
+
+    <table>
+      <thead><tr><th>Coverage %</th><th>ระดับ</th><th>คำแนะนำ</th></tr></thead>
+      <tbody>
+        <tr><td><span class="test-pass">80-100%</span></td><td>ดีมาก</td><td>เป้าหมายที่ดี แต่ไม่ต้อง 100%</td></tr>
+        <tr><td><span style="color:#d97706;font-weight:700">60-80%</span></td><td>พอใช้</td><td>ปรับปรุงได้ เน้น critical paths</td></tr>
+        <tr><td><span class="test-fail">< 60%</span></td><td>ต่ำ</td><td>ต้องเพิ่ม tests! เสี่ยง production bugs</td></tr>
+      </tbody>
+    </table>
+
+    <blockquote>
+      <strong>🐕 ระวัง!</strong> 100% coverage ≠ 100% bug-free — coverage วัดว่า code ถูก "รัน" ไม่ได้วัดว่า "ถูกต้อง" ต้องเขียน assertion ที่ดีด้วย!
+    </blockquote>
+
+    <hr>
+
+    <h2>🔄 TDD — Test-Driven Development</h2>
+
+    <p>TDD คือวิธีเขียน code ที่ <strong>เขียน test ก่อน เขียน code ทีหลัง</strong>:</p>
+
+    <div class="flow-diagram">
+      <div class="flow-step" style="border-color: rgba(239,68,68,0.3); background: rgba(239,68,68,0.04);">
+        <div class="flow-step__title">🔴 Red</div>
+        <div class="flow-step__sub">เขียน test → fail</div>
+      </div>
+      <span class="flow-arrow">→</span>
+      <div class="flow-step" style="border-color: rgba(34,197,94,0.3); background: rgba(34,197,94,0.04);">
+        <div class="flow-step__title">🟢 Green</div>
+        <div class="flow-step__sub">เขียน code ให้ pass</div>
+      </div>
+      <span class="flow-arrow">→</span>
+      <div class="flow-step" style="border-color: rgba(59,130,246,0.3); background: rgba(59,130,246,0.04);">
+        <div class="flow-step__title">🔵 Refactor</div>
+        <div class="flow-step__sub">ปรับ code ให้สวย</div>
+      </div>
+      <span class="flow-arrow">→</span>
+      <div class="flow-step">
+        <div class="flow-step__title">🔁 Repeat</div>
+        <div class="flow-step__sub">ทำซ้ำ</div>
+      </div>
+    </div>
+
+    <pre><code>// Step 1: 🔴 Red — เขียน test ก่อน (จะ fail)
+test('validates email format', () => {
+  expect(isValidEmail('user@example.com')).toBe(true);
+  expect(isValidEmail('invalid')).toBe(false);
+  expect(isValidEmail('')).toBe(false);
+  expect(isValidEmail('a@b.c')).toBe(true);
+});
+// ❌ ReferenceError: isValidEmail is not defined
+
+// Step 2: 🟢 Green — เขียน code ง่ายๆ ให้ pass
+function isValidEmail(email) {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+}
+// ✅ All tests pass!
+
+// Step 3: 🔵 Refactor — ปรับปรุง (ถ้าจำเป็น)
+// → code ดีอยู่แล้ว ไป feature ถัดไป!</code></pre>
+
+    <hr>
+
+    <h2>🚀 Testing ใน CI/CD Pipeline</h2>
+
+    <h3>GitHub Actions</h3>
+
+    <pre><code># .github/workflows/test.yml
+name: Test
+on: [push, pull_request]
+
+jobs:
+  unit-test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+      - run: npm ci
+      - run: npm test -- --coverage
+      - name: Upload coverage
+        uses: codecov/codecov-action@v4
+
+  integration-test:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_PASSWORD: test
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-retries 5
+    steps:
+      - uses: actions/checkout@v4
+      - run: npm ci
+      - run: npm run test:integration
+        env:
+          DATABASE_URL: postgres://postgres:test@localhost:5432/postgres
+
+  e2e-test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: npm ci
+      - run: npx playwright install --with-deps
+      - run: npm run build
+      - run: npx playwright test
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: playwright-report
+          path: playwright-report/</code></pre>
+
+    <hr>
+
+    <h2>🛠️ Testing Tools — เลือกใช้ตัวไหน?</h2>
+
+    <table>
+      <thead><tr><th>ภาษา</th><th>Unit / Integration</th><th>E2E</th></tr></thead>
+      <tbody>
+        <tr><td><strong>JavaScript</strong></td><td>Jest, Vitest, Mocha</td><td>Playwright, Cypress</td></tr>
+        <tr><td><strong>Python</strong></td><td>pytest, unittest</td><td>Playwright, Selenium</td></tr>
+        <tr><td><strong>Java</strong></td><td>JUnit, TestNG</td><td>Selenium, Playwright</td></tr>
+        <tr><td><strong>Go</strong></td><td>testing (built-in)</td><td>Playwright</td></tr>
+        <tr><td><strong>API Testing</strong></td><td>Supertest, httpx</td><td>Postman, k6</td></tr>
+        <tr><td><strong>Load Testing</strong></td><td>—</td><td>k6, Locust, Artillery</td></tr>
+      </tbody>
+    </table>
+
+    <hr>
+
+    <h2>📋 Testing Best Practices</h2>
+
+    <ol>
+      <li><strong>Test Pyramid:</strong> Unit เยอะ → Integration กลาง → E2E น้อย</li>
+      <li><strong>AAA Pattern:</strong> Arrange (เตรียม) → Act (ทำ) → Assert (ตรวจ)</li>
+      <li><strong>Test ชื่อดี:</strong> <code>"returns 404 when user not found"</code> ไม่ใช่ <code>"test1"</code></li>
+      <li><strong>Independent:</strong> แต่ละ test ไม่พึ่งพากัน — รันสลับลำดับได้</li>
+      <li><strong>Fast:</strong> Unit tests ต้องเร็ว (&lt; 1 sec ทั้งหมด)</li>
+      <li><strong>Mock external:</strong> อย่าเรียก API/DB จริงใน unit test</li>
+      <li><strong>CI/CD:</strong> ทุก push ต้องรัน tests อัตโนมัติ</li>
+      <li><strong>Coverage &gt; 80%:</strong> แต่เน้น critical paths ไม่ใช่ตัวเลข</li>
+    </ol>
+
+    <blockquote>
+      <strong>💡 จำไว้:</strong> "Tests ที่ไม่รันใน CI = ไม่มี tests" — ทุก test ต้องอยู่ใน pipeline!
+    </blockquote>
+
+    <hr>
+
+    <h2>สรุป</h2>
+
+    <ul>
+      <li><strong>Testing Pyramid</strong> = Unit (เยอะ เร็ว) → Integration (กลาง) → E2E (น้อย ช้า)</li>
+      <li><strong>Unit Test</strong> = ทดสอบ function เดียว, ใช้ mock แยก dependencies</li>
+      <li><strong>Integration Test</strong> = ทดสอบหลาย components ร่วมกัน (API + DB)</li>
+      <li><strong>E2E Test</strong> = จำลอง user ใช้งานจริง (Playwright / Cypress)</li>
+      <li><strong>TDD</strong> = Red → Green → Refactor — เขียน test ก่อน code</li>
+      <li><strong>Code Coverage</strong> = เป้า &gt; 80% แต่เน้นคุณภาพ ไม่ใช่ตัวเลข</li>
+      <li><strong>CI/CD</strong> = ทุก push ต้องรัน tests อัตโนมัติ 🧪🐕</li>
+    </ul>
+
+    <div class="post-series-footer">
+      บทความจากซีรีส์ DevOps & Vibe Coding 2026
+    </div>
+
+  </article>
+
+  <!-- Post Navigation -->
+  <div class="post-nav">
+    <a href="devops-security.html" class="post-nav__link">
+      <div class="post-nav__dir">← Previous</div>
+      <div class="post-nav__title">DevSecOps — Security พื้นฐานที่ DevOps ต้องรู้</div>
+    </a>
+  </div>
+
+  <footer class="blog-footer">
+    <a href="./">← Back to Blog</a>
+    <span>© 2025 Anirach Mingkhwan — Associate Professor, KMUTNB</span>
+  </footer>
+
+</body>
+</html>
