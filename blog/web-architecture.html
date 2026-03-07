@@ -1,0 +1,1571 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Web Architecture & Design Patterns — ออกแบบระบบให้ Scale ได้และดูแลง่าย | Anirach Mingkhwan</title>
+  <meta name="description" content="เรียนรู้ Monolith vs Microservices, MVC, Layered Architecture, Clean Architecture, REST vs GraphQL vs gRPC, Event-Driven Architecture, Message Queues และ Design Patterns สำหรับ Developer ทุกระดับ">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --navy: #0f172a; --blue: #6366f1; --blue-dark: #4f46e5; --blue-light: #818cf8;
+      --slate: #334155; --slate-light: #64748b; --gray: #94a3b8;
+      --bg: #f8fafc; --white: #ffffff; --code-bg: #1e293b;
+      --font: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+      --mono: 'JetBrains Mono', 'Fira Code', monospace;
+      --green: #22c55e; --red: #ef4444; --amber: #f59e0b;
+      --emerald: #10b981; --emerald-dark: #065f46;
+      --purple: #8b5cf6; --purple-dark: #7c3aed; --indigo: #6366f1;
+      --orange: #f97316; --cyan: #06b6d4;
+    }
+    html { scroll-behavior: smooth; }
+    body { font-family: var(--font); font-size: 17px; line-height: 1.8; color: var(--slate); background: var(--bg); -webkit-font-smoothing: antialiased; }
+    .blog-nav { position: fixed; top: 0; left: 0; right: 0; z-index: 100; background: rgba(248,250,252,0.85); backdrop-filter: blur(20px); border-bottom: 1px solid rgba(0,0,0,0.05); }
+    .blog-nav__inner { max-width: 860px; margin: 0 auto; padding: 0 2rem; height: 56px; display: flex; align-items: center; justify-content: space-between; }
+    .blog-nav__back { font-size: 0.85rem; font-weight: 500; color: var(--blue); text-decoration: none; }
+    .blog-nav__back:hover { color: #4f46e5; }
+    .blog-nav__title { font-size: 0.85rem; font-weight: 600; color: var(--navy); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 50%; }
+    .post-hero { padding: 8rem 2rem 3rem; background: linear-gradient(135deg, var(--navy) 0%, #1e293b 40%, var(--slate) 100%); text-align: center; }
+    .post-hero__tags { display: flex; gap: 0.5rem; justify-content: center; margin-bottom: 1.25rem; flex-wrap: wrap; }
+    .post-hero__tag { font-size: 0.7rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.1em; color: #c7d2fe; background: rgba(199,210,254,0.15); padding: 0.3rem 0.75rem; border-radius: 20px; }
+    .post-hero__title { font-size: clamp(1.8rem, 5vw, 3rem); font-weight: 800; color: #fff; line-height: 1.2; margin-bottom: 1rem; max-width: 720px; margin-left: auto; margin-right: auto; }
+    .post-hero__meta { font-size: 0.85rem; color: rgba(255,255,255,0.6); display: flex; align-items: center; justify-content: center; gap: 1.5rem; }
+    .post-hero__series { font-weight: 600; color: #c7d2fe; }
+    .post-hero__cover { max-width: 380px; margin: 2.5rem auto 0; border-radius: 16px; overflow: hidden; box-shadow: 0 20px 60px rgba(0,0,0,0.4); }
+    .post-hero__cover img { width: 100%; display: block; }
+    .post-body { max-width: 720px; margin: 0 auto; padding: 3rem 2rem 6rem; }
+    .post-body h2 { font-size: 1.6rem; font-weight: 800; color: var(--navy); margin: 3rem 0 1rem; padding-bottom: 0.5rem; border-bottom: 2px solid rgba(139,92,246,0.15); }
+    .post-body h3 { font-size: 1.25rem; font-weight: 700; color: var(--navy); margin: 2.25rem 0 0.75rem; }
+    .post-body h4 { font-size: 1.05rem; font-weight: 700; color: var(--navy); margin: 1.75rem 0 0.6rem; }
+    .post-body p { margin-bottom: 1.25rem; }
+    .post-body strong { font-weight: 700; color: var(--navy); }
+    .post-body pre { background: var(--code-bg); border-radius: 12px; padding: 1.5rem; margin: 1.25rem 0 1.5rem; overflow-x: auto; border: 1px solid rgba(255,255,255,0.05); }
+    .post-body pre code { font-family: var(--mono); font-size: 0.82rem; color: #e2e8f0; line-height: 1.7; }
+    .post-body code { font-family: var(--mono); font-size: 0.88em; background: rgba(139,92,246,0.08); color: #6b21a8; padding: 0.15em 0.45em; border-radius: 5px; }
+    .post-body pre code { background: none; color: #e2e8f0; padding: 0; }
+    .post-body ul, .post-body ol { margin: 0.5rem 0 1.25rem 1.5rem; }
+    .post-body li { margin-bottom: 0.4rem; }
+    .post-body table { width: 100%; border-collapse: collapse; margin: 1.25rem 0 1.5rem; font-size: 0.9rem; }
+    .post-body th { background: rgba(139,92,246,0.06); font-weight: 700; color: var(--navy); padding: 0.75rem 1rem; text-align: left; border-bottom: 2px solid rgba(139,92,246,0.15); }
+    .post-body td { padding: 0.65rem 1rem; border-bottom: 1px solid #e2e8f0; }
+    .post-body blockquote { background: rgba(139,92,246,0.06); border-left: 4px solid var(--purple); padding: 1rem 1.25rem; border-radius: 0 10px 10px 0; margin: 1.25rem 0; font-size: 0.95rem; color: var(--navy); }
+    .post-body hr { border: none; height: 1px; background: linear-gradient(90deg, transparent, rgba(139,92,246,0.2), transparent); margin: 3rem 0; }
+    .post-series-footer { text-align: center; font-size: 0.85rem; color: var(--gray); font-style: italic; margin-top: 2rem; padding-top: 2rem; border-top: 1px solid #e2e8f0; }
+    .post-nav { max-width: 720px; margin: 0 auto; padding: 0 2rem 3rem; display: flex; gap: 1.5rem; flex-wrap: wrap; }
+    .post-nav__link { flex: 1; min-width: 200px; padding: 1.25rem 1.5rem; border-radius: 12px; background: rgba(255,255,255,0.85); backdrop-filter: blur(16px); border: 1px solid rgba(255,255,255,0.6); box-shadow: 0 4px 16px rgba(0,0,0,0.05); text-decoration: none; color: inherit; transition: transform 0.2s, box-shadow 0.2s; }
+    .post-nav__link:hover { transform: translateY(-2px); box-shadow: 0 8px 24px rgba(139,92,246,0.1); }
+    .post-nav__dir { font-size: 0.75rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.1em; color: var(--purple); margin-bottom: 0.35rem; }
+    .post-nav__title { font-size: 0.9rem; font-weight: 600; color: var(--navy); line-height: 1.4; }
+    .blog-footer { background: var(--navy); padding: 2rem 0; text-align: center; }
+    .blog-footer a { color: var(--blue-light); text-decoration: none; font-weight: 600; font-size: 0.9rem; }
+    .blog-footer span { color: var(--gray); font-size: 0.8rem; display: block; margin-top: 0.4rem; }
+    
+    /* Architecture-specific components */
+    .arch-diagram { margin: 1.5rem 0 2rem; padding: 1.5rem; background: rgba(139,92,246,0.04); border-radius: 12px; }
+    .arch-comparison { display: grid; grid-template-columns: 1fr 1fr; gap: 2rem; margin: 2rem 0; }
+    .arch-concept { padding: 1.5rem; background: white; border-radius: 12px; border: 2px solid rgba(139,92,246,0.15); }
+    .arch-concept__title { font-size: 1.2rem; font-weight: 700; color: var(--navy); margin-bottom: 1rem; text-align: center; }
+    .arch-concept__content { margin-bottom: 1.5rem; }
+    .arch-module { margin: 0.5rem 0; padding: 0.75rem 1rem; background: rgba(139,92,246,0.08); border-radius: 8px; text-align: center; font-size: 0.9rem; font-weight: 600; color: #6b21a8; }
+    .arch-db { margin: 0.5rem 0; padding: 0.75rem 1rem; background: rgba(34,197,94,0.1); border-radius: 8px; text-align: center; font-size: 0.9rem; font-weight: 600; color: #059669; }
+    .arch-features { background: rgba(139,92,246,0.03); padding: 1rem; border-radius: 8px; }
+    .arch-features ul { margin: 0; padding-left: 1.2rem; }
+    .arch-features li { margin-bottom: 0.4rem; font-size: 0.9rem; }
+    
+    .modular-monolith { margin: 1.5rem 0 2rem; padding: 1.5rem; background: rgba(34,197,94,0.04); border-radius: 12px; }
+    .monolith-modules { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 1rem; margin-bottom: 1.5rem; }
+    .monolith-module { padding: 1rem; background: white; border-radius: 10px; border: 2px solid rgba(34,197,94,0.15); text-align: center; }
+    .monolith-module__name { font-size: 1rem; font-weight: 700; color: var(--emerald-dark); margin-bottom: 0.5rem; }
+    .monolith-db { margin-top: 1.5rem; padding: 1rem; background: rgba(34,197,94,0.08); border-radius: 10px; text-align: center; font-weight: 600; color: var(--emerald-dark); }
+    
+    .flow-diagram { margin: 1.5rem 0 2rem; padding: 1.5rem; background: rgba(139,92,246,0.04); border-radius: 12px; }
+    .flow-step { display: flex; align-items: center; margin-bottom: 1rem; padding: 1rem; background: white; border-radius: 10px; border: 1.5px solid rgba(139,92,246,0.1); }
+    .flow-step__box { padding: 1rem; background: var(--purple); color: white; border-radius: 8px; margin-right: 1rem; font-weight: 600; min-width: 100px; text-align: center; }
+    .flow-arrow { display: flex; align-items: center; justify-content: center; margin: 0.5rem 0; font-size: 1.5rem; color: var(--purple); }
+    .flow-arrow::before { content: "↓"; }
+    
+    .layer-diagram { margin: 1.5rem 0 2rem; }
+    .layer { margin: 0.5rem 0; padding: 1rem 1.5rem; border-radius: 10px; text-align: center; font-weight: 600; color: white; }
+    .layer--presentation { background: linear-gradient(135deg, #f97316, #ea580c); }
+    .layer--service { background: linear-gradient(135deg, #3b82f6, #2563eb); }
+    .layer--repository { background: linear-gradient(135deg, #059669, #047857); }
+    .layer--database { background: linear-gradient(135deg, #7c3aed, #6d28d9); }
+    .layer-arrow { text-align: center; font-size: 1.2rem; color: var(--slate); margin: 0.25rem 0; }
+    
+    .clean-arch { margin: 1.5rem 0 2rem; padding: 2rem; background: rgba(139,92,246,0.04); border-radius: 12px; }
+    .clean-circles { position: relative; width: 300px; height: 300px; margin: 0 auto; }
+    .clean-circle { position: absolute; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 600; color: white; text-align: center; line-height: 1.3; }
+    .clean-circle--outer { width: 300px; height: 300px; background: linear-gradient(135deg, #64748b, #475569); top: 0; left: 0; }
+    .clean-circle--middle { width: 200px; height: 200px; background: linear-gradient(135deg, #3b82f6, #2563eb); top: 50px; left: 50px; }
+    .clean-circle--inner { width: 100px; height: 100px; background: linear-gradient(135deg, #059669, #047857); top: 100px; left: 100px; font-size: 0.9rem; }
+    
+    .api-comparison { margin: 1.5rem 0 2rem; }
+    .api-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 1.5rem; margin-bottom: 1.5rem; }
+    .api-card { padding: 1.5rem; background: white; border-radius: 12px; border: 2px solid rgba(139,92,246,0.15); }
+    .api-card__title { font-size: 1.2rem; font-weight: 700; color: var(--navy); margin-bottom: 1rem; text-align: center; }
+    .api-card__endpoint { font-family: var(--mono); font-size: 0.8rem; background: var(--code-bg); color: #e2e8f0; padding: 0.5rem; border-radius: 6px; margin: 0.5rem 0; text-align: center; }
+    .api-card__features { margin-top: 1rem; }
+    .api-card__features ul { margin: 0; padding-left: 1rem; }
+    .api-card__features li { font-size: 0.9rem; margin-bottom: 0.3rem; }
+    
+    .sync-async { margin: 1.5rem 0 2rem; }
+    .sync-async__grid { display: grid; grid-template-columns: 1fr 1fr; gap: 2rem; }
+    .sync-async__type { padding: 1.5rem; border-radius: 12px; }
+    .sync-async__type--sync { background: rgba(239,68,68,0.06); border-left: 4px solid var(--red); }
+    .sync-async__type--async { background: rgba(34,197,94,0.06); border-left: 4px solid var(--green); }
+    .sync-async__title { font-size: 1.1rem; font-weight: 700; margin-bottom: 1rem; }
+    .sync-async__type--sync .sync-async__title { color: #dc2626; }
+    .sync-async__type--async .sync-async__title { color: #059669; }
+    .sync-async__timeline { margin: 1rem 0; }
+    .sync-async__step { padding: 0.4rem 0.8rem; margin: 0.3rem 0; border-radius: 6px; font-size: 0.85rem; }
+    .sync-step { background: rgba(239,68,68,0.1); color: #dc2626; }
+    .async-step { background: rgba(34,197,94,0.1); color: #059669; }
+    
+    .message-queue { margin: 1.5rem 0 2rem; padding: 1.5rem; background: rgba(139,92,246,0.04); border-radius: 12px; }
+    .queue-flow { display: grid; grid-template-columns: 150px 1fr 150px; gap: 1.5rem; align-items: center; }
+    .queue-producer, .queue-consumer { padding: 1rem; background: var(--purple); color: white; border-radius: 10px; text-align: center; font-weight: 600; }
+    .queue-middle { padding: 1rem; background: white; border: 2px solid rgba(139,92,246,0.15); border-radius: 10px; text-align: center; }
+    .queue-name { font-weight: 700; color: var(--navy); margin-bottom: 0.5rem; }
+    .queue-messages { display: flex; flex-direction: column; gap: 0.3rem; }
+    .queue-message { font-size: 0.8rem; padding: 0.3rem 0.6rem; background: rgba(139,92,246,0.1); color: #6b21a8; border-radius: 6px; }
+    
+    .communication-patterns { margin: 1.5rem 0 2rem; }
+    .pattern-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 1.5rem; }
+    .pattern-card { padding: 1.5rem; background: white; border-radius: 12px; border: 2px solid rgba(139,92,246,0.15); }
+    .pattern-card__title { font-size: 1.1rem; font-weight: 700; color: var(--navy); margin-bottom: 0.75rem; }
+    .pattern-card__desc { font-size: 0.9rem; color: var(--slate-light); margin-bottom: 1rem; }
+    .pattern-card__use { font-size: 0.85rem; color: var(--emerald-dark); background: rgba(34,197,94,0.08); padding: 0.5rem; border-radius: 6px; }
+    
+    .real-world-arch { margin: 2rem 0; }
+    .arch-stack { display: flex; flex-direction: column; gap: 1rem; }
+    .arch-layer { padding: 1rem 1.5rem; border-radius: 10px; text-align: center; font-weight: 600; color: white; }
+    .arch-layer--cdn { background: linear-gradient(135deg, #f97316, #ea580c); }
+    .arch-layer--lb { background: linear-gradient(135deg, #3b82f6, #2563eb); }
+    .arch-layer--app { background: linear-gradient(135deg, #059669, #047857); }
+    .arch-layer--api { background: linear-gradient(135deg, #7c3aed, #6d28d9); }
+    .arch-layer--services { display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 0.5rem; background: rgba(139,92,246,0.08); padding: 1rem; border-radius: 10px; }
+    .arch-service { padding: 0.5rem; background: var(--purple); color: white; border-radius: 6px; font-size: 0.85rem; }
+    .arch-layer--db { background: linear-gradient(135deg, #64748b, #475569); }
+    
+    .decision-grid { margin: 1.5rem 0 2rem; }
+    .decision-categories { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 1.5rem; }
+    .decision-category { padding: 1.5rem; background: white; border-radius: 12px; border: 2px solid rgba(139,92,246,0.15); }
+    .decision-category__title { font-size: 1.1rem; font-weight: 700; color: var(--navy); margin-bottom: 1rem; }
+    .decision-option { margin: 0.75rem 0; padding: 0.75rem; border-radius: 8px; background: rgba(139,92,246,0.04); border-left: 3px solid var(--purple); }
+    .decision-option__condition { font-size: 0.85rem; font-weight: 600; color: var(--purple-dark); margin-bottom: 0.25rem; }
+    .decision-option__choice { font-size: 0.9rem; color: var(--navy); }
+    
+    .file-tree { margin: 1rem 0; padding: 1rem; background: var(--code-bg); border-radius: 8px; color: #e2e8f0; font-family: var(--mono); font-size: 0.8rem; }
+    .file-tree__item { margin: 0.2rem 0; }
+    .file-tree__folder { color: #60a5fa; font-weight: 600; }
+    .file-tree__file { color: #94a3b8; }
+    
+    @media (max-width: 768px) {
+      .post-hero { padding: 7rem 1.25rem 2.5rem; }
+      .post-body { padding: 2rem 1.25rem 4rem; }
+      .post-body pre { padding: 1rem; border-radius: 8px; }
+      .post-hero__meta { flex-direction: column; gap: 0.4rem; }
+      .post-nav { padding: 0 1.25rem 3rem; }
+      .arch-comparison { grid-template-columns: 1fr; }
+      .api-grid { grid-template-columns: 1fr; }
+      .sync-async__grid { grid-template-columns: 1fr; }
+      .queue-flow { grid-template-columns: 1fr; }
+      .pattern-grid { grid-template-columns: 1fr; }
+      .decision-categories { grid-template-columns: 1fr; }
+      .monolith-modules { grid-template-columns: 1fr; }
+      .clean-circles { width: 250px; height: 250px; }
+      .clean-circle--outer { width: 250px; height: 250px; }
+      .clean-circle--middle { width: 160px; height: 160px; top: 45px; left: 45px; }
+      .clean-circle--inner { width: 80px; height: 80px; top: 85px; left: 85px; }
+    }
+  </style>
+</head>
+<body>
+
+  <nav class="blog-nav">
+    <div class="blog-nav__inner">
+      <a href="./" class="blog-nav__back">‹ Blog</a>
+      <div class="blog-nav__title">Web Architecture & Design Patterns</div>
+    </div>
+  </nav>
+
+  <header class="post-hero">
+    <div class="post-hero__tags">
+      <span class="post-hero__tag">Architecture</span>
+      <span class="post-hero__tag">Design Patterns</span>
+      <span class="post-hero__tag">Microservices</span>
+    </div>
+    <h1 class="post-hero__title">Web Architecture & Design Patterns — ออกแบบระบบให้ Scale ได้และดูแลง่าย 🏗️</h1>
+    <div class="post-hero__meta">
+      <span>By <strong style="color:#fff">Anirach Mingkhwan</strong></span>
+      <span class="post-hero__series">DevOps & Vibe Coding 2026</span>
+    </div>
+    <div class="post-hero__cover">
+      <img src="../images/web-architecture-cover.jpg" alt="Web Architecture & Design Patterns">
+    </div>
+  </header>
+
+  <article class="post-body">
+
+    <h2>🐕 ทำไมต้องรู้ Architecture?</h2>
+
+    <div class="arch-diagram">
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 2rem; margin-bottom: 1.5rem;">
+        <div style="padding: 1.5rem; background: rgba(239,68,68,0.06); border-left: 4px solid var(--red); border-radius: 8px;">
+          <div style="font-weight: 700; color: #dc2626; margin-bottom: 1rem;">❌ ไม่คิด Architecture:</div>
+          <ul style="margin: 0; padding-left: 1.2rem; color: var(--slate);">
+            <li>1 ไฟล์ 10,000 บรรทัด</li>
+            <li>แก้จุดนึง → พังอีก 5 จุด</li>
+            <li>Deploy ทีนึง → ลุ้นทั้งทีม</li>
+            <li>Scale ไม่ได้ → server ล่มตอน peak</li>
+            <li>Developer ใหม่ต้อง 3 เดือนกว่าจะเข้าใจ</li>
+          </ul>
+        </div>
+        <div style="padding: 1.5rem; background: rgba(34,197,94,0.06); border-left: 4px solid var(--green); border-radius: 8px;">
+          <div style="font-weight: 700; color: #059669; margin-bottom: 1rem;">✅ คิด Architecture:</div>
+          <ul style="margin: 0; padding-left: 1.2rem; color: var(--slate);">
+            <li>แต่ละส่วนแยกชัดเจน</li>
+            <li>แก้จุดนึง → ไม่กระทบจุดอื่น</li>
+            <li>Deploy ทีละส่วนได้</li>
+            <li>Scale เฉพาะส่วนที่ต้องการ</li>
+            <li>Developer ใหม่เข้าใจภายใน 1 สัปดาห์</li>
+          </ul>
+        </div>
+      </div>
+      
+      <blockquote>
+        <strong>Code ดี + Architecture แย่ = ระบบพัง</strong><br>
+        <strong>Code แย่ + Architecture ดี = แก้ได้ทีหลัง</strong>
+      </blockquote>
+    </div>
+
+    <hr>
+
+    <h2>🏢 Monolith vs Microservices</h2>
+
+    <h3>Monolith — ทุกอย่างอยู่ก้อนเดียว</h3>
+
+    <div class="arch-comparison">
+      <div class="arch-concept">
+        <div class="arch-concept__title">Monolith Architecture</div>
+        <div class="arch-concept__content">
+          <div style="text-align: center; margin-bottom: 1rem; font-weight: 600; color: var(--navy);">Single Application</div>
+          <div class="arch-module">Auth Module</div>
+          <div class="arch-module">Users Module</div>
+          <div class="arch-module">Products Module</div>
+          <div class="arch-module">Orders Module</div>
+          <div class="arch-module">Payments Module</div>
+          <div class="arch-module">Notifications Module</div>
+          <div class="arch-db">Shared Database (1)</div>
+        </div>
+        <div class="arch-features">
+          <ul>
+            <li>Deploy ทีเดียว ทั้งก้อน</li>
+            <li>Scale ทีเดียว ทั้งก้อน</li>
+            <li>พังทีเดียว... ก็ทั้งก้อน 💀</li>
+          </ul>
+        </div>
+      </div>
+      
+      <div class="arch-concept">
+        <div class="arch-concept__title">Microservices Architecture</div>
+        <div class="arch-concept__content">
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem; margin-bottom: 1rem;">
+            <div style="text-align: center;">
+              <div style="font-size: 0.8rem; font-weight: 600; color: var(--navy); margin-bottom: 0.3rem;">Auth Service</div>
+              <div style="font-size: 0.7rem; color: var(--slate-light);">Node.js:3001</div>
+              <div style="font-size: 0.7rem; background: rgba(239,68,68,0.1); color: #dc2626; padding: 0.2rem 0.4rem; border-radius: 4px; margin-top: 0.3rem;">Redis</div>
+            </div>
+            <div style="text-align: center;">
+              <div style="font-size: 0.8rem; font-weight: 600; color: var(--navy); margin-bottom: 0.3rem;">Users Service</div>
+              <div style="font-size: 0.7rem; color: var(--slate-light);">Python:3002</div>
+              <div style="font-size: 0.7rem; background: rgba(34,197,94,0.1); color: #059669; padding: 0.2rem 0.4rem; border-radius: 4px; margin-top: 0.3rem;">PostgreSQL</div>
+            </div>
+            <div style="text-align: center;">
+              <div style="font-size: 0.8rem; font-weight: 600; color: var(--navy); margin-bottom: 0.3rem;">Products Service</div>
+              <div style="font-size: 0.7rem; color: var(--slate-light);">Go:3003</div>
+              <div style="font-size: 0.7rem; background: rgba(139,92,246,0.1); color: #6b21a8; padding: 0.2rem 0.4rem; border-radius: 4px; margin-top: 0.3rem;">MongoDB</div>
+            </div>
+            <div style="text-align: center;">
+              <div style="font-size: 0.8rem; font-weight: 600; color: var(--navy); margin-bottom: 0.3rem;">Orders Service</div>
+              <div style="font-size: 0.7rem; color: var(--slate-light);">Java:3004</div>
+              <div style="font-size: 0.7rem; background: rgba(34,197,94,0.1); color: #059669; padding: 0.2rem 0.4rem; border-radius: 4px; margin-top: 0.3rem;">PostgreSQL</div>
+            </div>
+          </div>
+        </div>
+        <div class="arch-features">
+          <ul>
+            <li>แต่ละ service: Deploy อิสระ</li>
+            <li>Scale อิสระ</li>
+            <li>DB แยก (Database per service)</li>
+            <li>ภาษา/tech stack อิสระ</li>
+            <li>ทีมดูแลอิสระ</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <h3>Comparison Table</h3>
+
+    <table>
+      <thead>
+        <tr>
+          <th></th>
+          <th>Monolith</th>
+          <th>Microservices</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><strong>Complexity</strong></td>
+          <td>⭐ Simple</td>
+          <td>⭐⭐⭐ Complex</td>
+        </tr>
+        <tr>
+          <td><strong>Development</strong></td>
+          <td>⚡ Fast start</td>
+          <td>🐢 Slower setup</td>
+        </tr>
+        <tr>
+          <td><strong>Deployment</strong></td>
+          <td>All or nothing</td>
+          <td>Independent</td>
+        </tr>
+        <tr>
+          <td><strong>Scaling</strong></td>
+          <td>Scale everything</td>
+          <td>Scale per service</td>
+        </tr>
+        <tr>
+          <td><strong>Tech stack</strong></td>
+          <td>One stack</td>
+          <td>Mix & match</td>
+        </tr>
+        <tr>
+          <td><strong>Data consistency</strong></td>
+          <td>✅ Easy (1 DB)</td>
+          <td>⚠️ Eventual</td>
+        </tr>
+        <tr>
+          <td><strong>Debugging</strong></td>
+          <td>✅ Stack trace</td>
+          <td>⚠️ Distributed</td>
+        </tr>
+        <tr>
+          <td><strong>Team size</strong></td>
+          <td>1-15 devs</td>
+          <td>10-100+ devs</td>
+        </tr>
+        <tr>
+          <td><strong>Fault isolation</strong></td>
+          <td>❌ One bug = entire app down</td>
+          <td>✅ Service fails others survive</td>
+        </tr>
+        <tr>
+          <td><strong>Communication</strong></td>
+          <td>Function calls (fast)</td>
+          <td>Network (HTTP, gRPC, queues)</td>
+        </tr>
+        <tr>
+          <td><strong>DevOps needs</strong></td>
+          <td>⭐ Basic</td>
+          <td>⭐⭐⭐ K8s, etc.</td>
+        </tr>
+        <tr>
+          <td><strong>Cost</strong></td>
+          <td>💰 Lower</td>
+          <td>💰💰💰 Higher</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <blockquote>
+      <strong>💡 Start with Monolith → Extract to Microservices when you actually NEED to</strong><br><br>
+      "Don't start with microservices unless you have a very good reason." — Martin Fowler
+    </blockquote>
+
+    <h3>Modular Monolith — Best of Both Worlds</h3>
+
+    <div class="modular-monolith">
+      <div style="margin-bottom: 1rem; font-weight: 700; color: var(--emerald-dark); text-align: center;">Modular Monolith (แนะนำ!)</div>
+      
+      <div style="text-align: center; margin-bottom: 1rem; font-weight: 600; color: var(--navy);">Single Deployment</div>
+      
+      <div class="monolith-modules">
+        <div class="monolith-module">
+          <div class="monolith-module__name">Auth Module</div>
+          <div style="font-size: 0.8rem; color: var(--slate-light);">Routes, Models, Logic</div>
+        </div>
+        <div class="monolith-module">
+          <div class="monolith-module__name">Users Module</div>
+          <div style="font-size: 0.8rem; color: var(--slate-light);">Routes, Models, Logic</div>
+        </div>
+        <div class="monolith-module">
+          <div class="monolith-module__name">Products Module</div>
+          <div style="font-size: 0.8rem; color: var(--slate-light);">Routes, Models, Logic</div>
+        </div>
+        <div class="monolith-module">
+          <div class="monolith-module__name">Orders Module</div>
+          <div style="font-size: 0.8rem; color: var(--slate-light);">Routes, Models, Logic</div>
+        </div>
+      </div>
+      
+      <div style="text-align: center; margin: 1rem 0; font-size: 0.9rem; color: var(--slate-light);">
+        Communicate via Internal APIs only<br>
+        (NOT direct DB access)
+      </div>
+      
+      <div class="monolith-db">
+        Shared Database<br>
+        (but each module owns its tables)
+      </div>
+      
+      <div style="margin-top: 1.5rem; padding: 1rem; background: rgba(34,197,94,0.08); border-radius: 8px;">
+        <ul style="margin: 0; padding-left: 1.2rem; color: var(--emerald-dark);">
+          <li>✅ Simple deployment (1 unit)</li>
+          <li>✅ Clear module boundaries</li>
+          <li>✅ Easy to extract to microservice later</li>
+          <li>✅ No network overhead between modules</li>
+          <li>✅ Single DB = ACID transactions</li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="file-tree">
+<div class="file-tree__item"><span class="file-tree__folder">src/</span></div>
+<div class="file-tree__item">&nbsp;&nbsp;<span class="file-tree__folder">modules/</span></div>
+<div class="file-tree__item">&nbsp;&nbsp;&nbsp;&nbsp;<span class="file-tree__folder">auth/</span></div>
+<div class="file-tree__item">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="file-tree__file">auth.controller.ts</span></div>
+<div class="file-tree__item">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="file-tree__file">auth.service.ts</span></div>
+<div class="file-tree__item">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="file-tree__file">auth.routes.ts</span></div>
+<div class="file-tree__item">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="file-tree__file">auth.model.ts</span></div>
+<div class="file-tree__item">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="file-tree__file">auth.types.ts</span></div>
+<div class="file-tree__item">&nbsp;&nbsp;&nbsp;&nbsp;<span class="file-tree__folder">users/</span></div>
+<div class="file-tree__item">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="file-tree__file">users.controller.ts</span></div>
+<div class="file-tree__item">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="file-tree__file">users.service.ts</span></div>
+<div class="file-tree__item">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="file-tree__file">users.routes.ts</span></div>
+<div class="file-tree__item">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="file-tree__file">users.model.ts</span></div>
+<div class="file-tree__item">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="file-tree__file">users.types.ts</span></div>
+<div class="file-tree__item">&nbsp;&nbsp;&nbsp;&nbsp;<span class="file-tree__folder">products/</span></div>
+<div class="file-tree__item">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="file-tree__file">products.controller.ts</span></div>
+<div class="file-tree__item">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="file-tree__file">products.service.ts</span></div>
+<div class="file-tree__item">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="file-tree__file">products.routes.ts</span></div>
+<div class="file-tree__item">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="file-tree__file">...</span></div>
+<div class="file-tree__item">&nbsp;&nbsp;<span class="file-tree__folder">shared/</span></div>
+<div class="file-tree__item">&nbsp;&nbsp;&nbsp;&nbsp;<span class="file-tree__folder">middleware/</span></div>
+<div class="file-tree__item">&nbsp;&nbsp;&nbsp;&nbsp;<span class="file-tree__folder">database/</span></div>
+<div class="file-tree__item">&nbsp;&nbsp;&nbsp;&nbsp;<span class="file-tree__folder">utils/</span></div>
+<div class="file-tree__item">&nbsp;&nbsp;<span class="file-tree__file">app.ts</span></div>
+<div class="file-tree__item">&nbsp;&nbsp;<span class="file-tree__file">server.ts</span></div>
+    </div>
+
+    <hr>
+
+    <h2>📐 Design Patterns — MVC, MVVM, Clean Architecture</h2>
+
+    <h3>MVC (Model-View-Controller)</h3>
+
+    <div class="flow-diagram">
+      <div style="margin-bottom: 1rem; font-weight: 700; color: var(--navy);">MVC Pattern Flow</div>
+      
+      <div style="display: grid; grid-template-columns: 1fr auto 1fr; gap: 2rem; align-items: center; margin-bottom: 1.5rem;">
+        <div style="padding: 1rem; background: var(--blue); color: white; border-radius: 8px; text-align: center; font-weight: 600;">
+          View<br>
+          <span style="font-size: 0.8rem; opacity: 0.8;">(Template)<br>HTML/EJS</span>
+        </div>
+        <div style="font-size: 1.5rem; color: var(--purple);">←→</div>
+        <div style="padding: 1rem; background: var(--purple); color: white; border-radius: 8px; text-align: center; font-weight: 600;">
+          Controller<br>
+          <span style="font-size: 0.8rem; opacity: 0.8;">(Logic)<br>Routes + Handlers</span>
+        </div>
+      </div>
+      
+      <div style="text-align: center; margin: 1rem 0; font-size: 1.5rem; color: var(--purple);">↕</div>
+      
+      <div style="text-align: center;">
+        <div style="padding: 1rem; background: var(--emerald); color: white; border-radius: 8px; font-weight: 600; max-width: 300px; margin: 0 auto;">
+          Model<br>
+          <span style="font-size: 0.8rem; opacity: 0.8;">(Data + Business Logic)</span>
+        </div>
+      </div>
+      
+      <div style="margin-top: 1.5rem; text-align: center; font-size: 0.9rem; color: var(--slate-light);">
+        <strong>Examples:</strong> Rails, Django, Laravel, Express + EJS<br>
+        <strong>Best for:</strong> Server-rendered (SSR) web apps
+      </div>
+    </div>
+
+    <pre><code>// ═══════════════════════════════
+// MVC Example — Express.js
+// ═══════════════════════════════
+
+// Model — Database interaction
+// models/Order.ts
+class OrderModel {
+  static async create(data: OrderInput): Promise&lt;Order&gt; {
+    const result = await db.query(
+      'INSERT INTO orders (user_id, total, status) VALUES ($1, $2, $3) RETURNING *',
+      [data.userId, data.total, 'pending']
+    );
+    return result.rows[0];
+  }
+
+  static async findByUser(userId: string): Promise&lt;Order[]&gt; {
+    return db.query('SELECT * FROM orders WHERE user_id = $1 ORDER BY created_at DESC', [userId]);
+  }
+}
+
+// Controller — Business logic
+// controllers/orderController.ts
+class OrderController {
+  static async createOrder(req: Request, res: Response) {
+    try {
+      const { items } = req.body;
+      
+      // Business logic
+      const total = items.reduce((sum, item) =&gt; sum + item.price * item.qty, 0);
+      const order = await OrderModel.create({ userId: req.user.id, total });
+      
+      // Respond
+      res.status(201).json({ order });
+    } catch (err) {
+      res.status(500).json({ error: 'Failed to create order' });
+    }
+  }
+}
+
+// View — Routes (API = JSON response)
+// routes/orders.ts
+router.post('/orders', authenticate, OrderController.createOrder);
+router.get('/orders', authenticate, OrderController.listOrders);</code></pre>
+
+    <h3>Layered Architecture — Controller → Service → Repository</h3>
+
+    <div class="layer-diagram">
+      <div style="margin-bottom: 1rem; font-weight: 700; color: var(--navy); text-align: center;">Layered (N-Tier) Architecture</div>
+      
+      <div class="layer layer--presentation">
+        Presentation Layer (Controllers / Routes)<br>
+        <span style="font-size: 0.85rem; opacity: 0.9;">→ HTTP requests, validation, response format</span>
+      </div>
+      <div class="layer-arrow">↓</div>
+      
+      <div class="layer layer--service">
+        Service Layer (Business Logic)<br>
+        <span style="font-size: 0.85rem; opacity: 0.9;">→ Business rules, orchestration, validation</span>
+      </div>
+      <div class="layer-arrow">↓</div>
+      
+      <div class="layer layer--repository">
+        Repository Layer (Data Access)<br>
+        <span style="font-size: 0.85rem; opacity: 0.9;">→ Database queries, ORM, external APIs</span>
+      </div>
+      <div class="layer-arrow">↓</div>
+      
+      <div class="layer layer--database">
+        Database / External Services
+      </div>
+      
+      <div style="margin-top: 1.5rem; padding: 1rem; background: rgba(139,92,246,0.06); border-radius: 8px; text-align: center;">
+        <strong>กฎ:</strong> แต่ละ layer เรียกได้แค่ layer ข้างล่าง<br>
+        Controller → Service ✅<br>
+        Controller → Repository ❌ (ข้าม layer)<br>
+        Service → Controller ❌ (ย้อนกลับ)
+      </div>
+    </div>
+
+    <pre><code>// ═══════════════════════════════
+// Layered Architecture Example
+// ═══════════════════════════════
+
+// Repository Layer — Data access only
+// repositories/orderRepository.ts
+class OrderRepository {
+  async create(data: CreateOrderDTO): Promise&lt;Order&gt; {
+    return prisma.order.create({ data });
+  }
+
+  async findById(id: string): Promise&lt;Order | null&gt; {
+    return prisma.order.findUnique({ 
+      where: { id },
+      include: { items: true, user: true }
+    });
+  }
+
+  async findByUser(userId: string): Promise&lt;Order[]&gt; {
+    return prisma.order.findMany({
+      where: { userId },
+      orderBy: { createdAt: 'desc' }
+    });
+  }
+}
+
+// Service Layer — Business logic
+// services/orderService.ts
+class OrderService {
+  constructor(
+    private orderRepo: OrderRepository,
+    private productRepo: ProductRepository,
+    private paymentService: PaymentService,
+    private notificationService: NotificationService,
+  ) {}
+
+  async createOrder(userId: string, items: CartItem[]): Promise&lt;Order&gt; {
+    // 1. Validate stock
+    for (const item of items) {
+      const product = await this.productRepo.findById(item.productId);
+      if (!product) throw new NotFoundError(`Product ${item.productId} not found`);
+      if (product.stock &lt; item.quantity) throw new ValidationError(`Insufficient stock for ${product.name}`);
+    }
+
+    // 2. Calculate total
+    const total = items.reduce((sum, item) =&gt; sum + item.price * item.quantity, 0);
+
+    // 3. Create order
+    const order = await this.orderRepo.create({
+      userId,
+      total,
+      status: 'pending',
+      items: items.map(i =&gt; ({
+        productId: i.productId,
+        quantity: i.quantity,
+        price: i.price,
+      })),
+    });
+
+    // 4. Reserve stock
+    for (const item of items) {
+      await this.productRepo.decrementStock(item.productId, item.quantity);
+    }
+
+    // 5. Send notification
+    await this.notificationService.sendOrderConfirmation(userId, order);
+
+    return order;
+  }
+}
+
+// Controller Layer — HTTP handling
+// controllers/orderController.ts
+class OrderController {
+  constructor(private orderService: OrderService) {}
+
+  createOrder = async (req: Request, res: Response) =&gt; {
+    try {
+      const { items } = req.body;
+      
+      // Input validation only
+      if (!items?.length) {
+        return res.status(400).json({ error: 'Items required' });
+      }
+
+      // Delegate to service
+      const order = await this.orderService.createOrder(req.user.id, items);
+      
+      res.status(201).json({ data: order });
+    } catch (err) {
+      if (err instanceof ValidationError) {
+        return res.status(400).json({ error: err.message });
+      }
+      if (err instanceof NotFoundError) {
+        return res.status(404).json({ error: err.message });
+      }
+      res.status(500).json({ error: 'Internal server error' });
+    }
+  };
+}</code></pre>
+
+    <h3>Clean Architecture / Hexagonal Architecture</h3>
+
+    <div class="clean-arch">
+      <div style="margin-bottom: 1.5rem; font-weight: 700; color: var(--navy); text-align: center;">Clean Architecture (Onion)</div>
+      
+      <div class="clean-circles">
+        <div class="clean-circle clean-circle--outer">
+          <div style="font-size: 0.85rem; line-height: 1.2;">
+            Frameworks & Drivers<br>
+            <span style="font-size: 0.7rem; opacity: 0.8;">Express, PostgreSQL, Redis, AWS S3</span>
+          </div>
+        </div>
+        <div class="clean-circle clean-circle--middle">
+          <div style="font-size: 0.85rem; line-height: 1.2;">
+            Interface Adapters<br>
+            <span style="font-size: 0.7rem; opacity: 0.8;">Controllers, Presenters, Gateways</span>
+          </div>
+        </div>
+        <div class="clean-circle clean-circle--inner">
+          <div style="font-size: 0.8rem; line-height: 1.2;">
+            Enterprise<br>Entities<br>
+            <span style="font-size: 0.65rem; opacity: 0.8;">Domain Models</span>
+          </div>
+        </div>
+      </div>
+      
+      <div style="margin-top: 2rem; padding: 1rem; background: rgba(139,92,246,0.06); border-radius: 8px;">
+        <div style="font-weight: 600; color: var(--navy); margin-bottom: 0.5rem;">Dependency Rule:</div>
+        <ul style="margin: 0; padding-left: 1.2rem; font-size: 0.9rem; color: var(--slate);">
+          <li>dependencies point INWARD only</li>
+          <li>Inner layers know NOTHING about outer layers</li>
+          <li>Use interfaces/ports at boundaries</li>
+        </ul>
+        <div style="margin-top: 1rem; display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 0.5rem;">
+          <div style="font-size: 0.85rem; color: var(--green); background: rgba(34,197,94,0.08); padding: 0.5rem; border-radius: 6px;">✅ Testable: mock outer layers</div>
+          <div style="font-size: 0.85rem; color: var(--green); background: rgba(34,197,94,0.08); padding: 0.5rem; border-radius: 6px;">✅ Framework-independent: swap Express → Fastify</div>
+          <div style="font-size: 0.85rem; color: var(--green); background: rgba(34,197,94,0.08); padding: 0.5rem; border-radius: 6px;">✅ DB-independent: swap PostgreSQL → MongoDB</div>
+          <div style="font-size: 0.85rem; color: var(--amber); background: rgba(245,158,11,0.08); padding: 0.5rem; border-radius: 6px;">⚠️ More code & complexity</div>
+        </div>
+      </div>
+    </div>
+
+    <hr>
+
+    <h2>🌐 API Styles — REST vs GraphQL vs gRPC</h2>
+
+    <h3>REST — Resource-based</h3>
+
+    <div class="api-comparison">
+      <div class="api-grid">
+        <div class="api-card">
+          <div class="api-card__title">REST API</div>
+          <div style="font-size: 0.9rem; color: var(--slate-light); text-align: center; margin-bottom: 1rem;">HTTP Method + URL = Operation on Resource</div>
+          
+          <div class="api-card__endpoint">GET /api/users</div>
+          <div style="font-size: 0.8rem; color: var(--slate-light); text-align: center; margin-bottom: 0.5rem;">List users</div>
+          
+          <div class="api-card__endpoint">GET /api/users/123</div>
+          <div style="font-size: 0.8rem; color: var(--slate-light); text-align: center; margin-bottom: 0.5rem;">Get user 123</div>
+          
+          <div class="api-card__endpoint">POST /api/users</div>
+          <div style="font-size: 0.8rem; color: var(--slate-light); text-align: center; margin-bottom: 0.5rem;">Create user</div>
+          
+          <div class="api-card__endpoint">PUT /api/users/123</div>
+          <div style="font-size: 0.8rem; color: var(--slate-light); text-align: center; margin-bottom: 0.5rem;">Update user 123 (full)</div>
+          
+          <div class="api-card__endpoint">DELETE /api/users/123</div>
+          <div style="font-size: 0.8rem; color: var(--slate-light); text-align: center; margin-bottom: 1rem;">Delete user 123</div>
+          
+          <div style="font-size: 0.85rem; color: var(--navy); font-weight: 600; margin-bottom: 0.5rem;">Nested resources:</div>
+          <div class="api-card__endpoint">GET /api/users/123/posts</div>
+          <div class="api-card__endpoint">GET /api/posts/456/comments</div>
+        </div>
+        
+        <div style="grid-column: 1 / -1;">
+          <div style="padding: 1rem; background: rgba(239,68,68,0.06); border-left: 4px solid var(--red); border-radius: 8px; margin-bottom: 1rem;">
+            <div style="font-weight: 700; color: #dc2626; margin-bottom: 0.75rem;">REST Problems:</div>
+            <ul style="margin: 0; padding-left: 1.2rem; font-size: 0.9rem; color: var(--slate);">
+              <li><strong>Over-fetching</strong> — ขอ user แต่ได้ทุก field กลับมา</li>
+              <li><strong>Under-fetching</strong> — ต้อง call หลาย endpoints</li>
+              <li><strong>N+1 problem</strong> — list ที่ต้อง fetch related data</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <h3>GraphQL — Query-based</h3>
+
+    <div class="api-comparison">
+      <div class="api-grid">
+        <div class="api-card">
+          <div class="api-card__title">GraphQL API</div>
+          <div class="api-card__endpoint">POST /graphql</div>
+          <div style="font-size: 0.9rem; color: var(--slate-light); text-align: center; margin-bottom: 1rem;">Single endpoint<br>Client บอกว่าต้องการ data อะไร</div>
+          
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; font-size: 0.8rem;">
+            <div>
+              <div style="font-weight: 600; color: var(--navy); margin-bottom: 0.5rem;">Query:</div>
+              <div style="font-family: var(--mono); background: var(--code-bg); color: #e2e8f0; padding: 0.75rem; border-radius: 6px;">
+{<br>
+&nbsp;&nbsp;user(id: 123) {<br>
+&nbsp;&nbsp;&nbsp;&nbsp;name<br>
+&nbsp;&nbsp;&nbsp;&nbsp;avatar<br>
+&nbsp;&nbsp;&nbsp;&nbsp;posts(limit: 5) {<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;title<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;likes<br>
+&nbsp;&nbsp;&nbsp;&nbsp;}<br>
+&nbsp;&nbsp;}<br>
+}
+              </div>
+            </div>
+            <div>
+              <div style="font-weight: 600; color: var(--navy); margin-bottom: 0.5rem;">Response:</div>
+              <div style="font-family: var(--mono); background: var(--code-bg); color: #e2e8f0; padding: 0.75rem; border-radius: 6px;">
+{<br>
+&nbsp;&nbsp;"data": {<br>
+&nbsp;&nbsp;&nbsp;&nbsp;"user": {<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;"name": "Alice",<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;"avatar": "url...",<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;"posts": [...]<br>
+&nbsp;&nbsp;&nbsp;&nbsp;}<br>
+&nbsp;&nbsp;}<br>
+}
+              </div>
+            </div>
+          </div>
+          
+          <div style="margin-top: 1rem; text-align: center; font-size: 0.9rem; color: var(--green); font-weight: 600;">
+            1 request! เลือกเฉพาะ fields ที่ต้องการ!
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <pre><code># ═══════════════════════════════
+# GraphQL Schema Definition
+# ═══════════════════════════════
+
+type User {
+  id: ID!
+  name: String!
+  email: String!
+  avatar: String
+  posts(limit: Int = 10, offset: Int = 0): [Post!]!
+  followers: Int!
+}
+
+type Post {
+  id: ID!
+  title: String!
+  content: String!
+  author: User!
+  comments: [Comment!]!
+  likes: Int!
+  createdAt: DateTime!
+}
+
+type Query {
+  user(id: ID!): User
+  users(limit: Int, offset: Int): [User!]!
+  post(id: ID!): Post
+  posts(status: PostStatus, limit: Int): [Post!]!
+}
+
+type Mutation {
+  createPost(input: CreatePostInput!): Post!
+  updatePost(id: ID!, input: UpdatePostInput!): Post!
+  deletePost(id: ID!): Boolean!
+}
+
+# ═══════════════════════════════
+# Client Queries
+# ═══════════════════════════════
+
+# Dashboard — 1 request แทน 4 requests
+query Dashboard {
+  me: user(id: "123") {
+    name
+    avatar
+    followers
+  }
+  recentPosts: posts(limit: 5) {
+    title
+    likes
+    createdAt
+  }
+}
+
+# Mutation
+mutation CreatePost {
+  createPost(input: {
+    title: "GraphQL is Awesome"
+    content: "Here's why..."
+  }) {
+    id
+    title
+    createdAt
+  }
+}</code></pre>
+
+    <h3>gRPC — Binary Protocol (Service-to-Service)</h3>
+
+    <div class="api-comparison">
+      <div class="api-grid">
+        <div class="api-card">
+          <div class="api-card__title">gRPC</div>
+          <div class="api-card__features">
+            <ul style="margin: 0; padding-left: 1rem; font-size: 0.9rem;">
+              <li>Binary protocol (Protocol Buffers) → 10x faster</li>
+              <li>Strongly typed → contract-first development</li>
+              <li>Streaming support → real-time data</li>
+              <li>Code generation → auto-generate client/server</li>
+            </ul>
+          </div>
+          
+          <div style="margin: 1rem 0; display: grid; grid-template-columns: 1fr auto 1fr; gap: 1rem; align-items: center; font-size: 0.85rem;">
+            <div style="text-align: center; padding: 0.75rem; background: var(--blue); color: white; border-radius: 6px;">
+              Service A<br>(Node.js)
+            </div>
+            <div style="color: var(--slate-light);">gRPC<br>(binary)</div>
+            <div style="text-align: center; padding: 0.75rem; background: var(--emerald); color: white; border-radius: 6px;">
+              Service B<br>(Go)
+            </div>
+          </div>
+          
+          <div style="margin: 1rem 0; text-align: center; font-size: 0.85rem; color: var(--slate-light);">vs</div>
+          
+          <div style="display: grid; grid-template-columns: 1fr auto 1fr; gap: 1rem; align-items: center; font-size: 0.85rem;">
+            <div style="text-align: center; padding: 0.75rem; background: var(--slate-light); color: white; border-radius: 6px;">
+              Service A
+            </div>
+            <div style="color: var(--slate-light);">HTTP/JSON<br>(text, slow)</div>
+            <div style="text-align: center; padding: 0.75rem; background: var(--slate-light); color: white; border-radius: 6px;">
+              Service B
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <pre><code>// ═══════════════════════════════
+// user.proto — Protocol Buffer Definition
+// ═══════════════════════════════
+
+syntax = "proto3";
+package user;
+
+service UserService {
+  // Unary — request/response เดียว
+  rpc GetUser (GetUserRequest) returns (User);
+  rpc CreateUser (CreateUserRequest) returns (User);
+  
+  // Server streaming — server ส่ง stream กลับ
+  rpc ListUsers (ListUsersRequest) returns (stream User);
+  
+  // Bidirectional streaming — ทั้ง 2 ฝั่ง stream
+  rpc Chat (stream ChatMessage) returns (stream ChatMessage);
+}
+
+message User {
+  string id = 1;
+  string name = 2;
+  string email = 3;
+  UserRole role = 4;
+  int64 created_at = 5;
+}
+
+enum UserRole {
+  MEMBER = 0;
+  EDITOR = 1;
+  ADMIN = 2;
+}
+
+message GetUserRequest {
+  string id = 1;
+}
+
+message CreateUserRequest {
+  string name = 1;
+  string email = 2;
+  string password = 3;
+}</code></pre>
+
+    <h3>REST vs GraphQL vs gRPC — เลือกยังไง?</h3>
+
+    <table>
+      <thead>
+        <tr>
+          <th></th>
+          <th>REST</th>
+          <th>GraphQL</th>
+          <th>gRPC</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><strong>Format</strong></td>
+          <td>JSON (text)</td>
+          <td>JSON (text)</td>
+          <td>Protobuf (binary)</td>
+        </tr>
+        <tr>
+          <td><strong>Transport</strong></td>
+          <td>HTTP/1.1</td>
+          <td>HTTP/1.1</td>
+          <td>HTTP/2</td>
+        </tr>
+        <tr>
+          <td><strong>Performance</strong></td>
+          <td>⭐⭐</td>
+          <td>⭐⭐</td>
+          <td>⭐⭐⭐</td>
+        </tr>
+        <tr>
+          <td><strong>Type Safety</strong></td>
+          <td>❌ Manual</td>
+          <td>✅ Schema</td>
+          <td>✅ Proto</td>
+        </tr>
+        <tr>
+          <td><strong>Browser Support</strong></td>
+          <td>✅ Native</td>
+          <td>✅ Library</td>
+          <td>⚠️ grpc-web</td>
+        </tr>
+        <tr>
+          <td><strong>Over/Under fetch</strong></td>
+          <td>❌ Common</td>
+          <td>✅ Exact</td>
+          <td>✅ Exact</td>
+        </tr>
+        <tr>
+          <td><strong>Caching</strong></td>
+          <td>✅ HTTP cache</td>
+          <td>⚠️ Complex</td>
+          <td>❌ Hard</td>
+        </tr>
+        <tr>
+          <td><strong>Learning Curve</strong></td>
+          <td>⭐ Easy</td>
+          <td>⭐⭐ Medium</td>
+          <td>⭐⭐⭐ Hard</td>
+        </tr>
+        <tr>
+          <td><strong>Best For</strong></td>
+          <td>Public APIs, CRUD, simple</td>
+          <td>Mobile/SPA, complex UI</td>
+          <td>Microservice internal</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <blockquote>
+      <strong>💡 Common patterns:</strong><br>
+      ├── Public API → REST (simple, cacheable, everyone knows it)<br>
+      ├── Frontend (SPA/Mobile) → GraphQL (flexible queries)<br>
+      ├── Service-to-service → gRPC (fast, typed, streaming)<br>
+      └── Mix! REST for public + gRPC for internal is common
+    </blockquote>
+
+    <hr>
+
+    <h2>📨 Event-Driven Architecture & Message Queues</h2>
+
+    <h3>Synchronous vs Asynchronous</h3>
+
+    <div class="sync-async">
+      <div class="sync-async__grid">
+        <div class="sync-async__type sync-async__type--sync">
+          <div class="sync-async__title">❌ Synchronous (blocking)</div>
+          <div style="font-weight: 600; margin-bottom: 0.5rem;">User clicks "Place Order"</div>
+          <div class="sync-async__timeline">
+            <div class="sync-step">├── Create order .......... 100ms</div>
+            <div class="sync-step">├── Charge payment ........ 500ms ← 3rd party!</div>
+            <div class="sync-step">├── Update inventory ...... 100ms</div>
+            <div class="sync-step">├── Send email ............ 300ms ← 3rd party!</div>
+            <div class="sync-step">├── Send SMS .............. 400ms ← 3rd party!</div>
+            <div class="sync-step">├── Update analytics ...... 100ms</div>
+            <div class="sync-step">└── Generate invoice ...... 200ms</div>
+          </div>
+          <div style="font-weight: 600; color: #dc2626; margin-top: 1rem;">
+            Total: 1,700ms ← User waits 1.7 seconds! 😤<br>
+            ⚠️ ถ้า email server ล่ม → ทั้ง order fail!
+          </div>
+        </div>
+        
+        <div class="sync-async__type sync-async__type--async">
+          <div class="sync-async__title">✅ Asynchronous (event-driven)</div>
+          <div style="font-weight: 600; margin-bottom: 0.5rem;">User clicks "Place Order"</div>
+          <div class="sync-async__timeline">
+            <div class="async-step">├── Create order .......... 100ms</div>
+            <div class="async-step">├── Charge payment ........ 500ms</div>
+            <div class="async-step">├── Publish event: "order.created" → Queue</div>
+            <div class="async-step">└── Response: "Order placed!" ← 600ms total! ⚡</div>
+          </div>
+          <div style="margin-top: 1rem; font-size: 0.9rem; color: var(--slate-light);">
+            Message Queue processes (background):<br>
+            ├── Send email .............. async<br>
+            ├── Send SMS ................ async<br>
+            ├── Update analytics ........ async<br>
+            └── Generate invoice ........ async
+          </div>
+          <div style="font-weight: 600; color: #059669; margin-top: 1rem;">
+            ⚡ User gets response in 600ms!<br>
+            ✅ Email ล่ม → retry อัตโนมัติ → order ไม่ fail
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <h3>Message Queue Architecture</h3>
+
+    <div class="message-queue">
+      <div style="margin-bottom: 1rem; font-weight: 700; color: var(--navy); text-align: center;">Message Queue Pattern</div>
+      
+      <div class="queue-flow">
+        <div class="queue-producer">
+          Producer<br>
+          <span style="font-size: 0.8rem; opacity: 0.8;">(ผู้ส่ง)</span><br><br>
+          Order Service
+        </div>
+        
+        <div class="queue-middle">
+          <div class="queue-name">order.created queue</div>
+          <div class="queue-messages">
+            <div class="queue-message">message 1</div>
+            <div class="queue-message">message 2</div>
+            <div class="queue-message">message 3</div>
+          </div>
+        </div>
+        
+        <div class="queue-consumer">
+          Consumer<br>
+          <span style="font-size: 0.8rem; opacity: 0.8;">(ผู้รับ)</span><br><br>
+          Email Service<br>
+          SMS Service<br>
+          Analytics
+        </div>
+      </div>
+      
+      <div style="margin-top: 1.5rem; padding: 1rem; background: rgba(139,92,246,0.06); border-radius: 8px;">
+        <div style="font-weight: 600; color: var(--navy); margin-bottom: 0.75rem;">How it works:</div>
+        <ol style="margin: 0; padding-left: 1.2rem; font-size: 0.9rem; color: var(--slate);">
+          <li>Producer ส่ง message เข้า queue</li>
+          <li>Queue เก็บ message ไว้ (persistent)</li>
+          <li>Consumer ดึง message มาทำงาน</li>
+          <li>ถ้า consumer fail → message ยังอยู่ใน queue</li>
+          <li>Consumer อื่นมารับทำแทนได้ (competing consumers)</li>
+        </ol>
+      </div>
+    </div>
+
+    <h3>Event-Driven Example with RabbitMQ</h3>
+
+    <pre><code>// ═══════════════════════════════
+// Producer — Order Service
+// ═══════════════════════════════
+import amqp from 'amqplib';
+
+class OrderService {
+  private channel: amqp.Channel;
+
+  async connect() {
+    const conn = await amqp.connect('amqp://localhost');
+    this.channel = await conn.createChannel();
+    
+    // Declare exchange (topic-based routing)
+    await this.channel.assertExchange('events', 'topic', { durable: true });
+  }
+
+  async createOrder(userId: string, items: CartItem[]) {
+    // 1. Business logic
+    const order = await this.orderRepo.create({ userId, items });
+    
+    // 2. Publish event (async, non-blocking)
+    const event = {
+      type: 'order.created',
+      data: {
+        orderId: order.id,
+        userId,
+        items,
+        total: order.total,
+        timestamp: new Date().toISOString(),
+      },
+    };
+
+    this.channel.publish(
+      'events',
+      'order.created',
+      Buffer.from(JSON.stringify(event)),
+      { persistent: true }  // Survives broker restart
+    );
+
+    return order;  // Return immediately!
+  }
+}
+
+// ═══════════════════════════════
+// Consumer — Email Service
+// ═══════════════════════════════
+class EmailConsumer {
+  async start() {
+    const conn = await amqp.connect('amqp://localhost');
+    const channel = await conn.createChannel();
+
+    await channel.assertExchange('events', 'topic', { durable: true });
+
+    // Create queue for this consumer
+    const q = await channel.assertQueue('email-service', { durable: true });
+    
+    // Bind to events we care about
+    await channel.bindQueue(q.queue, 'events', 'order.created');
+    await channel.bindQueue(q.queue, 'events', 'user.registered');
+
+    // Process messages
+    channel.prefetch(10);  // Process 10 at a time
+    channel.consume(q.queue, async (msg) => {
+      if (!msg) return;
+
+      try {
+        const event = JSON.parse(msg.content.toString());
+
+        switch (event.type) {
+          case 'order.created':
+            await sendOrderConfirmation(event.data);
+            break;
+          case 'user.registered':
+            await sendWelcomeEmail(event.data);
+            break;
+        }
+
+        channel.ack(msg);  // ✅ Message processed
+      } catch (err) {
+        channel.nack(msg, false, true);  // ❌ Retry (requeue)
+      }
+    });
+  }
+}</code></pre>
+
+    <h3>Apache Kafka — High-Throughput Event Streaming</h3>
+
+    <div style="margin: 1.5rem 0; padding: 1.5rem; background: rgba(139,92,246,0.04); border-radius: 12px;">
+      <div style="margin-bottom: 1rem; font-weight: 700; color: var(--navy);">Apache Kafka</div>
+      
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; margin-bottom: 1.5rem;">
+        <div style="font-size: 0.9rem; color: var(--slate);">
+          <strong>RabbitMQ = Message Queue</strong><br>
+          (messages ถูกลบหลัง consume)
+        </div>
+        <div style="font-size: 0.9rem; color: var(--slate);">
+          <strong>Kafka = Event Log</strong><br>
+          (events ถูกเก็บถาวร, replay ได้)
+        </div>
+      </div>
+      
+      <div style="padding: 1rem; background: white; border-radius: 8px; margin-bottom: 1.5rem;">
+        <div style="font-weight: 600; color: var(--navy); margin-bottom: 0.75rem; text-align: center;">Topic: orders</div>
+        <div style="font-family: var(--mono); font-size: 0.8rem; color: var(--slate); text-align: center;">
+          Partition 0: [e1][e2][e3][e4][e5]→<br>
+          Partition 1: [e1][e2][e3]→<br>
+          Partition 2: [e1][e2][e3][e4]→
+        </div>
+      </div>
+      
+      <div style="margin-bottom: 1.5rem;">
+        <div style="display: grid; grid-template-columns: 1fr auto 1fr; gap: 1rem; align-items: center; font-size: 0.9rem;">
+          <div style="text-align: center; color: var(--navy);">
+            ↑<br>Producers<br>(Order Service)
+          </div>
+          <div style="font-size: 1.5rem; color: var(--purple);">→</div>
+          <div style="text-align: center; color: var(--navy);">
+            ↓ ↓<br>Consumer Groups<br>├── Email Service<br>├── Analytics Service<br>└── Inventory Service
+          </div>
+        </div>
+      </div>
+      
+      <div style="background: rgba(139,92,246,0.06); padding: 1rem; border-radius: 8px;">
+        <div style="font-weight: 600; color: var(--navy); margin-bottom: 0.75rem;">Key Features:</div>
+        <ul style="margin: 0; padding-left: 1.2rem; font-size: 0.9rem; color: var(--slate);">
+          <li>Retention: เก็บ events 7 วัน (configurable)</li>
+          <li>Replay: consumer ย้อนอ่านได้</li>
+          <li>Partitions: parallel processing</li>
+          <li>Consumer Groups: load balancing</li>
+          <li>Throughput: 100K+ messages/second</li>
+          <li>Ordering: per-partition ordering guarantee</li>
+        </ul>
+      </div>
+    </div>
+
+    <h3>RabbitMQ vs Kafka — Quick Comparison</h3>
+
+    <table>
+      <thead>
+        <tr>
+          <th></th>
+          <th>RabbitMQ</th>
+          <th>Apache Kafka</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><strong>Model</strong></td>
+          <td>Message Queue</td>
+          <td>Event Log</td>
+        </tr>
+        <tr>
+          <td><strong>Messages</strong></td>
+          <td>Deleted after consumption</td>
+          <td>Retained (7d+) replay possible</td>
+        </tr>
+        <tr>
+          <td><strong>Throughput</strong></td>
+          <td>~10K msg/sec</td>
+          <td>~100K+ msg/sec</td>
+        </tr>
+        <tr>
+          <td><strong>Ordering</strong></td>
+          <td>Per-queue</td>
+          <td>Per-partition</td>
+        </tr>
+        <tr>
+          <td><strong>Routing</strong></td>
+          <td>✅ Flexible (exchange types)</td>
+          <td>Topic-based</td>
+        </tr>
+        <tr>
+          <td><strong>Protocol</strong></td>
+          <td>AMQP</td>
+          <td>Custom binary</td>
+        </tr>
+        <tr>
+          <td><strong>Complexity</strong></td>
+          <td>⭐⭐ Medium</td>
+          <td>⭐⭐⭐ Complex</td>
+        </tr>
+        <tr>
+          <td><strong>Use Cases</strong></td>
+          <td>Task queues, notifications, RPC</td>
+          <td>Event sourcing, analytics, logs, streaming</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <blockquote>
+      <strong>💡 Small/medium apps → RabbitMQ (simpler)</strong><br>
+      <strong>High-throughput, event sourcing → Kafka</strong><br>
+      <strong>Cloud-native → AWS SQS/SNS (simplest managed option)</strong>
+    </blockquote>
+
+    <hr>
+
+    <h2>🏗️ Communication Patterns in Distributed Systems</h2>
+
+    <div class="communication-patterns">
+      <div class="pattern-grid">
+        <div class="pattern-card">
+          <div class="pattern-card__title">1. API Gateway</div>
+          <div class="pattern-card__desc">Client → API Gateway → Services<br>Gateway handles: routing, auth, rate limiting</div>
+          <div class="pattern-card__use">Tools: Kong, AWS API Gateway, Nginx</div>
+        </div>
+        
+        <div class="pattern-card">
+          <div class="pattern-card__title">2. Service Mesh</div>
+          <div class="pattern-card__desc">Sidecar proxy per service (Envoy)<br>Handles: mTLS, load balancing, observability</div>
+          <div class="pattern-card__use">Tools: Istio, Linkerd</div>
+        </div>
+        
+        <div class="pattern-card">
+          <div class="pattern-card__title">3. Saga Pattern</div>
+          <div class="pattern-card__desc">Distributed transactions<br>Each step has a compensating action</div>
+          <div class="pattern-card__use">Example: Order → Stock → Payment → Compensate if fail</div>
+        </div>
+        
+        <div class="pattern-card">
+          <div class="pattern-card__title">4. CQRS</div>
+          <div class="pattern-card__desc">Command Query Responsibility Segregation<br>Write DB (normalized) ≠ Read DB (denormalized)</div>
+          <div class="pattern-card__use">Sync via events between the two DBs</div>
+        </div>
+        
+        <div class="pattern-card">
+          <div class="pattern-card__title">5. Circuit Breaker</div>
+          <div class="pattern-card__desc">Closed → Open → Half-Open → Closed<br>If Service B fails 5 times → stop calling</div>
+          <div class="pattern-card__use">Prevents cascading failures</div>
+        </div>
+      </div>
+    </div>
+
+    <hr>
+
+    <h2>🌍 Real-World Architecture Examples</h2>
+
+    <h3>E-commerce Platform (Medium Scale)</h3>
+
+    <div class="real-world-arch">
+      <div style="margin-bottom: 1rem; font-weight: 700; color: var(--navy); text-align: center;">E-commerce Architecture (Medium Scale)</div>
+      
+      <div class="arch-stack">
+        <div class="arch-layer arch-layer--cdn">
+          CDN (CloudFlare / CloudFront)<br>
+          <span style="font-size: 0.85rem; opacity: 0.9;">→ Static assets (images, CSS, JS)</span>
+        </div>
+        
+        <div class="arch-layer arch-layer--lb">
+          Load Balancer (Nginx / ALB)
+        </div>
+        
+        <div class="arch-layer arch-layer--app">
+          Web App (Next.js SSR)<br>
+          <span style="font-size: 0.85rem; opacity: 0.9;">Multiple instances</span>
+        </div>
+        
+        <div class="arch-layer arch-layer--api">
+          API Gateway (Kong)<br>
+          <span style="font-size: 0.85rem; opacity: 0.9;">→ Auth, rate limiting, logging</span>
+        </div>
+        
+        <div class="arch-layer--services">
+          <div class="arch-service">User Service</div>
+          <div class="arch-service">Product Service</div>
+          <div class="arch-service">Order Service</div>
+          <div class="arch-service">Payment Service</div>
+        </div>
+        
+        <div class="arch-layer arch-layer--db">
+          PostgreSQL + Redis + RabbitMQ + Elasticsearch
+        </div>
+      </div>
+    </div>
+
+    <h3>SaaS Application (Simpler — Modular Monolith)</h3>
+
+    <div class="real-world-arch">
+      <div style="margin-bottom: 1rem; font-weight: 700; color: var(--navy); text-align: center;">SaaS App Architecture (Startup Stage)</div>
+      
+      <div class="arch-stack">
+        <div class="arch-layer arch-layer--cdn">
+          Frontend (React/Next.js on Vercel)
+        </div>
+        
+        <div class="arch-layer arch-layer--api">
+          API Server (Modular Monolith — Node.js)<br>
+          <span style="font-size: 0.85rem; opacity: 0.9;">Auth | Users | Billing | Teams | API Modules</span>
+        </div>
+        
+        <div class="arch-layer arch-layer--db">
+          PostgreSQL (single DB, schema per module)
+        </div>
+        
+        <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 0.5rem;">
+          <div class="arch-layer" style="background: linear-gradient(135deg, #06b6d4, #0891b2); font-size: 0.85rem;">Redis<br>(cache)</div>
+          <div class="arch-layer" style="background: linear-gradient(135deg, #f59e0b, #d97706); font-size: 0.85rem;">S3/R2<br>(files)</div>
+          <div class="arch-layer" style="background: linear-gradient(135deg, #8b5cf6, #7c3aed); font-size: 0.85rem;">Background Jobs<br>(BullMQ)</div>
+        </div>
+      </div>
+      
+      <div style="margin-top: 1rem; text-align: center; font-size: 0.9rem; color: var(--emerald-dark); font-weight: 600;">
+        💡 เริ่มง่าย, scale ได้, ค่อย extract ทีหลัง
+      </div>
+    </div>
+
+    <hr>
+
+    <h2>📋 Architecture Decision Cheat Sheet</h2>
+
+    <div class="decision-grid">
+      <div class="decision-categories">
+        <div class="decision-category">
+          <div class="decision-category__title">📦 Architecture</div>
+          <div class="decision-option">
+            <div class="decision-option__condition">Solo/small team (1-5)</div>
+            <div class="decision-option__choice">→ Modular Monolith</div>
+          </div>
+          <div class="decision-option">
+            <div class="decision-option__condition">Medium team (5-20)</div>
+            <div class="decision-option__choice">→ Modular Monolith + Queue</div>
+          </div>
+          <div class="decision-option">
+            <div class="decision-option__condition">Large team (20+)</div>
+            <div class="decision-option__choice">→ Microservices</div>
+          </div>
+          <div class="decision-option">
+            <div class="decision-option__condition">"I'm not sure"</div>
+            <div class="decision-option__choice">→ Monolith (you can always split)</div>
+          </div>
+        </div>
+        
+        <div class="decision-category">
+          <div class="decision-category__title">🌐 API Style</div>
+          <div class="decision-option">
+            <div class="decision-option__condition">Public API</div>
+            <div class="decision-option__choice">→ REST (everyone knows it)</div>
+          </div>
+          <div class="decision-option">
+            <div class="decision-option__condition">Mobile/SPA with complex data</div>
+            <div class="decision-option__choice">→ GraphQL</div>
+          </div>
+          <div class="decision-option">
+            <div class="decision-option__condition">Service-to-service</div>
+            <div class="decision-option__choice">→ gRPC (speed + type safety)</div>
+          </div>
+          <div class="decision-option">
+            <div class="decision-option__condition">Real-time</div>
+            <div class="decision-option__choice">→ WebSocket or Server-Sent Events</div>
+          </div>
+        </div>
+        
+        <div class="decision-category">
+          <div class="decision-category__title">📨 Communication</div>
+          <div class="decision-option">
+            <div class="decision-option__condition">Need immediate response</div>
+            <div class="decision-option__choice">→ Sync (REST/gRPC)</div>
+          </div>
+          <div class="decision-option">
+            <div class="decision-option__condition">Can delay processing</div>
+            <div class="decision-option__choice">→ Async (Message Queue)</div>
+          </div>
+          <div class="decision-option">
+            <div class="decision-option__condition">Need event replay</div>
+            <div class="decision-option__choice">→ Kafka</div>
+          </div>
+          <div class="decision-option">
+            <div class="decision-option__condition">Simple task queue</div>
+            <div class="decision-option__choice">→ RabbitMQ or BullMQ</div>
+          </div>
+          <div class="decision-option">
+            <div class="decision-option__condition">Managed + simple</div>
+            <div class="decision-option__choice">→ AWS SQS/SNS</div>
+          </div>
+        </div>
+        
+        <div class="decision-category">
+          <div class="decision-category__title">📐 Design Pattern</div>
+          <div class="decision-option">
+            <div class="decision-option__condition">Small app</div>
+            <div class="decision-option__choice">→ MVC (simple, proven)</div>
+          </div>
+          <div class="decision-option">
+            <div class="decision-option__condition">Medium app</div>
+            <div class="decision-option__choice">→ Layered (Controller-Service-Repo)</div>
+          </div>
+          <div class="decision-option">
+            <div class="decision-option__condition">Complex domain</div>
+            <div class="decision-option__choice">→ Clean/Hexagonal Architecture</div>
+          </div>
+          <div class="decision-option">
+            <div class="decision-option__condition">"I'm overthinking"</div>
+            <div class="decision-option__choice">→ MVC is fine, ship it!</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <hr>
+
+    <h2>🔑 Key Takeaways</h2>
+
+    <ol>
+      <li><strong>Start Monolith, Split Later</strong> → อย่าเริ่มด้วย microservices ถ้าไม่จำเป็น — modular monolith ดีพอสำหรับ 90% ของ startups</li>
+      <li><strong>MVC → Layered → Clean</strong> → เลือก complexity ให้เหมาะกับ project — MVC ก็ ship ได้!</li>
+      <li><strong>REST for public, GraphQL for SPA, gRPC for internal</strong> → ไม่ต้องเลือกอันเดียว ใช้ร่วมกันได้</li>
+      <li><strong>Event-driven = resilient</strong> → ใช้ message queues สำหรับงานที่ไม่ต้อง respond ทันที</li>
+      <li><strong>RabbitMQ vs Kafka</strong> → Task queue ใช้ RabbitMQ, event streaming ใช้ Kafka</li>
+      <li><strong>Saga ≠ distributed transaction</strong> → แต่ละ step มี compensating action</li>
+      <li><strong>CQRS</strong> → แยก write model กับ read model ถ้า read-heavy</li>
+      <li><strong>Circuit Breaker</strong> → ป้องกัน cascading failures ใน distributed systems</li>
+      <li><strong>API Gateway</strong> → Single entry point สำหรับ auth, rate limit, routing</li>
+      <li><strong>Architecture คือ trade-offs</strong> → ไม่มี "best" architecture — มีแค่ "right for this situation"</li>
+    </ol>
+
+    <div class="post-series-footer">
+      บทความจากซีรีส์ DevOps & Vibe Coding 2026
+    </div>
+
+  </article>
+
+  <!-- Post Navigation -->
+  <div class="post-nav">
+    <a href="authentication-authorization.html" class="post-nav__link">
+      <div class="post-nav__dir">← Previous</div>
+      <div class="post-nav__title">Authentication & Authorization — ระบบยืนยันตัวตนและจัดการสิทธิ์อย่างปลอดภัย</div>
+    </a>
+  </div>
+
+  <footer class="blog-footer">
+    <a href="./">← Back to Blog</a>
+    <span>© 2025 Anirach Mingkhwan — Associate Professor, KMUTNB</span>
+  </footer>
+
+</body>
+</html>
