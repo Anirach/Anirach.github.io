@@ -1,0 +1,782 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Automated Testing with GitHub — ทดสอบอัตโนมัติทุก Push | Anirach Mingkhwan</title>
+  <meta name="description" content="เรียนรู้ Automated Testing ตั้งแต่ Static Analysis, Unit Tests, Integration Tests, E2E (Playwright), Security Scanning, Coverage Gates และ Complete Testing Pipeline">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --navy: #0f172a; --blue: #6366f1; --blue-dark: #4f46e5; --blue-light: #818cf8;
+      --slate: #334155; --slate-light: #64748b; --gray: #94a3b8;
+      --bg: #f8fafc; --white: #ffffff; --code-bg: #1e293b;
+      --font: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+      --mono: 'JetBrains Mono', 'Fira Code', monospace;
+      --green: #22c55e; --red: #ef4444; --amber: #f59e0b;
+    }
+    html { scroll-behavior: smooth; }
+    body { font-family: var(--font); font-size: 17px; line-height: 1.8; color: var(--slate); background: var(--bg); -webkit-font-smoothing: antialiased; }
+    .blog-nav { position: fixed; top: 0; left: 0; right: 0; z-index: 100; background: rgba(248,250,252,0.85); backdrop-filter: blur(20px); border-bottom: 1px solid rgba(0,0,0,0.05); }
+    .blog-nav__inner { max-width: 860px; margin: 0 auto; padding: 0 2rem; height: 56px; display: flex; align-items: center; justify-content: space-between; }
+    .blog-nav__back { font-size: 0.85rem; font-weight: 500; color: var(--blue); text-decoration: none; }
+    .blog-nav__back:hover { color: #4f46e5; }
+    .blog-nav__title { font-size: 0.85rem; font-weight: 600; color: var(--navy); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 50%; }
+    .post-hero { padding: 8rem 2rem 3rem; background: linear-gradient(135deg, #1e1b4b 0%, #312e81 40%, #4338ca 100%); text-align: center; }
+    .post-hero__tags { display: flex; gap: 0.5rem; justify-content: center; margin-bottom: 1.25rem; flex-wrap: wrap; }
+    .post-hero__tag { font-size: 0.7rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.1em; color: #a5b4fc; background: rgba(165,180,252,0.15); padding: 0.3rem 0.75rem; border-radius: 20px; }
+    .post-hero__title { font-size: clamp(1.8rem, 5vw, 3rem); font-weight: 800; color: #fff; line-height: 1.2; margin-bottom: 1rem; max-width: 720px; margin-left: auto; margin-right: auto; }
+    .post-hero__meta { font-size: 0.85rem; color: rgba(255,255,255,0.6); display: flex; align-items: center; justify-content: center; gap: 1.5rem; }
+    .post-hero__series { font-weight: 600; color: #a5b4fc; }
+    .post-hero__cover { max-width: 380px; margin: 2.5rem auto 0; border-radius: 16px; overflow: hidden; box-shadow: 0 20px 60px rgba(0,0,0,0.4); }
+    .post-hero__cover img { width: 100%; display: block; }
+    .post-body { max-width: 720px; margin: 0 auto; padding: 3rem 2rem 6rem; }
+    .post-body h2 { font-size: 1.6rem; font-weight: 800; color: var(--navy); margin: 3rem 0 1rem; padding-bottom: 0.5rem; border-bottom: 2px solid rgba(99,102,241,0.15); }
+    .post-body h3 { font-size: 1.25rem; font-weight: 700; color: var(--navy); margin: 2.25rem 0 0.75rem; }
+    .post-body h4 { font-size: 1.05rem; font-weight: 700; color: var(--navy); margin: 1.75rem 0 0.6rem; }
+    .post-body p { margin-bottom: 1.25rem; }
+    .post-body strong { font-weight: 700; color: var(--navy); }
+    .post-body pre { background: var(--code-bg); border-radius: 12px; padding: 1.5rem; margin: 1.25rem 0 1.5rem; overflow-x: auto; border: 1px solid rgba(255,255,255,0.05); }
+    .post-body pre code { font-family: var(--mono); font-size: 0.82rem; color: #e2e8f0; line-height: 1.7; }
+    .post-body code { font-family: var(--mono); font-size: 0.88em; background: rgba(99,102,241,0.08); color: #4f46e5; padding: 0.15em 0.45em; border-radius: 5px; }
+    .post-body pre code { background: none; color: #e2e8f0; padding: 0; }
+    .post-body ul, .post-body ol { margin: 0.5rem 0 1.25rem 1.5rem; }
+    .post-body li { margin-bottom: 0.4rem; }
+    .post-body table { width: 100%; border-collapse: collapse; margin: 1.25rem 0 1.5rem; font-size: 0.9rem; }
+    .post-body th { background: rgba(99,102,241,0.06); font-weight: 700; color: var(--navy); padding: 0.75rem 1rem; text-align: left; border-bottom: 2px solid rgba(99,102,241,0.15); }
+    .post-body td { padding: 0.65rem 1rem; border-bottom: 1px solid #e2e8f0; }
+    .post-body blockquote { background: rgba(99,102,241,0.06); border-left: 4px solid var(--blue); padding: 1rem 1.25rem; border-radius: 0 10px 10px 0; margin: 1.25rem 0; font-size: 0.95rem; color: var(--navy); }
+    .post-body hr { border: none; height: 1px; background: linear-gradient(90deg, transparent, rgba(99,102,241,0.2), transparent); margin: 3rem 0; }
+    .post-series-footer { text-align: center; font-size: 0.85rem; color: var(--gray); font-style: italic; margin-top: 2rem; padding-top: 2rem; border-top: 1px solid #e2e8f0; }
+    .post-nav { max-width: 720px; margin: 0 auto; padding: 0 2rem 3rem; display: flex; gap: 1.5rem; flex-wrap: wrap; }
+    .post-nav__link { flex: 1; min-width: 200px; padding: 1.25rem 1.5rem; border-radius: 12px; background: rgba(255,255,255,0.85); backdrop-filter: blur(16px); border: 1px solid rgba(255,255,255,0.6); box-shadow: 0 4px 16px rgba(0,0,0,0.05); text-decoration: none; color: inherit; transition: transform 0.2s, box-shadow 0.2s; }
+    .post-nav__link:hover { transform: translateY(-2px); box-shadow: 0 8px 24px rgba(99,102,241,0.1); }
+    .post-nav__dir { font-size: 0.75rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.1em; color: var(--blue); margin-bottom: 0.35rem; }
+    .post-nav__title { font-size: 0.9rem; font-weight: 600; color: var(--navy); line-height: 1.4; }
+    .blog-footer { background: var(--navy); padding: 2rem 0; text-align: center; }
+    .blog-footer a { color: var(--blue-light); text-decoration: none; font-weight: 600; font-size: 0.9rem; }
+    .blog-footer span { color: var(--gray); font-size: 0.8rem; display: block; margin-top: 0.4rem; }
+    /* Pyramid */
+    .pyramid { display: flex; flex-direction: column; align-items: center; margin: 1.5rem 0 2rem; gap: 4px; }
+    .pyramid__level { text-align: center; padding: 0.7rem 1rem; font-size: 0.82rem; font-weight: 700; border-radius: 8px; color: #fff; }
+    .pyramid__level--e2e { background: linear-gradient(135deg, #ef4444, #dc2626); width: 40%; }
+    .pyramid__level--int { background: linear-gradient(135deg, #f59e0b, #d97706); width: 55%; }
+    .pyramid__level--unit { background: linear-gradient(135deg, #22c55e, #16a34a); width: 70%; }
+    .pyramid__level--static { background: linear-gradient(135deg, #6366f1, #4f46e5); width: 90%; }
+    .pyramid__label { font-size: 0.68rem; color: var(--gray); margin-top: 0.1rem; font-weight: 400; }
+    /* Pipeline diagram */
+    .pipeline { display: flex; flex-direction: column; gap: 0.5rem; margin: 1.5rem 0 2rem; padding: 1.5rem; background: rgba(99,102,241,0.04); border-radius: 12px; }
+    .pipeline__stage { display: flex; gap: 0.5rem; align-items: center; flex-wrap: wrap; }
+    .pipeline__label { font-size: 0.72rem; font-weight: 700; color: var(--blue); min-width: 80px; text-transform: uppercase; letter-spacing: 0.05em; }
+    .pipeline__box { font-size: 0.78rem; font-weight: 600; padding: 0.4rem 0.75rem; border-radius: 8px; color: #fff; }
+    .pipeline__box--pass { background: #16a34a; }
+    .pipeline__box--lint { background: #6366f1; }
+    .pipeline__box--test { background: #0891b2; }
+    .pipeline__box--int { background: #d97706; }
+    .pipeline__box--e2e { background: #dc2626; }
+    .pipeline__box--sec { background: #7c3aed; }
+    .pipeline__arrow { text-align: center; color: var(--blue); font-weight: 700; font-size: 0.9rem; }
+    .flow-diagram { display: flex; align-items: center; justify-content: center; gap: 0.5rem; flex-wrap: wrap; margin: 1.5rem 0 2rem; padding: 1.5rem; background: rgba(99,102,241,0.04); border-radius: 12px; }
+    .flow-step { text-align: center; padding: 0.75rem 1.25rem; background: white; border-radius: 10px; border: 1.5px solid rgba(99,102,241,0.15); box-shadow: 0 2px 8px rgba(0,0,0,0.04); }
+    .flow-step__title { font-size: 0.9rem; font-weight: 700; color: var(--navy); }
+    .flow-step__sub { font-size: 0.72rem; color: var(--gray); margin-top: 0.15rem; }
+    .flow-arrow { font-size: 1.2rem; color: var(--blue); font-weight: 700; }
+    @media (max-width: 600px) {
+      .post-hero { padding: 7rem 1.25rem 2.5rem; }
+      .post-body { padding: 2rem 1.25rem 4rem; }
+      .post-body pre { padding: 1rem; border-radius: 8px; }
+      .post-hero__meta { flex-direction: column; gap: 0.4rem; }
+      .post-nav { padding: 0 1.25rem 3rem; }
+      .flow-diagram { flex-direction: column; }
+      .pyramid__level--e2e { width: 50%; }
+      .pyramid__level--int { width: 65%; }
+      .pyramid__level--unit { width: 80%; }
+      .pyramid__level--static { width: 100%; }
+    }
+  </style>
+</head>
+<body>
+
+  <nav class="blog-nav">
+    <div class="blog-nav__inner">
+      <a href="./" class="blog-nav__back">‹ Blog</a>
+      <div class="blog-nav__title">Automated Testing with GitHub</div>
+    </div>
+  </nav>
+
+  <header class="post-hero">
+    <div class="post-hero__tags">
+      <span class="post-hero__tag">Testing</span>
+      <span class="post-hero__tag">GitHub Actions</span>
+      <span class="post-hero__tag">DevOps</span>
+    </div>
+    <h1 class="post-hero__title">Automated Testing with GitHub — ทดสอบอัตโนมัติทุก Push 🧪</h1>
+    <div class="post-hero__meta">
+      <span>By <strong style="color:#fff">Anirach Mingkhwan</strong></span>
+      <span class="post-hero__series">DevOps & Vibe Coding 2026</span>
+    </div>
+    <div class="post-hero__cover">
+      <img src="../images/automated-testing-cover.jpg" alt="Automated Testing with GitHub">
+    </div>
+  </header>
+
+  <article class="post-body">
+
+    <p>จากโพสต์ที่แล้วเราเรียน Code Quality & Review แต่ยังเป็น manual — วันนี้มาทำให้ <strong>ทุกอย่างอัตโนมัติ</strong>! ทุกครั้งที่ <code>git push</code> → ระบบทดสอบให้หมด ตั้งแต่ lint ไปจนถึง E2E 🧪🐕</p>
+
+    <div class="flow-diagram">
+      <div class="flow-step">
+        <div class="flow-step__title">📝 git push</div>
+        <div class="flow-step__sub">Developer push code</div>
+      </div>
+      <span class="flow-arrow">→</span>
+      <div class="flow-step" style="border-color:rgba(99,102,241,0.3);background:rgba(99,102,241,0.04);">
+        <div class="flow-step__title">⚡ 847 tests</div>
+        <div class="flow-step__sub">GitHub Actions รัน</div>
+      </div>
+      <span class="flow-arrow">→</span>
+      <div class="flow-step" style="border-color:rgba(34,197,94,0.3);background:rgba(34,197,94,0.04);">
+        <div class="flow-step__title">✅ All passed</div>
+        <div class="flow-step__sub">2 นาที ไม่ใช่ 2 วัน</div>
+      </div>
+    </div>
+
+    <hr>
+
+    <h2>Testing Pyramid + Static Analysis</h2>
+
+    <div class="pyramid">
+      <div class="pyramid__level pyramid__level--e2e">🖥️ E2E Tests (Playwright)<div class="pyramid__label">น้อย, ช้า, แพง — critical paths เท่านั้น</div></div>
+      <div class="pyramid__level pyramid__level--int">🔗 Integration Tests (API + DB)<div class="pyramid__label">กลาง, ปานกลาง — services ร่วมกัน</div></div>
+      <div class="pyramid__level pyramid__level--unit">⚡ Unit Tests (Jest, pytest)<div class="pyramid__label">เยอะ, เร็ว, ถูก — ทดสอบทีละ function</div></div>
+      <div class="pyramid__level pyramid__level--static">🔍 Static Analysis (ESLint, CodeQL, mypy)<div class="pyramid__label">เร็วที่สุด — ไม่ต้องรัน code ก็เจอ bug</div></div>
+    </div>
+
+    <hr>
+
+    <h2>⚡ Level 1: Static Analysis — เจอ bug โดยไม่ต้องรัน</h2>
+
+    <h3>ESLint + Prettier + TypeScript</h3>
+
+    <pre><code># .github/workflows/static-analysis.yml
+name: Static Analysis
+on: pull_request:
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+      - run: npm ci
+
+      # ESLint — หา bugs + enforce rules
+      - name: ESLint
+        run: npx eslint . --format=json --output-file=eslint-report.json
+        continue-on-error: true
+
+      # Prettier — format check
+      - name: Prettier
+        run: npx prettier --check .
+
+      # TypeScript — type check
+      - name: Type Check
+        run: npx tsc --noEmit
+
+      # แสดงผลใน PR เป็น annotations
+      - name: Annotate ESLint results
+        if: always()
+        uses: ataylorme/eslint-annotate-action@v3
+        with:
+          report-json: eslint-report.json</code></pre>
+
+    <h3>Python — Ruff + mypy</h3>
+
+    <pre><code>  python-lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      # Ruff — lint + format (แทน flake8 + isort + black)
+      - name: Ruff lint
+        uses: astral-sh/ruff-action@v1
+      - name: Ruff format check
+        uses: astral-sh/ruff-action@v1
+        with:
+          args: "format --check"
+
+      # mypy — type check
+      - run: pip install -r requirements.txt
+      - name: mypy
+        run: mypy src/ --strict</code></pre>
+
+    <h3>GitHub CodeQL — Security Analysis (SAST)</h3>
+
+    <pre><code># .github/workflows/codeql.yml
+name: CodeQL Security Analysis
+on:
+  push:
+    branches: [main]
+  pull_request:
+  schedule:
+    - cron: '0 6 * * 1'                 # ทุกวันจันทร์
+
+jobs:
+  analyze:
+    runs-on: ubuntu-latest
+    permissions:
+      security-events: write
+    strategy:
+      matrix:
+        language: ['javascript-typescript', 'python']
+    steps:
+      - uses: actions/checkout@v4
+      - uses: github/codeql-action/init@v3
+        with:
+          languages: ${{ matrix.language }}
+          queries: +security-extended
+      - uses: github/codeql-action/autobuild@v3
+      - uses: github/codeql-action/analyze@v3</code></pre>
+
+    <table>
+      <thead><tr><th>Severity</th><th>CodeQL ตรวจจับ</th></tr></thead>
+      <tbody>
+        <tr><td><strong style="color:#dc2626">🔴 Critical</strong></td><td>SQL Injection, XSS, Path Traversal, Command Injection</td></tr>
+        <tr><td><strong style="color:#ea580c">🟠 High</strong></td><td>Hard-coded credentials, Missing authentication, Input validation</td></tr>
+        <tr><td><strong style="color:#d97706">🟡 Medium</strong></td><td>Incomplete URL validation, Weak cryptography, Missing CSRF</td></tr>
+      </tbody>
+    </table>
+
+    <blockquote>
+      <strong>💡</strong> CodeQL ฟรีสำหรับ public repos! ผลแสดงใน Security tab + annotation ใน PR
+    </blockquote>
+
+    <hr>
+
+    <h2>🧪 Level 2: Unit Tests — ทดสอบทีละ function</h2>
+
+    <h3>Jest (TypeScript)</h3>
+
+    <pre><code>// src/utils/calculator.ts
+export function calculateDiscount(price: number, percent: number): number {
+  if (price < 0) throw new Error('Price cannot be negative');
+  if (percent < 0 || percent > 100) throw new Error('Invalid discount');
+  return price * (1 - percent / 100);
+}
+
+// src/utils/__tests__/calculator.test.ts
+describe('calculateDiscount', () => {
+  test('applies 20% discount', () => {
+    expect(calculateDiscount(100, 20)).toBe(80);
+  });
+
+  test('0% discount returns full price', () => {
+    expect(calculateDiscount(100, 0)).toBe(100);
+  });
+
+  test('100% discount returns 0', () => {
+    expect(calculateDiscount(100, 100)).toBe(0);
+  });
+
+  test('rejects negative price', () => {
+    expect(() => calculateDiscount(-100, 20)).toThrow('Price cannot be negative');
+  });
+
+  test('rejects invalid discount > 100', () => {
+    expect(() => calculateDiscount(100, 150)).toThrow('Invalid discount');
+  });
+});</code></pre>
+
+    <h3>pytest (Python) — Parametrized Tests</h3>
+
+    <pre><code># tests/test_user_service.py
+import pytest
+from datetime import date
+from src.services.user_service import User
+
+class TestUser:
+    @pytest.fixture
+    def admin(self):
+        return User("Alice", "alice@test.com", date(1990, 5, 15), role="admin")
+
+    def test_admin_can_access_dashboard(self, admin):
+        assert admin.can_access("dashboard") is True
+
+    def test_admin_can_access_settings(self, admin):
+        assert admin.can_access("settings") is True
+
+    # ทดสอบหลาย cases ด้วย parametrize
+    @pytest.mark.parametrize("role,resource,expected", [
+        ("admin", "dashboard", True),
+        ("admin", "settings", True),
+        ("editor", "dashboard", True),
+        ("editor", "settings", False),
+        ("member", "dashboard", True),
+        ("member", "settings", False),
+        ("guest", "dashboard", False),
+    ])
+    def test_role_permissions(self, role, resource, expected):
+        user = User("Test", "t@t.com", date(2000, 1, 1), role=role)
+        assert user.can_access(resource) is expected</code></pre>
+
+    <h3>GitHub Actions — Unit Tests + Coverage</h3>
+
+    <pre><code># .github/workflows/unit-tests.yml
+name: Unit Tests
+on: pull_request:
+
+jobs:
+  test-js:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: '20', cache: 'npm' }
+      - run: npm ci
+      - run: npm test -- --coverage --reporters=default --reporters=jest-junit
+        env:
+          JEST_JUNIT_OUTPUT_DIR: reports/
+
+      # แสดง test results ใน PR
+      - name: Test Report
+        if: always()
+        uses: dorny/test-reporter@v1
+        with:
+          name: Jest Results
+          path: reports/jest-results.xml
+          reporter: jest-junit
+
+      # Coverage comment ใน PR
+      - uses: codecov/codecov-action@v4
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}</code></pre>
+
+    <hr>
+
+    <h2>🔗 Level 3: Integration Tests — หลาย components ร่วมกัน</h2>
+
+    <pre><code># .github/workflows/integration-tests.yml
+name: Integration Tests
+on: pull_request:
+
+jobs:
+  api-tests:
+    runs-on: ubuntu-latest
+    # Services — DB + Cache พร้อมใช้ใน CI เลย!
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_DB: testdb
+          POSTGRES_USER: test
+          POSTGRES_PASSWORD: testpass
+        ports: ['5432:5432']
+        options: --health-cmd pg_isready --health-interval 10s --health-retries 5
+      redis:
+        image: redis:7-alpine
+        ports: ['6379:6379']
+        options: --health-cmd "redis-cli ping" --health-interval 10s --health-retries 5
+
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: '20', cache: 'npm' }
+      - run: npm ci
+      - run: npm run db:migrate
+        env: { DATABASE_URL: 'postgresql://test:testpass@localhost:5432/testdb' }
+      - run: npm run db:seed:test
+        env: { DATABASE_URL: 'postgresql://test:testpass@localhost:5432/testdb' }
+      - run: npm run test:integration
+        env:
+          DATABASE_URL: postgresql://test:testpass@localhost:5432/testdb
+          REDIS_URL: redis://localhost:6379
+          JWT_SECRET: test-secret-key
+        timeout-minutes: 10</code></pre>
+
+    <h3>API Integration Test Example</h3>
+
+    <pre><code>// tests/integration/api/users.test.ts
+import request from 'supertest';
+import { app } from '../../../src/app';
+
+describe('POST /api/users', () => {
+  test('creates a new user', async () => {
+    const res = await request(app)
+      .post('/api/users')
+      .set('Authorization', `Bearer ${authToken}`)
+      .send({
+        name: 'Test User',
+        email: 'new@test.com',
+        password: 'SecurePass123!',
+      })
+      .expect(201);
+
+    expect(res.body.data).toMatchObject({
+      name: 'Test User',
+      email: 'new@test.com',
+    });
+    // password ต้องไม่ return กลับมา
+    expect(res.body.data).not.toHaveProperty('password');
+  });
+
+  test('rejects duplicate email', async () => {
+    await request(app)
+      .post('/api/users')
+      .set('Authorization', `Bearer ${authToken}`)
+      .send({ name: 'Dup', email: 'admin@test.com', password: 'Pass123!' })
+      .expect(409);
+  });
+
+  test('validates required fields', async () => {
+    const res = await request(app)
+      .post('/api/users')
+      .set('Authorization', `Bearer ${authToken}`)
+      .send({ name: 'No Email' })
+      .expect(400);
+
+    expect(res.body.errors).toContainEqual(
+      expect.objectContaining({ field: 'email' })
+    );
+  });
+});</code></pre>
+
+    <hr>
+
+    <h2>🌐 Level 4: E2E Tests — Playwright</h2>
+
+    <pre><code># .github/workflows/e2e-tests.yml
+name: E2E Tests
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+jobs:
+  e2e:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    services:
+      postgres:
+        image: postgres:16
+        env: { POSTGRES_DB: e2e_test, POSTGRES_USER: test, POSTGRES_PASSWORD: test }
+        ports: ['5432:5432']
+        options: --health-cmd pg_isready --health-interval 10s
+
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: '20', cache: 'npm' }
+      - run: npm ci
+      - run: npx playwright install --with-deps chromium firefox
+      - run: npm run start:test &
+        env: { DATABASE_URL: 'postgresql://test:test@localhost:5432/e2e_test' }
+      - run: npx wait-on http://localhost:3000 --timeout 30000
+      - run: npx playwright test
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: playwright-report
+          path: playwright-report/</code></pre>
+
+    <h3>Playwright Test — Login + Shopping Cart</h3>
+
+    <pre><code>// e2e/tests/auth.spec.ts
+import { test, expect } from '@playwright/test';
+
+test('successful login flow', async ({ page }) => {
+  await page.goto('/login');
+  await page.fill('[data-testid="email"]', 'admin@test.com');
+  await page.fill('[data-testid="password"]', 'test123');
+  await page.click('[data-testid="login-button"]');
+
+  await expect(page).toHaveURL('/dashboard');
+  await expect(page.locator('[data-testid="welcome-message"]'))
+    .toContainText('Welcome, Admin');
+});
+
+test('shows error for invalid credentials', async ({ page }) => {
+  await page.goto('/login');
+  await page.fill('[data-testid="email"]', 'wrong@test.com');
+  await page.fill('[data-testid="password"]', 'wrong');
+  await page.click('[data-testid="login-button"]');
+
+  await expect(page.locator('[data-testid="error-message"]'))
+    .toContainText('Invalid email or password');
+});</code></pre>
+
+    <pre><code>// e2e/tests/shopping-cart.spec.ts
+test('add items → update quantity → checkout', async ({ page }) => {
+  await page.goto('/products');
+
+  // Add item to cart
+  await page.locator('.product-card').first()
+    .getByRole('button', { name: 'Add to Cart' }).click();
+  await expect(page.locator('[data-testid="cart-badge"]')).toHaveText('1');
+
+  // Go to cart → update quantity
+  await page.click('[data-testid="cart-icon"]');
+  await page.fill('[data-testid="quantity-input"]', '3');
+  await page.click('[data-testid="update-cart"]');
+
+  // Checkout
+  await page.click('[data-testid="checkout-button"]');
+  await page.fill('#address', '123 Test St');
+  await page.click('[data-testid="place-order"]');
+
+  await expect(page.locator('[data-testid="order-confirmation"]')).toBeVisible();
+  await expect(page.locator('[data-testid="order-id"]')).toHaveText(/^ORD-\d+$/);
+});</code></pre>
+
+    <h3>Playwright Config — Multi-browser</h3>
+
+    <pre><code>// playwright.config.ts
+export default defineConfig({
+  testDir: './e2e/tests',
+  fullyParallel: true,
+  retries: process.env.CI ? 2 : 0,       // retry 2 ครั้งใน CI
+  reporter: [['html'], ['junit', { outputFile: 'reports/e2e-results.xml' }]],
+  use: {
+    baseURL: process.env.BASE_URL || 'http://localhost:3000',
+    trace: 'on-first-retry',              // trace เมื่อ retry
+    screenshot: 'only-on-failure',
+    video: 'retain-on-failure',
+  },
+  projects: [
+    { name: 'chromium', use: { ...devices['Desktop Chrome'] } },
+    { name: 'firefox', use: { ...devices['Desktop Firefox'] } },
+    { name: 'mobile-chrome', use: { ...devices['Pixel 5'] } },
+    { name: 'mobile-safari', use: { ...devices['iPhone 13'] } },
+  ],
+});</code></pre>
+
+    <hr>
+
+    <h2>🛡️ Level 5: Security Testing</h2>
+
+    <h3>Dependabot — Auto-update Dependencies</h3>
+
+    <pre><code># .github/dependabot.yml
+version: 2
+updates:
+  - package-ecosystem: "npm"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+    open-pull-requests-limit: 10
+    labels: ["dependencies", "automated"]
+    groups:
+      dev-dependencies:
+        dependency-type: "development"
+
+  - package-ecosystem: "docker"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"</code></pre>
+
+    <h3>Trivy + Gitleaks + License Check</h3>
+
+    <pre><code># .github/workflows/security-scan.yml
+jobs:
+  source-scan:
+    steps:
+      - uses: actions/checkout@v4
+      - uses: aquasecurity/trivy-action@master
+        with:
+          scan-type: 'fs'
+          severity: 'CRITICAL,HIGH'
+          exit-code: '1'                   # fail ถ้าเจอ CRITICAL
+
+  secret-scan:
+    steps:
+      - uses: actions/checkout@v4
+        with: { fetch-depth: 0 }
+      - uses: gitleaks/gitleaks-action@v2
+        env: { GITHUB_TOKEN: '${{ secrets.GITHUB_TOKEN }}' }
+
+  license-check:
+    steps:
+      - uses: actions/checkout@v4
+      - run: npm ci
+      - run: npx license-checker --failOn "GPL-3.0;AGPL-3.0"</code></pre>
+
+    <hr>
+
+    <h2>📊 Coverage Gates — บังคับ Coverage ขั้นต่ำ</h2>
+
+    <pre><code>// jest.config.js
+module.exports = {
+  coverageThreshold: {
+    global: {
+      branches: 80,
+      functions: 80,
+      lines: 85,
+      statements: 85,
+    },
+    // auth code ต้อง coverage สูงพิเศษ!
+    './src/auth/': {
+      branches: 90,
+      functions: 90,
+      lines: 95,
+    },
+  },
+};</code></pre>
+
+    <hr>
+
+    <h2>🔄 Complete Testing Pipeline</h2>
+
+    <div class="pipeline">
+      <div class="pipeline__stage">
+        <div class="pipeline__label">Stage 1</div>
+        <div class="pipeline__box pipeline__box--lint">🔍 Lint</div>
+        <div class="pipeline__box pipeline__box--lint">📐 Format</div>
+        <div class="pipeline__box pipeline__box--lint">🔤 TypeCheck</div>
+        <span style="font-size:0.7rem;color:var(--gray);">~30s</span>
+      </div>
+      <div class="pipeline__arrow">↓</div>
+      <div class="pipeline__stage">
+        <div class="pipeline__label">Stage 2</div>
+        <div class="pipeline__box pipeline__box--test">🧪 Unit 1/4</div>
+        <div class="pipeline__box pipeline__box--test">🧪 Unit 2/4</div>
+        <div class="pipeline__box pipeline__box--test">🧪 Unit 3/4</div>
+        <div class="pipeline__box pipeline__box--test">🧪 Unit 4/4</div>
+        <span style="font-size:0.7rem;color:var(--gray);">~2min (parallel)</span>
+      </div>
+      <div class="pipeline__arrow">↓</div>
+      <div class="pipeline__stage">
+        <div class="pipeline__label">Stage 3</div>
+        <div class="pipeline__box pipeline__box--int">🔗 Integration (DB+Redis)</div>
+        <div class="pipeline__box pipeline__box--sec">🛡️ Security (CodeQL+Trivy)</div>
+        <span style="font-size:0.7rem;color:var(--gray);">~5min (parallel)</span>
+      </div>
+      <div class="pipeline__arrow">↓</div>
+      <div class="pipeline__stage">
+        <div class="pipeline__label">Stage 4</div>
+        <div class="pipeline__box pipeline__box--e2e">🌐 E2E Chromium</div>
+        <div class="pipeline__box pipeline__box--e2e">🌐 E2E Firefox</div>
+        <span style="font-size:0.7rem;color:var(--gray);">~10min</span>
+      </div>
+      <div class="pipeline__arrow">↓</div>
+      <div class="pipeline__stage">
+        <div class="pipeline__label">Gate</div>
+        <div class="pipeline__box pipeline__box--pass">✅ All Passed → Ready to merge</div>
+        <span style="font-size:0.7rem;color:var(--gray);">Total: ~15min (parallel)</span>
+      </div>
+    </div>
+
+    <pre><code># Complete pipeline — key parts
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true          # cancel old runs ถ้า push ใหม่
+
+jobs:
+  static:   ...                      # lint + format + typecheck
+  unit:
+    needs: static
+    strategy:
+      matrix:
+        shard: [1, 2, 3, 4]          # split tests 4 shards!
+    steps:
+      - run: npm test -- --shard=${{ matrix.shard }}/4
+
+  integration:
+    needs: static
+    services:                         # Postgres + Redis
+      postgres: ...
+      redis: ...
+
+  e2e:
+    needs: [unit, integration]
+    strategy:
+      matrix:
+        browser: [chromium, firefox]  # multi-browser parallel
+
+  all-tests-pass:
+    needs: [coverage, integration, e2e, security]
+    if: always()                      # Gate: ทุก job ต้อง pass</code></pre>
+
+    <hr>
+
+    <h2>⚡ Performance Tips</h2>
+
+    <table>
+      <thead><tr><th>Technique</th><th>Effect</th><th>How</th></tr></thead>
+      <tbody>
+        <tr><td><strong>Test Sharding</strong></td><td>3-4x faster</td><td><code>--shard=1/4</code> (Jest/Playwright)</td></tr>
+        <tr><td><strong>Caching</strong></td><td>10x faster install</td><td><code>cache: 'npm'</code> in setup-node</td></tr>
+        <tr><td><strong>Concurrency</strong></td><td>Cancel old runs</td><td><code>cancel-in-progress: true</code></td></tr>
+        <tr><td><strong>Path Filtering</strong></td><td>Skip unnecessary</td><td><code>dorny/paths-filter@v3</code></td></tr>
+        <tr><td><strong>fail-fast: false</strong></td><td>See all failures</td><td>Don't stop on first fail</td></tr>
+      </tbody>
+    </table>
+
+    <pre><code># Path filtering — รันเฉพาะ tests ที่เกี่ยวข้อง
+- uses: dorny/paths-filter@v3
+  id: filter
+  with:
+    filters: |
+      backend:
+        - 'src/api/**'
+        - 'src/models/**'
+      frontend:
+        - 'src/components/**'
+        - 'src/pages/**'
+
+test-backend:
+  needs: changes
+  if: needs.changes.outputs.backend == 'true'
+  # → ไม่รัน backend tests ถ้าแก้แค่ frontend!</code></pre>
+
+    <hr>
+
+    <h2>🔑 Key Takeaways</h2>
+
+    <ol>
+      <li><strong>Testing Pyramid</strong> → Unit (เยอะ) > Integration (กลาง) > E2E (น้อย)</li>
+      <li><strong>Static analysis ก่อนเสมอ</strong> → เร็ว, เจอ bugs ตั้งแต่ก่อนรัน test</li>
+      <li><strong>CodeQL</strong> → free SAST สำหรับ public repos</li>
+      <li><strong>Services ใน Actions</strong> → Postgres/Redis/Mongo พร้อมใช้ใน CI เลย</li>
+      <li><strong>Playwright</strong> → E2E testing ที่ดีที่สุด — เร็ว, reliable, multi-browser</li>
+      <li><strong>Test sharding</strong> → แบ่ง tests รัน parallel → เร็วขึ้น 3-4x</li>
+      <li><strong>Coverage gates</strong> → บังคับ 80%+ coverage ห้ามลดลง</li>
+      <li><strong>Dependabot</strong> → auto-update dependencies + security patches</li>
+      <li><strong>Path filtering</strong> → ไม่ต้องรัน backend tests ถ้าแก้แค่ frontend</li>
+      <li><strong>concurrency + cancel-in-progress</strong> → ประหยัด CI minutes 🧪🐕</li>
+    </ol>
+
+    <div class="post-series-footer">
+      บทความจากซีรีส์ DevOps & Vibe Coding 2026
+    </div>
+
+  </article>
+
+  <!-- Post Navigation -->
+  <div class="post-nav">
+    <a href="code-quality.html" class="post-nav__link">
+      <div class="post-nav__dir">← Previous</div>
+      <div class="post-nav__title">Code Quality & Review — เขียน Code ดีๆ ที่ทีมอยากอ่าน</div>
+    </a>
+  </div>
+
+  <footer class="blog-footer">
+    <a href="./">← Back to Blog</a>
+    <span>© 2025 Anirach Mingkhwan — Associate Professor, KMUTNB</span>
+  </footer>
+
+</body>
+</html>
