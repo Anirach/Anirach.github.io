@@ -160,6 +160,8 @@
 
     <h2>🐕 GitOps คืออะไร? ทำไมต้อง Git เป็นศูนย์กลาง?</h2>
 
+    <p><strong>GitOps</strong> คือแนวคิดที่ใช้ Git repository เป็น "ความจริงเดียว" (single source of truth) สำหรับทุกอย่างที่รันอยู่บน production — ตั้งแต่ Kubernetes manifests, Helm values, config maps ไปจนถึง infrastructure ทั้งหมด ถ้าอยากรู้ว่า production มีอะไรรันอยู่ ดูที่ Git ไม่ใช่ <code>kubectl get pods</code> ถ้าใครแก้ production โดยไม่ผ่าน Git → ระบบจะ detect drift และ revert กลับอัตโนมัติ!</p>
+
     <div class="compare-grid">
       <div class="compare-box compare-box--old">
         <div class="compare-box__title">❌ แบบเดิม: Push-based</div>
@@ -213,6 +215,8 @@
 
     <h2>📜 GitOps Principles — 4 หลักการสำคัญ</h2>
 
+    <p>GitOps มี 4 หลักการที่ต้องทำตามทั้งหมด — ขาดอันใดอันหนึ่งก็ไม่ใช่ GitOps จริง: <strong>Declarative</strong> (อธิบาย desired state ใน YAML), <strong>Versioned & Immutable</strong> (ทุก change ผ่าน Git commit), <strong>Pulled Automatically</strong> (agent ดึง config มา apply เอง ไม่ใช่ push จาก CI), <strong>Continuously Reconciled</strong> (agent ตรวจสอบตลอดว่า actual state = desired state):</p>
+
     <ol>
       <li><strong>Declarative</strong> — อธิบาย "ต้องการอะไร" ไม่ใช่ "ทำยังไง" → YAML manifests, Helm charts, Kustomize</li>
       <li><strong>Versioned &amp; Immutable</strong> — ทุกอย่างอยู่ใน Git → มี history ทุกการเปลี่ยนแปลง (<code>git log</code>, <code>git diff</code>, <code>git blame</code>)</li>
@@ -221,6 +225,8 @@
     </ol>
 
     <h3>GitOps vs Traditional CI/CD</h3>
+
+    <p>Traditional CI/CD ใช้ "push model" — CI pipeline build แล้ว push deploy ไปที่ cluster โดยตรง ปัญหาคือ CI ต้องมี credentials เข้าถึง production cluster (security risk) และถ้าใครแก้ config ตรงใน cluster จะ drift ไม่มีใครรู้ GitOps ใช้ "pull model" — agent ใน cluster (ArgoCD/Flux) ดึง config จาก Git มา apply เอง ปลอดภัยกว่าและ self-healing:</p>
 
     <table>
       <thead><tr><th>Feature</th><th>Traditional CI/CD</th><th>GitOps</th></tr></thead>
@@ -239,6 +245,8 @@
     <hr>
 
     <h2>🔶 ArgoCD — GitOps Controller ยอดนิยม</h2>
+
+    <p><strong>ArgoCD</strong> เป็น GitOps controller ที่ได้รับความนิยมมากที่สุด — เป็น CNCF graduated project มี Web UI ที่สวยงามแสดง resource tree ทั้งหมด real-time, รองรับ Helm, Kustomize, plain YAML, Jsonnet, และ custom config management plugins หลักการทำงานคือ ArgoCD จะ watch Git repo ของคุณ ถ้ามี commit ใหม่หรือ actual state drift จาก desired state → sync อัตโนมัติ:</p>
 
     <div class="arch-diagram">
       <div class="arch-box">
@@ -273,6 +281,8 @@
 
     <h3>ติดตั้ง ArgoCD</h3>
 
+    <p>การติดตั้ง ArgoCD ง่ายมาก — แค่ <code>kubectl apply</code> manifest จาก GitHub แล้วเข้าถึง Web UI ผ่าน port-forward ได้เลย รหัสผ่าน admin initial ถูกเก็บใน Kubernetes Secret:</p>
+
     <pre><code># 1. สร้าง namespace
 kubectl create namespace argocd
 
@@ -298,6 +308,8 @@ argocd login localhost:8080 --username admin --password &lt;password&gt;
 argocd account update-password</code></pre>
 
     <h3>สร้าง Application แรก</h3>
+
+    <p>ArgoCD Application คือ resource ที่บอกว่า "ดึง config จาก Git repo นี้ path นี้ แล้ว deploy ไปที่ cluster/namespace นี้" — เมื่อสร้างแล้ว ArgoCD จะ sync อัตโนมัติทุกครั้งที่มี commit ใหม่ในสิ่งที่ผิดปกติเมื่อถูกแก้:</p>
 
     <pre><code># argocd-app.yaml
 apiVersion: argoproj.io/v1alpha1
@@ -350,6 +362,8 @@ argocd app create myapp \
 
     <h3>ArgoCD CLI — คำสั่งที่ใช้บ่อย</h3>
 
+    <p>นอกจาก Web UI แล้ว ArgoCD มี CLI ที่ใช้ในการจัดการ applications, sync, rollback และตรวจสอบ status ได้จาก terminal — เหมาะกับ automation และ scripting:</p>
+
     <pre><code># ดู apps
 argocd app list
 argocd app get myapp
@@ -375,6 +389,8 @@ argocd app wait myapp --health</code></pre>
     <hr>
 
     <h2>📁 Git Repository Structure</h2>
+
+    <p>หนึ่งในคำถามแรกของ GitOps คือ "จัดโครงสร้าง Git repo ยังไง?" — Best practice คือ <strong>แยก app code กับ K8s manifests เป็นคนละ repo</strong> เพราะ app code มี commit บ่อย (feature dev) แต่ manifests เปลี่ยนไม่บ่อย (config changes) การแยกทำให้ CI/CD pipeline ชัดเจนและ permissions จัดการง่ายกว่า:</p>
 
     <h3>แยก App Code กับ Manifests (แนะนำ!)</h3>
 
@@ -402,6 +418,8 @@ argocd app wait myapp --health</code></pre>
 
     <h3>Manifests Repo Structure (Kustomize)</h3>
 
+    <p>ใน manifests repo ใช้ <strong>Kustomize</strong> จัดการ environment-specific config — มี <code>base/</code> เป็น template กลาง แล้ว <code>overlays/</code> สำหรับแต่ละ environment (dev/staging/prod) override เฉพาะค่าที่ต่างกัน เช่น replicas, resource limits, image tags:</p>
+
     <pre><code>myapp-manifests/
 ├── base/                      # shared base
 │   ├── deployment.yaml
@@ -422,6 +440,8 @@ argocd app wait myapp --health</code></pre>
 │       └── hpa.yaml</code></pre>
 
     <h3>CI/CD Flow แบบ GitOps</h3>
+
+    <p>GitOps flow ต่างจาก traditional CI/CD — CI pipeline จะ build + push Docker image เท่านั้น จากนั้น <strong>update image tag ใน manifests repo</strong> (ไม่ใช่ deploy ตรง) แล้ว ArgoCD ที่ watch manifests repo จะ detect change และ sync ไปยัง cluster ให้อัตโนมัติ:</p>
 
     <div class="arch-diagram">
       <div class="arch-box">
@@ -455,6 +475,8 @@ argocd app wait myapp --health</code></pre>
     </div>
 
     <h3>CI Pipeline — Auto-update Manifests</h3>
+
+    <p>ตัวอย่าง GitHub Actions pipeline ที่ build Docker image แล้ว auto-update image tag ใน manifests repo — สังเกตว่า CI ไม่ได้ deploy เลย แค่แก้ YAML ใน Git แล้ว commit ArgoCD จัดการ deploy ให้:</p>
 
     <pre><code># .github/workflows/ci.yml (App Repo)
 name: CI/CD
@@ -495,7 +517,7 @@ jobs:
 
     <h2>📦 Helm Charts — Package Manager สำหรับ K8s</h2>
 
-    <p>Helm คือ <strong>"apt/brew สำหรับ Kubernetes"</strong> — template engine ที่ช่วยจัดการ K8s manifests ด้วย <code>values.yaml</code>:</p>
+    <p><strong>Helm</strong> คือ "apt/brew สำหรับ Kubernetes" — แทนที่จะ copy-paste YAML manifests สำหรับแต่ละ environment Helm ใช้ <strong>templates + values</strong> ทำให้เขียน manifest ครั้งเดียวแล้วใส่ค่าต่างกันตาม environment ได้ เช่น dev ใช้ 1 replica, prod ใช้ 3 replicas แค่เปลี่ยน <code>values.yaml</code>:</p>
 
     <pre><code># สร้าง chart ใหม่
 helm create myapp
@@ -587,6 +609,8 @@ helm template myapp ./myapp                     # ดู rendered manifests</cod
 
     <h3>ArgoCD + Helm</h3>
 
+    <p>ArgoCD รองรับ Helm charts โดยตรง — แค่ระบุ <code>source.helm</code> ใน Application spec แล้ว ArgoCD จะ render templates ด้วย values ที่กำหนดให้อัตโนมัติ สามารถ override values per-environment ได้:</p>
+
     <pre><code># ArgoCD Application ที่ใช้ Helm
 apiVersion: argoproj.io/v1alpha1
 kind: Application
@@ -615,6 +639,8 @@ spec:
     <hr>
 
     <h2>🎨 Kustomize — Template-free Configuration</h2>
+
+    <p><strong>Kustomize</strong> เป็นทางเลือกของ Helm ที่ไม่ใช้ templates — เขียน YAML ธรรมดาใน <code>base/</code> แล้วใช้ "patches" ใน <code>overlays/</code> เพื่อ override เฉพาะค่าที่ต่างกัน ข้อดีคือ YAML ที่เขียนเป็น valid K8s manifests อ่านง่ายกว่า Helm templates, built-in มากับ <code>kubectl</code> ไม่ต้องติดตั้งเพิ่ม ข้อเสียคือ logic (if/else, loops) ทำไม่ได้เหมือน Helm:</p>
 
     <table>
       <thead><tr><th>Feature</th><th>Helm</th><th>Kustomize</th></tr></thead>
@@ -696,6 +722,8 @@ kustomize edit set image ghcr.io/myorg/myapp:v2.2.0</code></pre>
 
     <h2>🔄 ArgoCD vs Flux — เลือกอะไรดี?</h2>
 
+    <p>นอกจาก ArgoCD แล้ว <strong>Flux</strong> (โดย Weaveworks) เป็น GitOps controller อีกตัวที่เป็น CNCF graduated project เช่นกัน ทั้งสองทำงานเหมือนกันในแก่นแท้ แต่ ArgoCD เด่นเรื่อง UI และ multi-cluster management ส่วน Flux เด่นเรื่อง lightweight และ composable architecture:</p>
+
     <table>
       <thead><tr><th>Feature</th><th>ArgoCD</th><th>Flux</th></tr></thead>
       <tbody>
@@ -719,7 +747,11 @@ kustomize edit set image ghcr.io/myorg/myapp:v2.2.0</code></pre>
 
     <h2>🌍 Multi-Environment GitOps</h2>
 
+    <p>ในองค์กรจริงมีหลาย environments (dev, staging, prod) และหลาย applications — จะจัดการ ArgoCD Applications ยังไงให้ scale ได้? คำตอบคือ <strong>App-of-Apps Pattern</strong> — สร้าง "parent" application ที่ manage "child" applications ทั้งหมด ทำให้เพิ่ม/ลบ apps แค่แก้ Git:</p>
+
     <h3>App-of-Apps Pattern</h3>
+
+    <p>App-of-Apps ทำงานเหมือน "bootstrapper" — ArgoCD Application ตัวหนึ่ง watch directory ที่มี Application manifests ของ apps ทั้งหมด ถ้าอยากเพิ่ม app ใหม่ แค่ commit Application YAML ใหม่เข้าไป ArgoCD จะสร้างให้อัตโนมัติ:</p>
 
     <pre><code># apps/root-app.yaml — "App ที่สร้าง Apps อื่น"
 apiVersion: argoproj.io/v1alpha1
@@ -751,6 +783,8 @@ apps/
 
     <h3>Promotion Flow (Dev → Staging → Prod)</h3>
 
+    <p>การ promote application จาก dev → staging → prod ใน GitOps ทำผ่าน <strong>Pull Request</strong> — ไม่ใช่ปุ่ม deploy ถ้าอยาก promote image tag ใหม่จาก staging ไปยัง prod ก็สร้าง PR ที่แก้ image tag ใน prod overlay ได้ approval แล้ว merge → ArgoCD sync ให้ ทุก change มี audit trail ใน Git:</p>
+
     <div class="promo-pipeline">
       <div class="promo-step promo-step--dev">🟢 Dev — Auto-deploy (latest)</div>
       <div class="promo-label">✅ Tests pass</div>
@@ -774,9 +808,11 @@ apps/
 
     <h2>🛡️ GitOps Security</h2>
 
+    <p>ถ้าทุกอย่างอยู่ใน Git แล้ว secrets ล่ะ? Kubernetes Secrets เป็นแค่ base64 (decode ได้ทันที) ถ้า commit เข้า Git ทุกคนที่มี repo access จะเห็น passwords, API keys ทั้งหมด! ต้องใช้เครื่องมือเข้ารหัส secrets ก่อนเก็บใน Git:</p>
+
     <h3>Sealed Secrets — Encrypt secrets ใน Git</h3>
 
-    <p>ปัญหา: Kubernetes Secret เป็น base64 (ไม่ encrypted) → <strong>ห้ามเก็บใน Git!</strong></p>
+    <p><strong>Sealed Secrets</strong> (โดย Bitnami) แก้ปัญหานี้โดยเข้ารหัส Secret ด้วย public key — เฉพาะ controller ใน cluster ที่มี private key เท่านั้นที่ decrypt ได้ ทำให้ commit SealedSecret เข้า Git ได้อย่างปลอดภัย:</p>
 
     <pre><code># ติดตั้ง Sealed Secrets controller
 helm repo add sealed-secrets https://bitnami-labs.github.io/sealed-secrets
@@ -806,6 +842,8 @@ spec:
 
     <h3>RBAC — จำกัดสิทธิ์ ArgoCD</h3>
 
+    <p>ArgoCD มี <strong>RBAC (Role-Based Access Control)</strong> built-in — กำหนดได้ว่าใครมีสิทธิ์ sync app ไหน, ดู logs ได้ไหม, แก้ config ได้ไหม สำคัญมากเมื่อมีหลายทีมใช้ ArgoCD ร่วมกัน — dev team ไม่ควร sync prod apps ได้:</p>
+
     <pre><code># ArgoCD RBAC ConfigMap
 apiVersion: v1
 kind: ConfigMap
@@ -833,6 +871,8 @@ data:
     <hr>
 
     <h2>📋 GitOps Cheat Sheet</h2>
+
+    <p>สรุปเครื่องมือและคำสั่งที่ใช้บ่อยในการทำ GitOps — เก็บไว้เป็น quick reference:</p>
 
     <div class="level-grid">
       <div class="level-card level-card--1">
@@ -892,6 +932,8 @@ helm rollback myapp 1            # rollback</code></pre>
     <hr>
 
     <h2>🔑 Key Takeaways</h2>
+
+    <p>GitOps เปลี่ยนวิธีคิดเรื่อง deployment จาก "กด deploy" เป็น "commit to Git" — ทุก change มี history, review process, และ rollback ได้ทันที ArgoCD ทำให้ GitOps เข้าถึงง่ายด้วย UI ที่สวยงามและ ecosystem ที่ครบครัน:</p>
 
     <ol>
       <li><strong>GitOps</strong> = Git เป็น single source of truth → ทุก change ผ่าน PR</li>
