@@ -163,6 +163,8 @@
 
     <p><strong>SRE (Site Reliability Engineering)</strong> คือ discipline ที่ใช้ software engineering approach มาแก้ปัญหา operations:</p>
 
+    <p>หลายคนงงว่า SRE กับ DevOps ต่างกันยังไง? ตารางด้านล่างจะช่วยให้เข้าใจความแตกต่างชัดเจน โดยเฉพาะการที่ SRE มีแนวคิด "วัดผลด้วยตัวเลข" และ "จำกัด toil work" ที่ชัดเจนกว่า DevOps ที่เน้นเรื่อง culture และ process เป็นหลัก</p>
+
     <table>
       <thead><tr><th>Feature</th><th>Traditional Ops</th><th>DevOps</th><th>SRE</th></tr></thead>
       <tbody>
@@ -175,6 +177,8 @@
       </tbody>
     </table>
 
+    <p>จากตารางจะเห็นว่า SRE เป็น "การทำให้ DevOps เป็นรูปธรรม" ด้วยการกำหนดเมตริกที่ชัดเจน ตัวอย่างเช่น แทนที่จะบอกว่า "ระบบต้องเสถียร" SRE จะบอกว่า "ระบบต้อง uptime 99.9%" และมีวิธีวัดผลที่ชัดเจน แนวคิด Error Budget ทำให้การสมดุลระหว่างความเสถียรและการ deploy feature ใหม่เป็นเรื่องของ data ไม่ใช่ความรู้สึก</p>
+
     <blockquote>
       <strong>💡 จำง่ายๆ:</strong> DevOps = "วัฒนธรรม" (philosophy) | SRE = "วิธีทำจริง" (implementation) — SRE implements DevOps
     </blockquote>
@@ -184,6 +188,8 @@
     <h2>📊 SLI / SLO / SLA — วัด Reliability ยังไง?</h2>
 
     <p>หัวใจของ SRE คือการ <strong>วัด reliability ด้วยตัวเลข</strong> ไม่ใช่ความรู้สึก:</p>
+
+    <p>SLI, SLO และ SLA เป็นหัวใจสำคัญของ SRE ที่ทำให้การวัด "ความเสถียร" เป็นเรื่องของตัวเลข ไม่ใช่ความรู้สึกหรือคำพูดคลุมเครือ การเข้าใจความแตกต่างของสามตัวนี้จะช่วยให้เราออกแบบระบบและวัดผลได้อย่างมีประสิทธิภาพ</p>
 
     <div class="slo-grid">
       <div class="slo-card">
@@ -206,7 +212,11 @@
       </div>
     </div>
 
+    <p>จากไดอะแกรมเห็นได้ว่า SLI เป็นตัววัดที่เก็บข้อมูลจริงจากระบบ SLO เป็นเป้าหมายที่เรากำหนดขึ้นจาก SLI และ SLA เป็นข้อตกลงกับลูกค้าที่มี consequence จริง (เช่น คืนเงิน) หลักสำคัญคือ SLO ต้อง "เข้มงวดกว่า" SLA เพราะต้องมี buffer ไว้จัดการความเสี่ยง</p>
+
     <h3>SLI ที่สำคัญ — "The Four Golden Signals"</h3>
+
+    <p>Google แนะนำให้เริ่มต้นด้วยการวัด "สี่สัญญาณทอง" ซึ่งครอบคลุมประสบการณ์ผู้ใช้และสุขภาพระบบอย่างครอบคลุม การมี SLI ทั้งสี่ตัวจะช่วยให้เราเห็นภาพรวมของระบบและสามารถตรวจจับปัญหาได้รวดเร็ว</p>
 
     <table>
       <thead><tr><th>Signal</th><th>วัดอะไร</th><th>ตัวอย่าง SLI</th></tr></thead>
@@ -217,6 +227,8 @@
         <tr><td><strong>💾 Saturation</strong></td><td>ใช้ resource เท่าไร</td><td>CPU 70%, Memory 80%</td></tr>
       </tbody>
     </table>
+
+    <p>สิ่งสำคัญคือ Latency ต้องแยก "success requests" กับ "error requests" เพราะ error มักจะเร็วกว่า (fail fast) และอาจทำให้เราไม่เห็นปัญหาจริง Traffic จะบอกความต้องการ (demand) Errors บอกคุณภาพ และ Saturation บอกขีดจำกัดของระบบ การมีทั้งสี่ตัวจะให้ภาพที่สมบูรณ์</p>
 
     <pre><code># Prometheus — วัด SLI
 # Latency (p99)
@@ -235,6 +247,8 @@ sum(rate(http_requests_total[5m]))
   /
   sum(rate(http_requests_total[30d]))
 )</code></pre>
+
+    <p>โค้ด Prometheus ข้างต้นแสดงวิธีการคำนวณ SLI พื้นฐาน การใช้ histogram สำหรับ latency จะให้ความยืดหยุ่นในการคำนวณ percentile ต่างๆ ส่วนการคำนวณ error rate ต้องระวังเรื่อง division by zero และควรมี fallback value การคำนวณ availability แบบ 30 วันจะให้มุมมองระยะยาวที่เสถียรกว่าการดูแค่ช่วงเวลาสั้นๆ</p>
 
     <h3>ตัวอย่าง SLO Document</h3>
 
@@ -265,6 +279,8 @@ sum(rate(http_requests_total[5m]))
 
     <p><strong>Error Budget</strong> คือ "งบ" ที่ระบบ "ผิดพลาดได้" — คำนวณจาก SLO:</p>
 
+    <p>Error Budget เป็นแนวคิดปฏิวัติที่ทำให้การสมดุลระหว่างความเสถียรและการพัฒนา feature ใหม่เป็นเรื่องของคณิตศาสตร์ ไม่ใช่การต่อสู้กันระหว่างทีม Dev กับ Ops ตารางด้านล่างแสดงให้เห็นว่า SLO ที่สูงขึ้น (99.99%) จะมี Error Budget น้อยมาก ซึ่งหมายความว่าต้องระมัดระวังมากขึ้นในการ deploy</p>
+
     <table>
       <thead><tr><th>SLO</th><th>Error Budget/เดือน</th><th>Error Budget/ปี</th></tr></thead>
       <tbody>
@@ -274,6 +290,8 @@ sum(rate(http_requests_total[5m]))
         <tr><td><strong>99.99%</strong></td><td>4.38 นาที</td><td>52.6 นาที</td></tr>
       </tbody>
     </table>
+
+    <p>จากตารางจะเห็นว่าความแตกต่าง 0.09% ระหว่าง 99.9% กับ 99.99% ส่งผลให้ Error Budget ต่างกัน 10 เท่า! นี่คือเหตุผลที่ SLO ต้องกำหนดให้สมเหตุสมผลกับ business requirement ไม่ใช่ยึดติดที่ "9 ยิ่งเยอะยิ่งดี" กราฟด้านล่างแสดงตัวอย่างการ track Error Budget ที่ช่วยให้ทีมเห็นภาพปัจจุบันและตัดสินใจได้ทันเวลา</p>
 
     <div class="budget-bar">
       <div class="budget-bar__label"><span>Error Budget (99.9% SLO) — เดือนนี้</span><span>เหลือ 65%</span></div>
@@ -295,6 +313,8 @@ sum(rate(http_requests_total[5m]))
         <div class="budget-bar__fill budget-bar__fill--danger" style="width:100%;">BUDGET EXHAUSTED — Feature freeze!</div>
       </div>
     </div>
+
+    <p>Error Budget bar ข้างต้นแสดงสถานการณ์ต่างๆ ที่อาจเกิดขึ้น เมื่อเหลือ 65% (สีเขียว) ยังสามารถ deploy ได้ตามปกติ เมื่อเหลือ 15% (สีเหลือง) ต้องเริ่มระมัดระวังและอาจต้องชะลอการ deploy บาง feature เมื่อหมด (สีแดง) ต้อง freeze การ deploy feature ใหม่ทันทีและ focus ที่การแก้ปัญหา reliability นโยบายนี้ทำให้ทีมมี incentive ที่ชัดเจนในการสร้างระบบที่เสถียร</p>
 
     <blockquote>
       <strong>💡 หลักการ:</strong> Error Budget เหลือเยอะ → deploy features เร็วได้ | Error Budget ใกล้หมด → ชะลอ focus reliability | Error Budget หมด → <strong>Feature Freeze!</strong>
@@ -323,6 +343,8 @@ budget_remaining = (budget_total - budget_used) / budget_total * 100
 
     <h3>Severity Levels</h3>
 
+    <p>การกำหนด severity levels ที่ชัดเจนช่วยให้ทีมสามารถ prioritize และ respond ได้อย่างเหมาะสม ไม่ใช่ว่าทุกปัญหาต้องถือเป็น "emergency" ทั้งหมด การมี response time ที่แตกต่างกันจะช่วยให้ทีมใช้พลังงานอย่างมีประสิทธิภาพและไม่เกิด burnout</p>
+
     <table>
       <thead><tr><th>Level</th><th>Impact</th><th>Response Time</th><th>ตัวอย่าง</th></tr></thead>
       <tbody>
@@ -333,7 +355,11 @@ budget_remaining = (budget_total - budget_used) / budget_total * 100
       </tbody>
     </table>
 
+    <p>จากตารางจะเห็นว่า P1 เป็นเรื่องจริงจัง (5 นาที) เพราะ impact ต่อ user ทั้งหมด ส่วน P4 สามารถรอได้เพราะไม่กระทบ functionality หลักการสำคัญคือ "impact ต่อ user" ไม่ใช่ว่า server ตัวไหนพัง เช่น monitoring server down อาจเป็นแค่ P3 ถ้าไม่กระทบ user experience โดยตรง</p>
+
     <h3>Incident Response Flow</h3>
+
+    <p>กระบวนการ incident response ต้องมีขั้นตอนที่ชัดเจนและฝึกซ้อมเป็นประจำ ไม่ใช่รอให้เกิดปัญหาจริงแล้วค่อยคิดว่าต้องทำอะไร flow ด้านล่างเน้น "mitigation ก่อน investigation" เพราะการหยุดปัญหาสำคัญกว่าการหา root cause ในช่วงแรก</p>
 
     <div class="flow-diagram">
       <div class="flow-step" style="border-color:rgba(239,68,68,0.3);background:rgba(239,68,68,0.04);">
@@ -362,7 +388,11 @@ budget_remaining = (budget_total - budget_used) / budget_total * 100
       </div>
     </div>
 
+    <p>Flow นี้แสดงให้เห็นว่าการ "detect" เร็วมีความสำคัญมาก และการ "mitigate" ไม่จำเป็นต้องเป็น permanent fix อาจเป็นการ rollback หรือ workaround ก่อน จุดสำคัญคือ Postmortem ไม่ใช่ "optional" แต่เป็นส่วนหนึ่งของ incident response เพื่อป้องกันปัญหาเดิมไม่ให้เกิดซ้ำ</p>
+
     <h3>Incident Timeline ตัวอย่าง</h3>
+
+    <p>Timeline ที่ดีจะแสดงให้เห็น decision making process และ lesson learned การจดเวลาที่แม่นยำช่วยให้ postmortem มีความน่าเชื่อถือ และการ track action items จะทำให้การตอบสนองใน incident ครั้งต่อไปดีขึ้น ตัวอย่างด้านล่างแสดง incident ที่ resolve ภายใน 12 นาที ซึ่งถือว่าเร็วมาก</p>
 
     <div class="timeline">
       <div class="timeline__item">
@@ -391,6 +421,8 @@ budget_remaining = (budget_total - budget_used) / budget_total * 100
       </div>
     </div>
 
+    <p>จาก timeline จะเห็นว่าการมี deployment tool ที่ดี (ArgoCD) ทำให้ rollback ได้เร็ว (2 นาที) การ communicate กับ customer ทำหลังจากระบบ stable แล้ว ไม่ใช่ตอนที่กำลัง firefighting อยู่ การจด timeline แบบนี้จะกลายเป็น input สำคัญของ postmortem เพื่อวิเคราะห์ว่าทำอะไรได้ดี ทำอะไรควรปรับปรุง</p>
+
     <h3>Incident Commander — Roles</h3>
 
     <pre><code># Incident Roles (P1/P2)
@@ -417,6 +449,8 @@ budget_remaining = (budget_total - budget_used) / budget_total * 100
     <h2>📝 Blameless Postmortem — เรียนรู้จากความผิดพลาด</h2>
 
     <p><strong>Postmortem</strong> คือ document ที่เขียนหลังเกิด incident — เน้น <strong>"เรียนรู้" ไม่ใช่ "โทษคน"</strong> (blameless!):</p>
+
+    <p>Blameless postmortem เป็นหัวใจสำคัญของ SRE culture เพราะถ้าคนกลัวถูกโทษ จะไม่มีใครอยากรายงานปัญหาหรือเขียน postmortem ที่ซื่อสัตย์ การสร้าง culture ที่เน้น "เรียนรู้จากความผิดพลาด" จะทำให้ระบบแข็งแกร่งขึ้นในระยะยาว template ด้านล่างแสดงโครงสร้างที่ครบถ้วนของ postmortem ที่ดี</p>
 
     <pre><code># Postmortem Template
 # ═══════════════════
@@ -468,6 +502,8 @@ circular reference. Under 500 req/s, memory grew ~1GB/min.
 - Memory profiling should be part of CI, not manual
 - Rollback capability (ArgoCD) saved us — invest in it</code></pre>
 
+    <p>จาก postmortem template จะเห็นว่าการแยก "What Went Well" กับ "What Went Wrong" ช่วยให้เกิด balanced view ไม่ใช่โฟกัสแค่สิ่งที่ผิดพลาด Action Items ต้องมี owner และ due date ที่ชัดเจน ไม่ใช่แค่ "เราจะปรับปรุง" อย่างคลุมเครือ การ track action items completion เป็นสิ่งสำคัญที่บ่อยครั้งถูกมองข้าม</p>
+
     <blockquote>
       <strong>🐕 Blameless Culture:</strong> "สมชาย deploy code ที่มี bug" → ❌ | "ระบบไม่มี memory check ใน CI pipeline ที่จะ catch bug นี้" → ✅
     </blockquote>
@@ -490,6 +526,8 @@ circular reference. Under 500 req/s, memory grew ~1GB/min.
       </tbody>
     </table>
 
+    <p>จากตารางเปรียบเทียบจะเห็นว่า toil มักจะเป็นงานที่ซ้ำซาก คาดการณ์ได้ และไม่สร้างคุณค่าระยะยาว ส่วน engineering work จะสร้าง "leverage" คือลงทุนครั้งเดียวแต่ได้ประโยชน์ต่อเนื่อง การแปลง manual task เป็น automation ไม่ใช่แค่การเขียน script แต่รวมถึงการออกแบบ monitoring, error handling และ maintenance ระยะยาว</p>
+
     <pre><code># วัด Toil — track เวลาที่ใช้
 # ──────────────────────────
 # Week 1: SRE Team Time Breakdown
@@ -504,6 +542,8 @@ circular reference. Under 500 req/s, memory grew ~1GB/min.
 # 2. Certificate renewals      — 3h/week → cert-manager
 # 3. Capacity request tickets  — 3h/week → self-service
 # 4. Log investigation         — 5h/week → better alerting</code></pre>
+
+    <p>การ track เวลาแบบนี้จะให้ insight ที่ชัดเจนว่าทีมใช้เวลาไปกับอะไรบ้าง การมี target 50% engineering work ไม่ใช่ตัวเลขมหัศจรรย์ แต่เป็น guideline ที่ช่วยให้ทีมไม่จมอยู่กับงาน manual จนไม่มีเวลาปรับปรุงระบบ การระบุ "Top Toil Items" จะช่วยให้ prioritize การ automate ตาม impact</p>
 
     <hr>
 
@@ -526,7 +566,11 @@ circular reference. Under 500 req/s, memory grew ~1GB/min.
 # - Time off after high-severity incidents
 # - No more than 25% of time on-call per quarter</code></pre>
 
+    <p>โครงสร้าง on-call ข้างต้นแสดงระบบ rotation ที่สมดุลระหว่าง coverage และ fairness การมี secondary backup ช่วยลดความเครียดของ primary และสร้าง safety net การจำกัดไม่เกิน 25% ต่อไตรมาสช่วยป้องกัน burnout ที่สำคัญคือการมี escalation path ที่ชัดเจนเพื่อไม่ให้เกิดสถานการณ์ที่ on-call engineer ต้องรับผิดชอบเกินขีดจำกัด</p>
+
     <h3>Alerting — Alert ที่ดี vs Alert ที่แย่</h3>
+
+    <p>การออกแบบ alerting ที่ดีเป็นศิลปะที่ต้องสมดุลระหว่าง "จับปัญหาได้ครบ" กับ "ไม่รบกวนโดยไม่จำเป็น" Alert fatigue คือศัตรูใหญ่ของ SRE เพราะเมื่อ alert มากเกินไป คนจะเริ่มเพิกเฉยแม้กระทั่งปัญหาจริง หลักสำคัญคือ alert ต้อง "actionable" เสมอ</p>
 
     <table>
       <thead><tr><th>✅ Alert ที่ดี</th><th>❌ Alert ที่แย่</th></tr></thead>
@@ -538,6 +582,8 @@ circular reference. Under 500 req/s, memory grew ~1GB/min.
         <tr><td>Alert fatigue ต่ำ</td><td>Alert ทุก 5 นาที (noise!)</td></tr>
       </tbody>
     </table>
+
+    <p>จากตารางจะเห็นว่า alert ที่ดีมุ่งเน้น "impact ต่อ user" ไม่ใช่ "server metrics" เพราะ CPU สูงไม่ได้แปลว่า user ได้รับผลกระทบเสมอไป การมี runbook link ช่วยให้ on-call engineer สามารถ respond ได้เร็ว โดยเฉพาะช่วงกลางคืนหรือคนใหม่ที่ยังไม่คุ้นเคยระบบ</p>
 
     <pre><code># Prometheus Alert Rules
 groups:
@@ -571,9 +617,13 @@ groups:
       #   expr: cpu_usage > 80
       #   → CPU สูงไม่ได้แปลว่า user ได้รับผลกระทบ!</code></pre>
 
+    <p>Prometheus alert rules ข้างต้นแสดงความแตกต่างระหว่าง alert ที่ดีกับแย่ HighErrorRate alert เน้น user impact และมี context ครบ (runbook, dashboard) Error Budget alert เป็น proactive warning ที่ช่วยป้องกันปัญหาก่อนเกิด ส่วน CPU alert ถูก comment ออกเพราะไม่ relate กับ user experience โดยตรง ข้อสำคัญคือ `for: 5m` ช่วยกรอง transient spike</p>
+
     <hr>
 
     <h2>📈 Capacity Planning</h2>
+
+    <p>Capacity Planning คือการ "เดาอนาคต" อย่างมีหลักการ แทนที่จะรอให้ระบบ overload แล้วค่อย panic buying การทำ forecasting ด้วย data จะช่วยให้วางแผนและจัดซื้อ infrastructure ได้ทันเวลา โดยเฉพาะในยุคที่ hardware procurement ใช้เวลานาน</p>
 
     <pre><code># Capacity Planning Questions
 # ──────────────────────────
@@ -593,11 +643,15 @@ predict_linear(
 rate(http_requests_total[30d])
 # → ถ้าโต 20%/month → plan capacity 3 months ahead</code></pre>
 
+    <p>PromQL ข้างต้นแสดงการใช้ predict_linear() ในการคาดการณ์ disk usage และ traffic growth การ predict 30 วันข้างหน้าให้เวลาเพียงพอในการ procure resource ใหม่ แต่ต้องระวังว่า linear prediction อาจไม่เหมาะกับ seasonal traffic หรือ sudden spike การมี alert ที่แจ้งล่วงหน้าจะช่วยให้ไม่ต้องมา firefighting ตอนดึก</p>
+
     <hr>
 
     <h2>🛡️ Chaos Engineering — ทดสอบความแข็งแกร่ง</h2>
 
     <p>Chaos Engineering = <strong>ทำลายระบบตัวเองก่อนที่ระบบจริงจะพัง</strong> เพื่อหาจุดอ่อน:</p>
+
+    <p>Chaos Engineering คือการ "ทำลายระบบตัวเอง" อย่างมีเป้าหมายเพื่อค้นหาจุดอ่อนก่อนที่มันจะพังจริงในเวลาที่ไม่เหมาะ การทำ controlled failure จะช่วยให้เราเข้าใจพฤติกรรมของระบบในสถานการณ์ที่ไม่ปกติ และเตรียม recovery process ให้พร้อม</p>
 
     <pre><code># Chaos Experiments ที่ควรทำ
 # ──────────────────────────
@@ -630,6 +684,8 @@ spec:
             - name: FORCE
               value: 'true'</code></pre>
 
+    <p>รายการ chaos experiments ข้างต้นเริ่มจากสิ่งง่ายๆ (kill pod) ไปยังซับซ้อนขึ้น (network partition) LitmusChaos configuration แสดงการทดสอบ pod resilience โดยการ kill pod ทุก 10 วินาทีเป็นเวลา 30 วินาที การตั้ง FORCE=true จะทำ immediate kill ไม่ใช่ graceful shutdown เพื่อจำลอง real-world failure ที่มักจะเป็น unexpected</p>
+
     <blockquote>
       <strong>💡 กฎ Chaos:</strong> เริ่มจาก staging ก่อน → ค่อยทำ production | ทำในเวลาทำการ (มีคนดู) | มี rollback plan เสมอ
     </blockquote>
@@ -637,6 +693,8 @@ spec:
     <hr>
 
     <h2>📋 SRE Checklist — เริ่มต้นยังไง?</h2>
+
+    <p>การเริ่มต้น SRE ในองค์กรต้องทำทีละขั้น ไม่ใช่กระโดดไปทำทั้งหมดพร้อมกัน เพราะ SRE ต้องอาศัยทั้ง technical implementation และ culture change ที่ใช้เวลา checklist ด้านล่างเรียงตามลำดับความสำคัญ โดย foundation (ข้อ 1-3) ต้องแข็งแกร่งก่อนไปขั้นตอนถัดไป</p>
 
     <ol>
       <li><strong>กำหนด SLIs</strong> — วัด latency, error rate, availability</li>
@@ -650,6 +708,8 @@ spec:
       <li><strong>Capacity Planning</strong> — forecast growth, plan ahead</li>
       <li><strong>Chaos Engineering</strong> — break it before it breaks itself</li>
     </ol>
+
+    <p>การเริ่มที่ SLI/SLO ไม่ใช่เพราะมันง่าย แต่เพราะมันเป็น "ภาษาร่วม" ที่ทำให้ทีมคุยกันรู้เรื่อง เมื่อมี SLO แล้ว error budget จะตามมาเป็นธรรมชาติ และ alerting จะมี direction ที่ชัดเจน การทำ postmortem ที่ blameless จะค่อยๆ เปลี่ยน culture และขั้นตอนสุดท้ายจะช่วย optimize ระบบให้แข็งแกร่งขึ้น</p>
 
     <hr>
 
