@@ -184,6 +184,8 @@
 
     <h2>🔑 Secrets Management — อย่าเก็บ secret ใน code!</h2>
 
+    <p><strong>Secrets Management</strong> คือการจัดการข้อมูลลับ (passwords, API keys, tokens, certificates) อย่างปลอดภัย ข้อผิดพลาดที่พบบ่อยที่สุดคือ <strong>hardcode secrets ใน source code</strong> แล้ว commit เข้า Git — แม้จะลบภายหลัง Git history ยังเก็บไว้! ตัวอย่างที่เห็นบ่อย:</p>
+
     <div class="warning">
       <strong>❌ อย่าทำแบบนี้เด็ดขาด!</strong>
     </div>
@@ -200,6 +202,8 @@ environment:
   - DB_PASSWORD=mysecretpassword</code></pre>
 
     <h3>✅ วิธีที่ถูกต้อง</h3>
+
+    <p>แทนที่จะ hardcode ให้ใช้ <strong>environment variables</strong> หรือ <strong>secrets manager</strong> (AWS Secrets Manager, HashiCorp Vault, GitHub Secrets) เก็บ secrets แยกจาก code ทำให้เปลี่ยน secrets ได้โดยไม่ต้องแก้ code และ secrets ไม่เข้า Git:</p>
 
     <pre><code># 1. Environment Variables (ง่ายสุด)
 export DB_PASSWORD="$(cat /run/secrets/db_password)"
@@ -231,6 +235,8 @@ aws secretsmanager get-secret-value --secret-id myapp/db_password
 
     <h3>Git Secret Scanning</h3>
 
+    <p>แม้จะระวังแล้ว บางครั้ง secrets ก็หลุดเข้า Git ได้ <strong>Secret scanning</strong> ช่วยตรวจจับอัตโนมัติ — ทั้ง pre-commit hook (ป้องกันก่อน commit) และ CI pipeline (ตรวจซ้ำทุก PR) เครื่องมือเช่น <strong>Gitleaks</strong> และ <strong>GitHub Secret Scanning</strong> สแกนหา patterns ของ API keys, tokens, passwords:</p>
+
     <pre><code># ติดตั้ง git-secrets ป้องกัน commit secrets
 git secrets --install
 git secrets --register-aws     # ตรวจ AWS keys
@@ -248,7 +254,11 @@ gitleaks detect --source . --verbose
 
     <h2>🐳 Container Security</h2>
 
+    <p>Containers มีความเสี่ยงด้าน security หลายจุด — base image อาจมี vulnerabilities, Dockerfile อาจ expose secrets, runtime อาจให้สิทธิ์มากเกินไป (root access) การ secure containers ต้องทำทั้ง 3 ระดับ: <strong>build time</strong> (Dockerfile best practices), <strong>registry</strong> (image scanning), และ <strong>runtime</strong> (least privilege, read-only filesystem):</p>
+
     <h3>Dockerfile Best Practices</h3>
+
+    <p>Dockerfile ที่ปลอดภัยต้อง: ใช้ <strong>specific version tags</strong> (ไม่ใช่ latest), ใช้ <strong>non-root user</strong>, ใช้ <strong>multi-stage builds</strong> เพื่อลดขนาดและ attack surface, และอย่า COPY secrets เข้า image:</p>
 
     <pre><code># ❌ BAD — ใช้ root, image ใหญ่, ไม่ pin version
 FROM node:latest
@@ -274,6 +284,8 @@ CMD ["node", "app.js"]</code></pre>
 
     <h3>Image Scanning</h3>
 
+    <p><strong>Image scanning</strong> ตรวจหา known vulnerabilities (CVEs) ใน Docker images — ทั้ง OS packages และ application dependencies เครื่องมือเช่น <strong>Trivy</strong> (ฟรี, เร็ว), Snyk, หรือ AWS ECR scanning ควรรันทุกครั้งที่ build image ใหม่ใน CI pipeline:</p>
+
     <pre><code># Trivy — scan Docker image
 trivy image myapp:latest
 # → แสดง CVE ทั้งหมดในทุก layer
@@ -289,6 +301,8 @@ snyk container test myapp:latest
 docker scout cves myapp:latest</code></pre>
 
     <h3>Runtime Security</h3>
+
+    <p>แม้ image จะ clean แต่ runtime ก็ต้อง secure — ใช้ <strong>read-only filesystem</strong> (ป้องกัน malware เขียนไฟล์), <strong>drop capabilities</strong> (ลดสิทธิ์ที่ไม่จำเป็น), ตั้ง <strong>resource limits</strong> (ป้องกัน DoS), และ <strong>no-new-privileges</strong> (ป้องกัน privilege escalation):</p>
 
     <pre><code># ใช้ read-only filesystem
 docker run --read-only --tmpfs /tmp myapp
@@ -322,6 +336,8 @@ spec:
 
     <h2>🔒 SSL/TLS — เข้ารหัส Traffic</h2>
 
+    <p><strong>SSL/TLS</strong> เข้ารหัส traffic ระหว่าง client กับ server — ถ้าไม่มี ข้อมูลทั้งหมด (passwords, credit cards, personal data) ถูกส่งแบบ plaintext ใครก็ดักอ่านได้! ปัจจุบัน <strong>HTTPS เป็น mandatory</strong> — browsers แสดง "Not Secure" สำหรับ HTTP, Google ลด SEO ranking, และ modern APIs ส่วนใหญ่บังคับ HTTPS ใช้ <strong>Let's Encrypt</strong> ได้ฟรี:</p>
+
     <pre><code># Let's Encrypt — SSL ฟรี!
 # ติดตั้ง certbot
 sudo apt install certbot python3-certbot-nginx
@@ -337,6 +353,8 @@ curl -vI https://example.com 2>&amp;1 | grep -A5 "SSL connection"
 openssl s_client -connect example.com:443 -brief</code></pre>
 
     <h3>Nginx SSL Config (Best Practice)</h3>
+
+    <p>Config ด้านล่างแสดง Nginx SSL ที่ได้เกรด A+ จาก SSL Labs — ใช้ TLS 1.2+ เท่านั้น (ปิด SSLv3, TLS 1.0, 1.1 ที่มีช่องโหว่), เปิด HSTS (บังคับ HTTPS), และ redirect HTTP → HTTPS อัตโนมัติ:</p>
 
     <pre><code>server {
     listen 443 ssl http2;
@@ -364,7 +382,11 @@ openssl s_client -connect example.com:443 -brief</code></pre>
 
     <h2>🔍 Security Scanning ใน CI/CD</h2>
 
+    <p>แทนที่จะตรวจ security ด้วยมือ ให้ <strong>automate ทุกอย่างใน CI/CD pipeline</strong> — ทุก PR จะถูกสแกนอัตโนมัติ ถ้าพบ critical vulnerabilities → PR merge ไม่ได้ ครอบคลุม 5 ด้าน: secret scanning, dependency audit, SAST, container scanning, และ IaC scanning:</p>
+
     <h3>GitHub Actions Security Pipeline</h3>
+
+    <p>ตัวอย่าง pipeline ที่รัน security scans ทั้งหมดแบบ parallel — Gitleaks หา secrets, npm audit หา vulnerable dependencies, CodeQL หา code vulnerabilities, Trivy สแกน Docker image, และ tfsec สแกน Terraform configs:</p>
 
     <pre><code># .github/workflows/security.yml
 name: Security Scan
