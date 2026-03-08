@@ -257,7 +257,7 @@
 
     <h2>ทำไมต้อง Kubernetes?</h2>
 
-    <p>ลองนึกภาพว่าเรามี web app ที่ใช้ 3 services:</p>
+    <p>Docker Compose ก็จัดการหลาย containers ได้ แล้วทำไมต้อง K8s? คำตอบคือ Compose ทำงานบน <strong>เครื่องเดียว</strong> แต่ K8s ทำงานบน <strong>หลายเครื่อง (cluster)</strong> — auto-scaling, self-healing, rolling updates, service discovery ทั้งหมดอัตโนมัติ ลองนึกภาพว่าเรามี web app ที่ใช้ 3 services:</p>
 
     <div class="flow-diagram">
       <div class="flow-step">
@@ -290,7 +290,7 @@
 
     <h2>K8s Architecture — มีอะไรอยู่ข้างใน?</h2>
 
-    <p>Kubernetes แบ่งเป็น 2 ส่วนหลัก:</p>
+    <p>Kubernetes cluster แบ่งเป็น 2 ส่วนหลัก — <strong>Control Plane</strong> (สมอง — ตัดสินใจว่า Pod ไหนรันที่ไหน, ดูแล desired state) กับ <strong>Worker Nodes</strong> (แรงงาน — รัน containers จริง) Control Plane มักมี 3 เครื่องเพื่อ HA ส่วน Worker Nodes มีได้ไม่จำกัด เพิ่ม nodes = เพิ่ม capacity:</p>
 
     <div class="arch-diagram">
       <div class="arch-box">
@@ -322,6 +322,8 @@
     </div>
 
     <h3>Control Plane (สมอง)</h3>
+
+    <p>Control Plane มี 4 components หลัก: <strong>API Server</strong> (ประตูหน้าเดียว — kubectl, dashboard ทุกอย่างผ่านตัวนี้), <strong>etcd</strong> (key-value store เก็บ state ทั้งหมดของ cluster), <strong>Scheduler</strong> (ตัดสินใจว่า Pod ใหม่ไปรันที่ Node ไหน), <strong>Controller Manager</strong> (ดูแลว่า actual state = desired state):</p>
     <ul>
       <li><strong>API Server</strong> — ประตูหน้าบ้าน ทุกคำสั่งต้องผ่านตรงนี้</li>
       <li><strong>Scheduler</strong> — เลือกว่า Pod ไหนจะรันบน Node ไหน</li>
@@ -330,6 +332,8 @@
     </ul>
 
     <h3>Worker Node (แรงงาน)</h3>
+
+    <p>แต่ละ Worker Node มี 3 components: <strong>kubelet</strong> (agent ที่รับคำสั่งจาก Control Plane แล้วจัดการ Pods), <strong>kube-proxy</strong> (จัดการ networking ภายใน cluster), <strong>Container Runtime</strong> (containerd/CRI-O — ตัวรัน containers จริง):</p>
     <ul>
       <li><strong>kubelet</strong> — agent ที่รันบนทุก Node คอยดูแล Pod</li>
       <li><strong>kube-proxy</strong> — จัดการ networking ให้ Pod คุยกันได้</li>
@@ -339,6 +343,8 @@
     <hr>
 
     <h2>K8s Core Concepts — คำศัพท์ที่ต้องรู้</h2>
+
+    <p>K8s มีศัพท์เฉพาะเยอะ แต่ core concepts ที่ต้องเข้าใจมีไม่กี่ตัว — <strong>Pod</strong> (หน่วยเล็กที่สุดใน K8s ห่อ 1+ containers), <strong>Deployment</strong> (จัดการ Pods — scaling, rolling updates), <strong>Service</strong> (ทำให้ Pods มี stable endpoint), <strong>Ingress</strong> (route traffic จาก internet เข้า Services) เข้าใจ 4 ตัวนี้ก็เริ่มใช้ K8s ได้แล้ว:</p>
 
     <table>
       <thead>
@@ -396,9 +402,11 @@
 
     <h2>Hands-on — Deploy แอปแรกด้วย K8s</h2>
 
+    <p>มาลองใช้จริง! ขั้นตอนหลักคือ: สร้าง <strong>Deployment</strong> (บอกว่ารัน image อะไร กี่ replicas) → สร้าง <strong>Service</strong> (expose ให้เข้าถึงได้) → <strong>Scale</strong> (เพิ่ม/ลด replicas) → <strong>Update</strong> (เปลี่ยน version โดยไม่ downtime)</p>
+
     <h3>1. สร้าง Deployment</h3>
 
-    <p>ไฟล์ <code>deployment.yaml</code>:</p>
+    <p>Deployment YAML กำหนด: <code>replicas</code> (กี่ Pods), <code>image</code> (Docker image ไหน), <code>resources</code> (CPU/Memory limits), <code>readinessProbe</code> (ตรวจว่า Pod พร้อมรับ traffic ก่อน route เข้ามา) สังเกตว่าเป็น declarative — บอก "ต้องการอะไร" ไม่ใช่ "ทำอะไร":</p>
 
     <pre><code>apiVersion: apps/v1
 kind: Deployment
@@ -441,7 +449,7 @@ kubectl get pods
 
     <h3>2. สร้าง Service</h3>
 
-    <p>ไฟล์ <code>service.yaml</code>:</p>
+    <p><strong>Service</strong> ทำให้ Pods มี stable IP/DNS name — เพราะ Pods มาและไป (scale, crash, update) แต่ Service address คงที่เสมอ มี 3 types: <strong>ClusterIP</strong> (ภายใน cluster), <strong>NodePort</strong> (expose port บน Node), <strong>LoadBalancer</strong> (สร้าง cloud LB อัตโนมัติ):</p>
 
     <pre><code>apiVersion: v1
 kind: Service
@@ -465,6 +473,8 @@ kubectl get svc
 
     <h3>3. Scaling — เพิ่ม/ลด Pod</h3>
 
+    <p>Scale ได้ง่ายมาก — แค่แก้ replicas แล้ว K8s สร้าง/ลบ Pods ให้อัตโนมัติ หรือใช้ <strong>HPA (Horizontal Pod Autoscaler)</strong> ให้ scale ตาม CPU/Memory usage อัตโนมัติ:</p>
+
     <pre><code># Scale เป็น 5 pods
 kubectl scale deployment my-web-app --replicas=5
 
@@ -473,6 +483,8 @@ kubectl get pods
 # จะเห็น 5 pods running!</code></pre>
 
     <h3>4. Rolling Update — อัปเดตโดยไม่ downtime</h3>
+
+    <p><strong>Rolling Update</strong> คือฟีเจอร์ที่ทำให้ K8s โดดเด่น — เมื่อ update image version K8s จะค่อยๆ สร้าง Pod ใหม่ (version ใหม่) แล้วลบ Pod เก่าทีละตัว ถ้า Pod ใหม่ fail จะ rollback อัตโนมัติ — <strong>zero downtime deployment</strong>:</p>
 
     <pre><code># เปลี่ยน image เป็น version ใหม่
 kubectl set image deployment/my-web-app web=nginx:1.25
@@ -489,7 +501,7 @@ kubectl rollout undo deployment/my-web-app</code></pre>
 
     <h2>Self-healing — K8s ซ่อมตัวเอง</h2>
 
-    <p>หนึ่งในฟีเจอร์เด่นที่สุดของ K8s — ถ้า Pod ตาย มันจะสร้างตัวใหม่อัตโนมัติ:</p>
+    <p><strong>Self-healing</strong> คือฟีเจอร์ที่ทำให้ K8s แตกต่างจาก Docker Compose — ถ้า Pod crash, Node ล่ม, หรือ health check fail K8s จะ detect และสร้าง Pod ใหม่อัตโนมัติ ไม่ต้องมีคนมานั่ง monitor แล้ว restart เอง ทำงาน 24/7 ไม่มีวันหยุด:</p>
 
     <pre><code># ลอง kill pod ทิ้ง
 kubectl delete pod my-web-app-6d8f7b4c5-abc12
@@ -507,6 +519,8 @@ kubectl get pods
     <hr>
 
     <h2>Docker Compose vs Kubernetes</h2>
+
+    <p>คำถามที่พบบ่อย — "ควรใช้ Compose หรือ K8s?" ไม่ใช่เรื่องของ "ตัวไหนดีกว่า" แต่เป็น "ต้องการอะไร" — Compose เหมาะกับ single server, dev environment, small apps ส่วน K8s เหมาะกับ production ที่ต้อง scale, HA, multi-team:</p>
 
     <table>
       <thead>
@@ -563,7 +577,7 @@ kubectl get pods
 
     <h2>เริ่มต้นลองเล่น K8s</h2>
 
-    <p>ไม่ต้องมี cluster จริงก็ลองได้! เครื่องมือสำหรับ local:</p>
+    <p>ไม่ต้องมี cluster จริงก็ลองได้! มี tools สำหรับรัน K8s บนเครื่องตัวเอง — เหมาะกับการเรียนรู้และ development แนะนำเริ่มจาก <strong>minikube</strong> (ง่ายที่สุด) หรือ <strong>kind</strong> (K8s ใน Docker — เร็วมาก):</p>
 
     <ul>
       <li><strong><a href="https://minikube.sigs.k8s.io/" target="_blank">Minikube</a></strong> — K8s บนเครื่องตัวเอง (แนะนำสำหรับมือใหม่)</li>
@@ -585,6 +599,8 @@ minikube service hello</code></pre>
     <hr>
 
     <h2>สรุป</h2>
+
+    <p>Kubernetes คือ industry standard สำหรับ container orchestration — ทุก cloud provider รองรับ (EKS, AKS, GKE) และเป็นทักษะที่ DevOps engineers ต้องมี เรียนรู้ curve สูง แต่เมื่อเข้าใจแล้วจะเห็นว่ามันแก้ปัญหาจริงๆ ที่ Docker เดี่ยวๆ ทำไม่ได้:</p>
 
     <ul>
       <li><strong>Kubernetes</strong> = Container Orchestrator ที่จัดการ deploy, scale, heal อัตโนมัติ</li>
