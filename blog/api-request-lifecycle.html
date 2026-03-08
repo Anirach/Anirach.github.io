@@ -222,7 +222,7 @@
 
     <h2>API Request Lifecycle ทำงานยังไง?</h2>
 
-    <p>เมื่อ Client ต้องการข้อมูลจาก Server จะเกิดขั้นตอนดังนี้:</p>
+    <p>เมื่อ Client ต้องการข้อมูลจาก Server จะเกิดขั้นตอน 5 ขั้น — ตั้งแต่ Client ส่ง request ไปจนถึงแสดงผลให้ user เห็น ทั้งหมดเกิดขึ้นในเวลาไม่กี่มิลลิวินาที! เข้าใจ lifecycle นี้จะช่วยให้ debug API issues ได้เร็วขึ้น — "ปัญหาเกิดที่ขั้นตอนไหน?":</p>
 
     <!-- Flow Diagram -->
     <div class="flow-diagram">
@@ -270,7 +270,7 @@ Accept: application/json</code></pre>
 
     <h3>Step 2: Server รับ Request</h3>
 
-    <p>Server ได้รับ request แล้วจะผ่านหลายชั้น:</p>
+    <p>Server ได้รับ request แล้วไม่ได้ทำงานทันที — จะผ่านหลาย "ชั้น" ก่อน เหมือนด่านตรวจ: <strong>Middleware</strong> (ตรวจ auth, logging, rate limiting), <strong>Router</strong> (หาว่า URL นี้ไปที่ handler ไหน), <strong>Validation</strong> (ตรวจว่าข้อมูลถูกต้องไหม) ถ้าผ่านหมดจึงไปถึง handler function:</p>
 
     <ol>
       <li><strong>DNS Resolution</strong> — แปลง domain name เป็น IP address</li>
@@ -281,7 +281,7 @@ Accept: application/json</code></pre>
 
     <h3>Step 3: Server ประมวลผล</h3>
 
-    <p>Handler function จะดำเนินการตามที่ request บอก เช่น:</p>
+    <p><strong>Handler function</strong> ทำงานจริงตามที่ request บอก — อาจง่ายแค่ดึงข้อมูลจาก database หรือซับซ้อนมาก เช่น คำนวณราคา, เรียก external APIs, ส่ง email, จัดคิว background jobs ขั้นตอนนี้คือที่ "business logic" อยู่:</p>
 
     <ul>
       <li>Query ข้อมูลจาก Database</li>
@@ -301,7 +301,7 @@ app.get('/api/users/:id', async (req, res) => {
 
     <h3>Step 4: Server ส่ง Response กลับ</h3>
 
-    <p>Server สร้าง <strong>HTTP Response</strong> กลับไปหา Client ประกอบด้วย:</p>
+    <p>เมื่อประมวลผลเสร็จ Server สร้าง <strong>HTTP Response</strong> กลับไปหา Client — ประกอบด้วย Status Code (สำเร็จ/ผิดพลาด), Headers (content type, cache, cookies), และ Body (ข้อมูลจริง มักเป็น JSON):</p>
 
     <ul>
       <li><strong>Status Code</strong> — บอกผลลัพธ์ (200, 404, 500 ฯลฯ)</li>
@@ -327,7 +327,7 @@ Content-Type: application/json
 
     <h2>HTTP Methods — ทำอะไรได้บ้าง?</h2>
 
-    <p>แต่ละ method บอก server ว่า client ต้องการ "ทำอะไร" กับ resource:</p>
+    <p>HTTP มี methods หลายตัว แต่ที่ใช้บ่อยมี 5 ตัว — ตาม CRUD operations: <strong>GET</strong> (อ่าน), <strong>POST</strong> (สร้าง), <strong>PUT</strong> (แก้ทั้งหมด), <strong>PATCH</strong> (แก้บางส่วน), <strong>DELETE</strong> (ลบ) การเลือกใช้ method ถูกต้องเป็น RESTful best practice — ไม่ใช่แค่ใช้ POST ทุกอย่าง!</p>
 
     <table>
       <thead>
@@ -374,7 +374,7 @@ Content-Type: application/json
 
     <h2>HTTP Status Codes — Server ตอบกลับอะไร?</h2>
 
-    <p>Status code เป็นตัวเลข 3 หลักที่บอกผลลัพธ์ของ request:</p>
+    <p><strong>Status codes</strong> เป็นตัวเลข 3 หลักที่บอก "ผลลัพธ์" ของ request — แบ่งเป็น 5 กลุ่มตามหลักร้อย: 1xx (informational), 2xx (success), 3xx (redirect), 4xx (client error — ผิดที่ client), 5xx (server error — ผิดที่ server) DevOps ต้องรู้ codes สำคัญเพื่อ debug API issues:</p>
 
     <h3>2xx — สำเร็จ ✅</h3>
     <ul>
@@ -412,6 +412,8 @@ Content-Type: application/json
     <hr>
 
     <h2>ตัวอย่างจริง — สร้าง User ด้วย POST</h2>
+
+    <p>มาดู lifecycle ทั้งหมดในตัวอย่างจริง — Client ส่ง POST request สร้าง user ใหม่ Server validate ข้อมูล, hash password, บันทึกลง database, แล้วส่ง response กลับพร้อม user ID ที่สร้างได้:</p>
 
     <h4>Request:</h4>
     <pre><code>POST /api/users HTTP/1.1
@@ -453,7 +455,7 @@ Content-Type: application/json
 
     <h2>ลองเล่นด้วย cURL</h2>
 
-    <p>เปิด terminal แล้วลองส่ง request จริงๆ ได้เลย:</p>
+    <p><strong>cURL</strong> เป็น command-line tool สำหรับส่ง HTTP requests — DevOps ใช้ตลอดเวลาสำหรับ debug APIs, health checks, automation scripts ทางเลือกอื่นที่ใช้ง่ายกว่า: <strong>Postman</strong> (GUI), <strong>HTTPie</strong> (CLI ที่ syntax สวยกว่า cURL) ลองเล่นกับ APIs สาธารณะได้เลย:</p>
 
     <pre><code># GET — ดึงข้อมูล
 curl -X GET https://jsonplaceholder.typicode.com/users/1
@@ -473,6 +475,8 @@ curl -X DELETE https://jsonplaceholder.typicode.com/posts/1</code></pre>
     <hr>
 
     <h2>สรุป</h2>
+
+    <p>API Request Lifecycle เป็นพื้นฐานที่ทุก developer ต้องเข้าใจ — ไม่ว่าจะเป็น frontend, backend, หรือ DevOps ทุก web app, mobile app, microservice สื่อสารกันผ่าน APIs ทั้งนั้น เข้าใจ lifecycle ดี = debug เร็ว + ออกแบบ API ดี:</p>
 
     <ul>
       <li><strong>API</strong> = ช่องทางสื่อสารระหว่าง Client กับ Server</li>
