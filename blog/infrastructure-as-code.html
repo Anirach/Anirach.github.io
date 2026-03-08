@@ -224,6 +224,8 @@
 
     <p><strong>Infrastructure as Code</strong> คือแนวคิดที่ว่า — infrastructure (server, network, database, firewall) ควรถูก <strong>กำหนดด้วย code</strong> ไม่ใช่การคลิกบน console หรือพิมพ์คำสั่งทีละบรรทัด</p>
 
+    <p>ข้อดีของ IaC: <strong>repeatable</strong> (ทำซ้ำได้เหมือนเดิมทุกครั้ง), <strong>version controlled</strong> (เก็บใน Git ดู history ได้), <strong>reviewable</strong> (review infrastructure changes เหมือน code review), <strong>testable</strong> (ทดสอบก่อน apply ได้) — เปรียบเทียบก่อนและหลัง IaC:</p>
+
     <h3>ก่อน IaC (Manual) 😩</h3>
     <ol>
       <li>Login เข้า AWS Console</li>
@@ -252,7 +254,7 @@
 
     <h2>Terraform vs Ansible — ใช้ตัวไหน?</h2>
 
-    <p>คำตอบคือ <strong>ใช้ทั้งคู่!</strong> เพราะทำหน้าที่ต่างกัน:</p>
+    <p>คำตอบคือ <strong>ใช้ทั้งคู่!</strong> เพราะทำหน้าที่ต่างกัน — <strong>Terraform</strong> "สร้าง" infrastructure (VMs, networks, databases, load balancers) ส่วน <strong>Ansible</strong> "ตั้งค่า" สิ่งที่สร้างมา (install software, configure services, deploy apps) Terraform เป็น <strong>declarative</strong> (บอกว่า "ต้องการอะไร") Ansible เป็น <strong>procedural</strong> (บอกว่า "ทำอะไรทีละขั้น"):</p>
 
     <div class="flow-diagram">
       <div class="flow-step">
@@ -326,7 +328,11 @@
 
     <h2>Terraform — สร้าง Infrastructure ด้วย Code</h2>
 
+    <p><strong>Terraform</strong> โดย HashiCorp เป็น IaC tool ที่ได้รับความนิยมสูงสุด — รองรับ cloud providers ทุกเจ้า (AWS, Azure, GCP, DigitalOcean, etc.) ด้วย provider plugins ใช้ภาษา <strong>HCL (HashiCorp Configuration Language)</strong> ที่อ่านง่าย และจัดการ state ของ infrastructure ให้อัตโนมัติ</p>
+
     <h3>Terraform ทำงานยังไง?</h3>
+
+    <p>Terraform workflow มี 3 ขั้นตอนหลัก: <strong>Write</strong> (เขียน .tf files), <strong>Plan</strong> (ดูว่าจะเปลี่ยนอะไร — เหมือน dry run), <strong>Apply</strong> (สร้าง/แก้ infrastructure จริง) สิ่งสำคัญคือ <code>terraform plan</code> แสดง diff ก่อน apply เสมอ — ไม่มีเซอร์ไพรส์!</p>
 
     <div class="flow-diagram">
       <div class="flow-step">
@@ -352,7 +358,7 @@
 
     <h3>ตัวอย่าง: สร้าง AWS EC2 Instance</h3>
 
-    <p>ไฟล์ <code>main.tf</code>:</p>
+    <p>ตัวอย่าง <code>main.tf</code> ด้านล่างสร้าง EC2 instance บน AWS — สังเกตว่า HCL อ่านง่ายมาก: กำหนด provider (AWS, region), resource (instance type, AMI, security group), และ output (IP address) ทุกอย่างเป็น declarative:</p>
 
     <pre><code># กำหนด provider (Cloud ที่จะใช้)
 terraform {
@@ -430,6 +436,8 @@ terraform destroy   # ลบทั้งหมด (ระวัง!)
 
     <h3>Terraform สร้างหลายเครื่องพร้อมกัน</h3>
 
+    <p>พลังของ IaC เห็นชัดเมื่อต้องสร้างหลายเครื่อง — แค่ใช้ <code>count</code> หรือ <code>for_each</code> ก็สร้าง 10, 50, 100 เครื่องได้ในคำสั่งเดียว ลองทำแบบ manual ดู!</p>
+
     <pre><code># ใช้ count สร้าง 5 เครื่องรวด!
 resource "aws_instance" "web_cluster" {
   count         = 5
@@ -451,9 +459,11 @@ output "server_ips" {
 
     <h2>Ansible — ตั้งค่า Server อัตโนมัติ</h2>
 
+    <p><strong>Ansible</strong> โดย Red Hat เป็น configuration management tool ที่ใช้ง่ายที่สุด — เขียน playbooks ด้วย YAML ธรรมดา ไม่ต้องเรียนภาษาใหม่ เหมาะกับ: install packages, configure services, deploy applications, manage users/permissions</p>
+
     <h3>Ansible ทำงานยังไง?</h3>
 
-    <p>Ansible เป็น <strong>agentless</strong> — ไม่ต้องติดตั้งอะไรบนเครื่องเป้าหมาย ใช้ SSH เข้าไปรันคำสั่งเลย!</p>
+    <p>Ansible เป็น <strong>agentless</strong> — ไม่ต้องติดตั้งอะไรบนเครื่องเป้าหมาย ใช้ SSH เข้าไปรันคำสั่งเลย! ต่างจาก Chef/Puppet ที่ต้องติดตั้ง agent บนทุกเครื่อง ทำให้ setup ง่ายและ maintain น้อยกว่า มี 2 ส่วนหลัก: <strong>Inventory</strong> (รายชื่อ servers) และ <strong>Playbook</strong> (สิ่งที่ต้องทำ):</p>
 
     <div class="arch-diagram">
       <div class="arch-box">
@@ -486,7 +496,7 @@ output "server_ips" {
 
     <h3>Step 1: Inventory — บอกว่ามี server อะไรบ้าง</h3>
 
-    <p>ไฟล์ <code>inventory.yml</code>:</p>
+    <p><strong>Inventory</strong> คือไฟล์ที่บอก Ansible ว่า "มี server อะไรบ้าง แบ่งเป็นกลุ่มอะไร" สามารถจัดกลุ่มเป็น webservers, databases, monitoring ได้ — แล้วรัน playbook เฉพาะกลุ่ม:</p>
 
     <pre><code>all:
   children:
@@ -508,7 +518,7 @@ output "server_ips" {
 
     <h3>Step 2: Playbook — บอกว่าต้องทำอะไร</h3>
 
-    <p>ไฟล์ <code>setup-webserver.yml</code>:</p>
+    <p><strong>Playbook</strong> คือ YAML file ที่อธิบาย "ต้องทำอะไรบ้าง" ทีละ task — Ansible จะรันตามลำดับ แต่ละ task ใช้ <strong>module</strong> (เช่น apt, copy, service, template) ที่เป็น idempotent คือรันกี่ครั้งก็ได้ผลเหมือนกัน ตัวอย่าง setup web server:</p>
 
     <pre><code>---
 - name: Setup Web Servers
@@ -581,6 +591,8 @@ ansible-playbook -i inventory.yml setup-webserver.yml
 
     <h3>Ansible Ad-hoc Commands — ไม่ต้องเขียน playbook</h3>
 
+    <p>สำหรับงานเร็วๆ ที่ไม่ต้องเขียน playbook — ใช้ <strong>ad-hoc commands</strong> รันคำสั่งเดียวบนหลายเครื่องพร้อมกัน เช่น check uptime ทุกเครื่อง, restart service, copy file:</p>
+
     <pre><code># Ping ทุกเครื่อง
 ansible all -i inventory.yml -m ping
 
@@ -597,7 +609,7 @@ ansible webservers -i inventory.yml -m service -a "name=nginx state=restarted" -
 
     <h2>Terraform + Ansible ทำงานร่วมกัน</h2>
 
-    <p>Workflow ที่ดีที่สุดคือใช้ <strong>ทั้งคู่ร่วมกัน</strong>:</p>
+    <p>Workflow ที่ดีที่สุดคือใช้ <strong>ทั้งคู่ร่วมกัน</strong> — Terraform สร้าง infrastructure (VMs, VPC, Load Balancer) แล้วส่ง output (IP addresses) ให้ Ansible ไปตั้งค่า (install Docker, deploy app, configure monitoring) เหมือน Terraform "สร้างบ้าน" แล้ว Ansible "ตกแต่งภายใน":</p>
 
     <div class="arch-diagram">
       <div class="arch-box">
@@ -645,6 +657,8 @@ ansible-playbook -i inventory.yml setup-all.yml</code></pre>
 
     <h2>IaC Tools อื่นๆ ที่น่ารู้</h2>
 
+    <p>นอกจาก Terraform + Ansible ยังมี IaC tools อื่นๆ ที่น่าสนใจ — แต่ละตัวมีจุดแข็งต่างกัน เลือกตามความเหมาะสมของทีมและ use case:</p>
+
     <table>
       <thead>
         <tr>
@@ -691,6 +705,8 @@ ansible-playbook -i inventory.yml setup-all.yml</code></pre>
 
     <h2>Best Practices</h2>
 
+    <p>IaC ทำให้ infrastructure เป็น code ดังนั้นต้อง treat เหมือน code จริงๆ — version control, code review, testing, modularization หลักการสำคัญที่ต้องทำ:</p>
+
     <ol>
       <li><strong>เก็บ IaC ใน Git</strong> — ทุก infrastructure change ต้องผ่าน PR review</li>
       <li><strong>ใช้ modules</strong> — แยก code เป็น module ที่ reuse ได้</li>
@@ -719,6 +735,8 @@ terraform {
     <hr>
 
     <h2>สรุป</h2>
+
+    <p>Infrastructure as Code เปลี่ยนวิธีจัดการ infrastructure จาก "จำในหัว + ทำด้วยมือ" เป็น "เขียน code + automate ทั้งหมด" ผลลัพธ์คือ: สร้าง environment ใหม่ได้ในนาที, disaster recovery เร็วขึ้น 100 เท่า, ทุกการเปลี่ยนแปลงมี audit trail ใน Git:</p>
 
     <ul>
       <li><strong>IaC</strong> = จัดการ infrastructure ด้วย code แทนการทำมือ</li>
