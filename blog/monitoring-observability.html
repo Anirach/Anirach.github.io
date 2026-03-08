@@ -234,6 +234,8 @@
 
     <h2>Monitoring vs Observability — ต่างกันยังไง?</h2>
 
+    <p>หลายคนใช้สองคำนี้แทนกัน แต่จริงๆ ต่างกัน — <strong>Monitoring</strong> คือ "ดูว่าระบบยังทำงานปกติไหม" (CPU สูงไหม? disk เต็มไหม? error rate เพิ่มไหม?) เป็นการถามคำถามที่ "รู้อยู่แล้ว" ส่วน <strong>Observability</strong> คือ "สามารถเข้าใจได้ว่าระบบเป็นยังไงจากข้อมูลที่ส่งออกมา" — ตอบคำถามที่ "ยังไม่เคยถาม" ได้ เหมาะกับ microservices ที่ complex และ failure modes คาดเดาไม่ได้:</p>
+
     <table>
       <thead>
         <tr>
@@ -269,7 +271,7 @@
 
     <h2>3 Pillars of Observability</h2>
 
-    <p>ระบบ Observability ที่ดีต้องมีข้อมูล 3 ประเภท:</p>
+    <p>ระบบ Observability ที่ดีต้องมีข้อมูล 3 ประเภทที่ทำงานเสริมกัน — <strong>Metrics</strong> บอกว่า "มีปัญหาไหม" (ตัวเลข), <strong>Logs</strong> บอกว่า "เกิดอะไรขึ้น" (events), <strong>Traces</strong> บอกว่า "ช้าตรงไหน" (request flow) ขาดอันใดอันหนึ่งก็ debug ยาก:</p>
 
     <div class="pillar-grid">
       <div class="pillar-card">
@@ -293,7 +295,11 @@
 
     <h2>Pillar 1: Metrics — ตัวเลขที่ต้องจับตา</h2>
 
+    <p><strong>Metrics</strong> คือตัวเลขที่วัดได้ตามเวลา (time-series data) — CPU usage 72%, response time 230ms, error rate 0.5% เหมาะกับ alerting (แจ้งเตือนเมื่อเกินเกณฑ์) และ trending (ดู pattern ระยะยาว) Metrics แบ่งเป็น 3 ระดับ:</p>
+
     <h3>System Metrics</h3>
+
+    <p><strong>System metrics</strong> วัดสุขภาพของ infrastructure — CPU, Memory, Disk, Network ทุก server ต้องมี เป็นตัวบอกว่า "เครื่องจะล่มเมื่อไร":</p>
     <ul>
       <li><strong>CPU Usage</strong> — เครื่องทำงานหนักแค่ไหน</li>
       <li><strong>Memory Usage</strong> — RAM เหลือเท่าไหร่</li>
@@ -302,6 +308,8 @@
     </ul>
 
     <h3>Application Metrics (RED Method)</h3>
+
+    <p><strong>RED Method</strong> (Rate, Errors, Duration) คือ metrics ที่วัดจากมุมผู้ใช้ — request มาเท่าไร? error กี่ %? ตอบช้าแค่ไหน? สำคัญกว่า system metrics เพราะบอกได้ว่า "user experience ดีไหม":</p>
     <ul>
       <li><strong>Rate</strong> — จำนวน request/sec</li>
       <li><strong>Errors</strong> — เปอร์เซ็นต์ error (5xx)</li>
@@ -309,6 +317,8 @@
     </ul>
 
     <h3>Business Metrics</h3>
+
+    <p><strong>Business metrics</strong> เชื่อม technical data กับ business impact — ยอดสั่งซื้อต่อนาที, signup rate, cart abandonment rate ช่วยตอบคำถามเช่น "ระบบช้าขึ้น 200ms ส่งผลกระทบต่อยอดขายไหม?":</p>
     <ul>
       <li><strong>Active Users</strong> — คนใช้งานอยู่กี่คน</li>
       <li><strong>Orders/min</strong> — คำสั่งซื้อต่อนาที</li>
@@ -323,6 +333,8 @@
     <hr>
 
     <h2>Prometheus + Grafana — Metrics Stack ยอดนิยม</h2>
+
+    <p><strong>Prometheus</strong> เป็น metrics database (TSDB) ที่เก็บข้อมูลแบบ time-series — ใช้ "pull model" คือ Prometheus ดึงข้อมูลจาก targets (servers, apps) ทุก 15 วินาที ส่วน <strong>Grafana</strong> เป็น dashboard tool ที่แสดง metrics เป็นกราฟสวยๆ ทั้งคู่เป็น open-source, CNCF graduated projects, และเป็น industry standard:</p>
 
     <div class="flow-diagram">
       <div class="flow-step">
@@ -370,6 +382,8 @@ scrape_configs:
 
     <h3>Docker Compose สำหรับ Monitoring Stack</h3>
 
+    <p>Setup monitoring stack ได้ง่ายด้วย Docker Compose — Prometheus + Grafana + Node Exporter (system metrics) + cAdvisor (container metrics) พร้อมใช้งานในไม่กี่นาที:</p>
+
     <pre><code>version: '3.8'
 services:
   prometheus:
@@ -409,6 +423,8 @@ docker compose up -d
 
     <h3>PromQL — Query ข้อมูลจาก Prometheus</h3>
 
+    <p><strong>PromQL</strong> คือ query language ของ Prometheus — ใช้คำนวณ metrics ที่ต้องการ เช่น error rate ใน 5 นาที, 95th percentile latency, CPU usage เฉลี่ย เรียนรู้ PromQL เป็นทักษะสำคัญสำหรับ DevOps:</p>
+
     <pre><code># CPU usage เฉลี่ย 5 นาที
 100 - (avg by(instance) (rate(node_cpu_seconds_total{mode="idle"}[5m])) * 100)
 
@@ -428,7 +444,11 @@ histogram_quantile(0.95, rate(http_request_duration_seconds_bucket[5m]))
 
     <h2>Pillar 2: Logs — บันทึกเหตุการณ์</h2>
 
+    <p><strong>Logs</strong> คือบันทึกเหตุการณ์ที่เกิดขึ้นในระบบ — "user X login สำเร็จ", "payment failed: insufficient funds", "database connection timeout" Metrics บอกว่า "มีปัญหา" แต่ Logs บอกว่า "เกิดอะไรขึ้นจริงๆ" สำคัญมากตอน debug</p>
+
     <h3>Structured Logging — ดีกว่า plain text!</h3>
+
+    <p>แทนที่จะ log แบบ plain text (<code>"User john logged in"</code>) ให้ใช้ <strong>structured logging</strong> (JSON format) — ทำให้ search, filter, aggregate ได้ง่าย ถามว่า "error ทั้งหมดของ user X ใน 1 ชั่วโมงที่แล้ว" ตอบได้ทันที:</p>
 
     <pre><code>// ❌ Bad — ยากต่อการ parse
 console.log("User login failed for user123");
@@ -443,6 +463,8 @@ logger.error({
 });</code></pre>
 
     <h3>Log Levels</h3>
+
+    <p><strong>Log levels</strong> ช่วยแยกความสำคัญ — production ควร log แค่ INFO ขึ้นไป (ไม่ต้อง DEBUG เพราะ volume สูงมาก) เมื่อมีปัญหาค่อยเปิด DEBUG ชั่วคราว:</p>
 
     <table>
       <thead>
@@ -477,6 +499,8 @@ logger.error({
     </table>
 
     <h3>ELK Stack — Centralized Logging</h3>
+
+    <p>เมื่อมีหลาย servers/containers การ SSH เข้าไปดู log ทีละเครื่องไม่ work — ต้องมี <strong>centralized logging</strong> ที่รวม logs ทั้งหมดมาที่เดียว <strong>ELK Stack</strong> (Elasticsearch + Logstash + Kibana) เป็น solution ยอดนิยม:</p>
 
     <div class="flow-diagram">
       <div class="flow-step">
@@ -546,6 +570,8 @@ services:
     <p>Trace ช่วยให้เห็นว่า <strong>Payment Service ใช้เวลา 850ms</strong> — นั่นคือ bottleneck!</p>
 
     <h3>เครื่องมือ Tracing</h3>
+
+    <p>เครื่องมือ tracing หลักๆ — <strong>Jaeger</strong> (CNCF, open-source, ใช้กับ Kubernetes ดี), <strong>Zipkin</strong> (โดย Twitter, lightweight), <strong>OpenTelemetry</strong> (มาตรฐานใหม่ที่รวม metrics+logs+traces เป็น vendor-neutral SDK):</p>
     <ul>
       <li><strong><a href="https://www.jaegertracing.io/" target="_blank">Jaeger</a></strong> — open-source, จาก Uber</li>
       <li><strong><a href="https://zipkin.io/" target="_blank">Zipkin</a></strong> — open-source, จาก Twitter</li>
@@ -587,6 +613,8 @@ app.get('/api/checkout', async (req, res) => {
     <p>Dashboard สวยแค่ไหนก็ไม่ช่วย <strong>ถ้าไม่มีใครดู</strong> — ต้องมี Alert!</p>
 
     <h3>Alert Rules (Prometheus)</h3>
+
+    <p>Alert rules กำหนดว่า "เมื่อ condition X เป็นจริงนาน Y นาที → แจ้งเตือน" สิ่งสำคัญคือ <code>for</code> duration ป้องกัน false alarms จาก spikes ชั่วคราว และ labels/annotations ช่วยให้ on-call team เข้าใจปัญหาเร็ว:</p>
 
     <pre><code># alert-rules.yml
 groups:
@@ -630,6 +658,8 @@ groups:
 
     <h3>Alert ส่งไปไหน? (Alertmanager)</h3>
 
+    <p><strong>Alertmanager</strong> รับ alerts จาก Prometheus แล้วส่งต่อไปยัง channels ที่เหมาะสม — Slack, PagerDuty, email, webhook รองรับ grouping (รวม alerts เดียวกัน), silencing (ปิดเสียงชั่วคราว), และ routing (critical → PagerDuty, warning → Slack):</p>
+
     <pre><code># alertmanager.yml
 route:
   receiver: 'team-slack'
@@ -660,6 +690,8 @@ receivers:
     <hr>
 
     <h2>Monitoring Stack ยอดนิยม</h2>
+
+    <p>มี monitoring tools มากมาย — ตารางด้านล่างเปรียบเทียบ stack ยอดนิยมทั้ง open-source และ commercial ช่วยเลือกตามความต้องการ (budget, scale, complexity):</p>
 
     <table>
       <thead>
@@ -702,7 +734,7 @@ receivers:
 
     <h2>4 Golden Signals (Google SRE)</h2>
 
-    <p>Google SRE แนะนำให้ monitor 4 สิ่งนี้เป็นหลัก:</p>
+    <p><strong>4 Golden Signals</strong> จาก Google SRE Book — ถ้า monitor ได้แค่ 4 อย่าง ให้เลือก 4 ตัวนี้ ครอบคลุม user experience ทั้งหมด Latency บอกประสบการณ์, Traffic บอก demand, Errors บอกคุณภาพ, Saturation บอกขีดจำกัด:</p>
 
     <ol>
       <li><strong>Latency</strong> — ใช้เวลาตอบนานแค่ไหน? (p50, p95, p99)</li>
@@ -718,6 +750,8 @@ receivers:
     <hr>
 
     <h2>สรุป</h2>
+
+    <p>Monitoring & Observability เป็นสิ่งที่ต้องมี ไม่ใช่ "มีก็ดี" — ถ้าไม่มี ก็เหมือนขับรถโดยไม่มี dashboard ไม่รู้ว่าน้ำมันจะหมดเมื่อไร เครื่องยนต์ร้อนแค่ไหน เริ่มจาก metrics + alerting ก่อน (Prometheus + Grafana) แล้วเพิ่ม logs และ traces เมื่อระบบซับซ้อนขึ้น:</p>
 
     <ul>
       <li><strong>Monitoring</strong> = "มีปัญหามั้ย?" | <strong>Observability</strong> = "ทำไมถึงมีปัญหา?"</li>
