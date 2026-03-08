@@ -194,11 +194,11 @@
 
     <h2>CI/CD คืออะไร?</h2>
 
-    <p>CI/CD ย่อมาจาก 2 คำ:</p>
+    <p>CI/CD ย่อมาจาก 2 คำที่ทำงานเสริมกัน — <strong>CI</strong> ทำให้ทีม integrate code ได้ถี่ขึ้นโดยไม่ "ตีกัน" ส่วน <strong>CD</strong> ทำให้ code ที่ผ่าน test แล้วถึงมือ user ได้เร็วที่สุด ทั้งสองรวมกันเปลี่ยน deployment จาก "เหตุการณ์ใหญ่น่ากลัว" เป็น "กิจวัตรธรรมดา":</p>
 
     <h3>CI — Continuous Integration</h3>
     <p><strong>"รวม code บ่อยๆ ทดสอบอัตโนมัติทุกครั้ง"</strong></p>
-    <p>ทุกครั้งที่ developer push code ขึ้น repo ระบบจะ:</p>
+    <p>หลักการคือ developer ทุกคนควร merge code เข้า main branch อย่างน้อยวันละครั้ง — ยิ่ง integrate บ่อย ยิ่งเจอ conflict เล็ก แก้ง่าย ถ้าปล่อยให้ branch แยกนานเป็นสัปดาห์ merge ทีเดียว conflict จะใหญ่มาก ทุกครั้งที่ push ระบบจะ:</p>
     <ol>
       <li>ดึง code มา build อัตโนมัติ</li>
       <li>รัน test ทั้งหมด</li>
@@ -207,8 +207,9 @@
     <p>ถ้าไม่มี CI → developer push code → ไม่มีใครรู้ว่าพังจนกว่าจะไป deploy จริง 💀</p>
 
     <h3>CD — Continuous Delivery / Continuous Deployment</h3>
-    <p><strong>Continuous Delivery:</strong> code ที่ผ่าน test แล้ว <strong>พร้อม deploy ได้ทันที</strong> แต่ยังต้องกดปุ่ม deploy เอง</p>
-    <p><strong>Continuous Deployment:</strong> code ที่ผ่าน test แล้ว <strong>deploy ขึ้น production อัตโนมัติเลย</strong> ไม่ต้องกดอะไร</p>
+    <p><strong>Continuous Delivery:</strong> code ที่ผ่าน test แล้ว <strong>พร้อม deploy ได้ทันที</strong> แต่ยังต้องกดปุ่ม deploy เอง เหมาะกับทีมที่ต้อง compliance review หรือต้องการ manual approval ก่อน release</p>
+    <p><strong>Continuous Deployment:</strong> code ที่ผ่าน test แล้ว <strong>deploy ขึ้น production อัตโนมัติเลย</strong> ไม่ต้องกดอะไร — ทุก commit ที่ผ่าน pipeline จะถึงมือ user ทันที! Netflix, Facebook, Google ใช้แบบนี้ แต่ต้องมี test coverage สูงมากจึงจะ confident พอ</p>
+    <p>ทั้งสองแบบมีข้อดี — <strong>Delivery</strong> ปลอดภัยกว่า (มี human gate) ส่วน <strong>Deployment</strong> เร็วกว่า (feedback loop สั้นมาก) เลือกตาม risk tolerance ของทีมและ business</p>
 
     <div class="flow-diagram">
       <div class="flow-step">
@@ -266,8 +267,10 @@
 
     <h2>แต่ละขั้นตอนทำอะไรบ้าง?</h2>
 
+    <p>Pipeline ทั่วไปมี 5 ขั้นตอน — แต่ละขั้นตอนทำหน้าที่เฉพาะและเป็น "quality gate" ที่ต้องผ่านก่อนไปขั้นถัดไป ยิ่ง pipeline มี gate เยอะ ยิ่งมั่นใจว่า code ที่ถึง production มีคุณภาพ:</p>
+
     <h3>1. Source — รับ Code เข้ามา</h3>
-    <p>Pipeline เริ่มทำงานเมื่อมี <strong>trigger</strong> เช่น:</p>
+    <p>Pipeline เริ่มทำงานเมื่อมี <strong>trigger event</strong> — ส่วนใหญ่คือ git push แต่สามารถตั้งได้หลายแบบ ยิ่ง trigger อัตโนมัติมากเท่าไหร่ developer ยิ่งไม่ต้องจำว่า "ต้องทำอะไรก่อน deploy":</p>
     <ul>
       <li>Push code ขึ้น branch</li>
       <li>เปิด Pull Request</li>
@@ -518,8 +521,10 @@ jobs:
 
     <h2>Best Practices</h2>
 
+    <p>มี pipeline ดีไม่พอ — ต้อง "ดูแล" pipeline ด้วย เหมือนรถยนต์ที่ต้อง service ประจำ ถ้าปล่อยให้ pipeline ช้า, test ไม่ครอบคลุม, หรือ secrets hardcode สุดท้าย pipeline จะกลายเป็นภาระแทนที่จะช่วย:</p>
+
     <h3>1. Keep Pipeline Fast ⚡</h3>
-    <p>Pipeline ที่ช้าเกินไป developer จะไม่อยากรอ → เริ่มข้าม → เสียประโยชน์</p>
+    <p>Pipeline ที่ช้าเกินไป developer จะไม่อยากรอ → เริ่มข้าม CI → ค่อยๆ เลิกใช้ → เสียประโยชน์ทั้งหมด ทำให้เร็วด้วย: parallel jobs, caching dependencies, เลือกรันเฉพาะ test ที่เกี่ยวข้อง, ใช้ incremental builds</p>
     <p>เป้าหมาย:</p>
     <ul>
       <li><strong>Build + Unit Test:</strong> &lt; 5 นาที</li>
@@ -554,7 +559,7 @@ jobs:
     DB_PASSWORD: ${{ secrets.DB_PASSWORD }}</code></pre>
 
     <h3>5. ทำให้ Pipeline เหมือนกันทุก Environment 🔄</h3>
-    <p>Development → Staging → Production ควรใช้ pipeline เดียวกัน ต่างกันแค่ config</p>
+    <p>Development → Staging → Production ควรใช้ pipeline เดียวกัน ต่างกันแค่ config (database URL, API keys, feature flags) ถ้าแต่ละ environment ใช้ pipeline ต่างกัน จะเจอปัญหา "staging ผ่านแต่ production พัง" — ใช้ Docker + environment variables ทำให้ environment ต่างกันแค่ config ไม่ใช่ infrastructure</p>
 
     <hr>
 
