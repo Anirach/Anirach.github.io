@@ -232,7 +232,7 @@
 
     <h2>TCP/IP Model — ภาษากลางของ Internet</h2>
 
-    <p>ทุกครั้งที่เราเปิดเว็บหรือส่งข้อมูล ข้อมูลจะเดินทางผ่าน <strong>4 ชั้น (layers)</strong> ของ TCP/IP model:</p>
+    <p>ทุกครั้งที่เราเปิดเว็บหรือส่งข้อมูล ข้อมูลจะเดินทางผ่าน <strong>4 ชั้น (layers)</strong> ของ TCP/IP model — แต่ละชั้นมีหน้าที่เฉพาะ: <strong>Application</strong> (HTTP, DNS — ภาษาที่ apps พูด), <strong>Transport</strong> (TCP/UDP — ส่งข้อมูลแบบ reliable หรือ fast), <strong>Internet</strong> (IP — หาเส้นทางไป destination), <strong>Network Access</strong> (Ethernet/WiFi — ส่ง bits จริงๆ) เข้าใจ model นี้แล้วจะ debug network issues ได้เร็วขึ้นมาก:</p>
 
     <div class="stack-diagram">
       <div class="stack-layer stack-layer--app">
@@ -254,6 +254,8 @@
     </blockquote>
 
     <h3>TCP vs UDP — ต่างกันยังไง?</h3>
+
+    <p>Transport layer มี 2 protocols หลัก — <strong>TCP</strong> (Transmission Control Protocol) ส่งข้อมูลแบบ reliable มี handshake, retransmission, ordering เหมาะกับ web, email, file transfer ส่วน <strong>UDP</strong> (User Datagram Protocol) ส่งเร็วแต่ไม่ guarantee delivery เหมาะกับ video streaming, gaming, DNS ที่ speed สำคัญกว่า reliability:</p>
 
     <table>
       <thead>
@@ -299,6 +301,8 @@
     <p>ทุกอุปกรณ์บน network ต้องมี <strong>IP Address</strong> เหมือนบ้านต้องมีเลขที่อยู่:</p>
 
     <h3>IPv4</h3>
+
+    <p><strong>IPv4</strong> ใช้ 32-bit address (เช่น 192.168.1.100) รองรับ ~4.3 พันล้าน addresses ซึ่งหมดแล้ว! <strong>IPv6</strong> ใช้ 128-bit (เช่น 2001:db8::1) รองรับได้แทบไม่จำกัด แต่ IPv4 ยังใช้อยู่ทั่วไปผ่าน NAT:</p>
     <pre><code># รูปแบบ: 4 กลุ่ม, กลุ่มละ 0-255
 192.168.1.100      ← Private IP (ใช้ภายใน network)
 203.0.113.50       ← Public IP (ใช้บน internet)
@@ -309,6 +313,8 @@ ifconfig           # macOS
 ipconfig           # Windows</code></pre>
 
     <h3>Private vs Public IP</h3>
+
+    <p><strong>Private IPs</strong> (10.x.x.x, 172.16-31.x.x, 192.168.x.x) ใช้ภายใน network เท่านั้น — ไม่สามารถเข้าถึงจาก internet ได้โดยตรง ต้องผ่าน NAT/router ส่วน <strong>Public IPs</strong> คือ addresses ที่ใช้บน internet จริง DevOps ต้องเข้าใจความแตกต่างนี้เพราะส่งผลต่อ VPC design และ security:</p>
     <table>
       <thead>
         <tr>
@@ -344,7 +350,7 @@ ipconfig           # Windows</code></pre>
 
     <h2>Ports — ประตูของ Application</h2>
 
-    <p>IP Address บอกว่า "เครื่องไหน" แต่ <strong>Port</strong> บอกว่า "app ไหน" บนเครื่องนั้น:</p>
+    <p>IP Address บอกว่า "เครื่องไหน" แต่ <strong>Port</strong> บอกว่า "app ไหน" บนเครื่องนั้น — เครื่องเดียวรัน web server (port 80), database (port 5432), SSH (port 22) พร้อมกันได้ ports 0-1023 เป็น "well-known ports" ที่ต้องใช้ root privilege, 1024-65535 ใช้ได้อิสระ DevOps ต้องรู้ว่า service ไหนใช้ port ไหน เพื่อตั้ง firewall ได้ถูกต้อง:</p>
 
     <table>
       <thead>
@@ -437,6 +443,8 @@ curl -I http://server.com:8080</code></pre>
 
     <h3>DNS Record Types</h3>
 
+    <p>DNS ไม่ได้มีแค่ "ชื่อ → IP" — มี record types หลายแบบที่ทำหน้าที่ต่างกัน DevOps ต้องรู้อย่างน้อย A, AAAA, CNAME, MX, TXT เพื่อ setup domains ได้ถูกต้อง:</p>
+
     <table>
       <thead>
         <tr>
@@ -492,7 +500,7 @@ dig @1.1.1.1 mysite.com A      # ถาม Cloudflare DNS</code></pre>
 
     <h2>Firewall — กำแพงป้องกัน</h2>
 
-    <p><strong>Firewall</strong> คือตัวกรองที่ตัดสินว่า traffic ไหนเข้า-ออกได้ ไหนบล็อก:</p>
+    <p><strong>Firewall</strong> คือตัวกรองที่ตัดสินว่า traffic ไหนเข้า-ออกได้ ไหนบล็อก — หลักการคือ <strong>"default deny"</strong> ปิดทุกอย่างก่อน แล้วเปิดเฉพาะที่จำเป็น เช่น เปิด port 80/443 สำหรับ web, port 22 สำหรับ SSH เฉพาะ IP ที่อนุญาต บน Linux ใช้ <code>ufw</code> (ง่าย) หรือ <code>iptables</code> (powerful) บน cloud ใช้ Security Groups:</p>
 
     <pre><code># UFW (Ubuntu) — ง่ายที่สุด
 sudo ufw enable
@@ -515,7 +523,7 @@ sudo iptables -A INPUT -p tcp --dport 3306 -j DROP</code></pre>
 
     <h2>Load Balancer — กระจาย Traffic</h2>
 
-    <p>เมื่อ app มี traffic เยอะ เราใช้ <strong>Load Balancer</strong> กระจาย request ไปยังหลาย server:</p>
+    <p>เมื่อ app มี traffic เยอะเกินกว่า server เดียวรับไหว ใช้ <strong>Load Balancer</strong> กระจาย requests ไปยังหลาย servers — ทำให้ scale ได้ (เพิ่ม server เมื่อ traffic เพิ่ม) และ HA (ถ้า server หนึ่งล่ม traffic ไปอีกตัว) Load Balancer มี 2 แบบ: <strong>Layer 4</strong> (TCP level — เร็ว, ง่าย) และ <strong>Layer 7</strong> (HTTP level — route ตาม URL path, headers ได้):</p>
 
     <div class="arch-diagram">
       <div class="arch-box">
@@ -552,6 +560,8 @@ sudo iptables -A INPUT -p tcp --dport 3306 -j DROP</code></pre>
     </div>
 
     <h3>Load Balancing Strategies</h3>
+
+    <p>วิธีกระจาย traffic มีหลายแบบ — เลือกตาม use case: <strong>Round Robin</strong> (วนรอบ — ง่ายที่สุด), <strong>Least Connections</strong> (ส่งไป server ที่ว่างที่สุด), <strong>IP Hash</strong> (user เดิมไป server เดิม — เหมาะกับ session-based apps):</p>
     <ul>
       <li><strong>Round Robin</strong> — วนส่งทีละตัว (1 → 2 → 3 → 1 → ...)</li>
       <li><strong>Least Connections</strong> — ส่งไปตัวที่ connection น้อยสุด</li>
@@ -643,7 +653,7 @@ ssh staging</code></pre>
 
     <h2>Docker Networking — Container คุยกันยังไง?</h2>
 
-    <p>กลับมาเชื่อมกับ Docker — container ใช้ virtual network ของตัวเอง:</p>
+    <p>กลับมาเชื่อมกับ Docker — containers ใช้ virtual network ที่ Docker สร้างให้ มี 3 modes หลัก: <strong>bridge</strong> (default — containers คุยกันผ่าน virtual bridge), <strong>host</strong> (ใช้ network ของ host ตรงๆ — เร็วแต่ไม่ isolate), <strong>overlay</strong> (ข้าม hosts — ใช้กับ Docker Swarm/K8s) containers ในเครือข่ายเดียวกันเรียกหากันด้วย container name:</p>
 
     <pre><code># ดู network ที่มี
 docker network ls
@@ -670,6 +680,8 @@ docker run -d --name db  --network myapp-net postgres
 
     <h2>เครื่องมือ Networking ที่ DevOps ต้องรู้</h2>
 
+    <p>สรุป command-line tools สำหรับ debug network issues — จำไม่หมดก็ไม่เป็นไร แค่รู้ว่ามีอะไรบ้าง เมื่อมีปัญหาจะได้เลือกใช้ถูกตัว:</p>
+
     <pre><code># ping — ทดสอบว่าเครื่องเปิดอยู่มั้ย
 ping google.com
 
@@ -695,6 +707,8 @@ nmap -sT server.com</code></pre>
     <hr>
 
     <h2>สรุป</h2>
+
+    <p>Networking เป็นพื้นฐานที่ทุกอย่างใน DevOps สร้างอยู่บน — Docker networking, Kubernetes services, Load Balancers, VPCs ล้วนใช้ concepts เดียวกัน (TCP/IP, DNS, ports, firewalls) เข้าใจพื้นฐานดี debug ปัญหาได้เร็ว:</p>
 
     <ul>
       <li><strong>TCP/IP 4 Layers</strong> = Application → Transport → Network → Link</li>
