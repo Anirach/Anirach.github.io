@@ -1,0 +1,612 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Claude Code Architecture Deep Dive — สถาปัตยกรรมเบื้องหลัง AI Coding Assistant | Anirach Mingkhwan</title>
+  <meta name="description" content="เจาะลึกสถาปัตยกรรม Claude Code จาก Anthropic — Tools system, Agent loops, Memory management, MCP protocol และการออกแบบระบบ AI ที่ทำงานจริงได้">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --navy: #0f172a; --blue: #6366f1; --blue-dark: #4f46e5; --blue-light: #818cf8;
+      --slate: #334155; --slate-light: #64748b; --gray: #94a3b8;
+      --bg: #f8fafc; --white: #ffffff; --code-bg: #1e293b;
+      --font: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+      --mono: 'JetBrains Mono', 'Fira Code', monospace;
+      --sky: #0ea5e9; --amber: #f59e0b; --green: #22c55e; --red: #ef4444;
+      --purple: #a855f7; --orange: #f97316;
+    }
+    html { scroll-behavior: smooth; }
+    body { font-family: var(--font); font-size: 17px; line-height: 1.8; color: var(--slate); background: var(--bg); -webkit-font-smoothing: antialiased; }
+    .blog-nav { position: fixed; top: 0; left: 0; right: 0; z-index: 100; background: rgba(248,250,252,0.85); backdrop-filter: blur(20px); border-bottom: 1px solid rgba(0,0,0,0.05); }
+    .blog-nav__inner { max-width: 860px; margin: 0 auto; padding: 0 2rem; height: 56px; display: flex; align-items: center; justify-content: space-between; }
+    .blog-nav__back { font-size: 0.85rem; font-weight: 500; color: var(--blue); text-decoration: none; }
+    .blog-nav__back:hover { color: #4f46e5; }
+    .blog-nav__title { font-size: 0.85rem; font-weight: 600; color: var(--navy); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 50%; }
+
+    .post-hero { padding: 8rem 2rem 3rem; background: linear-gradient(135deg, #7c3aed 0%, #8b5cf6 40%, #a78bfa 100%); text-align: center; }
+    .post-hero__tags { display: flex; gap: 0.5rem; justify-content: center; margin-bottom: 1.25rem; flex-wrap: wrap; }
+    .post-hero__tag { font-size: 0.7rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.1em; color: #ddd6fe; background: rgba(221,214,254,0.15); padding: 0.3rem 0.75rem; border-radius: 20px; }
+    .post-hero__title { font-size: clamp(1.8rem, 5vw, 3rem); font-weight: 800; color: #fff; line-height: 1.2; margin-bottom: 1rem; max-width: 720px; margin-left: auto; margin-right: auto; }
+    .post-hero__meta { font-size: 0.85rem; color: rgba(255,255,255,0.6); display: flex; align-items: center; justify-content: center; gap: 1.5rem; }
+    .post-hero__series { font-weight: 600; color: #ddd6fe; }
+
+    .post-body { max-width: 720px; margin: 0 auto; padding: 3rem 2rem 6rem; }
+    .post-body h2 { font-size: 1.6rem; font-weight: 800; color: var(--navy); margin: 3rem 0 1rem; padding-bottom: 0.5rem; border-bottom: 2px solid rgba(99,102,241,0.15); }
+    .post-body h3 { font-size: 1.25rem; font-weight: 700; color: var(--navy); margin: 2.25rem 0 0.75rem; }
+    .post-body h4 { font-size: 1.05rem; font-weight: 700; color: var(--navy); margin: 1.75rem 0 0.6rem; }
+    .post-body p { margin-bottom: 1.25rem; }
+    .post-body strong { font-weight: 700; color: var(--navy); }
+    .post-body a { color: var(--blue); text-decoration: underline; text-decoration-thickness: 1px; text-underline-offset: 2px; }
+    .post-body pre { background: var(--code-bg); border-radius: 12px; padding: 1.5rem; margin: 1.25rem 0 1.5rem; overflow-x: auto; border: 1px solid rgba(255,255,255,0.05); }
+    .post-body pre code { font-family: var(--mono); font-size: 0.82rem; color: #e2e8f0; line-height: 1.7; }
+    .post-body code { font-family: var(--mono); font-size: 0.88em; background: rgba(99,102,241,0.08); color: #4f46e5; padding: 0.15em 0.45em; border-radius: 5px; }
+    .post-body pre code { background: none; color: #e2e8f0; padding: 0; }
+    .post-body ul, .post-body ol { margin: 0.5rem 0 1.25rem 1.5rem; }
+    .post-body li { margin-bottom: 0.4rem; }
+    .post-body table { width: 100%; border-collapse: collapse; margin: 1.25rem 0 1.5rem; font-size: 0.9rem; }
+    .post-body th { background: rgba(99,102,241,0.06); font-weight: 700; color: var(--navy); padding: 0.75rem 1rem; text-align: left; border-bottom: 2px solid rgba(99,102,241,0.15); }
+    .post-body td { padding: 0.65rem 1rem; border-bottom: 1px solid #e2e8f0; }
+    .post-body blockquote { background: rgba(99,102,241,0.06); border-left: 4px solid var(--blue); padding: 1rem 1.25rem; border-radius: 0 10px 10px 0; margin: 1.25rem 0; font-size: 0.95rem; color: var(--navy); }
+    .post-body hr { border: none; height: 1px; background: linear-gradient(90deg, transparent, rgba(99,102,241,0.2), transparent); margin: 3rem 0; }
+
+    /* Architecture diagrams */
+    .arch-diagram { margin: 1.5rem 0 2rem; }
+    .arch-box { border: 2px solid rgba(99,102,241,0.25); border-radius: 12px; padding: 1.25rem; background: linear-gradient(135deg, rgba(99,102,241,0.03), rgba(99,102,241,0.06)); }
+    .arch-label { font-size: 0.75rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.1em; color: var(--blue); text-align: center; margin-bottom: 0.75rem; }
+    .arch-row { display: flex; gap: 0.75rem; justify-content: center; flex-wrap: wrap; margin-bottom: 0.75rem; }
+    .arch-container { border: 2px solid rgba(99,102,241,0.2); border-radius: 10px; padding: 0.75rem; background: rgba(238,242,255,0.8); min-width: 120px; text-align: center; }
+    .arch-item { font-size: 0.78rem; font-weight: 600; color: var(--navy); padding: 0.3rem 0.6rem; margin: 0.25rem 0; background: rgba(99,102,241,0.08); border-radius: 6px; }
+    .arch-name { font-size: 0.72rem; font-weight: 700; color: var(--blue); margin-bottom: 0.35rem; }
+    .arch-arrow-down { text-align: center; font-size: 1rem; color: var(--blue); font-weight: 700; margin: 0.5rem 0; }
+
+    .flow-diagram { display: flex; align-items: center; justify-content: center; gap: 0.5rem; flex-wrap: wrap; margin: 1.5rem 0 2rem; padding: 1.5rem; background: rgba(99,102,241,0.04); border-radius: 12px; }
+    .flow-step { text-align: center; padding: 0.75rem 1.25rem; background: white; border-radius: 10px; border: 1.5px solid rgba(99,102,241,0.15); box-shadow: 0 2px 8px rgba(0,0,0,0.04); }
+    .flow-step__title { font-size: 0.9rem; font-weight: 700; color: var(--navy); }
+    .flow-step__sub { font-size: 0.72rem; color: var(--gray); margin-top: 0.15rem; }
+    .flow-arrow { font-size: 1.2rem; color: var(--blue); font-weight: 700; }
+
+    /* Component cards */
+    .component-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem; margin: 1.5rem 0 2rem; }
+    .component-card { border-radius: 12px; padding: 1.25rem; text-align: center; background: white; border: 1.5px solid rgba(99,102,241,0.12); box-shadow: 0 2px 8px rgba(0,0,0,0.03); }
+    .component-card__icon { font-size: 1.5rem; margin-bottom: 0.5rem; }
+    .component-card__name { font-size: 0.9rem; font-weight: 700; color: var(--navy); margin-bottom: 0.25rem; }
+    .component-card__desc { font-size: 0.75rem; color: var(--gray); line-height: 1.5; }
+
+    /* Tool badges */
+    .tool-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 0.75rem; margin: 1.5rem 0 2rem; }
+    .tool-badge { border-radius: 10px; padding: 0.75rem 1rem; background: white; border: 1.5px solid rgba(99,102,241,0.12); display: flex; align-items: center; gap: 0.5rem; }
+    .tool-badge__icon { font-size: 1.1rem; }
+    .tool-badge__name { font-size: 0.8rem; font-weight: 600; color: var(--navy); }
+
+    /* Layer diagram */
+    .layer-stack { margin: 1.5rem 0 2rem; }
+    .layer-item { padding: 1rem 1.25rem; border-radius: 10px; margin-bottom: 0.5rem; display: flex; align-items: center; gap: 0.75rem; }
+    .layer-item--user { background: linear-gradient(90deg, rgba(34,197,94,0.1), rgba(34,197,94,0.05)); border-left: 4px solid #22c55e; }
+    .layer-item--agent { background: linear-gradient(90deg, rgba(99,102,241,0.1), rgba(99,102,241,0.05)); border-left: 4px solid #6366f1; }
+    .layer-item--tool { background: linear-gradient(90deg, rgba(249,115,22,0.1), rgba(249,115,22,0.05)); border-left: 4px solid #f97316; }
+    .layer-item--system { background: linear-gradient(90deg, rgba(168,85,247,0.1), rgba(168,85,247,0.05)); border-left: 4px solid #a855f7; }
+    .layer-item__icon { font-size: 1.25rem; }
+    .layer-item__content { flex: 1; }
+    .layer-item__title { font-size: 0.9rem; font-weight: 700; color: var(--navy); }
+    .layer-item__desc { font-size: 0.78rem; color: var(--gray); }
+
+    .post-nav { max-width: 720px; margin: 0 auto; padding: 0 2rem 3rem; display: flex; gap: 1.5rem; flex-wrap: wrap; }
+    .post-nav__link { flex: 1; min-width: 200px; padding: 1.25rem 1.5rem; border-radius: 12px; background: rgba(255,255,255,0.85); backdrop-filter: blur(16px); border: 1px solid rgba(255,255,255,0.6); box-shadow: 0 4px 16px rgba(0,0,0,0.05); text-decoration: none; color: inherit; transition: transform 0.2s, box-shadow 0.2s; }
+    .post-nav__link:hover { transform: translateY(-2px); box-shadow: 0 8px 24px rgba(99,102,241,0.1); }
+    .post-nav__dir { font-size: 0.75rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.1em; color: var(--blue); margin-bottom: 0.35rem; }
+    .post-nav__title { font-size: 0.9rem; font-weight: 600; color: var(--navy); line-height: 1.4; }
+    .blog-footer { background: var(--navy); padding: 2rem 0; text-align: center; }
+    .blog-footer a { color: var(--blue-light); text-decoration: none; font-weight: 600; font-size: 0.9rem; }
+    .blog-footer span { color: var(--gray); font-size: 0.8rem; display: block; margin-top: 0.4rem; }
+
+    @media (max-width: 600px) {
+      .post-hero { padding: 7rem 1.25rem 2.5rem; }
+      .post-body { padding: 2rem 1.25rem 4rem; }
+      .post-body pre { padding: 1rem; border-radius: 8px; }
+      .post-hero__meta { flex-direction: column; gap: 0.4rem; }
+      .post-nav { padding: 0 1.25rem 3rem; }
+      .flow-diagram { flex-direction: column; }
+      .component-grid { grid-template-columns: 1fr; }
+      .tool-grid { grid-template-columns: repeat(2, 1fr); }
+    }
+  </style>
+</head>
+<body>
+
+  <nav class="blog-nav">
+    <div class="blog-nav__inner">
+      <a href="./" class="blog-nav__back">< Blog</a>
+      <div class="blog-nav__title">Claude Code Architecture</div>
+    </div>
+  </nav>
+
+  <header class="post-hero">
+    <div class="post-hero__tags">
+      <span class="post-hero__tag">Claude Code</span>
+      <span class="post-hero__tag">AI Agent</span>
+      <span class="post-hero__tag">Architecture</span>
+    </div>
+    <h1 class="post-hero__title">Claude Code Architecture Deep Dive</h1>
+    <div class="post-hero__meta">
+      <span>By <strong style="color:#fff">Anirach Mingkhwan</strong></span>
+      <span class="post-hero__series">AI Developer Tools 2026</span>
+    </div>
+  </header>
+
+  <article class="post-body">
+
+    <p>Claude Code คือ <strong>AI Coding Assistant</strong> แบบ CLI จาก Anthropic ที่ไม่ใช่แค่ chatbot แต่เป็น <strong>autonomous agent</strong> ที่อ่าน/เขียนไฟล์, รัน commands, และทำงานจริงใน codebase ของคุณได้</p>
+
+    <p>วันนี้มาเจาะลึก <strong>สถาปัตยกรรมเบื้องหลัง</strong> ว่า Claude Code ออกแบบระบบยังไงให้ AI ทำงานได้อย่างปลอดภัยและมีประสิทธิภาพ</p>
+
+    <hr>
+
+    <h2>Overview: Claude Code คืออะไร?</h2>
+
+    <p>Claude Code ต่างจาก ChatGPT หรือ web-based AI ตรงที่มันรันใน <strong>terminal ของคุณ</strong> และมีสิทธิ์เข้าถึง filesystem, Git, และ shell commands ได้จริง:</p>
+
+    <div class="flow-diagram">
+      <div class="flow-step" style="border-color: rgba(34,197,94,0.3); background: rgba(34,197,94,0.04);">
+        <div class="flow-step__title">Developer</div>
+        <div class="flow-step__sub">พิมพ์คำสั่ง</div>
+      </div>
+      <span class="flow-arrow">-></span>
+      <div class="flow-step" style="border-color: rgba(99,102,241,0.3); background: rgba(99,102,241,0.04);">
+        <div class="flow-step__title">Claude Code CLI</div>
+        <div class="flow-step__sub">Agent loop</div>
+      </div>
+      <span class="flow-arrow">-></span>
+      <div class="flow-step" style="border-color: rgba(249,115,22,0.3); background: rgba(249,115,22,0.04);">
+        <div class="flow-step__title">Tools</div>
+        <div class="flow-step__sub">Read/Write/Bash</div>
+      </div>
+      <span class="flow-arrow">-></span>
+      <div class="flow-step" style="border-color: rgba(168,85,247,0.3); background: rgba(168,85,247,0.04);">
+        <div class="flow-step__title">Codebase</div>
+        <div class="flow-step__sub">Files & Git</div>
+      </div>
+    </div>
+
+    <blockquote>
+      <strong>Key insight:</strong> Claude Code ไม่ใช่แค่ wrapper รอบ API แต่เป็น <strong>agentic system</strong> ที่มี tool use, memory, และ execution environment ครบ
+    </blockquote>
+
+    <hr>
+
+    <h2>Core Architecture Layers</h2>
+
+    <p>Claude Code แบ่งเป็น 4 layers หลัก:</p>
+
+    <div class="layer-stack">
+      <div class="layer-item layer-item--user">
+        <span class="layer-item__icon">1</span>
+        <div class="layer-item__content">
+          <div class="layer-item__title">User Interface Layer</div>
+          <div class="layer-item__desc">Terminal UI, VSCode Extension, input handling</div>
+        </div>
+      </div>
+      <div class="layer-item layer-item--agent">
+        <span class="layer-item__icon">2</span>
+        <div class="layer-item__content">
+          <div class="layer-item__title">Agent Controller</div>
+          <div class="layer-item__desc">Main loop, context management, model routing</div>
+        </div>
+      </div>
+      <div class="layer-item layer-item--tool">
+        <span class="layer-item__icon">3</span>
+        <div class="layer-item__content">
+          <div class="layer-item__title">Tool Execution Layer</div>
+          <div class="layer-item__desc">File ops, Bash, Grep, Search, MCP servers</div>
+        </div>
+      </div>
+      <div class="layer-item layer-item--system">
+        <span class="layer-item__icon">4</span>
+        <div class="layer-item__content">
+          <div class="layer-item__title">System Integration</div>
+          <div class="layer-item__desc">Git, filesystem, permissions, sandboxing</div>
+        </div>
+      </div>
+    </div>
+
+    <h3>1. User Interface Layer</h3>
+
+    <p>Claude Code รองรับหลาย interfaces:</p>
+
+    <ul>
+      <li><strong>CLI Mode</strong> - รันใน terminal ด้วย <code>claude</code> command</li>
+      <li><strong>VSCode Extension</strong> - Embedded ใน editor พร้อม context awareness</li>
+      <li><strong>API/SDK Mode</strong> - สำหรับ automation และ CI/CD</li>
+    </ul>
+
+    <h3>2. Agent Controller - หัวใจของระบบ</h3>
+
+    <p>Agent Controller คือ <strong>"สมอง"</strong> ที่ควบคุมการทำงานทั้งหมด:</p>
+
+    <div class="arch-diagram">
+      <div class="arch-box">
+        <div class="arch-label">Agent Loop</div>
+        <div class="arch-row">
+          <div class="arch-container">
+            <div class="arch-name">Input Processing</div>
+            <div class="arch-item">User message</div>
+            <div class="arch-item">Context injection</div>
+          </div>
+          <div class="arch-container">
+            <div class="arch-name">Model Call</div>
+            <div class="arch-item">Claude API</div>
+            <div class="arch-item">Tool selection</div>
+          </div>
+          <div class="arch-container">
+            <div class="arch-name">Execution</div>
+            <div class="arch-item">Run tools</div>
+            <div class="arch-item">Collect results</div>
+          </div>
+        </div>
+        <div class="arch-arrow-down">Loop until done</div>
+      </div>
+    </div>
+
+    <p>แต่ละ iteration ของ loop:</p>
+
+    <ol>
+      <li><strong>Receive input</strong> - user message + tool results จาก iteration ก่อน</li>
+      <li><strong>Build context</strong> - รวม system prompt, CLAUDE.md, conversation history</li>
+      <li><strong>Call Claude</strong> - ส่งไป API และรับ response + tool calls</li>
+      <li><strong>Execute tools</strong> - รัน tools ที่ Claude เลือก (Read, Write, Bash, etc.)</li>
+      <li><strong>Check completion</strong> - ถ้ายังไม่เสร็จ กลับไป step 1</li>
+    </ol>
+
+    <hr>
+
+    <h2>Tool System - ความสามารถของ Claude Code</h2>
+
+    <p>Claude Code มี <strong>built-in tools</strong> ที่ให้ AI โต้ตอบกับ codebase ได้:</p>
+
+    <div class="tool-grid">
+      <div class="tool-badge">
+        <span class="tool-badge__icon">Read</span>
+        <span class="tool-badge__name">อ่านไฟล์</span>
+      </div>
+      <div class="tool-badge">
+        <span class="tool-badge__icon">Write</span>
+        <span class="tool-badge__name">สร้างไฟล์ใหม่</span>
+      </div>
+      <div class="tool-badge">
+        <span class="tool-badge__icon">Edit</span>
+        <span class="tool-badge__name">แก้ไขไฟล์</span>
+      </div>
+      <div class="tool-badge">
+        <span class="tool-badge__icon">Bash</span>
+        <span class="tool-badge__name">รัน commands</span>
+      </div>
+      <div class="tool-badge">
+        <span class="tool-badge__icon">Glob</span>
+        <span class="tool-badge__name">ค้นหาไฟล์</span>
+      </div>
+      <div class="tool-badge">
+        <span class="tool-badge__icon">Grep</span>
+        <span class="tool-badge__name">ค้นหา content</span>
+      </div>
+      <div class="tool-badge">
+        <span class="tool-badge__icon">Agent</span>
+        <span class="tool-badge__name">Spawn sub-agents</span>
+      </div>
+      <div class="tool-badge">
+        <span class="tool-badge__icon">WebSearch</span>
+        <span class="tool-badge__name">ค้นหาเว็บ</span>
+      </div>
+    </div>
+
+    <h3>Tool Execution Flow</h3>
+
+    <pre><code>User: "Fix the bug in auth.ts"
+
+Claude thinks: I need to read the file first
+  -> Tool: Read(file_path="src/auth.ts")
+  <- Returns: file content
+
+Claude thinks: I see the issue, let me fix it
+  -> Tool: Edit(file_path="src/auth.ts", old_string="...", new_string="...")
+  <- Returns: success
+
+Claude thinks: Let me verify by running tests
+  -> Tool: Bash(command="npm test")
+  <- Returns: All tests passed
+
+Claude: "Fixed the null check bug in auth.ts. Tests passing."</code></pre>
+
+    <h3>Permission Model</h3>
+
+    <p>Claude Code มีระบบ <strong>permission modes</strong> ที่ผู้ใช้เลือกได้:</p>
+
+    <table>
+      <thead><tr><th>Mode</th><th>Auto-approve</th><th>Use case</th></tr></thead>
+      <tbody>
+        <tr><td><strong>Ask</strong></td><td>ไม่มี - ถามทุกครั้ง</td><td>Learning, sensitive code</td></tr>
+        <tr><td><strong>Auto-edit</strong></td><td>Read/Edit อัตโนมัติ</td><td>Development workflow</td></tr>
+        <tr><td><strong>Full auto</strong></td><td>ทุก tool</td><td>CI/CD, automation</td></tr>
+      </tbody>
+    </table>
+
+    <hr>
+
+    <h2>Context Management</h2>
+
+    <p>หนึ่งในความท้าทายของ AI agent คือ <strong>context window</strong> มีจำกัด Claude Code จัดการด้วยหลายวิธี:</p>
+
+    <h3>1. CLAUDE.md - Project Memory</h3>
+
+    <p>ไฟล์ <code>CLAUDE.md</code> ในโปรเจคเป็น <strong>persistent context</strong> ที่ถูกโหลดทุกครั้ง:</p>
+
+    <pre><code># CLAUDE.md
+
+## Project Overview
+E-commerce API built with Node.js + PostgreSQL
+
+## Development
+- Run tests: npm test
+- Start dev: npm run dev
+- DB migration: npm run migrate
+
+## Conventions
+- Use camelCase for variables
+- All API routes in /src/routes/
+- Error handling via middleware</code></pre>
+
+    <h3>2. Automatic Context Injection</h3>
+
+    <p>Claude Code ฉีด context อัตโนมัติ:</p>
+
+    <ul>
+      <li><strong>Git status</strong> - current branch, uncommitted changes</li>
+      <li><strong>IDE selection</strong> - highlighted code ใน VSCode</li>
+      <li><strong>Recent conversation</strong> - compressed summary ถ้ายาวเกิน</li>
+      <li><strong>Tool results</strong> - output จาก tools ก่อนหน้า</li>
+    </ul>
+
+    <h3>3. Context Compaction</h3>
+
+    <p>เมื่อ conversation ยาวเกินไป Claude Code จะ <strong>compact</strong> ข้อความเก่าเป็น summary เพื่อประหยัด tokens:</p>
+
+    <div class="flow-diagram">
+      <div class="flow-step">
+        <div class="flow-step__title">Full History</div>
+        <div class="flow-step__sub">100k tokens</div>
+      </div>
+      <span class="flow-arrow">-></span>
+      <div class="flow-step">
+        <div class="flow-step__title">Compaction</div>
+        <div class="flow-step__sub">AI summarize</div>
+      </div>
+      <span class="flow-arrow">-></span>
+      <div class="flow-step">
+        <div class="flow-step__title">Summary + Recent</div>
+        <div class="flow-step__sub">~20k tokens</div>
+      </div>
+    </div>
+
+    <hr>
+
+    <h2>MCP: Model Context Protocol</h2>
+
+    <p><strong>MCP</strong> คือ protocol ที่ให้ Claude Code เชื่อมต่อกับ <strong>external tools</strong> ได้ไม่จำกัด:</p>
+
+    <div class="component-grid">
+      <div class="component-card">
+        <div class="component-card__icon">MCP</div>
+        <div class="component-card__name">Database MCP</div>
+        <div class="component-card__desc">Query PostgreSQL, MySQL โดยตรง</div>
+      </div>
+      <div class="component-card">
+        <div class="component-card__icon">MCP</div>
+        <div class="component-card__name">Browser MCP</div>
+        <div class="component-card__desc">Control Playwright browser</div>
+      </div>
+      <div class="component-card">
+        <div class="component-card__icon">MCP</div>
+        <div class="component-card__name">Docker MCP</div>
+        <div class="component-card__desc">Manage containers</div>
+      </div>
+      <div class="component-card">
+        <div class="component-card__icon">MCP</div>
+        <div class="component-card__name">Custom MCPs</div>
+        <div class="component-card__desc">Build your own tools</div>
+      </div>
+    </div>
+
+    <h3>MCP Architecture</h3>
+
+    <pre><code>Claude Code
+    |
+    +-- Built-in Tools (Read, Write, Bash, etc.)
+    |
+    +-- MCP Client
+         |
+         +-- stdio:// -> Local MCP Server
+         +-- sse:// -> Remote MCP Server
+         +-- docker:// -> Containerized MCP</code></pre>
+
+    <p>MCP servers ทำให้ Claude Code ขยายความสามารถได้ไม่จำกัด โดยไม่ต้องแก้ core code</p>
+
+    <hr>
+
+    <h2>Sub-agents: Parallel Execution</h2>
+
+    <p>Claude Code สามารถ <strong>spawn sub-agents</strong> เพื่อทำงานขนานกันได้:</p>
+
+    <div class="arch-diagram">
+      <div class="arch-box">
+        <div class="arch-label">Multi-agent Execution</div>
+        <div class="arch-row">
+          <div class="arch-container">
+            <div class="arch-name">Main Agent</div>
+            <div class="arch-item">Coordinate</div>
+          </div>
+        </div>
+        <div class="arch-arrow-down">spawns</div>
+        <div class="arch-row">
+          <div class="arch-container">
+            <div class="arch-name">Sub-agent 1</div>
+            <div class="arch-item">Research code</div>
+          </div>
+          <div class="arch-container">
+            <div class="arch-name">Sub-agent 2</div>
+            <div class="arch-item">Run tests</div>
+          </div>
+          <div class="arch-container">
+            <div class="arch-name">Sub-agent 3</div>
+            <div class="arch-item">Check docs</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <p>Sub-agent types ที่มี:</p>
+
+    <ul>
+      <li><strong>Explore</strong> - ค้นหาและเข้าใจ codebase</li>
+      <li><strong>Plan</strong> - วางแผน implementation</li>
+      <li><strong>General-purpose</strong> - ทำงานทั่วไป</li>
+      <li><strong>Background</strong> - รันแบบ async ไม่ block main</li>
+    </ul>
+
+    <hr>
+
+    <h2>Security Model</h2>
+
+    <p>Claude Code ออกแบบมาให้ <strong>safe by default</strong>:</p>
+
+    <h3>1. Sandbox Execution</h3>
+
+    <p>Bash commands รันใน sandbox ที่:</p>
+    <ul>
+      <li>จำกัด network access</li>
+      <li>ป้องกันการเข้าถึงไฟล์นอก working directory</li>
+      <li>Block dangerous commands (rm -rf /, etc.)</li>
+    </ul>
+
+    <h3>2. Prompt Injection Defense</h3>
+
+    <p>Claude Code ระวัง <strong>prompt injection</strong> จาก external sources:</p>
+    <ul>
+      <li>Tool outputs ถูก sanitize</li>
+      <li>File contents ถูก mark เป็น untrusted</li>
+      <li>User ได้รับ warning ถ้าพบ suspicious content</li>
+    </ul>
+
+    <h3>3. Git Safety</h3>
+
+    <p>มี safeguards สำหรับ Git operations:</p>
+    <ul>
+      <li>ไม่ force push ไป main/master โดยไม่ถาม</li>
+      <li>ไม่ reset --hard โดยไม่ warning</li>
+      <li>Commit message ต้องมี Co-Authored-By</li>
+    </ul>
+
+    <hr>
+
+    <h2>Model Routing</h2>
+
+    <p>Claude Code เลือกใช้ model ตาม task:</p>
+
+    <table>
+      <thead><tr><th>Model</th><th>Use case</th><th>Trade-off</th></tr></thead>
+      <tbody>
+        <tr><td><strong>Opus</strong></td><td>Complex reasoning, architecture</td><td>Slow, expensive</td></tr>
+        <tr><td><strong>Sonnet</strong></td><td>General coding, default</td><td>Balanced</td></tr>
+        <tr><td><strong>Haiku</strong></td><td>Simple tasks, sub-agents</td><td>Fast, cheap</td></tr>
+      </tbody>
+    </table>
+
+    <p>ผู้ใช้สามารถ override ด้วย <code>/model</code> command หรือตั้งค่าใน settings</p>
+
+    <hr>
+
+    <h2>Hooks System</h2>
+
+    <p>Claude Code มี <strong>hooks</strong> ที่ให้ inject custom logic ได้:</p>
+
+    <pre><code># .claude/settings.json
+{
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Bash",
+        "command": "echo 'Running: $TOOL_INPUT' >> ~/.claude/bash.log"
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "Edit",
+        "command": "prettier --write $FILE_PATH"
+      }
+    ]
+  }
+}</code></pre>
+
+    <p>Hook types ที่รองรับ:</p>
+    <ul>
+      <li><strong>PreToolUse</strong> - ก่อนรัน tool</li>
+      <li><strong>PostToolUse</strong> - หลังรัน tool</li>
+      <li><strong>Notification</strong> - แจ้งเตือน events</li>
+    </ul>
+
+    <hr>
+
+    <h2>สรุป: Lessons Learned</h2>
+
+    <p>จากการศึกษา Claude Code architecture เราได้เรียนรู้:</p>
+
+    <div class="component-grid">
+      <div class="component-card">
+        <div class="component-card__icon">Loop</div>
+        <div class="component-card__name">Agent Loop Pattern</div>
+        <div class="component-card__desc">Think -> Act -> Observe -> Repeat</div>
+      </div>
+      <div class="component-card">
+        <div class="component-card__icon">Tool</div>
+        <div class="component-card__name">Tool Abstraction</div>
+        <div class="component-card__desc">Capability = Tool definitions</div>
+      </div>
+      <div class="component-card">
+        <div class="component-card__icon">Context</div>
+        <div class="component-card__name">Context Management</div>
+        <div class="component-card__desc">Persistent + Dynamic + Compaction</div>
+      </div>
+      <div class="component-card">
+        <div class="component-card__icon">Safety</div>
+        <div class="component-card__name">Safety by Design</div>
+        <div class="component-card__desc">Permissions + Sandbox + Confirmation</div>
+      </div>
+    </div>
+
+    <blockquote>
+      <strong>Key takeaway:</strong> การสร้าง AI Agent ที่ทำงานจริงได้ต้องคิดเรื่อง <strong>tool design, context management, และ safety</strong> ไม่ใช่แค่ prompt engineering
+    </blockquote>
+
+    <p class="post-series-footer">Part of the AI Developer Tools Series</p>
+
+  </article>
+
+  <nav class="post-nav">
+    <a href="openclaw-101.html" class="post-nav__link">
+      <div class="post-nav__dir">Related</div>
+      <div class="post-nav__title">OpenClaw 101 - AI Agent System</div>
+    </a>
+    <a href="web-architecture.html" class="post-nav__link">
+      <div class="post-nav__dir">See also</div>
+      <div class="post-nav__title">Web Architecture & Design Patterns</div>
+    </a>
+  </nav>
+
+  <footer class="blog-footer">
+    <a href="./">Back to Blog</a>
+    <span>Anirach Mingkhwan</span>
+  </footer>
+
+</body>
+</html>
