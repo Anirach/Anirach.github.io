@@ -1,0 +1,248 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>OpenClaw Memory Architecture — ออกแบบความจำให้ Agent ทำงานต่อเนื่อง | Anirach Mingkhwan</title>
+  <meta name="description" content="เจาะโครงสร้าง memory ของ OpenClaw: Identity, Workspace Config, Daily Notes, Long-term Memory และ workflow ที่ทำให้ agent จำเรื่องสำคัญได้จริง">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <style>
+    *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+    :root{--navy:#0f172a;--slate:#334155;--muted:#64748b;--bg:#f8fafc;--white:#fff;--teal:#0d9488;--teal2:#14b8a6;--mono:'JetBrains Mono',monospace;--font:'Inter',sans-serif}
+    body{font-family:var(--font);font-size:17px;line-height:1.8;color:var(--slate);background:var(--bg)}
+    .blog-nav{position:fixed;top:0;left:0;right:0;z-index:50;background:rgba(248,250,252,.9);backdrop-filter:blur(14px);border-bottom:1px solid rgba(0,0,0,.05)}
+    .blog-nav__inner{max-width:860px;margin:0 auto;padding:0 2rem;height:56px;display:flex;align-items:center;justify-content:space-between}
+    .blog-nav__back{font-size:.85rem;font-weight:600;color:var(--teal);text-decoration:none}
+    .blog-nav__title{font-size:.85rem;font-weight:700;color:var(--navy)}
+    .post-hero{padding:8rem 2rem 3rem;background:linear-gradient(135deg,#0f766e 0%, #0d9488 45%, #14b8a6 100%);text-align:center}
+    .post-hero__tag{font-size:.7rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:rgba(255,255,255,.85);background:rgba(255,255,255,.14);padding:.3rem .75rem;border-radius:20px;display:inline-block;margin:.2rem}
+    .post-hero__title{font-size:clamp(1.8rem,5vw,3rem);font-weight:900;color:#fff;line-height:1.2;margin:1rem auto;max-width:760px}
+    .post-hero__meta{font-size:.85rem;color:rgba(255,255,255,.7)}
+    .post-hero__cover{max-width:380px;margin:2rem auto 0;border-radius:16px;overflow:hidden;box-shadow:0 20px 60px rgba(0,0,0,.35)}
+    .post-hero__cover img{display:block;width:100%}
+
+    .post-body{max-width:760px;margin:0 auto;padding:3rem 2rem 6rem}
+    h2{font-size:1.55rem;color:var(--navy);margin:2.8rem 0 1rem;padding-bottom:.5rem;border-bottom:2px solid rgba(20,184,166,.2)}
+    h3{font-size:1.2rem;color:var(--navy);margin:1.8rem 0 .7rem}
+    p{margin-bottom:1.1rem}
+    ul{margin:.5rem 0 1.25rem 1.5rem}
+    li{margin-bottom:.35rem}
+    code{font-family:var(--mono);font-size:.88em;background:rgba(20,184,166,.1);padding:.15rem .45rem;border-radius:6px;color:#0f766e}
+    pre{background:#0f172a;color:#e2e8f0;padding:1.2rem;border-radius:12px;overflow:auto;margin:1rem 0 1.4rem}
+    pre code{background:none;color:inherit;padding:0}
+
+    .info{border:1.5px solid rgba(20,184,166,.25);background:rgba(20,184,166,.05);padding:1rem 1.1rem;border-radius:12px;margin:1.2rem 0}
+    .info__title{font-weight:800;color:#0f766e;margin-bottom:.4rem}
+
+    .arch-diagram{margin:1.5rem 0}
+    .arch-box{border:1.5px solid rgba(20,184,166,.22);border-radius:14px;background:#fff;padding:1rem 1.1rem;margin:.8rem 0}
+    .arch-layer{display:inline-block;font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.08em;background:rgba(20,184,166,.11);color:#0f766e;padding:.2rem .55rem;border-radius:30px;margin-bottom:.45rem}
+
+    .flow-diagram{display:grid;gap:.8rem;margin:1.2rem 0}
+    .flow-step{border:1px solid rgba(15,118,110,.25);background:#fff;border-radius:10px;padding:.8rem 1rem}
+    .flow-arrow{text-align:center;color:#94a3b8;font-weight:700}
+
+    .post-nav{display:grid;grid-template-columns:1fr 1fr;gap:1rem;margin-top:3rem}
+    .post-nav__link{text-decoration:none;border:1px solid rgba(20,184,166,.2);border-radius:12px;padding:1rem;background:#fff}
+    .post-nav__dir{font-size:.75rem;color:#94a3b8;text-transform:uppercase;font-weight:700;letter-spacing:.08em}
+    .post-nav__title{font-size:.9rem;color:var(--navy);font-weight:700;line-height:1.35}
+    .post-footer{max-width:760px;margin:0 auto;padding:2.4rem 2rem;border-top:1px solid rgba(20,184,166,.15);text-align:center}
+    .post-footer__back{font-size:.9rem;color:#0d9488;text-decoration:none;font-weight:600}
+    .post-footer__copyright{font-size:.8rem;color:#94a3b8;margin-top:.8rem}
+
+    @media (max-width:768px){.post-body,.blog-nav__inner{padding-left:1.25rem;padding-right:1.25rem}.post-nav{grid-template-columns:1fr}}
+  </style>
+</head>
+<body>
+  <nav class="blog-nav">
+    <div class="blog-nav__inner">
+      <a href="./" class="blog-nav__back">‹ Blog</a>
+      <div class="blog-nav__title">OpenClaw Memory Architecture</div>
+    </div>
+  </nav>
+
+  <section class="post-hero">
+    <span class="post-hero__tag">OpenClaw</span>
+    <span class="post-hero__tag">Memory System</span>
+    <span class="post-hero__tag">AI Workflow</span>
+    <h1 class="post-hero__title">OpenClaw Memory Architecture — ออกแบบความจำให้ Agent ทำงานต่อเนื่องแบบมืออาชีพ 🧠</h1>
+    <div class="post-hero__meta">Practical System Design • สำหรับงานวิจัยและงานที่ต้องต่อเนื่องทุกวัน</div>
+    <div class="post-hero__cover">
+      <img src="../images/monitoring-cover.jpg" alt="OpenClaw Memory Architecture">
+    </div>
+  </section>
+
+  <article class="post-body">
+    <h2>ทำไม Agent ต้องมี “สถาปัตยกรรมความจำ”?</h2>
+    <p>ปัญหาคลาสสิกของ AI assistant คือเก่งใน session นั้น ๆ แต่พอ context reset แล้วเหมือนเริ่มใหม่หมด ทำให้เกิดงานซ้ำ ตัดสินใจไม่ต่อเนื่อง และเสียเวลาในการ recap ทุกครั้ง</p>
+    <p>แนวทางที่เวิร์กจริงคือแยกความจำเป็นชั้น (layer) พร้อมนิยามหน้าที่ชัดเจนว่าไฟล์ไหนใช้เพื่ออะไร และควรอัปเดตเมื่อไร</p>
+
+    <div class="info">
+      <div class="info__title">Core Principle</div>
+      <p style="margin:0">ถ้าเรื่องไหนสำคัญและต้องจำข้าม session ให้เขียนลงไฟล์เสมอ — <strong>Text &gt; Brain</strong></p>
+    </div>
+
+    <h2>ภาพรวมโครงสร้าง Memory Architecture</h2>
+    <p>โครงนี้ทำงานดีเพราะเริ่มจาก identity ก่อนเสมอ แล้วค่อยไป config และ memory ทำให้ agent รักษาบุคลิก กติกา และบริบทงานได้พร้อมกัน</p>
+
+    <div class="arch-diagram">
+      <div class="arch-box">
+        <span class="arch-layer">Session Start</span>
+        <p><code>SOUL.md → USER.md → memory/today.md (+yesterday) → MEMORY.md (เฉพาะ main session)</code></p>
+      </div>
+      <div class="arch-box">
+        <span class="arch-layer">Layer 1</span>
+        <p><strong>Identity Files:</strong> กำหนดว่า “ฉันเป็นใคร” และ “กำลังช่วยใคร”</p>
+      </div>
+      <div class="arch-box">
+        <span class="arch-layer">Layer 2</span>
+        <p><strong>Workspace Config:</strong> กติกาการทำงาน ความปลอดภัย และ periodic tasks</p>
+      </div>
+      <div class="arch-box">
+        <span class="arch-layer">Layer 3</span>
+        <p><strong>Memory System:</strong> Daily logs + Curated long-term memory + Topic notes</p>
+      </div>
+    </div>
+
+    <h2>Layer 1: Identity (Who I am)</h2>
+    <p>Layer นี้ไม่ใช่เรื่องสวยงาม แต่เป็นแกนของ consistency ในการตอบและการตัดสินใจ</p>
+    <ul>
+      <li><code>SOUL.md</code> — โทนเสียง ขอบเขต บุคลิก</li>
+      <li><code>USER.md</code> — ความชอบและรูปแบบการทำงานของเจ้าของ</li>
+      <li><code>IDENTITY.md</code> — ชื่อ/บทบาทของ agent</li>
+    </ul>
+    <p>ข้อดีคือแม้ model เปลี่ยนหรือ session restart วิธีคิดหลักยังคงเดิม เพราะ grounded จากไฟล์ก่อนเริ่มงานทุกครั้ง</p>
+
+    <h2>Layer 2: Workspace Config (How I operate)</h2>
+    <p>ชั้นนี้คือ operational contract ที่ทำให้ agent ไม่เผลอทำเกินขอบเขต</p>
+    <ul>
+      <li><code>AGENTS.md</code> — policy การทำงาน privacy firewall กติกา owner-only</li>
+      <li><code>TOOLS.md</code> — รายละเอียด infra/local stack ที่ต้องใช้ซ้ำ</li>
+      <li><code>HEARTBEAT.md</code> — รายการเช็กแบบ periodic (ถ้าไม่มี task ก็ไม่ต้องยิง API)</li>
+    </ul>
+
+    <div class="info">
+      <div class="info__title">Practical Tip</div>
+      <p style="margin:0">แยก “policy” ออกจาก “knowledge” ชัด ๆ: policy อยู่ AGENTS.md ส่วนความรู้ operational อยู่ memory files เพื่อให้ update ง่ายและ audit ง่าย</p>
+    </div>
+
+    <h2>Layer 3: Memory System (What I remember)</h2>
+    <h3>3.1 Daily Notes = short-term durable log</h3>
+    <p>ไฟล์รายวันใน <code>memory/YYYY-MM-DD.md</code> เหมาะสำหรับบันทึกเหตุการณ์ดิบ เช่น แก้ bug อะไร ตัดสินใจอะไร ทดลองอะไรแล้วผลเป็นอย่างไร</p>
+
+    <h3>3.2 MEMORY.md = long-term curated memory</h3>
+    <p>ไฟล์นี้ไม่ควรเป็น dump ทุกอย่าง แต่เป็นสิ่งที่ “ควรอยู่ระยะยาว” เช่น preferences, decisions, lessons learned, recurring pitfalls</p>
+
+    <h3>3.3 Topic Notes = deep reference</h3>
+    <p>ไฟล์เฉพาะเรื่อง เช่น <code>infra-setup-notes.md</code>, <code>rag-setup-notes.md</code> ช่วยให้ตอบคำถามเทคนิคเร็วขึ้นโดยไม่ต้องค้นทั้งประวัติ</p>
+
+    <h2>Workflow ที่ควรใช้จริงในทุก session</h2>
+    <p>โฟลว์นี้ทำให้ memory เป็นระบบจริง ไม่ใช่แค่ “หวังว่าจะจำได้”</p>
+
+    <div class="flow-diagram">
+      <div class="flow-step"><strong>Step 1 — Session start:</strong> โหลดไฟล์หลักตามลำดับที่กำหนด</div>
+      <div class="flow-arrow">↓</div>
+      <div class="flow-step"><strong>Step 2 — During work:</strong> ทำงานปกติ แต่ mark เหตุการณ์สำคัญที่ควรบันทึก</div>
+      <div class="flow-arrow">↓</div>
+      <div class="flow-step"><strong>Step 3 — Before compaction:</strong> flush ลง daily note ให้ครบ</div>
+      <div class="flow-arrow">↓</div>
+      <div class="flow-step"><strong>Step 4 — Every few days:</strong> review daily notes แล้วสรุปขึ้น MEMORY.md</div>
+      <div class="flow-arrow">↓</div>
+      <div class="flow-step"><strong>Step 5 — Next session:</strong> โหลดไฟล์เดิม แล้วทำงานต่อได้ทันที</div>
+    </div>
+
+    <h2>ตัวอย่างโครงสร้างไฟล์ที่แนะนำ</h2>
+    <p>ด้านล่างคือตัวอย่างที่ใช้งานได้จริงและขยายต่อได้ง่าย</p>
+    <pre><code>workspace/
+├── SOUL.md
+├── USER.md
+├── IDENTITY.md
+├── AGENTS.md
+├── TOOLS.md
+├── HEARTBEAT.md
+├── MEMORY.md
+└── memory/
+    ├── 2026-03-20.md
+    ├── infra-setup-notes.md
+    ├── rag-setup-notes.md
+    ├── knowledge-graph-setup.md
+    └── system-hardening-notes.md</code></pre>
+
+    <p>เหตุผลที่โครงนี้ดีคืออ่านง่าย, แยก concern ชัด, และรองรับทั้งงานรายวันกับงานที่ต้อง maintain ระยะยาว</p>
+
+    <h2>ข้อผิดพลาดที่เจอบ่อย</h2>
+    <ul>
+      <li>เก็บทุกอย่างไว้ในไฟล์เดียว ทำให้ค้นยากและเสี่ยง context noise</li>
+      <li>ไม่ทบทวน daily notes เป็นระยะ ทำให้ MEMORY.md ไม่เคย evolve</li>
+      <li>คิดว่า “จำไว้ในหัวก็พอ” ซึ่งพังแน่เมื่อ session reset</li>
+      <li>ปะปนข้อมูลส่วนตัวจาก main session ไป shared context (ผิดหลัก privacy)</li>
+    </ul>
+
+    <h2>Decision Matrix: อะไรควรเก็บไฟล์ไหน?</h2>
+    <p>จุดตัดสินใจที่สำคัญที่สุดคือ “ข้อมูลนี้มีอายุการใช้งานนานแค่ไหน” และ “ต้องใช้ข้าม session หรือไม่” ถ้าตอบไม่ได้ชัด ให้เริ่มจาก daily note แล้วค่อย promote ขึ้น MEMORY.md ภายหลัง</p>
+    <div class="info">
+      <div class="info__title">Quick Routing Rules</div>
+      <ul>
+        <li><strong>Identity/voice boundary</strong> → <code>SOUL.md</code></li>
+        <li><strong>User preference ที่คงที่</strong> → <code>USER.md</code></li>
+        <li><strong>กติกาการปฏิบัติ/ความปลอดภัย</strong> → <code>AGENTS.md</code></li>
+        <li><strong>เหตุการณ์รายวันแบบดิบ</strong> → <code>memory/YYYY-MM-DD.md</code></li>
+        <li><strong>บทเรียน/การตัดสินใจระยะยาว</strong> → <code>MEMORY.md</code></li>
+        <li><strong>ความรู้ลึกเฉพาะโดเมน</strong> → <code>memory/*-notes.md</code></li>
+      </ul>
+    </div>
+
+    <h2>Governance Boundary: Main Session vs Shared Context</h2>
+    <p>ในงานจริง เรื่องนี้สำคัญกว่าความฉลาดของโมเดล เพราะถ้า boundary ไม่ชัด มีโอกาสเกิด data leakage ทันที</p>
+    <div class="arch-diagram">
+      <div class="arch-box">
+        <span class="arch-layer">Main Session (Private)</span>
+        <p>อ่าน <code>MEMORY.md</code> ได้เต็มรูปแบบ และใช้เพื่อ personalization ในการทำงานกับเจ้าของระบบ</p>
+      </div>
+      <div class="arch-box">
+        <span class="arch-layer">Shared / Group Context</span>
+        <p>ห้ามดึง personal long-term memory มาใช้โดยไม่จำเป็น เน้นตอบตาม context ปัจจุบันเท่านั้น</p>
+      </div>
+      <div class="arch-box">
+        <span class="arch-layer">Safety Rule</span>
+        <p>เมื่อไม่มั่นใจว่าข้อมูลควรถูกเปิดเผยหรือไม่ ให้ default เป็น <strong>ไม่เปิดเผย</strong> และถามเพื่อยืนยันก่อนเสมอ</p>
+      </div>
+    </div>
+
+    <h2>Anti-Patterns และวิธีแก้</h2>
+    <h3>1) ใช้ MEMORY.md เป็น log รายวัน</h3>
+    <p><strong>ปัญหา:</strong> ไฟล์บวมเร็ว ค้นยาก สัญญาณสำคัญจมหาย<br><strong>แก้:</strong> บันทึกดิบไว้ daily files แล้วทำ weekly curation</p>
+
+    <h3>2) เก็บ policy ปะปนกับ operational notes</h3>
+    <p><strong>ปัญหา:</strong> ตอนแก้ config จะเผลอทำลายกฎความปลอดภัย<br><strong>แก้:</strong> policy อยู่ <code>AGENTS.md</code> อย่างเดียว ส่วนเทคนิคปฏิบัติไป <code>TOOLS.md</code>/<code>memory/*-notes.md</code></p>
+
+    <h3>3) ไม่ทำ promotion cycle</h3>
+    <p><strong>ปัญหา:</strong> มีแต่ daily log แต่ไม่เกิด long-term intelligence<br><strong>แก้:</strong> ตั้งรอบ review ทุก 2-3 วัน และ promote เฉพาะสิ่งที่มีผลต่อการตัดสินใจอนาคต</p>
+
+    <h3>4) ลืม privacy context boundary</h3>
+    <p><strong>ปัญหา:</strong> ข้อมูล private จาก main session หลุดไปในกลุ่ม<br><strong>แก้:</strong> บังคับ contextual gate ก่อนตอบทุกครั้งว่าเป็น DM หรือ shared channel</p>
+
+    <h2>สรุป: ความเก่งของ Agent = ความต่อเนื่อง + governance ของระบบความจำ</h2>
+    <p>ถ้าจะทำให้ AI assistant ใช้งานในระดับ production โดยเฉพาะงานวิจัย งานเอกสาร หรือ infra automation ให้คิดแบบ system design ตั้งแต่แรก: แยกชั้นความจำ, กำหนด lifecycle, บังคับ memory promotion, และวาง governance boundary ให้ชัด</p>
+    <p>เมื่อทำครบ Agent จะไม่ใช่แค่ “ตอบเก่ง” แต่จะ “ทำงานต่อเนื่องได้จริง ปลอดภัย และ audit ได้” เหมือนทีมงานมืออาชีพที่มีทั้งสมุดบันทึกและระเบียบการทำงานชัดเจน</p>
+
+    <nav class="post-nav">
+      <a href="deployment-hosting.html" class="post-nav__link">
+        <div class="post-nav__dir">← Previous</div>
+        <div class="post-nav__title">Deployment &amp; Hosting Strategies</div>
+      </a>
+      <a href="./" class="post-nav__link">
+        <div class="post-nav__dir">Next →</div>
+        <div class="post-nav__title">Back to all posts</div>
+      </a>
+    </nav>
+  </article>
+
+  <footer class="post-footer">
+    <a href="./" class="post-footer__back">← Back to Blog</a>
+    <div class="post-footer__copyright">© 2025 Anirach Mingkhwan — Associate Professor, KMUTNB</div>
+  </footer>
+</body>
+</html>
