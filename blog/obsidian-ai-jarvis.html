@@ -1,0 +1,655 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Obsidian + AI Agent = สร้างสมองที่สองที่คิดจากสิ่งที่เราสั่งสมมา | Anirach Mingkhwan</title>
+    <meta name="description" content="จาก Obsidian vault สู่ AI ผู้ช่วยส่วนตัวแบบ JARVIS — memory system, proactive behavior, always-on agent และ case study จาก OpenClaw ที่รันจริง">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        :root {
+            --navy: #0f172a;
+            --purple: #7c3aed;
+            --purple-dark: #6d28d9;
+            --purple-light: #a78bfa;
+            --indigo: #6366f1;
+            --cyan: #06b6d4;
+            --slate: #334155;
+            --slate-light: #64748b;
+            --gray: #94a3b8;
+            --bg: #f8fafc;
+            --white: #ffffff;
+            --font: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            --mono: 'JetBrains Mono', 'SF Mono', Monaco, Consolas, monospace;
+        }
+
+        html { scroll-behavior: smooth; }
+
+        body {
+            font-family: var(--font);
+            font-size: 17px;
+            line-height: 1.8;
+            color: var(--slate);
+            background: var(--bg);
+            -webkit-font-smoothing: antialiased;
+        }
+
+        a { text-decoration: none; color: var(--purple); }
+        a:hover { color: var(--purple-dark); }
+
+        /* ── NAV ── */
+        .nav {
+            position: fixed; top: 0; left: 0; right: 0; z-index: 100;
+            background: rgba(248,250,252,0.92); backdrop-filter: blur(20px);
+            border-bottom: 1px solid rgba(0,0,0,0.05);
+        }
+        .nav__inner {
+            max-width: 900px; margin: 0 auto; padding: 0 2rem; height: 60px;
+            display: flex; align-items: center; justify-content: space-between;
+        }
+        .nav__logo { font-size: 1.1rem; font-weight: 800; color: var(--navy); }
+        .nav__links { display: flex; gap: 24px; }
+        .nav__links a { font-size: 0.85rem; font-weight: 500; color: var(--slate-light); }
+        .nav__links a:hover { color: var(--purple); }
+
+        /* ── HERO ── */
+        .hero {
+            padding: 7rem 2rem 4rem;
+            background: linear-gradient(135deg, #1e1b4b 0%, #4c1d95 40%, #7c3aed 100%);
+            color: white; text-align: center;
+        }
+        .hero__badge {
+            display: inline-block; font-size: 0.75rem; font-weight: 700;
+            letter-spacing: 0.12em; text-transform: uppercase;
+            background: rgba(255,255,255,0.15); padding: 0.4rem 1.2rem;
+            border-radius: 50px; margin-bottom: 1.5rem;
+        }
+        .hero h1 {
+            font-size: clamp(2rem, 5vw, 3.2rem); font-weight: 900;
+            line-height: 1.15; margin-bottom: 1.2rem;
+            text-shadow: 0 2px 12px rgba(0,0,0,0.2);
+        }
+        .hero__sub {
+            font-size: 1.15rem; opacity: 0.85; max-width: 640px;
+            margin: 0 auto 2rem; line-height: 1.7;
+        }
+        .hero__meta {
+            font-size: 0.85rem; opacity: 0.6;
+        }
+
+        /* ── CONTENT ── */
+        .container { max-width: 800px; margin: 0 auto; padding: 0 2rem; }
+
+        .content { padding: 3rem 0 4rem; }
+
+        .content h2 {
+            font-size: 1.7rem; font-weight: 800; color: var(--navy);
+            margin: 3rem 0 1.2rem; line-height: 1.3;
+            padding-top: 1rem;
+        }
+        .content h2:first-child { margin-top: 0; }
+
+        .content h3 {
+            font-size: 1.3rem; font-weight: 700; color: var(--purple-dark);
+            margin: 2.2rem 0 0.8rem;
+        }
+
+        .content p {
+            margin-bottom: 1.3rem; color: var(--slate);
+            text-align: justify;
+        }
+
+        .content ul, .content ol {
+            margin: 0 0 1.3rem 1.5rem;
+        }
+        .content li {
+            margin-bottom: 0.5rem;
+        }
+
+        /* ── CODE ── */
+        .code-block {
+            background: #1e293b; color: #e2e8f0;
+            padding: 1.5rem; border-radius: 10px;
+            margin: 1.5rem 0; border-left: 4px solid var(--purple);
+            font-family: var(--mono); font-size: 0.85rem;
+            overflow-x: auto; white-space: pre-wrap; line-height: 1.6;
+        }
+
+        code {
+            font-family: var(--mono); font-size: 0.88em;
+            background: rgba(124, 58, 237, 0.08); color: var(--purple-dark);
+            padding: 0.15em 0.4em; border-radius: 4px;
+        }
+
+        /* ── CALLOUT BOXES ── */
+        .insight-box {
+            background: linear-gradient(135deg, #f5f3ff 0%, #ede9fe 100%);
+            border: 1px solid #ddd6fe; border-radius: 12px;
+            padding: 1.5rem 1.8rem; margin: 2rem 0;
+        }
+        .insight-box h4 {
+            color: var(--purple); font-weight: 700; margin-bottom: 0.6rem;
+            font-size: 1.05rem;
+        }
+        .insight-box p { margin-bottom: 0.5rem; }
+        .insight-box p:last-child { margin-bottom: 0; }
+
+        .warning-box {
+            background: linear-gradient(135deg, #fefce8 0%, #fef9c3 100%);
+            border: 1px solid #fde68a; border-radius: 12px;
+            padding: 1.5rem 1.8rem; margin: 2rem 0;
+        }
+        .warning-box h4 { color: #92400e; font-weight: 700; margin-bottom: 0.6rem; }
+
+        .case-study-box {
+            background: linear-gradient(135deg, #ecfdf5 0%, #d1fae5 100%);
+            border: 1px solid #a7f3d0; border-radius: 12px;
+            padding: 1.5rem 1.8rem; margin: 2rem 0;
+        }
+        .case-study-box h4 { color: #065f46; font-weight: 700; margin-bottom: 0.6rem; }
+
+        /* ── COMPARISON ── */
+        .comparison {
+            display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem;
+            margin: 2rem 0;
+        }
+        .comparison__card {
+            background: var(--white); border-radius: 12px; padding: 1.5rem;
+            border: 1px solid #e5e7eb;
+        }
+        .comparison__card h4 {
+            font-size: 1rem; font-weight: 700; margin-bottom: 0.8rem;
+        }
+        .comparison__card.old h4 { color: var(--gray); }
+        .comparison__card.new h4 { color: var(--purple); }
+        .comparison__card ul { list-style: none; padding: 0; }
+        .comparison__card li {
+            padding: 0.3rem 0; font-size: 0.92rem;
+        }
+
+        /* ── ARCHITECTURE DIAGRAM ── */
+        .arch-diagram {
+            background: var(--white); border: 1px solid #e5e7eb;
+            border-radius: 14px; padding: 2rem; margin: 2rem 0;
+            text-align: center;
+        }
+        .arch-diagram h4 {
+            color: var(--navy); font-weight: 700; margin-bottom: 1.5rem;
+        }
+        .arch-layers {
+            display: flex; flex-direction: column; gap: 0.8rem;
+            max-width: 500px; margin: 0 auto;
+        }
+        .arch-layer {
+            padding: 0.8rem 1.2rem; border-radius: 8px;
+            font-weight: 600; font-size: 0.9rem;
+            display: flex; align-items: center; justify-content: center; gap: 0.5rem;
+        }
+        .arch-layer.l1 { background: linear-gradient(90deg, #7c3aed, #a78bfa); color: white; }
+        .arch-layer.l2 { background: linear-gradient(90deg, #6366f1, #818cf8); color: white; }
+        .arch-layer.l3 { background: linear-gradient(90deg, #0891b2, #06b6d4); color: white; }
+        .arch-layer.l4 { background: linear-gradient(90deg, #059669, #34d399); color: white; }
+        .arch-layer.l5 { background: linear-gradient(90deg, #d97706, #fbbf24); color: #1e293b; }
+        .arch-arrow {
+            font-size: 1.2rem; color: var(--gray); text-align: center;
+        }
+
+        /* ── STEPS ── */
+        .step {
+            display: flex; gap: 1.2rem; margin: 1.5rem 0;
+            align-items: flex-start;
+        }
+        .step__number {
+            width: 36px; height: 36px; border-radius: 50%;
+            background: var(--purple); color: white;
+            display: flex; align-items: center; justify-content: center;
+            font-weight: 800; font-size: 0.9rem; flex-shrink: 0;
+            margin-top: 0.2rem;
+        }
+        .step__content h4 {
+            font-weight: 700; color: var(--navy); margin-bottom: 0.3rem;
+        }
+        .step__content p { margin-bottom: 0; font-size: 0.95rem; }
+
+        /* ── TAKEAWAYS ── */
+        .takeaways {
+            background: linear-gradient(135deg, #1e1b4b 0%, #4c1d95 100%);
+            border-radius: 14px; padding: 2.5rem; margin: 3rem 0;
+            color: white;
+        }
+        .takeaways h3 {
+            color: white; margin-bottom: 1.5rem; font-size: 1.4rem;
+        }
+        .takeaways ul { list-style: none; padding: 0; }
+        .takeaways li {
+            background: rgba(255,255,255,0.1); padding: 1rem 1.2rem;
+            border-radius: 8px; margin-bottom: 0.8rem;
+            border-left: 3px solid rgba(255,255,255,0.4);
+            font-size: 0.95rem; line-height: 1.6;
+        }
+
+        /* ── FOOTER ── */
+        .footer {
+            background: var(--navy); color: var(--gray);
+            text-align: center; padding: 2.5rem 0;
+            margin-top: 3rem;
+        }
+        .footer a { color: var(--purple-light); font-weight: 600; }
+        .footer span { display: block; margin-top: 0.5rem; font-size: 0.8rem; }
+
+        /* ── RESPONSIVE ── */
+        @media (max-width: 768px) {
+            .nav__links { display: none; }
+            .hero { padding: 6rem 1.5rem 3rem; }
+            .hero h1 { font-size: 1.8rem; }
+            .container { padding: 0 1.5rem; }
+            .comparison { grid-template-columns: 1fr; }
+            .code-block { font-size: 0.78rem; padding: 1rem; }
+        }
+    </style>
+</head>
+<body>
+
+<!-- NAV -->
+<nav class="nav">
+    <div class="nav__inner">
+        <a href="../index.html" class="nav__logo">Anirach</a>
+        <div class="nav__links">
+            <a href="../index.html#research">Research</a>
+            <a href="../index.html#about">About</a>
+            <a href="./">Blog</a>
+            <a href="../index.html#contact">Contact</a>
+        </div>
+    </div>
+</nav>
+
+<!-- HERO -->
+<header class="hero">
+    <span class="hero__badge">Personal AI • Obsidian • OpenClaw</span>
+    <h1>Obsidian + AI Agent<br>= สร้างสมองที่สองที่คิดจากสิ่งที่เราสั่งสมมา</h1>
+    <p class="hero__sub">จาก Obsidian vault ธรรมดา สู่ AI ผู้ช่วยส่วนตัวที่รู้จักเรา จำได้ ทำงานเอง และอยู่กับเราตลอด — ใกล้คำว่า JARVIS มากกว่าที่หลายคนคิด</p>
+    <p class="hero__meta">โดย Anirach Mingkhwan · มีนาคม 2026</p>
+</header>
+
+<!-- CONTENT -->
+<div class="container">
+    <div class="content">
+
+        <!-- ════════════════════════════════════════════ -->
+        <!-- PART 1: WHY THIS COMBO IS DIFFERENT -->
+        <!-- ════════════════════════════════════════════ -->
+
+        <h2>🧠 ทำไม AI ทั่วไปยังไม่ใช่ "ผู้ช่วยส่วนตัว" จริง ๆ</h2>
+
+        <p>คนส่วนใหญ่ใช้ AI เหมือน search engine รุ่นใหม่ — ถามแล้วรับคำตอบ ปิดหน้าต่าง จบ เปิดใหม่ก็เริ่มจากศูนย์ทุกครั้ง ไม่มี context ไม่จำได้ว่าเมื่อวานเราถามอะไร ไม่รู้ด้วยซ้ำว่าเราทำอะไรเป็นหลัก</p>
+
+        <p>ความต่างระหว่าง AI ทั่วไป กับ <strong>AI ที่เข้าถึงคลังความรู้ของเรา</strong> มันไม่ใช่แค่ "ฉลาดขึ้น" แต่มันเป็นคนละเรื่องกันเลย</p>
+
+        <div class="comparison">
+            <div class="comparison__card old">
+                <h4>❌ AI ทั่วไป (Chatbot)</h4>
+                <ul>
+                    <li>🔄 เริ่มใหม่ทุกครั้ง ไม่จำอะไรเลย</li>
+                    <li>🌐 ดึงคำตอบจากอินเทอร์เน็ตเป็นหลัก</li>
+                    <li>📝 ตอบแบบกว้าง ๆ ไม่รู้จักเรา</li>
+                    <li>⏸️ ทำงานเฉพาะตอนเราเปิดใช้</li>
+                    <li>🔒 ข้อมูลเราอยู่บน cloud ของคนอื่น</li>
+                </ul>
+            </div>
+            <div class="comparison__card new">
+                <h4>✅ AI + Personal Knowledge Base</h4>
+                <ul>
+                    <li>🧠 จำ context ย้อนหลัง สะสมความรู้</li>
+                    <li>📂 ดึงจากโน้ต งานวิจัย ไอเดียของเรา</li>
+                    <li>🎯 ตอบตรงกับสิ่งที่เราสนใจจริง ๆ</li>
+                    <li>⚡ ทำงานเชิงรุก ตรวจงานเอง</li>
+                    <li>🏠 ข้อมูลอยู่ในเครื่องเราทั้งหมด</li>
+                </ul>
+            </div>
+        </div>
+
+        <p>แนวคิดนี้เริ่มจากของสองอย่างที่ดูธรรมดา แต่พอมาประกบกันกลับแรงมาก: <strong>Obsidian</strong> กับ <strong>Claude Code</strong></p>
+
+        <h3>Obsidian — ไม่ใช่แค่แอปจดโน้ต</h3>
+
+        <p>ในแก่นจริง ๆ Obsidian คือแอปจดโน้ต แต่ความสำคัญไม่ได้อยู่ที่การจด — มันอยู่ที่ <strong>ข้อมูลทั้งหมดเป็นไฟล์ markdown แบบ plain text ในเครื่องเราเอง</strong> นั่นแปลว่าโน้ตทุกชิ้นไม่ได้ถูกขังอยู่ในระบบปิด อ่านได้ ย้ายได้ จัดโครงสร้างได้ และที่สำคัญคือ AI สามารถเข้าถึงไฟล์พวกนี้ได้ง่ายมาก</p>
+
+        <p>ถ้ามองแบบง่าย ๆ Obsidian ไม่ใช่แค่สมุดจด แต่มันคือ <strong>ฐานข้อมูลความคิดส่วนตัว</strong> ของเรา</p>
+
+        <h3>Claude Code — AI ที่ทำงานใน Environment ของเรา</h3>
+
+        <p>Claude Code ต่างจากการใช้ Claude บนหน้าเว็บตรงที่มันทำงานใน environment ของเราเอง — อ่านไฟล์ แก้ไฟล์ เขียนโค้ด และทำงานกับโฟลเดอร์จริงได้ พอเอามันไปชี้กับ Obsidian vault เมื่อไร AI ก็จะไม่ได้ตอบแบบลอย ๆ อีกต่อไป แต่มันจะเริ่มตอบจากโน้ต ความคิด งานวิจัย และประวัติการทำงานของเราที่สะสมไว้ทั้งหมด</p>
+
+        <div class="insight-box">
+            <h4>💡 Core Insight</h4>
+            <p>AI จะเก่งกับเราจริงได้ก็ต่อเมื่อมันได้เข้าถึงความรู้ของเรา — ไม่ใช่ความรู้ทั่วไปจากอินเทอร์เน็ต แต่เป็น framework, มุมมอง, และคลังข้อมูลที่เราสั่งสมไว้เอง</p>
+        </div>
+
+        <!-- ════════════════════════════════════════════ -->
+        <!-- PART 2: THE NEXT LEVEL -->
+        <!-- ════════════════════════════════════════════ -->
+
+        <h2>🚀 ก้าวถัดไป — จาก "AI อ่าน Vault" สู่ "AI ที่มีชีวิต"</h2>
+
+        <p>บทความส่วนใหญ่ที่พูดเรื่อง Obsidian + AI จะหยุดอยู่ที่ "ให้ AI อ่าน vault แล้วตอบคำถาม" ซึ่งก็ดี แต่มันแค่ชั้นแรก ถ้าจะไปสู่ระดับ JARVIS จริง ๆ ต้องไปอีก 3 ชั้น:</p>
+
+        <div class="arch-diagram">
+            <h4>🏗️ สถาปัตยกรรม 5 ชั้นของ Personal AI</h4>
+            <div class="arch-layers">
+                <div class="arch-layer l1">💬 ชั้น 5: Always-On Messaging (Telegram / Discord)</div>
+                <div class="arch-arrow">↕</div>
+                <div class="arch-layer l2">⚡ ชั้น 4: Proactive Behavior (Cron / Heartbeat)</div>
+                <div class="arch-arrow">↕</div>
+                <div class="arch-layer l3">🧠 ชั้น 3: Memory System (Daily → Long-term)</div>
+                <div class="arch-arrow">↕</div>
+                <div class="arch-layer l4">🤖 ชั้น 2: AI Engine (Claude Code / LLM)</div>
+                <div class="arch-arrow">↕</div>
+                <div class="arch-layer l5">📂 ชั้น 1: Knowledge Base (Obsidian Vault)</div>
+            </div>
+        </div>
+
+        <h3>ชั้นที่ 1-2: Vault + AI (ที่ทุกคนรู้)</h3>
+
+        <p>ชั้นนี้คือสิ่งที่หลายคนทำอยู่แล้ว — เอา Claude Code ชี้ไปที่ Obsidian vault แล้วถาม ให้สรุป ให้เชื่อมโน้ต ให้หา pattern ก็ใช้งานได้ดีมาก</p>
+
+        <h3>ชั้นที่ 3: Memory System — AI ที่จำได้</h3>
+
+        <p>นี่คือจุดที่เปลี่ยนจาก "เครื่องมือ" เป็น "ผู้ช่วย" จริง ๆ แทนที่ AI จะเริ่มจากศูนย์ทุกครั้ง ลองนึกภาพว่ามันมี memory แบบนี้:</p>
+
+        <ul>
+            <li><strong>Daily Notes</strong> — บันทึกสิ่งที่เกิดขึ้นแต่ละวัน (AI เขียนเอง ไม่ใช่แค่อ่าน)</li>
+            <li><strong>Long-term Memory</strong> — ความรู้ที่ curate แล้ว เช่น preferences, decisions, lessons learned</li>
+            <li><strong>Identity Files</strong> — AI รู้ว่าตัวเองเป็นใคร ช่วยใคร และช่วยแบบไหน</li>
+        </ul>
+
+        <div class="code-block"># ตัวอย่างโครงสร้าง Memory System จริง
+workspace/
+├── MEMORY.md           # Long-term memory (curated)
+├── SOUL.md             # AI personality & guidelines
+├── USER.md             # ข้อมูลเกี่ยวกับเจ้าของ
+├── memory/
+│   ├── 2026-03-24.md   # Daily notes (auto-generated)
+│   ├── 2026-03-23.md
+│   └── heartbeat-state.json
+└── obsidian-vault/     # Obsidian vault (knowledge base)
+    ├── Research/
+    ├── KnowledgeGraph/
+    └── Daily/</div>
+
+        <p>ทุกครั้งที่ AI ตื่นขึ้นมา มันจะอ่าน SOUL.md (รู้ว่าตัวเองเป็นใคร) USER.md (รู้ว่าช่วยใคร) และ daily notes ล่าสุด (รู้ว่าเมื่อวานเกิดอะไร) — เหมือนคนที่ตื่นนอนแล้วทบทวนสิ่งที่เกิดขึ้นก่อนเริ่มทำงาน</p>
+
+        <h3>ชั้นที่ 4: Proactive Behavior — AI ที่ทำงานเอง ไม่ต้องรอถาม</h3>
+
+        <p>นี่คือจุดที่เริ่มรู้สึกว่า "มันมีชีวิต" จริง ๆ — AI ไม่ได้นั่งรอให้เราสั่ง แต่มันตรวจงานเอง:</p>
+
+        <ul>
+            <li><strong>Idle Improver</strong> — ตอนไม่มีใครคุย มันสแกน disk, memory, git status, syntax errors</li>
+            <li><strong>Vault Insight</strong> — วิเคราะห์ vault หา themes, gaps, และ connections ที่เราอาจพลาด</li>
+            <li><strong>Heartbeat System</strong> — ทุก 30 นาที ตรวจ email, calendar, notifications</li>
+            <li><strong>Memory Maintenance</strong> — ทุกสัปดาห์ ทบทวน daily notes แล้ว curate เป็น long-term memory</li>
+        </ul>
+
+        <div class="insight-box">
+            <h4>🔑 ความต่างสำคัญ</h4>
+            <p>AI ทั่วไป: เราถาม → มันตอบ → จบ<br>
+            AI ที่ proactive: มันตรวจงานเอง → เจอปัญหา → แจ้งเรา → แก้ได้เองก็แก้</p>
+        </div>
+
+        <h3>ชั้นที่ 5: Always-On — AI ที่คุยด้วยได้ตลอด</h3>
+
+        <p>Claude Code ต้องเปิด terminal ทุกครั้ง ซึ่งก็โอเคถ้าใช้เป็นเครื่องมือ แต่ถ้าต้องการ JARVIS จริง ๆ มันต้อง always-on — พร้อมตอบตลอดเวลาผ่าน messaging ที่เราใช้ในชีวิตจริง ไม่ว่าจะ Telegram, Discord, LINE หรือ WhatsApp</p>
+
+        <p>ตรงนี้คือจุดที่ต้องมี agent layer ที่เชื่อมทุกอย่างเข้าด้วยกัน — vault, memory system, proactive behavior, และ messaging channels — ให้ทำงานเป็นระบบเดียวที่ไม่ต้องเปิดปิด</p>
+
+        <!-- ════════════════════════════════════════════ -->
+        <!-- PART 3: CASE STUDY -->
+        <!-- ════════════════════════════════════════════ -->
+
+        <h2>📋 Case Study: OpenClaw — ระบบที่รันจริงอยู่ตอนนี้</h2>
+
+        <p>ทุกสิ่งที่พูดมาไม่ใช่ทฤษฎี — นี่คือ setup จริงที่ผมรันอยู่ทุกวัน ใช้ <a href="https://openclaw.ai" target="_blank">OpenClaw</a> เป็น agent framework ที่เชื่อม Claude เข้ากับ Obsidian vault, memory system, และ Telegram</p>
+
+        <div class="case-study-box">
+            <h4>📊 ตัวเลขจริงจาก Production Setup</h4>
+            <p><strong>Vault:</strong> 862 ไฟล์ markdown, 136,875 คำ, 846 internal links, 83 unique tags<br>
+            <strong>Memory:</strong> Daily notes อัตโนมัติทุกวัน + MEMORY.md curate ทุกสัปดาห์<br>
+            <strong>Cron Jobs:</strong> Idle scanner ทุก 30 นาที + Vault insight ทุกสัปดาห์<br>
+            <strong>Channel:</strong> Telegram direct message — ส่งข้อความถึง AI ได้ตลอด 24/7<br>
+            <strong>Tools:</strong> Web search, file management, code execution, Google Workspace, vault intelligence</p>
+        </div>
+
+        <h3>ตัวอย่างที่ 1: Vault Intelligence</h3>
+
+        <p>แทนที่จะเปิด Obsidian กด search เอง ผมแค่พิมพ์ใน Telegram:</p>
+
+        <div class="code-block"># ค้นหาด้วยภาษาธรรมชาติ
+"หาโน้ตที่เกี่ยวกับ machine learning ใน vault"
+
+# ผลลัพธ์จริง:
+🔍 Search: "machine learning" — 5 results
+
+  [44] KnowledgeGraph/People/Machine-Learning.md (212 words)
+  [42] KnowledgeGraph/Topics/machine learning.md (82 words)
+  [25] KnowledgeGraph/People/Session-Learnings.md (745 words)
+  ...</div>
+
+        <div class="code-block"># วิเคราะห์ vault หา patterns
+"วิเคราะห์ vault ให้หน่อย ว่ามี theme อะไรบ้าง"
+
+# ผลลัพธ์จริง:
+🎨 Theme Clusters:
+  Cluster 1: #database, #reference, #sales, #vpipe (strength: 11)
+  Cluster 2: #coding, #complete, #project, #rag (strength: 10)
+  Cluster 3: #course, #guide, #team (strength: 5)
+
+⚠️ Gaps:
+  - Missing notes: 273 (referenced but don't exist)
+  - Stub notes: 355 (&lt;50 words)
+  - Dead-end notes: 163 (no outlinks)</div>
+
+        <h3>ตัวอย่างที่ 2: Proactive System Monitoring</h3>
+
+        <p>ทุก 30 นาที ระบบ scan ตัวเองอัตโนมัติ ถ้าเจอปัญหาจะแจ้งเอง:</p>
+
+        <div class="code-block"># Idle Scan ทำงานอัตโนมัติ (ไม่ต้องสั่ง):
+Idle scan: 4 issues (🔴0 🟡0 🔵4)
+- 🔵 stale_tmp: 51 stale files in tmp/
+- 🔵 git: workspace: 9 uncommitted changes
+- 🔵 git: obsidian-vault: 1 uncommitted changes
+
+# ถ้าเจอ 🔴 HIGH severity → แจ้งเตือนทันทีผ่าน Telegram
+# ถ้าเจอแค่ 🔵 LOW → บันทึกเงียบ ๆ ใน memory</div>
+
+        <h3>ตัวอย่างที่ 3: Memory ที่สะสมจริง</h3>
+
+        <div class="code-block"># MEMORY.md — ตัวอย่างจากระบบจริง (ย่อ)
+
+## About Anirach
+- Collaboration style: direct, practical, fast execution
+- Preferred tone: calm, strategic, precise, informative
+
+## Durable Workflow Preferences
+- Prefers momentum: continue retries until tasks complete
+- Blog editing rule: confirm new vs replacement before changing
+- For heavy HTML work (&gt;500 lines), generate via Python script
+
+## Technical Lessons
+- RAG performance improves by loading models once per batch
+- LibreOffice headless PDF conversion works without Java
+- Keep embeddings-only Gemini usage unless explicitly requested</div>
+
+        <p>AI รู้ว่าผมชอบทำงานแบบไหน เคยมีปัญหาอะไร และเรียนรู้อะไรจากประสบการณ์ที่ผ่านมา ทุกครั้งที่มันช่วยงาน มันไม่ได้เริ่มจากศูนย์ แต่เริ่มจากสิ่งที่สะสมไว้</p>
+
+        <h3>ตัวอย่างที่ 4: Blog Post Generation จาก Vault</h3>
+
+        <p>บทความที่คุณอ่านอยู่ตอนนี้ก็ถูกสร้างด้วยวิธีนี้ — ผมส่งไอเดียเข้าไปใน Telegram, AI ดึงข้อมูลจาก vault, ใช้ memory เรื่อง blog conventions, แล้วสร้าง HTML ที่ตรงกับสไตล์ของเว็บไซต์ทั้งหมดภายในรอบเดียว</p>
+
+        <!-- ════════════════════════════════════════════ -->
+        <!-- PART 4: PRIVACY & SECURITY -->
+        <!-- ════════════════════════════════════════════ -->
+
+        <h2>🔒 Privacy & Security — ทำไม Local-First ถึงสำคัญ</h2>
+
+        <p>ข้อมูลใน Obsidian vault คือชีวิตทั้งชีวิตของเรา — ความคิด งานวิจัย ไอเดียธุรกิจ personal notes บางทีมีข้อมูลคนอื่นด้วย การเอาไปวางบน cloud service ที่ไม่รู้ว่าใครเข้าถึงได้บ้างมันเสี่ยงเกินไป</p>
+
+        <h3>ทำไม Local-First ถึงดีกว่า</h3>
+
+        <ul>
+            <li><strong>ข้อมูลไม่ออกจากเครื่อง</strong> — Obsidian vault อยู่ใน disk เรา AI ประมวลผลที่เราเอง</li>
+            <li><strong>ไม่ต้องพึ่ง cloud sync</strong> — ไม่กลัว data breach จาก third-party service</li>
+            <li><strong>ควบคุมได้ทั้งหมด</strong> — จะลบ จะย้าย จะ encrypt ก็ทำได้เอง</li>
+            <li><strong>Offline capable</strong> — vault ยังใช้งานได้แม้ไม่มีอินเทอร์เน็ต</li>
+        </ul>
+
+        <div class="warning-box">
+            <h4>⚠️ สิ่งที่ต้องระวัง</h4>
+            <p>แม้จะ local-first แต่ตัว AI model ยังต้องส่ง prompt ไปประมวลผลที่ cloud (Anthropic API) ดังนั้นต้องระวังว่าข้อมูลที่ส่งไปใน prompt ไม่มี sensitive data ที่ไม่ควรออกจากเครื่อง ถ้าต้องการ privacy สมบูรณ์ 100% ต้องใช้ local model (เช่น Ollama + Llama) แทน</p>
+        </div>
+
+        <h3>Security Best Practices</h3>
+
+        <ul>
+            <li>แยก vault ส่วนตัว vs vault ที่ AI เข้าถึง — ไม่ต้องให้ AI เห็นทุกอย่าง</li>
+            <li>ใช้ <code>.gitignore</code> exclude ไฟล์ sensitive ออกจาก version control</li>
+            <li>ตรวจ skills/plugins ก่อนติดตั้ง — ระวัง supply chain attacks</li>
+            <li>ใช้ sandbox isolation ป้องกัน AI execute commands อันตราย</li>
+            <li>Review memory files เป็นระยะ — ดูว่า AI บันทึกอะไรไว้</li>
+        </ul>
+
+        <!-- ════════════════════════════════════════════ -->
+        <!-- PART 5: HOW TO START -->
+        <!-- ════════════════════════════════════════════ -->
+
+        <h2>🛠️ วิธีเริ่มต้น — จากศูนย์สู่ Personal AI</h2>
+
+        <p>ไม่ต้องทำทุกอย่างพร้อมกัน เริ่มทีละชั้น แล้วค่อยขยับขึ้นเมื่อพร้อม:</p>
+
+        <h3>Phase 1: สร้างฐาน (สัปดาห์ที่ 1-2)</h3>
+
+        <div class="step">
+            <div class="step__number">1</div>
+            <div class="step__content">
+                <h4>ติดตั้ง Obsidian + สร้างนิสัยจดโน้ต</h4>
+                <p>เริ่มจากง่าย ๆ — จดทุกอย่างที่เจอระหว่างวัน: ไอเดีย, บทความที่อ่าน, decisions ที่ตัดสิน, สิ่งที่เรียนรู้ ไม่ต้องสวย ไม่ต้อง organize เยอะ แค่เก็บเข้า vault ให้เป็นนิสัย</p>
+            </div>
+        </div>
+
+        <div class="step">
+            <div class="step__number">2</div>
+            <div class="step__content">
+                <h4>จัดโครงสร้างเบื้องต้น</h4>
+                <p>สร้างโฟลเดอร์หลัก เช่น <code>Daily/</code> <code>Research/</code> <code>Projects/</code> <code>Ideas/</code> ใช้ tags กำกับ theme ของแต่ละโน้ต ใช้ <code>[[wiki links]]</code> เชื่อมโน้ตที่เกี่ยวกัน</p>
+            </div>
+        </div>
+
+        <h3>Phase 2: ต่อ AI เข้ามา (สัปดาห์ที่ 3-4)</h3>
+
+        <div class="step">
+            <div class="step__number">3</div>
+            <div class="step__content">
+                <h4>ติดตั้ง Claude Code + ชี้ไปที่ vault</h4>
+                <p>ติดตั้ง Claude Code ผ่าน terminal จากนั้น <code>cd</code> ไปที่โฟลเดอร์ vault แล้วเริ่มถามคำถาม เช่น "สรุปสิ่งที่ฉันเขียนเรื่อง X ตลอดเดือนนี้" หรือ "หาโน้ตที่เกี่ยวกับ Y แต่ยังไม่ได้เชื่อมกัน"</p>
+            </div>
+        </div>
+
+        <div class="code-block"># ติดตั้ง Claude Code
+npm install -g @anthropic-ai/claude-code
+
+# เปิดใช้งาน ชี้ไปที่ vault
+cd ~/obsidian-vault
+claude
+
+# เริ่มถาม
+> สรุป themes หลัก ๆ ที่ฉันเขียนในเดือนนี้
+> หาโน้ตที่เกี่ยวกับ RAG แต่ยังไม่ได้ link กัน
+> draft บทความจากโน้ตทั้งหมดเรื่อง machine learning</div>
+
+        <div class="step">
+            <div class="step__number">4</div>
+            <div class="step__content">
+                <h4>สร้าง Vault Intelligence Tools</h4>
+                <p>เขียน scripts ง่าย ๆ เช่น vault search, vault stats, vault insight — เพื่อให้ AI มีเครื่องมือวิเคราะห์ vault ได้ลึกขึ้น ไม่ต้องอ่านทุกไฟล์ทุกครั้ง</p>
+            </div>
+        </div>
+
+        <h3>Phase 3: ยกระดับเป็น JARVIS (เดือนที่ 2+)</h3>
+
+        <div class="step">
+            <div class="step__number">5</div>
+            <div class="step__content">
+                <h4>เพิ่ม Memory System</h4>
+                <p>สร้างไฟล์ <code>MEMORY.md</code> <code>SOUL.md</code> <code>USER.md</code> ให้ AI มีตัวตนและจำ context ได้ ตั้ง cron/heartbeat ให้ AI curate memory อัตโนมัติ</p>
+            </div>
+        </div>
+
+        <div class="step">
+            <div class="step__number">6</div>
+            <div class="step__content">
+                <h4>ต่อ Agent Layer + Messaging</h4>
+                <p>ใช้ agent framework (เช่น OpenClaw) เชื่อม AI เข้ากับ Telegram/Discord ให้คุยได้ตลอด ตั้ง proactive behaviors เช่น idle scanning, email checking, calendar alerts</p>
+            </div>
+        </div>
+
+        <div class="step">
+            <div class="step__number">7</div>
+            <div class="step__content">
+                <h4>ขยายขีดความสามารถ</h4>
+                <p>ต่อ Google Workspace, GitHub, web search, code execution เข้ามา ให้ AI ทำงานได้จริง — ไม่ใช่แค่ตอบคำถาม แต่ draft email, สร้าง blog post, commit code, จัดการ calendar</p>
+            </div>
+        </div>
+
+        <!-- ════════════════════════════════════════════ -->
+        <!-- USE CASES -->
+        <!-- ════════════════════════════════════════════ -->
+
+        <h2>🎯 ใครได้ประโยชน์จากสิ่งนี้</h2>
+
+        <h3>นักวิจัย / อาจารย์</h3>
+        <p>เก็บ paper notes, research ideas, methodology decisions ใน vault แล้วให้ AI ช่วยหา gaps ในงานวิจัย, สร้าง literature review จากโน้ตที่สะสม, หรือ draft paper sections จากข้อมูลที่มี</p>
+
+        <h3>Content Creator / นักเขียน</h3>
+        <p>เก็บทุกไอเดีย ทุกโพสต์ ทุกโครงร่างไว้ใน vault แล้วให้ AI ช่วยหาว่าเคยเล่ามุมไหนไปแล้ว มุมไหนยังไม่แตะ เรื่องไหนต่อยอดได้ โทนจะใกล้ตัวเรามากกว่าใช้ AI เริ่มจากศูนย์ เพราะต้นทางคือข้อมูลของเราเอง</p>
+
+        <h3>สาย Crypto / Finance</h3>
+        <p>แต่ละวันรับข้อมูลเยอะมาก — research, ข่าว, มุมมอง, ไอเดีย ถ้าเก็บลง vault แล้วให้ AI ช่วยอ่านซ้ำ ช่วยเชื่อม ช่วยสรุป จะเริ่มเห็น pattern: narrative ที่เก็บซ้ำ ๆ ช่องว่างที่ยังไม่ได้เขียน มุมที่ถนัดแต่ยังใช้ไม่เต็มที่</p>
+
+        <h3>Developer / Engineer</h3>
+        <p>เก็บ architecture decisions, debug notes, code snippets, project retrospectives ใน vault ทุกครั้งที่เจอปัญหาคล้าย ๆ เดิม AI จะดึง context จากครั้งก่อนมาช่วยทันที ไม่ต้อง google ใหม่</p>
+
+        <!-- ════════════════════════════════════════════ -->
+        <!-- SUMMARY -->
+        <!-- ════════════════════════════════════════════ -->
+
+        <div class="takeaways">
+            <h3>🎯 สรุป — Key Takeaways</h3>
+            <ul>
+                <li><strong>Obsidian คือฐาน, AI คือเครื่องยนต์</strong> — vault เก็บความรู้เราทั้งหมดเป็น plain text ที่ AI อ่านได้ทันที</li>
+                <li><strong>AI ทั่วไปแค่ "ฉลาด" แต่ AI + vault "ตรงกับเรา"</strong> — มันดึงจาก framework และมุมมองที่เราสะสมไว้เอง ไม่ใช่คำตอบ generic จากอินเทอร์เน็ต</li>
+                <li><strong>ชั้นที่ 3-5 คือจุดเปลี่ยน</strong> — Memory system, proactive behavior, always-on messaging ทำให้เปลี่ยนจาก "เครื่องมือ" เป็น "ผู้ช่วยที่มีชีวิต"</li>
+                <li><strong>Privacy ต้องมาก่อน</strong> — Local-first, แยก vault, review memory เป็นระยะ</li>
+                <li><strong>เริ่มจากนิสัยจดโน้ต</strong> — เทคโนโลยีมาทีหลัง สิ่งสำคัญที่สุดคือเริ่มเก็บข้อมูลให้เป็นระบบก่อน</li>
+                <li><strong>มันไม่ใช่ productivity hack</strong> — มันคือการค่อย ๆ สร้างสมองที่สอง แล้วเอา AI มาเป็นตัวเร่งให้สมองก้อนนั้นใช้งานได้จริงในทุกวัน</li>
+            </ul>
+        </div>
+
+        <p style="text-align: center; margin-top: 2rem; font-size: 1.1rem; color: var(--slate-light);">
+            <em>ถ้าพูดง่าย ๆ — Obsidian คือฐาน, AI คือเครื่องยนต์<br>
+            พอประกบกันดี ๆ มันไม่ได้แค่ช่วยทำงานเร็วขึ้น<br>
+            แต่มันช่วยให้เรา <strong style="color: var(--purple);">"คิดจากสิ่งที่เราสั่งสมมา"</strong> ได้ดีขึ้นด้วย</em>
+        </p>
+
+    </div>
+</div>
+
+<!-- FOOTER -->
+<footer class="footer">
+    <a href="./">← กลับไปหน้า Blog</a>
+    <span>© 2026 Anirach Mingkhwan</span>
+</footer>
+
+</body>
+</html>
