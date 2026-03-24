@@ -1,0 +1,654 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Self-Transferring OpenClaw Bot — ย้าย AI Agent ข้ามเครื่องแบบไม่พลาด | OpenClaw 2026</title>
+    <meta name="description" content="คู่มือย้าย OpenClaw bot จาก VPS Ubuntu ไป Mac Studio แบบ step-by-step พร้อม self-check ให้ bot ตรวจตัวเองว่าย้ายครบ">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'SF Pro Display', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            line-height: 1.7; color: #1a1a1a; background: #ffffff;
+        }
+        .container { max-width: 800px; margin: 0 auto; padding: 0 20px; }
+        header {
+            background: linear-gradient(135deg, #2563eb 0%, #3b82f6 50%, #60a5fa 100%);
+            color: white; padding: 2rem 0; margin-bottom: 2rem;
+        }
+        nav { background: #f8f9fa; padding: 1rem 0; border-bottom: 1px solid #e9ecef; margin-bottom: 2rem; }
+        nav ul { list-style: none; display: flex; justify-content: center; flex-wrap: wrap; gap: 2rem; }
+        nav a { color: #2563eb; text-decoration: none; font-weight: 500; transition: color 0.3s; }
+        nav a:hover { color: #1d4ed8; }
+        .hero { text-align: center; padding: 3rem 0; }
+        .hero h1 { font-size: 2.4rem; font-weight: 700; margin-bottom: 1rem; text-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+        .hero .subtitle { font-size: 1.2rem; opacity: 0.9; margin-bottom: 1rem; }
+        .series-info {
+            background: rgba(255,255,255,0.2); padding: 1rem;
+            border-radius: 10px; margin-top: 1.5rem;
+        }
+        .content { margin-bottom: 3rem; }
+        h2 { color: #2563eb; font-size: 1.8rem; margin: 2.5rem 0 1rem 0; font-weight: 600; }
+        h3 { color: #1d4ed8; font-size: 1.3rem; margin: 2rem 0 0.8rem 0; font-weight: 600; }
+        p { margin-bottom: 1.2rem; color: #374151; text-align: justify; }
+        .code-block {
+            background: #1e293b; color: #e2e8f0; padding: 1.5rem; border-radius: 8px;
+            margin: 1.5rem 0; border-left: 4px solid #3b82f6;
+            font-family: 'SF Mono', Monaco, 'Cascadia Code', 'Roboto Mono', Consolas, 'Courier New', monospace;
+            font-size: 0.85rem; overflow-x: auto; white-space: pre; white-space: pre-wrap;
+        }
+        .code-block .comment { color: #64748b; }
+        .highlight-box {
+            background: linear-gradient(135deg, #eff6ff 0%, #f0f9ff 100%);
+            border: 1px solid #93c5fd; border-radius: 10px; padding: 1.5rem; margin: 1.5rem 0;
+        }
+        .highlight-box h4 { color: #2563eb; margin-bottom: 0.8rem; font-weight: 600; }
+        .warning-box {
+            background: linear-gradient(135deg, #fef3c7 0%, #fffbeb 100%);
+            border: 1px solid #fcd34d; border-radius: 10px; padding: 1.5rem; margin: 1.5rem 0;
+        }
+        .warning-box h4 { color: #d97706; margin-bottom: 0.8rem; font-weight: 600; }
+        .danger-box {
+            background: linear-gradient(135deg, #fee2e2 0%, #fef2f2 100%);
+            border: 1px solid #fca5a5; border-radius: 10px; padding: 1.5rem; margin: 1.5rem 0;
+        }
+        .danger-box h4 { color: #dc2626; margin-bottom: 0.8rem; font-weight: 600; }
+        .success-box {
+            background: linear-gradient(135deg, #ecfdf5 0%, #f0fdf4 100%);
+            border: 1px solid #6ee7b7; border-radius: 10px; padding: 1.5rem; margin: 1.5rem 0;
+        }
+        .success-box h4 { color: #059669; margin-bottom: 0.8rem; font-weight: 600; }
+        .step-number {
+            display: inline-flex; align-items: center; justify-content: center;
+            width: 36px; height: 36px; background: #2563eb; color: white;
+            border-radius: 50%; font-weight: 700; font-size: 1rem; margin-right: 0.5rem;
+            flex-shrink: 0;
+        }
+        .step-header {
+            display: flex; align-items: center; margin: 2.5rem 0 1rem 0;
+        }
+        .step-header h3 { margin: 0; }
+        .checklist { list-style: none; padding-left: 0; }
+        .checklist li {
+            padding: 0.5rem 0 0.5rem 2rem; position: relative;
+            border-bottom: 1px solid #f3f4f6;
+        }
+        .checklist li::before {
+            content: "☐"; position: absolute; left: 0; color: #6b7280; font-size: 1.1rem;
+        }
+        .checklist li.pass::before { content: "✅"; }
+        .flow-diagram {
+            background: #f8fafc; border: 2px solid #e2e8f0; border-radius: 12px;
+            padding: 2rem; margin: 2rem 0; text-align: center;
+        }
+        .flow-step {
+            display: inline-block; background: #2563eb; color: white;
+            padding: 0.5rem 1rem; border-radius: 25px; margin: 0.3rem;
+            font-weight: 500; font-size: 0.85rem;
+        }
+        .flow-step.green { background: #059669; }
+        .flow-step.orange { background: #d97706; }
+        .flow-arrow { display: inline-block; color: #9ca3af; font-size: 1.2rem; margin: 0 0.3rem; }
+        ul, ol { padding-left: 1.5rem; margin-bottom: 1.2rem; }
+        li { margin-bottom: 0.5rem; color: #374151; }
+        .takeaways {
+            background: linear-gradient(135deg, #eff6ff 0%, #f0f9ff 100%);
+            border: 1px solid #93c5fd; border-radius: 10px; padding: 2rem; margin: 2rem 0;
+        }
+        .takeaways h3 { color: #2563eb; margin-bottom: 1rem; }
+        .takeaways ul { padding-left: 1.5rem; }
+        .takeaways li { margin-bottom: 0.5rem; color: #374151; }
+        .phase-label {
+            display: inline-block; background: #dbeafe; color: #1d4ed8;
+            padding: 0.3rem 0.8rem; border-radius: 6px; font-weight: 600;
+            font-size: 0.85rem; margin-bottom: 0.5rem;
+        }
+        .phase-label.green { background: #d1fae5; color: #047857; }
+        .phase-label.orange { background: #fef3c7; color: #92400e; }
+        footer {
+            background: #f8f9fa; padding: 2rem 0; text-align: center;
+            color: #6b7280; border-top: 1px solid #e9ecef;
+        }
+        footer a { color: #2563eb; text-decoration: none; }
+        footer a:hover { text-decoration: underline; }
+        @media (max-width: 768px) {
+            .hero h1 { font-size: 1.7rem; }
+            h2 { font-size: 1.4rem; }
+            h3 { font-size: 1.15rem; }
+            .code-block { font-size: 0.8rem; padding: 1rem; }
+            nav ul { gap: 1rem; }
+        }
+    </style>
+</head>
+<body>
+
+<nav>
+    <div class="container">
+        <ul>
+            <li><a href="../index.html">Home</a></li>
+            <li><a href="index.html">Blog</a></li>
+            <li><a href="../index.html#research">Research</a></li>
+        </ul>
+    </div>
+</nav>
+
+<header>
+    <div class="container">
+        <div class="hero">
+            <h1>🚚 Self-Transferring OpenClaw Bot<br>ย้าย AI Agent ข้ามเครื่องแบบไม่พลาด</h1>
+            <p class="subtitle">จาก VPS Ubuntu → Mac Studio — คู่มือ step-by-step พร้อม self-check ให้ bot ตรวจตัวเองว่าย้ายครบสมบูรณ์</p>
+            <div class="series-info">
+                📅 March 2026 &nbsp;|&nbsp; ⏱️ 12 min read &nbsp;|&nbsp; 🏷️ OpenClaw · Migration · DevOps
+            </div>
+        </div>
+    </div>
+</header>
+
+<main class="container">
+    <article class="content">
+
+        <h2>ทำไมต้องย้าย?</h2>
+        <p>มีหลายเหตุผลที่คุณอาจต้องย้าย OpenClaw bot ไปเครื่องใหม่ — VPS หมดสัญญา, อยากเปลี่ยนมาใช้เครื่องที่แรงกว่า, ย้ายจาก cloud มาเครื่องบ้าน, หรือแค่อยาก consolidate หลายบอทมาเครื่องเดียว</p>
+        <p>ปัญหาคือ OpenClaw bot ไม่ใช่แค่โปรแกรมเดียว — มันมี config, credentials, memory, workspace, skills, cron jobs, และ session data ที่ต้องย้ายมาด้วยกันหมด ถ้าย้ายไม่ครบ bot จะลืมทุกอย่าง หรือแย่กว่านั้น — ส่งข้อความไม่ได้</p>
+
+        <div class="flow-diagram">
+            <span class="flow-step">📦 Backup เครื่องเก่า</span>
+            <span class="flow-arrow">→</span>
+            <span class="flow-step orange">📤 Transfer ข้ามเครื่อง</span>
+            <span class="flow-arrow">→</span>
+            <span class="flow-step">📥 Restore เครื่องใหม่</span>
+            <span class="flow-arrow">→</span>
+            <span class="flow-step green">✅ Self-Check</span>
+        </div>
+
+        <div class="warning-box">
+            <h4>⚠️ ก่อนเริ่ม — อ่านนี้ก่อน</h4>
+            <ul style="margin-bottom:0">
+                <li>ห้ามรัน bot ทั้งสองเครื่องพร้อมกัน (โดยเฉพาะ Telegram — session จะชนกัน)</li>
+                <li>ย้ายเสร็จแล้วค่อย stop เครื่องเก่า ← ทำแบบนี้ผิด! ต้อง <strong>stop เครื่องเก่าก่อน</strong> แล้วค่อยเริ่มเครื่องใหม่</li>
+                <li>ถ้าใช้ Telegram channel — session ผูกกับ device ดังนั้น <strong>ต้อง stop เครื่องเก่าก่อนเสมอ</strong></li>
+            </ul>
+        </div>
+
+        <h2>สิ่งที่ต้องเตรียม</h2>
+        <ul>
+            <li><strong>เครื่องเก่า:</strong> VPS Ubuntu ที่รัน OpenClaw อยู่</li>
+            <li><strong>เครื่องใหม่:</strong> Mac Studio (macOS) — หรือเครื่องใหม่ใดๆ ที่มี Node.js 18+</li>
+            <li><strong>SSH access</strong> ถึงทั้งสองเครื่อง</li>
+            <li><strong>พื้นที่ว่างเพียงพอ</strong> บนเครื่องใหม่ (ดูจาก <code>du -sh ~/.openclaw</code>)</li>
+        </ul>
+
+        <!-- ========== PHASE 1 ========== -->
+        <span class="phase-label">PHASE 1 — เครื่องเก่า (VPS Ubuntu)</span>
+        <h2>เตรียมและ Backup จากเครื่องเก่า</h2>
+
+        <div class="step-header">
+            <span class="step-number">1</span>
+            <h3>หยุด Gateway บนเครื่องเก่า</h3>
+        </div>
+        <p>สำคัญมาก — ต้องหยุดก่อนเพื่อไม่ให้เกิดการเขียน data ระหว่าง backup</p>
+        <div class="code-block"><span class="comment"># SSH เข้าเครื่องเก่า</span>
+ssh user@your-vps-ip
+
+<span class="comment"># หยุด gateway</span>
+openclaw gateway stop
+
+<span class="comment"># ยืนยันว่าหยุดแล้ว</span>
+openclaw gateway status
+<span class="comment"># ควรเห็น: Gateway is not running</span></div>
+
+        <div class="step-header">
+            <span class="step-number">2</span>
+            <h3>ตรวจสอบขนาดข้อมูล</h3>
+        </div>
+        <div class="code-block"><span class="comment"># ดูขนาดทั้งหมด</span>
+du -sh ~/.openclaw
+
+<span class="comment"># ดูรายละเอียดแต่ละโฟลเดอร์</span>
+du -sh ~/.openclaw/*/
+
+<span class="comment"># ตัวอย่างผลลัพธ์:</span>
+<span class="comment"># 12M   ~/.openclaw/workspace/</span>
+<span class="comment"># 4.0K  ~/.openclaw/credentials/</span>
+<span class="comment"># 256K  ~/.openclaw/agents/</span>
+<span class="comment"># 2.1M  ~/.openclaw/telegram/</span>
+<span class="comment"># 80K   ~/.openclaw/cron/</span></div>
+
+        <div class="step-header">
+            <span class="step-number">3</span>
+            <h3>สร้าง Backup ด้วย openclaw backup</h3>
+        </div>
+        <p>OpenClaw มีคำสั่ง backup ในตัว — ใช้มันแทนที่จะ tar เอง เพราะมันรู้ว่าอะไรต้อง include อะไรข้าม</p>
+        <div class="code-block"><span class="comment"># สร้าง backup พร้อม verify</span>
+openclaw backup create --verify --output ~/
+
+<span class="comment"># จะได้ไฟล์ประมาณ:</span>
+<span class="comment"># ~/2026-03-24T00-00-00.000Z-openclaw-backup.tar.gz</span>
+
+<span class="comment"># ดูขนาด backup</span>
+ls -lh ~/2026-03-24*.tar.gz</div>
+
+        <div class="highlight-box">
+            <h4>💡 backup ครอบคลุมอะไรบ้าง?</h4>
+            <ul style="margin-bottom:0">
+                <li><strong>openclaw.json</strong> — config หลัก (model, channels, settings ทั้งหมด)</li>
+                <li><strong>credentials/</strong> — API keys, tokens ทุกตัว</li>
+                <li><strong>agents/</strong> — agent configs, auth profiles</li>
+                <li><strong>workspace/</strong> — SOUL.md, MEMORY.md, memory/, skills, tools ทั้งหมด</li>
+                <li><strong>telegram/</strong> — session data (สำคัญ! ไม่งั้นต้อง login ใหม่)</li>
+                <li><strong>cron/</strong> — scheduled tasks ทั้งหมด</li>
+            </ul>
+        </div>
+
+        <div class="step-header">
+            <span class="step-number">4</span>
+            <h3>(ทางเลือก) Manual backup เพิ่มเติม</h3>
+        </div>
+        <p>ถ้าคุณมีไฟล์พิเศษนอก <code>~/.openclaw</code> เช่น crontab, systemd service, หรือ git credentials:</p>
+        <div class="code-block"><span class="comment"># Export crontab</span>
+crontab -l > ~/crontab-backup.txt
+
+<span class="comment"># Copy git credentials ถ้ามี</span>
+cp ~/.git-credentials ~/git-credentials-backup 2>/dev/null
+
+<span class="comment"># Copy .env files ถ้ามี</span>
+cp ~/.openclaw/.env ~/env-backup 2>/dev/null
+
+<span class="comment"># บันทึก OpenClaw version</span>
+openclaw --version > ~/openclaw-version.txt
+npm list -g openclaw >> ~/openclaw-version.txt</div>
+
+        <!-- ========== PHASE 2 ========== -->
+        <span class="phase-label orange">PHASE 2 — Transfer ข้ามเครื่อง</span>
+        <h2>ส่งข้อมูลไปเครื่องใหม่</h2>
+
+        <div class="step-header">
+            <span class="step-number">5</span>
+            <h3>โอนไฟล์ด้วย scp หรือ rsync</h3>
+        </div>
+        <p>เลือกวิธีที่สะดวก — ทั้งสองวิธีใช้ได้:</p>
+        <div class="code-block"><span class="comment"># วิธี A: scp (ง่ายสุด) — รันจากเครื่องใหม่ (Mac Studio)</span>
+scp user@your-vps-ip:~/2026-03-24*.tar.gz ~/Downloads/
+
+<span class="comment"># วิธี B: rsync (เร็วกว่าถ้าไฟล์ใหญ่ หรืออยากมี progress)</span>
+rsync -avz --progress user@your-vps-ip:~/2026-03-24*.tar.gz ~/Downloads/
+
+<span class="comment"># วิธี C: ถ้าทั้งสองเครื่องอยู่ใน Tailscale</span>
+scp user@vps-tailscale-name:~/2026-03-24*.tar.gz ~/Downloads/</div>
+
+        <p>โอนไฟล์เพิ่มเติมด้วย (ถ้ามี):</p>
+        <div class="code-block">scp user@your-vps-ip:~/crontab-backup.txt ~/Downloads/
+scp user@your-vps-ip:~/git-credentials-backup ~/Downloads/
+scp user@your-vps-ip:~/openclaw-version.txt ~/Downloads/</div>
+
+        <!-- ========== PHASE 3 ========== -->
+        <span class="phase-label green">PHASE 3 — เครื่องใหม่ (Mac Studio)</span>
+        <h2>ติดตั้งและ Restore บนเครื่องใหม่</h2>
+
+        <div class="step-header">
+            <span class="step-number">6</span>
+            <h3>ติดตั้ง OpenClaw บนเครื่องใหม่</h3>
+        </div>
+        <div class="code-block"><span class="comment"># ติดตั้ง Node.js ถ้ายังไม่มี (macOS)</span>
+brew install node
+
+<span class="comment"># ติดตั้ง OpenClaw (ใช้ version เดียวกับเครื่องเก่า)</span>
+npm install -g openclaw
+
+<span class="comment"># ตรวจ version</span>
+openclaw --version</div>
+
+        <div class="warning-box">
+            <h4>⚠️ Version ต้องตรงกัน</h4>
+            <p style="margin-bottom:0">ดู version จาก <code>openclaw-version.txt</code> ที่ backup มา ถ้า version เก่าใช้ <code>npm install -g openclaw@x.x.x</code> — version ไม่ตรงอาจทำให้ config format ไม่เข้ากัน</p>
+        </div>
+
+        <div class="step-header">
+            <span class="step-number">7</span>
+            <h3>Restore จาก Backup</h3>
+        </div>
+        <div class="code-block"><span class="comment"># ตรวจ backup ก่อน restore</span>
+openclaw backup verify ~/Downloads/2026-03-24*.tar.gz
+
+<span class="comment"># Restore — แตกไฟล์ไปที่ ~/.openclaw</span>
+<span class="comment"># ถ้า ~/.openclaw ยังไม่มี (fresh install):</span>
+mkdir -p ~/.openclaw
+tar -xzf ~/Downloads/2026-03-24*.tar.gz -C ~
+
+<span class="comment"># ตรวจว่าไฟล์ครบ</span>
+ls -la ~/.openclaw/
+ls -la ~/.openclaw/workspace/
+ls -la ~/.openclaw/credentials/</div>
+
+        <div class="highlight-box">
+            <h4>💡 macOS path differences</h4>
+            <p style="margin-bottom:0">OpenClaw ใช้ <code>~/.openclaw</code> เหมือนกันทั้ง Linux และ macOS ดังนั้น path ไม่มีปัญหา แต่ถ้าใน config มี hardcoded absolute path (เช่น <code>/root/...</code>) ต้องแก้เป็น <code>/Users/yourname/...</code></p>
+        </div>
+
+        <div class="step-header">
+            <span class="step-number">8</span>
+            <h3>แก้ Config ให้เข้ากับเครื่องใหม่</h3>
+        </div>
+        <p>เปิด config แล้วตรวจสอบ path ที่อาจต้องแก้:</p>
+        <div class="code-block"><span class="comment"># เปิด config</span>
+nano ~/.openclaw/openclaw.json
+
+<span class="comment"># สิ่งที่ต้องเช็ค/แก้:</span>
+<span class="comment"># 1. workspace path — ถ้า hardcoded เป็น /root/... แก้เป็น /Users/yourname/...</span>
+<span class="comment"># 2. hostname/IP — ถ้า gateway bind อยู่กับ IP เก่า</span>
+<span class="comment"># 3. gateway port — ถ้าเครื่องใหม่ใช้ port นั้นอยู่แล้ว</span>
+<span class="comment"># 4. tools path — เช่น path ไป python, docker, etc.</span></div>
+
+        <div class="step-header">
+            <span class="step-number">9</span>
+            <h3>Restore ไฟล์เสริม</h3>
+        </div>
+        <div class="code-block"><span class="comment"># Git credentials (ถ้ามี)</span>
+cp ~/Downloads/git-credentials-backup ~/.git-credentials
+
+<span class="comment"># Crontab — ต้องแก้ path ก่อน import</span>
+<span class="comment"># เปิดดูก่อน:</span>
+cat ~/Downloads/crontab-backup.txt
+<span class="comment"># แก้ path แล้ว import:</span>
+crontab ~/Downloads/crontab-backup.txt</div>
+
+        <div class="step-header">
+            <span class="step-number">10</span>
+            <h3>เริ่ม Gateway บนเครื่องใหม่</h3>
+        </div>
+        <div class="code-block"><span class="comment"># เริ่ม gateway</span>
+openclaw gateway start
+
+<span class="comment"># ตรวจ status</span>
+openclaw gateway status
+
+<span class="comment"># ดู logs ว่ามี error ไหม</span>
+openclaw logs --tail 50</div>
+
+        <!-- ========== PHASE 4: SELF-CHECK ========== -->
+        <h2>🔍 Self-Check — ให้ Bot ตรวจตัวเอง</h2>
+        <p>นี่คือส่วนสำคัญที่สุด — หลังจากย้ายเสร็จ ให้รันสคริปต์ตรวจสอบว่าทุกอย่างครบ ใช้ได้ทั้งรันเองและให้ bot รัน</p>
+
+        <h3>สคริปต์ Self-Check อัตโนมัติ</h3>
+        <p>สร้างไฟล์ <code>migration-check.sh</code>:</p>
+        <div class="code-block">#!/bin/bash
+# ============================================
+# OpenClaw Migration Self-Check
+# ย้าย bot มาแล้ว ต้องเช็คว่าครบ
+# ============================================
+
+PASS=0
+FAIL=0
+WARN=0
+OPENCLAW_DIR="$HOME/.openclaw"
+
+check() {
+    local label="$1"
+    local result="$2"
+    if [ "$result" = "pass" ]; then
+        echo "  ✅ $label"
+        ((PASS++))
+    elif [ "$result" = "warn" ]; then
+        echo "  ⚠️  $label"
+        ((WARN++))
+    else
+        echo "  ❌ $label"
+        ((FAIL++))
+    fi
+}
+
+echo ""
+echo "🔍 OpenClaw Migration Self-Check"
+echo "================================="
+echo ""
+
+# --- 1. Core Files ---
+echo "📁 Core Files"
+[ -f "$OPENCLAW_DIR/openclaw.json" ] &amp;&amp; R="pass" || R="fail"
+check "openclaw.json exists" "$R"
+
+[ -d "$OPENCLAW_DIR/credentials" ] &amp;&amp; R="pass" || R="fail"
+check "credentials/ directory exists" "$R"
+
+[ -d "$OPENCLAW_DIR/agents" ] &amp;&amp; R="pass" || R="fail"
+check "agents/ directory exists" "$R"
+
+echo ""
+
+# --- 2. Workspace ---
+echo "📂 Workspace"
+[ -d "$OPENCLAW_DIR/workspace" ] &amp;&amp; R="pass" || R="fail"
+check "workspace/ exists" "$R"
+
+[ -f "$OPENCLAW_DIR/workspace/SOUL.md" ] &amp;&amp; R="pass" || R="fail"
+check "SOUL.md exists (bot personality)" "$R"
+
+[ -f "$OPENCLAW_DIR/workspace/MEMORY.md" ] &amp;&amp; R="pass" || R="warn"
+check "MEMORY.md exists (long-term memory)" "$R"
+
+[ -f "$OPENCLAW_DIR/workspace/USER.md" ] &amp;&amp; R="pass" || R="warn"
+check "USER.md exists (user profile)" "$R"
+
+[ -d "$OPENCLAW_DIR/workspace/memory" ] &amp;&amp; R="pass" || R="warn"
+check "memory/ directory exists (daily logs)" "$R"
+
+MEM_COUNT=$(ls "$OPENCLAW_DIR/workspace/memory/"*.md 2>/dev/null | wc -l)
+[ "$MEM_COUNT" -gt 0 ] &amp;&amp; R="pass" || R="warn"
+check "memory files present ($MEM_COUNT files)" "$R"
+
+echo ""
+
+# --- 3. Skills ---
+echo "🧩 Skills"
+SKILL_COUNT=$(find "$OPENCLAW_DIR/workspace/skills" -name "SKILL.md" 2>/dev/null | wc -l)
+[ "$SKILL_COUNT" -gt 0 ] &amp;&amp; R="pass" || R="warn"
+check "skills installed ($SKILL_COUNT skills)" "$R"
+
+echo ""
+
+# --- 4. Channel/Session Data ---
+echo "📡 Channels &amp; Sessions"
+[ -d "$OPENCLAW_DIR/telegram" ] &amp;&amp; R="pass" || R="warn"
+check "telegram/ session data exists" "$R"
+
+echo ""
+
+# --- 5. Cron Jobs ---
+echo "⏰ Cron Jobs"
+CRON_COUNT=$(ls "$OPENCLAW_DIR/cron/"*.json 2>/dev/null | wc -l)
+[ "$CRON_COUNT" -gt 0 ] &amp;&amp; R="pass" || R="warn"
+check "cron jobs present ($CRON_COUNT jobs)" "$R"
+
+echo ""
+
+# --- 6. Gateway ---
+echo "🌐 Gateway"
+if openclaw gateway status 2>/dev/null | grep -qi "running"; then
+    check "gateway is running" "pass"
+else
+    check "gateway is running" "fail"
+fi
+
+echo ""
+
+# --- 7. Connectivity ---
+echo "🔗 Connectivity"
+if openclaw status 2>/dev/null | grep -qi "ok\|connected\|online"; then
+    check "openclaw status OK" "pass"
+else
+    check "openclaw status check" "warn"
+fi
+
+echo ""
+
+# --- 8. Bot Response Test ---
+echo "🤖 Bot Response"
+echo "  ℹ️  Send a test message to your bot on Telegram/Discord"
+echo "  ℹ️  Verify it responds within 30 seconds"
+
+echo ""
+echo "================================="
+echo "Results: ✅ $PASS passed | ❌ $FAIL failed | ⚠️  $WARN warnings"
+echo ""
+
+if [ "$FAIL" -eq 0 ]; then
+    echo "🎉 Migration looks good!"
+    if [ "$WARN" -gt 0 ]; then
+        echo "   (Check warnings above — they may be optional)"
+    fi
+else
+    echo "🚨 $FAIL check(s) failed — review above and fix before going live"
+fi
+echo ""</div>
+
+        <p>รันสคริปต์:</p>
+        <div class="code-block">chmod +x migration-check.sh
+./migration-check.sh</div>
+
+        <h3>ผลลัพธ์ที่ควรเห็น</h3>
+        <div class="code-block">🔍 OpenClaw Migration Self-Check
+=================================
+
+📁 Core Files
+  ✅ openclaw.json exists
+  ✅ credentials/ directory exists
+  ✅ agents/ directory exists
+
+📂 Workspace
+  ✅ workspace/ exists
+  ✅ SOUL.md exists (bot personality)
+  ✅ MEMORY.md exists (long-term memory)
+  ✅ USER.md exists (user profile)
+  ✅ memory/ directory exists (daily logs)
+  ✅ memory files present (15 files)
+
+🧩 Skills
+  ✅ skills installed (12 skills)
+
+📡 Channels &amp; Sessions
+  ✅ telegram/ session data exists
+
+⏰ Cron Jobs
+  ✅ cron jobs present (3 jobs)
+
+🌐 Gateway
+  ✅ gateway is running
+
+🔗 Connectivity
+  ✅ openclaw status OK
+
+🤖 Bot Response
+  ℹ️  Send a test message to your bot on Telegram/Discord
+  ℹ️  Verify it responds within 30 seconds
+
+=================================
+Results: ✅ 12 passed | ❌ 0 failed | ⚠️  0 warnings
+
+🎉 Migration looks good!</div>
+
+        <h2>ให้ Bot ตรวจตัวเองผ่านแชท</h2>
+        <p>หลังจาก gateway เริ่มแล้ว ส่งข้อความหาบอทผ่าน Telegram แล้วถามให้มันตรวจ:</p>
+
+        <div class="highlight-box">
+            <h4>💬 ข้อความที่ส่งให้ bot</h4>
+            <p style="margin-bottom: 0.5rem; font-style: italic;">"เพิ่งย้ายเครื่อง ช่วยตรวจสอบหน่อยว่า:"</p>
+            <ol style="margin-bottom:0">
+                <li>อ่าน SOUL.md, MEMORY.md ได้ไหม?</li>
+                <li>memory files มีกี่ไฟล์?</li>
+                <li>skills ติดตั้งอยู่กี่ตัว?</li>
+                <li>cron jobs มีอะไรบ้าง?</li>
+                <li>รัน <code>openclaw status</code> แล้วแปะผลมาให้</li>
+                <li>จำอะไรเกี่ยวกับฉันได้บ้าง?</li>
+            </ol>
+        </div>
+
+        <p>ถ้า bot ตอบได้ทุกข้อ — แสดงว่า memory, config, credentials, และ channel ย้ายมาครบแล้ว ถ้ามันจำคุณไม่ได้หรืออ่านไฟล์ไม่ได้ แสดงว่า workspace path ยังไม่ถูกต้อง</p>
+
+        <h2>Cleanup เครื่องเก่า</h2>
+        <p>หลังจากมั่นใจว่าเครื่องใหม่ทำงานปกติแล้ว (ใช้งานจริง 1-2 วัน):</p>
+        <div class="code-block"><span class="comment"># SSH เข้าเครื่องเก่า</span>
+ssh user@your-vps-ip
+
+<span class="comment"># ยืนยันว่า gateway หยุดแล้ว</span>
+openclaw gateway status
+
+<span class="comment"># ถ้ายังรันอยู่:</span>
+openclaw gateway stop
+
+<span class="comment"># (ทางเลือก) ลบ OpenClaw ออกจากเครื่องเก่า</span>
+<span class="comment"># ⚠️ ทำเมื่อมั่นใจจริงๆ เท่านั้น!</span>
+<span class="comment"># npm uninstall -g openclaw</span>
+<span class="comment"># rm -rf ~/.openclaw</span></div>
+
+        <div class="danger-box">
+            <h4>🚨 อย่าลบเครื่องเก่าทันที!</h4>
+            <p style="margin-bottom:0">ใช้เครื่องใหม่จริง 2-3 วันก่อน ถ้ามีปัญหาจะได้กลับไป restore จากเครื่องเก่าได้ เก็บ backup file ไว้อย่างน้อย 1 สัปดาห์</p>
+        </div>
+
+        <h2>Troubleshooting</h2>
+
+        <h3>❌ Bot ไม่ตอบใน Telegram</h3>
+        <ul>
+            <li>เช็คว่า gateway รันอยู่: <code>openclaw gateway status</code></li>
+            <li>ดู logs: <code>openclaw logs --tail 100</code></li>
+            <li>Telegram session อาจหมดอายุ — ต้อง login ใหม่: <code>openclaw channels login telegram</code></li>
+        </ul>
+
+        <h3>❌ Bot ลืมทุกอย่าง</h3>
+        <ul>
+            <li>ตรวจ workspace path ใน config: <code>cat ~/.openclaw/openclaw.json | grep workspace</code></li>
+            <li>ตรวจว่า MEMORY.md อยู่ถูกที่: <code>ls ~/.openclaw/workspace/MEMORY.md</code></li>
+        </ul>
+
+        <h3>❌ Skills ใช้ไม่ได้</h3>
+        <ul>
+            <li>Skills ที่มี binary dependency (เช่น python, docker) ต้องติดตั้ง dependency บนเครื่องใหม่ด้วย</li>
+            <li>macOS อาจต้อง <code>brew install python3 docker</code></li>
+        </ul>
+
+        <h3>❌ Cron jobs ไม่ทำงาน</h3>
+        <ul>
+            <li>ตรวจ: <code>openclaw cron list</code></li>
+            <li>ถ้า cron ใช้ system crontab (ไม่ใช่ OpenClaw cron) ต้อง import crontab แยก</li>
+            <li>แก้ path ใน crontab ให้ตรงกับเครื่องใหม่</li>
+        </ul>
+
+        <div class="takeaways">
+            <h3>📌 สรุปขั้นตอนทั้งหมด</h3>
+            <ol>
+                <li><strong>หยุด gateway</strong> บนเครื่องเก่า</li>
+                <li><strong>Backup</strong> ด้วย <code>openclaw backup create --verify</code></li>
+                <li><strong>Transfer</strong> ไฟล์ด้วย scp/rsync ไปเครื่องใหม่</li>
+                <li><strong>ติดตั้ง OpenClaw</strong> บนเครื่องใหม่ (version เดียวกัน)</li>
+                <li><strong>Restore</strong> จาก backup archive</li>
+                <li><strong>แก้ path</strong> ที่ hardcoded ใน config (เช่น /root → /Users/name)</li>
+                <li><strong>เริ่ม gateway</strong> บนเครื่องใหม่</li>
+                <li><strong>รัน self-check</strong> script ยืนยันทุกอย่างครบ</li>
+                <li><strong>ส่งข้อความทดสอบ</strong> ให้ bot ตรวจตัวเอง</li>
+                <li><strong>ใช้จริง 2-3 วัน</strong> ก่อนลบเครื่องเก่า</li>
+            </ol>
+        </div>
+
+        <div class="success-box">
+            <h4>🎉 เสร็จแล้ว!</h4>
+            <p style="margin-bottom:0">Bot ของคุณย้ายบ้านเรียบร้อย — personality เดิม, ความจำเดิม, skills เดิม, ทุกอย่างเหมือนเดิม แค่เปลี่ยนเครื่อง เหมือนย้ายสมองจากร่างเก่าไปร่างใหม่ 🧠➡️💻</p>
+        </div>
+
+        <p style="text-align: center; margin-top: 2rem; color: #6b7280; font-style: italic;">
+            "A good migration is one where nobody notices anything changed — except the server bill."
+        </p>
+
+    </article>
+</main>
+
+<footer>
+    <div class="container">
+        <p>Written by <a href="../index.html">Anirach Mingkhwan</a> · March 2026</p>
+        <p style="margin-top: 0.5rem;">
+            <a href="index.html">← Back to Blog</a>
+        </p>
+    </div>
+</footer>
+
+</body>
+</html>
