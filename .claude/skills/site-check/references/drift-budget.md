@@ -4,8 +4,14 @@ Open this when the user wants to pay down cosmetic inconsistency, or when you ne
 warn-level violation is pre-existing. These do not block a push. Every count below was computed from
 the tree; re-verify with the quoted command before repeating a number.
 
-Baseline shape: 37 posts in `blog/`, 38 HTML files in `blog/`, 39 repo-wide, 358 internal
-`href|src` refs, 50 files in `images/`. Nav partition: 7 `.series-nav` + 25 `.post-nav` + 5 no-nav.
+Baseline shape (2026-08-10): 37 posts in `blog/`, 38 HTML files in `blog/`, 42 repo-wide (the 4
+landing pages `index.html` + `books/` + `projects/` + `news/` joined the site), 51 files in
+`images/`. Nav partition: 7 `.series-nav` + 25 `.post-nav` + 5 no-nav.
+
+**When you pay an item down, delete its key from `BASELINE` in `check_site.py` in the same commit.**
+INV-25 fails the build on any baseline key that no longer matches a live violation, because a dead
+key silently absorbs the next occurrence of the same defect. This file is the human-readable half of
+that table; keep the two in step.
 
 ## The pattern behind almost all of it
 
@@ -13,11 +19,12 @@ The 7 OpenClaw series posts (`openclaw-101`, `-agent-teams`, `-memory`, `-securi
 `-skills`, `-production`) are the un-templated corner of the site. They hand-roll their own header,
 their own footer, their own ordinal badge, and their own site nav — and they supply:
 
-- all **14** broken internal links (INV-05)
 - **5** of the **6** missing meta descriptions (INV-14)
-- **7** of the **10** posts with no `:root` (INV-22)
 - all **4** ordinal-badge markup variants (INV-20)
 - the one drifted series heading (INV-03b)
+
+They also supplied all 14 broken internal links (INV-05, fixed in `b9fb125`) and 7 of the 10 posts
+with no `:root` (INV-22, fixed in `6670480`) — both now green, both un-baselined.
 
 Fixing them as a group is a bigger win than fixing them one at a time. Everything else in this file
 is a long tail.
@@ -71,6 +78,10 @@ copyright written as the `&copy;` entity (4× `&copy; 2026`, 1× `&copy; 2024`; 
 blog-post/references/known-exceptions.md), so only 3 posts have no copyright at all. Pick one
 year and one encoding before editing 37 files.
 
+INV-15 iterates `site.posts` **only**. The 5 nav-bearing index pages are covered by INV-24 instead,
+which checks them for agreement with each other rather than against a hardcoded year — that gap is
+how `blog/index.html` kept a `© 2025` footer while the other four landing pages read 2026.
+
 ### INV-16 — footer container class (4 variants)
 `<footer class="blog-footer">` ×23, `<footer class="footer">` ×7, `<footer class="post-footer">` ×3,
 bare `<footer>` ×4. Each variant is styled by that page's own embedded `<style>` block, so
@@ -101,20 +112,23 @@ posts live in `#series-openclaw` (INV-19).
 
 All seven numbers match series-nav position. Only the presentation drifts.
 
-### INV-22 — posts with no `:root` (10)
-`beyond-plugins.html`, `idle-self-improvement.html`, `openclaw-101.html`,
-`openclaw-agent-teams.html`, `openclaw-integrations.html`, `openclaw-memory.html`,
-`openclaw-migration.html`, `openclaw-production.html`, `openclaw-security.html`,
-`openclaw-skills.html`.
+### INV-22 — posts with no `:root` (0 — RETIRED 2026-08-10)
+This cohort is gone. `6670480` landed the canonical 24-token `:root` block in all 39 files with
+embedded CSS — the 10 island posts (`beyond-plugins`, `idle-self-improvement`, `openclaw-migration`
+and the 7 series posts) included — and in `style.css` itself, which retires INV-22b too. Both
+BASELINE entries have been deleted, so a post that loses its `:root` is now reported as a **new**
+violation rather than absorbed as `[known]`.
 
-Two corrections to CLAUDE.md that this check exposes:
+Two notes that used to live here, corrected:
 
-- `style.css` has **0** `:root` blocks and **0** `var(` uses — it is plain hex literals only. The
-  `--navy` / `--blue` / `--slate` / `--bg` convention lives inside `blog/` pages' embedded styles,
-  not in the root stylesheet.
-- `data-reveal` is inert in `blog/`. `script.js` is loaded **only** by root `index.html`; no blog
-  page has a `<script>` tag at all, and `grep -o 'data-reveal' blog/index.html | wc -l` returns 0.
-  Adding `data-reveal` to a blog page does nothing.
+- `style.css` **does** now define the canonical tokens; CLAUDE.md's `--navy` / `--blue` advice reads
+  on the root stylesheet as well as inside `blog/` pages' embedded styles. Check
+  `page-design/references/tokens.md` for the canonical names before inventing one.
+- `data-reveal` is still inert in `blog/`. `script.js` is loaded **only** by root `index.html`, and
+  no blog page has a `<script>` tag at all, so adding `data-reveal` to a blog page does nothing —
+  and because `style.css` ships `[data-reveal] { opacity: 0 }`, doing it on a page that *does* link
+  `style.css` hides the element outright. INV-21b (info) now checks every page for this, not just
+  the ones in `blog/`.
 
 ### Header variants (informational, no INV id)
 26 posts carry `<nav class="blog-nav">` with exactly one link, `href="./"` — a perfectly uniform
@@ -124,10 +138,12 @@ header. The remaining 11 (the 7 series posts + `beyond-plugins`, `idle-self-impr
 
 ## Suggested order to pay it down
 
-1. **INV-05** (14 broken links) — the only warn-adjacent item that affects readers; it is fail-level
-   for a reason. One mapping table, 7 files.
-2. **INV-10** (8 stale nav titles) — cheap, mechanical, visible.
-3. **INV-14** (6 meta descriptions) — cheap, affects search results.
-4. **INV-06a** (9 orphan images) — one delete commit.
-5. **INV-03b / INV-20** — one-liners in the series posts; do them while you are already in there.
-6. **INV-15 / INV-16 / INV-22** — 37-file sweeps. Only worth it alongside a redesign.
+1. **INV-10** (8 stale nav titles) — cheap, mechanical, visible.
+2. **INV-14** (6 meta descriptions) — cheap, affects search results.
+3. **INV-06a** (9 orphan images) — one delete commit.
+4. **INV-03b / INV-20** — one-liners in the series posts; do them while you are already in there.
+5. **INV-15 / INV-16** — 37-file sweeps. Only worth it alongside a redesign.
+
+Already paid: **INV-05** (14 broken links, `b9fb125`), **INV-02a/02c** (counters, same commit),
+**INV-12** (dead hamburger on `blog/index.html`, Task 9), **INV-22 / INV-22b** (`:root`, `6670480`).
+Each one's BASELINE key is gone; do not resurrect them.

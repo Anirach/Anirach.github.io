@@ -23,12 +23,17 @@ prints one line, `[STATUS ] INV-id  count  title`, where STATUS is PASS (0 viola
 outside the baseline, at that check's severity). Non-zero checks then print a detail block: new
 violations marked ✗, baselined ones marked `· [known]`. A SUMMARY block closes the report.
 
-Exit 0 = no fail-severity violation outside the hard-coded BASELINE in check_site.py:153-260.
+Exit 0 = no fail-severity violation outside the hard-coded BASELINE in check_site.py:270-369.
 Exit 1 = at least one fail-severity violation whose key is not in that baseline. Exit 2 = usage or
 environment error (bad `--root`, unknown `--check` id, bad flag). Warn- and info-level checks print
 but never change the exit code, and neither do fail-level violations that match a baseline key —
-today 20 fail-severity violations across INV-04a/05/07a/11/12 are reported as [known] and the
-script still exits 0 once INV-02a/02c are fixed.
+today 6 fail-severity violations (INV-04a 2, INV-04f 1, INV-07a 2, INV-11 1) are reported as
+[known] and the script exits 0.
+
+A baseline entry is a promise, not a mute button. When you repair baselined debt, delete its key in
+the same commit: **INV-25 audits the whole table and fails if any key has stopped matching a live
+violation.** That check exists because INV-22's 10 keys and INV-22b's 1 key outlived their debt by
+19 commits and were caught laundering a freshly injected `:root` regression as [known].
 
 Flags: `--root PATH` (default: walk up from cwd, then from the script's own directory),
 `--check INV-05` (repeatable, run a subset), `--quiet` (status lines and summary only, no detail),
@@ -42,42 +47,55 @@ python3 .claude/skills/site-check/scripts/check_site.py --fix
 ```
 
 `--fix` recomputes all four counter sites in `blog/index.html` — the two `.blog-hero__stat` values
-(`:220` Series, `:221` Articles) and every `.series-count` (`:235`, `:573`) — from the actual
-`class="card"` counts, and rewrites only the ones that are wrong (2 of 4 today). It reports the
-already-correct ones as `ok … (already correct)`. It is idempotent and touches no other file.
-Nothing else is auto-fixable — every other failure needs a judgement call about which of two files
-is wrong.
+(Series, Articles) and both `.series-count` spans (`#series-openclaw`, `#series-devops`) — from the
+actual `class="card"` counts, and rewrites only the ones that are wrong (**0 of 4 today**: 37 cards,
+2 series-sections, 13 + 24). It reports the already-correct ones as `ok … (already correct)`. It is
+idempotent and touches no other file. Nothing else is auto-fixable — every other failure needs a
+judgement call about which of two files is wrong. Line numbers are deliberately not quoted here;
+`blog/index.html` is edited often and `--fix` prints the current ones.
 
 **Run it twice around every edit.** Capture the baseline before you touch anything, then compare.
-The repo is red today (see below), so "the script failed" means nothing on its own; "the script
-reports a violation that was not in the baseline" means you broke something. One blind spot
-remains: cohort-keyed checks (INV-15's copyright year, INV-16's footer class) report one violation
-per cohort, so a post moving between two already-known cohorts (e.g. © 2026 → © 2025) stays
-[known] and will NOT flip the exit code — read the per-check counts and details, not just the
-exit status.
+The tree exits 0 today but is not violation-free (see below), so "the script passed" means nothing
+on its own; "the script reports a violation that was not in the baseline" means you broke
+something. One blind spot remains: cohort-keyed checks (INV-15's copyright year, INV-16's footer
+class) report one violation per cohort, so a post moving between two already-known cohorts (e.g.
+© 2026 → © 2025) stays [known] and will NOT flip the exit code — read the per-check counts and
+details, not just the exit status.
 
-## Expected red on today's tree — do not panic, do not mass-fix
+## Expected `[known]` on today's tree — do not panic, do not mass-fix
 
-A clean checkout fails. These are pre-existing, verified as of the last audit:
+A clean checkout **exits 0** with **55 violations across 17 checks**, every one of them baselined.
+Verified against the tree at the fix round of 2026-08-10 (48 checks: 29 fail / 15 warn / 4 info):
 
-| id | count | what |
-|----|-------|------|
-| INV-02a | 1 | `blog/index.html:221` says `<strong>33</strong> Articles`, actual `class="card"` count is **37** |
-| INV-02c | 1 | `blog/index.html:235` says `12 articles` for `#series-openclaw`, actual is **13** |
-| INV-04a | 2 | one allowlisted chain-head edge (`cicd-pipeline.prev → git-branching`, by design) + one real defect (`openclaw-memory-architecture` grafted onto `deployment-hosting`) — see INV-04a below |
-| INV-05 | 14 | broken site-absolute links in the per-post header/footer site nav of 6 of the 7 OpenClaw posts |
-| INV-07a | 2 | two covers each shared by two posts |
-| INV-11 | 1 | `blog/deployment-hosting.html` has two `<h1>` (lines 164 and 176) |
-| INV-12 | 1 | `blog/index.html` renders a hamburger button but loads no JS |
-| warn-level | — | INV-03b 1, INV-04c 4, INV-04d 2, INV-06a 9, INV-10 8, INV-14 6, INV-15/16/17/20b/20c/22 |
+| id | sev | count | what |
+|----|-----|-------|------|
+| INV-03b | warn | 1 | `openclaw-integrations.html` heads its chip strip differently from the other six |
+| INV-04a | fail | 2 | one allowlisted chain-head edge (`cicd-pipeline.prev → git-branching`, by design) + one real defect (`openclaw-memory-architecture` grafted onto `deployment-hosting`) |
+| INV-04c | warn | 4 | `<nav class="post-nav">` instead of `<div>` in 4 posts |
+| INV-04d | warn | 2 | `claude-code-architecture`'s `Related` / `See also` block (allowlisted) |
+| INV-04f | fail | 1 | `deployment-hosting` is claimed as `prev` by 2 posts |
+| INV-04h | info | 2 | the same 2 posts are unreachable from the chain walk |
+| INV-05b | info | 4 | illustrative paths inside `<pre>`/`<code>` in `frontend-performance.html` |
+| INV-06a | warn | 9 | orphan images from a prior template |
+| INV-07a | fail | 2 | two covers each shared by two posts |
+| INV-10 | warn | 8 | stale `.post-nav__title` labels |
+| INV-11 | fail | 1 | `blog/deployment-hosting.html` has two `<h1>` (lines **184** and **196**) |
+| INV-14 | warn | 6 | posts with no `<meta name="description">` |
+| INV-15 | warn | 2 | 25 posts `© 2025`, 8 with no `©` line |
+| INV-16 | warn | 4 | four different footer container classes |
+| INV-17 | warn | 2 | 2 cards whose section contradicts their nav family |
+| INV-20b | warn | 4 | four ordinal-badge markup variants |
+| INV-20c | warn | 1 | `openclaw-memory.html` writes `บทที่ 3` |
 
-The parent brief describes "three stale counters". Verify before repeating that: the third counter,
-`blog/index.html:573` `24 articles` for `#series-devops`, is **correct** today, as is
-`:220 <strong>2</strong> Series`. Only two counters are stale. Say what the script prints, not what
-you remember.
+**Four checks that used to be red are now green — do not re-report them as debt:** INV-02a and
+INV-02c (counters, fixed in `b9fb125`), INV-05 (the 14 dead site-absolute links, fixed in the same
+commit), INV-12 (`blog/index.html`'s dead hamburger, replaced with the CSS checkbox toggle in Task
+9). INV-22/INV-22b likewise: every post now carries the canonical `:root` block (`6670480`). Their
+baseline entries have been deleted, so a recurrence of any of them fails the build.
 
 Fixing the baseline is welcome but is a separate, deliberate task — never bundle it into an
-unrelated edit, because it makes the diff unreviewable.
+unrelated edit, because it makes the diff unreviewable. Whatever you fix, delete its BASELINE key in
+the same commit or INV-25 will fail.
 
 ---
 
@@ -175,24 +193,19 @@ a post that has a free slot.
 
 ### INV-05 — every internal `href`/`src`/`srcset`/`poster` resolves on disk
 
-14 failures today, all in the hand-rolled per-post site nav (`<ul class="nav-links">` /
-`<div class="nav-links">` inside each post's own `<nav>`, plus openclaw-production's footer link
-row at `:1327-1332`) — NOT in the `.series-nav` chip strip, which is clean. `openclaw-skills.html`
-has none, so 6 of the 7 OpenClaw posts are affected. All point at pages that were never built.
-**anirach.com is a single-page portfolio**; the working form is the one
-`blog/index.html:200-204` already uses. Apply this mapping verbatim:
+**0 today, and no baseline entry remains** — the 14 dead site-absolute links in the hand-rolled
+per-post site nav of 6 of the 7 OpenClaw posts were repaired in `b9fb125`, so any recurrence fails
+the build. The repaired form is the mapping below; keep using it, and never re-introduce a bare
+`/about`-style path. The home page is a single scroll with `#`-anchored sections, plus the four
+section directories (`blog/`, `books/`, `projects/`, `news/`).
 
-| broken | correct |
+| never write | write |
 |--------|---------|
 | `/about`, `../about/` | `../index.html#about` |
-| `/projects` | `../index.html#projects` |
+| `/projects` (as a home anchor) | `../index.html#projects` |
 | `/research` | `../index.html#research` |
 | `/contact` | `../index.html#contact` |
 | `/teaching` | `../index.html#research` (no `#teaching` section exists — verify with `grep -n 'id="' index.html` before writing it) |
-
-Exact sites: `openclaw-101.html:375,376`; `openclaw-agent-teams.html:437,438`;
-`openclaw-integrations.html:263,264`; `openclaw-memory.html:318`;
-`openclaw-production.html:386,387,1329,1330`; `openclaw-security.html:360,361,362`.
 
 **INV-05b (never fails the build):** 4 refs inside `<pre>`/`<code>` in
 `blog/frontend-performance.html` are illustrative code samples. Leave them alone.
@@ -245,20 +258,31 @@ serves them, but only if the file is really there.
 
 ### INV-11 — exactly one `<h1>` per post
 
-`blog/deployment-hosting.html` has two: `:164` the hero title, `:176` a near-duplicate inside the
-article body. **Repair:** delete the body one (`:176`), keep `.post-hero__title`.
+`blog/deployment-hosting.html` has two: `:184` the hero title, `:196` a near-duplicate inside the
+article body. **Repair:** delete the body one (`:196`), keep `.post-hero__title`.
 
-### INV-12 — a page rendering `.nav__hamburger` must load JS
+### INV-12 — every menu-toggle control is actually wired
 
-`blog/index.html` has 4 hamburger references and **zero** `<script>` tags — the mobile menu is dead,
-and it is the only page in the repo with this defect (`index.html` has both). At `max-width: 768px`,
-`blog/index.html:173` sets `.nav__links { display: none; }`, so on a phone the blog index has no
-navigation at all.
+0 today. The site ships **two** legitimate mobile-menu patterns and the check knows both:
 
-**Repair, pick one:** (a) add a small inline `<script>` mirroring `script.js`'s toggle — note
-`script.js` is loaded *only* by root `index.html` and hooks `#hamburger`, `#nav`, `#navLinks`, so
-the IDs must match; or (b) delete the hamburger button and the `@media` rule that hides
-`.nav__links`. Do not leave it as-is and call the page done.
+- **JS-driven** — `index.html:32` `<button class="nav__hamburger" id="hamburger">`, wired by
+  `script.js`. A page carrying this shape must contain a `<script>` tag.
+- **Pure CSS** — `<input type="checkbox" id="navToggle" class="nav__toggle">` +
+  `<label for="navToggle" class="nav__burger">` on `blog/index.html` and the three sibling landing
+  pages, which load no JS at all. Both halves must be present, and the `for=` must name the
+  checkbox's `id`, or the tap does nothing.
+
+The check used to grep the literal string `hamburger`. After Task 9 converted four pages to the
+checkbox pattern, that string survived in `index.html` alone, so the check policed **1 page out of
+42** and could not see the four pages most likely to regress. It now walks the rendered markup
+(`<style>`/`<script>`/`<pre>`/`<code>` blanked first, so CSS rules that merely *name* `.nav__burger`
+and example markup in code samples are not mistaken for controls) and reports: a JS-driven toggle on
+a JS-less page, a menu `<label>` with no `for=`, a `<label for=X>` with no checkbox `X`, and a menu
+checkbox no label points at.
+
+**Repair:** finish whichever pattern the page started. Do not "fix" it by deleting the control and
+leaving `.nav__links { display: none; }` in the mobile media query — that leaves the page with no
+navigation at all on a phone.
 
 ### INV-19 — the 7 numbered OpenClaw posts all live in `#series-openclaw`
 
@@ -272,16 +296,50 @@ the IDs must match; or (b) delete the hamburger button and the `@media` rule tha
 ### INV-21 — every DOM hook `script.js` uses exists in `index.html`
 
 0 today. 8 selectors harvested: `#nav`, `#hamburger`, `#navLinks`, `a`, `[data-reveal]` ×2,
-`a[href^="#"]`, `.hero__bg-text`. `index.html` carries 9 `data-reveal` attributes. Note
-`data-reveal` inside `blog/` is inert (0 uses, 0 JS) — CLAUDE.md's advice to add it for scroll
-fade-in is a **no-op in blog/** (INV-21b, info-level).
+`a[href^="#"]`, `.hero__bg-text`. `index.html` carries 14 `data-reveal` attributes and is the only
+file in the repo that carries any.
+
+**INV-21b (info-level)** asks the paired question: does every page holding a `data-reveal` hook load
+the JavaScript that acts on it? `style.css` ships `[data-reveal] { opacity: 0 }` and `script.js`
+adds `.revealed`, so a page with the hook and no script does not merely lose an animation — it
+renders that content **invisible**. It used to skip `index.html`, which is the only file containing
+the hook, so its domain was guaranteed empty; it now covers every page. Adding `data-reveal` to a
+`blog/` page is still a no-op (no blog page loads JS) and the check will say so.
+
+### INV-23 — the nav-bearing pages all link to all five destinations
+
+0 today. `index.html`, `blog/index.html` and every discovered section index each carry their own
+hand-copied `<nav>`; every one must link to home, `#contact`, and all four section directories, and
+every relative href inside that `<nav>` must resolve on disk.
+
+The page list is **discovered, not hardcoded**: any non-hidden top-level directory that ships an
+`index.html` is a section of the site (`blog/` is handled separately; `images/` and `docs/` have no
+`index.html` and are skipped for free). Create `talks/index.html` and it is immediately in scope for
+this check, the link scan, the image-orphan scan and the lang check — and every existing nav goes red
+until it links there. That is the intended behaviour: a section nobody can navigate to is not
+shipped.
+
+### INV-25 — the linter audits its own BASELINE
+
+0 today. Every key in `BASELINE` must still match at least one live violation, and a key baselined
+for *N* occurrences must still fire *N* times. A key that matches nothing is not documentation, it
+is a suppression rule aimed at a violation that no longer exists — the next time that defect
+reappears it is absorbed as `[known]` and the build stays green.
+
+This is not theoretical. `INV-22`'s 10 keys and `INV-22b`'s 1 key survived the `:root` sweep
+(`6670480`) by 19 commits and four linter-editing tasks; stripping `:root` from two posts produced
+two identical fresh violations and only the non-baselined one was reported. INV-25 reports all 11 of
+those keys.
+
+**Repair:** delete the dead key and leave a one-line retirement comment in its place (the file
+already does this for INV-05, INV-12, INV-22 and INV-22b). Never re-add a key to silence it.
 
 ---
 
 ## Warn-level checks (real drift, never blocks a push)
 
 Surface these; fix them deliberately, not opportunistically. A linter that fails the build on
-cosmetics gets switched off. The real split is 25 fail / 14 warn / 4 info across 43 checks —
+cosmetics gets switched off. The real split is 29 fail / 15 warn / 4 info across 48 checks —
 `--list` prints each check's severity.
 
 | id | rule | today | repair |
@@ -291,15 +349,16 @@ cosmetics gets switched off. The real split is 25 fail / 14 warn / 4 info across
 | INV-04d | `.post-nav__dir` ∈ {`← Previous`, `Next →`} | 2 | `blog/claude-code-architecture.html:602-609` uses `Related` / `See also` — a post-nav-shaped block that is not part of any chain. Intentional; see allowlist. |
 | INV-06a | every file in `images/` is referenced | 9 | Orphans from a prior template: `Opic02.jpg bg.jpg overlay.png pic01.jpg pic02.jpg pic03.jpg pictop.png xpic01.jpg xpic03.jpg`. Safe to delete in one commit; confirm with `grep -r` first. |
 | INV-10 | `.post-nav__title` matches the target's card title | 8 | Stale labels. Worst: `devops-security.html` calls its Next target "Linux & Shell Essentials" but the post is "Linux Command Line". Copy the card title from `blog/index.html`. |
-| INV-13 | `lang` attrs | 0 | Green: `index.html` and `blog/index.html` are `lang="en"`, all 37 posts `lang="th"`. |
+| INV-13 | `lang` attrs | 0 | Green: the 5 nav-bearing index pages are `lang="en"`, all 37 posts `lang="th"`. |
 | INV-14 | every post has `<meta name="description">` | 6 | Missing in `idle-self-improvement`, `openclaw-101`, `openclaw-agent-teams`, `openclaw-memory`, `openclaw-security`, `openclaw-skills`. |
-| INV-15 | footer copyright year uniform | 2 | 25 × `© 2025`, 8 × none, against the expected 4 × `© 2026` (beyond-plugins, obsidian-ai-jarvis, openclaw-101, openclaw-agent-teams). The script reports one violation per non-2026 cohort. |
+| INV-15 | footer copyright year uniform **in posts** | 2 | 25 × `© 2025`, 8 × none, against the expected 4 × `© 2026` (beyond-plugins, obsidian-ai-jarvis, openclaw-101, openclaw-agent-teams). The script reports one violation per non-2026 cohort. |
 | INV-16 | footer container class uniform | 4 variants | `blog-footer` 23, `footer` 7, `post-footer` 3, bare `<footer>` 4. |
 | INV-17 | a card's section matches its nav family | 2 | `claude-code-architecture` and `openclaw-memory-architecture` sit in `#series-openclaw` but carry DevOps `post-nav`. See allowlist. |
 | INV-18 | no `#series-devops` card uses the chip strip | 0 | Green. (The mirror rule, INV-19, is fail-level — see above.) |
 | INV-20b | ordinal badge uses one consistent markup form | 4 | `.series-badge` ×4 (101, agent-teams, memory, production), `.series-info` ×1 (security), bare `<p>` ×1 (integrations), `<strong>` ×1 (skills). |
 | INV-20c | badge is worded "Post #N" | 1 | `blog/openclaw-memory.html:328` writes `บทที่ 3`. |
-| INV-22 | every post defines its own `:root` | 10 | The 7 series posts + `beyond-plugins`, `idle-self-improvement`, `openclaw-migration` have none. Also: `style.css` has **0** `:root` and **0** `var(` — it is hex-literal only, so CLAUDE.md's "use `--navy`/`--blue` from `:root`" applies to `blog/` pages, not to `style.css`. |
+| INV-22 | every post defines its own `:root` | 0 | Green since `6670480` landed the canonical 24-token block in all 39 files with embedded CSS, `style.css` included (INV-22b, info-level, is green for the same reason). Baseline entries deleted — a post that loses its `:root` is now reported as new. |
+| INV-24 | the 5 nav-bearing pages agree on the footer `©` year and all carry a meta description | 0 | INV-14/15/16 iterate `site.posts` only, so `blog/index.html` and the four landing pages sat outside every footer/meta check — which is how a `© 2025` footer survived on `blog/index.html` while the other four read 2026. The year is checked for **consistency** (modal year wins), never against a hardcoded literal, so 1 January is not a linter event. |
 
 Full drift inventory with counts and the reason each cohort exists: `references/drift-budget.md`.
 
@@ -329,9 +388,10 @@ violation in the table above.
 
 ## If you edit the script
 
-Four regex traps, each of which produced a *wrong pass or a false alarm* during the original audit.
-A wrong regex makes the linter lie in the dangerous direction: it reports working chains as broken
-and invites "fixes" that destroy real links.
+Five regex traps, each of which produced a *wrong pass or a false alarm* in a real audit. A wrong
+regex makes the linter lie in the dangerous direction: it reports working chains as broken and
+invites "fixes" that destroy real links — or, worse, it silently narrows a check's domain to
+nothing and reports PASS forever.
 
 ```python
 CARD  = r'<a\s+href="([^"]+)"\s+class="card">'
@@ -341,6 +401,7 @@ PLINK = (r'<a\s+href="([^"]+)"\s+class="post-nav__link"[^>]*>\s*'   # [^>]*> is 
          r'<div class="post-nav__title">(.*?)</div>')
 ATTR  = r'\b(href|src|srcset|poster)\s*=\s*"([^"]+)"'     # NEVER include content=
 CODE  = r'<(pre|code)\b[^>]*>.*?</\1>'                    # exclusion spans for the link checker
+INERT = r'<(style|script|pre|code)\b[^>]*>.*?</\1>'       # blank_inert(): markup-shape checks
 ```
 
 1. `class="post-nav__link">` (no `[^>]*`) drops the 3 Next anchors that carry
@@ -350,7 +411,27 @@ CODE  = r'<(pre|code)\b[^>]*>.*?</\1>'                    # exclusion spans for 
    the link pattern, never on the container's closing tag.
 4. Scanning `content=` turns every `<meta name="description">` and the viewport tag into a "broken
    path" (90 hits instead of 14). Skipping `<pre>`/`<code>` removes 4 more false positives.
+5. Any check that reasons about **markup shape** must run its text through `blank_inert()` first, or
+   a CSS rule that merely names a class, or example markup inside a code sample, is counted as a
+   real element. `blank_inert` blanks `<style>`/`<script>`/`<pre>`/`<code>` bodies while preserving
+   byte offsets, so reported line numbers stay correct.
 
 Title comparison for INV-10 must be `html.unescape(re.sub(r'\s+',' ',t)).strip()`, then emoji-stripped
 (`[\U0001F000-\U0001FAFF☀-➿️]`), then `.strip().strip('—-').strip()` — see `norm_title` at
-check_site.py:337-342. `&amp;` vs `&` alone yields ~14 false positives.
+check_site.py:446-451. `&amp;` vs `&` alone yields ~14 false positives.
+
+**Three rules that outrank "make the run green":**
+
+1. **Never hardcode a set the filesystem can answer.** `NAV_SIBLING_DIRS = ["books","projects",
+   "news"]` meant a future `talks/` was invisible to every check that walks the site;
+   `discover_nav_sibling_dirs()` replaced it.
+2. **Never narrow a check to a literal that only one file happens to contain.** INV-12's `"hamburger"`
+   grep and INV-21b's `if rel == "index.html": continue` both reduced their check's domain to
+   (almost) nothing while still printing PASS. Ask "which files can this check *see*?" — if the
+   answer is one file, or none, the check is decorative.
+3. **Never baseline your way to green.** Add the key only for debt you have inspected and can
+   describe in a comment, and delete it the moment it is paid. INV-25 enforces the second half.
+
+Every new or modified check must be proven failable by fault injection **on a copy of the repo**
+(`--root /tmp/copy`), never on the real tree. Paste the injected output into the commit or the PR;
+"it passes" is not evidence that a check works.

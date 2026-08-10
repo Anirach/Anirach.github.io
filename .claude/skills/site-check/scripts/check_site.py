@@ -105,6 +105,58 @@ RE_EMOJI = re.compile('[\U0001F000-\U0001FAFF☀-➿️]')
 RE_NAV_BLOCK = re.compile(r'<nav\b[^>]*>(.*?)</nav>', re.S)
 RE_NAV_HREF = re.compile(r'href="([^"]+)"')
 
+# -- menu-toggle controls (INV-12) -----------------------------------------
+# Task 9 replaced the JS <button class="nav__hamburger"> with a pure-CSS
+# checkbox toggle on 4 of the 5 nav-bearing pages, which left the literal
+# string "hamburger" alive in index.html and nowhere else — so a grep for it
+# policed 1 page out of 42.  Match the CONTROL, not one page's class name.
+RE_INERT_SPAN = re.compile(r'<(style|script|pre|code)\b[^>]*>.*?</\1>', re.S)
+RE_ANY_TAG = re.compile(r'<([a-zA-Z][a-zA-Z0-9]*)\b([^>]*)>')
+RE_MENU_TOKEN = re.compile(
+    r'hamburger|burger|nav__toggle|nav-toggle|navtoggle|menu-toggle|menu__toggle',
+    re.I)
+RE_ATTR_ANY = re.compile(r'([A-Za-z_:][-A-Za-z0-9_:.]*)\s*=\s*"([^"]*)"')
+
+
+def blank_inert(s):
+    """Blank the bodies of <style>/<script>/<pre>/<code>, preserving byte
+    offsets and newlines so line numbers stay accurate.  A markup-shape check
+    must never fire on a CSS rule that merely *names* a class, nor on example
+    markup inside a code sample (trap #4, generalised)."""
+    out, last = [], 0
+    for m in RE_INERT_SPAN.finditer(s):
+        out.append(s[last:m.start()])
+        out.append(re.sub(r"[^\n]", " ", m.group(0)))
+        last = m.end()
+    out.append(s[last:])
+    return "".join(out)
+
+
+def menu_controls(s):
+    """Every menu-toggle control actually RENDERED by this page.
+
+    Returns (js_driven, labels, checkboxes) where
+      js_driven  = [(tag, attrs, pos)]   button/a/div/span carrying a menu
+                   token — inert without JavaScript
+      labels     = [(for_id, pos)]       <label> carrying a menu token
+      checkboxes = {id: pos}             <input type="checkbox"> carrying one
+    """
+    js_driven, labels, checkboxes = [], [], {}
+    for m in RE_ANY_TAG.finditer(blank_inert(s)):
+        tag, attrs = m.group(1).lower(), m.group(2)
+        if not RE_MENU_TOKEN.search(attrs):
+            continue
+        a = {k.lower(): v for k, v in RE_ATTR_ANY.findall(attrs)}
+        if tag == "input":
+            if a.get("type", "").lower() == "checkbox" and a.get("id"):
+                checkboxes[a["id"]] = m.start()
+        elif tag == "label":
+            labels.append((a.get("for"), m.start()))
+        elif tag in ("button", "a", "div", "span"):
+            js_driven.append((tag, a, m.start()))
+    return js_driven, labels, checkboxes
+
+
 # ---------------------------------------------------------------------------
 # Canonical, hand-verified constants
 # ---------------------------------------------------------------------------
@@ -150,22 +202,54 @@ CHAIN_TERMINAL_NEXT = "./"
 
 EXPECTED_COPYRIGHT_YEAR = "2026"
 
-# The three sibling landing pages that joined index.html and blog/index.html
-# as full-site destinations (Task 9, 2026-08-10). Each carries the same
-# 5-destination nav (Blog/Books/Projects/News/Contact) as the other four.
-NAV_SIBLING_DIRS = ["books", "projects", "news"]
+# The sibling landing pages that joined index.html and blog/index.html as
+# full-site destinations (Task 9, 2026-08-10): books/, projects/, news/ today.
+# DISCOVERED, never hardcoded — a hardcoded list meant a future talks/ or
+# teaching/ directory would be invisible to every check that walks the site
+# (link scan, image-orphan scan, lang, nav consistency), which is precisely
+# when a linter is supposed to speak up.  The rule is deliberately narrow:
+# a *top-level*, non-hidden directory that ships its own index.html is a
+# section of the site.  blog/ is excluded because it is handled explicitly
+# everywhere; images/ and docs/ carry no index.html and so are skipped for
+# free.
+DISCOVERY_EXCLUDE_DIRS = {"blog", "images", "node_modules"}
 
-# The 5 nav-bearing pages INV-23 polices, relative to the site root.
-NAV_PAGES = ["index.html", "blog/index.html"] + \
-            [d + "/index.html" for d in NAV_SIBLING_DIRS]
 
-# The 4 off-page nav destinations every one of NAV_PAGES must link to. The
-# brief's full five-destination list is "home, blog, books, projects, news";
-# home is checked separately (any page's own index.html target, tracked as
-# found_home in INV-23) since it isn't a subdirectory like the other four,
-# and Contact is checked separately again since it's index.html's #contact
-# anchor, not a destination page at all.
-NAV_DEST_DIRS = ["blog", "books", "projects", "news"]
+def discover_nav_sibling_dirs(root):
+    """Top-level directories that publish an index.html, sorted for stable
+    report ordering.  Returns e.g. ['books', 'news', 'projects']."""
+    out = []
+    try:
+        names = os.listdir(root)
+    except OSError:
+        return out
+    for name in sorted(names):
+        if name.startswith(".") or name in DISCOVERY_EXCLUDE_DIRS:
+            continue
+        d = os.path.join(root, name)
+        if os.path.isdir(d) and os.path.isfile(os.path.join(d, "index.html")):
+            out.append(name)
+    return out
+
+
+def nav_pages_for(root):
+    """The nav-bearing pages INV-23/INV-24 police, relative to the site root:
+    home, the blog index, and every discovered section index."""
+    return ["index.html", "blog/index.html"] + \
+           [d + "/index.html" for d in discover_nav_sibling_dirs(root)]
+
+
+def nav_dest_dirs_for(root):
+    """The off-page nav destinations every nav-bearing page must link to. The
+    brief's five-destination list is "home, blog, books, projects, news";
+    home is checked separately (any page's own index.html target, tracked as
+    found_home in INV-23) since it isn't a subdirectory like the others, and
+    Contact is checked separately again since it's index.html's #contact
+    anchor, not a destination page at all.  Derived from the same discovery
+    as the page list, so adding a section directory adds it to the contract
+    every nav must satisfy."""
+    return ["blog"] + discover_nav_sibling_dirs(root)
+
 
 # ---------------------------------------------------------------------------
 # BASELINE — pre-existing violations verified by hand against the current
@@ -273,16 +357,15 @@ BASELINE = {
     "INV-20b": {".series-badge", ".series-info", "<p>", "<strong>"},
     "INV-20c": {"openclaw-memory.html"},
 
-    "INV-22": {
-        "beyond-plugins.html", "idle-self-improvement.html",
-        "openclaw-101.html", "openclaw-agent-teams.html",
-        "openclaw-integrations.html", "openclaw-memory.html",
-        "openclaw-migration.html", "openclaw-production.html",
-        "openclaw-security.html", "openclaw-skills.html",
-    },
-
-    # style.css is hex-literals only.  Documented, not a regression.
-    "INV-22b": {"style.css"},
+    # INV-22 (10 island posts with no :root block of their own) and INV-22b
+    # (style.css carrying zero custom properties) were both retired by the
+    # canonical :root sweep in 6670480 — every post now declares the 24-token
+    # block and style.css declares it too.  The two entries then sat here dead
+    # for 19 commits and were actively LAUNDERING new regressions: stripping
+    # :root from openclaw-101.html and from docker-compose.html produced two
+    # identical fresh violations, and only the non-baselined one was reported.
+    # No baseline entry remains; a future recurrence must be reported as new.
+    # INV-25 now audits the whole table for exactly this failure mode.
 }
 
 FAIL, WARN, INFO = "fail", "warn", "info"
@@ -385,14 +468,16 @@ class Site(object):
         self.pages = ["index.html"] + \
                      ["blog/" + f for f in sorted(os.listdir(self.blog))
                       if f.endswith(".html")]
-        # The three sibling landing pages (books/, projects/, news/) carry the
-        # same 5-destination nav as index.html and blog/index.html and must be
-        # in every link/image/lang scan too, or e.g. an image referenced only
-        # from books/index.html reports as a false-positive orphan (INV-06a).
-        for d in NAV_SIBLING_DIRS:
-            rel = d + "/index.html"
-            if os.path.exists(os.path.join(root, rel)):
-                self.pages.append(rel)
+        # The sibling landing pages (books/, projects/, news/ today, whatever
+        # ships an index.html tomorrow) carry the same 5-destination nav as
+        # index.html and blog/index.html and must be in every link/image/lang
+        # scan too, or e.g. an image referenced only from books/index.html
+        # reports as a false-positive orphan (INV-06a).
+        self.nav_sibling_dirs = discover_nav_sibling_dirs(root)
+        self.nav_pages = nav_pages_for(root)
+        self.nav_dest_dirs = nav_dest_dirs_for(root)
+        for d in self.nav_sibling_dirs:
+            self.pages.append(d + "/index.html")
         self.text = {}
         for rel in self.pages:
             with open(os.path.join(root, rel), encoding="utf-8") as fh:
@@ -1019,15 +1104,50 @@ def _(site):
     return out
 
 
-@check("INV-12", "a page rendering .nav__hamburger must load JavaScript")
+# The original INV-12 grepped the literal string "hamburger".  After Task 9
+# that string survives in index.html alone (the other four nav-bearing pages
+# were converted to `.nav__toggle` + `.nav__burger`), so the check policed 1
+# page out of 42 and could not see the very pages most likely to regress.
+# It now recognises the CONTROL in either of the two shapes this site uses,
+# and asks the question that actually matters for each: a JS-driven toggle
+# needs JavaScript on the page, and a CSS checkbox toggle needs both halves
+# of the label/checkbox pair present or nothing happens on tap.
+@check("INV-12", "every menu-toggle control is wired: JS toggles need <script>, "
+                 "CSS toggles need their label+checkbox pair")
 def _(site):
     out = []
     for rel in site.pages:
         s = site.text[rel]
-        if "hamburger" in s and "<script" not in s:
-            out.append(Violation(rel, "%s renders %d hamburger refs but has 0 <script> "
-                                      "— the mobile menu is dead"
-                                 % (rel, s.count("hamburger"))))
+        has_js = "<script" in s
+        js_driven, labels, checkboxes = menu_controls(s)
+        for tag, a, pos in js_driven:
+            if not has_js:
+                ident = a.get("id") or a.get("class") or tag
+                out.append(Violation("%s|nojs|%s" % (rel, ident),
+                                     "%s:%d renders a JS-driven menu toggle "
+                                     "<%s %s> but the page has 0 <script> "
+                                     "— the mobile menu is dead"
+                                     % (rel, lineno(s, pos), tag, ident)))
+        for for_id, pos in labels:
+            if for_id is None:
+                out.append(Violation("%s|label-nofor" % rel,
+                                     "%s:%d menu <label> has no for= attribute "
+                                     "— it toggles nothing"
+                                     % (rel, lineno(s, pos))))
+            elif for_id not in checkboxes and not has_js:
+                out.append(Violation("%s|orphan-label|%s" % (rel, for_id),
+                                     '%s:%d menu <label for="%s"> has no '
+                                     '<input type="checkbox" id="%s"> and the '
+                                     "page loads no JS — the mobile menu is dead"
+                                     % (rel, lineno(s, pos), for_id, for_id)))
+        labelled = {f for f, _p in labels}
+        for cb_id, pos in sorted(checkboxes.items(), key=lambda kv: kv[1]):
+            if cb_id not in labelled and not has_js:
+                out.append(Violation("%s|orphan-checkbox|%s" % (rel, cb_id),
+                                     '%s:%d menu checkbox id="%s" has no '
+                                     "<label for> pointing at it and the page "
+                                     "loads no JS — nothing can toggle it"
+                                     % (rel, lineno(s, pos), cb_id)))
     return out
 
 
@@ -1208,17 +1328,30 @@ def _(site):
     return out
 
 
-@check("INV-21b", "data-reveal is inert in blog/ (no blog page loads JavaScript)", INFO)
+# This check used to skip index.html — which is the only file in the repo
+# that contains data-reveal, so its domain was guaranteed empty and it could
+# never fire.  The exclusion is gone: the invariant is about the HOOK, not
+# about one page.  style.css ships `[data-reveal] { opacity: 0 }`, so a page
+# that carries the hook and never loads the script that adds `.revealed`
+# doesn't just lose an animation, it renders that content invisible — which
+# is exactly what the detail line now distinguishes.  Severity stays INFO
+# (unchanged); the domain is now every page, so index.html losing its
+# <script> tag, or a blog post inheriting a data-reveal by copy-paste, both
+# report.
+@check("INV-21b", "every data-reveal hook is on a page that loads JavaScript", INFO)
 def _(site):
     out = []
     for rel in site.pages:
-        if rel == "index.html":
-            continue
         s = site.text[rel]
         n = s.count("data-reveal")
         if n and "<script" not in s:
-            out.append(Violation(rel, "%s has %d data-reveal hooks but loads no JS "
-                                      "— the reveal animation never fires" % (rel, n)))
+            hidden = ('href="../style.css"' in s or 'href="style.css"' in s
+                      or "[data-reveal]" in s)
+            out.append(Violation(rel, "%s has %d data-reveal hook%s but loads no JS "
+                                      "— the reveal animation never fires%s"
+                                 % (rel, n, "" if n == 1 else "s",
+                                    " and the opacity:0 rule leaves that content "
+                                    "invisible" if hidden else "")))
     return out
 
 
@@ -1249,6 +1382,11 @@ def _(site):
 # INV-23 — 5-page nav consistency (Task 9, 2026-08-10; home check added in
 # fix round 1 after review Finding 1 — see below)
 #
+# The page list and the destination list are DISCOVERED (see
+# discover_nav_sibling_dirs) rather than hardcoded, so a new top-level
+# section directory is policed the day it appears instead of the day someone
+# remembers to edit this file.
+#
 # index.html, blog/index.html, books/index.html, projects/index.html and
 # news/index.html each carry their own hand-copied <nav>. Every one of them
 # must link to all 5 destinations the brief names — home, blog, books,
@@ -1272,7 +1410,7 @@ def _(site):
 def _(site):
     out = []
     root_index = os.path.normpath(os.path.join(site.root, "index.html"))
-    for rel in NAV_PAGES:
+    for rel in site.nav_pages:
         s = site.text.get(rel)
         if s is None:
             out.append(Violation(rel + "|missing-page", "%s does not exist" % rel))
@@ -1308,13 +1446,13 @@ def _(site):
                     found_home = True
             elif os.path.isdir(norm):
                 base = os.path.basename(norm)
-                if base in NAV_DEST_DIRS:
+                if base in site.nav_dest_dirs:
                     found_dirs.add(base)
             elif os.path.basename(norm) == "index.html":
                 parent = os.path.basename(os.path.dirname(norm))
-                if parent in NAV_DEST_DIRS:
+                if parent in site.nav_dest_dirs:
                     found_dirs.add(parent)
-        missing_dirs = [d for d in NAV_DEST_DIRS if d not in found_dirs]
+        missing_dirs = [d for d in site.nav_dest_dirs if d not in found_dirs]
         if missing_dirs:
             out.append(Violation(rel + "|missing-dest|" + ",".join(missing_dirs),
                                  "%s nav has no link resolving to: %s"
@@ -1325,6 +1463,116 @@ def _(site):
         if not found_contact:
             out.append(Violation(rel + "|missing-contact",
                                  "%s nav has no link resolving to index.html#contact" % rel))
+    return out
+
+
+# ---------------------------------------------------------------------------
+# INV-24 — page-chrome uniformity across the NAV-BEARING pages
+#
+# INV-14 (meta description), INV-15 (footer year) and INV-16 (footer class)
+# all iterate site.posts, so blog/index.html and the landing pages sit
+# outside their loop entirely.  Nothing policed them — which is how a
+# "© 2025" footer survived on blog/index.html while the other four landing
+# pages read 2026.  This check closes that hole for the two properties a
+# reader actually notices.
+#
+# The year is checked for CONSISTENCY, not against a constant: the whole
+# point is that these five hand-copied footers must agree with each other,
+# and pinning a literal year here just means the linter goes red every 1
+# January for a reason that isn't drift.  The modal year wins; every page
+# that disagrees (or shows no © line at all) is named.  Severity is WARN, to
+# match its three siblings INV-14/15/16 which police the same two properties
+# over posts.
+# ---------------------------------------------------------------------------
+@check("INV-24", "nav-bearing pages agree on the footer © year and all carry "
+                 "a meta description", WARN)
+def _(site):
+    out = []
+    years, missing_desc = {}, []
+    for rel in site.nav_pages:
+        s = site.text.get(rel)
+        if s is None:
+            out.append(Violation(rel + "|missing-page", "%s does not exist" % rel))
+            continue
+        found = sorted(set(RE_COPYRIGHT.findall(s)))
+        years[rel] = "+".join(found) if found else "NONE"
+        if '<meta name="description"' not in s:
+            missing_desc.append(rel)
+
+    if years:
+        groups = defaultdict(list)
+        for rel, key in years.items():
+            groups[key].append(rel)
+        # modal year wins; ties break on the key so the report is stable
+        majority = sorted(groups, key=lambda k: (-len(groups[k]), k))[0]
+        for rel in sorted(years):
+            if years[rel] == majority:
+                continue
+            shown = "no © line" if years[rel] == "NONE" else "© " + years[rel]
+            out.append(Violation(rel + "|year",
+                                 "%s footer shows %s but %d of the %d nav-bearing "
+                                 "pages show © %s"
+                                 % (rel, shown, len(groups[majority]),
+                                    len(years), majority)))
+    for rel in sorted(missing_desc):
+        out.append(Violation(rel + "|desc",
+                             '%s has no <meta name="description">' % rel))
+    return out
+
+
+# ---------------------------------------------------------------------------
+# INV-25 — the linter audits its own BASELINE
+#
+# A baseline entry is a promise: "this violation exists today, we understand
+# it, do not fail the build for it".  When the underlying debt is repaired
+# and nobody deletes the entry, that promise silently becomes a suppression
+# rule for a violation that no longer exists — and the next time the same
+# defect is reintroduced it is absorbed as [known] and the build stays
+# green.  That is not hypothetical: INV-22's 10 keys and INV-22b's 1 key
+# outlived their debt by 19 commits and four linter-editing tasks, and a
+# fresh :root regression injected into openclaw-101.html was laundered by
+# them while the identical regression in docker-compose.html was reported.
+#
+# So: every baselined key must still match at least one live violation, and
+# a key baselined for N occurrences must still fire N times.  A baseline
+# that has gone stale is now a FAIL, on the same footing as the regressions
+# it would otherwise hide.  Re-running each baselined check costs ~17 extra
+# check invocations against an already-parsed Site (~40 ms total).
+# ---------------------------------------------------------------------------
+@check("INV-25", "linter self-audit: no BASELINE entry is stale "
+                 "(every baselined key still matches a live violation)")
+def _(site):
+    out = []
+    by_id = {c.cid: c for c in CHECKS}
+    for cid in sorted(BASELINE, key=cid_sort_key):
+        base = BASELINE[cid]
+        allowed = dict(base) if isinstance(base, dict) else {k: 1 for k in base}
+        chk = by_id.get(cid)
+        if chk is None:
+            out.append(Violation(cid + "|no-such-check",
+                                 "BASELINE has an entry for %s but no such check "
+                                 "is registered — it suppresses nothing and "
+                                 "hides a renamed check" % cid))
+            continue
+        live = Counter()
+        for v in chk.fn(site) or []:
+            live[v.key if isinstance(v, Violation) else str(v)] += 1
+        for key in sorted(allowed):
+            n_live, n_allowed = live.get(key, 0), allowed[key]
+            if n_live == 0:
+                out.append(Violation("%s|%s|dead" % (cid, key),
+                                     "BASELINE[%s] key %r matches 0 live "
+                                     "violations — the debt it documented is "
+                                     "gone; delete the entry, or it will "
+                                     "silently absorb the next regression that "
+                                     "reuses this key"
+                                     % (cid, key)))
+            elif n_live < n_allowed:
+                out.append(Violation("%s|%s|overcount" % (cid, key),
+                                     "BASELINE[%s] key %r allows %d occurrences "
+                                     "but only %d fire — lower it to %d, the "
+                                     "spare slot suppresses a future regression"
+                                     % (cid, key, n_allowed, n_live, n_live)))
     return out
 
 
