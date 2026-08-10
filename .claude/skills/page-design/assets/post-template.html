@@ -1,0 +1,287 @@
+<!DOCTYPE html>
+<!--
+  HOUSE post template for anirach.com.
+  Derived from blog/api-request-lifecycle.html (the cleanest of the 26 house posts),
+  plus the Phase 2/3 additions that are still missing repo-wide:
+  loading/decoding/width/height, aspect-ratio, :focus-visible, prefers-reduced-motion,
+  color-scheme, text-wrap: balance.
+
+  TO USE:
+    1. cp this to blog/<slug>.html
+    2. Replace every {{PLACEHOLDER}}.
+    3. Pick ONE hero gradient from SKILL.md §5 — do not invent one.
+    4. Pick ONE footer nav pattern: .post-nav (DevOps) or .series-nav (OpenClaw) or delete both.
+    5. Add the cover to images/ as JPG, <=1600px wide, <=200KB. Never PNG for a photo/AI cover.
+       Never reuse an existing cover — 2 covers are already double-booked.
+    6. Add a .card to blog/.blog-grid in the right <section class="series-section">.
+    7. Update ALL THREE counters in blog/index.html:
+         line ~221  <strong>NN</strong> Articles      (total)
+         line ~235  <span class="series-count">NN articles</span>   #series-openclaw
+         line ~573  <span class="series-count">NN articles</span>   #series-devops
+-->
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{{TITLE}} | Anirach Mingkhwan</title>
+  <meta name="description" content="{{ONE_SENTENCE_THAI_SUMMARY}}">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    /* ── TOKENS — canonical, keep byte-identical across files ── */
+    :root {
+      color-scheme: light;
+      /* ink */
+      --navy: #0f172a; --slate: #334155; --slate-light: #64748b; --gray: #94a3b8;
+      /* ground */
+      --bg: #f8fafc; --white: #ffffff; --code-bg: #1e293b;
+      /* accent */
+      --blue: #6366f1; --blue-dark: #4f46e5; --blue-light: #818cf8;
+      /* status — only these six */
+      --green: #22c55e; --red: #ef4444; --amber: #f59e0b;
+      --cyan: #06b6d4; --purple: #8b5cf6; --purple-dark: #7c3aed;
+      /* type */
+      --font: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+      --mono: 'JetBrains Mono', 'Fira Code', monospace;
+      /* form */
+      --radius: 12px; --radius-sm: 8px; --radius-lg: 16px;
+      --measure: 720px; --wide: 860px;
+      --transition: 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    /* ── BASE ── */
+    html { scroll-behavior: smooth; }
+    body {
+      font-family: var(--font); font-size: 17px; line-height: 1.8;
+      color: var(--slate); background: var(--bg); -webkit-font-smoothing: antialiased;
+    }
+    h1, h2, h3, .post-hero__title { text-wrap: balance; }
+
+    /* ── NAV ── */
+    .blog-nav {
+      position: fixed; top: 0; left: 0; right: 0; z-index: 100;
+      background: rgba(248,250,252,0.85); backdrop-filter: blur(20px);
+      border-bottom: 1px solid rgba(0,0,0,0.05);
+    }
+    .blog-nav__inner {
+      max-width: var(--wide); margin: 0 auto; padding: 0 2rem; height: 56px;
+      display: flex; align-items: center; justify-content: space-between;
+    }
+    .blog-nav__back {
+      font-size: 0.85rem; font-weight: 500; color: var(--blue);
+      text-decoration: none; display: flex; align-items: center; gap: 0.4rem;
+    }
+    .blog-nav__back:hover { color: var(--blue-dark); }
+    .blog-nav__title {
+      font-size: 0.85rem; font-weight: 600; color: var(--navy);
+      overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 50%;
+    }
+
+    /* ── HERO ── */
+    .post-hero {
+      padding: 8rem 2rem 3rem;
+      /* PICK ONE from SKILL.md §5. Default / light: */
+      background: linear-gradient(135deg, #e8f0fe 0%, #ddd6fe 50%, #c7d2fe 100%);
+      text-align: center;
+    }
+    .post-hero__tags { display: flex; gap: 0.5rem; justify-content: center; margin-bottom: 1.25rem; }
+    .post-hero__tag {
+      font-size: 0.7rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.1em;
+      color: var(--blue); background: rgba(99,102,241,0.1);
+      padding: 0.3rem 0.75rem; border-radius: 20px;
+    }
+    .post-hero__title {
+      font-size: clamp(1.8rem, 5vw, 3rem); font-weight: 800; color: var(--navy);
+      line-height: 1.2; margin-bottom: 1rem;
+      max-width: var(--measure); margin-left: auto; margin-right: auto;
+    }
+    .post-hero__meta {
+      font-size: 0.85rem; color: var(--slate-light);
+      display: flex; align-items: center; justify-content: center; gap: 1.5rem;
+    }
+    .post-hero__series { font-weight: 600; color: var(--blue); }
+    .post-hero__cover {
+      max-width: 380px; margin: 2.5rem auto 0; aspect-ratio: 16 / 9;
+      border-radius: var(--radius-lg); overflow: hidden;
+      box-shadow: 0 20px 60px rgba(99,102,241,0.15);
+    }
+    .post-hero__cover img { width: 100%; height: 100%; object-fit: cover; display: block; }
+
+    /* ── BODY ── */
+    .post-body { max-width: var(--measure); margin: 0 auto; padding: 3rem 2rem 6rem; }
+    .post-body h2 {
+      font-size: 1.6rem; font-weight: 800; color: var(--navy);
+      margin: 3rem 0 1rem; padding-bottom: 0.5rem;
+      border-bottom: 2px solid rgba(99,102,241,0.15);
+    }
+    .post-body h3 { font-size: 1.25rem; font-weight: 700; color: var(--navy); margin: 2.25rem 0 0.75rem; }
+    .post-body h4 { font-size: 1.05rem; font-weight: 700; color: var(--navy); margin: 1.75rem 0 0.6rem; }
+    .post-body p { margin-bottom: 1.25rem; }
+    .post-body strong { font-weight: 700; color: var(--navy); }
+    .post-body ul, .post-body ol { margin: 0 0 1.25rem 1.5rem; }
+    .post-body li { margin-bottom: 0.5rem; }
+    .post-body a {
+      color: var(--blue); text-decoration: underline;
+      text-decoration-thickness: 1px; text-underline-offset: 2px;
+    }
+
+    /* ── CODE ── */
+    .post-body pre {
+      background: var(--code-bg); color: #e2e8f0;
+      border-radius: var(--radius); padding: 1.25rem 1.5rem;
+      overflow-x: auto; margin: 1.5rem 0;
+      font-family: var(--mono); font-size: 0.85rem; line-height: 1.7;
+    }
+    .post-body code { font-family: var(--mono); }
+    .post-body p > code, .post-body li > code {
+      background: rgba(99,102,241,0.1); color: var(--blue-dark);
+      padding: 0.15rem 0.4rem; border-radius: var(--radius-sm); font-size: 0.9em;
+    }
+
+    /* ── CALLOUT ── */
+    .callout {
+      border-left: 3px solid var(--blue); background: rgba(99,102,241,0.06);
+      border-radius: var(--radius); padding: 1.25rem 1.5rem; margin: 2rem 0;
+    }
+    .callout__title { font-weight: 700; color: var(--navy); margin-bottom: 0.4rem; }
+    .callout--info { border-color: var(--cyan);  background: rgba(6,182,212,0.06); }
+    .callout--good { border-color: var(--green); background: rgba(34,197,94,0.06); }
+    .callout--warn { border-color: var(--amber); background: rgba(245,158,11,0.06); }
+    .callout--bad  { border-color: var(--red);   background: rgba(239,68,68,0.06); }
+
+    /* ── COMPARE ── */
+    .compare { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin: 2rem 0; }
+    .compare__col {
+      border-radius: var(--radius); padding: 1.25rem;
+      background: var(--white); border: 1px solid rgba(0,0,0,0.06);
+    }
+    .compare__col--old { border-left: 3px solid var(--red); }
+    .compare__col--new { border-left: 3px solid var(--green); }
+    .compare__label {
+      font-size: 0.75rem; font-weight: 700; text-transform: uppercase;
+      letter-spacing: 0.08em; color: var(--slate-light); margin-bottom: 0.6rem;
+    }
+
+    /* ── FIGURE (diagrams are PNGs — never build them from divs) ── */
+    .figure { margin: 2.5rem 0; }
+    .figure__img {
+      width: 100%; height: auto; display: block;
+      border-radius: var(--radius); border: 1px solid rgba(0,0,0,0.06);
+    }
+    .figure__caption {
+      font-size: 0.85rem; color: var(--slate-light); text-align: center; margin-top: 0.75rem;
+    }
+
+    /* ── POST NAV + FOOTER ── */
+    .post-nav {
+      max-width: var(--measure); margin: 0 auto; padding: 0 2rem 3rem;
+      display: flex; gap: 1.5rem; flex-wrap: wrap;
+    }
+    .post-nav__link {
+      display: block; padding: 1.25rem; text-decoration: none;
+      background: var(--white); border: 1px solid rgba(0,0,0,0.06);
+      border-radius: var(--radius); transition: transform var(--transition), box-shadow var(--transition);
+    }
+    .post-nav__link:hover { transform: translateY(-2px); box-shadow: 0 8px 24px rgba(15,23,42,0.06); }
+    .post-nav__dir { font-size: 0.75rem; font-weight: 600; color: var(--blue); margin-bottom: 0.35rem; }
+    .post-nav__title { font-size: 0.95rem; font-weight: 600; color: var(--navy); line-height: 1.4; }
+    .blog-footer { background: var(--navy); padding: 2rem 0; text-align: center; }
+    .blog-footer a { color: var(--blue-light); text-decoration: none; font-weight: 600; font-size: 0.9rem; }
+    .blog-footer span { color: var(--gray); font-size: 0.8rem; display: block; margin-top: 0.4rem; }
+
+    /* ── A11Y ── */
+    :focus-visible { outline: 2px solid var(--blue); outline-offset: 3px; border-radius: 2px; }
+    :focus:not(:focus-visible) { outline: none; }
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after {
+        animation-duration: .01ms !important; animation-iteration-count: 1 !important;
+        transition-duration: .01ms !important; scroll-behavior: auto !important;
+      }
+    }
+
+    /* ── RESPONSIVE — 768 then 600, no other breakpoints ── */
+    @media (max-width: 768px) {
+      .post-hero { padding: 6.5rem 1.5rem 2.5rem; }
+      .post-body { padding: 2.5rem 1.5rem 4rem; }
+    }
+    @media (max-width: 600px) {
+      .blog-nav__inner { padding: 0 1.25rem; }
+      .post-hero { padding: 6rem 1.25rem 2rem; }
+      .post-body { padding: 2rem 1.25rem 3.5rem; }
+      .post-hero__meta { flex-direction: column; gap: 0.4rem; }
+      .compare { grid-template-columns: 1fr; }
+      .post-nav { flex-direction: column; }
+    }
+  </style>
+</head>
+<body>
+
+  <nav class="blog-nav">
+    <div class="blog-nav__inner">
+      <a href="./" class="blog-nav__back">‹ Blog</a>
+      <div class="blog-nav__title">{{SHORT_TITLE}}</div>
+    </div>
+  </nav>
+
+  <header class="post-hero">
+    <div class="post-hero__tags">
+      <span class="post-hero__tag">{{TAG1}}</span>
+      <span class="post-hero__tag">{{TAG2}}</span>
+      <span class="post-hero__tag">{{TAG3}}</span>
+    </div>
+    <h1 class="post-hero__title">{{TITLE}}</h1>
+    <div class="post-hero__meta">
+      <span>By <strong>Anirach Mingkhwan</strong></span>
+      <span class="post-hero__series">{{SERIES_NAME}}</span>
+    </div>
+    <div class="post-hero__cover">
+      <img src="../images/{{SLUG}}-cover.jpg" alt="{{DESCRIPTIVE_ALT_TEXT}}"
+           width="1600" height="900" loading="eager" fetchpriority="high" decoding="async">
+    </div>
+  </header>
+
+  <article class="post-body">
+
+    <p>{{THAI_LEDE}}</p>
+
+    <h2>{{SECTION_HEADING_NO_EMOJI}}</h2>
+    <p>{{THAI_BODY}}</p>
+
+    <aside class="callout callout--info">
+      <div class="callout__title">{{CALLOUT_TITLE}}</div>
+      <p>{{CALLOUT_BODY}}</p>
+    </aside>
+
+    <h3>{{SUBHEADING}}</h3>
+    <pre><code>{{CODE}}</code></pre>
+
+    <figure class="figure">
+      <img class="figure__img" src="../images/{{SLUG}}-arch.png" alt="{{DIAGRAM_ALT}}"
+           width="1600" height="900" loading="lazy" decoding="async">
+      <figcaption class="figure__caption">{{DIAGRAM_CAPTION}}</figcaption>
+    </figure>
+
+  </article>
+
+  <!-- Pick ONE footer nav pattern, or delete both. Never mix. -->
+  <div class="post-nav">
+    <a href="{{PREV_SLUG}}.html" class="post-nav__link">
+      <div class="post-nav__dir">← Previous</div>
+      <div class="post-nav__title">{{PREV_TITLE}}</div>
+    </a>
+    <a href="{{NEXT_SLUG}}.html" class="post-nav__link">
+      <div class="post-nav__dir">Next →</div>
+      <div class="post-nav__title">{{NEXT_TITLE}}</div>
+    </a>
+  </div>
+
+  <footer class="blog-footer">
+    <a href="./">← Back to Blog</a>
+    <span>© 2025 Anirach Mingkhwan — Associate Professor, KMUTNB</span>
+  </footer>
+
+</body>
+</html>
