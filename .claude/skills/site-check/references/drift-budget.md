@@ -113,7 +113,7 @@ posts live in `#series-openclaw` (INV-19).
 All seven numbers match series-nav position. Only the presentation drifts.
 
 ### INV-22 — posts with no `:root` (0 — RETIRED 2026-08-10)
-This cohort is gone. `6670480` landed the canonical 24-token `:root` block in all 39 files with
+This cohort is gone. `6670480` landed the canonical 24-token `:root` block in all 42 files with
 embedded CSS — the 10 island posts (`beyond-plugins`, `idle-self-improvement`, `openclaw-migration`
 and the 7 series posts) included — and in `style.css` itself, which retires INV-22b too. Both
 BASELINE entries have been deleted, so a post that loses its `:root` is now reported as a **new**

@@ -23,23 +23,31 @@ Deploy by pushing to `main` — GitHub Pages auto-deploys. There is no `.nojekyl
 ```
 /
 ├── index.html          # Portfolio landing page — the ONLY consumer of style.css + script.js
-├── style.css           # Landing-page styles only (plain hex colors, no :root variables)
+├── style.css           # Landing-page styles — carries the canonical 24-token :root block, same tokens every other page redefines in its own embedded <style>
 ├── script.js           # IIFE: nav scroll state, hamburger, IntersectionObserver reveal, hero parallax
 ├── blog/
-│   ├── index.html      # Blog listing — fully static, zero JavaScript
+│   ├── index.html      # Blog listing — fully static, zero JavaScript, 3 category bands (only Technology has posts)
 │   └── *.html          # 37 self-contained posts (own <style>, own :root, own nav markup)
+├── books/index.html    # Books & Writing — self-contained page, own <style>/:root
+├── projects/index.html # Projects & Apps — self-contained page, own <style>/:root
+├── news/index.html     # News & Updates — self-contained page, own <style>/:root
 ├── images/             # Cover images (<slug>-cover.png|jpg) + diagram PNGs
 └── CNAME               # anirach.com
 ```
 
-**Every blog page is an island.** Posts do not link `style.css` or `script.js`; each embeds its full stylesheet in a `<style>` block and defines its own `:root` variables. Editing `style.css` affects only the landing page. Editing one post affects only that post — there is no shared partial, so changes that should apply "everywhere" must be repeated per file (this is what commit `4c180c9` "Standardize series navigation across all 7 OpenClaw posts" was doing).
+**Every blog page is an island — and so is each of `books/`, `projects/`, `news/`.** None of them link `style.css` or `script.js`; each embeds its full stylesheet in a `<style>` block and defines its own `:root` variables (copied from the same canonical token set `style.css` also carries). Editing `style.css` affects only the landing page. Editing one post or one of the three section pages affects only that file — there is no shared partial, so changes that should apply "everywhere" must be repeated per file (this is what commit `4c180c9` "Standardize series navigation across all 7 OpenClaw posts" was doing).
 
-### Content is organized as two series
+### Content is organized as three categories, one of which holds two series
 
-`blog/index.html` groups posts into two `.series-section` blocks — there is no category-filter UI and no client-side JS on that page:
+`blog/index.html` groups posts into three `.category` bands — there is no category-filter UI and no client-side JS on that page. Only **Technology** has posts; the other two are placeholders:
 
-- `#series-openclaw` — "OpenClaw for Organizations" (13 cards; 7 of them are the numbered series, the rest standalone)
-- `#series-devops` — "DevOps & Vibe Coding" (24 cards)
+- **Technology** (`#cat-technology`, 37 articles) — contains two `.series-section` blocks:
+  - `#series-openclaw` — "OpenClaw for Organizations" (13 cards; 7 of them are the numbered series, the rest standalone)
+  - `#series-devops` — "DevOps & Vibe Coding" (24 cards)
+- **Academic & Philosophy** (`#cat-academic`) — "First posts coming soon"
+- **Lifestyle** (`#cat-lifestyle`) — "First posts coming soon"
+
+The hero `.blog-hero__stats` mirrors this: 3 Categories, 2 Series, 37 Articles.
 
 ### Three mutually exclusive in-post navigation patterns
 
@@ -55,7 +63,7 @@ The numbered OpenClaw series order is fixed: `openclaw-101` → `agent-teams` �
 
 ## Conventions
 
-- **Language**: `<html lang="th">` on posts (`lang="en"` on `index.html` and `blog/index.html`). Headings and technical terms in English, body prose in Thai.
+- **Language**: `<html lang="th">` on posts. All 5 nav-bearing index pages (`index.html`, `blog/index.html`, `books/index.html`, `projects/index.html`, `news/index.html`) are `lang="en"`. Headings and technical terms in English, body prose in Thai (marked with `<span lang="th">` on the section pages).
 - **CSS variables**: defined per-file in each blog page's own `:root`. Common set: `--navy: #0f172a`, `--blue`/`--indigo: #6366f1`, `--slate: #334155`, `--slate-light: #64748b`, `--bg: #f8fafc`, `--font` (Inter), `--mono` (JetBrains Mono). Longer posts add semantic accents (`--green`, `--amber`, `--purple`, `--code-bg`). Copy the `:root` from the nearest sibling post rather than inventing one. `openclaw-101.html` predates this and uses raw hex throughout.
 - **Fonts**: Google Fonts `<link>` per page — Inter 300–900, plus JetBrains Mono 400–600 on posts with code.
 - **Diagrams**: render as PNG in `images/` and `<img>` them in. Inline HTML/CSS and ASCII-art diagrams have repeatedly broken layout and were replaced (`c270892`, `4ae2660`) — do not reintroduce them.
@@ -70,15 +78,13 @@ The numbered OpenClaw series order is fixed: `openclaw-101` → `agent-teams` �
 4. Wire navigation: for the numbered OpenClaw series, add the chip to all 7 `.series-nav` blocks; for DevOps, insert into the prev/next chain by editing the two neighbouring posts as well.
 5. Update the counters (see below).
 
-### Manual counters — currently out of sync
+### Manual counters — currently in sync, but nothing enforces it
 
-Nothing computes these; they drift. In `blog/index.html`:
-
-- `.blog-hero__stats` says **33** articles; there are actually **37** cards.
-- `#series-openclaw` `.series-count` says **12 articles**; there are actually **13** cards.
-- `#series-devops` `.series-count` says **24 articles** — correct.
-
-Fix these when touching the index. Verify with:
+Nothing computes these; they drift silently whenever a post is added or moved. As of this writing
+`blog/index.html` is consistent: `.blog-hero__stats` says **37** articles, `#series-openclaw`
+`.series-count` says **13** articles, `#series-devops` `.series-count` says **24** articles — all
+matching their actual card counts. Re-verify every time you touch the index; do not trust that this
+paragraph is still true.
 
 ```bash
 grep -c 'class="card"' blog/index.html                              # total cards
@@ -90,7 +96,7 @@ awk '/id="series-openclaw"/,/id="series-devops"/' blog/index.html | grep -c 'cla
 Four skills live in `.claude/skills/` — use them; they carry the deep, verified detail this file only summarizes:
 
 - **page-design** — the house visual system (canonical `:root` tokens, type scale, component vocabulary, approved hero gradients, modern-CSS adoption verdicts). Load before designing or restyling anything.
-- **blog-post** — the end-to-end recipe for adding/editing a post, with a starter template (`assets/post-template.html`) and a wiring verifier (`assets/verify-wiring.py`).
+- **blog-post** — the end-to-end recipe for adding/editing a post, with a wiring verifier (`assets/verify-wiring.py`). The starter template itself is not here — it was consolidated into **page-design** (`assets/post-template.html`) as the repo's one canonical copy; see `.claude/skills/blog-post/assets/TEMPLATE-MOVED.md`.
 - **a11y-perf** — accessibility and performance standing rules plus the measured remediation backlog (real contrast ratios, image weights, focus states).
 - **site-check** — run `python3 .claude/skills/site-check/scripts/check_site.py` from the repo root before every push; it is this repo's only test suite.
 

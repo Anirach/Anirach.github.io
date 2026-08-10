@@ -357,7 +357,7 @@ cosmetics gets switched off. The real split is 29 fail / 15 warn / 4 info across
 | INV-18 | no `#series-devops` card uses the chip strip | 0 | Green. (The mirror rule, INV-19, is fail-level — see above.) |
 | INV-20b | ordinal badge uses one consistent markup form | 4 | `.series-badge` ×4 (101, agent-teams, memory, production), `.series-info` ×1 (security), bare `<p>` ×1 (integrations), `<strong>` ×1 (skills). |
 | INV-20c | badge is worded "Post #N" | 1 | `blog/openclaw-memory.html:328` writes `บทที่ 3`. |
-| INV-22 | every post defines its own `:root` | 0 | Green since `6670480` landed the canonical 24-token block in all 39 files with embedded CSS, `style.css` included (INV-22b, info-level, is green for the same reason). Baseline entries deleted — a post that loses its `:root` is now reported as new. |
+| INV-22 | every post defines its own `:root` | 0 | Green since `6670480` landed the canonical 24-token block in all 42 files with embedded CSS, `style.css` included (INV-22b, info-level, is green for the same reason). Baseline entries deleted — a post that loses its `:root` is now reported as new. |
 | INV-24 | the 5 nav-bearing pages agree on the footer `©` year and all carry a meta description | 0 | INV-14/15/16 iterate `site.posts` only, so `blog/index.html` and the four landing pages sat outside every footer/meta check — which is how a `© 2025` footer survived on `blog/index.html` while the other four read 2026. The year is checked for **consistency** (modal year wins), never against a hardcoded literal, so 1 January is not a linter event. |
 
 Full drift inventory with counts and the reason each cohort exists: `references/drift-budget.md`.
