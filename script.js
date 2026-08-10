@@ -5,6 +5,12 @@
 (function () {
   'use strict';
 
+  // Respect the OS-level motion preference: the reduced-motion CSS media
+  // block can shrink transition/animation durations, but it cannot stop a
+  // scrollY-driven inline transform (the hero parallax below), so that one
+  // needs a JS-side guard too.
+  const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
   // ── Nav scroll effect ──
   const nav = document.getElementById('nav');
   let lastScroll = 0;
@@ -46,7 +52,7 @@
           const idx = siblings.indexOf(entry.target);
           setTimeout(() => {
             entry.target.classList.add('revealed');
-          }, idx * 120);
+          }, reduceMotion ? 0 : idx * 120);
           observer.unobserve(entry.target);
         }
       });
@@ -73,7 +79,7 @@
 
   // ── Parallax-lite for hero bg text ──
   const bgText = document.querySelector('.hero__bg-text');
-  if (bgText) {
+  if (bgText && !reduceMotion) {
     window.addEventListener('scroll', () => {
       const y = window.scrollY;
       if (y < window.innerHeight) {
