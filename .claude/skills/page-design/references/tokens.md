@@ -11,12 +11,21 @@ vals=collections.defaultdict(collections.Counter)
 for f in files:
     s=open(f,encoding='utf-8',errors='replace').read()
     for m in re.finditer(r':root\s*\{(.*?)\}', s, re.S):
-        for d in re.finditer(r'(--[a-zA-Z0-9-]+)\s*:\s*([^;]+);', m.group(1)):
+        # trailing ';' is optional: a minified last declaration before '}' has none
+        for d in re.finditer(r'(--[a-zA-Z0-9-]+)\s*:\s*([^;]+?);?(?=;|$)', m.group(1)):
             vals[d.group(1)][' '.join(d.group(2).split())]+=1
 for k,c in sorted(vals.items(), key=lambda kv:-sum(kv[1].values())):
     print(f"{k:16s} {sum(c.values()):3d}  " + " | ".join(f"{v}x{n}" for v,n in c.most_common()))
 PY
 ```
+
+**Edge case:** the two minified house files (`blog/openclaw-memory-architecture.html`,
+`blog/vibe-coding-devops-process.html`) write their `:root{...}` on one line with no
+trailing `;` before the closing `}`, so a regex that requires `[^;]+;` silently drops
+each file's *last* declaration (`--font` in the first, `--mono` in the second). The
+pattern above matches the value up to the next `;` **or** end-of-block, so it captures
+both. If you hand-roll a similar audit regex elsewhere, exercise it against these two
+files specifically before trusting its output.
 
 ---
 
