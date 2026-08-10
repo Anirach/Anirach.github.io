@@ -30,21 +30,40 @@ Baseline on a clean `main` (2026-08-10): `posts=37 cards=37 series-nav=7 post-na
 no-nav=5`, 4 known failures, 14 broken-link warnings in the OpenClaw series, 8 stale nav
 titles. If your run does not start from that, something else is already in flight.
 
-## Step 1 — pick the series, which picks the nav pattern
+## Step 1 — pick the category and series, which picks the nav pattern
+
+As of Task 11 (2026-08-10), `blog/index.html` groups posts into three top-level
+**categories** — `#cat-technology`, `#cat-academic` (Academic & Philosophy),
+`#cat-lifestyle` (Lifestyle) — each an `h2 class="category__title"` band. Technology is
+the only one with content today; it contains the two **series** below (each an
+`h3 class="series-title"`, one heading level under its category). Academic & Philosophy
+and Lifestyle currently render a single quiet `.category__note` line instead of any
+cards — see `references/known-exceptions.md`.
 
 There are exactly three in-post nav patterns and they are mutually exclusive. Which one
-you use is decided entirely by which series the post belongs to.
+you use is decided by which category/series the post belongs to.
 
-| Series | Section in `blog/index.html` | Nav pattern | Template |
+| Category / series | Section in `blog/index.html` | Nav pattern | Template |
 |---|---|---|---|
-| **DevOps & Vibe Coding** (24 posts) | `#series-devops` | `.post-nav` prev/next pair, relative `foo.html` links | `assets/post-template.html` — **the default** |
-| **Numbered OpenClaw** (7 posts) | `#series-openclaw` | `.series-nav` 7-chip strip, absolute `/blog/<slug>` links | copy `blog/openclaw-skills.html`; read `references/openclaw-series.md` first |
-| **Standalone** (5 posts) | either section | no nav block at all | `assets/post-template.html` with the `.post-nav` block deleted |
+| Technology → **DevOps & Vibe Coding** (24 posts) | `#series-devops` | `.post-nav` prev/next pair, relative `foo.html` links | `assets/post-template.html` — **the default** |
+| Technology → **Numbered OpenClaw** (7 posts) | `#series-openclaw` | `.series-nav` 7-chip strip, absolute `/blog/<slug>` links | copy `blog/openclaw-skills.html`; read `references/openclaw-series.md` first |
+| Technology → **Standalone** (5 posts) | either section | no nav block at all | `assets/post-template.html` with the `.post-nav` block deleted |
+| **Academic & Philosophy** (0 posts) | new `.blog-grid` inside `#cat-academic` | standalone (no nav) until the category reaches 2 posts, then a per-category `.post-nav` prev/next chain, same shape as DevOps's | `assets/post-template.html` with the `.post-nav` block deleted for the 1st post; restore it once a 2nd exists |
+| **Lifestyle** (0 posts) | new `.blog-grid` inside `#cat-lifestyle` | same rule as Academic & Philosophy | same |
 
-Card sections: `#series-openclaw` 13 cards, `#series-devops` 24 = 37. The nav partition
+Card sections: `#series-openclaw` 13 cards, `#series-devops` 24 = 37 Technology cards ==
+37 total (Academic & Philosophy and Lifestyle carry 0). The nav partition
 (what `verify-wiring.py` prints) is 7 series-nav + 25 post-nav + 5 no-nav = 37.
 `git-branching.html` is a `#series-devops` card with no nav, so it appears in two rows
 above.
+
+**Adding the first post to Academic & Philosophy or Lifestyle** replaces that category's
+`.category__note` paragraph with a `.blog-grid` (copy the shape from `#series-devops`'s
+`.blog-grid`, minus the `.series-description`) holding one card, and its
+`.category__count` becomes `"1 article"`. No `.post-nav` yet — the post is standalone.
+**Adding the second post** to the same category is what introduces its `.post-nav`
+prev/next chain (Step 7's DevOps recipe applies, scoped to that category's cards instead
+of `#series-devops`'s). Do not build a chain for a lone post.
 
 Default to the DevOps template even for an AI/agent topic. Two posts already do exactly
 that — `claude-code-architecture.html` and `openclaw-memory-architecture.html` are carded
@@ -248,6 +267,14 @@ EOF
 Set the hero stat and both `.series-count` values to what those commands print, including
 fixing the two that are already wrong. `verify-wiring.py` baselines the current drift, so
 correcting it will make the `known:` lines disappear — that is the desired direction.
+
+Since Task 11 there are two more counter sites: the Technology `.category__count`
+(`#cat-technology`, must equal the sum of its two series — 37 today) and the hero
+`<strong>3</strong> Categories` pill (must equal the number of `.category` blocks on the
+page, currently fixed at 3). Adding a post inside Technology means recomputing both, same
+as the series counters above. Adding the *first* post to Academic & Philosophy or
+Lifestyle changes that category's `.category__count` from `"First posts coming soon"` to
+`"1 article"` — see Step 1. `check_site.py`'s INV-02d/INV-02e enforce all of this.
 
 ## Step 7 — rewire the neighbours (DevOps series only)
 

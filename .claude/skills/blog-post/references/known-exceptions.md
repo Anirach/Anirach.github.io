@@ -6,6 +6,18 @@ symmetrical will corrupt the one navigation chain that currently verifies perfec
 
 ## Deliberate exceptions — leave alone
 
+**Two categories intentionally carry 0 cards.** Since Task 11 (2026-08-10),
+`blog/index.html` groups posts into three `.category` bands: `#cat-technology` (all 37
+existing posts, unchanged), `#cat-academic` (Academic & Philosophy) and `#cat-lifestyle`
+(Lifestyle). The latter two render a single quiet `<p class="category__note">` line
+("...— เร็ว ๆ นี้") instead of a `.blog-grid`, and their `.category__count` reads
+`"First posts coming soon"` rather than a number — a fake `"0 articles"` count would
+read as a bug. This is by design, not missing content; do not add placeholder cards to
+fill them. `check_site.py`'s INV-02d treats a 0-card category with that exact label as
+clean, and flags either a stale number left behind or a numeric "0" as a violation. See
+`.claude/skills/blog-post/SKILL.md` Step 1 for how the first post in either category
+should be added.
+
 **`git-branching.html` is the chain head and has no nav at all.**
 It is the oldest DevOps post. `cicd-pipeline.html:607` points `prev → git-branching.html`,
 which cannot reciprocate. Adding a `.post-nav` to `git-branching.html` would be a

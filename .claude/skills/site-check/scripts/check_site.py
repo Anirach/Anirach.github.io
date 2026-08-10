@@ -68,6 +68,20 @@ RE_SECTION = re.compile(
 RE_SERIES_COUNT = re.compile(r'(<span class="series-count">)(\d+)(\s*articles?</span>)')
 RE_HERO_STAT = re.compile(
     r'(<span class="blog-hero__stat"><strong>)(\d+)(</strong>\s*([A-Za-z]+)</span>)')
+# A .category block's header is a small fixed shape (icon/title/count, no
+# nested divs) so it is safe to bound non-greedily on its own </div> — unlike
+# a post-nav block (trap #3), there is nothing inside the header to mis-nest
+# on. The category's *body* (its child series-sections or its coming-soon
+# note) is NOT bounded by this regex; Site._parse_index() slices that
+# positionally, from the end of one category's header to the start of the
+# next (see Task 11, 2026-08-10).
+RE_CATEGORY_HEAD = re.compile(
+    r'<div class="category" id="([^"]+)">\s*'
+    r'<div class="category__header">\s*'
+    r'<span class="category__icon">[^<]*</span>\s*'
+    r'<h2 class="category__title">(.*?)</h2>\s*'
+    r'<span class="category__count">([^<]*)</span>\s*'
+    r'</div>', re.S)
 RE_SNAV = re.compile(r'<div class="series-nav">(.*?)</div>\s*</div>', re.S)
 RE_SNAV_ITEM = re.compile(r'<(a href="([^"]+)"|span class="current")>([^<]*)<')
 RE_PNAV_OPEN = re.compile(r'<(div|nav)\s+class="post-nav">')
@@ -441,6 +455,27 @@ class Site(object):
         for m in RE_HERO_STAT.finditer(idx):
             self.hero_stats[m.group(4).lower()] = (int(m.group(2)), m.start())
 
+        # -- category bands (Task 11, 2026-08-10) -------------------------
+        # Each category's card count is derived positionally: everything
+        # between the end of its own header and the start of the next
+        # category's opening <div> (or end of file for the last one). That
+        # correctly sums cards across a category's *multiple* child
+        # series-sections (Technology has 2) without needing to balance
+        # nested </div> tags.
+        self.categories = []
+        heads = list(RE_CATEGORY_HEAD.finditer(idx))
+        for i, m in enumerate(heads):
+            body_start = m.end()
+            body_end = heads[i + 1].start() if i + 1 < len(heads) else len(idx)
+            body = idx[body_start:body_end]
+            self.categories.append({
+                "id": m.group(1),
+                "title": norm_title(m.group(2)),
+                "count_text": htmlmod.unescape(m.group(3)).strip(),
+                "count_off": m.start(3),
+                "cards": len(RE_CARD.findall(body)),
+            })
+
     # -- in-post navigation ----------------------------------------------
     def _parse_navs(self):
         self.nav = {}            # post -> dict(prev,next,other,n,tag,titles)
@@ -557,6 +592,62 @@ def _(site):
             out.append(Violation(sid, "blog/index.html:%d #%s declared %d, actual %d"
                                  % (ln, sid, declared, actual)))
     return out
+
+
+# The exact label an empty category (0 cards) must show instead of a number
+# — "0 articles" reads like a bug, so it is a distinct, deliberate string
+# rather than a numeric label of zero.
+CATEGORY_COMING_SOON = "First posts coming soon"
+
+# The two categories that intentionally carry 0 cards today (Task 11,
+# 2026-08-10). Not used to *skip* them — INV-02d checks every category,
+# empty or not — only referenced by fault-injection notes / commit history.
+EMPTY_CATEGORIES = {"cat-academic", "cat-lifestyle"}
+
+
+@check("INV-02d", ".category__count == cards inside that category "
+                   "(sum of its child series), or the coming-soon label if empty")
+def _(site):
+    out = []
+    for c in site.categories:
+        ln = lineno(site.idx, c["count_off"])
+        if c["cards"] == 0:
+            # An empty category must show the quiet coming-soon label, never
+            # a numeric "0 articles" — and never a stale positive number
+            # left over from before its cards were removed.
+            if c["count_text"] != CATEGORY_COMING_SOON:
+                out.append(Violation(c["id"],
+                    'blog/index.html:%d #%s has 0 cards but .category__count '
+                    'reads %r (want %r)'
+                    % (ln, c["id"], c["count_text"], CATEGORY_COMING_SOON)))
+            continue
+        m = re.match(r'^(\d+)\s+articles?$', c["count_text"])
+        if not m:
+            out.append(Violation(c["id"],
+                'blog/index.html:%d #%s has %d card(s) but .category__count '
+                'reads %r (want "%d articles")'
+                % (ln, c["id"], c["cards"], c["count_text"], c["cards"])))
+            continue
+        declared = int(m.group(1))
+        if declared != c["cards"]:
+            out.append(Violation(c["id"],
+                "blog/index.html:%d #%s declared %d, actual %d"
+                % (ln, c["id"], declared, c["cards"])))
+    return out
+
+
+@check("INV-02e", 'blog-hero "N Categories" == number of <div class="category">')
+def _(site):
+    stat = site.hero_stats.get("categories")
+    want = len(site.categories)
+    if stat is None:
+        return [Violation("missing", 'blog/index.html has no "N Categories" hero stat')]
+    got, off = stat
+    if got != want:
+        ln = lineno(site.idx, off)
+        return [Violation("categories", "blog/index.html:%d declared %d, actual %d"
+                          % (ln, got, want))]
+    return []
 
 
 # ---------------------------------------------------------------------------
