@@ -346,16 +346,21 @@ Ordered by how much they degrade a screen-reader pass:
       <img src="../images/openclaw-101-cover.png" alt="" width="352" height="220"
            loading="lazy" decoding="async">
     </div>
-    <h3 class="card__title"><a href="openclaw-101.html" class="card__link">Title…</a></h3>
+    <h4 class="card__title"><a href="openclaw-101.html" class="card__link">Title…</a></h4>
   </div>
   ```
   ```css
   .card { position: relative; }
   .card__link::after { content: ""; position: absolute; inset: 0; }
   ```
-  This also fixes the flat outline — `blog/index.html` has 39 `<h2>` and 0 `<h3>`, so
-  the 37 card titles are siblings of the 2 `.series-title` headings and a heading list
-  can't tell which posts belong to which series.
+  Use `<h4>`, not `<h3>` — Task 11 (2026-08-10) already gave `blog/index.html` a real
+  ladder (`h1` page title → `h2` ×3 category titles → `h3` ×2 `.series-title` headings
+  → `h4` ×37 `.card__title`s, verified with
+  `python3 -c "import re,collections; s=open('blog/index.html').read(); print(collections.Counter(int(m.group(1)) for m in re.finditer(r'<h([1-6])\b[^>]*>', s)))"`
+  → `{1: 1, 2: 3, 3: 2, 4: 37}`), so wrapping a card title in `<h3>` would re-collide it
+  with the series headings it sits under. The flat-outline problem this bullet used to
+  describe (39 `<h2>` / 0 `<h3>`, card titles siblings of `.series-title`) is already
+  fixed by that ladder; this bullet is now only about the long accessible-name problem.
 - **Decorative alts.** Set `alt=""` on the 37 identical `alt="Anirach"`
   `.card__avatar` images, and on any cover whose adjacent heading repeats the words.
   Replace the 4 noise alts ending in "Cover" (`openclaw-101.html:383`,

@@ -431,9 +431,16 @@ class Site(object):
                 self.card_pos.setdefault(cur, offset)
             elif cur is not None:
                 im = re.search(r'<img src="([^"]+)"', p)
-                t = re.search(r'<h2 class="card__title">(.*?)</h2>', p, re.S)
+                # The heading LEVEL .card__title uses is not stable — it was <h2>
+                # until Task 11's fix round (2026-08-10) demoted it to <h4> to
+                # repair the heading ladder (h1 -> h2 category -> h3 series ->
+                # h4 card). Match any level via a backreference instead of
+                # hardcoding one, so a future ladder change can't silently zero
+                # out site.card_title and turn INV-10 into a check that always
+                # passes because it has nothing left to compare.
+                t = re.search(r'<(h[1-6]) class="card__title">(.*?)</\1>', p, re.S)
                 self.card_img[cur] = os.path.basename(im.group(1)) if im else None
-                self.card_title[cur] = norm_title(t.group(1)) if t else None
+                self.card_title[cur] = norm_title(t.group(2)) if t else None
                 cur = None
             offset += len(p)
 
