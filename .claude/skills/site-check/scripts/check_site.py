@@ -88,6 +88,8 @@ RE_COPYRIGHT = re.compile(r'©\s*(\d{4})')
 RE_EXTLESS = re.compile(r'href="(/blog/[^"#?]+)"')
 RE_JS_SEL = re.compile(r"querySelector(?:All)?\('([^']+)'\)|getElementById\('([^']+)'\)")
 RE_EMOJI = re.compile('[\U0001F000-\U0001FAFF☀-➿️]')
+RE_NAV_BLOCK = re.compile(r'<nav\b[^>]*>(.*?)</nav>', re.S)
+RE_NAV_HREF = re.compile(r'href="([^"]+)"')
 
 # ---------------------------------------------------------------------------
 # Canonical, hand-verified constants
@@ -133,6 +135,20 @@ CHAIN_HEAD = "git-branching.html"
 CHAIN_TERMINAL_NEXT = "./"
 
 EXPECTED_COPYRIGHT_YEAR = "2026"
+
+# The three sibling landing pages that joined index.html and blog/index.html
+# as full-site destinations (Task 9, 2026-08-10). Each carries the same
+# 5-destination nav (Blog/Books/Projects/News/Contact) as the other four.
+NAV_SIBLING_DIRS = ["books", "projects", "news"]
+
+# The 5 nav-bearing pages INV-23 polices, relative to the site root.
+NAV_PAGES = ["index.html", "blog/index.html"] + \
+            [d + "/index.html" for d in NAV_SIBLING_DIRS]
+
+# The 4 off-page nav destinations every one of NAV_PAGES must link to (a 5th
+# destination, Contact, is index.html's own #contact section and is checked
+# separately since it is an anchor, not a directory).
+NAV_DEST_DIRS = ["blog", "books", "projects", "news"]
 
 # ---------------------------------------------------------------------------
 # BASELINE — pre-existing violations verified by hand against the current
@@ -215,7 +231,11 @@ BASELINE = {
     },
 
     "INV-11": {"deployment-hosting.html"},
-    "INV-12": {"blog/index.html"},
+
+    # INV-12 (blog/index.html rendered a hamburger button but loaded no JS)
+    # was fixed by Task 9: the dead button was replaced with the checkbox-
+    # toggle pattern from projects/index.html. No baseline entry remains; a
+    # future regression must fail.
 
     "INV-14": {
         "idle-self-improvement.html", "openclaw-101.html",
@@ -348,6 +368,14 @@ class Site(object):
         self.pages = ["index.html"] + \
                      ["blog/" + f for f in sorted(os.listdir(self.blog))
                       if f.endswith(".html")]
+        # The three sibling landing pages (books/, projects/, news/) carry the
+        # same 5-destination nav as index.html and blog/index.html and must be
+        # in every link/image/lang scan too, or e.g. an image referenced only
+        # from books/index.html reports as a false-positive orphan (INV-06a).
+        for d in NAV_SIBLING_DIRS:
+            rel = d + "/index.html"
+            if os.path.exists(os.path.join(root, rel)):
+                self.pages.append(rel)
         self.text = {}
         for rel in self.pages:
             with open(os.path.join(root, rel), encoding="utf-8") as fh:
@@ -1114,6 +1142,70 @@ def _(site):
                           "literals only, so CLAUDE.md's \"use --navy/--blue from "
                           "style.css\" guidance cannot be followed there")]
     return []
+
+
+# ---------------------------------------------------------------------------
+# INV-23 — 5-page nav consistency (Task 9, 2026-08-10)
+#
+# index.html, blog/index.html, books/index.html, projects/index.html and
+# news/index.html each carry their own hand-copied <nav>. Every one of them
+# must link to all 4 sibling destinations (blog/, books/, projects/, news/)
+# plus index.html's #contact section, and every relative href inside that
+# <nav> must resolve to something real on disk — a page that looks fine but
+# 404s on click is worse than a page that never linked there at all.
+# ---------------------------------------------------------------------------
+@check("INV-23", "every nav-bearing page links to all 5 destinations, every nav href resolves")
+def _(site):
+    out = []
+    root_index = os.path.normpath(os.path.join(site.root, "index.html"))
+    for rel in NAV_PAGES:
+        s = site.text.get(rel)
+        if s is None:
+            out.append(Violation(rel + "|missing-page", "%s does not exist" % rel))
+            continue
+        m = RE_NAV_BLOCK.search(s)
+        if not m:
+            out.append(Violation(rel + "|missing-nav", "%s has no <nav>...</nav> element" % rel))
+            continue
+        page_dir = os.path.dirname(os.path.join(site.root, rel))
+        found_dirs, found_contact = set(), False
+        for href in RE_NAV_HREF.findall(m.group(1)):
+            if href.startswith(("http://", "https://", "mailto:", "tel:", "javascript:")):
+                continue
+            path_part, _, frag = href.partition("#")
+            path_part = path_part.split("?")[0]
+            if path_part == "":
+                cand = os.path.join(site.root, rel)              # anchor-only: same page
+            elif path_part.startswith("/"):
+                cand = os.path.join(site.root, path_part.lstrip("/"))
+            else:
+                cand = os.path.normpath(os.path.join(page_dir, path_part))
+            exists = (os.path.exists(cand) or os.path.exists(cand + ".html")
+                      or (os.path.isdir(cand) and os.path.exists(os.path.join(cand, "index.html"))))
+            if not exists:
+                out.append(Violation("%s|badhref|%s" % (rel, href),
+                                     '%s: nav href "%s" does not resolve on disk' % (rel, href)))
+                continue
+            norm = os.path.normpath(cand)
+            if os.path.isdir(norm):
+                base = os.path.basename(norm)
+                if base in NAV_DEST_DIRS:
+                    found_dirs.add(base)
+            elif os.path.basename(norm) == "index.html":
+                parent = os.path.basename(os.path.dirname(norm))
+                if parent in NAV_DEST_DIRS:
+                    found_dirs.add(parent)
+                elif norm == root_index and frag == "contact":
+                    found_contact = True
+        missing_dirs = [d for d in NAV_DEST_DIRS if d not in found_dirs]
+        if missing_dirs:
+            out.append(Violation(rel + "|missing-dest|" + ",".join(missing_dirs),
+                                 "%s nav has no link resolving to: %s"
+                                 % (rel, ", ".join(missing_dirs))))
+        if not found_contact:
+            out.append(Violation(rel + "|missing-contact",
+                                 "%s nav has no link resolving to index.html#contact" % rel))
+    return out
 
 
 # ---------------------------------------------------------------------------
