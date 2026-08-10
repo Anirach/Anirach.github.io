@@ -1,21 +1,31 @@
-/* ── a11y baseline — paste at the end of every <style> block ──────────────
-   Safe in all 39 files: every var() has a literal fallback, because 11 files
-   (index.html + the 7 numbered OpenClaw posts + beyond-plugins,
-   idle-self-improvement and openclaw-migration) have no :root at all.
-   Idempotent — the installer script skips files that already contain
-   "prefers-reduced-motion".
+/* ── a11y baseline — THE PART THAT IS NOT YET ON DISK ─────────────────────
+   Updated 2026-08-10 against 7867c00.
+
+   What this file used to contain and NO LONGER DOES, because e8da9da already
+   shipped it into 41 embedded <style> blocks + style.css (42/42 page coverage):
+
+     :focus-visible { outline: 2px solid var(--blue); outline-offset: 3px;
+                      border-radius: 2px; }
+     :focus:not(:focus-visible) { outline: none; }
+     @media (prefers-reduced-motion: reduce) { ...the *-reset block... }
+
+   Do NOT paste those again. A second, differently-worded focus ring (the old
+   version of this file used a 3px ring on :where(a,button,[tabindex])) would
+   fork the one rule the whole site currently agrees on, which is anti-pattern 3
+   in page-design/SKILL.md. Verify before adding anything here:
+
+     grep -L ':focus-visible' style.css blog/*.html books/index.html \
+            news/index.html projects/index.html          # → empty
+
+   Every var() below still carries a literal fallback. That is now belt-and-
+   braces rather than necessary — all 42 files declare the canonical :root since
+   6670480 — but it costs nothing and keeps the block safe to paste anywhere.
    ------------------------------------------------------------------------ */
 
-/* 1. Focus parity. The site has 91 :hover rules and had 0 :focus rules.
-      outline is never set to none anywhere, so this augments the UA ring
-      rather than replacing a suppressed one. */
-:where(a, button, [tabindex]):focus-visible {
-  outline: 3px solid var(--blue-dark, #4f46e5);
-  outline-offset: 3px;
-  border-radius: 4px;
-}
-
-/* Mirror the mouse-only card affordances (blog/index.html:96, :107, :140). */
+/* 1. Hover/focus PARITY. The ring exists everywhere; the affordances do not.
+      115 :hover rules across the site, and .card:focus-within is styled in 0
+      files, so keyboard users get the outline but never the card lift, the
+      image scale or the colour shift a mouse user gets. */
 .card:focus-within {
   transform: translateY(-4px);
   box-shadow: 0 16px 48px rgba(99, 102, 241, 0.1);
@@ -23,29 +33,23 @@
 .card:focus-within .card__image img { transform: scale(1.04); }
 .card:focus-within .card__read      { color: var(--blue-dark, #4f46e5); }
 
-/* 2. Skip link. Needs <main id="main"> on the page to be useful — 31 files
-      still lack it. */
+/* 2. Skip link. 0 of 42 files have one.
+      USELESS UNTIL <main id="main"> EXISTS — 31 files have no <main> at all and
+      the 11 that do have no id. Land the target first; see a11y-perf R5. */
 .skip-link { position: absolute; left: -9999px; }
 .skip-link:focus {
   left: 1rem; top: 1rem; z-index: 999;
   background: var(--navy, #0f172a); color: #fff;
-  padding: 0.75rem 1.25rem; border-radius: 8px;
+  padding: 0.75rem 1.25rem; border-radius: var(--radius-sm, 8px);
   font-weight: 600; text-decoration: none;
 }
 
-/* 3. Reduced motion. Covers the 64 transition: declarations, the infinite
-      pulseArrow animation (blog/openclaw-migration.html:54) and
-      scroll-behavior: smooth (27 files).
-      The [data-reveal] override doubles as the no-JS fallback for
-      style.css:48-52, which otherwise leaves 9 elements of index.html at
-      opacity:0 forever if script.js fails to run. */
+/* 3. The no-JS safety net the shipped reduced-motion block does NOT include.
+      style.css:68 hides 14 [data-reveal] elements at opacity:0 and only
+      script.js's IntersectionObserver reveals them. If JS fails, a third of
+      index.html is permanently invisible and there is no <noscript> anywhere.
+      Add this INSIDE the existing @media (prefers-reduced-motion: reduce)
+      block in style.css — do not open a second one. */
 @media (prefers-reduced-motion: reduce) {
-  html { scroll-behavior: auto; }
-  *, *::before, *::after {
-    animation-duration: 0.01ms !important;
-    animation-iteration-count: 1 !important;
-    transition-duration: 0.01ms !important;
-    scroll-behavior: auto !important;
-  }
   [data-reveal] { opacity: 1 !important; transform: none !important; }
 }

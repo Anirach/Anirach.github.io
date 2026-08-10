@@ -141,8 +141,10 @@ No emoji in `<h2>`. At most about one emoji per section overall (SKILL.md anti-p
 
 ## 4. Listing card — `.card`
 
-`blog/index.html:240-263`. This is already textbook BEM (37 cards, `card__tag` ×111) — the model
-for all future component naming.
+`blog/index.html`, the `openclaw-migration.html` card (find it with
+`grep -n 'openclaw-migration.html" class="card"' blog/index.html`). This is already textbook BEM
+(37 cards in `blog/index.html`, `card__tag` ×130 sitewide) — the model for all future component
+naming. Reproduced verbatim from disk, including the inline placeholder gradient.
 
 ```html
 <a href="openclaw-migration.html" class="card">
@@ -156,7 +158,7 @@ for all future component naming.
       <span class="card__tag">Migration</span>
       <span class="card__tag">DevOps</span>
     </div>
-    <h2 class="card__title">Self-Transferring OpenClaw Bot — ย้าย AI Agent ข้ามเครื่องแบบไม่พลาด</h2>
+    <h4 class="card__title">Self-Transferring OpenClaw Bot — ย้าย AI Agent ข้ามเครื่องแบบไม่พลาด 🚚</h4>
     <p class="card__excerpt">คู่มือย้าย bot จาก VPS Ubuntu ไป Mac Studio แบบ step-by-step</p>
     <div class="card__footer">
       <div class="card__author">
@@ -170,14 +172,22 @@ for all future component naming.
 </a>
 ```
 
-Two fixes to make while you are in there:
+**The title is `<h4>`, not `<h2>`.** Task 11 (`635eb94`) gave `blog/index.html` a real ladder —
+`h1` page title → `h2` ×3 `.category__title` → `h3` ×2 `.series-title` → `h4` ×37 `.card__title`.
+Writing `<h2 class="card__title">` re-collides the card with the category band. Any tool that
+greps for card titles must use `<h[1-6] class="card__title">`.
+
+One fix still to make while you are in there:
 
 - The live markup carries an **inline** `style="background: linear-gradient(...)"` on the cover
-  `<img>`. That is one of the 78 gradients. Move it to a class or drop it.
-- The cover is `openclaw-migration-cover.png` at **1.47 MB**. Re-encode to JPG (anti-pattern 5).
+  `<img>` — a load placeholder. It is one of the 77 gradients. Move it to a class or drop it.
 
-`.card` in `blog/index.html` means "blog listing card". The same bare name is used generically
-inside ~20 posts. Do not add a 21st `*-card` name; use `.card--<modifier>`.
+(The cover itself is fine now: `openclaw-migration-cover.jpg`, 186 KB, with
+`width`/`height`/`loading`/`decoding` — `ec2827b` and `e8da9da` handled both.)
+
+`.card` in `blog/index.html` means "blog listing card"; the 4 LISTING pages share the vocabulary
+(`card` ×56, `card__title` ×50 sitewide). The same bare name is also used generically inside ~20
+posts. Do not add a 19th `*-card` name; use `.card--<modifier>`.
 
 ---
 
@@ -374,7 +384,7 @@ characters in prose*, not to captured CLI output.
 
 ## 10. CSS file organisation
 
-Keep the existing comment convention — 10 files, 39 uses:
+Keep the existing comment convention — 13 files, 66 uses:
 
 ```css
 /* ── SECTION ── */

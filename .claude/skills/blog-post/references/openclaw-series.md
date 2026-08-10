@@ -8,10 +8,15 @@ blog/openclaw-agent-teams.html  blog/openclaw-integrations.html  blog/openclaw-p
 blog/openclaw-memory.html
 ```
 
-These 7 are the un-templated corner of the site. They were hand-written before the
-DevOps template settled, and they account for nearly every drift metric in the repo.
+These 7 are the roughest corner of the site. They were hand-written before the DevOps
+template settled, and they still account for most of the drift metrics in the repo.
 Steering a new post here costs 10 file edits instead of 4 — prefer the DevOps template
 unless the post genuinely belongs to this narrative arc.
+
+**Two of their old problems are fixed. Do not re-report them.** All 7 now carry the
+canonical 24-token `:root` (`6670480`, INV-22 PASSes) and the 4-line a11y block
+(`e8da9da`), and the 14 broken absolute links are gone (`b9fb125`, INV-05 PASSes).
+Re-verified 2026-08-10 against `7867c00`.
 
 ## What makes them different from every other post
 
@@ -19,7 +24,7 @@ unless the post genuinely belongs to this narrative arc.
 |---|---|---|
 | Header | `<nav class="blog-nav">` with `href="./"` in 26 of 30 | hand-rolled; **no `<nav class="blog-nav">` / `.blog-nav__back`** — 5 of 7 link back with a bare site-absolute `href="/blog"`; openclaw-memory.html and openclaw-skills.html have no back link at all |
 | Nav | `.post-nav` prev/next pair, relative `foo.html` | `.series-nav` chip strip, site-absolute `/blog/<slug>` (no `.html`) |
-| CSS vars | own `:root` in 27 of 30 | **no `:root` at all** — plain hex literals |
+| CSS vars | canonical `:root`, all 30 | **canonical `:root`, all 7** — same block, since `6670480`. `grep -c ':root' blog/openclaw-*.html` → `1` for every file. |
 | `<meta name="description">` | present | missing in 5 of 7 (101, agent-teams, memory, security, skills) |
 | Footer | `<footer class="blog-footer">` | `<footer class="footer">` ×5, bare `<footer>` ×2 (security, skills); copyright not standardised — 101 / agent-teams `© 2026 anirach.com • Built with ❤️ for the AI community`; memory `&copy; 2026 Anirach Mingkhwan. สงวนลิขสิทธิ์ทุกประการ.`; security / production `&copy; 2026 Anirach Mingkhwan. All rights reserved.`; integrations `&copy; 2024 …`; skills `&copy; 2026 anirach.com \| OpenClaw for Organizations Series` |
 
@@ -61,7 +66,8 @@ whatever the neighbouring lines in the file you are editing already use — do n
 "normalise" one file in isolation, that is drift.
 
 The extensionless `/blog/<slug>` form works because GitHub Pages resolves it to
-`<slug>.html`. All 42 such hrefs currently resolve. Do not "fix" them to `.html`.
+`<slug>.html`. All **42** such hrefs currently resolve (`check_site.py` INV-09 PASSes).
+Do not "fix" them to `.html`.
 
 ## Adding an 8th numbered post
 
@@ -77,28 +83,26 @@ The extensionless `/blog/<slug>` form works because GitHub Pages resolves it to
 5. Card goes at the **top** of `#series-openclaw` in `blog/index.html`, and both
    counters get recomputed (see SKILL.md).
 
-## The 14 broken links these files carry
+## The 14 broken links these files used to carry — **FIXED, do not re-report**
 
-All 7 hand-rolled headers/footers link to pages that have never existed. The site is a
-single-page portfolio; `blog/index.html:200-204` already uses the working form.
-
-| Broken href | Correct target | Occurrences |
-|---|---|---|
-| `/about` | `../index.html#about` | openclaw-101:376, agent-teams:438, integrations:264, security:362, production:386, production:1329 |
-| `/projects` | `../index.html#projects` | openclaw-101:375, agent-teams:437 |
-| `/research` | `../index.html#research` | integrations:263, security:360 |
-| `/teaching` | `../index.html#research` (no teaching section exists) | security:361 |
-| `/contact` | `../index.html#contact` | production:387, production:1330 |
-| `../about/` | `../index.html#about` | openclaw-memory:318 |
-
-Reproduce the list with:
+All 7 hand-rolled headers/footers used to link to `/about`, `/projects`, `/research`,
+`/teaching`, `/contact` and `../about/`, none of which existed. `b9fb125` ("fix stale
+counters, forked hero gradient, and 14 dead absolute links") removed them, and Task 8
+gave `/projects` a real page. The grep now returns **nothing**:
 
 ```bash
-grep -n 'href="/about\|href="/projects\|href="/research\|href="/teaching\|href="/contact\|href="\.\./about/' blog/*.html
+grep -c 'href="/about\|href="/projects\|href="/research\|href="/teaching\|href="/contact\|href="\.\./about/' blog/*.html \
+  | grep -v ':0$'          # → no output
+python3 .claude/skills/site-check/scripts/check_site.py | grep 'INV-05 '   # → PASS
 ```
 
-`verify-wiring.py` reports these at **warn** level, not fail, so they do not block your
-edit — but if you are already editing one of these files, fix the ones in it.
+What remains is the **back link**, which is a separate thing: 5 of the 7
+(`openclaw-101`, `agent-teams`, `integrations`, `production` ×2, `security`) reach the
+index with a bare site-absolute `href="/blog"` rather than the house
+`<a href="./" class="blog-nav__back">‹ Blog</a>`, and `openclaw-memory` /
+`openclaw-skills` have no route to the blog index at all. `/blog` resolves (GitHub Pages
+serves `blog/index.html`), so this is inconsistency, not breakage. Fix it in a file you
+are already editing; do not sweep it as a side effect of adding a post.
 
 ## Two `#series-openclaw` cards that are NOT part of this strip
 

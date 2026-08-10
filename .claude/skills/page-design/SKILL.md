@@ -1,27 +1,57 @@
 ---
 name: page-design
-description: The house visual system for anirach.com (this repo) — canonical :root tokens, type scale, layout constants, component vocabulary, breakpoints, modern-CSS verdicts, and the anti-patterns this repo has already been burned by. Use this whenever you create, restyle, or even lightly touch any HTML/CSS in this repository — a new blog post in blog/, a new section on index.html, a tweak to style.css, a nav or hero or callout or card, a diagram, a cover image, or a sweep across many files. Use it even if the user does not say "design", "style", or "CSS" — requests like "add a post about X", "make this look better", "fix the spacing", "add a diagram", "clean this up", "make it modern" all land here. Read it BEFORE writing markup, because the first question is always "is this file HOUSE or ISLAND?" and getting that wrong produces a 39-file inconsistency that is expensive to undo.
+description: The house visual system for anirach.com (this repo) — canonical :root tokens, type scale, layout constants, component vocabulary, breakpoints, modern-CSS verdicts, and the anti-patterns this repo has already been burned by. Use this whenever you create, restyle, or even lightly touch any HTML/CSS in this repository — a new blog post in blog/, a new section on index.html, a tweak to style.css, a nav or hero or callout or card, a diagram, a cover image, or a sweep across many files. Use it even if the user does not say "design", "style", or "CSS" — requests like "add a post about X", "make this look better", "fix the spacing", "add a diagram", "clean this up", "make it modern" all land here. Read it BEFORE writing markup, because the first question is always "is this file HOUSE, LISTING or ISLAND?" and getting that wrong produces a 42-file inconsistency that is expensive to undo.
 ---
 
 # The house visual system for anirach.com
 
+> ## Standing rule — numbers in this skill are load-bearing
+>
+> **Any change that invalidates a number in a skill file must update that number
+> in the same commit.** Every count in this file, in `references/tokens.md` and in
+> `references/components.md` is printed next to the command that produces it. If
+> you run a sweep and do not re-run those commands, the next session inherits a
+> confident, precise, wrong number and plans work that is already done.
+>
+> This is not hypothetical. Three sitewide sweeps (`6670480` tokens, `ec2827b`
+> covers, `e8da9da` a11y) landed without touching a single skill file, which is
+> how this skill spent a whole session telling readers there were "0
+> `:focus-visible` rules" in a repo that had 42 of them.
+
 ## 0. Correct your mental model first
 
-This looks like 37 hand-written blog posts that must be uniformly messy. It is not. It is **two
+This looks like 37 hand-written blog posts that must be uniformly messy. It is not. It is **three
 self-consistent families plus one hybrid**, and every design decision starts by classifying the
 file you are about to touch.
 
 ```
-blog/*.html  = 38 files = blog/index.html (listing) + 37 posts
-37 posts     = 26 HOUSE + 11 ISLAND (one of which, obsidian-ai-jarvis, is a HYBRID)
+42 HTML files
+  = index.html            (landing — the only page with <script> and the only one
+                           with no embedded <style>; its CSS is all style.css)
+  + 4 LISTING pages       blog/index.html, books/index.html, news/index.html,
+                           projects/index.html  — .nav chrome, 16px/1.7, 1200px
+  + 37 posts in blog/     = 26 HOUSE + 11 ISLAND
+                           (one of the 11, obsidian-ai-jarvis, is a HYBRID)
 ```
 
-Verified: `for f in blog/*.html; do grep -q 'class="blog-nav"' "$f" || basename "$f"; done`
-→ 12 files, of which one is `index.html`, leaving 11 island posts.
+```bash
+find . -name '*.html' -not -path './.git/*' -not -path './.claude/*' | wc -l   # → 42
+for f in blog/*.html; do grep -q 'class="blog-nav"' "$f" || basename "$f"; done # → 12
+```
+
+That second command returns 12, of which one is `blog/index.html`, leaving **11 island posts**.
+
+**The LISTING family is new** (Task 8, commits `fd63657` / `3f3d049` / `5447407`) and it is
+internally consistent: all four pages use `.nav` / `.nav__inner` / `.nav__links` / `.nav__logo` /
+`.nav__right`, `16px`/`1.7` body type, a `max-width: 1200px` container, one `clamp()` hero title,
+and the pure-CSS `.nav__toggle` checkbox + `.nav__burger` label mobile menu. Copy a sibling listing
+page when you add another; do not give a listing page `.blog-nav` chrome and do not give a post
+`.nav` chrome.
 
 | Axis | HOUSE (26) | ISLAND (10 pure) | HYBRID (obsidian-ai-jarvis) |
 |---|---|---|---|
-| `:root` + `var()` | yes 26/26 | no 0/10 | yes |
+| `:root` tokens | yes 26/26 | **yes 10/10 since `6670480`** | yes |
+| `:focus-visible` + reduced-motion + `color-scheme` + `text-wrap` | yes 26/26 | **yes 10/10 since `e8da9da`** | yes |
 | Google Fonts + preconnect | yes 26/26 | no 0/10 | yes |
 | `clamp()` | yes 26/26 | no 0/10 | yes |
 | `.post-hero` / `.post-body` | yes 26/26 | no 0/10 | **no** (`.container` 800px) |
@@ -29,6 +59,12 @@ Verified: `for f in blog/*.html; do grep -q 'class="blog-nav"' "$f" || basename 
 | code | `<pre>` 26/26 | `.code-block` 10/10 | `.code-block` |
 | body type | `17px` / `1.8` | no `font-size` (UA 16px); 5×`1.6`, 5×`1.7` | `17px` / `1.8` |
 | measure | `.post-body` 720px (24/26) — 760px in openclaw-memory-architecture + vibe-coding-devops-process | 1200 / 1000 / 900 / 800px | 800px |
+
+**The island/house gap is now narrower than it looks.** Two of the sweeps reached every file
+regardless of family: the canonical 24-token `:root` (all 42 files) and the a11y block (41
+embedded `<style>` blocks + `style.css`). What still separates island from house is **chrome and
+typography**, not tokens or accessibility. Do not re-plan the token or a11y work for island files;
+it is done. See `references/tokens.md` §1.
 
 **HOUSE deviations on those axes: two.** `openclaw-memory-architecture.html` and
 `vibe-coding-devops-process.html` (both minified) use `.post-body{max-width:760px}` and declare no
@@ -47,20 +83,29 @@ Verified: `for f in blog/*.html; do grep -q 'class="blog-nav"' "$f" || basename 
 - **Touching an ISLAND file?** Either leave its chrome alone or convert it fully to HOUSE. Never
   half-convert — a partial conversion creates a third family and destroys the property that makes
   this codebase tractable.
-- **Creating a new post?** It is HOUSE, always. Copy `assets/post-template.html`.
+- **Creating a new post?** It is HOUSE, always. Copy `assets/post-template.html` — the **only**
+  post template in this repo. (`blog-post/assets/post-template.html` was a second copy; it rotted
+  three sweeps behind and was deleted. See `blog-post/assets/TEMPLATE-MOVED.md`.)
 
 Because every file embeds its own `<style>`, a "global" change means editing N files by hand.
 That is the architecture, not a bug — see anti-pattern 2 before you reach for a shared stylesheet.
 
 ---
 
-## 1. The canonical `:root`
+## 1. The canonical `:root` — already landed, keep it byte-identical
 
-Paste this verbatim. Read `references/tokens.md` for the per-token deviation table, the delete
-list, and the rules for per-post brand tokens.
+**This sweep is finished.** `6670480` put the block below into every file; `36d9814` fixed its one
+bad target. All **42** `:root` blocks across the 41 HTML files that have one plus `style.css`
+declare all 24 tokens with **zero value deviations** — every token reads `×42` in the audit.
+`index.html` is the one file with no `:root` of its own, by design: its CSS is `style.css`, which
+carries the block at line 5.
+
+Paste this verbatim into anything new. Read `references/tokens.md` for the audit command, the
+remaining non-canonical tokens, and the rules for per-post brand tokens.
 
 ```css
 :root {
+  color-scheme: light;
   /* ink */
   --navy: #0f172a; --slate: #334155; --slate-light: #64748b; --gray: #94a3b8;
   /* ground */
@@ -80,23 +125,33 @@ list, and the rules for per-post brand tokens.
 }
 ```
 
-**Why you can paste this into 39 files without fear:** the core twelve tokens have *zero value
-conflicts* across all 28 `:root` blocks that exist today. `--navy #0f172a`, `--slate #334155` and
-`--bg #f8fafc` are 28/28 identical; `--slate-light` and `--gray` are 26/26; `--blue` and
-`--blue-light` 25/25; `--code-bg` 24/24; `--blue-dark` 20/20. And `style.css` — which declares
-**zero** custom properties (`grep -cE '^\s*--[a-z-]+\s*:' style.css` → `0`) — already uses nine of
-the ten palette hexes as literals (all but `--blue-light` `#818cf8`). Standardising the palette is
-a visual no-op. The entire diff is 9 value normalisations and 3 deletions, not a redesign. Say so
-in the commit message; that is what makes a 39-file sweep reviewable.
+Verify it is still uniform before and after any edit:
 
-Only five tokens genuinely conflict, and three names are pure aliases of tokens that already exist
-(`--indigo` == `--blue`, `--muted` == `--slate-light`, `--violet` == `--purple-dark`). `--teal2` is
-**not** an alias — it is a second teal value; see `references/tokens.md` §2. Full list there.
+```bash
+diff <(awk '/^    :root \{/,/^    \}/' .claude/skills/page-design/assets/post-template.html | sed 's/^ *//') \
+     <(awk '/^:root \{/,/^\}/' style.css | sed 's/^ *//')      # → no output
+```
 
-**`--radius` is `12px`, not `14px`.** `grep -ho 'border-radius: *[0-9]*px' index.html style.css blog/*.html | tr -d ' ' | sort | uniq -c | sort -rn`
-→ `168 12px`, `96 8px`, `75 10px`, `54 6px`, `33 20px`, `31 16px`, … `5 14px`. CLAUDE.md documents
-`--radius: 14px`, and `--radius` is declared in exactly one file (`blog/index.html`) at that wrong
-value. Use 12 / 8 / 16. Keep `20px`–`50px` pills for tags and chips only. See anti-pattern 10.
+The three pure aliases this section used to list for deletion — `--indigo`, `--muted`, `--violet` —
+are **gone** (0 occurrences). What is left off-canon is 7 genuine extras (`--emerald`,
+`--emerald-dark`, `--orange`, `--sky`, `--teal`, `--teal2`, `--purple-light`) plus 5 legitimate
+namespaced brand tokens; `references/tokens.md` §3–§4 has the fold-in table. `--teal2` is **not**
+an alias — it is a second teal value.
+
+**`--radius` is `12px`, not `14px`.**
+`grep -ho 'border-radius: *[0-9]*px' index.html style.css blog/*.html books/index.html news/index.html projects/index.html | tr -d ' ' | sort | uniq -c | sort -rn`
+→ `169 12px`, `96 8px`, `78 10px`, `54 6px`, `48 2px`, `35 20px`, `30 16px`, … `5 14px`. Use
+12 / 8 / 16; keep `20px`–`50px` pills for tags and chips only. The 48 `2px` hits are almost all the
+`:focus-visible` ring — do not consolidate them.
+
+**`--radius` is now correct in all 42 blocks; only CLAUDE.md is still wrong.** It documents
+`--radius: 14px`. Fixing that one line is anti-pattern 11 and is still outstanding.
+
+**The remaining token gap is consumption, not declaration.** `--measure` is declared 42 times and
+used `var(--measure)` **0** times — `max-width:720px` is still written as a literal 76 times.
+Same story for `--wide` (1 use vs 26 literals) and `--radius-lg` (1 vs 30). Nothing renders wrong;
+it just means "change the measure" is still an N-file edit. Write `var()` in new code (the template
+does); convert existing files opportunistically, not as a scheduled sweep. `references/tokens.md` §2.
 
 ---
 
@@ -121,8 +176,9 @@ Verify with a block-aware parse, not a line-based grep (most rules span lines, s
 → `24`, every one `font-size: 1.6rem`. The 2 house files with no `.post-body h2/h3/h4` rules at all
 are `openclaw-memory-architecture.html` and `vibe-coding-devops-process.html` (§0).
 
-The work is not redesign, it is **extension to the 11 island files** (and `blog/index.html`, which
-is `16px` / `1.7`). Font stacks to retire when you convert an island file: `'SF Pro Display', …`
+The work is not redesign, it is **extension to the 11 island files**. The 4 LISTING pages are
+`16px` / `1.7` and that is deliberate and uniform across all four — leave it. Font stacks to retire
+when you convert an island file: `'SF Pro Display', …`
 (×3), `'Segoe UI', Tahoma, Geneva, Verdana` (×1), bare `-apple-system, …` (×4),
 `'Inter', 'Noto Sans Thai', system-ui` (×1), and
 `'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif` (×1,
@@ -134,19 +190,25 @@ is `16px` / `1.7`). Font stacks to retire when you convert an island file: `'SF 
 
 | Constant | Value | Uses today |
 |---|---|---|
-| reading measure (`.post-body`) | **720px** | 74 |
-| wide container (`.blog-nav__inner`, listing) | **860px** | 26 |
+| reading measure (`.post-body`) | **720px** | 76 |
+| wide container (`.blog-nav__inner`) | **860px** | 26 |
+| listing container (the 4 LISTING pages) | **1200px** | 23 |
 | hero cover box | **380px** max-width (13 of 25), border-radius 16px = `--radius-lg` (25/25) | retire 420/480/520/560 |
-| listing card image | `.card__image`: width 100%; aspect-ratio 16/10 | `blog/index.html:101-103` |
-| tablet breakpoint | **768px** | 17 |
-| phone breakpoint | **600px** | 21 |
-| wide breakpoint | **1024px** | 1 — `style.css:586`, landing grids only |
+| listing card image | `.card__image`: width 100%; aspect-ratio 16/10 | `grep -n 'card__image' blog/index.html` |
+| tablet breakpoint | **768px** | 20 (18 spaced + 2 unspaced) |
+| phone breakpoint | **600px** | 24 |
+| wide breakpoint | **1024px** | 1 — `style.css`, landing grids only |
 | retire | `480px` (2), `500px` (1) | fold into 600px |
 
-`grep -ho '@media[^{]*' index.html style.css blog/*.html | sort | uniq -c | sort -rn`
-→ `21 (max-width: 600px)`, `15 + 2 (max-width: 768px)`, `2 480px`, `1 500px`, `1 1024px`.
+```bash
+grep -ho '@media[^{]*' index.html style.css blog/*.html books/index.html news/index.html projects/index.html \
+  | sed 's/[[:space:]]*$//' | sort | uniq -c | sort -rn
+```
+→ `42 (prefers-reduced-motion: reduce)`, `24 (max-width: 600px)`, `18 (max-width: 768px)`,
+`2 (max-width:768px)`, `2 480px`, `1 500px`, `1 1024px`.
 Two of the 768px hits are unspaced (`max-width:768px`) — match the spaced form in new code so
-grep-based sweeps find them.
+grep-based sweeps find them. The 42 reduced-motion blocks are the `e8da9da` a11y sweep (41
+embedded `<style>` blocks + `style.css`); they are not layout breakpoints.
 
 Island measures to convert away from: 1200px (`openclaw-101`, `openclaw-agent-teams`,
 `openclaw-production`), 1000px (`openclaw-security`), 900px (`openclaw-memory`), 800px
@@ -163,18 +225,44 @@ an existing noun, never a new noun.** Full markup for each, copy-paste ready, is
 `references/components.md` — open it whenever you add a callout, card, figure, or nav.
 
 ```
-Chrome     .blog-nav  .blog-nav__inner  .blog-nav__back  .blog-nav__title
+Chrome     .blog-nav  .blog-nav__inner  .blog-nav__back  .blog-nav__title      (posts)
+           .nav  .nav__inner  .nav__logo  .nav__links  .nav__right  .nav__cta
+           .nav__divider  .nav__toggle  .nav__burger                (LISTING pages
+                                          + index.html; .nav__toggle/.nav__burger
+                                          are the pure-CSS mobile menu — never JS)
 Header     .post-hero  .post-hero__tags  .post-hero__tag  .post-hero__title
            .post-hero__meta  .post-hero__series  .post-hero__cover
 Body       .post-body                       (max-width: var(--measure))
 Footers    .post-series-footer  .post-nav  .series-nav
 Listing    .card  .card__image|__body|__tags|__tag|__title|__excerpt|__footer|__author|__read
-           .blog-grid  .series-section  .series-header  .series-count
-Content    .callout  .callout--info|--warn|--good|--bad    [NEW — 0 uses today]
-           .compare  .compare__col  .compare__col--old|--new  [NEW — 0 uses today]
-           .figure  .figure__img  .figure__caption          [NEW — 0 uses today]
+           .blog-grid  .series-section  .series-header  .series-header__left
+           .series-title  .series-icon  .series-description  .series-count
+           .category  .category__header  .category__icon  .category__title
+           .category__count  .category__note              (Task 11, 635eb94)
+           .latest  .latest__inner  .latest__heading  .latest__list  .latest__date
+                                                        (Task 10, d4b94b5)
+Content    .callout  .callout--info|--warn|--good|--bad    [defined in the template — 0 uses]
+           .compare  .compare__col  .compare__col--old|--new  [defined — 0 uses]
+           .figure  .figure__img  .figure__caption          [defined — 0 uses]
 Code       <pre><code>                      (never .code-block)
 ```
+
+**`.category*` is the outer band, `.series*` is the inner group.** Task 11 (`635eb94`) re-cut
+`blog/index.html` into 3 `.category` bands (`#cat-technology`, `#cat-academic`, `#cat-lifestyle`)
+holding 2 `.series-section`s, and gave the page a real heading ladder:
+`h1` page title → `h2` ×3 `.category__title` → `h3` ×2 `.series-title` → `h4` ×37 `.card__title`.
+
+```bash
+python3 -c "import re,collections; s=open('blog/index.html').read(); print(collections.Counter(int(m.group(1)) for m in re.finditer(r'<h([1-6])\b[^>]*>', s)))"
+# → Counter({4: 37, 2: 3, 3: 2, 1: 1})
+```
+
+**Card titles are `h4`.** They were `h2` before Task 11. Anything that greps for
+`<h2 class="card__title">` is matching 0 of 37 — write `<h[1-6] class="card__title">` and let the
+backreference close it. `verify-wiring.py` was blind for exactly this reason until 2026-08-10.
+
+`.category__count` reads `"First posts coming soon"` — not `"0 articles"` — for the two empty
+categories, and `check_site.py` INV-02d enforces that exact label. Do not "fix" it to a number.
 
 The sprawl this replaces is real (counts are exact `class="X"` token occurrences): **18 bespoke
 `*-card` classes** (`info-card` ×27, `tool-card` ×10, `pillar-card` ×9, `skill-card` ×9,
@@ -190,14 +278,16 @@ Do not rename these en masse today — that is Phase 4 (§8). But **never add a 
 `.callout--<modifier>`.
 
 `blog/index.html` already uses perfect BEM (`class="card"` ×37 with `card__image`, `card__body`,
-`card__tags`, `card__title`, `card__excerpt`, `card__footer`, `card__author`, `card__read`, and
-`card__tag` ×111). So does `style.css` (`.btn--pill`, `.hero__label--bold`). Follow that.
+`card__tags`, `card__title`, `card__excerpt`, `card__footer`, `card__author`, `card__read`).
+Sitewide the `.card` vocabulary is now `card` ×56 (37 in `blog/index.html`, 7 in
+`projects/index.html`, the rest on the other listing pages), `card__tag` ×130, `card__title` ×50.
+`style.css` follows the same convention (`.btn--pill`, `.hero__label--bold`). Follow that.
 
 ---
 
 ## 5. Hero gradients — five approved, pick by series
 
-Today there are **78 distinct `linear-gradient(135deg, …)` values across 130 occurrences**, and 17
+Today there are **77 distinct `linear-gradient(135deg, …)` values across 133 occurrences**, and 17
 distinct `.post-hero` gradients across 26 house posts. This is the noisiest thing on the site.
 
 | Family | Gradient | Use for |
@@ -208,10 +298,10 @@ distinct `.post-hero` gradients across 26 house posts. This is the noisiest thin
 | Emerald | `linear-gradient(135deg, #052e16 0%, #064e3b 40%, #065f46 100%)` | testing / quality |
 | Teal | `linear-gradient(135deg, #134e4a 0%, #115e59 40%, #0f766e 100%)` | SRE / observability |
 
-The default is already the plurality (9 posts). `blog/index.html` carries an accidental fork of it
-at line 64 — identical except the middle stop is `40%` instead of `50%`. Verified:
-`grep -ho 'linear-gradient(135deg, *#e8f0fe[^)]*)' index.html blog/*.html | sort | uniq -c`
-→ `9` at 50% and `1` at 40%. Align it to 50%.
+The default is the plurality at **11 uses**, and the `40%`-stop fork `blog/index.html` used to
+carry was fixed by `b9fb125`. Verify it has not come back:
+`grep -ho 'linear-gradient(135deg, *#e8f0fe[^)]*)' index.html blog/*.html books/index.html news/index.html projects/index.html | sort | uniq -c`
+→ **one row**, all `50%`. Two rows means someone forked it again.
 
 **Never hand-pick a sixth.** Retire the one-offs when you touch their file: `#0c1929…`
 (docker-compose), `#0d1117…` (github-actions), `#1a0533…` (gitops), `#0369a1…` (cloud), `#0891b2…`
@@ -221,51 +311,73 @@ at line 64 — identical except the middle stop is `40%` instead of `50%`. Verif
 
 ## 6. Modern CSS — ranked by ROI, with verdicts
 
-The honest ranking here is lopsided. **Images dominate every CSS technique combined.**
+The honest ranking here is lopsided. **Images dominated every CSS technique combined — and that
+work is now done.** Items 1 and 3–6 below shipped in `ec2827b`/`21c8a55` and `e8da9da`. They are
+kept here as *the standard to hold*, not as a plan. Re-verify before you act on any of it.
 
-### ADOPT NOW, in this order
+### DONE — hold the line, do not re-plan
 
-**1. Image loading — the single highest-ROI change in the repo.**
-`blog/index.html` ships **18.4 MB across 36 unique images** (`19,247,246` bytes, computed by
-summing unique `src="../images/…"` targets), over **74 `<img>` tags**, with `loading=` on **0**
-files and `decoding=` on **0** files and zero `width`/`height` attributes anywhere. Guaranteed
-layout shift on every visit.
+**1. Image loading — LANDED.** `blog/index.html` now references **4.03 MB across 36 unique
+images** over 74 `<img>` tags, and **all 74 carry `loading="lazy"`**, so the HTML-only first byte
+cost is 66 KB and a first desktop viewport (first ~10 cards) fetches ≈1.7 MB, not 18.4 MB.
+Sitewide, **120 of 120 `<img>` tags have all four of `loading`, `decoding`, `width`, `height`**
+(38 also carry `fetchpriority`).
+
+```bash
+python3 - <<'PY'
+import re, pathlib
+n=ok=0
+for p in pathlib.Path('.').rglob('*.html'):
+    if '.claude' in p.parts or '.git' in p.parts: continue
+    for m in re.finditer(r'<img\b[^>]*>', p.read_text(encoding='utf-8'), re.S):
+        n+=1; ok+= all(a+'=' in m.group(0) for a in ('loading','decoding','width','height'))
+print(ok, "/", n)     # → 120 / 120
+PY
+```
+
+A line-based `grep -oh "<img[^>]*>"` reports **119** here — it drops the one `<img>` written across
+two lines. Use the multiline parse above; a one-tag discrepancy is exactly the kind of thing that
+makes a reader distrust the whole file.
 
 ```html
 <img src="../images/api-lifecycle-cover.jpg" alt="API Request Lifecycle — cute dog illustration"
      width="1600" height="900" loading="lazy" decoding="async">
 ```
 
-Above-the-fold hero covers get `loading="eager" fetchpriority="high"` instead. Pair with
-`aspect-ratio` (below) so the box is reserved before the bytes arrive.
+Above-the-fold hero covers get `loading="eager" fetchpriority="high"` instead.
 
-**2. `aspect-ratio`** — already correct on `.card__image` (`blog/index.html:102`, `16/10`) and
-`style.css:516`. Do not change it. The gap is `.post-hero__cover`, which reserves no box in any of
-the 25 files that declare it; add `aspect-ratio` there matching the actual cover art ratio.
+**3–6. `:focus-visible`, `prefers-reduced-motion`, `color-scheme: light`, `text-wrap: balance` —
+ALL LANDED** in `e8da9da`, as one 4-line block, in **41 embedded `<style>` blocks + `style.css`**
+= complete 42/42 page coverage. `index.html` is the one HTML file without the block in its own
+source, correctly, because it has no `<style>` block at all.
 
-**3. `:focus-visible`** — there is **zero** focus styling in the entire repo. `grep -l ':focus-visible'`
-matches 0 files, and there is no `outline` declaration anywhere. The site is currently unusable by
-keyboard. Non-negotiable; three lines per file.
+```bash
+grep -L ':focus-visible' style.css blog/*.html books/index.html news/index.html projects/index.html  # → empty
+grep -c ':focus-visible' style.css                                                                   # → 2
+```
 
-**4. `prefers-reduced-motion`** — also **0 files**, against 63 `transition:` declarations (70 raw
-hits including one `--transition:` and six `var(--transition)`), **36 `translateY`** hover lifts,
-an IntersectionObserver reveal at `script.js:40–59`, a nav scroll toggle at `script.js:13–17`, and
-a scroll parallax at `script.js:75+`. The parallax alone justifies it.
+`script.js:12` carries the `matchMedia('(prefers-reduced-motion: reduce)')` guard for the
+scroll-driven work the CSS block cannot reach.
 
-**5. `color-scheme: light`** — 0 files. The site is 100% light but declares nothing, so UA-painted
-scrollbars and form controls render dark for dark-OS visitors against a `#f8fafc` page. One line.
+**Corollary the old text got wrong:** `outline: none` **is** now declared, 42 times, as
+`:focus:not(:focus-visible) { outline: none; }`. That is correct and deliberate — it suppresses the
+UA ring only for mouse/programmatic focus, never for keyboard. Do not "fix" it, and do not cite it
+as evidence of a focus failure.
 
-**6. `text-wrap: balance`** — 0 files. Stops orphaned words in the `clamp()` hero titles and the 37
-card titles. Degrades to nothing where unsupported. Free.
+### ADOPT NOW
 
-**7. `clamp()` fluid type** — already the mechanism in 28 HTML files plus `style.css`. The
-post-title value is canonical (`clamp(1.8rem, 5vw, 3rem)`, 26/26 house files); the landing page has
-its own scale in `style.css`. Extend to the 11 island files; do not redesign either scale (§2).
+**2. `aspect-ratio` on `.post-hero__cover`** — the one image item still partly open. `.card__image`
+has it (`16/10`), and 26 blog files now declare `aspect-ratio` somewhere, but not every one of the
+25 `.post-hero__cover` rules reserves a box. Add `aspect-ratio: 16 / 9` plus
+`object-fit: cover` on the child `img` when you are in the file; the template already does.
 
-The three snippets to paste, verbatim:
+**7. `clamp()` fluid type** — the mechanism in the 26 house posts, the 4 listing pages and
+`style.css`. The post-title value is canonical (`clamp(1.8rem, 5vw, 3rem)`, 26/26 house files).
+Extend to the 11 island files; do not redesign either scale (§2).
+
+The block that shipped, verbatim — **keep it byte-identical** so a grep sweep still finds it:
 
 ```css
-/* focus — currently zero coverage repo-wide */
 :focus-visible { outline: 2px solid var(--blue); outline-offset: 3px; border-radius: 2px; }
 :focus:not(:focus-visible) { outline: none; }
 
@@ -288,7 +400,7 @@ And guard the JS in `script.js` (the CSS media block cannot stop a `scrollY`-dri
 const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 ```
 
-**Proving the sweep landed — `index.html` is not like the other 38 files.** Every `blog/*.html`
+**Proving the sweep landed — `index.html` is not like the other 41 files.** Every `blog/*.html`
 post, `blog/index.html`, `books/index.html`, `projects/index.html`, `news/index.html` and
 `style.css` itself embed or *are* their own CSS, so a per-file `<style>`-block grep proves coverage
 for each of them directly:
@@ -298,8 +410,11 @@ grep -L ':focus-visible' style.css blog/*.html books/index.html projects/index.h
 ```
 
 `index.html` is the one page whose CSS lives entirely in `style.css` via
-`<link rel="stylesheet" href="style.css">` — it has **zero** embedded `<style>` blocks by design
-(`grep -c '<style' index.html` → `0`, verified as an explicit requirement back in Task 10). Running
+`<link rel="stylesheet" href="style.css">` — it has **zero** embedded `<style>` blocks by design,
+an explicit requirement since Task 10. **Use `grep -c '</style>' index.html` → `0`, not
+`grep -c '<style'`**: since `7867c00` the file carries a comment reading "index.html deliberately
+has no `<style>` block of its own", so the opening-tag grep returns `1` and looks like a violation
+of the very rule the comment states. Closing tags cannot appear in that prose. Running
 the same per-file grep against `index.html` and expecting a hit is checking the wrong file: it will
 always report `index.html` as "missing" the snippet even when coverage is real, and the tempting
 fix — pasting a duplicate `<style>` block into `index.html` just to make the grep pass — is wrong.
@@ -313,9 +428,10 @@ cascade actually reaches the page (custom properties and `:focus-visible` both a
 regardless of which linked/embedded sheet declared them):
 
 ```bash
-grep -c '<style' index.html                 # → 0  (must stay 0 — see Task 10, and anti-pattern 2)
-grep -c ':focus-visible' style.css           # → 1 (or more)
-grep -c 'color-scheme' style.css             # → 1 (or more)
+grep -c '</style>' index.html      # → 0  (must stay 0 — Task 10, and anti-pattern 2)
+grep -c ':focus-visible' style.css # → 2
+grep -c 'color-scheme' style.css   # → 1
+grep -c 'text-wrap' style.css      # → 1
 ```
 Then in a real browser on `index.html`: tab once and confirm a visible focus ring, and confirm
 `getComputedStyle(document.documentElement).getPropertyValue('--blue')` resolves — both prove the
@@ -323,26 +439,30 @@ Then in a real browser on `index.html`: tab once and confirm a visible focus rin
 
 ### LATER — blocked, not declined
 
-- **`prefers-color-scheme` dark mode.** Genuinely worth having, but with per-file CSS it means 39
-  hand-maintained dark palettes plus dark variants of 78 gradients, and the light-lavender hero has
-  no dark analogue. **Blocked on the §1 tokens landing in all 39 files.** Once they have, it is one
-  `@media` block per file. Do not attempt before then.
+- **`prefers-color-scheme` dark mode.** Genuinely worth having, but with per-file CSS it means 42
+  hand-maintained dark palettes plus dark variants of 77 gradients, and the light-lavender hero has
+  no dark analogue. **The §1 blocker is cleared** — the tokens landed in all 42 files in `6670480`,
+  and `color-scheme: light` is declared in all 42, so a dark block now has a single well-defined
+  place to go and a single set of names to redefine. This is the largest remaining design project
+  and it is now genuinely unblocked, not merely deferred. Scope it as one `@media` block per file,
+  written once and pasted, exactly like `e8da9da` did.
 - **`color-mix()`.** Would collapse ~30 one-off tint gradients (`#eff6ff`, `#ecfdf5`, `#fefce8` …)
   into derivations of `--blue` / `--green` / `--amber`. Excellent second pass, after tokens.
 
 ### NOT NOW
 
 - **`content-visibility: auto`.** Long posts exist (`web-architecture.html` 91 KB,
-  `frontend-performance.html` 69 KB) but `.post-body` has no section children to apply it to, and
-  the real bottleneck is 18.4 MB of images. Revisit only if posts get sectioned.
+  `frontend-performance.html` 69 KB) but `.post-body` has no section children to apply it to. The
+  image bottleneck that used to dwarf it is gone (18.4 MB → 4.03 MB referenced, all lazy), so this
+  is now merely small rather than irrelevant. Revisit only if posts get sectioned.
 
 ### NEVER — with reasons
 
-- **CSS nesting.** This repo is maintained by grepping and find-replacing *flat* selectors across 39
+- **CSS nesting.** This repo is maintained by grepping and find-replacing *flat* selectors across 42
   files. There is no build step to flatten nesting. §7 shows how easily cross-file edits already
   drift; nesting would make every sweep measurably harder. Actively harmful here.
 - **Logical properties** (`margin-inline`, `padding-block`). Zero adoption today; both site languages
-  (English, Thai) are LTR. Buys nothing, costs a rewrite of every margin and padding in 39 files.
+  (English, Thai) are LTR. Buys nothing, costs a rewrite of every margin and padding in 42 files.
 - **Container queries.** `.post-body` is a single 720px column with nothing to adapt, and the card
   grid already works via `auto-fit`/`minmax`. No problem to solve.
 - **`:has()`.** No identified use case.
@@ -361,7 +481,7 @@ Then in a real browser on `index.html`: tab once and confirm a visible focus rin
    **Exception:** box-drawing characters *inside* `<pre>` or `.code-block` that reproduce real CLI
    output are correct — e.g. `blog/openclaw-agent-teams.html:874`, a `subagents list` table. Do not
    strip those while cleaning up ASCII art. The `/* ── SECTION ── */` CSS comment convention
-   (10 files, 39 uses) is also deliberate and worth keeping.
+   (13 files, 66 uses) is also deliberate and worth keeping.
 
 2. **Never add a shared stylesheet before resolving the name collisions.** `index.html` is the only
    file linking `style.css`. Dropping a `<link>` into a post today collides immediately: `.nav`
@@ -378,23 +498,40 @@ Then in a real browser on `index.html`: tab once and confirm a visible focus rin
    which N in the commit. (That same rule also has `color: #4f46e5` hard-coded where
    `var(--blue-dark)` belongs.)
 
-4. **Never reuse a cover image.** 37 cards resolve to only 35 unique covers:
-   `../images/github-actions-cover.jpg` is shared by `vibe-coding-devops-process.html` and
+4. **Never reuse a cover image.** Still true and still unfixed: 37 cards resolve to only 35 unique
+   covers. `../images/github-actions-cover.jpg` is shared by `vibe-coding-devops-process.html` and
    `github-actions.html`; `../images/monitoring-cover.jpg` by `openclaw-memory-architecture.html`
    and `monitoring-observability.html`. Those pairs are indistinguishable on the listing.
+   `check_site.py` INV-07a baselines exactly these two. The fix is two new images, not a re-point.
 
-5. **Never commit a cover over ~200 KB, and never as PNG.** PNGs average **821 KB** (22 files,
-   17.6 MB); JPGs average **82 KB** (28 files, 2.3 MB) for the identical editorial job — a 10×
-   difference. 15 files exceed 500 KB, all PNG, led by `obsidian-ai-jarvis-cover.png` (1.57 MB),
-   `idle-self-improvement-cover.png` (1.54 MB), `claude-code-architecture-cover.png` (1.50 MB).
-   Photographic / AI-generated covers are JPG or WebP at ≤1600px wide. PNG is only for diagrams
-   with flat colour and text.
+5. **Never commit a cover over ~200 KB, and never as PNG. This is now clean — keep it clean.**
+   `ec2827b` + `21c8a55` re-encoded every PNG cover to JPG at `formatOptions 70`. Today:
+   **36 JPG covers, 0 PNG covers, average 112 KB, largest 194 KB, zero over 200 KB.**
 
-6. **Never add a post without updating all three counters in `blog/index.html`.** Line 221
-   `<strong>33</strong> Articles` — actual is **37**. Line 235 `<span class="series-count">12
-   articles</span>` for `#series-openclaw` — actual is **13**. Line 573 `24 articles` for
-   `#series-devops` — correct. Three numbers, three line numbers, every single time. (Link integrity
-   itself is fine: 37 unique post links, 37 post files, no orphans, no dead post links.)
+   ```bash
+   ls images/*-cover.png 2>/dev/null | wc -l                                   # → 0
+   find images -name '*-cover.*' -size +200k                                   # → nothing
+   ls -l images/*-cover.jpg | awk '{s+=$5;n++} END {print n" jpg, avg "int(s/n/1024)" KB"}'
+   ```
+
+   Photographic / AI-generated covers are JPG at ≤1600px wide. PNG survives for the **5 diagram
+   images only** (`*-arch.png`, `*-flow.png`, `*-levels.png`, 123–235 KB) — those are correctly
+   PNG and must not be converted; a q70 JPEG smears their lines.
+
+6. **Never add a post without recomputing every counter in `blog/index.html`.** They were all
+   stale; `b9fb125` fixed them and Task 11 added two more sites. **All five are correct today** and
+   `check_site.py` INV-02a–INV-02e all PASS — so any drift you see is drift you introduced.
+
+   | Counter | Value today |
+   |---|---|
+   | `.blog-hero__stat` "N Categories" | 3 |
+   | `.blog-hero__stat` "N Series" | 2 |
+   | `.blog-hero__stat` "N Articles" | 37 |
+   | `.category__count` `#cat-technology` | 37 articles |
+   | `.series-count` `#series-openclaw` / `#series-devops` | 13 / 24 |
+
+   Recompute, never increment — incrementing by hand is how all of them went stale. Never cite line
+   numbers for these; they have moved twice. Grep for the class.
 
 7. **Never invent a token name for a value that already has one.** `--indigo` == `--blue`,
    `--muted` == `--slate-light`, `--violet` == `--purple-dark`. (`--teal2` is *not* an alias — it
@@ -408,18 +545,31 @@ Then in a real browser on `index.html`: tab once and confirm a visible focus rin
    `<link>` and no `preconnect` — they silently render in a system font while claiming the house
    typeface. All 10 pure island files lack both tags.
 
-10. **Never link an absolute route that does not exist.** None of `/about`, `/projects`, `/research`,
-    `/contact`, `/teaching` exist on disk, yet `/about` is linked from 5 files, `/projects` from 2,
-    `/research` from 2, `/contact` from 1, `/teaching` from 1, plus `href="../about/"` at
-    `blog/openclaw-memory.html:318`. Extensionless `/blog/openclaw-*` links **are** fine — GitHub
-    Pages resolves them to `.html`, and all 7 targets exist.
+10. **Never link an absolute route that does not exist. Now clean — keep it clean.** `b9fb125`
+    removed the 14 dead absolute links (`/about`, `/research`, `/contact`, `/teaching`,
+    `../about/`), and Task 8 gave `/projects` a real page. Every one of those five routes is now
+    linked from **0** files, and `check_site.py` INV-05 ("every relative/site-absolute href resolves
+    on disk") PASSes with 0 violations. Extensionless `/blog/openclaw-*` links **are** fine — GitHub
+    Pages resolves them to `.html`, all 7 targets exist, and INV-09 checks it.
 
-11. **Never let CLAUDE.md drift.** It currently states three false things: `--radius: 14px` (real
-    value 12px, 168 uses vs 5, and `--radius` is declared in 1 of 39 files); "see `blog/index.html`
-    or `style.css`" for CSS variables (`style.css` has **zero**); and "Blog listing with category
-    filters" (`blog/index.html` has **zero** `<script>` tags; the only `filter` occurrences are
-    `backdrop-filter: blur(...)` at lines 32 and 168). **Fix these three when the house system
-    lands**, or the next session inherits the same three false beliefs.
+    ```bash
+    python3 .claude/skills/site-check/scripts/check_site.py | grep 'INV-05 \|INV-09'
+    ```
+
+11. **Never let CLAUDE.md drift.** Re-checked 2026-08-10 — one of the three old claims fixed
+    itself, one is still wrong, one is now wrong in a *new* way:
+    - `--radius: 14px` — **still false.** Real value is `12px` (169 uses vs 5) and it is now
+      declared in 42 of 42 `:root` blocks at the correct value. CLAUDE.md is the last place the
+      wrong number survives. Fix it.
+    - "see `blog/index.html` or `style.css`" for CSS variables — **now true.** `6670480` gave
+      `style.css` the canonical `:root` at line 5; `check_site.py` INV-22b guards it.
+    - "Blog listing with category filters" — **still false, and more misleading than before.**
+      `blog/index.html` has zero `<script>` tags; the only `filter` occurrences are
+      `backdrop-filter: blur(...)`. Task 11 added real *category bands*, which makes "category
+      filters" sound plausible to a reader who has not opened the file. Reword to "category bands
+      (no JS)".
+
+    This entry is also the reason for the standing rule at the top of this file.
 
 12. **Never add JavaScript to `blog/index.html`.** `grep -c '<script' blog/index.html` → `0`. That
     is a feature worth defending. Any filtering must work without JS or not ship.
@@ -430,37 +580,44 @@ Then in a real browser on `index.html`: tab once and confirm a visible focus rin
     linux-command-line, monitoring-observability, networking-fundamentals). Posts sitting side by
     side in the same series read as different websites.
 
-14. **Never regress alt text.** 118 of 118 `<img>` have `alt` — the one complete accessibility
-    practice in the repo. Protect it.
+14. **Never regress alt text or image attributes.** **120 of 120** `<img>` have `alt`, and since
+    `e8da9da` all 120 also have `loading`, `decoding`, `width` and `height`. Two complete
+    sitewide practices — the only two. Protect both. (Alt *quality* is still uneven: 4 alts end in
+    the word "Cover" and 37 avatars repeat `alt="Anirach"`; see a11y-perf R6.)
 
 ---
 
-## 8. Adoption order — smallest diff first
+## 8. Adoption order — where the plan actually stands
 
-**Phase 1 — invisible, mechanical, zero visual change.** Paste the §1 `:root` into all 39 files. In
-the 28 that already have one this only *adds* missing tokens and normalises 9 values. In
-`style.css`, 9 of 10 hexes already match, so it is a pure find-and-replace (only `#475569`, 1 use,
-is off-palette). In the 11 island files, replace their hex literals with `var()`. Delete the 3
-alias tokens and fold `--teal2` into the Teal hero gradient. Set `--radius: 12px` and correct
-CLAUDE.md (anti-pattern 11).
+Phases 1–3 **shipped** between `6670480` and `e8da9da`. They are recorded here as history so nobody
+re-plans them; the only live work is Phase 4 and the short "still open" list below.
 
-**Phase 2 — visible tidy, high ROI.** `loading="lazy"` + `decoding="async"` + `width`/`height` on
-all 118 `<img>`; re-encode the 15 oversized PNG covers to JPG (drops `blog/index.html` from 18.4 MB
-to roughly 3 MB); commission art for the 2 shared covers; fix the 3 counters; fix the 6 dead
-routes; move `blog/index.html:64`'s hero gradient stop from 40% to 50%.
+| Phase | What it was | Status |
+|---|---|---|
+| 1 — tokens | canonical `:root` in every file, aliases deleted, `--radius: 12px` | **DONE** `6670480`, `36d9814`. 42/42 blocks, 0 deviations. Only CLAUDE.md's `14px` line is left. |
+| 2 — images + counters + routes | JPG covers, `loading`/`decoding`/`width`/`height`, counters, dead routes, hero-gradient fork | **DONE** `ec2827b`, `21c8a55`, `b9fb125`. 120/120 images attributed; 0 PNG covers; all 5 counters correct; 0 dead absolute links. |
+| 3 — modern polish | `:focus-visible`, `prefers-reduced-motion` (+ `script.js` guard), `color-scheme`, `text-wrap`, `aspect-ratio` | **DONE** `e8da9da`. 41 embedded blocks + `style.css`. |
+| 4 — structural | island → HOUSE conversion, vocabulary collapse, shared stylesheet, dark mode | **OPEN — the only live phase.** |
 
-**Phase 3 — modern polish, 3 snippets × 39 files.** `:focus-visible`, `prefers-reduced-motion`
-(+ the `matchMedia` guard in `script.js`), `color-scheme: light`, `text-wrap: balance`,
-`aspect-ratio` on covers.
+**Still open from Phases 1–3, small and specific:**
+
+- CLAUDE.md still documents `--radius: 14px` and "category filters" (anti-pattern 11).
+- `var(--measure)` / `var(--wide)` / `var(--radius-lg)` are declared but barely consumed (§1).
+- `aspect-ratio` is not on every `.post-hero__cover` (§6 item 2).
+- 2 covers are still double-booked; commissioning the art is the fix (anti-pattern 4).
+- Contrast: `.post-hero__meta` is still `rgba(255,255,255,0.6)` in 15 files and
+  `.post-series-footer` is still `var(--gray)` in 22 — see the a11y-perf skill, R3/R4. The a11y
+  *infrastructure* landed; the *palette* corrections did not.
 
 **Phase 4 — structural, genuinely optional.** Convert `obsidian-ai-jarvis.html` first: it already
 has house tokens, Inter, `clamp()` and `17px`/`1.8`, and only needs `.nav`→`.blog-nav`,
 `.container` 800px → `.post-hero`/`.post-body` 720px, and `.code-block`→`<pre>`. It is ~80% done and
 is the cheapest possible proof that the recipe works. Then the 10 island posts. Then collapse the
-callout and card vocabularies. **Only then** consider a shared stylesheet, and after that, dark mode.
+callout and card vocabularies. **Only then** consider a shared stylesheet, and after that, dark mode
+— which §6 now lists as unblocked rather than deferred.
 
-A partial migration is not a failure. Phases 2 and 3 are where the site visibly becomes nice,
-modern and tidy; Phase 4 is housekeeping.
+A partial migration is not a failure. Phases 2 and 3 are where the site visibly became nice, modern
+and tidy; Phase 4 is housekeeping.
 
 ---
 
@@ -469,16 +626,23 @@ modern and tidy; Phase 4 is housekeeping.
 Leave these alone unless the user explicitly asks:
 
 - the heading scale (`h2` 1.6rem 24/24, `h3` 1.25rem 24/24, hero `clamp(1.8rem, 5vw, 3rem)` ×26)
-- the 720px measure (74 uses) and the 860px wide container (26 uses)
+- the 720px measure (76 uses) and the 860px wide container (26 uses)
 - the BEM naming in `style.css` and in `blog/index.html`'s `.card`
 - the glassy nav: `background: rgba(248,250,252,0.85); backdrop-filter: blur(20px)`
-- the `/* ── SECTION ── */` CSS comment convention (10 files, 39 uses)
-- 100% alt-text coverage (118/118)
-- `<meta name="viewport">` on 39/39 files
+- the `/* ── SECTION ── */` CSS comment convention (13 files, 66 uses)
+- the canonical 24-token `:root`, byte-identical in 42/42 blocks (`references/tokens.md`)
+- the 4-line a11y block (`:focus-visible`, reduced-motion, `color-scheme`, `text-wrap`) in 41
+  embedded `<style>` blocks + `style.css` — including its `outline: none`, which is scoped to
+  `:focus:not(:focus-visible)` and is correct
+- image attributes: 120/120 `<img>` carry `alt`, `loading`, `decoding`, `width` and `height`
+- cover budget: 36 JPG covers, 0 PNG, avg 112 KB, max 194 KB, none over 200 KB
+- `<meta name="viewport">` on 42/42 files
+- `blog/index.html` has 0 `<script>` tags — a feature, not an omission (anti-pattern 12)
 
 Genuinely missing sitewide, if the user wants more: `og:image`, `og:title` and `rel="canonical"` are
-on **0** of 39 files, so every shared link renders as a bare URL; and 6 of 39 files still lack even
-a `<meta name="description">`.
+on **0** of 42 files, so every shared link renders as a bare URL; and 6 posts still lack a
+`<meta name="description">` (`idle-self-improvement` + 5 numbered OpenClaw posts — `check_site.py`
+INV-14 lists them).
 
 ---
 
@@ -488,4 +652,8 @@ a `<meta name="description">`.
 |---|---|
 | `references/tokens.md` | adding/changing any colour, radius, or token; doing a Phase 1 sweep |
 | `references/components.md` | writing markup for a nav, hero, callout, card, figure, or code block |
-| `assets/post-template.html` | creating a new blog post — copy this, do not hand-roll |
+| `assets/post-template.html` | creating a new blog post — copy this, do not hand-roll. **It is the only post template in the repo**; `blog-post/assets/post-template.html` was a duplicate that rotted three sweeps behind and was deleted (see `blog-post/assets/TEMPLATE-MOVED.md`). |
+
+Numbers in this skill were last re-measured against `7867c00` on **2026-08-10**. If you are reading
+this after a sitewide sweep whose commit is not named above, re-run the commands before trusting
+any count — and then update them here, per the standing rule at the top.

@@ -9,58 +9,95 @@ Always: work on a branch, run the verification grep afterwards, and eyeball
 
 ## Baseline counters — re-run these, don't trust a stale number
 
+> **Standing rule:** any change that invalidates a number here must update it in the
+> same commit. Everything below was re-measured **2026-08-10 against `7867c00`**.
+
 Always exclude `.claude/` — the skill directories carry HTML templates and CSS
 assets that match most of these patterns and inflate every count.
 
 ```bash
-find . -name "*.html" -not -path "./.git/*" -not -path "./.claude/*" | wc -l          # 39
-grep -roh "<img[^>]*>" --include="*.html" --exclude-dir=.claude . | wc -l             # 118
-grep -roh "<img[^>]*>" --include="*.html" --exclude-dir=.claude . | grep -c "loading="  # 0
-grep -roh "<img[^>]*>" --include="*.html" --exclude-dir=.claude . | grep -c "width="    # 0
-grep -rIo ":hover"  --include="*.html" --include="*.css" --include="*.js" --exclude-dir=.claude . | wc -l   # 91
-grep -rIo ":focus"  --include="*.html" --include="*.css" --include="*.js" --exclude-dir=.claude . | wc -l   #  0
-grep -rIoE "outline *:" --include="*.html" --include="*.css" --exclude-dir=.claude . | wc -l     # 0  (UA ring intact)
-grep -rl "prefers-reduced-motion" --include="*.html" --include="*.css" --exclude-dir=.claude . | wc -l      # 0
+find . -name "*.html" -not -path "./.git/*" -not -path "./.claude/*" | wc -l          # 42
+grep -rIo ":hover"  --include="*.html" --include="*.css" --include="*.js" --exclude-dir=.claude . | wc -l   # 115
+grep -rl ":focus-visible"         --include="*.html" --include="*.css" --exclude-dir=.claude . | wc -l      # 42 (41 html + style.css)
+grep -rl "prefers-reduced-motion" --include="*.html" --include="*.css" --exclude-dir=.claude . | wc -l      # 42
+grep -rl "color-scheme"           --include="*.html" --include="*.css" --exclude-dir=.claude . | wc -l      # 42
 grep -rl "<script" --include="*.html" --exclude-dir=.claude .                         # index.html only
-grep -rl "<main"   --include="*.html" --exclude-dir=.claude . | wc -l                 #  8 / 39
-grep -roh 'target="_blank"' --include="*.html" --exclude-dir=.claude . | wc -l        # 21
-grep -ro  'rel="noopener' --include="*.html" --exclude-dir=.claude . | wc -l          #  0
-grep -rhoE '<html lang="[^"]*"' --include="*.html" --exclude-dir=.claude . | sort | uniq -c   # 37 th, 2 en
+grep -rl "<main"   --include="*.html" --exclude-dir=.claude . | wc -l                 # 11 / 42
+grep -rl 'id="main"' --include="*.html" --exclude-dir=.claude . | wc -l               #  0 / 42
+grep -rl "skip-link" --include="*.html" --exclude-dir=.claude . | wc -l               #  0 / 42
+grep -roh 'target="_blank"' --include="*.html" --exclude-dir=.claude . | wc -l        # 57 (12 lack rel)
+grep -rhoE '<html lang="[^"]*"' --include="*.html" --exclude-dir=.claude . | sort | uniq -c  # 5 en, 37 th
+grep -rl "fonts.googleapis" --include="*.html" --exclude-dir=.claude . | wc -l        # 32 / 42
 grep -c 'class="card"' blog/index.html                                                # 37
-du -sh images/                                                                        # 20M
+ls images/*-cover.jpg | wc -l ; ls images/*-cover.png 2>/dev/null | wc -l             # 36 jpg, 0 png
+du -sh images/                                                                        # 5.6M
 ```
 
-## The 11 files with no `:root`
+**`<img>` attributes need a multiline parse, not a line grep** — one `<img>` on the site
+spans two lines, so `grep -oh "<img[^>]*>"` reports 119 where the truth is 120:
 
-A `sed` on `:root` skips these 11. The **10 blog posts** among them also load no
-webfont and set their own `font-family`, so the Inter design system never reaches
-them; `index.html` is different — it has no `:root` but does load Inter and does
-use `style.css`.
+```bash
+python3 - <<'EOF'
+import re, pathlib
+n=ok=0
+for p in pathlib.Path('.').rglob('*.html'):
+    if '.claude' in p.parts or '.git' in p.parts: continue
+    for m in re.finditer(r'<img\b[^>]*>', p.read_text(encoding='utf-8'), re.S):
+        n+=1; ok+= all(a+'=' in m.group(0) for a in ('loading','decoding','width','height'))
+print(ok, "/", n)      # → 120 / 120
+EOF
+```
+
+### Two obsolete warnings this file used to carry
+
+- **"`grep -rIoE 'outline *:' … | wc -l` → 0 (UA ring intact)."** It now returns **42**.
+  `:focus:not(:focus-visible) { outline: none; }` is part of the shipped block and is
+  correct. Read the selector before treating an `outline` hit as a defect.
+- **"A `sed` on `:root` silently misses 11 files."** Obsolete since `6670480`: every file
+  except `index.html` has a `:root`, and `index.html`'s lives in `style.css:5`. What is
+  still true about the same 10 island posts is that they load **no webfont**.
+
+## The 10 island posts with no webfont
+
+They declare their own `font-family` and never load Inter, so the design system's type
+does not reach them (their *tokens* do — see above).
 
 ```
-index.html
-blog/beyond-plugins.html          font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif   (:11)
+blog/beyond-plugins.html          -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif
 blog/idle-self-improvement.html
 blog/openclaw-101.html
 blog/openclaw-agent-teams.html
 blog/openclaw-integrations.html
-blog/openclaw-memory.html         font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif                     (:15)
+blog/openclaw-memory.html         'Segoe UI', Tahoma, Geneva, Verdana, sans-serif
 blog/openclaw-migration.html
-blog/openclaw-production.html
-blog/openclaw-security.html
+blog/openclaw-production.html     names 'Inter' but never loads it
+blog/openclaw-security.html       names 'Inter' but never loads it
 blog/openclaw-skills.html
 ```
 
-Regenerate the list at any time:
+Regenerate at any time:
 
 ```bash
-for f in $(find . -name "*.html" -not -path "./.git/*" -not -path "./.claude/*"); do grep -q ":root" "$f" || echo "$f"; done
+for f in $(find . -name "*.html" -not -path "./.git/*" -not -path "./.claude/*"); do
+  grep -q "fonts.googleapis" "$f" || echo "$f"
+done
 ```
 
 ## Insert a CSS block into every embedded `<style>`
 
-`assets/a11y-block.css` has no `:root` dependency beyond `--blue-dark` / `--navy`,
-which is why it falls back with `var(--blue-dark, #4f46e5)` — safe in all 39 files.
+**The focus/motion/color-scheme/text-wrap block is already installed everywhere** —
+`e8da9da` put it in 41 embedded `<style>` blocks + `style.css`. Do not re-run this loop
+for that block. What `assets/a11y-block.css` now holds is only the parts *not* on disk
+(`.card:focus-within` parity, the skip link, the `[data-reveal]` no-JS net), so this
+loop remains the delivery mechanism for those.
+
+`assets/a11y-block.css` has no `:root` dependency beyond `--blue-dark` / `--navy` /
+`--radius-sm`, and falls back with literals anyway — safe in all 42 files.
+
+**The `if 'prefers-reduced-motion' in s: continue` idempotence guard below now matches
+every file**, because the shipped block contains that string. Change the guard to a
+string unique to what you are inserting (e.g. `'card:focus-within'`) or the loop will
+silently patch nothing and report success.
 
 ```bash
 BLOCK=$(cat .claude/skills/a11y-perf/assets/a11y-block.css)
@@ -80,8 +117,10 @@ for p in pathlib.Path('.').rglob('*.html'):
     print('patched', p)
 EOF
 
-grep -rl "prefers-reduced-motion" --include="*.html" --exclude-dir=.claude . | wc -l   # expect 39
-grep -rl "focus-visible"          --include="*.html" --exclude-dir=.claude . | wc -l   # expect 39
+grep -rl "card:focus-within" --include="*.html" --exclude-dir=.claude . | wc -l   # expect 41
+# already-shipped block, for reference — these are 42 (41 html + style.css) today:
+grep -rl "prefers-reduced-motion" --include="*.html" --include="*.css" --exclude-dir=.claude . | wc -l
+grep -rl "focus-visible"          --include="*.html" --include="*.css" --exclude-dir=.claude . | wc -l
 ```
 
 ## Skip link after every `<body>`
@@ -99,21 +138,30 @@ for p in pathlib.Path('.').rglob('*.html'):
     j = s.find('>', i)
     p.write_text(s[:j+1] + LINK + s[j+1:], encoding='utf8')
 EOF
-grep -rl "skip-link" --include="*.html" . | wc -l   # expect 39
+grep -rl "skip-link" --include="*.html" --exclude-dir=.claude . | wc -l   # expect 42
 ```
 
-The link is useless without a target. The 31 files lacking `<main>` must get
-`<main id="main">` wrapped around the article body — that one is not safely
-scriptable because the wrap point differs per file. Do it a handful at a time and
-diff each. The 8 that already have `<main>` just need `id="main"` added:
+**Do the target first.** The link is useless without one, and today **0 of 42** files
+have `id="main"`. 31 files have no `<main>` at all and must get `<main id="main">`
+wrapped around the article body — not safely scriptable, because the wrap point differs
+per file. Do a handful at a time and diff each. The **11** that already have `<main>`
+need only the `id`:
 
 ```
 blog/index.html  blog/beyond-plugins.html  blog/idle-self-improvement.html
 blog/openclaw-101.html  blog/openclaw-agent-teams.html  blog/openclaw-integrations.html
 blog/openclaw-migration.html  blog/openclaw-security.html
+books/index.html  news/index.html  projects/index.html
 ```
 
-## `rel="noopener noreferrer"` on all 21 external links
+Regenerate: `grep -rl '<main' --include='*.html' --exclude-dir=.claude . | sort`
+
+## `rel="noopener noreferrer"` on the 12 external links that lack it
+
+57 `target="_blank"` anchors exist; **45 already have `rel`**. The 12 that do not are in
+`blog/api-request-lifecycle.html`, `blog/devops-security.html`,
+`blog/kubernetes-orchestration.html`, `blog/linux-command-line.html`,
+`blog/monitoring-observability.html` and `blog/obsidian-ai-jarvis.html`.
 
 ```bash
 grep -rl 'target="_blank"' --include="*.html" --exclude-dir=.claude . \
@@ -121,7 +169,11 @@ grep -rl 'target="_blank"' --include="*.html" --exclude-dir=.claude . \
   || grep -rl 'target="_blank"' --include="*.html" --exclude-dir=.claude . \
      | xargs perl -pi -e 's/target="_blank"(?![^>]*rel=)/target="_blank" rel="noopener noreferrer"/g'
 
-grep -roh '<a[^>]*target="_blank"[^>]*>' --include="*.html" . | grep -vc 'rel='   # expect 0
+python3 -c "
+import re,pathlib
+print(sum(1 for p in pathlib.Path('.').rglob('*.html') if '.claude' not in p.parts
+          for a in re.finditer(r'<a\b[^>]*>', p.read_text(encoding='utf-8'), re.S)
+          if 'target=\"_blank\"' in a.group(0) and 'rel=' not in a.group(0)))"   # before 12, after 0
 ```
 
 (BSD `sed` has no lookahead — the `perl` fallback is the one that will actually run.)
@@ -140,8 +192,8 @@ before trimming to `wght@400`.
 grep -rl "Inter:wght@300;400;500;600;700;800;900&family=JetBrains" --include="*.html" --exclude-dir=.claude . \
   | xargs perl -pi -e 's/Inter:wght\@300;400;500;600;700;800;900&family=JetBrains\+Mono:wght\@400;500;600/Inter:wght\@400;500;600;700;800;900&family=JetBrains+Mono:wght\@400/g'
 
-grep -rl "wght@300" --include="*.html" --exclude-dir=.claude .        # expect only index.html + blog/index.html (Inter-only URLs)
-grep -rl "display=swap" --include="*.html" --exclude-dir=.claude . | wc -l    # must still be 29
+grep -rl "wght@300" --include="*.html" --exclude-dir=.claude . | wc -l   # before 32, after 5 (the Inter-only index pages)
+grep -rl "display=swap" --include="*.html" --exclude-dir=.claude . | wc -l   # must still be 32
 ```
 
 Verify what uses the weights you are about to drop:
@@ -152,10 +204,13 @@ grep -rnE "font-weight: *300" --include="*.html" --include="*.css" --exclude-dir
 grep -rn "slo-card__example" blog/sre-fundamentals.html   # the one Mono-600 use
 ```
 
-## `.post-series-footer` colour — 22 rules across 23 referencing files
+## `.post-series-footer` colour — 22 rules, all still `var(--gray)`
 
-`blog/claude-code-architecture.html` uses the class with no rule for it (line 598
-renders with the inherited body colour); the substitution is a no-op there.
+Re-verified 2026-08-10: a block-aware parse finds 22 rules and every one is
+`color: var(--gray)`. A line-based grep reports 13 because 9 of them span lines — trust
+the parse in a11y-perf R4, not the grep. `blog/claude-code-architecture.html` uses the
+class with no rule for it, so the substitution is a no-op there (23 files reference the
+class, 22 style it).
 
 ```bash
 grep -rl "post-series-footer" --include="*.html" --exclude-dir=.claude . \
@@ -178,19 +233,20 @@ Then hand-edit the six files that also need the 0.35 black scrim — see
 
 ## Heading defects to fix by hand
 
-Two `<h1>` — `blog/deployment-hosting.html:164` (`.post-hero__title`) and `:176`.
-Demote 176.
+Two `<h1>` in `blog/deployment-hosting.html` — the `.post-hero__title` and a near
+duplicate in the body. Demote the second. `check_site.py` INV-11 prints the current line
+numbers; they have moved twice, so do not hardcode them here.
 
-`h2 → h4` skips, count per file:
+`h2 → h4` skips, count per file (re-measured 2026-08-10 — 12 posts, plus the `h1 → h3`):
 
 ```
-idle-self-improvement  4      openclaw-101          2
-obsidian-ai-jarvis     3      openclaw-memory       2
-openclaw-agent-teams   3      openclaw-skills       2
-openclaw-migration     3      api-request-lifecycle 1
-beyond-plugins         1      devops-security       1
+idle-self-improvement  4      openclaw-101            2
+obsidian-ai-jarvis     3      openclaw-memory         2
+openclaw-agent-teams   3      openclaw-skills         2
+openclaw-migration     3      api-request-lifecycle   1
+beyond-plugins         1      devops-security         1
 networking-fundamentals 1
-openclaw-integrations  1  ← this one is h1 (line 272) → h3 (line 282)
+openclaw-integrations  1  ← this one is h1 → h3, not h2 → h4
 ```
 
 Re-detect after editing:
@@ -206,21 +262,29 @@ for p in sorted(pathlib.Path('blog').glob('*.html')):
 EOF
 ```
 
-`blog/index.html` separately: 39 `<h2>`, 0 `<h3>`. The 37 `.card__title` headings
-should be `<h3>` so they nest under the 2 `.series-title` `<h2>`s at lines 233 and 571.
+### `blog/index.html` is already fixed — DO NOT RUN THE OLD RECIPE
+
+This file used to carry a `perl -pi` one-liner that rewrote `<h2 class="card__title">` to
+`<h3 class="card__title">`. **Running it today would break a correct ladder.** Task 11
+(`635eb94` + `4a31036`) re-cut the page and the card titles are already `<h4>`:
 
 ```bash
-perl -pi -e 's/<(\/?)h2 class="card__title"/<${1}h3 class="card__title"/g' blog/index.html
-grep -c '<h3 class="card__title"' blog/index.html   # expect 37
-grep -c '<h2' blog/index.html                       # expect 2
+python3 -c "import re,collections; s=open('blog/index.html').read(); print(collections.Counter(int(m.group(1)) for m in re.finditer(r'<h([1-6])\b[^>]*>', s)))"
+# → Counter({4: 37, 2: 3, 3: 2, 1: 1})
+#   h1 page title -> h2 x3 .category__title -> h3 x2 .series-title -> h4 x37 .card__title
 ```
 
+`<h3>` would re-collide the card titles with the `.series-title` headings they sit under.
+Leave them at `h4`, and grep for them as `<h[1-6] class="card__title">`.
+
 ## Emoji icons — 8 elements
+
+`index.html` already has 3 `aria-hidden="true"`; `blog/index.html` has 0.
 
 ```bash
 perl -pi -e 's/<div class="research__icon">/<div class="research__icon" aria-hidden="true">/g' index.html
 perl -pi -e 's/<span class="series-icon">/<span class="series-icon" aria-hidden="true">/g' blog/index.html
-grep -rc 'aria-hidden="true"' index.html blog/index.html   # index.html 8, blog/index.html 2
+grep -rc 'aria-hidden="true"' index.html blog/index.html   # expect index.html 9, blog/index.html 2
 ```
 
 ## Avatar alt text — 37 identical images in `blog/index.html`
@@ -230,12 +294,24 @@ perl -pi -e 's/alt="Anirach" class="card__avatar"/alt="" class="card__avatar"/g'
 grep -c 'alt="" class="card__avatar"' blog/index.html   # expect 37
 ```
 
-## Counters
+## Counters — already correct; recompute, never hardcode
+
+`b9fb125` fixed the two stale counters and Task 11 added two more sites. All five are
+correct today (3 Categories / 2 Series / 37 Articles / `#cat-technology` 37 /
+`#series-openclaw` 13 / `#series-devops` 24) and `check_site.py` INV-02a–INV-02e all PASS.
+
+The old `perl -pi -e 's|<strong>33</strong> Articles|...'` recipe is dead — it matches
+nothing now, and hardcoding the *next* pair of numbers would just recreate the problem.
+Derive them instead:
 
 ```bash
-perl -pi -e 's|<strong>33</strong> Articles|<strong>37</strong> Articles|'          blog/index.html
-perl -pi -e 's|<span class="series-count">12 articles</span>|<span class="series-count">13 articles</span>|' blog/index.html
-grep -n "Articles</\|series-count\">" blog/index.html
+grep -c 'class="card"' blog/index.html
+python3 -c "
+import re
+s=open('blog/index.html',encoding='utf-8').read()
+for sid,body in re.findall(r'<section class=\"series-section\" id=\"([^\"]+)\">(.*?)</section>',s,re.S):
+    print(sid, len(re.findall(r'class=\"card\"',body)))"
+python3 .claude/skills/site-check/scripts/check_site.py | grep INV-02
 ```
 
 ## Post-change smoke test
@@ -247,6 +323,15 @@ python3 -m http.server 8000 &
 open http://localhost:8000/blog/index.html
 ```
 
-Check at 375px and 1440px width, tab through the nav and the first three cards
-(the focus ring must be visible on each), and confirm the network panel shows the
-cover images deferred rather than all 74 firing at once.
+Check at 375px and 1440px width, tab through the nav and the first three cards (the 2px
+`:focus-visible` ring must be visible on each — it ships on every page now, so its
+*absence* is the regression), and confirm the network panel shows the cover images
+deferred: all 74 `<img>` tags on `blog/index.html` are `loading="lazy"`, so a first paint
+should fetch roughly the first viewport's worth (≈1.7 MB), not all 4.03 MB.
+
+And run the linter, which is the actual test suite:
+
+```bash
+python3 .claude/skills/site-check/scripts/check_site.py      # expect exit 0
+python3 .claude/skills/blog-post/assets/verify-wiring.py     # expect no FAIL lines
+```

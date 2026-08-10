@@ -1,29 +1,53 @@
 <!DOCTYPE html>
 <!--
-  HOUSE post template for anirach.com.
-  Derived from blog/api-request-lifecycle.html (the cleanest of the 26 house posts),
-  plus the Phase 2/3 additions that are still missing repo-wide:
-  loading/decoding/width/height, aspect-ratio, :focus-visible, prefers-reduced-motion,
-  color-scheme, text-wrap: balance.
+  ══════════════════════════════════════════════════════════════════════════
+  THE house post template for anirach.com. SINGLE SOURCE OF TRUTH.
+  There is exactly one post template in this repo and this is it. The
+  blog-post skill used to keep a second copy at
+  .claude/skills/blog-post/assets/post-template.html; it silently rotted
+  three sweeps behind (no loading=, no :focus-visible, no reduced-motion,
+  hardcoded 720px/16px) and was deleted on 2026-08-10. Do not recreate it.
+  If you change this file, nothing else needs syncing — that is the point.
+
+  Verified current against the sweeps that shaped the corpus:
+    6670480  canonical :root tokens in every file
+    ec2827b, 21c8a55  covers re-encoded to JPG, all <=200 KB
+    635eb94/4a31036  heading ladder (card titles are h4)
+    e8da9da  :focus-visible, prefers-reduced-motion, color-scheme,
+             text-wrap, aspect-ratio, width/height/loading/decoding
+  Diff this file's <style> against blog/api-request-lifecycle.html before
+  trusting it after any future sweep.
 
   TO USE:
-    1. cp this to blog/<slug>.html
-    2. Replace every {{PLACEHOLDER}}.
-    3. Pick ONE hero gradient from SKILL.md §5 — do not invent one.
-    4. Pick ONE footer nav pattern: .post-nav (DevOps) or .series-nav (OpenClaw) or delete both.
-    5. Add the cover to images/ as JPG, <=1600px wide, <=200KB. Never PNG for a photo/AI cover.
-       Never reuse an existing cover — 2 covers are already double-booked.
-    6. Add a .card to blog/.blog-grid in the right <section class="series-section">.
-    7. Update ALL THREE counters in blog/index.html:
-         line ~221  <strong>NN</strong> Articles      (total)
-         line ~235  <span class="series-count">NN articles</span>   #series-openclaw
-         line ~573  <span class="series-count">NN articles</span>   #series-devops
+    1. cp this to blog/<slug>.html   (lang="th" — posts are Thai, index pages are en)
+    2. Replace every {{PLACEHOLDER}}. Leave no {{ }} behind.
+    3. Pick ONE hero gradient from page-design/SKILL.md §5 — do not invent one.
+       This file ships the "Default / light" family, the plurality (11 uses).
+    4. Pick ONE footer nav pattern: .post-nav (DevOps chain) or .series-nav
+       (numbered OpenClaw) or delete both (standalone). Never two.
+       Read blog-post/SKILL.md Step 7 before writing prev/next by hand — the
+       chain is DERIVED from card order in blog/index.html, never authored.
+    5. Cover -> images/ as JPG, <=1600px wide, <=200 KB. Never PNG for a photo
+       or AI cover (PNG is for diagrams only). Never reuse another post's cover —
+       2 are already double-booked.
+    6. Add a .card to the right .blog-grid in blog/index.html. Card markup and
+       the exact indentation are in blog-post/SKILL.md Step 5.
+    7. RECOMPUTE, never increment, the counters in blog/index.html:
+         .blog-hero__stat  "N Articles"     = total class="card" count
+         .blog-hero__stat  "N Categories"   = number of <div class="category">
+         .category__count  (#cat-technology) = cards in that category
+         .series-count     (#series-openclaw / #series-devops)
+       All five are enforced by check_site.py INV-02a..INV-02e.
+    8. python3 .claude/skills/site-check/scripts/check_site.py     -> 0 new FAIL
+       python3 .claude/skills/blog-post/assets/verify-wiring.py    -> no FAIL lines
+  ══════════════════════════════════════════════════════════════════════════
 -->
 <html lang="th">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>{{TITLE}} | Anirach Mingkhwan</title>
+  <title>{{TITLE_EN}} — {{SUBTITLE_TH}} | Anirach Mingkhwan</title>
+  <!-- Thai, ~1 sentence. 6 posts still lack this; do not become the 7th. -->
   <meta name="description" content="{{ONE_SENTENCE_THAI_SUMMARY}}">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -31,7 +55,9 @@
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
-    /* ── TOKENS — canonical, keep byte-identical across files ── */
+    /* ── TOKENS — canonical, byte-identical in all 42 files. Do not edit. ──
+       Add a per-post brand token AFTER this block, never inside it:
+       e.g. --docker-blue: #2496ed;  (blog/docker-compose.html does exactly this) */
     :root {
       color-scheme: light;
       /* ink */
@@ -40,7 +66,7 @@
       --bg: #f8fafc; --white: #ffffff; --code-bg: #1e293b;
       /* accent */
       --blue: #6366f1; --blue-dark: #4f46e5; --blue-light: #818cf8;
-      /* status — only these six */
+      /* status — use only these six, never invent a seventh */
       --green: #22c55e; --red: #ef4444; --amber: #f59e0b;
       --cyan: #06b6d4; --purple: #8b5cf6; --purple-dark: #7c3aed;
       /* type */
@@ -58,7 +84,6 @@
       font-family: var(--font); font-size: 17px; line-height: 1.8;
       color: var(--slate); background: var(--bg); -webkit-font-smoothing: antialiased;
     }
-    h1, h2, h3, .post-hero__title { text-wrap: balance; }
 
     /* ── NAV ── */
     .blog-nav {
@@ -71,26 +96,30 @@
       display: flex; align-items: center; justify-content: space-between;
     }
     .blog-nav__back {
-      font-size: 0.85rem; font-weight: 500; color: var(--blue);
+      font-size: 0.85rem; font-weight: 500; color: var(--blue-dark);
       text-decoration: none; display: flex; align-items: center; gap: 0.4rem;
     }
-    .blog-nav__back:hover { color: var(--blue-dark); }
+    .blog-nav__back:hover { color: #4338ca; }
     .blog-nav__title {
       font-size: 0.85rem; font-weight: 600; color: var(--navy);
       overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 50%;
     }
 
-    /* ── HERO ── */
+    /* ── HERO ──
+       PICK ONE gradient from page-design/SKILL.md §5. This is Default / light.
+       The three text colours below are the a11y-perf R4 values for THIS
+       gradient — var(--blue) on #c7d2fe is 2.99:1 and fails AA. If you swap in
+       a dark gradient family, swap these to #fff and re-check against
+       a11y-perf/references/contrast.md section C. */
     .post-hero {
       padding: 8rem 2rem 3rem;
-      /* PICK ONE from SKILL.md §5. Default / light: */
       background: linear-gradient(135deg, #e8f0fe 0%, #ddd6fe 50%, #c7d2fe 100%);
       text-align: center;
     }
-    .post-hero__tags { display: flex; gap: 0.5rem; justify-content: center; margin-bottom: 1.25rem; }
+    .post-hero__tags { display: flex; gap: 0.5rem; justify-content: center; margin-bottom: 1.25rem; flex-wrap: wrap; }
     .post-hero__tag {
       font-size: 0.7rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.1em;
-      color: var(--blue); background: rgba(99,102,241,0.1);
+      color: var(--blue-dark); background: rgba(99,102,241,0.1);
       padding: 0.3rem 0.75rem; border-radius: 20px;
     }
     .post-hero__title {
@@ -99,10 +128,10 @@
       max-width: var(--measure); margin-left: auto; margin-right: auto;
     }
     .post-hero__meta {
-      font-size: 0.85rem; color: var(--slate-light);
+      font-size: 0.85rem; color: #475569;          /* 5.08:1 on #c7d2fe */
       display: flex; align-items: center; justify-content: center; gap: 1.5rem;
     }
-    .post-hero__series { font-weight: 600; color: var(--blue); }
+    .post-hero__series { font-weight: 600; color: #4338ca; }   /* 5.30:1 on #c7d2fe */
     .post-hero__cover {
       max-width: 380px; margin: 2.5rem auto 0; aspect-ratio: 16 / 9;
       border-radius: var(--radius-lg); overflow: hidden;
@@ -124,9 +153,19 @@
     .post-body ul, .post-body ol { margin: 0 0 1.25rem 1.5rem; }
     .post-body li { margin-bottom: 0.5rem; }
     .post-body a {
-      color: var(--blue); text-decoration: underline;
+      color: var(--blue-dark); text-decoration: underline;
       text-decoration-thickness: 1px; text-underline-offset: 2px;
     }
+    .post-body hr {
+      border: none; height: 1px; margin: 3rem 0;
+      background: linear-gradient(90deg, transparent, rgba(99,102,241,0.2), transparent);
+    }
+    .post-body table { width: 100%; border-collapse: collapse; margin: 1.25rem 0 1.5rem; font-size: 0.9rem; }
+    .post-body th {
+      background: rgba(99,102,241,0.06); font-weight: 700; color: var(--navy);
+      padding: 0.75rem 1rem; text-align: left; border-bottom: 2px solid rgba(99,102,241,0.15);
+    }
+    .post-body td { padding: 0.65rem 1rem; border-bottom: 1px solid #e2e8f0; }
 
     /* ── CODE ── */
     .post-body pre {
@@ -165,7 +204,7 @@
       letter-spacing: 0.08em; color: var(--slate-light); margin-bottom: 0.6rem;
     }
 
-    /* ── FIGURE (diagrams are PNGs — never build them from divs) ── */
+    /* ── FIGURE (diagrams are PNGs — never build them from divs; see §7.1) ── */
     .figure { margin: 2.5rem 0; }
     .figure__img {
       width: 100%; height: auto; display: block;
@@ -181,18 +220,24 @@
       display: flex; gap: 1.5rem; flex-wrap: wrap;
     }
     .post-nav__link {
+      flex: 1; min-width: 200px;
       display: block; padding: 1.25rem; text-decoration: none;
       background: var(--white); border: 1px solid rgba(0,0,0,0.06);
       border-radius: var(--radius); transition: transform var(--transition), box-shadow var(--transition);
     }
     .post-nav__link:hover { transform: translateY(-2px); box-shadow: 0 8px 24px rgba(15,23,42,0.06); }
-    .post-nav__dir { font-size: 0.75rem; font-weight: 600; color: var(--blue); margin-bottom: 0.35rem; }
+    .post-nav__dir { font-size: 0.75rem; font-weight: 600; color: var(--blue-dark); margin-bottom: 0.35rem; }
     .post-nav__title { font-size: 0.95rem; font-weight: 600; color: var(--navy); line-height: 1.4; }
+    .post-series-footer {
+      text-align: center; font-size: 0.85rem; color: var(--slate-light);
+      font-style: italic; margin-top: 2rem; padding-top: 2rem; border-top: 1px solid #e2e8f0;
+    }
     .blog-footer { background: var(--navy); padding: 2rem 0; text-align: center; }
     .blog-footer a { color: var(--blue-light); text-decoration: none; font-weight: 600; font-size: 0.9rem; }
     .blog-footer span { color: var(--gray); font-size: 0.8rem; display: block; margin-top: 0.4rem; }
 
-    /* ── A11Y ── */
+    /* ── A11Y / MOTION / WRAP — the e8da9da sweep block. Present in all 42
+          files verbatim; keep it byte-identical so a grep sweep still finds it. ── */
     :focus-visible { outline: 2px solid var(--blue); outline-offset: 3px; border-radius: 2px; }
     :focus:not(:focus-visible) { outline: none; }
     @media (prefers-reduced-motion: reduce) {
@@ -201,6 +246,7 @@
         transition-duration: .01ms !important; scroll-behavior: auto !important;
       }
     }
+    h1, h2, h3, .post-hero__title, .card__title { text-wrap: balance; }
 
     /* ── RESPONSIVE — 768 then 600, no other breakpoints ── */
     @media (max-width: 768px) {
@@ -222,65 +268,103 @@
   <nav class="blog-nav">
     <div class="blog-nav__inner">
       <a href="./" class="blog-nav__back">‹ Blog</a>
-      <div class="blog-nav__title">{{SHORT_TITLE}}</div>
+      <div class="blog-nav__title">{{SHORT_TITLE_EN}}</div>
     </div>
   </nav>
 
+  <!-- .post-hero__title is the file's ONLY <h1>. Do not repeat the title inside
+       .post-body — deployment-hosting.html did and still has two (INV-11). -->
   <header class="post-hero">
     <div class="post-hero__tags">
-      <span class="post-hero__tag">{{TAG1}}</span>
-      <span class="post-hero__tag">{{TAG2}}</span>
-      <span class="post-hero__tag">{{TAG3}}</span>
+      <span class="post-hero__tag">{{TAG_1}}</span>
+      <span class="post-hero__tag">{{TAG_2}}</span>
+      <span class="post-hero__tag">{{TAG_3}}</span>
     </div>
-    <h1 class="post-hero__title">{{TITLE}}</h1>
+    <h1 class="post-hero__title">{{TITLE_EN}} — {{SUBTITLE_TH}}</h1>
     <div class="post-hero__meta">
       <span>By <strong>Anirach Mingkhwan</strong></span>
-      <span class="post-hero__series">{{SERIES_NAME}}</span>
+      <span class="post-hero__series">DevOps &amp; Vibe Coding 2026</span>
     </div>
     <div class="post-hero__cover">
-      <img src="../images/{{SLUG}}-cover.jpg" alt="{{DESCRIPTIVE_ALT_TEXT}}"
+      <!-- LCP element: eager + fetchpriority, never loading="lazy".
+           width/height are the SOURCE pixel size (sips -g pixelWidth -g pixelHeight). -->
+      <img src="../images/{{SLUG}}-cover.jpg" alt="{{DESCRIPTIVE_ALT_TEXT_EN}}"
            width="1600" height="900" loading="eager" fetchpriority="high" decoding="async">
     </div>
   </header>
 
+  <!-- House prose style: English headings and technical terms, Thai explanatory
+       prose, code-switched within the sentence. Full conventions in
+       blog-post/SKILL.md Step 4. Open with a callback + 🤔 hook + one-line answer;
+       close with <h2>สรุป</h2> and a <ul> of <strong>Term</strong> = Thai one-liner. -->
   <article class="post-body">
 
     <p>{{THAI_LEDE}}</p>
 
-    <h2>{{SECTION_HEADING_NO_EMOJI}}</h2>
-    <p>{{THAI_BODY}}</p>
+    <hr>
+
+    <h2>{{SECTION_HEADING_EN}} คืออะไร?</h2>
+    <p><strong>{{TERM_EN}}</strong> {{EXPLANATION_TH}} โดยใช้ <code>{{command}}</code></p>
 
     <aside class="callout callout--info">
-      <div class="callout__title">{{CALLOUT_TITLE}}</div>
-      <p>{{CALLOUT_BODY}}</p>
+      <div class="callout__title">💡 จำง่ายๆ</div>
+      <p>{{ANALOGY_TH}}</p>
     </aside>
 
-    <h3>{{SUBHEADING}}</h3>
-    <pre><code>{{CODE}}</code></pre>
+    <h3>{{SUBHEADING_EN}}</h3>
+    <p>{{LEAD_IN_TH_ENDING_WITH_COLON}}:</p>
+<pre><code># {{CODE_COMMENT_TH}}
+{{CODE_LINE}}</code></pre>
 
+    <table>
+      <thead><tr><th>{{COL_1_EN}}</th><th>{{COL_2_EN}}</th><th>{{COL_3_EN}}</th></tr></thead>
+      <tbody>
+        <tr><td><strong>{{ROW_LABEL_EN}}</strong></td><td>{{CELL_TH}}</td><td>{{CELL_TH}}</td></tr>
+      </tbody>
+    </table>
+
+    <!-- Diagrams are PNGs in images/ — never inline HTML/CSS, never ASCII art.
+         Both were tried and reverted (f4f7e1b, 4fc85af -> c270892, 4ae2660). -->
     <figure class="figure">
-      <img class="figure__img" src="../images/{{SLUG}}-arch.png" alt="{{DIAGRAM_ALT}}"
+      <img class="figure__img" src="../images/{{SLUG}}-arch.png" alt="{{DIAGRAM_ALT_EN}}"
            width="1600" height="900" loading="lazy" decoding="async">
       <figcaption class="figure__caption">{{DIAGRAM_CAPTION}}</figcaption>
     </figure>
 
+    <hr>
+
+    <h2>สรุป</h2>
+    <p>{{CLOSING_PARAGRAPH_TH}}:</p>
+    <ul>
+      <li><strong>{{KEY_TERM_EN}}</strong> = {{ONE_LINE_TH}}</li>
+      <li><strong>{{KEY_TERM_EN}}</strong> = {{ONE_LINE_TH}} 🐕</li>
+    </ul>
+
+    <div class="post-series-footer">
+      บทความจากซีรีส์ DevOps &amp; Vibe Coding 2026
+    </div>
+
   </article>
 
-  <!-- Pick ONE footer nav pattern, or delete both. Never mix. -->
+  <!-- Pick ONE footer nav pattern, or delete both. Never mix — INV-08.
+       PREV = the card BELOW this one in #series-devops.
+       NEXT = the card ABOVE it, or "./" if this post is the new top card.
+       Each title is the target's card__title from blog/index.html verbatim,
+       minus trailing emoji. 8 labels have already drifted (INV-10). -->
   <div class="post-nav">
     <a href="{{PREV_SLUG}}.html" class="post-nav__link">
       <div class="post-nav__dir">← Previous</div>
-      <div class="post-nav__title">{{PREV_TITLE}}</div>
+      <div class="post-nav__title">{{PREV_CARD_TITLE}}</div>
     </a>
     <a href="{{NEXT_SLUG}}.html" class="post-nav__link">
       <div class="post-nav__dir">Next →</div>
-      <div class="post-nav__title">{{NEXT_TITLE}}</div>
+      <div class="post-nav__title">{{NEXT_CARD_TITLE}}</div>
     </a>
   </div>
 
   <footer class="blog-footer">
     <a href="./">← Back to Blog</a>
-    <span>© 2025 Anirach Mingkhwan — Associate Professor, KMUTNB</span>
+    <span>© 2026 Anirach Mingkhwan — Associate Professor, KMUTNB</span>
   </footer>
 
 </body>

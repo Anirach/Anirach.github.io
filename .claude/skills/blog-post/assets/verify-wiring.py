@@ -34,10 +34,14 @@ SERIES7_LABELS = ["#1 OpenClaw 101", "#2 Agent Teams", "#3 Memory & Knowledge",
                   "#7 Production & Scale"]
 SERIES7_HREFS = ["/blog/" + f[:-5] for f in SERIES7]
 
-# Violations that already exist on an unmodified checkout (2026-08-10).
+# Violations that already exist on an unmodified checkout.
+# Re-verified 2026-08-10 against 7867c00: exactly these two still fire.
+# The two counter entries that used to live here ("hero Articles 33 != 37 cards",
+# "#series-openclaw declares 12, holds 13") were fixed by b9fb125 and removed —
+# a baseline entry that no longer matches a live violation is dead weight that
+# hides the next real one. If you fix a baselined violation, delete its line in
+# the same commit.
 BASELINE = {
-    "hero Articles 33 != 37 cards",
-    "#series-openclaw declares 12, holds 13",
     "cover github-actions-cover.jpg shared by github-actions.html, vibe-coding-devops-process.html",
     "cover monitoring-cover.jpg shared by monitoring-observability.html, openclaw-memory-architecture.html",
 }
@@ -81,8 +85,16 @@ for i in range(1, len(chunks), 2):
     cards.append(href)
     m = re.search(r'<img src="([^"]+)"', body)
     card_img[href] = os.path.basename(m.group(1)) if m else None
-    m = re.search(r'<h2 class="card__title">(.*?)</h2>', body, re.S)
-    card_title[href] = norm(m.group(1)) if m else None
+    # Heading-level agnostic ON PURPOSE. Card titles were <h2> until Task 11
+    # (635eb94/4a31036) re-cut the heading ladder and made them <h4>; a
+    # hardcoded <h2> silently matched 0 of 37 cards and left card_title all
+    # None, which turned the title-drift check below into a no-op that always
+    # printed CLEAN. Any h1-h6 with that class must keep matching.
+    m = re.search(r'<(h[1-6]) class="card__title">(.*?)</\1>', body, re.S)
+    card_title[href] = norm(m.group(2)) if m else None
+    if m is None:
+        fails.append(f"card {href} has no <hN class=\"card__title\"> — "
+                     f"title-drift checking is blind for it")
 sections = dict(re.findall(r'<section class="series-section" id="([^"]+)">(.*?)</section>',
                            idx, re.S))
 
@@ -252,6 +264,12 @@ for p in posts:
         fails.append(f"{p} has {n} <h1> (expected exactly 1)")
 
 # --- report ------------------------------------------------------------------
+# Self-audit: a BASELINE entry that matches nothing is a stale suppression. It
+# means someone fixed the violation and left the excuse behind, which is exactly
+# how this script's <h2 class="card__title"> regex went unnoticed for a sweep.
+for b in sorted(BASELINE - set(fails)):
+    warns.append(f"BASELINE entry is stale (no longer fires) — delete it: {b!r}")
+
 new_fails = [f for f in fails if f not in BASELINE]
 print(f"posts={len(posts)}  cards={len(cards)}  "
       f"series-nav={sum(1 for v in kind.values() if v == 'series')}  "
@@ -263,6 +281,10 @@ for w in sorted(set(warns)):
     print("  warn  :", w)
 for f in new_fails:
     print("  FAIL  :", f)
-print("\nCLEAN — no new wiring breakage." if not new_fails
-      else f"\n{len(new_fails)} NEW failure(s). Fix before committing.")
+nw = len(set(warns))
+# "CLEAN" must never overstate: warns do not fail the run, but a run that
+# printed 10 warns is not the same as a run that printed 0, and the count is
+# what tells you whether YOUR edit added one.
+print(f"\nCLEAN — no new wiring breakage ({nw} warn)." if not new_fails
+      else f"\n{len(new_fails)} NEW failure(s), {nw} warn. Fix before committing.")
 sys.exit(1 if new_fails else 0)

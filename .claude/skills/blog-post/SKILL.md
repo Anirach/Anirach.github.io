@@ -5,9 +5,23 @@ description: End-to-end recipe for adding, editing, or removing a post in blog/ 
 
 # Adding and editing blog posts
 
+> ## Standing rule — numbers in this skill are load-bearing
+>
+> **Any change that invalidates a number in a skill file must update that number in the
+> same commit.** This file's counts, the `BASELINE` set in `assets/verify-wiring.py`, and
+> the drift tables in `references/known-exceptions.md` are all measurements of the repo at
+> a moment in time. A confidently wrong count here gets acted on. Three sitewide sweeps
+> (`6670480`, `ec2827b`, `e8da9da`) plus Task 11's heading re-cut landed without touching
+> this skill — which is how `verify-wiring.py` spent a session matching
+> `<h2 class="card__title">` against 37 cards that had been `h4` since `635eb94`, silently
+> reporting CLEAN while `check_site.py` independently found 8 stale nav titles.
+>
+> **Last full re-measure: 2026-08-10 against `7867c00`.**
+
 This site has **no build step, no templating, no partials**. Each of the 38 files in
 `blog/` — 37 posts plus `index.html` — embeds its own `<style>`, its own copy of the nav
-markup, and its own footer.
+markup, and its own footer. (The wider site is 42 HTML files: these 38 plus `index.html`,
+`books/`, `news/` and `projects/`.)
 Nothing validates the wiring between them. A post is not "a file" — it is a file plus a
 card plus two counters plus two neighbours' nav links, and every one of those is edited
 by hand.
@@ -26,9 +40,21 @@ Stdlib-only, no deps. On a clean checkout it prints `CLEAN` plus a list of `know
 what was already broken, and after every file you touch. Anything that appears as `FAIL:`
 was caused by your change.
 
-Baseline on a clean `main` (2026-08-10): `posts=37 cards=37 series-nav=7 post-nav=25
-no-nav=5`, 4 known failures, 14 broken-link warnings in the OpenClaw series, 8 stale nav
-titles. If your run does not start from that, something else is already in flight.
+Baseline on a clean `main` (2026-08-10, `7867c00`):
+
+```
+posts=37  cards=37  series-nav=7  post-nav=25  no-nav=5
+  known : cover github-actions-cover.jpg shared by github-actions.html, vibe-coding-devops-process.html
+  known : cover monitoring-cover.jpg shared by monitoring-observability.html, openclaw-memory-architecture.html
+  warn  : (8 stale .post-nav__title labels)
+
+CLEAN — no new wiring breakage (8 warn).
+```
+
+**2** known failures, not 4 — `b9fb125` fixed the two counter violations that used to be
+baselined. **0** broken-link warnings, not 14 — `b9fb125` fixed those too. **8** stale nav
+titles, which match `check_site.py` INV-10's baseline one-for-one. If your run does not
+start from that, something else is already in flight.
 
 ## Step 1 — pick the category and series, which picks the nav pattern
 
@@ -43,12 +69,17 @@ cards — see `references/known-exceptions.md`.
 There are exactly three in-post nav patterns and they are mutually exclusive. Which one
 you use is decided by which category/series the post belongs to.
 
+**The template lives in the page-design skill.** `TEMPLATE` below always means
+`.claude/skills/page-design/assets/post-template.html`. This skill used to ship its own
+copy at `assets/post-template.html`; it rotted three sweeps behind and was deleted on
+2026-08-10 — see `assets/TEMPLATE-MOVED.md`.
+
 | Category / series | Section in `blog/index.html` | Nav pattern | Template |
 |---|---|---|---|
-| Technology → **DevOps & Vibe Coding** (24 posts) | `#series-devops` | `.post-nav` prev/next pair, relative `foo.html` links | `assets/post-template.html` — **the default** |
+| Technology → **DevOps & Vibe Coding** (24 posts) | `#series-devops` | `.post-nav` prev/next pair, relative `foo.html` links | `TEMPLATE` — **the default** |
 | Technology → **Numbered OpenClaw** (7 posts) | `#series-openclaw` | `.series-nav` 7-chip strip, absolute `/blog/<slug>` links | copy `blog/openclaw-skills.html`; read `references/openclaw-series.md` first |
-| Technology → **Standalone** (5 posts) | either section | no nav block at all | `assets/post-template.html` with the `.post-nav` block deleted |
-| **Academic & Philosophy** (0 posts) | new `.blog-grid` inside `#cat-academic` | standalone (no nav) until the category reaches 2 posts, then a per-category `.post-nav` prev/next chain, same shape as DevOps's | `assets/post-template.html` with the `.post-nav` block deleted for the 1st post; restore it once a 2nd exists |
+| Technology → **Standalone** (5 posts) | either section | no nav block at all | `TEMPLATE` with the `.post-nav` block deleted |
+| **Academic & Philosophy** (0 posts) | new `.blog-grid` inside `#cat-academic` | standalone (no nav) until the category reaches 2 posts, then a per-category `.post-nav` prev/next chain, same shape as DevOps's | `TEMPLATE` with the `.post-nav` block deleted for the 1st post; restore it once a 2nd exists |
 | **Lifestyle** (0 posts) | new `.blog-grid` inside `#cat-lifestyle` | same rule as Academic & Philosophy | same |
 
 Card sections: `#series-openclaw` 13 cards, `#series-devops` 24 = 37 Technology cards ==
@@ -67,9 +98,12 @@ of `#series-devops`'s). Do not build a chain for a lone post.
 
 Default to the DevOps template even for an AI/agent topic. Two posts already do exactly
 that — `claude-code-architecture.html` and `openclaw-memory-architecture.html` are carded
-under `#series-openclaw` but use `.post-nav` chrome. The numbered OpenClaw series is the
-un-templated corner of the site (no `:root`, no `.blog-nav` back link, 14 broken links, 5
-missing meta descriptions); adding to it costs 10 file edits instead of 4.
+under `#series-openclaw` but use `.post-nav` chrome. The numbered OpenClaw series is still
+the roughest corner of the site (no `.blog-nav` back link, 5 missing meta descriptions,
+badge markup in 4 different forms); adding to it costs 10 file edits instead of 4. Two of
+its old problems are **gone**: they all have the canonical `:root` now (`6670480`), and
+the 14 broken links were fixed in `b9fb125` — `check_site.py` INV-05 and INV-09 both
+PASS.
 
 A post must never carry two patterns. `verify-wiring.py` fails on `BOTH`.
 
@@ -79,10 +113,15 @@ Every post needs a cover, and the post's cover must be the same file its card sh
 That is the one cover rule that is currently 100% green across all 37 posts — keep it that
 way.
 
-- Put the file in `images/`. Prefer `images/<slug>-cover.png` or `.jpg` — 23 of 37 posts
-  follow that. The other 14 use deliberate short names (`iac-cover.jpg`, `auth-cover.jpg`,
-  `sre-cover.jpg`, `linux-cli-cover.jpg`, `api-lifecycle-cover.jpg`, …). **Do not rename
-  existing files to match the slug**; that breaks two references for zero gain.
+- Put the file in `images/` as **`images/<slug>-cover.jpg`**. There are 36 covers and
+  **all of them are JPG** since `ec2827b`/`21c8a55`; average 112 KB, largest 194 KB, none
+  over 200 KB. Never PNG for a photo or AI illustration — PNG is for diagrams only.
+  23 of 37 posts use the `<slug>-cover` name; the other 14 use deliberate short names
+  (`iac-cover.jpg`, `auth-cover.jpg`, `sre-cover.jpg`, `linux-cli-cover.jpg`,
+  `api-lifecycle-cover.jpg`, …). **Do not rename existing files to match the slug**; that
+  breaks two references for zero gain.
+- Give the `<img>` `width`, `height`, `loading` and `decoding`. 120 of 120 images on the
+  site have all four; a new post without them is a regression, not a gap.
 - If `images/<slug>-cover.*` already exists, the post must use it. The verifier fails
   otherwise.
 - Never reuse another post's cover. Two posts already share covers because no dedicated
@@ -105,8 +144,13 @@ them.
 ## Step 3 — create the post file
 
 ```bash
-cp .claude/skills/blog-post/assets/post-template.html blog/<slug>.html
+cp .claude/skills/page-design/assets/post-template.html blog/<slug>.html
 ```
+
+That file is the **single** post template in this repo. It already carries the canonical
+24-token `:root`, the 4-line a11y block (`:focus-visible`, `prefers-reduced-motion`,
+`color-scheme`, `text-wrap`), `aspect-ratio` on the cover box, full image attributes, and
+`var(--measure)`/`var(--wide)`/`var(--radius-lg)` instead of hardcoded pixels.
 
 Then fill every `{{PLACEHOLDER}}`. The skeleton, in order, is:
 
@@ -132,7 +176,8 @@ Non-negotiables, each because something on disk got them wrong:
 - **`lang="th"`.** All 37 posts are `th`; `index.html` and `blog/index.html` are `en`.
 - **Exactly one `<h1>`**, the `.post-hero__title`. Do not repeat the title in the body —
   `deployment-hosting.html` did and now has two (lines 164 and 176).
-- **`<meta name="description">` in Thai.** Six posts are missing it.
+- **`<meta name="description">` in Thai.** Six posts are missing it
+  (`idle-self-improvement` + 5 numbered OpenClaw); `check_site.py` INV-14 lists them.
 - **`<nav class="blog-nav">` with `<a href="./" class="blog-nav__back">‹ Blog</a>`.**
   All 26 posts that have this nav use `href="./"` and nothing else. Eleven posts have no
   `<nav class="blog-nav">` back link. Five of them (openclaw-101, -agent-teams,
@@ -141,23 +186,24 @@ Non-negotiables, each because something on disk got them wrong:
   openclaw-migration) reach the index through other header/footer links; only
   openclaw-memory and openclaw-skills have no route to the blog index at all. Do not
   add a twelfth.
-- **Keep the `:root` block.** Ten posts have none and are stuck on hex literals.
+- **Keep the `:root` block, byte-identical.** Every post has the canonical 24-token block
+  since `6670480` — the "ten posts have none" note that used to be here is obsolete.
   `style.css` is not loaded by any blog page (only `index.html` loads it), so the `:root`
-  in the post file is the only place these variables exist.
+  in the post file is the only place these variables exist. `check_site.py` INV-22 PASSes;
+  keep it that way.
 - **No `<script>`, no `data-reveal`.** No page in `blog/` loads JavaScript. `data-reveal`
-  is inert there despite what `CLAUDE.md` suggests.
+  is inert there despite what `CLAUDE.md` suggests (`check_site.py` INV-21b). If you need
+  a mobile menu, use the pure-CSS `.nav__toggle` checkbox pattern from `blog/index.html` —
+  INV-12 enforces that every toggle is actually wired.
 
-The palette, from the template's `:root`:
+The palette is the canonical 24-token block, identical in all 42 `:root` blocks —
+do not retype it, copy it from the template or from `style.css:5`. Full table:
+`page-design/references/tokens.md` §1.
 
-```css
---navy: #0f172a;  --blue: #6366f1;  --blue-dark: #4f46e5;  --blue-light: #818cf8;
---slate: #334155; --slate-light: #64748b; --gray: #94a3b8;
---bg: #f8fafc;    --white: #ffffff; --code-bg: #1e293b;
-```
-
-Recolour only the three theme lines the template marks (`.post-hero` gradient,
-`.post-hero__tag` colour, `.post-hero__series` colour). Everything else stays indigo so
-posts look like one site. Adding a single topic accent var — `--docker-blue: #2496ed` in
+Recolour only the theme lines the template marks (`.post-hero` gradient plus the three
+hero text colours), picking a gradient from `page-design/SKILL.md` §5 — never inventing
+one. Everything else stays indigo so posts look like one site. Adding a single topic
+accent var **after** the canonical block — `--docker-blue: #2496ed` in
 `docker-compose.html` — is the established way to bring in a brand colour.
 
 ## Step 4 — writing the body
@@ -219,7 +265,7 @@ Copy this exactly, including the odd indentation (the comment is indented 8, the
             <span class="card__tag">{Tag 2}</span>
             <span class="card__tag">{Tag 3}</span>
           </div>
-          <h2 class="card__title">{EN Title} — {TH subtitle} {emoji}</h2>
+          <h4 class="card__title">{EN Title} — {TH subtitle} {emoji}</h4>
           <p class="card__excerpt">{one Thai sentence, no trailing period}</p>
           <div class="card__footer">
             <div class="card__author">
@@ -234,9 +280,18 @@ Copy this exactly, including the odd indentation (the comment is indented 8, the
       </a>
 ```
 
+- **`<h4>`, not `<h2>`.** Task 11 (`635eb94` + `4a31036`) gave `blog/index.html` a real
+  heading ladder — `h1` page title → `h2` ×3 `.category__title` → `h3` ×2 `.series-title`
+  → `h4` ×37 `.card__title`. All 37 cards on disk are `h4`
+  (`grep -c '<h4 class="card__title">' blog/index.html` → 37). An `h2` here collides with
+  the category band; an `h3` collides with the series heading. Any tool that greps for
+  card titles must use `<h[1-6] class="card__title">` with a backreference — hardcoding
+  the level is what blinded `verify-wiring.py`.
 - The `href` is relative with `.html` — `blog/index.html` never uses the extensionless
   form. Only the 7 OpenClaw series posts do, in their own chip strip.
-- The `img src` must be byte-identical to the cover the post itself embeds.
+- The `img src` must be byte-identical to the cover the post itself embeds, and the
+  `<img>` needs `width`, `height`, `loading="lazy"` and `decoding="async"` — 120/120
+  images on the site have all four.
 - The inline `background:` gradient is a placeholder shown while the image loads; pick
   hues that match the post's hero gradient.
 - `card__title` must equal the post's `<h1>` text. It is also the string the neighbours'
@@ -244,15 +299,24 @@ Copy this exactly, including the odd indentation (the comment is indented 8, the
 
 ## Step 6 — the counters
 
-`blog/index.html` carries four hand-maintained counter sites (two of which change on a
-normal post add: the hero Articles pill and your section's badge). Two are stale today:
+`blog/index.html` carries **six** hand-maintained counter sites since Task 11. **All six
+are correct today** — `b9fb125` fixed the two that were stale — and `check_site.py`
+INV-02a–INV-02e all PASS with no baseline entries, so anything you break here fails
+immediately.
 
-- line 220 `<span class="blog-hero__stat"><strong>2</strong> Series</span>` — correct
-- line 221 `<span class="blog-hero__stat"><strong>33</strong> Articles</span>` — **stale, actual is 37**
-- line 235 `<span class="series-count">12 articles</span>` (`#series-openclaw`) — **stale, actual is 13**
-- line 573 `<span class="series-count">24 articles</span>` (`#series-devops`) — correct
+| Counter | Value today | Changes when you add a post? |
+|---|---|---|
+| `.blog-hero__stat` "N Categories" | 3 | only if you add a `.category` block |
+| `.blog-hero__stat` "N Series" | 2 | only if you add a `.series-section` |
+| `.blog-hero__stat` "N Articles" | 37 | **yes, always** |
+| `.category__count` `#cat-technology` | 37 articles | **yes**, for a Technology post |
+| `.series-count` `#series-openclaw` | 13 articles | yes, if the post lands there |
+| `.series-count` `#series-devops` | 24 articles | yes, if the post lands there |
 
-They drifted because people incremented them by hand. **Recompute instead:**
+**No line numbers.** They have moved twice (Task 10 and Task 11) and every hardcoded one
+in this skill had rotted. Grep for the class.
+
+They drifted originally because people incremented them by hand. **Recompute instead:**
 
 ```bash
 grep -c 'class="card"' blog/index.html                       # total → hero Articles
@@ -264,17 +328,11 @@ for sid,body in re.findall(r'<section class="series-section" id="([^"]+)">(.*?)<
 EOF
 ```
 
-Set the hero stat and both `.series-count` values to what those commands print, including
-fixing the two that are already wrong. `verify-wiring.py` baselines the current drift, so
-correcting it will make the `known:` lines disappear — that is the desired direction.
-
-Since Task 11 there are two more counter sites: the Technology `.category__count`
-(`#cat-technology`, must equal the sum of its two series — 37 today) and the hero
-`<strong>3</strong> Categories` pill (must equal the number of `.category` blocks on the
-page, currently fixed at 3). Adding a post inside Technology means recomputing both, same
-as the series counters above. Adding the *first* post to Academic & Philosophy or
-Lifestyle changes that category's `.category__count` from `"First posts coming soon"` to
-`"1 article"` — see Step 1. `check_site.py`'s INV-02d/INV-02e enforce all of this.
+Set the hero stat, the `.category__count` and the relevant `.series-count` to what those
+commands print. Adding the *first* post to Academic & Philosophy or Lifestyle changes that
+category's `.category__count` from `"First posts coming soon"` to `"1 article"` — see
+Step 1. INV-02d treats the coming-soon label as clean and flags both a stale number and a
+literal `"0"`.
 
 ## Step 7 — rewire the neighbours (DevOps series only)
 
@@ -334,14 +392,20 @@ see `references/openclaw-series.md`.
 
 Adding a DevOps post touches **4 files** (5 with a diagram):
 
-1. `images/<slug>-cover.{png,jpg}` — new file, not shared with any other post.
-2. `blog/<slug>.html` — from `assets/post-template.html`; one `<h1>`, `lang="th"`,
-   meta description, `:root`, `blog-nav`, `post-nav`, `blog-footer`.
-3. `blog/index.html` — card at the top of the right `.blog-grid`, hero `Articles` count
-   and the section's `.series-count` **recomputed**.
+1. `images/<slug>-cover.jpg` — new file, JPG, ≤200 KB, not shared with any other post.
+2. `blog/<slug>.html` — from `page-design/assets/post-template.html`; one `<h1>`,
+   `lang="th"`, meta description, canonical `:root`, the 4-line a11y block, `blog-nav`,
+   `post-nav`, `blog-footer`.
+3. `blog/index.html` — card at the top of the right `.blog-grid` with an
+   `<h4 class="card__title">`, hero `Articles`, `.category__count` and the section's
+   `.series-count` all **recomputed**.
 4. The old top card's post file — its `next` changes from `"./"` to the new slug
    (plus a second neighbour if you inserted mid-chain).
-5. `python3 .claude/skills/blog-post/assets/verify-wiring.py` → no `FAIL:` lines.
+5. Both linters, from the repo root:
+   ```bash
+   python3 .claude/skills/blog-post/assets/verify-wiring.py     # no FAIL: lines
+   python3 .claude/skills/site-check/scripts/check_site.py      # exit 0
+   ```
 
 Adding a numbered OpenClaw post touches **10 files**: the above, minus the post-nav
 rewire, plus the `.series-nav` strip in all 7 existing series posts.
@@ -363,18 +427,21 @@ Match the blast radius to what you changed:
 | Deleting a post | remove the card, recompute both counters, and heal the chain by joining its two neighbours to each other |
 
 When editing one of the 7 numbered OpenClaw posts, open
-`references/openclaw-series.md` first — those files have no `:root`, no `.blog-nav`
-back link, and their own set of already-broken links you should not make worse.
+`references/openclaw-series.md` first — those files have no `.blog-nav` back link and
+their own drift you should not make worse. (They *do* have the canonical `:root` now, and
+their 14 broken links were fixed in `b9fb125`.)
 
 Because there are no shared partials, a request to change styling "everywhere" means
-editing up to 38 `<style>` blocks. Say so and get confirmation before starting; do not
-change one post and call it done.
+editing up to 38 `<style>` blocks in `blog/` — 42 for the whole site. Say so and get
+confirmation before starting; do not change one post and call it done.
 
 ## When something looks broken
 
 `references/known-exceptions.md` lists what is intentionally asymmetric — the chain head
 with no nav, the two off-chain OpenClaw cards, the five no-nav posts, the two shared
 covers — plus the standing drift (4 footer variants, 4 copyright cohorts, 8 stale nav
-titles) and the two genuine bugs worth reporting to the user (`blog/index.html` has a
-hamburger button with no JavaScript; `deployment-hosting.html` has two `<h1>`). Check it
-before "fixing" anything you did not introduce.
+titles) and the one genuine bug still worth reporting to the user
+(`deployment-hosting.html` has two `<h1>`). The old second bug — `blog/index.html`
+rendering a hamburger with no JavaScript — was **fixed in Task 9** and replaced with the
+pure-CSS checkbox toggle. Check that file before "fixing" anything you did not
+introduce.

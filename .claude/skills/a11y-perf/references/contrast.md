@@ -4,7 +4,7 @@ All ratios computed with the WCAG 2.x sRGB relative-luminance formula, with alph
 layers composited over their real backdrop. Body/meta text on this site is 12–18 px,
 so the threshold is **4.5:1** unless a line says otherwise.
 
-## The palette (`blog/index.html:13-20`, mirrored in 27 other files)
+## The palette — identical in all 42 `:root` blocks since `6670480`
 
 ```css
 :root {
@@ -13,6 +13,13 @@ so the threshold is **4.5:1** unless a line says otherwise.
   --bg: #f8fafc; --white: #ffffff;
 }
 ```
+
+Every ratio in this file is therefore a *sitewide* ratio, not a per-file one: there are no
+palette variants left to check. See `page-design/references/tokens.md` §1.
+
+**Line numbers in the tables below are gone on purpose.** `blog/index.html` has been
+re-cut twice (Task 10 and Task 11) and every line reference in this file had drifted.
+Grep for the class name instead — e.g. `grep -n '\.series-count' blog/index.html`.
 
 ## A. Token contrast, light backgrounds
 
@@ -27,25 +34,27 @@ so the threshold is **4.5:1** unless a line says otherwise.
 
 `--gray` is fine on dark: `#94a3b8` on `--navy #0f172a` is **6.96:1** — which is why
 you must not redefine the token globally. `#64748b` on `#0f172a` is only 3.75:1 and
-would break `.footer span` (`blog/index.html:145`).
+would break `.footer span` (`grep -n '\.footer span' blog/index.html`).
 
 ## B. Failing pairs on `blog/index.html`
 
-| Ratio | Selector (line) | Current | Use instead |
+| Ratio | Selector | Current | Use instead |
 |---|---|---|---|
-| **2.56** | `.card__series` (135) — **dead rule: the class appears 0 times in markup** | `var(--gray)` on `#fff` | delete the rule, or `var(--slate-light)` → 4.76 if the element is ever added |
-| **2.99** | `.blog-hero__label` (69) | `#6366f1` on `#c7d2fe` | `#4338ca` → 5.30 |
-| **3.19** | `.blog-hero__sub` (76) | `#64748b` on `#c7d2fe` | `#475569` → 5.08 |
-| **3.67** | `.blog-hero__stat strong` (169) | `#6366f1` on `rgba(255,255,255,.5)`/`#c7d2fe` = `#e3e8fe` | `#4f46e5` → 5.16 |
-| **3.87** | `.series-count` (159) | `#6366f1` on `rgba(99,102,241,.08)/#f8fafc` = `#eceefb` | `#4f46e5` → 5.45 |
-| **3.90** | `.blog-hero__label` (69) | `#6366f1` on `#e8f0fe` | `#4338ca` → 6.90 |
-| **4.09** | `.card__tag` (110–113) | `#6366f1` on `rgba(99,102,241,.07)/#fff` = `#f4f4fe` | `#4f46e5` → 5.75 |
-| **4.15** | `.blog-hero__sub` (76) | `#64748b` on `#e8f0fe` | `#475569` → 6.61 |
-| **4.47** | `.card__read` (137) | `#6366f1` on `#fff` (marginal) | `#4f46e5` → 6.29 |
+| **2.56** | `.card__series` — **dead rule: the class appears 0 times in markup** | `var(--gray)` on `#fff` | delete the rule, or `var(--slate-light)` → 4.76 if the element is ever added |
+| **2.99** | `.blog-hero__label` | `#6366f1` on `#c7d2fe` | `#4338ca` → 5.30 |
+| **3.19** | `.blog-hero__sub` | `#64748b` on `#c7d2fe` | `#475569` → 5.08 |
+| **3.67** | `.blog-hero__stat strong` | `#6366f1` on `rgba(255,255,255,.5)`/`#c7d2fe` = `#e3e8fe` | `#4f46e5` → 5.16 |
+| **3.87** | `.series-count` | `#6366f1` on `rgba(99,102,241,.08)/#f8fafc` = `#eceefb` | `#4f46e5` → 5.45 |
+| **3.90** | `.blog-hero__label` | `#6366f1` on `#e8f0fe` | `#4338ca` → 6.90 |
+| **4.09** | `.card__tag` | `#6366f1` on `rgba(99,102,241,.07)/#fff` = `#f4f4fe` | `#4f46e5` → 5.75 |
+| **4.15** | `.blog-hero__sub` | `#64748b` on `#e8f0fe` | `#475569` → 6.61 |
+| **4.47** | `.card__read` | `#6366f1` on `#fff` (marginal) | `#4f46e5` → 6.29 |
 
-`.blog-hero__sub` and `.blog-hero__label` fail across the **whole** hero gradient
-(`blog/index.html:64` `linear-gradient(135deg, #e8f0fe 0%, #ddd6fe 40%, #c7d2fe 100%)`),
-not just one end — check both stops when picking a replacement.
+`.blog-hero__sub` and `.blog-hero__label` fail across the **whole** hero gradient, not
+just one end — check both stops when picking a replacement. The gradient is now the
+canonical `linear-gradient(135deg, #e8f0fe 0%, #ddd6fe 50%, #c7d2fe 100%)`; the `40%`
+middle-stop fork this file used to cite was fixed in `b9fb125`, which does not change any
+ratio here (the end stops are the same).
 
 Passing already, leave alone: `.card__excerpt` 4.76, `.footer a #818cf8` on navy 5.98,
 `.card:hover .card__read #4f46e5` 6.29, `.footer span` 6.96, `.blog-hero__stat` 8.53,
@@ -54,8 +63,11 @@ body text 9.90, `.card__title` 17.85. Two are marginal (`.nav__links a` 4.55,
 
 ## C. `.post-hero__meta` on dark gradients
 
-Current value in 15 files: `rgba(255,255,255,0.6)`. Ratios are against the gradient's
-**worst (lightest) stop**, since 135deg text can overlap it.
+Current value in **15** files: `rgba(255,255,255,0.6)`, plus `.7` in
+`openclaw-memory-architecture.html` and `.75` in `vibe-coding-devops-process.html`.
+Re-verified 2026-08-10 — **no sweep has touched this; it is all still outstanding.**
+Ratios are against the gradient's **worst (lightest) stop**, since 135deg text can
+overlap it.
 
 | Worst stop | a=0.60 | a=0.92 | solid `#fff` | `#fff` + 0.35 black scrim |
 |---|---|---|---|---|
