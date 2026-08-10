@@ -177,21 +177,10 @@ BASELINE = {
     # the chain head.  Consequence of INV-17, not an independent defect.
     "INV-04h": {"claude-code-architecture.html", "openclaw-memory-architecture.html"},
 
-    # 14 broken links in the hand-rolled per-post site nav (plus
-    # openclaw-production's footer link row) of 6 of the 7 OpenClaw posts —
-    # NOT in the .series-nav chip strip, which is clean.  The site is a
-    # single-page portfolio; the working target is ../index.html#about (see
-    # blog/index.html:200-204).  Dict form: key -> expected occurrence count;
-    # openclaw-production repeats /about and /contact in header AND footer.
-    "INV-05": {
-        "blog/openclaw-101.html|/projects": 1, "blog/openclaw-101.html|/about": 1,
-        "blog/openclaw-agent-teams.html|/projects": 1, "blog/openclaw-agent-teams.html|/about": 1,
-        "blog/openclaw-integrations.html|/research": 1, "blog/openclaw-integrations.html|/about": 1,
-        "blog/openclaw-memory.html|../about/": 1,
-        "blog/openclaw-production.html|/about": 2, "blog/openclaw-production.html|/contact": 2,
-        "blog/openclaw-security.html|/research": 1, "blog/openclaw-security.html|/teaching": 1,
-        "blog/openclaw-security.html|/about": 1,
-    },
+    # INV-05 (14 dead /about|/projects|/research|/contact|/teaching links in 6
+    # of the 7 OpenClaw posts) was fixed in the counters/gradient/dead-links
+    # cleanup — every one now points at /#about|/#projects|/#research|/#contact
+    # on index.html. No baseline entry remains; a future recurrence must fail.
 
     # Illustrative paths inside code samples — never a real defect.
     # /css/app.css appears twice (lines 1199 and 1201, two <link> examples).
