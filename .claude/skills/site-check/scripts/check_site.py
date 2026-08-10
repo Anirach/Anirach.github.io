@@ -145,9 +145,12 @@ NAV_SIBLING_DIRS = ["books", "projects", "news"]
 NAV_PAGES = ["index.html", "blog/index.html"] + \
             [d + "/index.html" for d in NAV_SIBLING_DIRS]
 
-# The 4 off-page nav destinations every one of NAV_PAGES must link to (a 5th
-# destination, Contact, is index.html's own #contact section and is checked
-# separately since it is an anchor, not a directory).
+# The 4 off-page nav destinations every one of NAV_PAGES must link to. The
+# brief's full five-destination list is "home, blog, books, projects, news";
+# home is checked separately (any page's own index.html target, tracked as
+# found_home in INV-23) since it isn't a subdirectory like the other four,
+# and Contact is checked separately again since it's index.html's #contact
+# anchor, not a destination page at all.
 NAV_DEST_DIRS = ["blog", "books", "projects", "news"]
 
 # ---------------------------------------------------------------------------
@@ -1145,14 +1148,27 @@ def _(site):
 
 
 # ---------------------------------------------------------------------------
-# INV-23 — 5-page nav consistency (Task 9, 2026-08-10)
+# INV-23 — 5-page nav consistency (Task 9, 2026-08-10; home check added in
+# fix round 1 after review Finding 1 — see below)
 #
 # index.html, blog/index.html, books/index.html, projects/index.html and
 # news/index.html each carry their own hand-copied <nav>. Every one of them
-# must link to all 4 sibling destinations (blog/, books/, projects/, news/)
-# plus index.html's #contact section, and every relative href inside that
-# <nav> must resolve to something real on disk — a page that looks fine but
-# 404s on click is worse than a page that never linked there at all.
+# must link to all 5 destinations the brief names — home, blog, books,
+# projects, news — plus index.html's #contact section is checked separately
+# (index.html itself trivially satisfies "home" via its own logo link; the
+# real target of the home check is the 4 sibling pages). Every relative href
+# inside that <nav> must resolve to something real on disk — a page that
+# looks fine but 404s on click is worse than a page that never linked there
+# at all.
+#
+# Home and Contact are tracked as two INDEPENDENT booleans on purpose: a
+# fault-injection test proved that folding "home" into the Contact check
+# lets a page silently lose its way back to home as long as
+# "../index.html#contact" is still present elsewhere in the nav (that
+# href resolves to index.html too, but it is not what a reader would call
+# a "way back home" link). So a link only counts toward found_home if its
+# fragment is anything OTHER than "contact"; the bare logo link
+# (`../index.html`, no fragment) is the one expected to satisfy it.
 # ---------------------------------------------------------------------------
 @check("INV-23", "every nav-bearing page links to all 5 destinations, every nav href resolves")
 def _(site):
@@ -1168,7 +1184,7 @@ def _(site):
             out.append(Violation(rel + "|missing-nav", "%s has no <nav>...</nav> element" % rel))
             continue
         page_dir = os.path.dirname(os.path.join(site.root, rel))
-        found_dirs, found_contact = set(), False
+        found_dirs, found_contact, found_home = set(), False, False
         for href in RE_NAV_HREF.findall(m.group(1)):
             if href.startswith(("http://", "https://", "mailto:", "tel:", "javascript:")):
                 continue
@@ -1187,7 +1203,12 @@ def _(site):
                                      '%s: nav href "%s" does not resolve on disk' % (rel, href)))
                 continue
             norm = os.path.normpath(cand)
-            if os.path.isdir(norm):
+            if norm == root_index:
+                if frag == "contact":
+                    found_contact = True
+                else:
+                    found_home = True
+            elif os.path.isdir(norm):
                 base = os.path.basename(norm)
                 if base in NAV_DEST_DIRS:
                     found_dirs.add(base)
@@ -1195,13 +1216,14 @@ def _(site):
                 parent = os.path.basename(os.path.dirname(norm))
                 if parent in NAV_DEST_DIRS:
                     found_dirs.add(parent)
-                elif norm == root_index and frag == "contact":
-                    found_contact = True
         missing_dirs = [d for d in NAV_DEST_DIRS if d not in found_dirs]
         if missing_dirs:
             out.append(Violation(rel + "|missing-dest|" + ",".join(missing_dirs),
                                  "%s nav has no link resolving to: %s"
                                  % (rel, ", ".join(missing_dirs))))
+        if not found_home:
+            out.append(Violation(rel + "|missing-home",
+                                 "%s nav has no link resolving to index.html (home)" % rel))
         if not found_contact:
             out.append(Violation(rel + "|missing-contact",
                                  "%s nav has no link resolving to index.html#contact" % rel))
