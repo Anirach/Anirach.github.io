@@ -288,6 +288,39 @@ And guard the JS in `script.js` (the CSS media block cannot stop a `scrollY`-dri
 const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 ```
 
+**Proving the sweep landed — `index.html` is not like the other 38 files.** Every `blog/*.html`
+post, `blog/index.html`, `books/index.html`, `projects/index.html`, `news/index.html` and
+`style.css` itself embed or *are* their own CSS, so a per-file `<style>`-block grep proves coverage
+for each of them directly:
+
+```bash
+grep -L ':focus-visible' style.css blog/*.html books/index.html projects/index.html news/index.html   # → empty
+```
+
+`index.html` is the one page whose CSS lives entirely in `style.css` via
+`<link rel="stylesheet" href="style.css">` — it has **zero** embedded `<style>` blocks by design
+(`grep -c '<style' index.html` → `0`, verified as an explicit requirement back in Task 10). Running
+the same per-file grep against `index.html` and expecting a hit is checking the wrong file: it will
+always report `index.html` as "missing" the snippet even when coverage is real, and the tempting
+fix — pasting a duplicate `<style>` block into `index.html` just to make the grep pass — is wrong.
+It was tried once (Task 12, first pass) and reverted: the block was byte-for-byte identical to text
+already in `style.css`, added zero coverage, was pure drift risk, and violated the "index.html has
+no embedded style" invariant for no benefit. When a proof and the goal disagree, fix the proof, not
+the file.
+
+The correct check for `index.html`'s coverage is against `style.css`, plus a browser check that the
+cascade actually reaches the page (custom properties and `:focus-visible` both apply document-wide
+regardless of which linked/embedded sheet declared them):
+
+```bash
+grep -c '<style' index.html                 # → 0  (must stay 0 — see Task 10, and anti-pattern 2)
+grep -c ':focus-visible' style.css           # → 1 (or more)
+grep -c 'color-scheme' style.css             # → 1 (or more)
+```
+Then in a real browser on `index.html`: tab once and confirm a visible focus ring, and confirm
+`getComputedStyle(document.documentElement).getPropertyValue('--blue')` resolves — both prove the
+`style.css` link is doing its job, which a text grep on `index.html` itself cannot show.
+
 ### LATER — blocked, not declined
 
 - **`prefers-color-scheme` dark mode.** Genuinely worth having, but with per-file CSS it means 39
