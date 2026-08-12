@@ -87,10 +87,14 @@ def main() -> int:
         checked += 1
         if not src:
             fail(f'{date.group(1)} has no source comment. Add, directly above the '
-                 f'<article>:  <!-- source: <url> | verified YYYY-MM-DD -->')
+                 f'<article>:  <!-- source: <url-or-repo-path> | verified YYYY-MM-DD -->')
             problems += 1
-        elif not src.startswith(("http://", "https://")):
-            fail(f"{date.group(1)} source is not a URL: {src}")
+        elif src.startswith(("http://", "https://")):
+            pass                                  # external source, cannot check offline
+        elif (ROOT / src).is_file():
+            pass                                  # artifact stored in the repo (e.g. a poster)
+        else:
+            fail(f"{date.group(1)} source is neither a URL nor a file in this repo: {src}")
             problems += 1
     if checked == 0:
         print("  found 0 news items — the markup changed; update the patterns.",
