@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Gate for news updates on anirach.com. Run from anywhere; resolves the repo itself.
 
-Two things nothing else in this repo checks:
+Three things nothing else in this repo checks:
 
 1. SYNC — index.html's "Latest updates" strip must list the 3 newest items from
    news/index.html, in order. This shipped wrong once: the homepage showed
@@ -14,7 +14,13 @@ Two things nothing else in this repo checks:
    without a stated source. Omitting a source now fails the build; fabricating one
    requires writing a deliberate falsehood into the file, which is auditable.
 
-Exit 0 = both pass.  1 = a real problem.  2 = the checker itself could not run
+3. COUNTERS — two hand-maintained counters that nothing else verifies: news/index.html's
+   "N updates" (the .series-count label over the timeline) and books/index.html's
+   "N chapters" (the .series-count label over the Chapters section). Both drift silently
+   whenever an item is added or removed without also touching the label. This recomputes
+   each from the actual item count and fails if either disagrees.
+
+Exit 0 = all three pass.  1 = a real problem.  2 = the checker itself could not run
 (missing file, or the markup changed and its patterns no longer match — treat exit 2
 as "the checker is broken", never as "the site is fine").
 """
@@ -102,6 +108,44 @@ def main() -> int:
         return 2
     if problems == 0 or checked:
         print(f"  {checked} news items checked")
+
+    # ---- 3. counters ----------------------------------------------------------
+    print("COUNTERS")
+    try:
+        books = (ROOT / "books" / "index.html").read_text(encoding="utf-8")
+    except OSError as exc:
+        print(f"cannot read books/index.html: {exc}", file=sys.stderr)
+        return 2
+
+    news_label = re.search(r'<span class="series-count">(\d+) updates</span>', news)
+    news_actual = checked  # articles carrying a date chip in news/index.html's timeline
+
+    chapters_section = re.search(r'id="chapters".*?</section>', books, re.S)
+    chapters_body = chapters_section.group(0) if chapters_section else ""
+    chapters_label = re.search(r'<span class="series-count">(\d+) chapters</span>', chapters_body)
+    chapters_actual = len(re.findall(r'<article class="card card--row">', chapters_body))
+
+    if not news_label:
+        fail('news/index.html: no "N updates" series-count label found — '
+             'the markup changed; update the pattern in this script')
+        problems += 1
+    elif int(news_label.group(1)) != news_actual:
+        fail(f'news/index.html says "{news_label.group(1)} updates" but the '
+             f'timeline actually has {news_actual} item(s)')
+        problems += 1
+    else:
+        print(f'  news/index.html   "{news_label.group(1)} updates" == {news_actual} actual — ok')
+
+    if not chapters_section or not chapters_label:
+        fail('books/index.html: no "N chapters" series-count label found in the '
+             '#chapters section — the markup changed; update the pattern in this script')
+        problems += 1
+    elif int(chapters_label.group(1)) != chapters_actual:
+        fail(f'books/index.html says "{chapters_label.group(1)} chapters" but the '
+             f'#chapters section actually has {chapters_actual} row(s)')
+        problems += 1
+    else:
+        print(f'  books/index.html  "{chapters_label.group(1)} chapters" == {chapters_actual} actual — ok')
 
     print("PASS" if problems == 0 else f"FAIL — {problems} problem(s)")
     return 0 if problems == 0 else 1
