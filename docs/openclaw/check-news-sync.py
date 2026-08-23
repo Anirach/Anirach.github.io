@@ -22,7 +22,7 @@ Three things nothing else in this repo checks:
    removed without also touching the label. This recomputes each from the actual
    item count and fails if any of them disagrees.
 
-Exit 0 = all three pass.  1 = a real problem.  2 = the checker itself could not run
+Exit 0 = all four pass.  1 = a real problem.  2 = the checker itself could not run
 (missing file, or the markup changed and its patterns no longer match — treat exit 2
 as "the checker is broken", never as "the site is fine").
 """
@@ -46,6 +46,20 @@ NEWS_ITEM = re.compile(
     r'^[ \t]*<article class="card card--row">(.*?)</article>',
     re.S | re.M,
 )
+# The ^[ \t]* anchors above and below only guard INLINE quoted markup — markup
+# quoted inside a comment but sitting on its own indented line still starts a
+# line and would be counted. So every body is stripped of comments before any
+# findall; the anchors stay as defense in depth. strip_comments can keep the
+# provenance comments, which NEWS_ITEM must still see.
+COMMENT = re.compile(r'<!--.*?-->', re.S)
+PROVENANCE_COMMENT = re.compile(r'<!--\s*source:')
+
+
+def strip_comments(html: str, keep_provenance: bool = False) -> str:
+    if keep_provenance:
+        return COMMENT.sub(
+            lambda m: m.group(0) if PROVENANCE_COMMENT.match(m.group(0)) else "", html)
+    return COMMENT.sub("", html)
 
 
 def fail(msg: str) -> None:
@@ -59,6 +73,10 @@ def main() -> int:
     except OSError as exc:
         print(f"cannot read site files: {exc}", file=sys.stderr)
         return 2
+
+    # Comments out of the way first: quoted markup inside them must never reach
+    # a findall. The provenance comments are the one kind NEWS_ITEM parses.
+    news = strip_comments(news, keep_provenance=True)
 
     strip = STRIP_DATE.findall(home)
     dates = NEWS_DATE.findall(news)
@@ -125,12 +143,12 @@ def main() -> int:
     news_actual = checked  # articles carrying a date chip in news/index.html's timeline
 
     chapters_section = re.search(r'id="chapters".*?</section>', pubs, re.S)
-    chapters_body = chapters_section.group(0) if chapters_section else ""
+    chapters_body = strip_comments(chapters_section.group(0)) if chapters_section else ""
     chapters_label = re.search(r'<span class="series-count">(\d+) chapters</span>', chapters_body)
     chapters_actual = len(re.findall(r'<article class="card card--row">', chapters_body))
 
     published_section = re.search(r'id="published".*?</section>', books, re.S)
-    published_body = published_section.group(0) if published_section else ""
+    published_body = strip_comments(published_section.group(0)) if published_section else ""
     novels_label = re.search(r'<span class="series-count">(\d+) novels?</span>', published_body)
     # ^[ \t]* anchored for the same reason NEWS_ITEM is: books/index.html writes the
     # markup contract as an HTML comment directly beside the label, and an unanchored
@@ -139,7 +157,7 @@ def main() -> int:
                                    published_body, re.M))
 
     manuscripts_section = re.search(r'id="manuscripts".*?</section>', books, re.S)
-    manuscripts_body = manuscripts_section.group(0) if manuscripts_section else ""
+    manuscripts_body = strip_comments(manuscripts_section.group(0)) if manuscripts_section else ""
     manuscripts_label = re.search(r'<span class="series-count">(\d+) complete</span>',
                                   manuscripts_body)
     # ^[ \t]* anchored like the two patterns above: the manuscript cards are the
