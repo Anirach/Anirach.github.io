@@ -14,11 +14,12 @@ Three things nothing else in this repo checks:
    without a stated source. Omitting a source now fails the build; fabricating one
    requires writing a deliberate falsehood into the file, which is auditable.
 
-3. COUNTERS — two hand-maintained counters that nothing else verifies: news/index.html's
-   "N updates" (the .series-count label over the timeline) and books/index.html's
-   "N chapters" (the .series-count label over the Chapters section). Both drift silently
+3. COUNTERS — three hand-maintained counters that nothing else verifies: news/index.html's
+   "N updates" (the .series-count label over the timeline), publications/index.html's
+   "N chapters" (the .series-count label over the Chapters section), and books/index.html's
+   "N novel" (the .series-count label over the Published section). All three drift silently
    whenever an item is added or removed without also touching the label. This recomputes
-   each from the actual item count and fails if either disagrees.
+   each from the actual item count and fails if any of them disagrees.
 
 Exit 0 = all three pass.  1 = a real problem.  2 = the checker itself could not run
 (missing file, or the markup changed and its patterns no longer match — treat exit 2
@@ -112,18 +113,29 @@ def main() -> int:
     # ---- 3. counters ----------------------------------------------------------
     print("COUNTERS")
     try:
+        pubs = (ROOT / "publications" / "index.html").read_text(encoding="utf-8")
         books = (ROOT / "books" / "index.html").read_text(encoding="utf-8")
     except OSError as exc:
-        print(f"cannot read books/index.html: {exc}", file=sys.stderr)
+        print(f"cannot read publications/index.html or books/index.html: {exc}",
+              file=sys.stderr)
         return 2
 
     news_label = re.search(r'<span class="series-count">(\d+) updates</span>', news)
     news_actual = checked  # articles carrying a date chip in news/index.html's timeline
 
-    chapters_section = re.search(r'id="chapters".*?</section>', books, re.S)
+    chapters_section = re.search(r'id="chapters".*?</section>', pubs, re.S)
     chapters_body = chapters_section.group(0) if chapters_section else ""
     chapters_label = re.search(r'<span class="series-count">(\d+) chapters</span>', chapters_body)
     chapters_actual = len(re.findall(r'<article class="card card--row">', chapters_body))
+
+    published_section = re.search(r'id="published".*?</section>', books, re.S)
+    published_body = published_section.group(0) if published_section else ""
+    novels_label = re.search(r'<span class="series-count">(\d+) novels?</span>', published_body)
+    # ^[ \t]* anchored for the same reason NEWS_ITEM is: books/index.html writes the
+    # markup contract as an HTML comment directly beside the label, and an unanchored
+    # pattern would count that quoted <article> tag as a real card.
+    novels_actual = len(re.findall(r'^[ \t]*<article class="card card--feature">',
+                                   published_body, re.M))
 
     if not news_label:
         fail('news/index.html: no "N updates" series-count label found — '
@@ -134,18 +146,32 @@ def main() -> int:
              f'timeline actually has {news_actual} item(s)')
         problems += 1
     else:
-        print(f'  news/index.html   "{news_label.group(1)} updates" == {news_actual} actual — ok')
+        print(f'  news/index.html          "{news_label.group(1)} updates" '
+              f'== {news_actual} actual — ok')
 
     if not chapters_section or not chapters_label:
-        fail('books/index.html: no "N chapters" series-count label found in the '
+        fail('publications/index.html: no "N chapters" series-count label found in the '
              '#chapters section — the markup changed; update the pattern in this script')
         problems += 1
     elif int(chapters_label.group(1)) != chapters_actual:
-        fail(f'books/index.html says "{chapters_label.group(1)} chapters" but the '
+        fail(f'publications/index.html says "{chapters_label.group(1)} chapters" but the '
              f'#chapters section actually has {chapters_actual} row(s)')
         problems += 1
     else:
-        print(f'  books/index.html  "{chapters_label.group(1)} chapters" == {chapters_actual} actual — ok')
+        print(f'  publications/index.html  "{chapters_label.group(1)} chapters" '
+              f'== {chapters_actual} actual — ok')
+
+    if not published_section or not novels_label:
+        fail('books/index.html: no "N novel" series-count label found in the '
+             '#published section — the markup changed; update the pattern in this script')
+        problems += 1
+    elif int(novels_label.group(1)) != novels_actual:
+        fail(f'books/index.html says "{novels_label.group(1)} novel" but the '
+             f'#published section actually has {novels_actual} card(s)')
+        problems += 1
+    else:
+        print(f'  books/index.html         "{novels_label.group(1)} novel" '
+              f'== {novels_actual} actual — ok')
 
     print("PASS" if problems == 0 else f"FAIL — {problems} problem(s)")
     return 0 if problems == 0 else 1
