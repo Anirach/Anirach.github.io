@@ -28,10 +28,13 @@ means writing a deliberate falsehood into a file that is auditable forever.
 
 **Rule 3 — the item counters must match reality.**
 
-`news/index.html` carries a `"N updates"` label and `books/index.html` a `"N chapters"` label. Both
-are hand-typed and drift silently whenever an item is added without touching the label — a split
-commit nearly desynchronised them once. The gate recomputes both from the actual item counts and
-fails if either disagrees, so adding an item means updating its label in the same commit.
+Four labels are hand-typed: `news/index.html`'s `"N updates"`, `publications/index.html`'s
+`"N chapters"` (this label lived on `books/index.html` until the 2026-08-23 split of Books into
+Publications + Novels), and `books/index.html`'s `"N novel"` and `"N complete"`. All four drift
+silently whenever an item is added without touching the label — a split
+commit nearly desynchronised them once. The gate recomputes all four from the actual item counts
+(after stripping HTML comments, so a commented-out card cannot satisfy a label) and
+fails if any disagrees, so adding an item means updating its label in the same commit.
 
 ---
 
@@ -135,13 +138,13 @@ Run all three from the repo root. All must pass.
 
 ```bash
 python3 docs/openclaw/check-news-sync.py                        # sync + provenance + counters gate
-python3 .claude/skills/site-check/scripts/check_site.py         # 48 cross-file integrity checks
+python3 .claude/skills/site-check/scripts/check_site.py         # 49 cross-file integrity checks
 python3 .claude/skills/blog-post/assets/verify-wiring.py        # blog wiring (should be untouched)
 ```
 
 | Command | Expected |
 |---|---|
-| `check-news-sync.py` | `PASS`, exit 0 — runs three sections: SYNC, PROVENANCE, COUNTERS |
+| `check-news-sync.py` | `PASS`, exit 0 — runs three sections: SYNC, PROVENANCE, COUNTERS (four counters) |
 | `check_site.py` | exit 0, `0 new, 55 known` — "known" is pre-existing debt; **`0 new` is what matters** |
 | `verify-wiring.py` | `CLEAN` |
 
@@ -203,8 +206,9 @@ items to it and do not give it date chips; the checker deliberately ignores rows
 
 The three homepage rows are Sep 2026 / Aug 2026 / Jul 2026.
 
-`books/index.html`'s Chapters section holds **8 chapters** with its own `"N chapters"` label — the
-checker verifies that too.
+`publications/index.html`'s Chapters section holds **8 chapters** with its own `"N chapters"`
+label, and `books/index.html` (Novels) carries `"1 novel"` and `"2 complete"` — the
+checker verifies all three too.
 
 Re-derive rather than trusting this paragraph:
 
@@ -219,7 +223,8 @@ grep -c '<!-- source:' news/index.html              # provenance comments; must 
 ## If the markup ever changes
 
 `check-news-sync.py` matches on `latest__date`, `card__tag--date`, the `<!-- source: … -->`
-comment, and the two `series-count` labels (`"N updates"`, `"N chapters"`). If a redesign renames any of them the script exits **2** with `found no dates — the markup
+comment, and the four `series-count` labels (`"N updates"` on news, `"N chapters"` on
+publications, `"N novel"` and `"N complete"` on books). If a redesign renames any of them the script exits **2** with `found no dates — the markup
 changed`, rather than silently reporting success. Update its patterns in the same commit as the
 markup change.
 

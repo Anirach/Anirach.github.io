@@ -106,6 +106,8 @@ Order of sections:
 5. **Recommended reading**: built when the owner provides 3–8 titles with one-line notes
    (pending). Section omitted until content exists — no placeholder shelf.
 
+Superseded 2026-08-23: /books/ split into /publications/ (academic) and /books/ (fiction, with per-book detail pages).
+
 ### 4.4 Projects & Apps (`projects/index.html`) — new
 
 Two tiers, each card with name, tag, bilingual description, status badge, link:

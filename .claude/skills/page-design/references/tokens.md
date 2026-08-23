@@ -11,7 +11,9 @@ what is on disk plus the rules for not undoing it.
 > the command printed next to it — if you change the repo and do not re-run it,
 > you have created the exact drift this file exists to prevent.
 
-Last verified **2026-08-10** against `7867c00`.
+Last verified **2026-08-23** against `5178252` (the books/publications split: the site is 46 HTML
+files now — `publications/index.html` plus three `books/*.html` detail pages joined, all carrying
+the canonical block).
 
 ---
 
@@ -21,7 +23,8 @@ Last verified **2026-08-10** against `7867c00`.
 python3 - <<'PY'
 import re,glob,collections
 files=['index.html','style.css']+sorted(glob.glob('blog/*.html'))+ \
-      ['books/index.html','news/index.html','projects/index.html']
+      sorted(glob.glob('books/*.html'))+ \
+      ['news/index.html','projects/index.html','publications/index.html']
 vals=collections.defaultdict(collections.Counter); n=0
 for f in files:
     s=open(f,encoding='utf-8',errors='replace').read()
@@ -36,10 +39,10 @@ for k,c in sorted(vals.items(), key=lambda kv:-sum(kv[1].values())):
 PY
 ```
 
-Current output: **43 files scanned, 42 `:root` blocks**, and every one of the 24
-canonical tokens reads `…x42` — one value, no variants, zero deviations.
+Current output: **47 files scanned, 46 `:root` blocks**, and every one of the 24
+canonical tokens reads `…x46` — one value, no variants, zero deviations.
 
-`43 − 42 = 1`: `index.html` is the only file with no `:root` of its own, **by
+`47 − 46 = 1`: `index.html` is the only file with no `:root` of its own, **by
 design**. It is the one page whose CSS lives entirely in `style.css`
 (`grep -c '<style' index.html` → the only hit is a comment saying so, added in
 `7867c00`), and `style.css:5` carries the canonical block for it.
@@ -53,18 +56,18 @@ hand-rolled token audit against those two files before trusting its output.
 
 ---
 
-## 1. The canonical block — 24 tokens, 42/42 files, zero deviations
+## 1. The canonical block — 24 tokens, 46/46 files, zero deviations
 
 | Group | Tokens | Files holding the canonical value | Deviating |
 |---|---|---|---|
-| ink | `--navy` `#0f172a`, `--slate` `#334155`, `--slate-light` `#64748b`, `--gray` `#94a3b8` | 42 | **0** |
-| ground | `--bg` `#f8fafc`, `--white` `#ffffff`, `--code-bg` `#1e293b` | 42 | **0** |
-| accent | `--blue` `#6366f1`, `--blue-dark` `#4f46e5`, `--blue-light` `#818cf8` | 42 | **0** |
-| status | `--green` `#22c55e`, `--red` `#ef4444`, `--amber` `#f59e0b`, `--cyan` `#06b6d4`, `--purple` `#8b5cf6`, `--purple-dark` `#7c3aed` | 42 | **0** |
-| type | `--font`, `--mono` | 42 | **0** |
-| form | `--radius` `12px`, `--radius-sm` `8px`, `--radius-lg` `16px`, `--measure` `720px`, `--wide` `860px`, `--transition` `0.3s cubic-bezier(0.4, 0, 0.2, 1)` | 42 | **0** |
+| ink | `--navy` `#0f172a`, `--slate` `#334155`, `--slate-light` `#64748b`, `--gray` `#94a3b8` | 46 | **0** |
+| ground | `--bg` `#f8fafc`, `--white` `#ffffff`, `--code-bg` `#1e293b` | 46 | **0** |
+| accent | `--blue` `#6366f1`, `--blue-dark` `#4f46e5`, `--blue-light` `#818cf8` | 46 | **0** |
+| status | `--green` `#22c55e`, `--red` `#ef4444`, `--amber` `#f59e0b`, `--cyan` `#06b6d4`, `--purple` `#8b5cf6`, `--purple-dark` `#7c3aed` | 46 | **0** |
+| type | `--font`, `--mono` | 46 | **0** |
+| form | `--radius` `12px`, `--radius-sm` `8px`, `--radius-lg` `16px`, `--measure` `720px`, `--wide` `860px`, `--transition` `0.3s cubic-bezier(0.4, 0, 0.2, 1)` | 46 | **0** |
 
-Plus `color-scheme: light` on the same `:root` in all 42.
+Plus `color-scheme: light` on the same `:root` in all 46.
 
 The three pure aliases this file used to list for deletion — `--indigo`,
 `--muted`, `--violet` — are **gone**; the audit reports 0 occurrences of each.
@@ -83,7 +86,9 @@ diff <(awk '/^    :root \{/,/^    \}/' .claude/skills/page-design/assets/post-te
 
 This is the honest outstanding work, and it is the opposite of what this file
 used to describe. The colour tokens are used heavily; the **form** tokens are
-declared 42 times and used almost never.
+declared 46 times and used almost never — though the 2026-08 section pages
+(books/, publications/) finally consume `var(--measure)` and pushed several
+counts up.
 
 ```bash
 python3 - <<'PY'
@@ -99,18 +104,18 @@ PY
 
 | Token | `var()` uses | Literal still in the CSS |
 |---|---|---|
-| `--navy` | 359 | — |
-| `--blue` | 262 | — |
-| `--gray` | 93 | — |
-| `--slate-light` | 67 | — |
-| `--slate` | 65 | — |
-| `--blue-dark` | 23 | — |
-| `--transition` | 16 | — |
-| `--radius` | 13 | `border-radius:12px` ×169 |
-| `--radius-sm` | 10 | `border-radius:8px` ×96 |
+| `--navy` | 381 | — |
+| `--blue` | 273 | — |
+| `--gray` | 97 | — |
+| `--slate` | 79 | — |
+| `--slate-light` | 75 | — |
+| `--blue-dark` | 52 | — |
+| `--transition` | 29 | — |
+| `--radius` | 25 | `border-radius:12px` ×169 |
+| `--radius-sm` | 17 | `border-radius:8px` ×96 |
+| `--measure` | 10 | `max-width:720px` ×76 |
 | `--wide` | 1 | `max-width:860px` ×26 |
 | `--radius-lg` | 1 | `border-radius:16px` ×30 |
-| `--measure` | **0** | `max-width:720px` ×76 |
 
 Nothing is broken by this — the literals and the token values agree — but it
 means a future "change the measure" or "change the radius ladder" is still an
@@ -159,7 +164,7 @@ product prefix so a grep can find and scope it.
 | `--docker-blue` | `#2496ed` | `blog/docker-compose.html` |
 
 Declare them **after** the canonical block, never interleaved, so the canonical
-block stays a byte-identical paste across all 42 files.
+block stays a byte-identical paste across all 46 files.
 
 ---
 
@@ -192,27 +197,27 @@ promote it to a token if a second use appears.
 
 ```bash
 grep -ho 'border-radius: *[0-9]*px' index.html style.css blog/*.html \
-     books/index.html news/index.html projects/index.html \
+     books/*.html news/index.html projects/index.html publications/index.html \
   | tr -d ' ' | sort | uniq -c | sort -rn
 ```
 
 ```
 169 border-radius:12px      <- --radius
  96 border-radius:8px       <- --radius-sm
- 78 border-radius:10px      <- migrate to 12px
+ 82 border-radius:10px      <- migrate to 12px
+ 56 border-radius:2px       <- 54 of these are the :focus-visible ring (37 posts
+                               x1, style.css x1, and the 8 island-chrome pages
+                               x2 — base ring + the .nav__burger label ring).
+                               The other 2 are the indicator bars at style.css:116
+                               and :134. Do not "consolidate" them.
  54 border-radius:6px       <- migrate to 8px
- 48 border-radius:2px       <- 46 of these are the :focus-visible ring from the
-                               e8da9da sweep (one per stylesheet: 41 embedded +
-                               style.css; 4 of them written across two lines).
-                               The other 2 are the indicator bars at style.css:113
-                               and :131. Do not "consolidate" them.
- 35 border-radius:20px      <- pills only (tags, chips)
+ 39 border-radius:20px      <- pills only (tags, chips)
  30 border-radius:16px      <- --radius-lg
  24 border-radius:5px       <- migrate to 6px/8px
- 14 border-radius:50px      <- pills
+ 19 border-radius:50px      <- pills
  11 border-radius:4px
-  5 border-radius:14px      <- BAN. CLAUDE.md still documents 14px; it is wrong.
-  5 border-radius:100px     <- pills
+  6 border-radius:100px     <- pills
+  5 border-radius:14px      <- BAN. (CLAUDE.md's stray 14px doc line was fixed in 5a522ed.)
   2 border-radius:25px      <- pills
   1 border-radius:999px / 30px / 24px
 ```
@@ -227,18 +232,22 @@ Pills (`20px`/`50px`/`100px`) are for tag chips and buttons only.
 
 ```bash
 grep -ho '@media[^{]*' index.html style.css blog/*.html \
-     books/index.html news/index.html projects/index.html \
+     books/*.html news/index.html projects/index.html publications/index.html \
   | sed 's/[[:space:]]*$//' | sort | uniq -c | sort -rn
 ```
 
 ```
-42 @media (prefers-reduced-motion: reduce)   <- the e8da9da sweep: 41 embedded
+46 @media (prefers-reduced-motion: reduce)   <- the e8da9da sweep: 45 embedded
                                                 <style> blocks + style.css
-24 @media (max-width: 600px)      <- phone
-18 @media (max-width: 768px)      <- tablet
+28 @media (max-width: 600px)      <- phone
+22 @media (max-width: 768px)      <- tablet
+ 8 @media (max-width: 800px)      <- island-chrome mobile-nav takeover, nav rules
+                                     only: the 5 listing + 3 detail pages (5178252;
+                                     the 6-link desktop bar breaks at 769-771px)
  2 @media (max-width:768px)       <- same, unspaced; normalise on contact
  2 @media (max-width: 480px)      <- retire, fold into 600px
  1 @media (max-width: 500px)      <- retire, fold into 600px
+ 1 @media (max-width: 1080px)     <- style.css only, landing mobile-nav takeover (5178252)
  1 @media (max-width: 1024px)     <- style.css only, landing grids
 ```
 
@@ -250,23 +259,25 @@ Always write the spaced form `(max-width: 600px)` so grep sweeps catch it.
 
 ```bash
 grep -ho 'max-width:[[:space:]]*[0-9]*px' index.html style.css blog/*.html \
-     books/index.html news/index.html projects/index.html \
-  | tr -d ' ' | sort | uniq -c | sort -rn | head -14
+     books/*.html news/index.html projects/index.html publications/index.html \
+  | tr -d ' ' | sort | uniq -c | sort -rn | head -15
 ```
 
 ```
-76 max-width:720px    <- --measure, .post-body  (still a literal everywhere; §2)
-29 max-width:600px    <- breakpoint value, not a measure
+76 max-width:720px    <- --measure, .post-body  (still a literal in the posts; §2)
+33 max-width:600px    <- breakpoint value, not a measure
+31 max-width:1200px   <- islands + blog/index.html + the 5 listing + 3 detail pages
+28 max-width:800px    <- island containers + the 8 island-chrome nav-takeover
+                         breakpoints + section-page boxes
 26 max-width:860px    <- --wide, .blog-nav__inner
-23 max-width:768px    <- breakpoint value
-23 max-width:1200px   <- islands + blog/index.html + the 3 new index pages
+24 max-width:768px    <- breakpoint value
 16 max-width:380px    <- .post-hero__cover incumbent
-13 max-width:800px    <- island containers
  9 max-width:700px    <- cover boxes, not a text measure
+ 9 max-width:560px    <- hero sub-copy on the section pages
  7 max-width:520px    <- 4 house .post-hero__cover + 3 diagram boxes
  6 max-width:760px    <- the two HOUSE .post-body deviants, SKILL.md §0
  6 max-width:480px    <- 4 house .post-hero__cover + 2 breakpoint values
- 5 max-width:560px    <- hero sub-copy on the index pages
+ 5 max-width:900px    <- 2 island measures + a box on each books/ detail page
  3 max-width:500px    <- 1 breakpoint value + small content boxes
  3 max-width:420px
 ```
@@ -277,11 +288,11 @@ Island measures to convert: `1200px`, `1000px`, `900px`, `800px` — SKILL.md §
 
 ## 9. Gradients
 
-**77 distinct `linear-gradient(135deg, …)` values across 133 occurrences.**
+**78 distinct `linear-gradient(135deg, …)` values across 137 occurrences.**
 
 ```bash
 grep -ho 'linear-gradient(135deg[^)]*)' index.html style.css blog/*.html \
-     books/index.html news/index.html projects/index.html \
+     books/*.html news/index.html projects/index.html publications/index.html \
   | sed 's/[[:space:]]\+/ /g;s/, /,/g' | sort | uniq -c | sort -rn | head
 ```
 
@@ -289,6 +300,8 @@ grep -ho 'linear-gradient(135deg[^)]*)' index.html style.css blog/*.html \
 11 linear-gradient(135deg,rgba(99,102,241,0.03)              <- tint wash, fine
 11 linear-gradient(135deg,#e8f0fe 0%,#ddd6fe 50%,#c7d2fe 100%)  <- canonical light hero
  7 linear-gradient(135deg,#8b5cf6,#7c3aed,#a78bfa)           <- violet, 3-stop variant
+ 6 linear-gradient(135deg,#052e16 0%,#064e3b 40%,#065f46 100%)  <- canonical emerald:
+                                              2 posts + all 4 books/ (Novels) pages
  5 linear-gradient(135deg,#8b5cf6 0%,#7c3aed 100%)           <- canonical violet
  4 linear-gradient(135deg,#f59e0b,#d97706)
  4 linear-gradient(135deg,#3b82f6,#2563eb)
@@ -299,6 +312,7 @@ left** — `b9fb125` fixed `blog/index.html`'s. Verify the fork has not returned
 
 ```bash
 grep -ho 'linear-gradient(135deg, *#e8f0fe[^)]*)' index.html blog/*.html \
+     books/*.html news/index.html projects/index.html publications/index.html \
   | sort | uniq -c        # → one row, all 50%
 ```
 

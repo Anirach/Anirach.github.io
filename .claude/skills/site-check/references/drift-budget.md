@@ -4,9 +4,13 @@ Open this when the user wants to pay down cosmetic inconsistency, or when you ne
 warn-level violation is pre-existing. These do not block a push. Every count below was computed from
 the tree; re-verify with the quoted command before repeating a number.
 
-Baseline shape (2026-08-10): 37 posts in `blog/`, 38 HTML files in `blog/`, 42 repo-wide (the 4
-landing pages `index.html` + `books/` + `projects/` + `news/` joined the site), 51 files in
-`images/`. Nav partition: 7 `.series-nav` + 25 `.post-nav` + 5 no-nav.
+Baseline shape (2026-08-23, `5178252`): 37 posts in `blog/`, 38 HTML files in `blog/`, 46
+repo-wide — `index.html` plus five section directories (`books/` split into `publications/`
+(academic) + `books/` (fiction) on 2026-08-23, and `books/` now carries three per-book detail
+pages beside its index), 56 files in
+`images/`. Nav partition: 7 `.series-nav` + 25 `.post-nav` + 5 no-nav. The linter runs 49 checks
+(30 fail / 15 warn / 4 info) — INV-26, added with the split, ties each section directory's detail
+pages to its own `index.html` at fail level, with no baseline entry.
 
 **When you pay an item down, delete its key from `BASELINE` in `check_site.py` in the same commit.**
 INV-25 fails the build on any baseline key that no longer matches a live violation, because a dead
@@ -78,9 +82,9 @@ copyright written as the `&copy;` entity (4× `&copy; 2026`, 1× `&copy; 2024`; 
 blog-post/references/known-exceptions.md), so only 3 posts have no copyright at all. Pick one
 year and one encoding before editing 37 files.
 
-INV-15 iterates `site.posts` **only**. The 5 nav-bearing index pages are covered by INV-24 instead,
+INV-15 iterates `site.posts` **only**. The 6 nav-bearing index pages are covered by INV-24 instead,
 which checks them for agreement with each other rather than against a hardcoded year — that gap is
-how `blog/index.html` kept a `© 2025` footer while the other four landing pages read 2026.
+how `blog/index.html` kept a `© 2025` footer while the other landing pages read 2026.
 
 ### INV-16 — footer container class (4 variants)
 `<footer class="blog-footer">` ×23, `<footer class="footer">` ×7, `<footer class="post-footer">` ×3,

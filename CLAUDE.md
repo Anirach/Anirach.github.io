@@ -30,17 +30,22 @@ Deploy by pushing to `main` — GitHub Pages auto-deploys. There is no `.nojekyl
 ├── blog/
 │   ├── index.html      # Blog listing — fully static, zero JavaScript, 3 category bands (only Technology has posts)
 │   └── *.html          # 37 self-contained posts (own <style>, own :root, own nav markup)
-├── books/index.html    # Books & Writing — self-contained page, own <style>/:root
+├── books/              # Novels (fiction; nav label "Novels") — all self-contained
+│   ├── index.html      #   the section index: 1 published novel + 2 complete manuscripts
+│   ├── three-old-men.html            # per-book detail page
+│   ├── a-pocketful-of-questions.html # per-book detail page
+│   └── the-thirteenth-seal.html      # per-book detail page
+├── publications/index.html  # Academic: Springer book, 8 chapters, selected publications — self-contained
 ├── projects/index.html # Projects & Apps — self-contained page, own <style>/:root
 ├── news/index.html     # News & Updates — self-contained page, own <style>/:root
-├── images/             # 53 files — covers (<slug>-cover.png|jpg), diagram PNGs, posters
+├── images/             # 56 files — covers (<slug>-cover.png|jpg), diagram PNGs, posters
 ├── docs/               # design spec, implementation plan, OpenClaw news runbook + gate
 ├── .claude/skills/     # page-design · blog-post · a11y-perf · site-check
 ├── _config.yml         # Jekyll excludes: docs/, CLAUDE.md (see Development)
 └── CNAME               # anirach.com
 ```
 
-**Every blog page is an island — and so is each of `books/`, `projects/`, `news/`.** None of them link `style.css` or `script.js`; each embeds its full stylesheet in a `<style>` block and defines its own `:root` variables (copied from the same canonical token set `style.css` also carries). Editing `style.css` affects only the landing page. Editing one post or one of the three section pages affects only that file — there is no shared partial, so changes that should apply "everywhere" must be repeated per file (this is what commit `4c180c9` "Standardize series navigation across all 7 OpenClaw posts" was doing).
+**Every blog page is an island — and so is each of `books/` (its index and all three detail pages), `publications/`, `projects/`, `news/`.** None of them link `style.css` or `script.js`; each embeds its full stylesheet in a `<style>` block and defines its own `:root` variables (copied from the same canonical token set `style.css` also carries). Editing `style.css` affects only the landing page. Editing one post or one of the seven section-directory pages affects only that file — there is no shared partial, so changes that should apply "everywhere" must be repeated per file (this is what commit `4c180c9` "Standardize series navigation across all 7 OpenClaw posts" was doing).
 
 ### Content is organized as three categories, one of which holds two series
 
@@ -68,7 +73,7 @@ The numbered OpenClaw series order is fixed: `openclaw-101` → `agent-teams` �
 
 ## Conventions
 
-- **Language**: `<html lang="th">` on posts. All 5 nav-bearing index pages (`index.html`, `blog/index.html`, `books/index.html`, `projects/index.html`, `news/index.html`) are `lang="en"`. Headings and technical terms in English, body prose in Thai (marked with `<span lang="th">` on the section pages).
+- **Language**: `<html lang="th">` on posts. All 6 nav-bearing index pages (`index.html`, `blog/index.html`, `books/index.html`, `publications/index.html`, `projects/index.html`, `news/index.html`) and the 3 `books/` detail pages are `lang="en"`. Headings and technical terms in English, body prose in Thai (marked with `<span lang="th">` on the section pages).
 - **CSS variables**: defined per-file in each blog page's own `:root`. Common set: `--navy: #0f172a`, `--blue`/`--indigo: #6366f1`, `--slate: #334155`, `--slate-light: #64748b`, `--bg: #f8fafc`, `--font` (Inter), `--mono` (JetBrains Mono). Longer posts add semantic accents (`--green`, `--amber`, `--purple`, `--code-bg`). Copy the `:root` from the nearest sibling post rather than inventing one. `openclaw-101.html` predates this and uses raw hex throughout.
 - **Fonts**: Google Fonts `<link>` per page — Inter 300–900, plus JetBrains Mono 400–600 on posts with code.
 - **Diagrams**: render as PNG in `images/` and `<img>` them in. Inline HTML/CSS and ASCII-art diagrams have repeatedly broken layout and were replaced (`c270892`, `4ae2660`) — do not reintroduce them.
@@ -90,16 +95,28 @@ The numbered OpenClaw series order is fixed: `openclaw-101` → `agent-teams` �
 but they are no longer silent about it. `check_site.py` INV-02a/b/c/d/e recompute all of them from
 the actual card counts and fail the build on any mismatch, and `--fix` rewrites the ones it can.
 
-The same pattern exists outside `blog/`: `news/index.html`'s `"N updates"` and `books/index.html`'s
-`"N chapters"` are checked by `docs/openclaw/check-news-sync.py` instead.
+The same pattern exists outside `blog/`, with **four** counters checked by
+`docs/openclaw/check-news-sync.py` instead: `news/index.html`'s `"N updates"`,
+`publications/index.html`'s `"N chapters"` (the chapters label moved there in the 2026-08-23
+books/publications split), and `books/index.html`'s `"N novel"` and `"N complete"`. The gate
+strips HTML comments before counting, so a commented-out card can neither satisfy nor break a
+counter.
 
 Current values, re-derive rather than trust: 3 Categories · 2 Series · 37 Articles (13 OpenClaw +
-24 DevOps) · 7 news updates · 8 book chapters.
+24 DevOps) · 7 news updates · 8 chapters (publications) · 1 novel + 2 complete (books).
+
+`books/` detail pages have their own wiring check: `check_site.py` INV-26 fails if a
+`books/*.html` detail page is not linked from `books/index.html`, or if the index links a
+same-directory `.html` that does not exist. **Adding a future book** = copy a sibling detail page
+(e.g. `books/three-old-men.html`) as the template, add its card (whole-card anchor with
+`aria-labelledby="card-title-<slug>"`) to the right section of `books/index.html`, add the cover
+as `images/<slug>-cover.jpg` (JPEG, ≤200 KB), and update the `"N novel"` / `"N complete"` label in
+the same commit — then run both gates.
 
 ```bash
 python3 .claude/skills/site-check/scripts/check_site.py --check INV-02a --check INV-02c   # blog
 python3 .claude/skills/site-check/scripts/check_site.py --fix                             # repair blog counters
-python3 docs/openclaw/check-news-sync.py                                                  # news + books
+python3 docs/openclaw/check-news-sync.py                                                  # news + publications + books
 ```
 
 ## Project skills
@@ -109,9 +126,9 @@ Four skills live in `.claude/skills/` — use them; they carry the deep, verifie
 - **page-design** — the house visual system (canonical `:root` tokens, type scale, component vocabulary, approved hero gradients, modern-CSS adoption verdicts). Load before designing or restyling anything.
 - **blog-post** — the end-to-end recipe for adding/editing a post, with a wiring verifier (`assets/verify-wiring.py`). The starter template itself is not here — it was consolidated into **page-design** (`assets/post-template.html`) as the repo's one canonical copy; see `.claude/skills/blog-post/assets/TEMPLATE-MOVED.md`.
 - **a11y-perf** — accessibility and performance standing rules plus the measured remediation backlog (real contrast ratios, image weights, focus states).
-- **site-check** — run `python3 .claude/skills/site-check/scripts/check_site.py` from the repo root before every push. 48 cross-file integrity checks; exit 0 means no **new** fail-severity violation (a baseline of pre-existing debt is carried, `0 new, 55 known` today). `INV-25` fails the build if a baseline entry goes stale, so the net cannot silently rot.
+- **site-check** — run `python3 .claude/skills/site-check/scripts/check_site.py` from the repo root before every push. 49 cross-file integrity checks; exit 0 means no **new** fail-severity violation (a baseline of pre-existing debt is carried, `0 new, 55 known` today). `INV-25` fails the build if a baseline entry goes stale, so the net cannot silently rot; `INV-26` ties every section-directory detail page (today: the three `books/*.html`) to its own index.
 
-News and the homepage "Latest updates" strip have a separate gate — `python3 docs/openclaw/check-news-sync.py` — which checks three things nothing else does: the strip lists the 3 newest news items in order, every news item carries a `<!-- source: … -->` provenance comment, and the hand-typed `"N updates"` / `"N chapters"` counters match reality. The full procedure for adding news is `docs/openclaw/latest-updates-runbook.md`.
+News and the homepage "Latest updates" strip have a separate gate — `python3 docs/openclaw/check-news-sync.py` — which checks three things nothing else does: the strip lists the 3 newest news items in order, every news item carries a `<!-- source: … -->` provenance comment, and the four hand-typed counters match reality (`"N updates"` on news, `"N chapters"` on publications, `"N novel"` / `"N complete"` on books). The full procedure for adding news is `docs/openclaw/latest-updates-runbook.md`.
 
 ## Verification
 

@@ -4,7 +4,7 @@
 
 🌐 **Live: [anirach.com](https://anirach.com)**
 
-A hand-written static site — five top-level pages plus 37 self-contained blog posts. No build system, no package manager, no dependencies, no JavaScript framework. Push to `main` and GitHub Pages publishes it.
+A hand-written static site — six top-level pages, three per-book detail pages, and 37 self-contained blog posts. No build system, no package manager, no dependencies, no JavaScript framework. Push to `main` and GitHub Pages publishes it.
 
 ---
 
@@ -12,24 +12,27 @@ A hand-written static site — five top-level pages plus 37 self-contained blog 
 
 | | |
 |---|---|
-| **Pages** | Home · Blog · Books & Writing · Projects & Apps · News & Updates |
+| **Pages** | Home · Blog · Publications · Novels · Projects & Apps · News & Updates |
 | **Blog** | **37 posts** in 3 categories (Technology holds 2 series; Academic & Philosophy and Lifestyle are awaiting their first posts) |
 | **Stack** | Plain HTML5 + CSS3 + one 83-line vanilla-JS file. Google Fonts is the only external dependency |
 | **Hosting** | GitHub Pages (classic Jekyll build) on the custom domain `anirach.com`, fronted by Cloudflare |
 | **Build step** | None |
-| **Tests** | `.claude/skills/site-check/scripts/check_site.py` — 48 cross-file integrity checks. This is the test suite |
+| **Tests** | `.claude/skills/site-check/scripts/check_site.py` — 49 cross-file integrity checks. This is the test suite |
 
-## The five pages
+## The six pages
 
 | Page | What it holds |
 |---|---|
 | [`index.html`](index.html) | Single-scroll editorial portfolio: hero, about, latest-news strip, six research areas, featured book, curated live apps, contact |
 | [`blog/`](blog/) | 37 posts under three category bands — see below |
-| [`books/`](books/) | The Springer book *Libraries in Transformation*, 8 book chapters, and a selected-publications table |
+| [`publications/`](publications/) | The academic record: the Springer book *Libraries in Transformation*, 8 book chapters, and a selected-publications table |
+| [`books/`](books/) | Fiction (nav label "Novels"): the published novel *Three Old Men: The Last Conversation* plus two complete bilingual manuscripts — each with its own detail page (`books/three-old-men.html`, `books/a-pocketful-of-questions.html`, `books/the-thirteenth-seal.html`) |
 | [`projects/`](projects/) | Live apps (each verified working before it ships) and research-code repositories |
 | [`news/`](news/) | Reverse-chronological timeline of publications, talks and appointments, plus a career timeline |
 
-`script.js` (one IIFE, zero dependencies) drives five behaviours — nav scroll state, the mobile hamburger, an `IntersectionObserver` scroll-reveal with a 120 ms stagger, smooth anchor scrolling, and a hero-watermark parallax. **It runs on the landing page only.** The other four pages carry no JavaScript at all, by design; their mobile menu is a pure-CSS checkbox toggle.
+`books/` was one "Books & Writing" page until 2026-08-23, when it split: academic content moved to the new `publications/`, and `books/` became the fiction section with one detail page per book.
+
+`script.js` (one IIFE, zero dependencies) drives five behaviours — nav scroll state, the mobile hamburger, an `IntersectionObserver` scroll-reveal with a 120 ms stagger, smooth anchor scrolling, and a hero-watermark parallax. **It runs on the landing page only.** The other eight pages (five section indexes and the three book detail pages) carry no JavaScript at all, by design; their mobile menu is a pure-CSS checkbox toggle.
 
 ## The blog
 
@@ -39,7 +42,7 @@ A hand-written static site — five top-level pages plus 37 self-contained blog 
 - **🎓 Academic & Philosophy** — first posts coming soon.
 - **☕ Lifestyle** — first posts coming soon.
 
-**The site is bilingual.** Headings, technical terms, code and tag labels are in English; explanatory prose is in Thai. All 37 posts declare `<html lang="th">`; the five top-level pages declare `lang="en"` and wrap Thai passages in `<span lang="th">`.
+**The site is bilingual.** Headings, technical terms, code and tag labels are in English; explanatory prose is in Thai. All 37 posts declare `<html lang="th">`; the six top-level pages and the three book detail pages declare `lang="en"` and wrap Thai passages in `<span lang="th">`.
 
 ## Repository structure
 
@@ -51,8 +54,9 @@ A hand-written static site — five top-level pages plus 37 self-contained blog 
 ├── _config.yml         # Jekyll: keeps internal working docs out of the published site
 ├── CNAME               # anirach.com
 ├── blog/               # index.html (3 categories, 37 cards) + 37 self-contained posts
-├── books/  projects/  news/     # one self-contained index.html each
-├── images/             # 53 files — covers, diagrams, posters, profile photo
+├── books/              # Novels: index.html + 3 per-book detail pages, all self-contained
+├── publications/  projects/  news/   # one self-contained index.html each
+├── images/             # 56 files — covers, diagrams, posters, profile photo
 ├── docs/               # design spec, implementation plan, OpenClaw runbook (not published)
 └── .claude/skills/     # the four maintenance skills (not published)
 ```
@@ -66,10 +70,10 @@ index.html ──▶ style.css + script.js     (the ONLY consumer of either)
 
 blog/index.html   ──▶ its own <style> block, no JS
 blog/<post>.html  ──▶ its own <style> block, no JS     × 37
-books/ projects/ news/ ──▶ same                         × 3
+books/ (index + 3 detail) publications/ projects/ news/ ──▶ same   × 7
 ```
 
-Every page embeds its complete stylesheet. There is no shared partial, template engine or token file, so a "global" change means editing N files by hand — and nothing tells you when file 23 of 42 got missed. That is what the linter is for. The compensating upside: blast radius is exactly one file.
+Every page embeds its complete stylesheet. There is no shared partial, template engine or token file, so a "global" change means editing N files by hand — and nothing tells you when file 23 of 46 got missed. That is what the linter is for. The compensating upside: blast radius is exactly one file.
 
 ## Local development
 
@@ -88,12 +92,14 @@ python3 -m http.server 8000     # → http://localhost:8000
 Run all three from the repo root before pushing. All must pass:
 
 ```bash
-python3 .claude/skills/site-check/scripts/check_site.py      # 48 cross-file integrity checks
-python3 docs/openclaw/check-news-sync.py                     # news↔homepage sync, provenance, counters
+python3 .claude/skills/site-check/scripts/check_site.py      # 49 cross-file integrity checks
+python3 docs/openclaw/check-news-sync.py                     # news↔homepage sync, provenance, 4 counters
 python3 .claude/skills/blog-post/assets/verify-wiring.py     # blog post wiring
 ```
 
-`check_site.py` exits 0 when no **new** fail-severity violation appears. It carries a baseline of pre-existing debt (`0 new, 55 known` today) — **`0 new` is what matters**, and `INV-25` fails the build if any baseline entry goes stale, so the safety net cannot silently rot.
+`check_site.py` exits 0 when no **new** fail-severity violation appears. It carries a baseline of pre-existing debt (`0 new, 55 known` today) — **`0 new` is what matters**, and `INV-25` fails the build if any baseline entry goes stale, so the safety net cannot silently rot. `INV-26` (added with the books split) ties every section-directory detail page to its own `index.html`: an orphan detail page, or an index card linking a file that does not exist, fails the build.
+
+`check-news-sync.py` verifies the homepage strip mirrors the three newest news items, that every news item carries a `<!-- source: … -->` provenance comment, and that all **four** hand-typed counters match reality: `news/index.html` "7 updates", `publications/index.html` "8 chapters", and `books/index.html` "1 novel" and "2 complete" (it strips HTML comments first, so a commented-out card cannot satisfy a counter).
 
 ## Deployment
 

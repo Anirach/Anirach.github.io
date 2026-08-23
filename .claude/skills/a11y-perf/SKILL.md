@@ -1,6 +1,6 @@
 ---
 name: a11y-perf
-description: Accessibility and performance rules for the anirach.com static site (42 hand-written HTML files, no build step, per-file embedded CSS). Use this whenever you touch any .html file in this repo, add or edit a blog post under blog/, add or swap an image in images/, edit a :root palette or a .post-hero gradient, change nav markup, or are asked about contrast, alt text, focus states, keyboard access, page weight, image size, fonts, or Lighthouse/Core Web Vitals — even if the user does not mention accessibility or performance at all, and even for a "just add a card to blog/index.html" request. It carries this site's real measured numbers (blog/index.html is 4.03 MB referenced and fully lazy-loaded; --blue #6366f1 fails AA in every light context; the :focus-visible/reduced-motion/color-scheme baseline is landed in 42/42 pages; .post-hero__meta still fails contrast in 15 files) plus verified drop-in fixes, so use it instead of deriving generic WCAG advice.
+description: Accessibility and performance rules for the anirach.com static site (46 hand-written HTML files, no build step, per-file embedded CSS). Use this whenever you touch any .html file in this repo, add or edit a blog post under blog/, add or swap an image in images/, edit a :root palette or a .post-hero gradient, change nav markup, or are asked about contrast, alt text, focus states, keyboard access, page weight, image size, fonts, or Lighthouse/Core Web Vitals — even if the user does not mention accessibility or performance at all, and even for a "just add a card to blog/index.html" request. It carries this site's real measured numbers (blog/index.html is 4.03 MB referenced and fully lazy-loaded; --blue #6366f1 fails AA in every light context; the :focus-visible/reduced-motion/color-scheme baseline is landed in 46/46 pages; .post-hero__meta still fails contrast in 15 files) plus verified drop-in fixes, so use it instead of deriving generic WCAG advice.
 ---
 
 # Accessibility & performance for anirach.com
@@ -22,7 +22,9 @@ Everything below was measured on this repo. Re-run the command if you doubt a nu
 > rules" and "0 of 118 images have `loading`" about a repo with 42 focus blocks and
 > 120/120 fully attributed images.
 >
-> **Last full re-measure: 2026-08-10 against `7867c00`.** Every count below has its
+> **Last full re-measure: 2026-08-23 against `5178252`** (the books/publications split — the
+> site is 46 files now: `publications/index.html` plus three `books/*.html` detail pages joined,
+> and the island-chrome mobile-nav takeover moved to 800px). Every count below has its
 > command next to it. If you sweep, re-run them and edit this file in the same commit.
 
 ## What is DONE — do not re-plan these
@@ -40,14 +42,15 @@ weights)** — plus skip links and `<main>`, which are the unfinished half of R5
 ### 1. Covers ship as JPEG at ≤200 KB. Never PNG. **[DONE — hold the line]**
 
 `ec2827b` re-encoded the 15 oversized PNG covers to JPG and `21c8a55` re-ran the four
-that still cleared 200 KB at `formatOptions 70`. Today there are **0 PNG covers and 36
-JPG covers, average 112 KB, largest 194 KB, none over 200 KB.**
+that still cleared 200 KB at `formatOptions 70`; the three 2026-08-23 book covers shipped
+compliant. Today there are **0 PNG covers and 39
+JPG covers, average 111 KB, largest 194 KB, none over 200 KB.**
 
 ```bash
 ls images/*-cover.png 2>/dev/null | wc -l                     # → 0
 find images -name '*-cover.*' -size +200k                     # → nothing
 ls -l images/*-cover.jpg | awk '{s+=$5;n++} END {print n" jpg, avg "int(s/n/1024)" KB"}'
-# → 36 jpg, avg 112 KB
+# → 39 jpg, avg 111 KB
 ```
 
 Before adding a cover, run `ls -lS images/ | head` and compare. Hard-fail any cover
@@ -65,7 +68,8 @@ because they kept breaking layout.)
 
 ### 2. Every `<img>` gets `width`, `height`, `loading` and `decoding`. **[DONE — hold the line]**
 
-**120 of 120 `<img>` tags carry all four**, since `e8da9da`. 38 also carry
+**126 of 126 `<img>` tags carry all four**, since `e8da9da` (the books/publications pages
+shipped compliant). 41 also carry
 `fetchpriority`. This and `alt` coverage are the only two 100%-complete practices on the
 site; a new post that omits them is a regression, not a gap.
 
@@ -77,12 +81,13 @@ for p in pathlib.Path('.').rglob('*.html'):
     if '.claude' in p.parts or '.git' in p.parts: continue
     for m in re.finditer(r'<img\b[^>]*>', p.read_text(encoding='utf-8'), re.S):
         n+=1; ok+= all(a+'=' in m.group(0) for a in ('loading','decoding','width','height'))
-print(ok, "/", n)          # → 120 / 120
+print(ok, "/", n)          # → 126 / 126
 EOF
 ```
 
 **Use that multiline parse, not `grep -oh "<img[^>]*>"`** — the line-based grep reports
-119 because one `<img>` is written across two lines. Quoting 119 where the answer is 120
+119 because seven `<img>` are written across multiple lines (all on the books/publications
+pages). Quoting 119 where the answer is 126
 is exactly the kind of small wrongness that makes a reader stop trusting this file.
 
 Card images in `blog/index.html` sit in a 352×220 CSS px slot (1200px section −
@@ -121,11 +126,14 @@ grep -rl "<script" --include="*.html" --exclude-dir=.claude .   # → index.html
 `index.html`. A hamburger *button* pasted into any other page is decorative scenery over
 a hidden menu.
 
-**Task 9 solved this properly and the pattern is now the house standard.** The 4 LISTING
-pages (`blog/`, `books/`, `news/`, `projects/`) each carry a pure-CSS toggle — a visually
+**Task 9 solved this properly and the pattern is now the house standard.** The 8
+island-chrome pages (the 5 listing pages `blog/`, `books/`, `news/`, `projects/`,
+`publications/` plus the 3 `books/*.html` detail pages) each carry a pure-CSS toggle — a
+visually
 hidden `<input type="checkbox" id="navToggle" class="nav__toggle">`, a
 `<label for="navToggle" class="nav__burger">☰</label>`, and
-`.nav__toggle:checked ~ .nav__links { display: flex; }` inside the 768px media query. No
+`.nav__toggle:checked ~ .nav__links { display: flex; }` inside the 800px media query
+(moved up from 768px in `5178252`: the 6-link desktop bar broke in the 769–771px band). No
 JS, keyboard-operable, and `.nav__toggle:focus-visible + .nav__burger` gives the label a
 visible ring. `check_site.py` INV-12 ("every menu-toggle control is wired: JS toggles need
 `<script>`, CSS toggles need their label+checkbox pair") PASSes today and has **no
@@ -139,10 +147,12 @@ Still fully outstanding — this is the largest live a11y defect on the site.
 
 `--blue #6366f1` fails WCAG AA in **every** light-background use here: 4.47:1 on white,
 4.09:1 on the tag chip, 3.87:1 on the series-count chip, 3.90:1 and 2.99:1 on the two
-ends of the hero gradient. `--blue-dark #4f46e5` — now declared in **all 42** `:root`
+ends of the hero gradient. `--blue-dark #4f46e5` — now declared in **all 46** `:root`
 blocks, so it is always available — clears all of those except the hero gradient.
-`var(--blue)` is used 262 times against `var(--blue-dark)`'s 23; most of those 262 are
-legitimately borders and backgrounds, but every *text* use is a fail.
+`var(--blue)` is used 273 times against `var(--blue-dark)`'s 52; most of those 273 are
+legitimately borders and backgrounds, but every *text* use is a fail. (The 2026-08
+section pages and `style.css`'s `.btn--primary`/`.nav__cta` already made the
+`--blue-dark` switch, which is most of why its count rose from 23 to 52.)
 
 On the light hero gradient `#e8f0fe → #ddd6fe → #c7d2fe` even `#4f46e5` is only
 4.22:1 at the darkest stop. Use `#4338ca` there (5.30:1).
@@ -152,7 +162,8 @@ Keep `#6366f1` for borders, backgrounds, shadows and gradient stops. Full table 
 
 ### 5. A visible focus ring exists everywhere. **[DONE]** Hover/focus *parity* does not.
 
-`e8da9da` installed this block in **41 embedded `<style>` blocks + `style.css`** = all 42
+`e8da9da` installed this block, and the books/publications pages shipped with it — today it
+is in **45 embedded `<style>` blocks + `style.css`** = all 46
 pages:
 
 ```css
@@ -161,18 +172,18 @@ pages:
 ```
 
 ```bash
-grep -L ':focus-visible' style.css blog/*.html books/index.html news/index.html projects/index.html
+grep -L ':focus-visible' style.css blog/*.html books/*.html news/index.html projects/index.html publications/index.html
 # → empty.  index.html correctly has none of its own: its CSS is style.css.
 ```
 
 **Two things this changes about how you must report focus problems.**
 
-1. **`outline: none` now exists, 42 times, and it is correct.** It is scoped to
+1. **`outline: none` now exists, 46 times, and it is correct.** It is scoped to
    `:focus:not(:focus-visible)`, i.e. it suppresses the ring for mouse and programmatic
    focus only, never for keyboard. The old advice in this file — "`outline` is never set
-   to `none` anywhere, verify before claiming a focus failure" — will now find 42 matches
+   to `none` anywhere, verify before claiming a focus failure" — will now find 46 matches
    and mislead you into the opposite error. Read the selector, not the declaration.
-2. **The remaining gap is parity, not a ring.** There are **115 `:hover` rules**. Mouse
+2. **The remaining gap is parity, not a ring.** There are **137 `:hover` rules**. Mouse
    users still get card lift, image scale and a colour shift that keyboard users do not:
    `.card:focus-within` is not styled anywhere. That is a real but modest finding — do not
    escalate it to "keyboard inaccessible" on a site with a working 2px ring on every page.
@@ -196,14 +207,17 @@ grep -rhoE '\.post-hero__meta *\{[^}]*color: *[^;]+' blog/*.html \
 
 ### 7. Thai page, English headings — mark the switch.
 
-**37 of 42** files are `<html lang="th">` (the 5 index pages are `en`), with English
-headings, code and technical terms, and there are still **zero** inline `lang=` switches.
+**37 of 46** files are `<html lang="th">` (the 9 `en` files: the landing page, the 5 section
+indexes, and the 3 `books/` detail pages), with English
+headings, code and technical terms. The `en` pages now do this right — they wrap their Thai
+passages in `<span lang="th">` (49 switches across the 9 files) — but the 37 Thai posts still
+have **zero** inline `lang="en"` switches on their English headings.
 A Thai screen-reader voice reading "Kubernetes Orchestration" is unintelligible.
 `check_site.py` INV-13 enforces the page-level split; nothing enforces the inline one.
 
 ```bash
 grep -rhoE '<html lang="[^"]*"' --include="*.html" --exclude-dir=.claude . | sort | uniq -c
-# → 5 en, 37 th
+# → 9 en, 37 th
 ```
 
 ```html
@@ -216,7 +230,9 @@ grep -rhoE '<html lang="[^"]*"' --include="*.html" --exclude-dir=.claude . | sor
 The default failure mode here is `h2 → h4`: **12 of 37 posts** do it, plus one `h1 → h3`
 in `blog/openclaw-integrations.html` — **13 posts with a heading defect**, one of which
 (`deployment-hosting.html`) is the two-`<h1>` case rather than a skip. `<main>` exists in
-**11 of 42** files and **none of them has `id="main"`**, so a skip link would have no
+**15 of 46** files, and the 4 `books/` pages (index + 3 detail, `ea3c8e8`) are the first
+with `<main id="main">` — the other 11 `<main>`s still lack the `id`, so a sitewide skip
+link still has no
 target. When copying an existing post as a template, check its heading ladder first — you
 will inherit the skip.
 
@@ -238,20 +254,24 @@ a real `h1 → h2 → h3 → h4` ladder. Do not "fix" its card titles back to `h
 
 These are right; flagging them wastes the user's time:
 
-- `display=swap` present on **32/32** font-loading files.
-- Both `preconnect` links present on **32/32**.
+- `display=swap` present on **36/36** font-loading files.
+- Both `preconnect` links present on **36/36**.
 - `<meta name="viewport" content="width=device-width, initial-scale=1.0">` identical on
-  all **42** files — pinch-zoom is not blocked.
-- All **120/120** `<img>` tags have an `alt` attribute (the *quality* is the problem, not
+  all **46** files — pinch-zoom is not blocked.
+- All **126/126** `<img>` tags have an `alt` attribute (the *quality* is the problem, not
   the presence) **and** `loading`, `decoding`, `width`, `height`.
 - `:focus-visible`, `prefers-reduced-motion`, `color-scheme: light` and `text-wrap:
-  balance` on all 42 pages (41 embedded + `style.css`) — rule 5.
+  balance` on all 46 pages (45 embedded + `style.css`) — rule 5.
 - `outline: none` scoped to `:focus:not(:focus-visible)` — correct, not a defect.
 - `script.js:12` guards the scroll work with
   `window.matchMedia('(prefers-reduced-motion: reduce)').matches`.
 - All 5 counters in `blog/index.html` and every absolute route — `check_site.py` INV-02a–e
   and INV-05 all PASS.
-- The pure-CSS `.nav__toggle` menu on the 4 listing pages — rule 3.
+- The pure-CSS `.nav__toggle` menu on the 8 island-chrome pages — rule 3.
+- The whole-card anchors on `books/index.html` carrying
+  `aria-labelledby="card-title-<slug>"` so the accessible name is the title, not the
+  card's entire text (`5178252`, 3 cards) — a different mechanism from R6's
+  stretched-link recipe, but it solves the same long-accessible-name defect; leave it.
 - Every cover is JPG and under 200 KB — rule 1.
 - `index.html` having no embedded `<style>` block. Prove it with
   `grep -c '</style>' index.html` → `0`; `grep -c '<style'` returns 1 because of a comment
@@ -260,32 +280,32 @@ These are right; flagging them wastes the user's time:
 
 ### 10. State the file count before starting, and script the edit.
 
-There are no partials. **The site is 42 HTML files.** Before proposing a sitewide change,
+There are no partials. **The site is 46 HTML files.** Before proposing a sitewide change,
 count and say the number out loud so the user can judge scope:
 
 ```bash
-find . -name "*.html" -not -path "./.git/*" -not -path "./.claude/*" | wc -l   # → 42
+find . -name "*.html" -not -path "./.git/*" -not -path "./.claude/*" | wc -l   # → 46
 ```
 
 | Change | Files still needing it |
 |---|---|
-| Palette / `:root` patch | **0** — landed in all 42 (`6670480`) |
-| `:focus-visible` + reduced-motion + `color-scheme` + `text-wrap` | **0** — landed in 41 + `style.css` (`e8da9da`) |
-| `<main id="main">` wrap | **42** — 31 have no `<main>`, and the 11 that do have no `id` |
-| Skip link | **42** — 0 exist, and none would have a target until `<main id="main">` lands |
+| Palette / `:root` patch | **0** — landed in all 46 (`6670480` + the compliant 2026-08 pages) |
+| `:focus-visible` + reduced-motion + `color-scheme` + `text-wrap` | **0** — landed in 45 + `style.css` (`e8da9da`) |
+| `<main id="main">` wrap | **42** — 31 have no `<main>`, 11 have one without the `id`; only the 4 `books/` pages are done |
+| Skip link | **46** — 0 exist; the 4 `books/` pages now have the `id="main"` target, the other 42 do not |
 | `.post-hero__meta` colour | 15 (+2 minified variants) |
 | `.post-series-footer` colour | 22 |
 | Font URL trim | 27 |
 | `rel="noopener"` | 12 links across 6 files |
 
-Write a loop or `sed` script, never 42 sequential Edit calls.
+Write a loop or `sed` script, never 46 sequential Edit calls.
 
 **The old "`sed` on `:root` misses 11 files" warning is obsolete** — every file except
 `index.html` now has a `:root`, and `index.html`'s lives in `style.css`. What is still
 true about those same 10 island posts is that they **load no webfont** and declare their
 own stacks (`'Segoe UI', Tahoma, Geneva, Verdana` in `blog/openclaw-memory.html`;
 `-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto` in `blog/beyond-plugins.html`), so
-the Inter design system does not reach them: **32 of 42 files load Google Fonts, 10 do
+the Inter design system does not reach them: **36 of 46 files load Google Fonts, 10 do
 not.** Loops and verification commands: `references/n-file-edits.md`.
 
 ---
@@ -310,7 +330,7 @@ print(f"img tags {len(tags)}  unique {len(u)}  lazy {sum('loading=\"lazy\"' in t
 print(f"html {h:,}  images {sum(u.values()):,}  total {h+sum(u.values()):,}")
 EOF
 # → img tags 74  unique 36  lazy 74
-#   html 67,455  images 4,163,304  total 4,230,759   (4.03 MB)
+#   html 68,220  images 4,163,304  total 4,231,524   (4.03 MB)
 ```
 
 Three numbers matter and they are not the same number — quote the right one:
@@ -318,11 +338,11 @@ Three numbers matter and they are not the same number — quote the right one:
 | Figure | Value | Meaning |
 |---|---|---|
 | referenced total | **4.03 MB** | every byte the page can eventually pull. Was 18.41 MB. |
-| eager payload | **66 KB** | the HTML. **All 74 `<img>` tags are `loading="lazy"`**, so nothing else is fetched up front. |
+| eager payload | **67 KB** | the HTML. **All 74 `<img>` tags are `loading="lazy"`**, so nothing else is fetched up front. |
 | realistic first viewport | **≈1.7 MB** | HTML + the first ~10 cards' covers, which a browser fetches because lazy images near the viewport still load. |
 
 Saying "the blog index is 4 MB" overstates what a visitor downloads by ~2.4×; saying
-"66 KB" understates it. Say 4.03 MB referenced / ≈1.7 MB first viewport.
+"67 KB" understates it. Say 4.03 MB referenced / ≈1.7 MB first viewport.
 
 `ec2827b` + `21c8a55` did the cover re-encode; `e8da9da` added the attributes. Heaviest
 posts now: `blog/idle-self-improvement.html`, `openclaw-migration.html`,
@@ -331,7 +351,7 @@ posts now: `blog/idle-self-improvement.html`, `openclaw-migration.html`,
 ### R2. Mobile navigation — **[MOSTLY DONE]**
 
 The `blog/index.html` dead hamburger is **gone**. Task 9 (`ad3c42d`, `c25c682`) replaced
-it with the pure-CSS checkbox toggle now shared by all 4 listing pages (rule 3), and
+it with the pure-CSS checkbox toggle now shared by all 8 island-chrome pages (rule 3), and
 `check_site.py` INV-12 guards it with no baseline entry:
 
 ```bash
@@ -445,18 +465,18 @@ monitoring-observability, networking-fundamentals, api-request-lifecycle),
 
 ### R5. Focus and motion infrastructure — **[DONE]**; skip links and `<main>` — **[OUTSTANDING]**
 
-**Landed in `e8da9da`:** `:focus-visible` (42 pages), `prefers-reduced-motion` (42),
-`color-scheme: light` (42), `text-wrap: balance` (42), and the `matchMedia` guard at
-`script.js:12` for the scroll work CSS cannot reach. That covers **119 `transition:`
-declarations, 44 `translateY` lifts, `scroll-behavior: smooth` in 30 files** and the one
+**Landed in `e8da9da`:** `:focus-visible` (46 pages), `prefers-reduced-motion` (46),
+`color-scheme: light` (46), `text-wrap: balance` (46), and the `matchMedia` guard at
+`script.js:12` for the scroll work CSS cannot reach. That covers **138 `transition:`
+declarations, 50 `translateY` lifts, `scroll-behavior: smooth` in 34 files** and the one
 infinite animation (`pulseArrow`, `blog/openclaw-migration.html`).
 
 **Still missing, and they are a pair — neither is useful alone:**
 
 | Thing | Count today | Why it is blocked on the other |
 |---|---|---|
-| `<a href="#main" class="skip-link">` | **0 of 42** | a skip link with no target is worse than none |
-| `<main id="main">` | `<main>` in **11 of 42**, `id="main"` in **0** | the 11 need only the `id`; 31 need the wrap |
+| `<a href="#main" class="skip-link">` | **0 of 46** | a skip link with no target is worse than none |
+| `<main id="main">` | `<main>` in **15 of 46**, `id="main"` in **4** (the `books/` pages, `ea3c8e8`) | 11 `<main>`s need only the `id`; 31 files need the wrap |
 
 Do `<main id="main">` first, then the skip link. The wrap is not safely scriptable — the
 insertion point differs per file — so do a handful at a time and diff each.
@@ -508,7 +528,8 @@ Ordered by how much they degrade a screen-reader pass:
   `../images/monitoring-cover.jpg` with `alt="OpenClaw Memory Architecture"`. The alt
   describes the post, not the picture. This is the downstream symptom of the shared-cover
   problem (`check_site.py` INV-07a); the fix is a dedicated cover, not a reworded alt.
-- **`<main id="main">`** — 31 files have no `<main>`, and the 11 that do have no `id`.
+- **`<main id="main">`** — 31 files have no `<main>`, 11 have one without the `id`; only
+  the 4 `books/` pages are complete.
   See R5.
 - **`<nav>` for the two in-post nav patterns.** `<div class="series-nav">` (7 numbered
   OpenClaw posts) and `<div class="post-nav">` (DevOps posts) are both `<div>`, so
@@ -561,9 +582,10 @@ is how all of them went stale in the first place.
 
 Still outstanding. **27** files request
 `Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600`, and
-**32** files request weight 300 in some form (the 27 dual-family files plus the 5
-Inter-only index pages). Weight 300 is used by exactly **5 declarations**, all in
-`style.css`, i.e. only by `index.html` — dead weight in the other 31. Never trim 300 from
+**36** files request weight 300 in some form (the 27 dual-family files plus the 9
+Inter-only pages — the landing page, the 5 section indexes, the 3 `books/` detail pages).
+Weight 300 is used by exactly **5 declarations**, all in
+`style.css`, i.e. only by `index.html` — dead weight in the other 35. Never trim 300 from
 `index.html`'s Inter-only URL or five headings silently re-render at 400.
 
 JetBrains Mono **500** is unused. Mono **600** is used once —
@@ -576,7 +598,7 @@ weight 300:
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400&display=swap" rel="stylesheet">
 ```
 
-Keep the two `preconnect` lines and `display=swap` — already correct on **32/32**
+Keep the two `preconnect` lines and `display=swap` — already correct on **36/36**
 font-loading files. The other 10 files (the pure ISLAND posts) load no webfont at all.
 
 ---
