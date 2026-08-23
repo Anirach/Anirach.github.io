@@ -109,6 +109,9 @@ RE_NAV_HREF = re.compile(r'href="([^"]+)"')
 # match).  Fragment/query tolerated, filename captured bare.
 RE_SAME_DIR_HTML_HREF = re.compile(
     r'href="([A-Za-z0-9][A-Za-z0-9._-]*\.html)(?:[#?][^"]*)?"')
+# INV-26 orphan direction only: an href quoted inside an HTML comment is not
+# a link a visitor can follow, so it must not count as "linked".
+RE_HTML_COMMENT = re.compile(r'<!--.*?-->', re.S)
 
 # -- menu-toggle controls (INV-12) -----------------------------------------
 # Task 9 replaced the JS <button class="nav__hamburger"> with a pure-CSS
@@ -1600,10 +1603,15 @@ def _(site):
 # sweeps every *.html in a sibling dir (INV-05/06/12/13 coverage), but none
 # of the above ties a detail page to its own section index — an orphan
 # detail page is unreachable from the site, and a card href to a file that
-# does not exist 404s on the section that advertises it.  Scanned on the
-# RAW text, matching INV-05's deliberate policy that comments in this repo
-# never quote an unresolvable href (books/index.html spells its
-# wrap-pending attributes in prose for exactly this reason).
+# does not exist 404s on the section that advertises it.  The two directions
+# read different texts, deliberately:
+#   orphan — comment-STRIPPED index text.  An href quoted inside an HTML
+#     comment is not a link a visitor can follow, so a detail page whose only
+#     mention is commented out is still an orphan.  Scanning raw text here
+#     let a commented-out card mark its target "linked" and mute the check.
+#   dead — RAW text, matching INV-05's deliberate policy that comments in
+#     this repo never quote an unresolvable href (books/index.html spelled
+#     its wrap-pending attributes in prose for exactly this reason).
 # ---------------------------------------------------------------------------
 @check("INV-26", "every sibling-dir detail page is linked from its dir's "
                  "index.html, and every same-dir .html link there resolves")
@@ -1616,8 +1624,9 @@ def _(site):
         details = sorted(f for f in os.listdir(ddir)
                          if f.endswith(".html") and f != "index.html")
         hrefs = set(RE_SAME_DIR_HTML_HREF.findall(idx))
+        linked = set(RE_SAME_DIR_HTML_HREF.findall(RE_HTML_COMMENT.sub("", idx)))
         for f in details:
-            if f not in hrefs:
+            if f not in linked:
                 out.append(Violation("%s|orphan|%s" % (d, f),
                                      "%s/%s exists but %s never links it"
                                      % (d, f, idx_rel)))
