@@ -41,7 +41,7 @@ Exact card shape (from `blog/index.html:578-600`; the anchor pattern
           <div class="card__tags">
             <span class="card__tag">DevOps</span>
           </div>
-          <h2 class="card__title">Your Title — Thai subtitle ⚡</h2>
+          <h4 class="card__title">Your Title — Thai subtitle ⚡</h4>
           <p class="card__excerpt">Thai one-paragraph excerpt.</p>
           <div class="card__footer">
             <div class="card__author">
@@ -97,6 +97,11 @@ python3 .claude/skills/site-check/scripts/check_site.py --fix
 Updates `blog/index.html:221` (total Articles) and `:573` (`#series-devops` count). Do not
 hand-increment — that is how 33 drifted from the real 37.
 
+Since the three-category reorganisation there are **four** counters on `blog/index.html`, not two:
+the hero's `N Categories` / `N Series` / `N Articles`, and each series' own `.series-count`. The
+Technology band also carries a `.category__count` that must equal the sum of its two series.
+`check_site.py --fix` recomputes the ones it can; INV-02a/b/c/d/e fail the build on any mismatch.
+
 ---
 
 ## Adding an OpenClaw series post (an 8th chip)
@@ -112,7 +117,11 @@ This is a 9-file edit, not a 2-file edit.
 3. Add the ordinal badge. Numerically all 7 are correct today, but the markup is expressed 4 ways
    (`.series-badge` ×4, `.series-info` ×1, bare `<p>` ×1, `<strong>` ×1) and `openclaw-memory.html`
    writes `บทที่ 3` instead of `Post #3`. Use `.series-badge` with `Post #8`.
-4. Add the card inside `<section class="series-section" id="series-openclaw">`.
+4. Add the card inside `<section class="series-section" id="series-openclaw">` — which now sits
+   inside `<div class="category" id="cat-technology">`. The series sections did not move or change;
+   they gained a wrapper. Two further bands exist and are empty by design: `#cat-academic`
+   (Academic & Philosophy) and `#cat-lifestyle` (Lifestyle) — see
+   `blog-post/references/known-exceptions.md` before adding the first post to either.
 5. Do **not** give the post a `.post-nav` as well — INV-08 enforces exclusivity (7 series-nav / 25
    post-nav / 5 no-nav = 37).
 6. Fix the links you are about to copy: the series-post footers contain the 14 broken

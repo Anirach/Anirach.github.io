@@ -8,7 +8,7 @@ separate files, and nothing regenerates one from the other. That is why this run
 
 ---
 
-## The two rules that matter
+## The three rules that matter
 
 **Rule 1 — an item lives in two places, and they must agree.**
 
@@ -25,6 +25,13 @@ outcome — worse than the page being out of date. No automated check can tell a
 invented one, so the gate is procedural: **every item must carry a source comment**, and
 `check-news-sync.py` fails if one is missing. Omitting a source now breaks the build; inventing one
 means writing a deliberate falsehood into a file that is auditable forever.
+
+**Rule 3 — the item counters must match reality.**
+
+`news/index.html` carries a `"N updates"` label and `books/index.html` a `"N chapters"` label. Both
+are hand-typed and drift silently whenever an item is added without touching the label — a split
+commit nearly desynchronised them once. The gate recomputes both from the actual item counts and
+fails if either disagrees, so adding an item means updating its label in the same commit.
 
 ---
 
@@ -127,14 +134,14 @@ newest news items, in the same order. **Exactly three.** Delete the row that fel
 Run all three from the repo root. All must pass.
 
 ```bash
-python3 docs/openclaw/check-news-sync.py                        # sync + provenance gate
+python3 docs/openclaw/check-news-sync.py                        # sync + provenance + counters gate
 python3 .claude/skills/site-check/scripts/check_site.py         # 48 cross-file integrity checks
 python3 .claude/skills/blog-post/assets/verify-wiring.py        # blog wiring (should be untouched)
 ```
 
 | Command | Expected |
 |---|---|
-| `check-news-sync.py` | `PASS`, exit 0 |
+| `check-news-sync.py` | `PASS`, exit 0 — runs three sections: SYNC, PROVENANCE, COUNTERS |
 | `check_site.py` | exit 0, `0 new, 55 known` — "known" is pre-existing debt; **`0 new` is what matters** |
 | `verify-wiring.py` | `CLEAN` |
 
@@ -190,12 +197,14 @@ gh issue create --repo Anirach/Anirach.github.io \
 
 ## Reference — current state
 
-`news/index.html` holds **5 items** — Jul 2026, Dec 2025, Oct 2025, Nov 2024, May 2024 — each with a
-source comment. Below them sits a separate **career timeline** block: that is biography, not news.
-Do not add news items to it and do not give it date chips; the checker deliberately ignores rows
-without a date chip.
+`news/index.html` holds **7 items** — Sep 2026, Aug 2026, Jul 2026, Dec 2025, Oct 2025, Nov 2024, May 2024 — each with a source comment.
+Below them sits a separate **career timeline** block: that is biography, not news. Do not add news
+items to it and do not give it date chips; the checker deliberately ignores rows without one.
 
-The three homepage rows are Jul 2026 / Dec 2025 / Oct 2025.
+The three homepage rows are Sep 2026 / Aug 2026 / Jul 2026.
+
+`books/index.html`'s Chapters section holds **8 chapters** with its own `"N chapters"` label — the
+checker verifies that too.
 
 Re-derive rather than trusting this paragraph:
 
@@ -209,8 +218,8 @@ grep -c '<!-- source:' news/index.html              # provenance comments; must 
 
 ## If the markup ever changes
 
-`check-news-sync.py` matches on `latest__date`, `card__tag--date`, and the `<!-- source: … -->`
-comment. If a redesign renames any of them the script exits **2** with `found no dates — the markup
+`check-news-sync.py` matches on `latest__date`, `card__tag--date`, the `<!-- source: … -->`
+comment, and the two `series-count` labels (`"N updates"`, `"N chapters"`). If a redesign renames any of them the script exits **2** with `found no dates — the markup
 changed`, rather than silently reporting success. Update its patterns in the same commit as the
 markup change.
 

@@ -18,6 +18,8 @@ npx serve .
 
 Deploy by pushing to `main` — GitHub Pages auto-deploys. There is no `.nojekyll`, so Jekyll's default processing applies; GitHub Pages also resolves extensionless URLs (`/blog/openclaw-101` → `openclaw-101.html`), which the OpenClaw series relies on.
 
+`_config.yml` exists for exactly one purpose: `exclude: [docs, CLAUDE.md]` keeps internal working documents out of the **published** site (they stay in the repo). Jekyll already omits any path starting with `.` or `_`, so `.claude/` and `.superpowers/` are unreachable on the live site without being listed. Adding a new internal directory means adding it there too — verify with `curl -s -o /dev/null -w '%{http_code}' https://anirach.com/<path>` → 404.
+
 ## Architecture
 
 ```
@@ -31,7 +33,10 @@ Deploy by pushing to `main` — GitHub Pages auto-deploys. There is no `.nojekyl
 ├── books/index.html    # Books & Writing — self-contained page, own <style>/:root
 ├── projects/index.html # Projects & Apps — self-contained page, own <style>/:root
 ├── news/index.html     # News & Updates — self-contained page, own <style>/:root
-├── images/             # Cover images (<slug>-cover.png|jpg) + diagram PNGs
+├── images/             # 53 files — covers (<slug>-cover.png|jpg), diagram PNGs, posters
+├── docs/               # design spec, implementation plan, OpenClaw news runbook + gate
+├── .claude/skills/     # page-design · blog-post · a11y-perf · site-check
+├── _config.yml         # Jekyll excludes: docs/, CLAUDE.md (see Development)
 └── CNAME               # anirach.com
 ```
 
@@ -78,17 +83,23 @@ The numbered OpenClaw series order is fixed: `openclaw-101` → `agent-teams` �
 4. Wire navigation: for the numbered OpenClaw series, add the chip to all 7 `.series-nav` blocks; for DevOps, insert into the prev/next chain by editing the two neighbouring posts as well.
 5. Update the counters (see below).
 
-### Manual counters — currently in sync, but nothing enforces it
+### Hand-typed counters — now enforced, but still hand-typed
 
-Nothing computes these; they drift silently whenever a post is added or moved. As of this writing
-`blog/index.html` is consistent: `.blog-hero__stats` says **37** articles, `#series-openclaw`
-`.series-count` says **13** articles, `#series-devops` `.series-count` says **24** articles — all
-matching their actual card counts. Re-verify every time you touch the index; do not trust that this
-paragraph is still true.
+`blog/index.html` carries four: the hero's `N Categories` / `N Series` / `N Articles`, and a
+`.series-count` per series. Nothing *computes* them, so they still drift whenever you add a post —
+but they are no longer silent about it. `check_site.py` INV-02a/b/c/d/e recompute all of them from
+the actual card counts and fail the build on any mismatch, and `--fix` rewrites the ones it can.
+
+The same pattern exists outside `blog/`: `news/index.html`'s `"N updates"` and `books/index.html`'s
+`"N chapters"` are checked by `docs/openclaw/check-news-sync.py` instead.
+
+Current values, re-derive rather than trust: 3 Categories · 2 Series · 37 Articles (13 OpenClaw +
+24 DevOps) · 7 news updates · 8 book chapters.
 
 ```bash
-grep -c 'class="card"' blog/index.html                              # total cards
-awk '/id="series-openclaw"/,/id="series-devops"/' blog/index.html | grep -c 'class="card"'
+python3 .claude/skills/site-check/scripts/check_site.py --check INV-02a --check INV-02c   # blog
+python3 .claude/skills/site-check/scripts/check_site.py --fix                             # repair blog counters
+python3 docs/openclaw/check-news-sync.py                                                  # news + books
 ```
 
 ## Project skills
@@ -98,7 +109,9 @@ Four skills live in `.claude/skills/` — use them; they carry the deep, verifie
 - **page-design** — the house visual system (canonical `:root` tokens, type scale, component vocabulary, approved hero gradients, modern-CSS adoption verdicts). Load before designing or restyling anything.
 - **blog-post** — the end-to-end recipe for adding/editing a post, with a wiring verifier (`assets/verify-wiring.py`). The starter template itself is not here — it was consolidated into **page-design** (`assets/post-template.html`) as the repo's one canonical copy; see `.claude/skills/blog-post/assets/TEMPLATE-MOVED.md`.
 - **a11y-perf** — accessibility and performance standing rules plus the measured remediation backlog (real contrast ratios, image weights, focus states).
-- **site-check** — run `python3 .claude/skills/site-check/scripts/check_site.py` from the repo root before every push; it is this repo's only test suite.
+- **site-check** — run `python3 .claude/skills/site-check/scripts/check_site.py` from the repo root before every push. 48 cross-file integrity checks; exit 0 means no **new** fail-severity violation (a baseline of pre-existing debt is carried, `0 new, 55 known` today). `INV-25` fails the build if a baseline entry goes stale, so the net cannot silently rot.
+
+News and the homepage "Latest updates" strip have a separate gate — `python3 docs/openclaw/check-news-sync.py` — which checks three things nothing else does: the strip lists the 3 newest news items in order, every news item carries a `<!-- source: … -->` provenance comment, and the hand-typed `"N updates"` / `"N chapters"` counters match reality. The full procedure for adding news is `docs/openclaw/latest-updates-runbook.md`.
 
 ## Verification
 
