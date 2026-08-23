@@ -104,6 +104,11 @@ RE_JS_SEL = re.compile(r"querySelector(?:All)?\('([^']+)'\)|getElementById\('([^
 RE_EMOJI = re.compile('[\U0001F000-\U0001FAFF☀-➿️]')
 RE_NAV_BLOCK = re.compile(r'<nav\b[^>]*>(.*?)</nav>', re.S)
 RE_NAV_HREF = re.compile(r'href="([^"]+)"')
+# INV-26: a same-directory .html link (no path segment — the first character
+# class excludes "." and "/" so "../index.html" and absolute URLs never
+# match).  Fragment/query tolerated, filename captured bare.
+RE_SAME_DIR_HTML_HREF = re.compile(
+    r'href="([A-Za-z0-9][A-Za-z0-9._-]*\.html)(?:[#?][^"]*)?"')
 
 # -- menu-toggle controls (INV-12) -----------------------------------------
 # Task 9 replaced the JS <button class="nav__hamburger"> with a pure-CSS
@@ -473,11 +478,20 @@ class Site(object):
         # index.html and blog/index.html and must be in every link/image/lang
         # scan too, or e.g. an image referenced only from books/index.html
         # reports as a false-positive orphan (INV-06a).
+        #
+        # EVERY *.html in a sibling dir is swept, not just its index.html:
+        # books/ grew per-book detail pages (2026-08-23) and an index-only
+        # sweep gave them zero coverage — no INV-05 link resolution, no
+        # INV-06 image scan, no INV-12 nav-toggle wiring, no INV-13 lang.
+        # site.nav_pages stays index-only on purpose: INV-23/INV-24 police
+        # the five hand-copied section navs, and a detail page is not one.
         self.nav_sibling_dirs = discover_nav_sibling_dirs(root)
         self.nav_pages = nav_pages_for(root)
         self.nav_dest_dirs = nav_dest_dirs_for(root)
         for d in self.nav_sibling_dirs:
-            self.pages.append(d + "/index.html")
+            self.pages.extend(
+                d + "/" + f for f in sorted(os.listdir(os.path.join(root, d)))
+                if f.endswith(".html"))
         self.text = {}
         for rel in self.pages:
             with open(os.path.join(root, rel), encoding="utf-8") as fh:
@@ -1151,11 +1165,15 @@ def _(site):
     return out
 
 
-@check("INV-13", 'index pages are lang="en", posts are lang="th"', WARN)
+@check("INV-13", 'blog posts are lang="th", every other page lang="en"', WARN)
 def _(site):
     out = []
     for rel in site.pages:
         m = RE_LANG.search(site.text[rel])
+        # Post-detection keys on the blog/ prefix, NOT on "non-index": the
+        # sibling dirs now carry non-index detail pages (books/*.html) and
+        # those are section pages — lang="en" with inline <span lang="th">
+        # runs, exactly like the five index pages.
         want = "th" if rel.startswith("blog/") and rel != "blog/index.html" else "en"
         if not m:
             out.append(Violation(rel, "%s has no lang attribute" % rel))
@@ -1573,6 +1591,41 @@ def _(site):
                                      "but only %d fire — lower it to %d, the "
                                      "spare slot suppresses a future regression"
                                      % (cid, key, n_allowed, n_live, n_live)))
+    return out
+
+
+# ---------------------------------------------------------------------------
+# INV-26 — section-dir detail pages: the mirror of INV-01a/b for the sibling
+# dirs.  books/ grew per-book detail pages (2026-08-23); Site.pages now
+# sweeps every *.html in a sibling dir (INV-05/06/12/13 coverage), but none
+# of the above ties a detail page to its own section index — an orphan
+# detail page is unreachable from the site, and a card href to a file that
+# does not exist 404s on the section that advertises it.  Scanned on the
+# RAW text, matching INV-05's deliberate policy that comments in this repo
+# never quote an unresolvable href (books/index.html spells its
+# wrap-pending attributes in prose for exactly this reason).
+# ---------------------------------------------------------------------------
+@check("INV-26", "every sibling-dir detail page is linked from its dir's "
+                 "index.html, and every same-dir .html link there resolves")
+def _(site):
+    out = []
+    for d in site.nav_sibling_dirs:
+        idx_rel = d + "/index.html"
+        idx = site.text.get(idx_rel, "")
+        ddir = os.path.join(site.root, d)
+        details = sorted(f for f in os.listdir(ddir)
+                         if f.endswith(".html") and f != "index.html")
+        hrefs = set(RE_SAME_DIR_HTML_HREF.findall(idx))
+        for f in details:
+            if f not in hrefs:
+                out.append(Violation("%s|orphan|%s" % (d, f),
+                                     "%s/%s exists but %s never links it"
+                                     % (d, f, idx_rel)))
+        for h in sorted(hrefs):
+            if h != "index.html" and not os.path.isfile(os.path.join(ddir, h)):
+                out.append(Violation("%s|dead|%s" % (d, h),
+                                     '%s links href="%s" but %s/%s does not exist'
+                                     % (idx_rel, h, d, h)))
     return out
 
 

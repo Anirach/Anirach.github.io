@@ -150,10 +150,14 @@ def main() -> int:
     published_section = re.search(r'id="published".*?</section>', books, re.S)
     published_body = strip_comments(published_section.group(0)) if published_section else ""
     novels_label = re.search(r'<span class="series-count">(\d+) novels?</span>', published_body)
+    # The card is a whole-card link since the detail pages landed (2026-08-23):
+    # <a class="card card--feature" href="..."> — class attribute FIRST, then
+    # href, so this pattern keys on the class prefix and tolerates any href.
     # ^[ \t]* anchored for the same reason NEWS_ITEM is: books/index.html writes the
     # markup contract as an HTML comment directly beside the label, and an unanchored
-    # pattern would count that quoted <article> tag as a real card.
-    novels_actual = len(re.findall(r'^[ \t]*<article class="card card--feature">',
+    # pattern would count that quoted <a> tag as a real card (strip_comments already
+    # removes it; the anchor stays as defense in depth).
+    novels_actual = len(re.findall(r'^[ \t]*<a class="card card--feature"',
                                    published_body, re.M))
 
     manuscripts_section = re.search(r'id="manuscripts".*?</section>', books, re.S)
@@ -161,9 +165,11 @@ def main() -> int:
     manuscripts_label = re.search(r'<span class="series-count">(\d+) complete</span>',
                                   manuscripts_body)
     # ^[ \t]* anchored like the two patterns above: the manuscript cards are the
-    # bare .card primitive, and an unanchored pattern would also count any
-    # <article class="card"> quoted inside a maintenance comment.
-    manuscripts_actual = len(re.findall(r'^[ \t]*<article class="card">',
+    # bare .card primitive — whole-card links, <a class="card" href="..."> — and
+    # an unanchored pattern would also count any <a class="card"> quoted inside
+    # a maintenance comment.  The closing quote after "card" keeps the feature
+    # card (class="card card--feature") out of this count.
+    manuscripts_actual = len(re.findall(r'^[ \t]*<a class="card"',
                                         manuscripts_body, re.M))
 
     if not news_label:
