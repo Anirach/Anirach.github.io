@@ -51,11 +51,14 @@ img { max-width: 100%; height: auto; display: block; }
   padding: 0.65em 1.6em;
   border-radius: 100px;
 }
+/* white on var(--blue) is 4.47:1, just under the 4.5:1 floor; var(--blue-dark)
+   is 6.29:1. That was already the declared :hover, so the two states collapse
+   to one colour and the hover reads through transform + shadow. */
 .btn--primary {
-  background: #6366f1; color: #fff;
+  background: var(--blue-dark); color: #fff;
 }
 .btn--primary:hover {
-  background: #4f46e5;
+  background: var(--blue-dark);
   transform: translateY(-1px);
   box-shadow: 0 8px 25px rgba(99,102,241,0.35);
 }
@@ -645,8 +648,16 @@ img { max-width: 100%; height: auto; display: block; }
   .projects__grid { grid-template-columns: 1fr; }
 }
 
-@media (max-width: 768px) {
-  /* Nav */
+/* Nav — the burger takes over at 1000px, not 768px.
+   The bar carries 8 links plus a divider, a logo and the Scholar pill. Measured:
+   at 1001px the row has exactly 0px of slack (logo 81.4 + links 717.0 + right
+   122.6 = 921px, against a 921px content box), so it starts overflowing
+   immediately below that. The old next breakpoint was 768px, leaving the whole
+   769–1000px band on the desktop bar: at 800px .nav__inner overflowed its
+   padding box by 150px, pushing the Scholar pill off-screen and cutting
+   "Contact" down to "Co". 1000px is the last round width that still clears the
+   overflow, so this block is the mobile nav moved up to meet it. */
+@media (max-width: 1000px) {
   .nav__links {
     display: none;
     position: fixed; top: 0; left: 0; right: 0; bottom: 0;
@@ -655,6 +666,14 @@ img { max-width: 100%; height: auto; display: block; }
     -webkit-backdrop-filter: blur(20px);
     flex-direction: column;
     align-items: center; justify-content: center;
+    /* A short viewport (landscape phone, ~560px tall) makes the centred column
+       taller than the overlay: plain `center` overflows equally at both ends
+       and puts the first links above the top edge, out of reach of any scroll.
+       `safe center` falls back to flex-start once it would overflow, and
+       overflow-y makes the rest reachable. Declared after `center` so a browser
+       without the `safe` keyword keeps the old value instead of dropping both. */
+    justify-content: safe center;
+    overflow-y: auto;
     gap: 2rem; z-index: 999;
   }
   .nav__links.open { display: flex; }
@@ -663,8 +682,12 @@ img { max-width: 100%; height: auto; display: block; }
      short horizontal rule between the two groups instead. */
   .nav__divider { width: 40%; height: 1px; align-self: center; background: rgba(15,23,42,0.16); }
   .nav__hamburger { display: flex; z-index: 1001; }
+  /* The pill would fit at 1000px but not at 320px, and the Scholar link is
+     reachable twice more on this page (hero CTA, contact card). */
   .nav__right .btn { display: none; }
+}
 
+@media (max-width: 768px) {
   /* Hero */
   .hero__labels { display: none; }
   .hero__portrait { width: 70vw; margin-top: 7rem; }

@@ -14,12 +14,13 @@ Three things nothing else in this repo checks:
    without a stated source. Omitting a source now fails the build; fabricating one
    requires writing a deliberate falsehood into the file, which is auditable.
 
-3. COUNTERS — three hand-maintained counters that nothing else verifies: news/index.html's
+3. COUNTERS — four hand-maintained counters that nothing else verifies: news/index.html's
    "N updates" (the .series-count label over the timeline), publications/index.html's
    "N chapters" (the .series-count label over the Chapters section), and books/index.html's
-   "N novel" (the .series-count label over the Published section). All three drift silently
-   whenever an item is added or removed without also touching the label. This recomputes
-   each from the actual item count and fails if any of them disagrees.
+   "N novel" and "N complete" (the .series-count labels over the Published and
+   Manuscripts sections). All four drift silently whenever an item is added or
+   removed without also touching the label. This recomputes each from the actual
+   item count and fails if any of them disagrees.
 
 Exit 0 = all three pass.  1 = a real problem.  2 = the checker itself could not run
 (missing file, or the markup changed and its patterns no longer match — treat exit 2
@@ -137,6 +138,16 @@ def main() -> int:
     novels_actual = len(re.findall(r'^[ \t]*<article class="card card--feature">',
                                    published_body, re.M))
 
+    manuscripts_section = re.search(r'id="manuscripts".*?</section>', books, re.S)
+    manuscripts_body = manuscripts_section.group(0) if manuscripts_section else ""
+    manuscripts_label = re.search(r'<span class="series-count">(\d+) complete</span>',
+                                  manuscripts_body)
+    # ^[ \t]* anchored like the two patterns above: the manuscript cards are the
+    # bare .card primitive, and an unanchored pattern would also count any
+    # <article class="card"> quoted inside a maintenance comment.
+    manuscripts_actual = len(re.findall(r'^[ \t]*<article class="card">',
+                                        manuscripts_body, re.M))
+
     if not news_label:
         fail('news/index.html: no "N updates" series-count label found — '
              'the markup changed; update the pattern in this script')
@@ -172,6 +183,18 @@ def main() -> int:
     else:
         print(f'  books/index.html         "{novels_label.group(1)} novel" '
               f'== {novels_actual} actual — ok')
+
+    if not manuscripts_section or not manuscripts_label:
+        fail('books/index.html: no "N complete" series-count label found in the '
+             '#manuscripts section — the markup changed; update the pattern in this script')
+        problems += 1
+    elif int(manuscripts_label.group(1)) != manuscripts_actual:
+        fail(f'books/index.html says "{manuscripts_label.group(1)} complete" but the '
+             f'#manuscripts section actually has {manuscripts_actual} card(s)')
+        problems += 1
+    else:
+        print(f'  books/index.html         "{manuscripts_label.group(1)} complete" '
+              f'== {manuscripts_actual} actual — ok')
 
     print("PASS" if problems == 0 else f"FAIL — {problems} problem(s)")
     return 0 if problems == 0 else 1
