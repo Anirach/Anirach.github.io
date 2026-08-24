@@ -263,7 +263,8 @@ Header     .post-hero  .post-hero__tags  .post-hero__tag  .post-hero__title
 Body       .post-body                       (max-width: var(--measure))
 Footers    .post-series-footer  .post-nav  .series-nav
 Listing    .card  .card__image|__body|__tags|__tag|__title|__excerpt|__footer|__author|__read
-           .card__image--pair               (dual-jacket plate, books/index.html — 7daf3a4)
+           .card__image--pair               (dual-jacket plate — every card on books/index.html
+                                          since the 2026-08-24 dual-cover sweep; 7daf3a4 introduced it)
            .blog-grid  .series-section  .series-header  .series-header__left
            .series-title  .series-icon  .series-description  .series-count
            .category  .category__header  .category__icon  .category__title
@@ -354,8 +355,8 @@ kept here as *the standard to hold*, not as a plan. Re-verify before you act on 
 **1. Image loading — LANDED.** `blog/index.html` now references **4.03 MB across 36 unique
 images** over 74 `<img>` tags, and **all 74 carry `loading="lazy"`**, so the HTML-only first byte
 cost is 67 KB and a first desktop viewport (first ~10 cards) fetches ≈1.7 MB, not 18.4 MB.
-Sitewide, **131 of 131 `<img>` tags have all four of `loading`, `decoding`, `width`, `height`**
-(42 also carry `fetchpriority`; 89 are lazy, 42 eager).
+Sitewide, **137 of 137 `<img>` tags have all four of `loading`, `decoding`, `width`, `height`**
+(42 also carry `fetchpriority`; 95 are lazy, 42 eager).
 
 ```bash
 python3 - <<'PY'
@@ -365,15 +366,15 @@ for p in pathlib.Path('.').rglob('*.html'):
     if '.claude' in p.parts or '.git' in p.parts: continue
     for m in re.finditer(r'<img\b[^>]*>', p.read_text(encoding='utf-8'), re.S):
         n+=1; ok+= all(a+'=' in m.group(0) for a in ('loading','decoding','width','height'))
-print(ok, "/", n)     # → 131 / 131
+print(ok, "/", n)     # → 137 / 137
 PY
 ```
 
-A line-based `grep -oh "<img[^>]*>"` reports **120** here — it drops the eleven `<img>` written
-across multiple lines (all on the books/publications pages: 5 in `books/index.html`,
-1 on each of the 3 older detail pages, 2 in `books/one-day-of-light.html`,
-1 in `publications/index.html`). Use the multiline parse above;
-an eleven-tag discrepancy is exactly the kind of thing that
+A line-based `grep -oh "<img[^>]*>"` reports **120** here — it drops the seventeen `<img>` written
+across multiple lines (all on the books/publications pages: 8 in `books/index.html`,
+2 on each of the 4 `books/` detail pages, 1 in `publications/index.html`). Use the
+multiline parse above;
+a seventeen-tag discrepancy is exactly the kind of thing that
 makes a reader distrust the whole file.
 
 ```html
@@ -547,9 +548,11 @@ Then in a real browser on `index.html`: tab once and confirm a visible focus rin
 
 5. **Never commit a cover over ~200 KB, and never as PNG. This is now clean — keep it clean.**
    `ec2827b` + `21c8a55` re-encoded every PNG cover to JPG at `formatOptions 70`. Today:
-   **39 JPG covers, 0 PNG covers, average 111 KB, largest 194 KB, zero over 200 KB** (the three
-   2026-08-23 book covers — `three-old-men` 175 KB, `a-pocketful-of-questions` 73 KB,
-   `the-thirteenth-seal` 54 KB — all comply).
+   **44 JPG covers (36 `*-cover.jpg` + 8 suffixed), 0 PNG covers, average 107 KB, largest 194 KB,
+   zero over 200 KB** (the eight paired book faces — `three-old-men-cover-front/-back` 175 / 121 KB,
+   `a-pocketful-of-questions-cover-en/-th` 73 / 77 KB, `the-thirteenth-seal-cover-en/-th` 54 / 62 KB,
+   `one-day-of-light-cover-en/-th` 67 KB each — all comply; the `*-cover.jpg` glob alone reports
+   36 jpg, avg 112 KB, so add `images/*-cover-*.jpg` to any cover census).
 
    ```bash
    ls images/*-cover.png 2>/dev/null | wc -l                                   # → 0
@@ -619,7 +622,7 @@ Then in a real browser on `index.html`: tab once and confirm a visible focus rin
     linux-command-line, monitoring-observability, networking-fundamentals). Posts sitting side by
     side in the same series read as different websites.
 
-14. **Never regress alt text or image attributes.** **131 of 131** `<img>` have `alt`, and since
+14. **Never regress alt text or image attributes.** **137 of 137** `<img>` have `alt`, and since
     `e8da9da` all carry `loading`, `decoding`, `width` and `height` too. Two complete
     sitewide practices — the only two. Protect both. (Alt *quality* is still uneven: 4 alts end in
     the word "Cover" and 37 avatars repeat `alt="Anirach"`; see a11y-perf R6.)
@@ -634,7 +637,7 @@ re-plans them; the only live work is Phase 4 and the short "still open" list bel
 | Phase | What it was | Status |
 |---|---|---|
 | 1 — tokens | canonical `:root` in every file, aliases deleted, `--radius: 12px` | **DONE** `6670480`, `36d9814`. 47/47 blocks today, 0 deviations. CLAUDE.md's `14px` line is fixed too (`5a522ed`). |
-| 2 — images + counters + routes | JPG covers, `loading`/`decoding`/`width`/`height`, counters, dead routes, hero-gradient fork | **DONE** `ec2827b`, `21c8a55`, `b9fb125`. 131/131 images attributed today; 0 PNG covers; all 5 counters correct; 0 dead absolute links. |
+| 2 — images + counters + routes | JPG covers, `loading`/`decoding`/`width`/`height`, counters, dead routes, hero-gradient fork | **DONE** `ec2827b`, `21c8a55`, `b9fb125`. 137/137 images attributed today; 0 PNG covers; all 5 counters correct; 0 dead absolute links. |
 | 3 — modern polish | `:focus-visible`, `prefers-reduced-motion` (+ `script.js` guard), `color-scheme`, `text-wrap`, `aspect-ratio` | **DONE** `e8da9da`. 41 embedded blocks + `style.css`. |
 | 4 — structural | island → HOUSE conversion, vocabulary collapse, shared stylesheet, dark mode | **OPEN — the only live phase.** |
 
@@ -673,8 +676,8 @@ Leave these alone unless the user explicitly asks:
 - the 4-line a11y block (`:focus-visible`, reduced-motion, `color-scheme`, `text-wrap`) in 46
   embedded `<style>` blocks + `style.css` — including its `outline: none`, which is scoped to
   `:focus:not(:focus-visible)` and is correct
-- image attributes: 131/131 `<img>` carry `alt`, `loading`, `decoding`, `width` and `height`
-- cover budget: 39 JPG covers, 0 PNG, avg 111 KB, max 194 KB, none over 200 KB
+- image attributes: 137/137 `<img>` carry `alt`, `loading`, `decoding`, `width` and `height`
+- cover budget: 44 JPG covers (36 + 8 suffixed), 0 PNG, avg 107 KB, max 194 KB, none over 200 KB
 - `<meta name="viewport">` on 47/47 files
 - `blog/index.html` has 0 `<script>` tags — a feature, not an omission (anti-pattern 12)
 

@@ -24,7 +24,8 @@ Everything below was measured on this repo. Re-run the command if you doubt a nu
 >
 > **Last full re-measure: 2026-08-24 against `7daf3a4`** (One Day of Light — the site is 47
 > files now: `books/one-day-of-light.html` joined as a fourth `books/` detail page, with two
-> downloadable PDFs in `books/` and two paired-edition covers in `images/`). Every count below has its
+> downloadable PDFs in `books/` and two paired-edition covers in `images/`; the same-day dual-cover
+> sweep then gave every `books/` title both language faces — 8 suffixed cover files). Every count below has its
 > command next to it. If you sweep, re-run them and edit this file in the same commit.
 
 ## What is DONE — do not re-plan these
@@ -43,14 +44,14 @@ weights)** — plus skip links and `<main>`, which are the unfinished half of R5
 
 `ec2827b` re-encoded the 15 oversized PNG covers to JPG and `21c8a55` re-ran the four
 that still cleared 200 KB at `formatOptions 70`; the three 2026-08-23 book covers shipped
-compliant. Today there are **0 PNG covers and 39
-JPG covers, average 111 KB, largest 194 KB, none over 200 KB.**
+compliant. Today there are **0 PNG covers and 44
+JPG covers (36 `*-cover.jpg` + 8 suffixed), average 107 KB, largest 194 KB, none over 200 KB.**
 
 ```bash
 ls images/*-cover.png 2>/dev/null | wc -l                     # → 0
 find images -name '*-cover.*' -size +200k                     # → nothing
 ls -l images/*-cover.jpg | awk '{s+=$5;n++} END {print n" jpg, avg "int(s/n/1024)" KB"}'
-# → 39 jpg, avg 111 KB
+# → 36 jpg, avg 112 KB   (unsuffixed only — see the blind spot below)
 ```
 
 Before adding a cover, run `ls -lS images/ | head` and compare. Hard-fail any cover
@@ -66,10 +67,12 @@ crisp lines that a JPEG smears. (Diagrams are PNG for a reason: inline HTML/CSS 
 ASCII-art diagrams were tried and reverted in f4f7e1b, 4fc85af, c270892 and 4ae2660
 because they kept breaking layout.)
 
-**Blind spot in the census above:** the paired-edition covers
-`one-day-of-light-cover-en.jpg` / `-th.jpg` (67 KB each, compliant) end in
-`-cover-en.jpg`/`-cover-th.jpg` and so match neither the `*-cover.jpg` ls nor the
-`*-cover.*` find — audit suffixed cover names by hand when one exists.
+**Blind spot in the census above:** the eight paired book faces —
+`one-day-of-light-cover-en/-th.jpg` (67 KB each), `a-pocketful-of-questions-cover-en/-th.jpg`
+(73 / 77 KB), `the-thirteenth-seal-cover-en/-th.jpg` (54 / 62 KB) and
+`three-old-men-cover-front/-back.jpg` (175 / 121 KB) — end in `-cover-<face>.jpg` and so match
+neither the `*-cover.jpg` ls nor the `*-cover.*` find. Audit them with
+`ls -l images/*-cover-*.jpg` (→ 8 files, avg 86 KB, all compliant).
 
 **Downloadable PDFs live in their section's directory** (the
 `books/one-day-of-light-en.pdf` pattern), **≤10 MB each, metadata set (Title/Author)**.
@@ -79,7 +82,7 @@ removes its PDFs in the same commit.
 
 ### 2. Every `<img>` gets `width`, `height`, `loading` and `decoding`. **[DONE — hold the line]**
 
-**131 of 131 `<img>` tags carry all four**, since `e8da9da` (the books/publications pages
+**137 of 137 `<img>` tags carry all four**, since `e8da9da` (the books/publications pages
 and `books/one-day-of-light.html` shipped compliant). 42 also carry
 `fetchpriority`. This and `alt` coverage are the only two 100%-complete practices on the
 site; a new post that omits them is a regression, not a gap.
@@ -92,13 +95,13 @@ for p in pathlib.Path('.').rglob('*.html'):
     if '.claude' in p.parts or '.git' in p.parts: continue
     for m in re.finditer(r'<img\b[^>]*>', p.read_text(encoding='utf-8'), re.S):
         n+=1; ok+= all(a+'=' in m.group(0) for a in ('loading','decoding','width','height'))
-print(ok, "/", n)          # → 131 / 131
+print(ok, "/", n)          # → 137 / 137
 EOF
 ```
 
 **Use that multiline parse, not `grep -oh "<img[^>]*>"`** — the line-based grep reports
-120 because eleven `<img>` are written across multiple lines (all on the books/publications
-pages). Quoting 120 where the answer is 131
+120 because seventeen `<img>` are written across multiple lines (all on the books/publications
+pages). Quoting 120 where the answer is 137
 is exactly the kind of small wrongness that makes a reader stop trusting this file.
 
 Card images in `blog/index.html` sit in a 352×220 CSS px slot (1200px section −
@@ -269,7 +272,7 @@ These are right; flagging them wastes the user's time:
 - Both `preconnect` links present on **37/37**.
 - `<meta name="viewport" content="width=device-width, initial-scale=1.0">` identical on
   all **47** files — pinch-zoom is not blocked.
-- All **131/131** `<img>` tags have an `alt` attribute (the *quality* is the problem, not
+- All **137/137** `<img>` tags have an `alt` attribute (the *quality* is the problem, not
   the presence) **and** `loading`, `decoding`, `width`, `height`.
 - `:focus-visible`, `prefers-reduced-motion`, `color-scheme: light` and `text-wrap:
   balance` on all 47 pages (46 embedded + `style.css`) — rule 5.

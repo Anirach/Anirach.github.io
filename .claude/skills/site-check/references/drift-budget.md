@@ -7,7 +7,7 @@ the tree; re-verify with the quoted command before repeating a number.
 Baseline shape (2026-08-24, `7daf3a4`): 37 posts in `blog/`, 38 HTML files in `blog/`, 47
 repo-wide — `index.html` plus five section directories (`books/` split into `publications/`
 (academic) + `books/` (fiction) on 2026-08-23, and `books/` now carries four per-book detail
-pages beside its index, plus two downloadable PDFs), 59 files in
+pages beside its index, plus two downloadable PDFs), 62 files in
 `images/`. Nav partition: 7 `.series-nav` + 25 `.post-nav` + 5 no-nav. The linter runs 49 checks
 (30 fail / 15 warn / 4 info) — INV-26, added with the split, ties each section directory's detail
 pages to its own `index.html` at fail level, with no baseline entry.

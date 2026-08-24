@@ -39,7 +39,7 @@ Deploy by pushing to `main` — GitHub Pages auto-deploys. There is no `.nojekyl
 ├── publications/index.html  # Academic: Springer book, 8 chapters, selected publications — self-contained
 ├── projects/index.html # Projects & Apps — self-contained page, own <style>/:root
 ├── news/index.html     # News & Updates — self-contained page, own <style>/:root
-├── images/             # 59 files — covers (<slug>-cover.png|jpg), diagram PNGs, posters, the event QR
+├── images/             # 62 files — covers (<slug>-cover.jpg; books/ titles carry both language faces as -cover-en/-th or -cover-front/-back), diagram PNGs, posters, the event QR
 ├── docs/               # design spec, implementation plan, OpenClaw news runbook + gate
 ├── .claude/skills/     # page-design · blog-post · a11y-perf · site-check
 ├── _config.yml         # Jekyll excludes: docs/, CLAUDE.md (see Development)
@@ -114,7 +114,8 @@ Current values, re-derive rather than trust: 3 Categories · 2 Series · 37 Arti
 same-directory `.html` that does not exist. **Adding a future book** = copy a sibling detail page
 (e.g. `books/three-old-men.html`) as the template, add its card (whole-card anchor with
 `aria-labelledby="card-title-<slug>"`) to the right section of `books/index.html`, add the cover
-as `images/<slug>-cover.jpg` (JPEG, ≤200 KB), and update the `"N novel"` / `"N complete"` label in
+as `images/<slug>-cover-en.jpg` + `-cover-th.jpg` (JPEG, ≤200 KB each — every `books/` title shows both
+language faces, side by side on its card and stacked on its detail page), and update the `"N novel"` / `"N complete"` label in
 the same commit — then run both gates.
 
 ```bash
