@@ -549,7 +549,7 @@ Then in a real browser on `index.html`: tab once and confirm a visible focus rin
 5. **Never commit a cover over ~200 KB, and never as PNG. This is now clean — keep it clean.**
    `ec2827b` + `21c8a55` re-encoded every PNG cover to JPG at `formatOptions 70`. Today:
    **44 JPG covers (36 `*-cover.jpg` + 8 suffixed), 0 PNG covers, average 107 KB, largest 194 KB,
-   zero over 200 KB** (the eight paired book faces — `three-old-men-cover-front/-back` 175 / 121 KB,
+   zero over 200 KB** (the eight paired book faces — `three-old-men-cover-front/-back` 175 / 120 KB,
    `a-pocketful-of-questions-cover-en/-th` 73 / 77 KB, `the-thirteenth-seal-cover-en/-th` 54 / 62 KB,
    `one-day-of-light-cover-en/-th` 67 KB each — all comply; the `*-cover.jpg` glob alone reports
    36 jpg, avg 112 KB, so add `images/*-cover-*.jpg` to any cover census).

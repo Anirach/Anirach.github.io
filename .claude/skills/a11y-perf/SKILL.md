@@ -70,7 +70,7 @@ because they kept breaking layout.)
 **Blind spot in the census above:** the eight paired book faces —
 `one-day-of-light-cover-en/-th.jpg` (67 KB each), `a-pocketful-of-questions-cover-en/-th.jpg`
 (73 / 77 KB), `the-thirteenth-seal-cover-en/-th.jpg` (54 / 62 KB) and
-`three-old-men-cover-front/-back.jpg` (175 / 121 KB) — end in `-cover-<face>.jpg` and so match
+`three-old-men-cover-front/-back.jpg` (175 / 120 KB) — end in `-cover-<face>.jpg` and so match
 neither the `*-cover.jpg` ls nor the `*-cover.*` find. Audit them with
 `ls -l images/*-cover-*.jpg` (→ 8 files, avg 86 KB, all compliant).
 
