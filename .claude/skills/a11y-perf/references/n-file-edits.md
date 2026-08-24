@@ -10,34 +10,35 @@ Always: work on a branch, run the verification grep afterwards, and eyeball
 ## Baseline counters — re-run these, don't trust a stale number
 
 > **Standing rule:** any change that invalidates a number here must update it in the
-> same commit. Everything below was re-measured **2026-08-23 against `5178252`** (the
-> books/publications split: 46 HTML files — `publications/index.html` and three
-> `books/*.html` detail pages joined the site).
+> same commit. Everything below was re-measured **2026-08-24 against `7daf3a4`** (One
+> Day of Light: 47 HTML files — `books/one-day-of-light.html` joined as a fourth
+> `books/*.html` detail page, with two downloadable PDFs in `books/`).
 
 Always exclude `.claude/` — the skill directories carry HTML templates and CSS
 assets that match most of these patterns and inflate every count.
 
 ```bash
-find . -name "*.html" -not -path "./.git/*" -not -path "./.claude/*" | wc -l          # 46
-grep -rIo ":hover"  --include="*.html" --include="*.css" --include="*.js" --exclude-dir=.claude . | wc -l   # 137
-grep -rl ":focus-visible"         --include="*.html" --include="*.css" --exclude-dir=.claude . | wc -l      # 46 (45 html + style.css)
-grep -rl "prefers-reduced-motion" --include="*.html" --include="*.css" --exclude-dir=.claude . | wc -l      # 46
-grep -rl "color-scheme"           --include="*.html" --include="*.css" --exclude-dir=.claude . | wc -l      # 46
+find . -name "*.html" -not -path "./.git/*" -not -path "./.claude/*" | wc -l          # 47
+grep -rIo ":hover"  --include="*.html" --include="*.css" --include="*.js" --exclude-dir=.claude . | wc -l   # 144
+grep -rl ":focus-visible"         --include="*.html" --include="*.css" --exclude-dir=.claude . | wc -l      # 47 (46 html + style.css)
+grep -rl "prefers-reduced-motion" --include="*.html" --include="*.css" --exclude-dir=.claude . | wc -l      # 47
+grep -rl "color-scheme"           --include="*.html" --include="*.css" --exclude-dir=.claude . | wc -l      # 47
 grep -rl "<script" --include="*.html" --exclude-dir=.claude .                         # index.html only
-grep -rl "<main"   --include="*.html" --exclude-dir=.claude . | wc -l                 # 15 / 46
-grep -rl 'id="main"' --include="*.html" --exclude-dir=.claude . | wc -l               #  4 / 46 (the books/ pages)
-grep -rl "skip-link" --include="*.html" --exclude-dir=.claude . | wc -l               #  0 / 46
-grep -roh 'target="_blank"' --include="*.html" --exclude-dir=.claude . | wc -l        # 69 (12 lack rel)
-grep -rhoE '<html lang="[^"]*"' --include="*.html" --exclude-dir=.claude . | sort | uniq -c  # 9 en, 37 th
-grep -rl "fonts.googleapis" --include="*.html" --exclude-dir=.claude . | wc -l        # 36 / 46
+grep -rl "<main"   --include="*.html" --exclude-dir=.claude . | wc -l                 # 16 / 47
+grep -rl 'id="main"' --include="*.html" --exclude-dir=.claude . | wc -l               #  5 / 47 (the books/ pages)
+grep -rl "skip-link" --include="*.html" --exclude-dir=.claude . | wc -l               #  0 / 47
+grep -roh 'target="_blank"' --include="*.html" --exclude-dir=.claude . | wc -l        # 70 (12 lack rel)
+grep -rhoE '<html lang="[^"]*"' --include="*.html" --exclude-dir=.claude . | sort | uniq -c  # 10 en, 37 th
+grep -rl "fonts.googleapis" --include="*.html" --exclude-dir=.claude . | wc -l        # 37 / 47
 grep -c 'class="card"' blog/index.html                                                # 37
 ls images/*-cover.jpg | wc -l ; ls images/*-cover.png 2>/dev/null | wc -l             # 39 jpg, 0 png
-du -sh images/                                                                        # 6.3M
+                                                       # (one-day-of-light-cover-en/-th.jpg sit outside the *-cover.jpg glob)
+du -sh images/                                                                        # 6.4M
 ```
 
-**`<img>` attributes need a multiline parse, not a line grep** — seven `<img>` on the site
+**`<img>` attributes need a multiline parse, not a line grep** — eleven `<img>` on the site
 span multiple lines (all on the books/publications pages), so `grep -oh "<img[^>]*>"`
-reports 119 where the truth is 126:
+reports 119 where the truth is 130:
 
 ```bash
 python3 - <<'EOF'
@@ -47,13 +48,13 @@ for p in pathlib.Path('.').rglob('*.html'):
     if '.claude' in p.parts or '.git' in p.parts: continue
     for m in re.finditer(r'<img\b[^>]*>', p.read_text(encoding='utf-8'), re.S):
         n+=1; ok+= all(a+'=' in m.group(0) for a in ('loading','decoding','width','height'))
-print(ok, "/", n)      # → 126 / 126
+print(ok, "/", n)      # → 130 / 130
 EOF
 ```
 
 ### Two obsolete warnings this file used to carry
 
-- **"`grep -rIoE 'outline *:' … | wc -l` → 0 (UA ring intact)."** It now returns **46**.
+- **"`grep -rIoE 'outline *:' … | wc -l` → 0 (UA ring intact)."** It now returns **47**.
   `:focus:not(:focus-visible) { outline: none; }` is part of the shipped block and is
   correct. Read the selector before treating an `outline` hit as a defect.
 - **"A `sed` on `:root` silently misses 11 files."** Obsolete since `6670480`: every file
@@ -89,13 +90,13 @@ done
 ## Insert a CSS block into every embedded `<style>`
 
 **The focus/motion/color-scheme/text-wrap block is already installed everywhere** —
-`e8da9da` put it in what are now 45 embedded `<style>` blocks + `style.css`. Do not re-run this loop
+`e8da9da` put it in what are now 46 embedded `<style>` blocks + `style.css`. Do not re-run this loop
 for that block. What `assets/a11y-block.css` now holds is only the parts *not* on disk
 (`.card:focus-within` parity, the skip link, the `[data-reveal]` no-JS net), so this
 loop remains the delivery mechanism for those.
 
 `assets/a11y-block.css` has no `:root` dependency beyond `--blue-dark` / `--navy` /
-`--radius-sm`, and falls back with literals anyway — safe in all 46 files.
+`--radius-sm`, and falls back with literals anyway — safe in all 47 files.
 
 **The `if 'prefers-reduced-motion' in s: continue` idempotence guard below now matches
 every file**, because the shipped block contains that string. Change the guard to a
@@ -120,8 +121,8 @@ for p in pathlib.Path('.').rglob('*.html'):
     print('patched', p)
 EOF
 
-grep -rl "card:focus-within" --include="*.html" --exclude-dir=.claude . | wc -l   # expect 45
-# already-shipped block, for reference — these are 46 (45 html + style.css) today:
+grep -rl "card:focus-within" --include="*.html" --exclude-dir=.claude . | wc -l   # expect 46
+# already-shipped block, for reference — these are 47 (46 html + style.css) today:
 grep -rl "prefers-reduced-motion" --include="*.html" --include="*.css" --exclude-dir=.claude . | wc -l
 grep -rl "focus-visible"          --include="*.html" --include="*.css" --exclude-dir=.claude . | wc -l
 ```
@@ -141,11 +142,11 @@ for p in pathlib.Path('.').rglob('*.html'):
     j = s.find('>', i)
     p.write_text(s[:j+1] + LINK + s[j+1:], encoding='utf8')
 EOF
-grep -rl "skip-link" --include="*.html" --exclude-dir=.claude . | wc -l   # expect 46
+grep -rl "skip-link" --include="*.html" --exclude-dir=.claude . | wc -l   # expect 47
 ```
 
-**Do the target first.** The link is useless without one, and today only **4 of 46** files
-have `id="main"` — the four `books/` pages (`ea3c8e8`), the first complete examples on the
+**Do the target first.** The link is useless without one, and today only **5 of 47** files
+have `id="main"` — the five `books/` pages (`ea3c8e8` + `7daf3a4`), the first complete examples on the
 site. 31 files have no `<main>` at all and must get `<main id="main">`
 wrapped around the article body — not safely scriptable, because the wrap point differs
 per file. Do a handful at a time and diff each. The **11** that already have `<main>`
@@ -158,14 +159,15 @@ blog/openclaw-migration.html  blog/openclaw-security.html
 news/index.html  projects/index.html  publications/index.html
 ```
 
-(`books/index.html`, `books/three-old-men.html`, `books/a-pocketful-of-questions.html` and
-`books/the-thirteenth-seal.html` already carry `<main id="main">` — nothing to do there.)
+(`books/index.html`, `books/three-old-men.html`, `books/a-pocketful-of-questions.html`,
+`books/the-thirteenth-seal.html` and `books/one-day-of-light.html` already carry
+`<main id="main">` — nothing to do there.)
 
 Regenerate: `grep -rl '<main' --include='*.html' --exclude-dir=.claude . | sort`
 
 ## `rel="noopener noreferrer"` on the 12 external links that lack it
 
-69 `target="_blank"` anchors exist; **57 already have `rel`**. The 12 that do not are in
+70 `target="_blank"` anchors exist; **58 already have `rel`**. The 12 that do not are in
 `blog/api-request-lifecycle.html`, `blog/devops-security.html`,
 `blog/kubernetes-orchestration.html`, `blog/linux-command-line.html`,
 `blog/monitoring-observability.html` and `blog/obsidian-ai-jarvis.html`.
@@ -199,8 +201,8 @@ before trimming to `wght@400`.
 grep -rl "Inter:wght@300;400;500;600;700;800;900&family=JetBrains" --include="*.html" --exclude-dir=.claude . \
   | xargs perl -pi -e 's/Inter:wght\@300;400;500;600;700;800;900&family=JetBrains\+Mono:wght\@400;500;600/Inter:wght\@400;500;600;700;800;900&family=JetBrains+Mono:wght\@400/g'
 
-grep -rl "wght@300" --include="*.html" --exclude-dir=.claude . | wc -l   # before 36, after 9 (the Inter-only pages: landing + 5 indexes + 3 books/ detail)
-grep -rl "display=swap" --include="*.html" --exclude-dir=.claude . | wc -l   # must still be 36
+grep -rl "wght@300" --include="*.html" --exclude-dir=.claude . | wc -l   # before 37, after 10 (the Inter-only pages: landing + 5 indexes + 4 books/ detail)
+grep -rl "display=swap" --include="*.html" --exclude-dir=.claude . | wc -l   # must still be 37
 ```
 
 Verify what uses the weights you are about to drop:

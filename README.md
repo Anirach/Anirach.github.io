@@ -4,7 +4,7 @@
 
 🌐 **Live: [anirach.com](https://anirach.com)**
 
-A hand-written static site — six top-level pages, three per-book detail pages, and 37 self-contained blog posts. No build system, no package manager, no dependencies, no JavaScript framework. Push to `main` and GitHub Pages publishes it.
+A hand-written static site — six top-level pages, four per-book detail pages, and 37 self-contained blog posts. No build system, no package manager, no dependencies, no JavaScript framework. Push to `main` and GitHub Pages publishes it.
 
 ---
 
@@ -26,13 +26,13 @@ A hand-written static site — six top-level pages, three per-book detail pages,
 | [`index.html`](index.html) | Single-scroll editorial portfolio: hero, about, latest-news strip, six research areas, featured book, curated live apps, contact |
 | [`blog/`](blog/) | 37 posts under three category bands — see below |
 | [`publications/`](publications/) | The academic record: the Springer book *Libraries in Transformation*, 8 book chapters, and a selected-publications table |
-| [`books/`](books/) | Fiction (nav label "Novels"): the published novel *Three Old Men: The Last Conversation* plus two complete bilingual manuscripts — each with its own detail page (`books/three-old-men.html`, `books/a-pocketful-of-questions.html`, `books/the-thirteenth-seal.html`) |
+| [`books/`](books/) | Books & writing (nav label "Novels"): four works — *One Day of Light* (the free last-lecture event book, EN/TH editions with free PDF downloads served from `books/`), the published novel *Three Old Men: The Last Conversation*, and two complete bilingual manuscripts — each with its own detail page (`books/one-day-of-light.html`, `books/three-old-men.html`, `books/a-pocketful-of-questions.html`, `books/the-thirteenth-seal.html`) |
 | [`projects/`](projects/) | Live apps (each verified working before it ships) and research-code repositories |
 | [`news/`](news/) | Reverse-chronological timeline of publications, talks and appointments, plus a career timeline |
 
-`books/` was one "Books & Writing" page until 2026-08-23, when it split: academic content moved to the new `publications/`, and `books/` became the fiction section with one detail page per book.
+`books/` was one "Books & Writing" page until 2026-08-23, when it split: academic content moved to the new `publications/`, and `books/` became the fiction section with one detail page per book. On 2026-08-24 it gained a fourth work, the Last Lecture companion book *One Day of Light*, whose EN/TH PDFs are downloadable for free from `books/`.
 
-`script.js` (one IIFE, zero dependencies) drives five behaviours — nav scroll state, the mobile hamburger, an `IntersectionObserver` scroll-reveal with a 120 ms stagger, smooth anchor scrolling, and a hero-watermark parallax. **It runs on the landing page only.** The other eight pages (five section indexes and the three book detail pages) carry no JavaScript at all, by design; their mobile menu is a pure-CSS checkbox toggle.
+`script.js` (one IIFE, zero dependencies) drives five behaviours — nav scroll state, the mobile hamburger, an `IntersectionObserver` scroll-reveal with a 120 ms stagger, smooth anchor scrolling, and a hero-watermark parallax. **It runs on the landing page only.** The other nine pages (five section indexes and the four book detail pages) carry no JavaScript at all, by design; their mobile menu is a pure-CSS checkbox toggle.
 
 ## The blog
 
@@ -42,7 +42,7 @@ A hand-written static site — six top-level pages, three per-book detail pages,
 - **🎓 Academic & Philosophy** — first posts coming soon.
 - **☕ Lifestyle** — first posts coming soon.
 
-**The site is bilingual.** Headings, technical terms, code and tag labels are in English; explanatory prose is in Thai. All 37 posts declare `<html lang="th">`; the six top-level pages and the three book detail pages declare `lang="en"` and wrap Thai passages in `<span lang="th">`.
+**The site is bilingual.** Headings, technical terms, code and tag labels are in English; explanatory prose is in Thai. All 37 posts declare `<html lang="th">`; the six top-level pages and the four book detail pages declare `lang="en"` and wrap Thai passages in `<span lang="th">`.
 
 ## Repository structure
 
@@ -54,9 +54,9 @@ A hand-written static site — six top-level pages, three per-book detail pages,
 ├── _config.yml         # Jekyll: keeps internal working docs out of the published site
 ├── CNAME               # anirach.com
 ├── blog/               # index.html (3 categories, 37 cards) + 37 self-contained posts
-├── books/              # Novels: index.html + 3 per-book detail pages, all self-contained
+├── books/              # Books & writing: index.html + 4 per-book detail pages + 2 free PDFs (EN/TH), all self-contained
 ├── publications/  projects/  news/   # one self-contained index.html each
-├── images/             # 56 files — covers, diagrams, posters, profile photo
+├── images/             # 58 files — covers, diagrams, posters, profile photo
 ├── docs/               # design spec, implementation plan, OpenClaw runbook (not published)
 └── .claude/skills/     # the four maintenance skills (not published)
 ```
@@ -70,10 +70,10 @@ index.html ──▶ style.css + script.js     (the ONLY consumer of either)
 
 blog/index.html   ──▶ its own <style> block, no JS
 blog/<post>.html  ──▶ its own <style> block, no JS     × 37
-books/ (index + 3 detail) publications/ projects/ news/ ──▶ same   × 7
+books/ (index + 4 detail) publications/ projects/ news/ ──▶ same   × 8
 ```
 
-Every page embeds its complete stylesheet. There is no shared partial, template engine or token file, so a "global" change means editing N files by hand — and nothing tells you when file 23 of 46 got missed. That is what the linter is for. The compensating upside: blast radius is exactly one file.
+Every page embeds its complete stylesheet. There is no shared partial, template engine or token file, so a "global" change means editing N files by hand — and nothing tells you when file 23 of 47 got missed. That is what the linter is for. The compensating upside: blast radius is exactly one file.
 
 ## Local development
 

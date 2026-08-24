@@ -108,6 +108,8 @@ Order of sections:
 
 Superseded 2026-08-23: /books/ split into /publications/ (academic) and /books/ (fiction, with per-book detail pages).
 
+2026-08-24: One Day of Light (Last Lecture companion book) added to /books/ with free PDF downloads.
+
 ### 4.4 Projects & Apps (`projects/index.html`) — new
 
 Two tiers, each card with name, tag, bilingual description, status badge, link:

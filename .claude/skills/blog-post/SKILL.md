@@ -20,8 +20,8 @@ description: End-to-end recipe for adding, editing, or removing a post in blog/ 
 
 This site has **no build step, no templating, no partials**. Each of the 38 files in
 `blog/` — 37 posts plus `index.html` — embeds its own `<style>`, its own copy of the nav
-markup, and its own footer. (The wider site is 46 HTML files: these 38 plus `index.html`,
-the five section indexes `books/`, `news/`, `projects/`, `publications/`, and the three
+markup, and its own footer. (The wider site is 47 HTML files: these 38 plus `index.html`,
+the five section indexes `books/`, `news/`, `projects/`, `publications/`, and the four
 `books/*.html` per-book detail pages.)
 Nothing validates the wiring between them. A post is not "a file" — it is a file plus a
 card plus two counters plus two neighbours' nav links, and every one of those is edited
@@ -121,7 +121,7 @@ way.
   (`iac-cover.jpg`, `auth-cover.jpg`, `sre-cover.jpg`, `linux-cli-cover.jpg`,
   `api-lifecycle-cover.jpg`, …). **Do not rename existing files to match the slug**; that
   breaks two references for zero gain.
-- Give the `<img>` `width`, `height`, `loading` and `decoding`. 126 of 126 images on the
+- Give the `<img>` `width`, `height`, `loading` and `decoding`. 130 of 130 images on the
   site have all four; a new post without them is a regression, not a gap.
 - If `images/<slug>-cover.*` already exists, the post must use it. The verifier fails
   otherwise.
@@ -197,7 +197,7 @@ Non-negotiables, each because something on disk got them wrong:
   a mobile menu, use the pure-CSS `.nav__toggle` checkbox pattern from `blog/index.html` —
   INV-12 enforces that every toggle is actually wired.
 
-The palette is the canonical 24-token block, identical in all 46 `:root` blocks —
+The palette is the canonical 24-token block, identical in all 47 `:root` blocks —
 do not retype it, copy it from the template or from `style.css:5`. Full table:
 `page-design/references/tokens.md` §1.
 
@@ -291,7 +291,7 @@ Copy this exactly, including the odd indentation (the comment is indented 8, the
 - The `href` is relative with `.html` — `blog/index.html` never uses the extensionless
   form. Only the 7 OpenClaw series posts do, in their own chip strip.
 - The `img src` must be byte-identical to the cover the post itself embeds, and the
-  `<img>` needs `width`, `height`, `loading="lazy"` and `decoding="async"` — 126/126
+  `<img>` needs `width`, `height`, `loading="lazy"` and `decoding="async"` — 130/130
   images on the site have all four.
 - The inline `background:` gradient is a placeholder shown while the image loads; pick
   hues that match the post's hero gradient.
@@ -433,7 +433,7 @@ their own drift you should not make worse. (They *do* have the canonical `:root`
 their 14 broken links were fixed in `b9fb125`.)
 
 Because there are no shared partials, a request to change styling "everywhere" means
-editing up to 38 `<style>` blocks in `blog/` — 46 for the whole site. Say so and get
+editing up to 38 `<style>` blocks in `blog/` — 47 for the whole site. Say so and get
 confirmation before starting; do not change one post and call it done.
 
 ## When something looks broken

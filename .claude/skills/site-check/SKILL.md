@@ -65,7 +65,8 @@ details, not just the exit status.
 ## Expected `[known]` on today's tree — do not panic, do not mass-fix
 
 A clean checkout **exits 0** with **55 violations across 17 checks**, every one of them baselined.
-Verified against the tree at the books/publications split of 2026-08-23, `5178252` (49 checks:
+Verified against the One Day of Light tree of 2026-08-24, `7daf3a4` — 47 HTML files, `books/`
+now holding four detail pages (49 checks:
 30 fail / 15 warn / 4 info — INV-26 joined at fail level):
 
 | id | sev | count | what |
@@ -269,8 +270,8 @@ article body. **Repair:** delete the body one (`:196`), keep `.post-hero__title`
 - **JS-driven** — `index.html:32` `<button class="nav__hamburger" id="hamburger">`, wired by
   `script.js`. A page carrying this shape must contain a `<script>` tag.
 - **Pure CSS** — `<input type="checkbox" id="navToggle" class="nav__toggle">` +
-  `<label for="navToggle" class="nav__burger">` on `blog/index.html` and the seven sibling
-  section pages (the four other section indexes plus the three `books/` detail pages), which load
+  `<label for="navToggle" class="nav__burger">` on `blog/index.html` and the eight sibling
+  section pages (the four other section indexes plus the four `books/` detail pages), which load
   no JS at all. Both halves must be present, and the `for=` must name the
   checkbox's `id`, or the tap does nothing.
 
@@ -342,7 +343,7 @@ already does this for INV-05, INV-12, INV-22 and INV-22b). Never re-add a key to
 ### INV-26 — section-dir detail pages are wired to their index
 
 0 today. Added 2026-08-23 with the books/publications split, when `books/` grew three per-book
-detail pages — the mirror of INV-01a/b for the sibling directories. For every discovered section
+detail pages (four since `7daf3a4`) — the mirror of INV-01a/b for the sibling directories. For every discovered section
 directory, (a) every non-index `*.html` in it must be linked from that directory's own
 `index.html` — an orphan detail page is unreachable, since the section index is the only way in —
 and (b) every same-directory `.html` href in that index must resolve to a real file, or the card
@@ -378,7 +379,7 @@ cosmetics gets switched off. The real split is 30 fail / 15 warn / 4 info across
 | INV-04d | `.post-nav__dir` ∈ {`← Previous`, `Next →`} | 2 | `blog/claude-code-architecture.html:602-609` uses `Related` / `See also` — a post-nav-shaped block that is not part of any chain. Intentional; see allowlist. |
 | INV-06a | every file in `images/` is referenced | 9 | Orphans from a prior template: `Opic02.jpg bg.jpg overlay.png pic01.jpg pic02.jpg pic03.jpg pictop.png xpic01.jpg xpic03.jpg`. Safe to delete in one commit; confirm with `grep -r` first. |
 | INV-10 | `.post-nav__title` matches the target's card title | 8 | Stale labels. Worst: `devops-security.html` calls its Next target "Linux & Shell Essentials" but the post is "Linux Command Line". Copy the card title from `blog/index.html`. |
-| INV-13 | `lang` attrs | 0 | Green: the 6 nav-bearing index pages and the 3 `books/` detail pages are `lang="en"`, all 37 posts `lang="th"`. |
+| INV-13 | `lang` attrs | 0 | Green: the 6 nav-bearing index pages and the 4 `books/` detail pages are `lang="en"`, all 37 posts `lang="th"`. |
 | INV-14 | every post has `<meta name="description">` | 6 | Missing in `idle-self-improvement`, `openclaw-101`, `openclaw-agent-teams`, `openclaw-memory`, `openclaw-security`, `openclaw-skills`. |
 | INV-15 | footer copyright year uniform **in posts** | 2 | 25 × `© 2025`, 8 × none, against the expected 4 × `© 2026` (beyond-plugins, obsidian-ai-jarvis, openclaw-101, openclaw-agent-teams). The script reports one violation per non-2026 cohort. |
 | INV-16 | footer container class uniform | 4 variants | `blog-footer` 23, `footer` 7, `post-footer` 3, bare `<footer>` 4. |
