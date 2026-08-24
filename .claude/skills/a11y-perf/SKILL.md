@@ -79,7 +79,7 @@ removes its PDFs in the same commit.
 
 ### 2. Every `<img>` gets `width`, `height`, `loading` and `decoding`. **[DONE — hold the line]**
 
-**130 of 130 `<img>` tags carry all four**, since `e8da9da` (the books/publications pages
+**131 of 131 `<img>` tags carry all four**, since `e8da9da` (the books/publications pages
 and `books/one-day-of-light.html` shipped compliant). 42 also carry
 `fetchpriority`. This and `alt` coverage are the only two 100%-complete practices on the
 site; a new post that omits them is a regression, not a gap.
@@ -92,13 +92,13 @@ for p in pathlib.Path('.').rglob('*.html'):
     if '.claude' in p.parts or '.git' in p.parts: continue
     for m in re.finditer(r'<img\b[^>]*>', p.read_text(encoding='utf-8'), re.S):
         n+=1; ok+= all(a+'=' in m.group(0) for a in ('loading','decoding','width','height'))
-print(ok, "/", n)          # → 130 / 130
+print(ok, "/", n)          # → 131 / 131
 EOF
 ```
 
 **Use that multiline parse, not `grep -oh "<img[^>]*>"`** — the line-based grep reports
-119 because eleven `<img>` are written across multiple lines (all on the books/publications
-pages). Quoting 119 where the answer is 130
+120 because eleven `<img>` are written across multiple lines (all on the books/publications
+pages). Quoting 120 where the answer is 131
 is exactly the kind of small wrongness that makes a reader stop trusting this file.
 
 Card images in `blog/index.html` sit in a 352×220 CSS px slot (1200px section −
@@ -269,7 +269,7 @@ These are right; flagging them wastes the user's time:
 - Both `preconnect` links present on **37/37**.
 - `<meta name="viewport" content="width=device-width, initial-scale=1.0">` identical on
   all **47** files — pinch-zoom is not blocked.
-- All **130/130** `<img>` tags have an `alt` attribute (the *quality* is the problem, not
+- All **131/131** `<img>` tags have an `alt` attribute (the *quality* is the problem, not
   the presence) **and** `loading`, `decoding`, `width`, `height`.
 - `:focus-visible`, `prefers-reduced-motion`, `color-scheme: light` and `text-wrap:
   balance` on all 47 pages (46 embedded + `style.css`) — rule 5.

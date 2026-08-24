@@ -349,6 +349,12 @@ Delete on contact; the diagram itself belongs in a PNG (§8).
                    text-align: center; margin-top: 0.75rem; }
 ```
 
+One modifier exists: `.figure--qr` (books/one-day-of-light.html `#event`) — a small flat-art QR
+figure. It doubles the selector (`.figure.figure--qr`) so the detail pages' 800px cover-jacket
+rule (`.figure { flex-basis: 240px }`) cannot inflate it, and swaps the cover shadow for a 1px
+`#e2e8f0` border. The QR asset itself is regenerated from the decoded poster URL (round-trip
+verified), PNG, 884 bytes.
+
 **Diagrams are PNGs.** PNG is correct here precisely because diagrams are flat colour and text —
 that is the one case where PNG beats JPG. Photographic and AI-generated *covers* are JPG.
 

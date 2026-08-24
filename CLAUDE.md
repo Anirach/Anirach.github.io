@@ -39,7 +39,7 @@ Deploy by pushing to `main` — GitHub Pages auto-deploys. There is no `.nojekyl
 ├── publications/index.html  # Academic: Springer book, 8 chapters, selected publications — self-contained
 ├── projects/index.html # Projects & Apps — self-contained page, own <style>/:root
 ├── news/index.html     # News & Updates — self-contained page, own <style>/:root
-├── images/             # 58 files — covers (<slug>-cover.png|jpg), diagram PNGs, posters
+├── images/             # 59 files — covers (<slug>-cover.png|jpg), diagram PNGs, posters, the event QR
 ├── docs/               # design spec, implementation plan, OpenClaw news runbook + gate
 ├── .claude/skills/     # page-design · blog-post · a11y-perf · site-check
 ├── _config.yml         # Jekyll excludes: docs/, CLAUDE.md (see Development)

@@ -274,6 +274,7 @@ Content    .callout  .callout--info|--warn|--good|--bad    [defined in the templ
            .compare  .compare__col  .compare__col--old|--new  [defined — 0 uses]
            .figure  .figure__img  .figure__caption          [live since ea3c8e8 — the 4
                                           books/ DETAIL pages use it for their cover figure]
+           .figure--qr                 (reservation QR, books/one-day-of-light.html #event)
 Code       <pre><code>                      (never .code-block)
 ```
 
@@ -353,8 +354,8 @@ kept here as *the standard to hold*, not as a plan. Re-verify before you act on 
 **1. Image loading — LANDED.** `blog/index.html` now references **4.03 MB across 36 unique
 images** over 74 `<img>` tags, and **all 74 carry `loading="lazy"`**, so the HTML-only first byte
 cost is 67 KB and a first desktop viewport (first ~10 cards) fetches ≈1.7 MB, not 18.4 MB.
-Sitewide, **130 of 130 `<img>` tags have all four of `loading`, `decoding`, `width`, `height`**
-(42 also carry `fetchpriority`; 88 are lazy, 42 eager).
+Sitewide, **131 of 131 `<img>` tags have all four of `loading`, `decoding`, `width`, `height`**
+(42 also carry `fetchpriority`; 89 are lazy, 42 eager).
 
 ```bash
 python3 - <<'PY'
@@ -364,11 +365,11 @@ for p in pathlib.Path('.').rglob('*.html'):
     if '.claude' in p.parts or '.git' in p.parts: continue
     for m in re.finditer(r'<img\b[^>]*>', p.read_text(encoding='utf-8'), re.S):
         n+=1; ok+= all(a+'=' in m.group(0) for a in ('loading','decoding','width','height'))
-print(ok, "/", n)     # → 130 / 130
+print(ok, "/", n)     # → 131 / 131
 PY
 ```
 
-A line-based `grep -oh "<img[^>]*>"` reports **119** here — it drops the eleven `<img>` written
+A line-based `grep -oh "<img[^>]*>"` reports **120** here — it drops the eleven `<img>` written
 across multiple lines (all on the books/publications pages: 5 in `books/index.html`,
 1 on each of the 3 older detail pages, 2 in `books/one-day-of-light.html`,
 1 in `publications/index.html`). Use the multiline parse above;
@@ -556,9 +557,10 @@ Then in a real browser on `index.html`: tab once and confirm a visible focus rin
    ls -l images/*-cover.jpg | awk '{s+=$5;n++} END {print n" jpg, avg "int(s/n/1024)" KB"}'
    ```
 
-   Photographic / AI-generated covers are JPG at ≤1600px wide. PNG survives for the **5 diagram
-   images only** (`*-arch.png`, `*-flow.png`, `*-levels.png`, 123–235 KB) — those are correctly
-   PNG and must not be converted; a q70 JPEG smears their lines.
+   Photographic / AI-generated covers are JPG at ≤1600px wide. PNG survives for **flat art
+   only**: the 5 diagram images (`*-arch.png`, `*-flow.png`, `*-levels.png`, 123–235 KB) and the
+   884-byte registration QR (`one-day-of-light-qr.png`) — those are correctly PNG and must not be
+   converted; a q70 JPEG smears their lines (and would break the QR's modules).
 
 6. **Never add a post without recomputing every counter in `blog/index.html`.** They were all
    stale; `b9fb125` fixed them and Task 11 added two more sites. **All five are correct today** and
@@ -617,8 +619,8 @@ Then in a real browser on `index.html`: tab once and confirm a visible focus rin
     linux-command-line, monitoring-observability, networking-fundamentals). Posts sitting side by
     side in the same series read as different websites.
 
-14. **Never regress alt text or image attributes.** **130 of 130** `<img>` have `alt`, and since
-    `e8da9da` all 130 also have `loading`, `decoding`, `width` and `height`. Two complete
+14. **Never regress alt text or image attributes.** **131 of 131** `<img>` have `alt`, and since
+    `e8da9da` all carry `loading`, `decoding`, `width` and `height` too. Two complete
     sitewide practices — the only two. Protect both. (Alt *quality* is still uneven: 4 alts end in
     the word "Cover" and 37 avatars repeat `alt="Anirach"`; see a11y-perf R6.)
 
@@ -632,7 +634,7 @@ re-plans them; the only live work is Phase 4 and the short "still open" list bel
 | Phase | What it was | Status |
 |---|---|---|
 | 1 — tokens | canonical `:root` in every file, aliases deleted, `--radius: 12px` | **DONE** `6670480`, `36d9814`. 47/47 blocks today, 0 deviations. CLAUDE.md's `14px` line is fixed too (`5a522ed`). |
-| 2 — images + counters + routes | JPG covers, `loading`/`decoding`/`width`/`height`, counters, dead routes, hero-gradient fork | **DONE** `ec2827b`, `21c8a55`, `b9fb125`. 130/130 images attributed today; 0 PNG covers; all 5 counters correct; 0 dead absolute links. |
+| 2 — images + counters + routes | JPG covers, `loading`/`decoding`/`width`/`height`, counters, dead routes, hero-gradient fork | **DONE** `ec2827b`, `21c8a55`, `b9fb125`. 131/131 images attributed today; 0 PNG covers; all 5 counters correct; 0 dead absolute links. |
 | 3 — modern polish | `:focus-visible`, `prefers-reduced-motion` (+ `script.js` guard), `color-scheme`, `text-wrap`, `aspect-ratio` | **DONE** `e8da9da`. 41 embedded blocks + `style.css`. |
 | 4 — structural | island → HOUSE conversion, vocabulary collapse, shared stylesheet, dark mode | **OPEN — the only live phase.** |
 
@@ -671,7 +673,7 @@ Leave these alone unless the user explicitly asks:
 - the 4-line a11y block (`:focus-visible`, reduced-motion, `color-scheme`, `text-wrap`) in 46
   embedded `<style>` blocks + `style.css` — including its `outline: none`, which is scoped to
   `:focus:not(:focus-visible)` and is correct
-- image attributes: 130/130 `<img>` carry `alt`, `loading`, `decoding`, `width` and `height`
+- image attributes: 131/131 `<img>` carry `alt`, `loading`, `decoding`, `width` and `height`
 - cover budget: 39 JPG covers, 0 PNG, avg 111 KB, max 194 KB, none over 200 KB
 - `<meta name="viewport">` on 47/47 files
 - `blog/index.html` has 0 `<script>` tags — a feature, not an omission (anti-pattern 12)
