@@ -41,10 +41,10 @@ SERIES7_HREFS = ["/blog/" + f[:-5] for f in SERIES7]
 # a baseline entry that no longer matches a live violation is dead weight that
 # hides the next real one. If you fix a baselined violation, delete its line in
 # the same commit.
-BASELINE = {
-    "cover github-actions-cover.jpg shared by github-actions.html, vibe-coding-devops-process.html",
-    "cover monitoring-cover.jpg shared by monitoring-observability.html, openclaw-memory-architecture.html",
-}
+# Empty since 2026-08-26: the two cover-sharing keys died when scripts/make_cover.py
+# gave every post its own drawn cover. Add a key only for debt you have inspected
+# and can describe; the self-audit below flags any key that stops matching.
+BASELINE = set()
 
 # --- Regexes. Every one of these bit somebody during a previous audit. -------
 CARD = re.compile(r'<a\s+href="([^"]+)"\s+class="card">')
@@ -71,6 +71,11 @@ def read(p):
 
 
 def norm(s):
+    # Inner tags stripped FIRST, matching check_site.norm_title: a card title's
+    # <span lang="th"> wrapper is markup, not text. Without this the label check
+    # compared bare nav text against tagged card text and warned on ~every link
+    # (50 warns), which drowned the 8 real ones.
+    s = re.sub(r"<[^>]+>", "", s)
     return EMOJI.sub("", html.unescape(re.sub(r"\s+", " ", s))).strip().rstrip("—").strip()
 
 
@@ -141,7 +146,10 @@ for i, f in enumerate(SERIES7):
     if not m:
         fails.append(f"{f} lost its .series-nav block")
         continue
-    items = re.findall(r'<(a href="([^"]+)"|span class="current")>([^<]*)<', m.group(1))
+    # Tolerates extra attributes on either tag — byte-identical to check_site.py's
+    # RE_SNAV_ITEM. This file kept its own copy of the old regex when that one was
+    # widened for aria-current="page" (2026-08-26) and reported 7 false failures.
+    items = re.findall(r'<(a href="([^"]+)"[^>]*|span class="current"[^>]*)>([^<]*)<', m.group(1))
     if [l.strip() for _, _, l in items] != SERIES7_LABELS:
         fails.append(f"{f} series-nav labels drifted: {[l.strip() for _, _, l in items]}")
         continue
@@ -260,7 +268,7 @@ for rel in pages:
 
 for p in posts:
     n = len(re.findall(r"<h1[ >]", read(os.path.join(BLOG, p))))
-    if n != 1 and p != "deployment-hosting.html":
+    if n != 1:
         fails.append(f"{p} has {n} <h1> (expected exactly 1)")
 
 # --- report ------------------------------------------------------------------
