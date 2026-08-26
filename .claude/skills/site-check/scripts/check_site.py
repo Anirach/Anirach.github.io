@@ -359,17 +359,24 @@ BASELINE = {
     # 2026-08-26 metadata sweep — all 47 pages now carry one, and INV-27
     # promotes it from warn to FAIL. No baseline entry remains.
     "INV-15": {"2025", "NONE"},
+    # Phase 3 (island -> house, 2026-08-26) normalised 11 posts onto
+    # <footer class="blog-footer">, retiring the '<footer class="footer">' and
+    # bare '<footer>' variants. INV-25 flagged both keys as stale the same day.
     "INV-16": {
-        '<footer class="blog-footer">', '<footer class="footer">',
-        '<footer class="post-footer">', '<footer>',
+        '<footer class="blog-footer">', '<footer class="post-footer">',
     },
 
     # Two posts sit in #series-openclaw but carry DevOps post-nav chrome.
     # They are also the only 2 nodes unreachable from the chain walk.
     "INV-17": {"claude-code-architecture.html", "openclaw-memory-architecture.html"},
 
-    # The ordinal number is correct in all 7 posts; only the markup varies.
-    "INV-20b": {".series-badge", ".series-info", "<p>", "<strong>"},
+    # RETIRED 2026-08-26 by Phase 3. The ordinal badge used four different
+    # markup forms across the 7 series posts (.series-badge, .series-info, a
+    # bare <p>, a <strong>); the island->house conversion converged all seven on
+    # a single .post-hero__tag carrying "OpenClaw for Organizations 2026 •
+    # Post #N" on one source line (INV-20a requires that co-location). INV-20b
+    # now returns [] on its own, so every key here was stale and INV-25 said so.
+    # A fifth form appearing tomorrow is a NEW violation, not an absorbed one.
     "INV-20c": {"openclaw-memory.html"},
 
     # INV-22 (10 island posts with no :root block of their own) and INV-22b

@@ -5,6 +5,9 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Security & Access Control — ปกป้องข้อมูลองค์กร | Anirach Mingkhwan</title>
     <meta name="description" content="ปกป้ององค์กรจาก prompt injection, data leakage และ credential theft ด้วย Defense in Depth, sandbox / gateway / elevated และหลัก least privilege">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=Sarabun:wght@400;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
     <style>
         :root {
       color-scheme: light;
@@ -28,180 +31,102 @@
           --transition: 0.3s cubic-bezier(0.4, 0, 0.2, 1);
         }
 
-        * {
+        *, *::before, *::after {
             margin: 0;
             padding: 0;
             box-sizing: border-box;
         }
 
+        html { scroll-behavior: smooth; }
+
         body {
-            font-family: 'Inter', 'Noto Sans Thai', system-ui, -apple-system, sans-serif;
-            line-height: 1.6;
-            color: #1f2937;
-            background: #faf7f0;
+            font-family: var(--font); font-size: 17px; line-height: 1.8;
+            color: var(--slate); background: var(--bg); -webkit-font-smoothing: antialiased;
         }
 
-        .hero {
-            background: linear-gradient(135deg, #8b5cf6 0%, #a855f7 50%, #c084fc 100%);
-            color: white;
-            padding: 4rem 0;
-            text-align: center;
-        }
+    /* ── NAV ── */
+    .blog-nav {
+      position: fixed; top: 0; left: 0; right: 0; z-index: 100;
+      background: rgba(250,247,240,0.85); backdrop-filter: blur(20px);
+      border-bottom: 1px solid rgba(0,0,0,0.05);
+    }
+    .blog-nav__inner {
+      max-width: 860px; margin: 0 auto; padding: 0 2rem; height: 56px;
+      display: flex; align-items: center; justify-content: space-between;
+    }
+    .blog-nav__back {
+      font-size: 0.85rem; font-weight: 500; color: var(--blue);
+      text-decoration: none; display: flex; align-items: center; gap: 0.4rem;
+    }
+    .blog-nav__back:hover { color: var(--blue-dark); }
+    .blog-nav__title {
+      font-size: 0.85rem; font-weight: 600; color: var(--navy);
+      overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 50%;
+    }
 
-        .container {
-            max-width: 1000px;
-            margin: 0 auto;
-            padding: 0 2rem;
-        }
+    /* ── HERO ── (house .post-hero, Violet family per page-design §5 — the
+       OpenClaw series colour. The stops this post shipped with ran
+       #8b5cf6 → #a855f7 → #c084fc, which leaves white ink at 2.6:1 and navy
+       ink at 3.2:1 — neither clears 4.5:1. This is the same violet taken to
+       its dark end, byte-identical to blog/obsidian-ai-jarvis.html, so the
+       lightest stop (#7c3aed) still reads 5.7:1 against white.) */
+    .post-hero {
+      padding: 8rem 2rem 3rem;
+      background: linear-gradient(135deg, #11304b 0%, #4c1d95 40%, #7c3aed 100%);
+      color: #fff; text-align: center;
+    }
+    .post-hero__tags { display: flex; gap: 0.5rem; justify-content: center; margin-bottom: 1.25rem; flex-wrap: wrap; }
+    .post-hero__tag {
+      font-size: 0.7rem; font-weight: 600; text-transform: uppercase;
+      letter-spacing: 0.1em; color: #fff;
+      background: rgba(255,255,255,0.18); padding: 0.3rem 0.75rem; border-radius: 20px;
+    }
+    .post-hero__title {
+      font-size: clamp(1.8rem, 5vw, 3rem); font-weight: 800;
+      line-height: 1.2; margin: 0 auto 1rem; max-width: 720px;
+    }
+    .post-hero__sub {
+      font-size: 1.05rem; max-width: 640px; margin: 0 auto 1.5rem;
+      line-height: 1.7; color: rgba(255,255,255,0.92);
+    }
+    .post-hero__meta {
+      font-size: 0.85rem; color: rgba(255,255,255,0.92);
+      display: flex; align-items: center; justify-content: center; gap: 1.5rem; flex-wrap: wrap;
+    }
+    .post-hero__cover {
+      aspect-ratio: 1024/680; max-width: 420px; margin: 2.5rem auto 0;
+      border-radius: 16px; overflow: hidden;
+      box-shadow: 0 20px 60px rgba(17,48,75,0.35);
+    }
+    .post-hero__cover img { width: 100%; display: block; }
 
-        .hero h1 {
-            font-size: 2.5rem;
-            font-weight: 800;
-            margin-bottom: 1rem;
-            text-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-        }
-
-        .hero .subtitle {
-            font-size: 1.2rem;
-            opacity: 0.9;
-            margin-bottom: 2rem;
-        }
-
-        .series-info {
-            background: rgba(255, 255, 255, 0.1);
-            display: inline-block;
-            padding: 0.5rem 1rem;
-            border-radius: 2rem;
-            font-size: 0.9rem;
-            backdrop-filter: blur(10px);
-        }
-
-        nav {
-            background: white;
-            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
-            padding: 1rem 0;
-        }
-
-        nav .container {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-
-        .logo {
-            font-size: 1.5rem;
-            font-weight: 700;
-            color: #8b5cf6;
-            text-decoration: none;
-        }
-
-        .nav-links {
-            display: flex;
-            gap: 2rem;
-            list-style: none;
-        }
-
-        .nav-links a {
-            color: #526174;
-            text-decoration: none;
-            font-weight: 500;
-            transition: color 0.3s;
-        }
-
-        .nav-links a:hover {
-            color: #8b5cf6;
-        }
-
-        .main-content {
-            background: white;
-            margin: 2rem auto;
-            border-radius: 12px;
-            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
-            overflow: hidden;
-        }
-
-        .cover-image {
-            width: 100%;
-            height: 300px;
-            background: linear-gradient(135deg, #8b5cf6 0%, #a855f7 50%);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            color: white;
-            font-size: 1.2rem;
-            font-weight: 600;
-        }
-
-        .article-content {
-            padding: 3rem;
-        }
-
-        .article-meta {
-            border-bottom: 2px solid #f1f5f9;
-            padding-bottom: 2rem;
-            margin-bottom: 3rem;
-        }
-
-        .author {
-            display: flex;
-            align-items: center;
-            gap: 1rem;
-            margin-bottom: 1rem;
-        }
-
-        .author-avatar {
-            width: 48px;
-            height: 48px;
-            background: #8b5cf6;
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            color: white;
-            font-weight: 600;
-        }
-
-        h2 {
-            color: #1f2937;
-            font-size: 1.8rem;
-            font-weight: 700;
-            margin: 2.5rem 0 1.5rem 0;
-            border-left: 4px solid #8b5cf6;
-            padding-left: 1rem;
-        }
-
-        h3 {
-            color: #374151;
-            font-size: 1.4rem;
-            font-weight: 600;
-            margin: 2rem 0 1rem 0;
-        }
-
-        h4 {
-            color: #4b5563;
-            font-size: 1.2rem;
-            font-weight: 600;
-            margin: 1.5rem 0 0.8rem 0;
-        }
-
-        p {
-            margin-bottom: 1.2rem;
-            text-align: justify;
-        }
-
-        .code-block {
-            background: #1e293b;
-            color: #e2e8f0;
-            padding: 1.5rem;
-            border-radius: 8px;
-            margin: 1.5rem 0;
-            font-family: 'JetBrains Mono', 'Fira Code', monospace;
-            font-size: 0.9rem;
-            overflow-x: auto;
-            white-space: pre;
-            white-space: pre-wrap;
-            border-left: 4px solid #8b5cf6;
-        }
+    /* ── BODY ── */
+    .post-body { max-width: var(--measure); margin: 0 auto; padding: 3rem 2rem 6rem; }
+    .post-body h2 {
+      font-size: 1.6rem; font-weight: 800; color: var(--navy);
+      margin: 3rem 0 1rem; padding-bottom: 0.5rem;
+      border-bottom: 2px solid rgba(34,98,153,0.15);
+    }
+    .post-body h3 { font-size: 1.25rem; font-weight: 700; color: var(--navy); margin: 2.25rem 0 0.75rem; }
+    .post-body h4 { font-size: 1.05rem; font-weight: 700; color: var(--navy); margin: 1.75rem 0 0.6rem; }
+    .post-body p { margin-bottom: 1.25rem; }
+    .post-body strong { font-weight: 700; color: var(--navy); }
+    .post-body a { color: var(--blue); text-decoration: underline; text-decoration-thickness: 1px; text-underline-offset: 2px; }
+    .post-body ul, .post-body ol { margin: 0.5rem 0 1.25rem 1.5rem; }
+    .post-body li { margin-bottom: 0.4rem; }
+    .post-body pre {
+      background: var(--code-bg); border-radius: 12px; padding: 1.5rem;
+      margin: 1.25rem 0 1.5rem; overflow-x: auto; border: 1px solid rgba(255,255,255,0.05);
+    }
+    .post-body pre code {
+      font-family: var(--mono); font-size: 0.85rem; color: #e2e8f0;
+      line-height: 1.7; background: none; padding: 0; white-space: pre-wrap;
+    }
+    .post-body code {
+      font-family: var(--mono); font-size: 0.88em;
+      background: rgba(34,98,153,0.08); color: var(--blue-dark);
+      padding: 0.15em 0.45em; border-radius: 5px;
+    }
 
         .diagram-box {
             background: linear-gradient(135deg, #faf7f0 0%, #f1f5f9 100%);
@@ -275,15 +200,6 @@
             background: #faf7f0;
         }
 
-        ul, ol {
-            margin: 1rem 0;
-            padding-left: 2rem;
-        }
-
-        li {
-            margin: 0.5rem 0;
-        }
-
         .key-takeaways {
             background: linear-gradient(135deg, #ede9fe 0%, #e0e7ff 100%);
             border-radius: 12px;
@@ -345,32 +261,27 @@
             transform: translateY(-2px);
         }
 
-        footer {
-            background: #1f2937;
-            color: white;
-            padding: 3rem 0;
+        .blog-footer {
+            background: var(--navy);
+            color: var(--gray);
+            padding: 2.5rem 0;
             text-align: center;
         }
-
-        .footer-content {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-            gap: 2rem;
-            margin-bottom: 2rem;
-        }
+        .blog-footer a { color: var(--gold); text-decoration: none; font-weight: 600; font-size: 0.9rem; }
+        .blog-footer__cols {
+      display: grid; grid-template-columns: repeat(auto-fit, minmax(min(220px, 100%), 1fr));
+      gap: 1.5rem; max-width: 860px; margin: 0 auto 1.75rem; padding: 0 2rem 1.5rem;
+      text-align: left; border-bottom: 1px solid rgba(255,255,255,0.12);
+    }
+    .blog-footer__cols h4 { font-size: 0.85rem; color: #fff; margin-bottom: 0.35rem; }
+    .blog-footer__cols p { font-size: 0.8rem; color: var(--gray); line-height: 1.6; }
+    .blog-footer span { color: var(--gray); font-size: 0.8rem; display: block; margin-top: 0.4rem; }
 
         @media (max-width: 768px) {
-            .hero h1 {
-                font-size: 2rem;
-            }
-            
-            .article-content {
-                padding: 2rem;
-            }
-            
-            .nav-links {
-                display: none;
-            }
+            .post-hero { padding: 7rem 1.5rem 2.5rem; }
+            .post-body { padding: 2.5rem 1.5rem 4rem; }
+            .post-body pre { padding: 1rem; border-radius: 8px; }
+            .post-hero__meta { flex-direction: column; gap: 0.4rem; }
         }
     
     :focus-visible { outline: 2px solid var(--focus); outline-offset: 3px; border-radius: 2px; }
@@ -386,6 +297,19 @@
       }
     }
     h1, h2, h3, .post-hero__title, .card__title { text-wrap: balance; }
+
+    /* ── NARROW-VIEWPORT OVERFLOW GUARD ──
+       page-design: wide content must scroll inside its own container; the page
+       body must never scroll sideways. Two real causes measured at 375px on
+       2026-08-26: inline-styled CSS grids in post bodies whose fixed columns
+       cannot collapse (the minmax(320px,1fr) trap this repo hit once before),
+       and wide tables. !important is deliberate — the grids are inline styles
+       inside published content, and rewriting prose to fix layout is worse. */
+    @media (max-width: 768px) {
+      .post-body [style*="grid-template-columns"] { grid-template-columns: 1fr !important; }
+      .post-body table { display: block; width: 100%; overflow-x: auto; }
+      .post-body img, .post-body svg { max-width: 100%; height: auto; }
+    }
 </style>
     <!-- social -->
     <link rel="canonical" href="https://anirach.com/blog/openclaw-security.html">
@@ -409,41 +333,31 @@
     <!-- /social -->
 </head>
 <body>
-    <nav>
-        <div class="container">
-            <a href="/" class="logo">🐾 Anirach.com</a>
-            <ul class="nav-links">
-                <li><a href="/blog/">Blog</a></li>
-                <li><a href="/#research">Research</a></li>
-                <li><a href="/#research">Teaching</a></li>
-                <li><a href="/#about">About</a></li>
-            </ul>
-        </div>
+    <nav class="blog-nav">
+      <div class="blog-nav__inner">
+        <a href="./" class="blog-nav__back">‹ Blog</a>
+        <div class="blog-nav__title">Security &amp; Access Control</div>
+      </div>
     </nav>
 
-    <header class="hero">
-        <div class="container">
-            <h1>Security & Access Control</h1>
-            <p class="subtitle">ปกป้องข้อมูลองค์กรจาก AI Agents ที่อันตราย</p>
-            <div class="series-info">OpenClaw for Organizations 2026 • Post #4</div>
-        </div>
+    <header class="post-hero">
+      <!-- check_site.py INV-20a reads the ordinal badge off ONE source line:
+           keep the series name and the ordinal together on the line below. -->
+      <div class="post-hero__tags">
+        <span class="post-hero__tag">OpenClaw for Organizations 2026 • Post #4</span>
+      </div>
+      <h1 class="post-hero__title">Security & Access Control</h1>
+      <p class="post-hero__sub">ปกป้องข้อมูลองค์กรจาก AI Agents ที่อันตราย</p>
+      <div class="post-hero__meta">
+        <span>โดย <strong>Anirach Mingkhwan</strong></span>
+        <span>มีนาคม 2026 • 15 นาทีในการอ่าน</span>
+      </div>
+      <div class="post-hero__cover">
+        <img src="../images/openclaw-security-cover.jpg" alt="Security Architecture & Access Control" width="1024" height="680" loading="eager" fetchpriority="high" decoding="async">
+      </div>
     </header>
 
-    <main class="main-content container">
-        <div class="cover-image">
-            <img src="../images/openclaw-security-cover.jpg" alt="Security Architecture & Access Control" style="width:100%;height:auto;display:block;border-radius:12px;" width="1024" height="680" loading="eager" fetchpriority="high" decoding="async">
-        </div>
-
-        <article class="article-content">
-            <div class="article-meta">
-                <div class="author">
-                    <div class="author-avatar">AM</div>
-                    <div>
-                        <strong>Anirach Mingkhwan</strong><br>
-                        <small>มีนาคม 2026 • 15 นาทีในการอ่าน</small>
-                    </div>
-                </div>
-            </div>
+    <article class="post-body">
 
             <h2>🚨 เมื่อ AI Agent เข้าถึงได้ทุกอย่าง แต่ไม่มี Security</h2>
             <p>จินตนาการถึงสถานการณ์นี้: AI Agent ของคุณสามารถเข้าถึงฐานข้อมูลลูกค้า อีเมลของผู้บริหาร และระบบการเงิน แต่ไม่มีการป้องกันใดๆ เลย ในโลกที่ AI มีอำนาจมากขึ้น การขาด Security กลายเป็นภัยคุกคามที่ร้ายแรงที่สุด</p>
@@ -543,7 +457,7 @@
             </table>
 
             <h3>Container Configuration Example</h3>
-<div class="code-block">// openclaw.json - Sandbox Settings
+<pre><code>// openclaw.json - Sandbox Settings
 {
   "tools": {
     "exec": {
@@ -561,7 +475,7 @@
       }
     }
   }
-}</div>
+}</code></pre>
 
             <h2>🚪 Gateway Exec & Elevated Permissions</h2>
             <p>เมื่อ Agent ต้องการทำงานที่ไม่สามารถทำใน Sandbox ได้ OpenClaw มีระบบ Permission Escalation ที่ปลอดภัย</p>
@@ -571,7 +485,7 @@
             <p><strong>Elevated Permissions:</strong> เป็นการเข้าถึงระบบในระดับ Root ใช้สำหรับงาน System Administration เท่านั้น</p>
 
             <h3>Configuration & Approval Workflows</h3>
-<div class="code-block">// openclaw.json - Permission Levels
+<pre><code>// openclaw.json - Permission Levels
 {
   "tools": {
     "exec": {
@@ -601,7 +515,7 @@
       }
     }
   }
-}</div>
+}</code></pre>
 
             <h3>Ask Modes</h3>
             <table class="styled-table">
@@ -655,7 +569,7 @@
 
             <h3>Defense Mechanisms</h3>
             <h4>1. Trusted vs Untrusted Metadata</h4>
-<div class="code-block">// Message Classification
+<pre><code>// Message Classification
 {
   "message_id": "msg_123",
   "content": "วิเคราะห์รายงานนี้",
@@ -666,12 +580,12 @@
     "channel_type": "direct",
     "source": "authenticated_user"
   }
-}</div>
+}</code></pre>
 
             <h4>2. Persona-Guard Skill Integration</h4>
             <p>OpenClaw มี persona-guard skill ที่สามารถตรวจจับ sender ที่ไม่รู้จักและเปลี่ยนไปใช้ GUEST MODE</p>
 
-<div class="code-block">// Auto-detection of unknown users
+<pre><code>// Auto-detection of unknown users
 if (sender.id not in trusted_users) {
     switch_to_guest_mode()
     restrict_capabilities([
@@ -680,7 +594,7 @@ if (sender.id not in trusted_users) {
         "external_api_calls"
     ])
     log_security_event("unknown_user_detected")
-}</div>
+}</code></pre>
 
             <h4>3. GUEST MODE Restrictions</h4>
             <table class="styled-table">
@@ -734,7 +648,7 @@ if (sender.id not in trusted_users) {
             <h3>ha_query.py Pattern</h3>
             <p>OpenClaw ใช้ pattern ที่เรียกว่า "De-identification Pipeline" สำหรับการ query database</p>
 
-<div class="code-block"># tools/ha_query.py - De-ID Pipeline
+<pre><code># tools/ha_query.py - De-ID Pipeline
 import pandas as pd
 import hashlib
 import json
@@ -767,7 +681,7 @@ def hash_with_mapping(value, mapping, prefix):
 def query_patient_data(sql):
     raw_df = execute_query(sql)
     clean_df = de_identify_result(raw_df)
-    return clean_df.to_string()</div>
+    return clean_df.to_string()</code></pre>
 
             <h3>Practical Example</h3>
             <p>เมื่อ AI ต้องการวิเคราะห์ข้อมูลคนไข้:</p>
@@ -789,14 +703,14 @@ def query_patient_data(sql):
 
             <p>AI สามารถวิเคราะห์ pattern และ trend ได้ แต่ไม่รู้ว่าใครคือใคร หากต้องการ reverse lookup สามารถใช้ mapping file ได้</p>
 
-<div class="code-block"># Mapping file example (mapping_session_123.json)
+<pre><code># Mapping file example (mapping_session_123.json)
 {
   "patient_a7b3c4d5": "สมศรี ใจดี",
   "hn_f9e2a1b8": "12345",
   "phone_c5d9e7f2": "081-234-5678",
   "created_at": "2026-03-10T08:00:00Z",
   "session_id": "session_123"
-}</div>
+}</code></pre>
 
             <h2>🔐 Secret & Token Management</h2>
             <p>การจัดการ API Keys และ credentials เป็นอีกจุดสำคัญในการรักษาความปลอดภัย เพราะหาก token หลุดออกไป อาจนำไปสู่การเข้าถึงระบบที่ไม่ได้รับอนุญาต</p>
@@ -808,7 +722,7 @@ def query_patient_data(sql):
             </div>
 
             <h3>Secure Configuration Patterns</h3>
-<div class="code-block"># openclaw.json - Safe API Key Storage
+<pre><code># openclaw.json - Safe API Key Storage
 {
   "skills": {
     "entries": {
@@ -822,7 +736,7 @@ def query_patient_data(sql):
       }
     }
   }
-}</div>
+}</code></pre>
 
             <h3>What NOT to Put in Chat Logs</h3>
             <table class="styled-table">
@@ -849,7 +763,7 @@ def query_patient_data(sql):
             </table>
 
             <h3>Environment Variable Security</h3>
-<div class="code-block"># .env file (never commit to git)
+<pre><code># .env file (never commit to git)
 OPENAI_API_KEY=sk-xxx...xxx
 GITHUB_TOKEN=ghp_xxx...xxx
 DATABASE_URL=postgresql://user:[REDACTED]@localhost/db
@@ -863,7 +777,7 @@ api_key = os.getenv('OPENAI_API_KEY')
 
 # Never log the actual key
 print(f"API Key loaded: {'✅' if api_key else '❌'}")
-# NOT: print(f"API Key: {api_key}")  # ❌ NEVER!</div>
+# NOT: print(f"API Key: {api_key}")  # ❌ NEVER!</code></pre>
 
             <h2>👥 Access Control Patterns</h2>
             <p>การควบคุมการเข้าถึงเป็นการกำหนดว่าใครสามารถทำอะไรได้บ้าง โดย OpenClaw มีหลายระดับการควบคุม</p>
@@ -871,7 +785,7 @@ print(f"API Key loaded: {'✅' if api_key else '❌'}")
             <h3>MEMORY.md Passphrase Protection</h3>
             <p>ไฟล์ MEMORY.md มักเก็บข้อมูลสำคัญ จึงต้องมีการป้องกันพิเศษ</p>
 
-<div class="code-block"># MEMORY.md protection pattern
+<pre><code># MEMORY.md protection pattern
 if user.wants_to_read('MEMORY.md'):
     if not user.is_main_session():
         deny_access("MEMORY.md only accessible in main sessions")
@@ -882,12 +796,12 @@ if user.wants_to_read('MEMORY.md'):
             log_security_event("unauthorized_memory_access_attempt")
             deny_access("Invalid passphrase")
     
-    grant_access("MEMORY.md")</div>
+    grant_access("MEMORY.md")</code></pre>
 
             <h3>Persona-Guard: Unknown User → GUEST MODE</h3>
             <p>ระบบ persona-guard จะตรวจจับผู้ใช้ที่ไม่รู้จักและเปลี่ยนไป GUEST MODE โดยอัตโนมัติ</p>
 
-<div class="code-block"># persona-guard configuration
+<pre><code># persona-guard configuration
 {
   "trusted_users": [
     "telegram:7579913696",  // Anirach's ID
@@ -904,7 +818,7 @@ if user.wants_to_read('MEMORY.md'):
     ],
     "alert_admin": true
   }
-}</div>
+}</code></pre>
 
             <h3>Per-Channel Allowlists</h3>
             <p>แต่ละ channel อาจมีความเสี่ยงต่างกัน จึงควรมีการตั้งค่าที่เหมาะสม</p>
@@ -941,7 +855,7 @@ if user.wants_to_read('MEMORY.md'):
             </table>
 
             <h3>Group Chat Policies</h3>
-<div class="code-block"># Group chat security policies
+<pre><code># Group chat security policies
 {
   "group_policies": {
     "max_members": 20,  // เกิน 20 คน = เสี่ยงสูง
@@ -962,7 +876,7 @@ if user.wants_to_read('MEMORY.md'):
       "basic_qa"
     ]
   }
-}</div>
+}</code></pre>
 
             <h2>🛡️ Self-Protection Rules</h2>
             <p>AI Agent ต้องสามารถปกป้องตัวเองได้ เพื่อไม่ให้ถูกหลอกให้ทำลายระบบหรือลบข้อมูลสำคัญ</p>
@@ -975,7 +889,7 @@ if user.wants_to_read('MEMORY.md'):
                 <p>แม้ผู้ใช้จะพูดว่า "ไม่ต้องถาม ทำเลย" หรือ "เร่งด่วน" AI ก็ต้องถามยืนยันสำหรับคำสั่งอันตรายเสมอ</p>
             </div>
 
-<div class="code-block"># Self-protection implementation
+<pre><code># Self-protection implementation
 DANGEROUS_ACTIONS = [
     'rm -rf',
     'delete MEMORY.md',
@@ -1003,12 +917,12 @@ def execute_command(command, force=False):
             "timestamp": datetime.now()
         })
     
-    return execute_safely(command)</div>
+    return execute_safely(command)</code></pre>
 
             <h3>Trash vs rm</h3>
             <p>เพื่อความปลอดภัย ควรใช้ <code>trash</code> แทน <code>rm</code> เมื่อลบไฟล์</p>
 
-<div class="code-block"># Safer file deletion
+<pre><code># Safer file deletion
 # ❌ Dangerous
 rm important_file.txt
 
@@ -1016,7 +930,7 @@ rm important_file.txt
 trash important_file.txt
 
 # Can be recovered from trash if needed
-trash-restore important_file.txt</div>
+trash-restore important_file.txt</code></pre>
 
             <h3>Core File Protection</h3>
             <p>มีไฟล์บางไฟล์ที่ห้ามแก้ไขโดยไม่มีการยืนยันพิเศษ</p>
@@ -1054,7 +968,7 @@ trash-restore important_file.txt</div>
             </table>
 
             <h3>Safety Boundaries</h3>
-<div class="code-block"># Safety boundary implementation
+<pre><code># Safety boundary implementation
 SAFETY_RULES = {
     "never_disable_security": True,
     "always_confirm_destructive": True,
@@ -1075,7 +989,7 @@ def check_safety_violation(action):
     if action.bypasses_audit_logging():
         violations.append("Attempting to bypass audit trail")
     
-    return violations</div>
+    return violations</code></pre>
 
             <h2>✅ Security Checklist for Production</h2>
             <p>นี่คือ checklist ที่ครบถ้วนสำหรับการ deploy OpenClaw ใน production environment อย่างปลอดภัย</p>
@@ -1166,29 +1080,25 @@ def check_safety_violation(action):
                 <a href="/blog/openclaw-production">#7 Production & Scale</a>
             </div>
         </div>
-        </article>
-    </main>
+    </article>
 
-    <footer>
-        <div class="container">
-            <div class="footer-content">
-                <div>
-                    <h4>About Anirach</h4>
-                    <p>University lecturer & AI engineer focusing on practical AI applications for organizations.</p>
-                </div>
-                <div>
-                    <h4>OpenClaw Series</h4>
-                    <p>Comprehensive guide for implementing AI agents in enterprise environments.</p>
-                </div>
-                <div>
-                    <h4>Connect</h4>
-                    <p>Follow for more insights on AI, automation, and organizational transformation.</p>
-                </div>
-            </div>
-            <div style="text-align: center; padding-top: 2rem; border-top: 1px solid #374151;">
-                <p>&copy; 2026 Anirach Mingkhwan. All rights reserved.</p>
-            </div>
+    <footer class="blog-footer">
+      <div class="blog-footer__cols">
+        <div>
+          <h4>About Anirach</h4>
+          <p>University lecturer &amp; AI engineer focusing on practical AI applications for organizations.</p>
         </div>
+        <div>
+          <h4>OpenClaw Series</h4>
+          <p>Comprehensive guide for implementing AI agents in enterprise environments.</p>
+        </div>
+        <div>
+          <h4>Connect</h4>
+          <p>Follow for more insights on AI, automation, and organizational transformation.</p>
+        </div>
+      </div>
+      <a href="./">← กลับไปหน้า Blog</a>
+      <span>&copy; 2026 Anirach Mingkhwan. All rights reserved.</span>
     </footer>
 </body>
 </html>

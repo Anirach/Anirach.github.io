@@ -5,6 +5,9 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Idle Self-Improvement — ให้ AI Agent ดูแลระบบเองเมื่อว่าง | Anirach Mingkhwan</title>
     <meta name="description" content="Idle Improver — Python script ที่รันทุก 30 นาทีผ่าน cron ให้ AI Agent ตรวจสุขภาพระบบ 7 ด้าน และวิเคราะห์ Obsidian vault เฉพาะตอนที่ไม่มีใครคุยด้วย">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=Sarabun:wght@400;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
     <style>
         :root {
       color-scheme: light;
@@ -28,41 +31,100 @@
           --transition: 0.3s cubic-bezier(0.4, 0, 0.2, 1);
         }
 
-        * { margin: 0; padding: 0; box-sizing: border-box; }
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+        html { scroll-behavior: smooth; }
         body {
-            font-family: 'SF Pro Display', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-            line-height: 1.6; color: #1a1a1a; background: #ffffff;
+            font-family: var(--font); font-size: 17px; line-height: 1.8;
+            color: var(--slate); background: var(--bg); -webkit-font-smoothing: antialiased;
         }
-        
-    .hero-image { max-width: 700px; margin: 2rem auto 0; border-radius: 12px; overflow: hidden; box-shadow: 0 20px 60px rgba(0,0,0,0.3); }
-    .hero-image img { width: 100%; height: auto; display: block; }
 
-    .container { max-width: 800px; margin: 0 auto; padding: 0 20px; }
-        header {
-            background: linear-gradient(135deg, #059669 0%, #10b981 50%, #34d399 100%);
-            color: white; padding: 2rem 0; margin-bottom: 2rem;
+        /* ── NAV ── (house .blog-nav, copied from blog/api-request-lifecycle.html) */
+        .blog-nav {
+            position: fixed; top: 0; left: 0; right: 0; z-index: 100;
+            background: rgba(248,250,252,0.85); backdrop-filter: blur(20px);
+            border-bottom: 1px solid rgba(0,0,0,0.05);
         }
-        nav { background: #f8f9fa; padding: 1rem 0; border-bottom: 1px solid #e9ecef; margin-bottom: 2rem; }
-        nav ul { list-style: none; display: flex; justify-content: center; flex-wrap: wrap; gap: 2rem; }
-        nav a { color: #059669; text-decoration: none; font-weight: 500; transition: color 0.3s; }
-        nav a:hover { color: #047857; }
-        .hero { text-align: center; padding: 3rem 0; }
-        .hero h1 { font-size: 2.5rem; font-weight: 700; margin-bottom: 1rem; text-shadow: 0 2px 4px rgba(0,0,0,0.1); }
-        .hero .subtitle { font-size: 1.25rem; opacity: 0.9; margin-bottom: 1rem; }
-        .series-info {
-            background: rgba(255,255,255,0.2); padding: 1rem;
-            border-radius: 10px; margin-top: 1.5rem;
+        .blog-nav__inner {
+            max-width: 860px; margin: 0 auto; padding: 0 2rem; height: 56px;
+            display: flex; align-items: center; justify-content: space-between;
         }
-        .content { margin-bottom: 3rem; }
-        h2 { color: #059669; font-size: 1.8rem; margin: 2.5rem 0 1rem 0; font-weight: 600; }
-        h3 { color: #047857; font-size: 1.4rem; margin: 2rem 0 0.8rem 0; font-weight: 600; }
-        p { margin-bottom: 1.2rem; color: #374151; text-align: justify; }
-        .code-block {
-            background: #1e293b; color: #e2e8f0; padding: 1.5rem; border-radius: 8px;
-            margin: 1.5rem 0; border-left: 4px solid #10b981;
-            font-family: 'SF Mono', Monaco, 'Cascadia Code', 'Roboto Mono', Consolas, 'Courier New', monospace;
-            font-size: 0.9rem; overflow-x: auto; white-space: pre; white-space: pre-wrap;
+        .blog-nav__back {
+            font-size: 0.85rem; font-weight: 500; color: var(--blue);
+            text-decoration: none; display: flex; align-items: center; gap: 0.4rem;
         }
+        .blog-nav__back:hover { color: #1a4d7a; }
+        .blog-nav__title {
+            font-size: 0.85rem; font-weight: 600; color: var(--navy);
+            overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 50%;
+        }
+
+        /* ── HERO ── (house .post-hero; Emerald family per page-design §5. The
+           one-off #059669→#34d399 green this post shipped with is named in §5 as
+           a gradient to retire on touch, and it could not carry hero text at
+           4.5:1 in either ink — white read 1.92:1 on its #34d399 stop, --navy
+           3.60:1 on its #059669 stop. Emerald is the nearest approved family and
+           keeps the green identity of the post's own component accents; white on
+           its lightest stop (#065f46) reads 7.68:1. */
+        .post-hero {
+            padding: 8rem 2rem 3rem;
+            background: linear-gradient(135deg, #052e16 0%, #064e3b 40%, #065f46 100%);
+            color: #fff; text-align: center;
+        }
+        .post-hero__tags { display: flex; gap: 0.5rem; justify-content: center; margin-bottom: 1.25rem; flex-wrap: wrap; }
+        .post-hero__tag {
+            font-size: 0.7rem; font-weight: 600; text-transform: uppercase;
+            letter-spacing: 0.1em; color: #fff;
+            background: rgba(255,255,255,0.18); padding: 0.3rem 0.75rem; border-radius: 20px;
+        }
+        .post-hero__title {
+            font-size: clamp(1.8rem, 5vw, 3rem); font-weight: 800;
+            line-height: 1.2; margin: 0 auto 1rem; max-width: 720px;
+        }
+        .post-hero__sub {
+            font-size: 1.05rem; max-width: 640px; margin: 0 auto 1.5rem;
+            line-height: 1.7; color: rgba(255,255,255,0.95);
+        }
+        .post-hero__meta {
+            font-size: 0.85rem; color: rgba(255,255,255,0.95);
+            display: flex; align-items: center; justify-content: center; gap: 1.5rem; flex-wrap: wrap;
+        }
+        .post-hero__cover {
+            aspect-ratio: 1/1; max-width: 480px; margin: 2.5rem auto 0;
+            border-radius: 16px; overflow: hidden;
+            box-shadow: 0 20px 60px rgba(5,46,22,0.32);
+        }
+        .post-hero__cover img { width: 100%; height: 100%; object-fit: cover; display: block; }
+
+        /* ── BODY ── */
+        .post-body { max-width: var(--measure); margin: 0 auto; padding: 3rem 2rem 6rem; }
+        .post-body h2 {
+            font-size: 1.6rem; font-weight: 800; color: var(--navy);
+            margin: 3rem 0 1rem; padding-bottom: 0.5rem;
+            border-bottom: 2px solid rgba(34,98,153,0.15);
+        }
+        .post-body h2:first-child { margin-top: 0; }
+        .post-body h3 { font-size: 1.25rem; font-weight: 700; color: var(--navy); margin: 2.25rem 0 0.75rem; }
+        .post-body h4 { font-size: 1.05rem; font-weight: 700; color: var(--navy); margin: 1.75rem 0 0.6rem; }
+        .post-body p { margin-bottom: 1.25rem; }
+        .post-body strong { font-weight: 700; color: var(--navy); }
+        .post-body a { color: var(--blue); text-decoration: underline; text-decoration-thickness: 1px; text-underline-offset: 2px; }
+        .post-body pre {
+            background: var(--code-bg); border-radius: 12px; padding: 1.5rem;
+            margin: 1.25rem 0 1.5rem; overflow-x: auto; border: 1px solid rgba(255,255,255,0.05);
+        }
+        .post-body pre code {
+            font-family: var(--mono); font-size: 0.85rem; color: #e2e8f0; line-height: 1.7;
+            background: none; padding: 0; white-space: pre-wrap;
+        }
+        .post-body code {
+            font-family: var(--mono); font-size: 0.88em;
+            background: rgba(34,98,153,0.08); color: #1a4d7a;
+            padding: 0.15em 0.45em; border-radius: 5px;
+        }
+        .post-body ul, .post-body ol { margin: 0.5rem 0 1.25rem 1.5rem; }
+        .post-body li { margin-bottom: 0.4rem; }
+
+        /* ── the post's own components (unchanged) ── */
         .highlight-box {
             background: linear-gradient(135deg, #ecfdf5 0%, #f0fdf4 100%);
             border: 1px solid #6ee7b7; border-radius: 10px; padding: 1.5rem; margin: 1.5rem 0;
@@ -81,36 +143,26 @@
             border: 1px solid #6ee7b7; border-radius: 10px; padding: 2rem; margin: 2rem 0;
         }
         .takeaways h3 { color: #059669; margin-bottom: 1rem; }
-        .takeaways ul { padding-left: 1.5rem; }
-        .takeaways li { margin-bottom: 0.5rem; color: #374151; }
+        .takeaways ul { margin-left: 0; padding-left: 1.5rem; }
+        .takeaways li { margin-bottom: 0.5rem; color: var(--slate); }
         .analogy-box {
             background: linear-gradient(135deg, #fffbeb 0%, #fefce8 100%);
             border: 1px solid #fcd34d; border-radius: 10px; padding: 1.5rem; margin: 1.5rem 0;
         }
-        .analogy-box h4 { color: #d97706; margin-bottom: 0.8rem; font-weight: 600; }
-        .flow-diagram {
-            background: #faf7f0; border: 2px solid #e2e8f0; border-radius: 12px;
-            padding: 2rem; margin: 2rem 0; text-align: center;
-        }
-        .flow-step {
-            display: inline-block; background: #059669; color: white;
-            padding: 0.6rem 1.2rem; border-radius: 25px; margin: 0.3rem;
-            font-weight: 500; font-size: 0.9rem;
-        }
-        .flow-arrow { display: inline-block; color: #9ca3af; font-size: 1.2rem; margin: 0 0.3rem; }
-        ul, ol { padding-left: 1.5rem; margin-bottom: 1.2rem; }
-        li { margin-bottom: 0.5rem; color: #374151; }
-        footer {
-            background: #f8f9fa; padding: 2rem 0; text-align: center;
-            color: #6b7280; border-top: 1px solid #e9ecef;
-        }
-        footer a { color: #059669; text-decoration: none; }
-        footer a:hover { text-decoration: underline; }
-        @media (max-width: 768px) {
-            .hero h1 { font-size: 1.8rem; }
-            h2 { font-size: 1.4rem; }
-            h3 { font-size: 1.2rem; }
-            nav ul { gap: 1rem; }
+        .analogy-box h4 { color: #b45309; margin-bottom: 0.8rem; font-weight: 600; }
+
+        /* ── FOOTER ── */
+        .blog-footer { background: var(--navy); padding: 2rem 0; text-align: center; }
+        .blog-footer a { color: var(--gold); text-decoration: none; font-weight: 600; font-size: 0.9rem; }
+        .blog-footer span { color: var(--gray); font-size: 0.8rem; display: block; margin-top: 0.4rem; }
+
+        @media (max-width: 600px) {
+            .post-hero { padding: 7rem 1.25rem 2.5rem; }
+            .post-body { padding: 2rem 1.25rem 4rem; }
+            .post-body pre { padding: 1rem; border-radius: 8px; }
+            .post-body h2 { font-size: 1.4rem; }
+            .post-body h3 { font-size: 1.2rem; }
+            .post-hero__meta { flex-direction: column; gap: 0.4rem; }
         }
     
     :focus-visible { outline: 2px solid var(--focus); outline-offset: 3px; border-radius: 2px; }
@@ -126,6 +178,19 @@
       }
     }
     h1, h2, h3, .post-hero__title, .card__title { text-wrap: balance; }
+
+    /* ── NARROW-VIEWPORT OVERFLOW GUARD ──
+       page-design: wide content must scroll inside its own container; the page
+       body must never scroll sideways. Two real causes measured at 375px on
+       2026-08-26: inline-styled CSS grids in post bodies whose fixed columns
+       cannot collapse (the minmax(320px,1fr) trap this repo hit once before),
+       and wide tables. !important is deliberate — the grids are inline styles
+       inside published content, and rewriting prose to fix layout is worse. */
+    @media (max-width: 768px) {
+      .post-body [style*="grid-template-columns"] { grid-template-columns: 1fr !important; }
+      .post-body table { display: block; width: 100%; overflow-x: auto; }
+      .post-body img, .post-body svg { max-width: 100%; height: auto; }
+    }
 </style>
     <!-- social -->
     <link rel="canonical" href="https://anirach.com/blog/idle-self-improvement.html">
@@ -150,36 +215,32 @@
 </head>
 <body>
 
-<nav>
-    <div class="container">
-        <ul>
-            <li><a href="../index.html">Home</a></li>
-            <li><a href="index.html">Blog</a></li>
-            <li><a href="../index.html#research">Research</a></li>
-        </ul>
-    </div>
+<nav class="blog-nav">
+  <div class="blog-nav__inner">
+    <a href="./" class="blog-nav__back">‹ Blog</a>
+    <div class="blog-nav__title">Idle Self-Improvement</div>
+  </div>
 </nav>
 
-<header>
-    <div class="container">
-        <div class="hero">
-            <h1>🔄 Idle Self-Improvement<br>ให้ AI Agent ดูแลระบบเองเมื่อว่าง</h1>
-            <p class="subtitle">เปลี่ยนเวลาว่างของ AI Agent ให้เป็นเวลาทำงานที่มีคุณค่า — ตรวจสุขภาพระบบ วิเคราะห์ข้อมูล ค้นหาปัญหาก่อนที่คุณจะเจอเอง</p>
-            <div class="series-info">
-                📅 March 2026 &nbsp;|&nbsp; ⏱️ 8 min read &nbsp;|&nbsp; 🏷️ OpenClaw · Automation · DevOps
-            </div>
-        </div>
-    </div>
+<header class="post-hero">
+  <div class="post-hero__tags">
+    <span class="post-hero__tag">OpenClaw</span>
+    <span class="post-hero__tag">Automation</span>
+    <span class="post-hero__tag">DevOps</span>
+  </div>
+  <h1 class="post-hero__title">🔄 Idle Self-Improvement<br>ให้ AI Agent ดูแลระบบเองเมื่อว่าง</h1>
+  <p class="post-hero__sub">เปลี่ยนเวลาว่างของ AI Agent ให้เป็นเวลาทำงานที่มีคุณค่า — ตรวจสุขภาพระบบ วิเคราะห์ข้อมูล ค้นหาปัญหาก่อนที่คุณจะเจอเอง</p>
+  <div class="post-hero__meta">
+    <span>📅 March 2026</span>
+    <span>⏱️ 8 min read</span>
+  </div>
+  <div class="post-hero__cover">
+    <img src="../images/idle-self-improvement-cover.jpg" alt="Arthur the Labrador studying holographic screens" width="1024" height="1024" loading="eager" fetchpriority="high" decoding="async">
+  </div>
 </header>
-    <div style="max-width:700px;margin:0 auto;padding:0 2rem;">
-        <div class="hero-image">
-            <img src="../images/idle-self-improvement-cover.jpg" alt="Arthur the Labrador studying holographic screens" width="1024" height="1024" loading="eager" fetchpriority="high" decoding="async">
-        </div>
-    </div>
 
 
-<main class="container">
-    <article class="content">
+<article class="post-body">
 
         <h2>ปัญหาที่เรามักมองข้าม</h2>
         <p>AI Agent ส่วนใหญ่ทำงานแบบ "ถาม-ตอบ" — ถ้าคุณไม่ส่งข้อความ มันก็นั่งเฉยๆ ไม่ทำอะไรเลย เหมือนพนักงานที่รอคำสั่งอย่างเดียว ไม่เคยหันไปจัดโต๊ะหรือเช็คงานค้างเอง</p>
@@ -254,73 +315,73 @@
             <span class="emoji">📊</span>
             <h4>Vault Stats — แดชบอร์ดสุขภาพ vault</h4>
             <p>เหมือนหน้า dashboard ของ vault คุณ — จำนวนไฟล์, คำ, ลิงก์, แท็ก, โน้ตที่ถูกทิ้ง, โน้ตกำพร้า ดูภาพรวมได้ในคำสั่งเดียว</p>
-            <div class="code-block">python3 tools/vault_stats.py</div>
+            <pre><code>python3 tools/vault_stats.py</code></pre>
         </div>
 
         <div class="tool-card">
             <span class="emoji">🔍</span>
             <h4>Ask Vault — ค้นหาด้วยภาษาธรรมชาติ</h4>
             <p>ถาม vault เหมือนถามคน — "หาโน้ตเกี่ยวกับ machine learning" แทนที่จะจำชื่อไฟล์</p>
-            <div class="code-block">python3 tools/ask_vault.py "machine learning"
+            <pre><code>python3 tools/ask_vault.py "machine learning"
 python3 tools/ask_vault.py "RAG" --limit 5
-python3 tools/ask_vault.py "note.md" --related</div>
+python3 tools/ask_vault.py "note.md" --related</code></pre>
         </div>
 
         <div class="tool-card">
             <span class="emoji">🧩</span>
             <h4>Vault Insight — วิเคราะห์ theme, gap, connection</h4>
             <p>วิเคราะห์ vault ในเชิงลึก — หาธีมที่ซ้ำ, โน้ตที่อ้างถึงแต่ไม่เคยสร้าง, โน้ตที่ควรเชื่อมกันแต่ยังไม่ได้ลิงก์ รันอัตโนมัติทุกสัปดาห์</p>
-            <div class="code-block">python3 tools/vault_insight.py full --save</div>
+            <pre><code>python3 tools/vault_insight.py full --save</code></pre>
         </div>
 
         <h2>ตั้งค่าใน 5 ขั้นตอน</h2>
         <p>การติดตั้งไม่ยากอย่างที่คิด — ใช้เวลาประมาณ 10-15 นาที:</p>
 
         <h3>ขั้นที่ 1: สร้างโฟลเดอร์</h3>
-        <div class="code-block">mkdir -p ~/.openclaw/workspace/tools
+        <pre><code>mkdir -p ~/.openclaw/workspace/tools
 mkdir -p ~/.openclaw/workspace/memory
 mkdir -p ~/.openclaw/workspace/logs
-mkdir -p ~/.openclaw/workspace/tmp</div>
+mkdir -p ~/.openclaw/workspace/tmp</code></pre>
 
         <h3>ขั้นที่ 2: วางสคริปต์</h3>
         <p>ดาวน์โหลดหรือสร้างไฟล์ 4 ตัวใน <code>tools/</code>:</p>
-        <div class="code-block">workspace/tools/
+        <pre><code>workspace/tools/
 ├── idle_improver.py    # สแกนสุขภาพระบบ
 ├── vault_insight.py    # วิเคราะห์ vault
 ├── vault_stats.py      # แดชบอร์ด vault
-└── ask_vault.py        # ค้นหาใน vault</div>
+└── ask_vault.py        # ค้นหาใน vault</code></pre>
 
         <h3>ขั้นที่ 3: แก้ path ให้ตรง</h3>
         <p>ในแต่ละสคริปต์ แก้ 2 บรรทัดนี้ให้ตรงกับเครื่องคุณ:</p>
-        <div class="code-block">WORKSPACE = Path("~/.openclaw/workspace").expanduser()
-VAULT = Path("~/obsidian-vault").expanduser()  # ← path ของ vault คุณ</div>
+        <pre><code>WORKSPACE = Path("~/.openclaw/workspace").expanduser()
+VAULT = Path("~/obsidian-vault").expanduser()  # ← path ของ vault คุณ</code></pre>
 
         <h3>ขั้นที่ 4: ตั้ง cron job</h3>
-        <div class="code-block"># เปิด crontab
+        <pre><code># เปิด crontab
 crontab -e
 
 # เพิ่ม 2 บรรทัดนี้:
 */30 * * * * /usr/bin/python3 ~/.openclaw/workspace/tools/idle_improver.py
-0 3 * * 1 /usr/bin/python3 ~/.openclaw/workspace/tools/vault_insight.py full --save</div>
+0 3 * * 1 /usr/bin/python3 ~/.openclaw/workspace/tools/vault_insight.py full --save</code></pre>
         <p>บรรทัดแรก = สแกนทุก 30 นาที, บรรทัดที่สอง = วิเคราะห์ vault ทุกวันจันทร์ตี 3</p>
 
         <h3>ขั้นที่ 5: ทดสอบ</h3>
-        <div class="code-block"># ทดสอบ idle improver (บังคับรัน)
+        <pre><code># ทดสอบ idle improver (บังคับรัน)
 python3 tools/idle_improver.py --force
 
 # ทดสอบ vault stats
 python3 tools/vault_stats.py
 
 # ทดสอบค้นหา
-python3 tools/ask_vault.py "test query"</div>
+python3 tools/ask_vault.py "test query"</code></pre>
 
         <h3>ขั้นสุดท้าย: บอก Agent ให้รู้จักเครื่องมือ</h3>
         <p>เพิ่มใน <code>AGENTS.md</code> ของ workspace:</p>
-        <div class="code-block">## Vault Intelligence Tools
+        <pre><code>## Vault Intelligence Tools
 - `python3 tools/vault_stats.py` — vault dashboard
 - `python3 tools/ask_vault.py "query"` — search vault
 - `python3 tools/vault_insight.py full` — theme/gap analysis
-- `python3 tools/idle_improver.py --force` — system health scan</div>
+- `python3 tools/idle_improver.py --force` — system health scan</code></pre>
 
         <h2>ทำไมต้องตั้งค่าเรื่องนี้?</h2>
 
@@ -369,16 +430,11 @@ python3 tools/ask_vault.py "test query"</div>
             "The best monitoring is the kind you don't have to remember to do."
         </p>
 
-    </article>
-</main>
+</article>
 
-<footer>
-    <div class="container">
-        <p>Written by <a href="../index.html">Anirach Mingkhwan</a> · March 2026</p>
-        <p style="margin-top: 0.5rem;">
-            <a href="index.html">← Back to Blog</a>
-        </p>
-    </div>
+<footer class="blog-footer">
+  <a href="./">← Back to Blog</a>
+  <span>Written by Anirach Mingkhwan · March 2026</span>
 </footer>
 
 </body>

@@ -5,6 +5,9 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Production Deployment & Scaling — จาก Prototype สู่ระบบจริง | Anirach Mingkhwan</title>
     <meta name="description" content="คู่มือสมบูรณ์การ deploy OpenClaw บน production: VPS selection, Docker setup, multi-user scaling, cost monitoring, และ lessons learned จาก 45 agents">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=Sarabun:wght@400;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
     <style>
         :root {
       color-scheme: light;
@@ -28,180 +31,111 @@
           --transition: 0.3s cubic-bezier(0.4, 0, 0.2, 1);
         }
 
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        html { scroll-behavior: smooth; }
 
         body {
-            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-            line-height: 1.6;
-            color: #333;
-            background: #fafafa;
+            font-family: var(--font);
+            font-size: 17px;
+            line-height: 1.8;
+            color: var(--slate);
+            background: var(--bg);
+            -webkit-font-smoothing: antialiased;
         }
 
-        .container {
-            max-width: 1200px;
-            margin: 0 auto;
-            padding: 0 20px;
-        }
+    /* ── NAV ── */
+    .blog-nav {
+      position: fixed; top: 0; left: 0; right: 0; z-index: 100;
+      background: rgba(250,247,240,0.85); backdrop-filter: blur(20px);
+      border-bottom: 1px solid rgba(0,0,0,0.05);
+    }
+    .blog-nav__inner {
+      max-width: 860px; margin: 0 auto; padding: 0 2rem; height: 56px;
+      display: flex; align-items: center; justify-content: space-between;
+    }
+    .blog-nav__back {
+      font-size: 0.85rem; font-weight: 500; color: var(--blue);
+      text-decoration: none; display: flex; align-items: center; gap: 0.4rem;
+    }
+    .blog-nav__back:hover { color: var(--blue-dark); }
+    .blog-nav__title {
+      font-size: 0.85rem; font-weight: 600; color: var(--navy);
+      overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 50%;
+    }
 
-        /* Navigation */
-        .nav {
-            background: rgba(255, 255, 255, 0.95);
-            backdrop-filter: blur(10px);
-            border-bottom: 1px solid #e5e7eb;
-            position: sticky;
-            top: 0;
-            z-index: 100;
-        }
+    /* ── HERO ── (house .post-hero.  Gradient is the approved Violet family
+       from page-design §5 — the OpenClaw series hero — kept unchanged.  The
+       black scrim is the a11y-perf R3(b) treatment: white on the raw #8b5cf6
+       stop is only 4.24:1; with the .35 scrim it is 8.1:1, and the tag pills
+       — white on the scrim + 18% white — land at 5.2:1.) */
+    .post-hero {
+      padding: 8rem 2rem 3rem;
+      background:
+        linear-gradient(rgba(0,0,0,.35), rgba(0,0,0,.35)),
+        linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%);
+      color: #fff; text-align: center;
+    }
+    .post-hero__tags {
+      display: flex; gap: 0.5rem; justify-content: center;
+      flex-wrap: wrap; margin-bottom: 1.25rem;
+    }
+    .post-hero__tag, .series-badge {
+      display: inline-block;
+      font-size: 0.72rem; font-weight: 600; text-transform: uppercase;
+      letter-spacing: 0.1em; color: #fff;
+      background: rgba(255,255,255,0.18); padding: 0.35rem 0.9rem; border-radius: 20px;
+    }
+    .post-hero__title {
+      font-size: clamp(1.8rem, 5vw, 3rem); font-weight: 800;
+      line-height: 1.2; margin: 0 auto 1rem; max-width: 720px;
+    }
+    .post-hero__sub {
+      font-size: 1.05rem; max-width: 640px; margin: 0 auto 1.5rem;
+      line-height: 1.7; color: #fff;
+    }
+    .post-hero__meta {
+      font-size: 0.85rem; color: #fff;
+      display: flex; align-items: center; justify-content: center;
+      gap: 1.5rem; flex-wrap: wrap;
+    }
+    .post-hero__cover {
+      aspect-ratio: 1024/680; max-width: 600px; margin: 2.5rem auto 0;
+      border-radius: 16px; overflow: hidden;
+      box-shadow: 0 20px 60px rgba(17,48,75,0.28);
+    }
+    .post-hero__cover img { width: 100%; height: 100%; object-fit: cover; display: block; }
 
-        .nav-content {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 1rem 0;
-        }
+    /* ── CONTENT ── */
+    .post-body { max-width: var(--measure); margin: 0 auto; padding: 3rem 2rem 6rem; }
+    .post-body h2 {
+      font-size: 1.6rem; font-weight: 800; color: var(--navy);
+      margin: 3rem 0 1rem; padding-bottom: 0.5rem;
+      border-bottom: 2px solid rgba(34,98,153,0.15);
+    }
+    .post-body h2:first-child { margin-top: 0; }
+    .post-body h3 { font-size: 1.25rem; font-weight: 700; color: var(--navy); margin: 2.25rem 0 0.75rem; }
+    .post-body h4 { font-size: 1.05rem; font-weight: 700; color: var(--navy); margin: 1.75rem 0 0.6rem; }
+    .post-body p { margin-bottom: 1.25rem; text-align: justify; }
+    .post-body strong { font-weight: 700; color: var(--navy); }
+    .post-body a { color: var(--blue); text-decoration: underline; text-decoration-thickness: 1px; text-underline-offset: 2px; }
+    .post-body ul, .post-body ol { margin: 0.5rem 0 1.25rem 1.5rem; }
+    .post-body li { margin-bottom: 0.4rem; }
 
-        .logo {
-            font-size: 1.5rem;
-            font-weight: 700;
-            color: #8b5cf6;
-        }
-
-        .nav-links {
-            display: flex;
-            gap: 2rem;
-            list-style: none;
-        }
-
-        .nav-links a {
-            text-decoration: none;
-            color: #6b7280;
-            font-weight: 500;
-            transition: color 0.2s;
-        }
-
-        .nav-links a:hover {
-            color: #8b5cf6;
-        }
-
-        /* Hero Section */
-        .hero {
-            background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%);
-            color: white;
-            padding: 4rem 0;
-            position: relative;
-            overflow: hidden;
-        }
-
-        .hero::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background: url('../images/openclaw-production-cover.jpg') center/cover;
-            opacity: 0.1;
-        }
-
-        .hero-content {
-            position: relative;
-            z-index: 2;
-            text-align: center;
-        }
-
-        .series-badge {
-            display: inline-block;
-            background: rgba(255, 255, 255, 0.2);
-            padding: 0.5rem 1rem;
-            border-radius: 2rem;
-            font-size: 0.875rem;
-            font-weight: 600;
-            margin-bottom: 1rem;
-        }
-
-        .hero h1 {
-            font-size: 3rem;
-            font-weight: 800;
-            margin-bottom: 1rem;
-            line-height: 1.2;
-        }
-
-        .hero .subtitle {
-            font-size: 1.25rem;
-            opacity: 0.9;
-            max-width: 600px;
-            margin: 0 auto 2rem;
-        }
-
-        .author {
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 0.5rem;
-            opacity: 0.8;
-        }
-
-        /* Content */
-        .content {
-            background: white;
-            padding: 4rem 0;
-        }
-
-        .article {
-            max-width: 800px;
-            margin: 0 auto;
-        }
-
-        .article h2 {
-            color: #1f2937;
-            font-size: 1.875rem;
-            font-weight: 700;
-            margin: 3rem 0 1.5rem;
-            padding-bottom: 0.5rem;
-            border-bottom: 3px solid #8b5cf6;
-        }
-
-        .article h3 {
-            color: #374151;
-            font-size: 1.5rem;
-            font-weight: 600;
-            margin: 2rem 0 1rem;
-        }
-
-        .article p {
-            margin-bottom: 1.5rem;
-            color: #4b5563;
-            text-align: justify;
-        }
-
-        .article ul, .article ol {
-            margin: 1.5rem 0;
-            padding-left: 2rem;
-            color: #4b5563;
-        }
-
-        .article li {
-            margin-bottom: 0.5rem;
-        }
-
-        /* Code blocks */
-        .code-block {
-            background: #1f2937;
-            color: #e5e7eb;
-            padding: 1.5rem;
-            border-radius: 0.5rem;
-            margin: 1.5rem 0;
-            overflow-x: auto;
-            font-family: 'JetBrains Mono', Consolas, 'Courier New', monospace;
-            font-size: 0.875rem;
-            line-height: 1.5;
-            white-space: pre;
-            white-space: pre-wrap;
-        }
+    /* ── CODE ── */
+    .post-body pre {
+      background: var(--code-bg); border-radius: 12px; padding: 1.5rem;
+      margin: 1.25rem 0 1.5rem; overflow-x: auto; border: 1px solid rgba(255,255,255,0.05);
+    }
+    .post-body pre code {
+      font-family: var(--mono); font-size: 0.85rem; color: #e2e8f0;
+      line-height: 1.7; background: none; padding: 0; white-space: pre-wrap;
+    }
+    .post-body code {
+      font-family: var(--mono); font-size: 0.88em;
+      background: rgba(34,98,153,0.08); color: var(--blue-dark);
+      padding: 0.15em 0.45em; border-radius: 5px;
+    }
 
         /* Tables */
         .table-wrapper {
@@ -310,6 +244,12 @@
             font-weight: 600;
         }
 
+        /* the complete-series grid that closes the post — was a .container */
+        .series-complete {
+            max-width: var(--wide);
+            margin: 0 auto;
+            padding: 0 2rem;
+        }
 
         .series-posts {
             display: grid;
@@ -355,40 +295,30 @@
             color: #6b7280;
         }
 
-        /* Footer */
-        .footer {
-            background: #1f2937;
-            color: #e5e7eb;
-            padding: 3rem 0;
-            text-align: center;
-        }
-
-        .footer a {
-            color: #8b5cf6;
-            text-decoration: none;
-        }
-
-        .footer a:hover {
-            text-decoration: underline;
-        }
+    /* ── FOOTER ── */
+    .blog-footer {
+      background: var(--navy); color: #e2e8f0;
+      padding: 3rem 0; text-align: center; font-size: 0.9rem;
+    }
+    .blog-footer__inner { max-width: var(--wide); margin: 0 auto; padding: 0 2rem; }
+    .blog-footer p { margin-bottom: 0.5rem; }
+    .blog-footer p:last-child { margin-bottom: 0; }
+    .blog-footer a { color: var(--gold); text-decoration: none; font-weight: 600; }
+    .blog-footer a:hover { text-decoration: underline; }
 
         /* Responsive */
         @media (max-width: 768px) {
-            .hero h1 {
-                font-size: 2rem;
-            }
+            .post-hero { padding: 7rem 1.25rem 2.5rem; }
+            .post-hero__meta { flex-direction: column; gap: 0.4rem; }
 
-            .hero .subtitle {
-                font-size: 1rem;
-            }
+            .post-body { padding: 2rem 1.25rem 4rem; }
+            .post-body pre { padding: 1rem; border-radius: 8px; }
 
-            .nav-links {
-                display: none;
-            }
-
-            .article h2 {
+            .post-body h2 {
                 font-size: 1.5rem;
             }
+
+            .series-complete { padding: 0 1.25rem; }
 
             .series-posts {
                 grid-template-columns: 1fr;
@@ -408,6 +338,19 @@
       }
     }
     h1, h2, h3, .post-hero__title, .card__title { text-wrap: balance; }
+
+    /* ── NARROW-VIEWPORT OVERFLOW GUARD ──
+       page-design: wide content must scroll inside its own container; the page
+       body must never scroll sideways. Two real causes measured at 375px on
+       2026-08-26: inline-styled CSS grids in post bodies whose fixed columns
+       cannot collapse (the minmax(320px,1fr) trap this repo hit once before),
+       and wide tables. !important is deliberate — the grids are inline styles
+       inside published content, and rewriting prose to fix layout is worse. */
+    @media (max-width: 768px) {
+      .post-body [style*="grid-template-columns"] { grid-template-columns: 1fr !important; }
+      .post-body table { display: block; width: 100%; overflow-x: auto; }
+      .post-body img, .post-body svg { max-width: 100%; height: auto; }
+    }
 </style>
     <!-- social -->
     <link rel="canonical" href="https://anirach.com/blog/openclaw-production.html">
@@ -431,41 +374,32 @@
     <!-- /social -->
 </head>
 <body>
-    <!-- Navigation -->
-    <nav class="nav">
-        <div class="container">
-            <div class="nav-content">
-                <div class="logo">Anirach.com</div>
-                <ul class="nav-links">
-                    <li><a href="/">Home</a></li>
-                    <li><a href="/blog/">Blog</a></li>
-                    <li><a href="/#about">About</a></li>
-                    <li><a href="/#contact">Contact</a></li>
-                </ul>
-            </div>
-        </div>
+    <!-- NAV -->
+    <nav class="blog-nav">
+      <div class="blog-nav__inner">
+        <a href="./" class="blog-nav__back">‹ Blog</a>
+        <div class="blog-nav__title">Production &amp; Scaling</div>
+      </div>
     </nav>
 
-    <!-- Hero Section -->
-    <section class="hero">
-        <div class="container">
-            <div class="hero-content">
-                <div class="series-badge">OpenClaw for Organizations 2026 • Post #7 (Final)</div>
-                <h1>Production Deployment & Scaling</h1>
-                <p class="subtitle">จาก Prototype สู่ระบบจริง — การ deploy OpenClaw บน production แบบมืออาชีพ</p>
-                <div class="author">
-                    <span>By Anirach Mingkhwan</span>
-                    <span>•</span>
-                    <span>March 2026</span>
-                </div>
-            </div>
-        </div>
-    </section>
+    <!-- HERO -->
+    <header class="post-hero">
+      <div class="post-hero__tags">
+        <span class="post-hero__tag">OpenClaw for Organizations 2026 • Post #7 (Final)</span>
+      </div>
+      <h1 class="post-hero__title">Production Deployment &amp; Scaling</h1>
+      <p class="post-hero__sub">จาก Prototype สู่ระบบจริง — การ deploy OpenClaw บน production แบบมืออาชีพ</p>
+      <div class="post-hero__meta">
+        <span>By <strong>Anirach Mingkhwan</strong></span>
+        <span>March 2026</span>
+      </div>
+      <div class="post-hero__cover">
+        <img src="../images/openclaw-production-cover.jpg" alt="Arthur the Labrador in a data-centre aisle watching holographic Docker and monitoring dashboards" width="1024" height="680" loading="eager" fetchpriority="high" decoding="async">
+      </div>
+    </header>
 
     <!-- Main Content -->
-    <section class="content">
-        <div class="container">
-            <article class="article">
+    <article class="post-body">
                 <h2>1. จาก Laptop Prototype สู่ Production System</h2>
                 
                 <p>การเปลี่ยนจาก AI agent ที่รันบน laptop ส่วนตัวไปสู่ระบบ production ที่รัน 24/7 นั้นไม่ใช่แค่การ copy-paste code ไปยัง server ใหม่ — มันเป็นการเปลี่ยนแปลงครั้งใหญ่ที่ต้องคิดใหม่ทั้งหมดเรื่อง reliability, security, scalability และ cost management</p>
@@ -582,7 +516,7 @@
 
                 <h3>Production Docker Compose Setup</h3>
 
-                <div class="code-block">version: '3.8'
+                <pre><code>version: '3.8'
 
 services:
   openclaw-gateway:
@@ -648,13 +582,13 @@ services:
 
 volumes:
   redis_data:
-  postgres_data:</div>
+  postgres_data:</code></pre>
 
                 <h3>Health Checks และ Monitoring</h3>
 
                 <p>การตั้ง health checks อย่างถูกต้องเป็นสิ่งสำคัญ เพื่อให้ Docker สามารถ restart containers ที่มีปัญหาได้อัตโนมัติ:</p>
 
-                <div class="code-block"># Health check endpoint ใน OpenClaw Gateway
+                <pre><code># Health check endpoint ใน OpenClaw Gateway
 GET /health
 
 Response:
@@ -670,7 +604,7 @@ Response:
     "used": "2.1GB",
     "available": "16GB"
   }
-}</div>
+}</code></pre>
 
                 <h2>4. Installation & Setup on VPS</h2>
 
@@ -678,7 +612,7 @@ Response:
 
                 <h3>Step 1: OS Setup (Ubuntu 22.04 LTS)</h3>
 
-                <div class="code-block"># Update system
+                <pre><code># Update system
 sudo apt update && sudo apt upgrade -y
 
 # Install essential packages
@@ -693,11 +627,11 @@ sudo ufw enable
 # Create openclaw user
 sudo adduser openclaw
 sudo usermod -aG docker openclaw
-sudo usermod -aG sudo openclaw</div>
+sudo usermod -aG sudo openclaw</code></pre>
 
                 <h3>Step 2: Docker Installation</h3>
 
-                <div class="code-block"># Install Docker
+                <pre><code># Install Docker
 curl -fsSL https://get.docker.com -o get-docker.sh
 sudo sh get-docker.sh
 
@@ -706,11 +640,11 @@ sudo curl -L "https://github.com/docker/compose/releases/latest/download/docker-
 sudo chmod +x /usr/local/bin/docker-compose
 
 # Add user to docker group
-sudo usermod -aG docker openclaw</div>
+sudo usermod -aG docker openclaw</code></pre>
 
                 <h3>Step 3: Node.js และ OpenClaw</h3>
 
-                <div class="code-block"># Install Node.js 18+
+                <pre><code># Install Node.js 18+
 curl -fsSL https://deb.nodesource.com/setup_18.x | sudo -E bash -
 sudo apt-get install -y nodejs
 
@@ -723,11 +657,11 @@ sudo chown openclaw:openclaw /opt/openclaw
 cd /opt/openclaw
 
 # Initialize OpenClaw
-openclaw init --production</div>
+openclaw init --production</code></pre>
 
                 <h3>Step 4: SystemD Service Configuration</h3>
 
-                <div class="code-block"># /etc/systemd/system/openclaw.service
+                <pre><code># /etc/systemd/system/openclaw.service
 [Unit]
 Description=OpenClaw AI Agent Gateway
 After=docker.service
@@ -747,19 +681,19 @@ StandardError=syslog
 SyslogIdentifier=openclaw
 
 [Install]
-WantedBy=multi-user.target</div>
+WantedBy=multi-user.target</code></pre>
 
-                <div class="code-block"># Enable and start service
+                <pre><code># Enable and start service
 sudo systemctl enable openclaw
 sudo systemctl start openclaw
 sudo systemctl status openclaw
 
 # Check logs
-sudo journalctl -u openclaw -f</div>
+sudo journalctl -u openclaw -f</code></pre>
 
                 <h3>Step 5: SSL และ Domain Setup</h3>
 
-                <div class="code-block"># Install Certbot for Let's Encrypt
+                <pre><code># Install Certbot for Let's Encrypt
 sudo apt install certbot python3-certbot-nginx
 
 # Get SSL certificate
@@ -767,7 +701,7 @@ sudo certbot --nginx -d your-domain.com
 
 # Configure automatic renewal
 sudo crontab -e
-# Add: 0 12 * * * /usr/bin/certbot renew --quiet</div>
+# Add: 0 12 * * * /usr/bin/certbot renew --quiet</code></pre>
 
                 <h2>5. Multi-User & Multi-Channel Scaling</h2>
 
@@ -784,7 +718,7 @@ sudo crontab -e
 
                 <h3>Multi-Channel Configuration</h3>
 
-                <div class="code-block"># openclaw.json - Multi-channel setup
+                <pre><code># openclaw.json - Multi-channel setup
 {
   "channels": {
     "telegram": {
@@ -811,11 +745,11 @@ sudo crontab -e
     "timeoutMinutes": 60,
     "sandboxLimit": 10
   }
-}</div>
+}</code></pre>
 
                 <h3>Workspace Management</h3>
 
-                <div class="code-block"># Workspace structure for multi-user
+                <pre><code># Workspace structure for multi-user
 /opt/openclaw/workspace/
 ├── telegram/
 │   ├── user1/
@@ -827,7 +761,7 @@ sudo crontab -e
 │   ├── guild1/
 │   └── guild2/
 └── signal/
-    └── groups/</div>
+    └── groups/</code></pre>
 
                 <h2>6. Monitoring & Cost Tracking</h2>
 
@@ -835,7 +769,7 @@ sudo crontab -e
 
                 <h3>Cost Tracking Implementation</h3>
 
-                <div class="code-block"># Cost tracking script
+                <pre><code># Cost tracking script
 #!/bin/bash
 # /opt/openclaw/scripts/cost-monitor.sh
 
@@ -851,7 +785,7 @@ openclaw gateway status --json | jq '.agents[] | {
 }' >> $COST_LOG
 
 # Daily cost summary
-python3 /opt/openclaw/scripts/cost-summary.py $COST_LOG</div>
+python3 /opt/openclaw/scripts/cost-summary.py $COST_LOG</code></pre>
 
                 <h3>Real Monthly Cost Breakdown (45 Agents)</h3>
 
@@ -913,7 +847,7 @@ python3 /opt/openclaw/scripts/cost-summary.py $COST_LOG</div>
 
                 <h3>Monitoring Dashboard Setup</h3>
 
-                <div class="code-block"># Prometheus + Grafana monitoring
+                <pre><code># Prometheus + Grafana monitoring
 version: '3.8'
 
 services:
@@ -937,7 +871,7 @@ services:
   node-exporter:
     image: prom/node-exporter
     ports:
-      - "9100:9100"</div>
+      - "9100:9100"</code></pre>
 
                 <h2>7. Backup Strategies</h2>
 
@@ -955,7 +889,7 @@ services:
 
                 <h3>Automated Backup Script</h3>
 
-                <div class="code-block">#!/bin/bash
+                <pre><code>#!/bin/bash
 # /opt/openclaw/scripts/backup.sh
 
 BACKUP_DATE=$(date +%Y%m%d_%H%M%S)
@@ -984,11 +918,11 @@ aws s3 sync $BACKUP_DIR s3://$S3_BUCKET/backups/
 find /opt/backups -name "openclaw_*" -mtime +30 -delete
 
 # Send notification
-echo "Backup completed: $BACKUP_DATE" | mail -s "OpenClaw Backup" admin@yourdomain.com</div>
+echo "Backup completed: $BACKUP_DATE" | mail -s "OpenClaw Backup" admin@yourdomain.com</code></pre>
 
                 <h3>Git-based Backup for Code</h3>
 
-                <div class="code-block"># Setup git backup for workspace
+                <pre><code># Setup git backup for workspace
 cd /opt/openclaw/workspace
 git init
 git remote add origin git@github.com:yourorg/openclaw-workspace.git
@@ -998,7 +932,7 @@ git remote add origin git@github.com:yourorg/openclaw-workspace.git
 cd /opt/openclaw/workspace
 git add -A
 git commit -m "Daily backup $(date +%Y-%m-%d)"
-git push origin main</div>
+git push origin main</code></pre>
 
                 <div class="alert danger">
                     <strong>Security Warning:</strong> อย่า commit API keys หรือ sensitive data ลง git repository โดยตรง ใช้ .gitignore และ environment variables แทน
@@ -1020,7 +954,7 @@ git push origin main</div>
 
                 <h3>Rolling Upgrade Process</h3>
 
-                <div class="code-block"># Zero-downtime upgrade script
+                <pre><code># Zero-downtime upgrade script
 #!/bin/bash
 
 # 1. Backup current system
@@ -1048,11 +982,11 @@ openclaw gateway health || exit 1
 # 8. Re-enable service
 openclaw gateway maintenance --disable
 
-echo "Upgrade completed successfully"</div>
+echo "Upgrade completed successfully"</code></pre>
 
                 <h3>Rollback Strategy</h3>
 
-                <div class="code-block"># Emergency rollback script
+                <pre><code># Emergency rollback script
 #!/bin/bash
 
 PREVIOUS_VERSION="2.1.5"  # Keep track of last working version
@@ -1069,7 +1003,7 @@ LATEST_BACKUP=$(ls -t /opt/backups/openclaw_* | head -n1)
 tar -xzf $LATEST_BACKUP/workspace.tar.gz -C /
 
 # 4. Restart service
-sudo systemctl start openclaw</div>
+sudo systemctl start openclaw</code></pre>
 
                 <h2>9. Security Hardening for Production</h2>
 
@@ -1077,7 +1011,7 @@ sudo systemctl start openclaw</div>
 
                 <h3>Firewall Configuration</h3>
 
-                <div class="code-block"># UFW firewall rules
+                <pre><code># UFW firewall rules
 sudo ufw --force reset
 sudo ufw default deny incoming
 sudo ufw default allow outgoing
@@ -1093,11 +1027,11 @@ sudo ufw allow 443/tcp
 sudo ufw allow from 10.0.0.0/8 to any port 3000
 
 # Enable firewall
-sudo ufw enable</div>
+sudo ufw enable</code></pre>
 
                 <h3>SSH Hardening</h3>
 
-                <div class="code-block"># /etc/ssh/sshd_config
+                <pre><code># /etc/ssh/sshd_config
 Port 2222
 PermitRootLogin no
 PasswordAuthentication no
@@ -1110,11 +1044,11 @@ ClientAliveCountMax 2
 AllowUsers openclaw
 
 # Restart SSH
-sudo systemctl restart sshd</div>
+sudo systemctl restart sshd</code></pre>
 
                 <h3>Fail2Ban Configuration</h3>
 
-                <div class="code-block"># /etc/fail2ban/jail.local
+                <pre><code># /etc/fail2ban/jail.local
 [DEFAULT]
 bantime = 3600
 findtime = 600
@@ -1132,11 +1066,11 @@ enabled = true
 port = 3000
 filter = openclaw-api
 logpath = /opt/openclaw/logs/gateway.log
-maxretry = 5</div>
+maxretry = 5</code></pre>
 
                 <h3>API Keys และ Secrets Management</h3>
 
-                <div class="code-block"># Use environment variables for secrets
+                <pre><code># Use environment variables for secrets
 # /opt/openclaw/.env (chmod 600)
 ANTHROPIC_API_KEY=sk-...
 OPENAI_API_KEY=sk-...
@@ -1149,7 +1083,7 @@ Environment=ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}
 # Rotate API keys monthly
 #!/bin/bash
 # /opt/openclaw/scripts/rotate-keys.sh
-# Automated key rotation script</div>
+# Automated key rotation script</code></pre>
 
                 <h2>10. Performance Optimization</h2>
 
@@ -1157,7 +1091,7 @@ Environment=ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}
 
                 <h3>Context Window Management</h3>
 
-                <div class="code-block"># openclaw.json - Performance settings
+                <pre><code># openclaw.json - Performance settings
 {
   "performance": {
     "contextWindow": {
@@ -1176,7 +1110,7 @@ Environment=ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}
       "queueTimeout": 30000
     }
   }
-}</div>
+}</code></pre>
 
                 <h3>Model Selection Strategy</h3>
 
@@ -1221,7 +1155,7 @@ Environment=ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}
 
                 <h3>Caching Strategies</h3>
 
-                <div class="code-block"># Redis caching for common queries
+                <pre><code># Redis caching for common queries
 const redis = require('redis');
 const client = redis.createClient();
 
@@ -1242,7 +1176,7 @@ async function getCachedResponse(query, model) {
   await client.setex(cacheKey, 3600, JSON.stringify(response));
   
   return response;
-}</div>
+}</code></pre>
 
                 <h2>11. Lessons from Running 45 Agents</h2>
 
@@ -1328,12 +1262,10 @@ async function getCachedResponse(query, model) {
         </div>
 
     </article>
-        </div>
-    </section>
 
     <!-- Series Navigation -->
     <section class="series-nav">
-        <div class="container">
+        <div class="series-complete">
             <h3>📚 OpenClaw for Organizations 2026 - Complete Series</h3>
             <div class="series-posts">
                 <div class="series-post">
@@ -1376,8 +1308,8 @@ async function getCachedResponse(query, model) {
     </section>
 
     <!-- Footer -->
-    <footer class="footer">
-        <div class="container">
+    <footer class="blog-footer">
+        <div class="blog-footer__inner">
             <p>&copy; 2026 Anirach Mingkhwan. All rights reserved.</p>
             <p>
                 <a href="/">Home</a> •
