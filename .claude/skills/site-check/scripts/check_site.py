@@ -469,8 +469,15 @@ def lineno(text, pos):
 
 
 def norm_title(s):
-    """Titles must be unescaped, whitespace-collapsed and emoji-stripped before
-    comparison, or `&amp;` vs `&` alone yields ~14 false positives."""
+    """Titles must be tag-stripped, unescaped, whitespace-collapsed and
+    emoji-stripped before comparison, or `&amp;` vs `&` alone yields ~14 false
+    positives.
+
+    Inner tags are stripped because a title's TEXT is the thing being compared,
+    not its markup: wrapping a Thai card title in <span lang="th"> (the site's
+    own i18n convention, and an accessibility requirement on a lang="en" page)
+    is not a title change, but without this it read as 37 mismatches."""
+    s = re.sub(r"<[^>]+>", "", s)
     s = htmlmod.unescape(re.sub(r"\s+", " ", s)).strip()
     s = RE_EMOJI.sub("", s)
     return s.strip().strip("—-").strip()
