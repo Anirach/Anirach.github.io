@@ -41,6 +41,9 @@
   }
 
   // ── Scroll reveal ──
+  // Opt IN to the hidden state. Everything below only runs with JS available,
+  // so the page is never left blank by a script that failed to load.
+  document.documentElement.classList.add('js-reveal');
   const reveals = document.querySelectorAll('[data-reveal]');
 
   if ('IntersectionObserver' in window) {

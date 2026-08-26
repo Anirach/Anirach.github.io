@@ -19,8 +19,10 @@ import sys
 from PIL import Image, ImageDraw, ImageFilter, ImageFont
 
 ROOT = pathlib.Path(__file__).resolve().parents[1]
-FONTS = pathlib.Path("/private/tmp/claude-501/-Users-anirach-Documents-Anirach-github-io/"
-                     "bed2c623-bbc4-4ff7-92b6-a51793171070/scratchpad/fonts")
+# Vendored beside this script (both OFL). Previously this pointed at a session
+# scratchpad, so the generator would have broken the day that directory was
+# garbage-collected — with no error until someone tried to redraw a cover.
+FONTS = pathlib.Path(__file__).resolve().parent / "fonts"
 GOLD = (196, 164, 108)
 CREAM = (250, 247, 240)
 S = 1600  # drawn at 2x then downsampled, so edges and type stay crisp

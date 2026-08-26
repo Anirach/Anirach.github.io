@@ -321,11 +321,9 @@ BASELINE = {
         "blog/frontend-performance.html|/fonts/inter-var.woff2": 1,
     },
 
-    # Leftovers from a prior HTML template.  Safe to delete, nothing links them.
-    "INV-06a": {
-        "Opic02.jpg", "bg.jpg", "overlay.png", "pic01.jpg", "pic02.jpg",
-        "pic03.jpg", "pictop.png", "xpic01.jpg", "xpic03.jpg",
-    },
+    # RETIRED 2026-08-26. The 9 template leftovers were deleted (749 KB), and
+    # the check now also walks the repo ROOT, where two 1.2 MB screenshots had
+    # been published unreferenced because nothing looked there.
 
     # RETIRED 2026-08-26. Two posts had no cover of their own and borrowed a
     # neighbour's — openclaw-memory-architecture wore monitoring's, and
@@ -362,10 +360,11 @@ BASELINE = {
     # INV-14 (6 posts with no <meta name="description">) was cleared by the
     # 2026-08-26 metadata sweep — all 47 pages now carry one, and INV-27
     # promotes it from warn to FAIL. No baseline entry remains.
-    # Phase 4 (2026-08-26) swept 26 files from "© 2025"/"© 2024" to 2026, so the
-    # '2025' cohort is gone. "NONE" stays: 3 posts still carry no copyright line
-    # at all, which is a different, still-live defect.
-    "INV-15": {"NONE"},
+    # RETIRED 2026-08-26. The year cohorts went first; then the whole-site
+    # improvement Phase 1 unified all 48 pages onto ONE string in ONE encoding
+    # (the literal ©, not &copy; — RE_COPYRIGHT cannot read the entity, so an
+    # entity reads to this gate as "no copyright at all") and gave the last 2
+    # posts the line they lacked. INV-15 passes on its own now.
     # Phase 3 (island -> house, 2026-08-26) normalised 11 posts onto
     # <footer class="blog-footer">, retiring the '<footer class="footer">' and
     # bare '<footer>' variants. INV-25 flagged both keys as stale the same day.
@@ -1027,11 +1026,25 @@ def _images_used(site):
     return used
 
 
-@check("INV-06a", "every file in images/ is referenced at least once", WARN)
+@check("INV-06a", "no unreferenced image is published (images/ AND the repo root)", WARN)
 def _(site):
     used = _images_used(site)
-    return [Violation(i, "images/%s is never referenced" % i)
-            for i in site.images_on_disk if i not in used]
+    out = [Violation(i, "images/%s is never referenced" % i)
+           for i in site.images_on_disk if i not in used]
+    # The root was a blind spot: home-1440.png (430 KB) and p3-jarvis-1440.png
+    # (789 KB) sat there tracked, published and crawlable, referenced by
+    # nothing, invisible to this check because it only walked images/ and
+    # invisible to _config.yml because that only excludes named paths.
+    for f in sorted(os.listdir(site.root)):
+        if not f.lower().endswith((".png", ".jpg", ".jpeg", ".webp", ".gif", ".svg")):
+            continue
+        if f in ("favicon.ico", "favicon.svg", "apple-touch-icon.png"):
+            continue          # probed at the root by browsers, never linked
+        if f not in used:
+            out.append(Violation("root:" + f,
+                                 "%s sits at the repo root, is published, and is "
+                                 "referenced by nothing" % f))
+    return out
 
 
 @check("INV-06b", "every referenced image exists on disk")

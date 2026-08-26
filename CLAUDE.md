@@ -45,7 +45,7 @@ Deploy by pushing to `main` — GitHub Pages auto-deploys. There is no `.nojekyl
 │                       #   outright — it is not prepended, as was first assumed
 ├── sitemap.xml         # 47 canonical URLs, hand-maintained — 404.html excluded
 ├── favicon.ico         # + apple-touch-icon.png (180×180) — both probed at the root by default
-├── images/             # 71 files — covers (<slug>-cover.jpg; books/ titles carry both language faces as -cover-en/-th or -cover-front/-back), 9 share cards (og-*.jpg, <slug>-og.jpg — all 1200×630), diagram PNGs, posters, the event QR
+├── images/             # 64 files — covers (<slug>-cover.jpg; books/ titles carry both language faces as -cover-en/-th or -cover-front/-back), 9 share cards (og-*.jpg, <slug>-og.jpg — all 1200×630), diagram PNGs, posters, the event QR
 ├── docs/               # design spec, implementation plan, OpenClaw news runbook + gate
 ├── .claude/skills/     # page-design · blog-post · a11y-perf · site-check
 ├── _config.yml         # Jekyll excludes: docs/, CLAUDE.md (see Development)
@@ -141,11 +141,20 @@ Four skills live in `.claude/skills/` — use them; they carry the deep, verifie
 - **page-design** — the house visual system (canonical `:root` tokens, type scale, component vocabulary, approved hero gradients, modern-CSS adoption verdicts). Load before designing or restyling anything.
 - **blog-post** — the end-to-end recipe for adding/editing a post, with a wiring verifier (`assets/verify-wiring.py`). The starter template itself is not here — it was consolidated into **page-design** (`assets/post-template.html`) as the repo's one canonical copy; see `.claude/skills/blog-post/assets/TEMPLATE-MOVED.md`.
 - **a11y-perf** — accessibility and performance standing rules plus the measured remediation backlog (real contrast ratios, image weights, focus states).
-- **site-check** — run `python3 .claude/skills/site-check/scripts/check_site.py` from the repo root before every push. 53 cross-file integrity checks; exit 0 means no **new** fail-severity violation (a baseline of pre-existing debt is carried, `0 new, 41 known` today — down from 55 before the 2026-08-26 redesign phases paid debt down). `INV-25` fails the build if a baseline entry goes stale, so the net cannot silently rot; `INV-26` ties every section-directory detail page (today: the four `books/*.html`) to its own index; `INV-27` enforces the social/canonical head block on all 47 pages. Added 2026-08-26 by the
+- **site-check** — run `python3 .claude/skills/site-check/scripts/check_site.py` from the repo root before every push. 56 cross-file integrity checks; exit 0 means no **new** fail-severity violation (a baseline of pre-existing debt is carried, `0 new, 29 known` today — down from 55, as the 2026-08-26 redesign phases paid real debt down rather than baselining it). `INV-25` fails the build if a baseline entry goes stale, so the net cannot silently rot; `INV-26` ties every section-directory detail page (today: the four `books/*.html`) to its own index; `INV-27` enforces the social/canonical head block on all 47 pages. Added 2026-08-26 by the
 critique work, each fault-injected before being trusted: `INV-28` (every `.post-hero` background is
 one of the 5 approved gradient families), `INV-29` (every post carries a home link and a footer
 destination row, so no post is a dead end), `INV-30` (the skip link and its `id="main"` target
 exist together), `INV-31`/`INV-32` (feed and sitemap drift).
+
+**Progressive enhancement is now the rule on `index.html`.** `[data-reveal]` starts VISIBLE; the
+hidden state is opt-in via a `.js-reveal` class that `script.js` adds to `<html>` as its first act.
+Before 2026-08-26 the hidden state was the default and the script was the only thing that undid it,
+so with JavaScript off **53% of the landing page rendered as empty coloured bands** (2,746 of
+5,172px at 1440) — including the entire One Day of Light block, both PDF links and the seat
+reservation. A `<noscript><style>` override was the obvious patch and was deliberately rejected: it
+would have given `index.html` its first `<style>` block and broken the invariant that this page's
+CSS lives entirely in `style.css` (7867c00). Never re-invert this.
 
 **Complementary user-level design skills** (installed 2026-08-26 into `~/.claude/skills` — not in this
 repo, may be absent on other machines): `fixing-metadata` + `seo` (the gap they found was closed by the

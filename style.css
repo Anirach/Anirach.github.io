@@ -69,15 +69,23 @@ img { max-width: 100%; height: auto; display: block; }
 }
 .btn:hover .btn__arrow { transform: translateX(3px); }
 
-/* ── Reveal animation ── */
+/* ── Reveal animation ──
+   PROGRESSIVE ENHANCEMENT, deliberately inverted 2026-08-26. The hidden state
+   is now opt-IN: script.js adds .js-reveal to <html>, and only then does
+   [data-reveal] start at opacity 0. Previously the hidden state was the
+   default and script.js was the only thing that undid it, so with JavaScript
+   off 53% of this page rendered as empty coloured bands — measured 2,746 of
+   5,172px at 1440, including the entire One Day of Light block, both PDFs and
+   the seat reservation. A <noscript> override would also have worked, but it
+   would have given index.html its first-ever <style> block and broken the
+   invariant that this page's CSS lives entirely in style.css (7867c00).
+   Phase 7 replaces this with a scroll-driven animation and deletes script.js. */
 [data-reveal] {
-  opacity: 0; transform: translateY(40px);
   transition: opacity 0.8s cubic-bezier(0.16,1,0.3,1),
               transform 0.8s cubic-bezier(0.16,1,0.3,1);
 }
-[data-reveal].revealed {
-  opacity: 1; transform: translateY(0);
-}
+.js-reveal [data-reveal] { opacity: 0; transform: translateY(40px); }
+.js-reveal [data-reveal].revealed { opacity: 1; transform: translateY(0); }
 
 /* ═══════════════════════════════════════════════════
    NAVIGATION
@@ -449,9 +457,12 @@ img { max-width: 100%; height: auto; display: block; }
 
 /* Two single-language editions, so the plate holds both jackets — the same
    dual-cover pattern books/index.html uses (.card__image--pair). */
-.book__covers { display: flex; gap: 1rem; align-items: flex-start; }
+/* A definite width + a declared ratio: the covers are lazy, so before they
+   resolved this flex item computed to 0px and the card jumped ~180px tall and
+   495px wide when they landed. */
+.book__covers { display: flex; gap: 1rem; align-items: flex-start; flex: 0 0 300px; width: 300px; }
 .book__covers img {
-  width: calc(50% - 0.5rem); height: auto; display: block;
+  width: calc(50% - 0.5rem); aspect-ratio: 2 / 3; object-fit: cover; display: block;
   border-radius: var(--radius-sm);
   box-shadow: 0 16px 40px rgba(17,48,75,0.22);
 }
@@ -465,6 +476,11 @@ img { max-width: 100%; height: auto; display: block; }
 .btn--ghost:hover { background: var(--blue-dark); color: #fff; }
 .btn__text-link { color: var(--blue-dark); font-weight: 600; font-size: 0.9rem; }
 .btn__text-link:hover { color: var(--navy); }
+.book__heading {
+  font-size: clamp(2rem, 4vw, 3.5rem); font-weight: 300; color: var(--navy);
+  letter-spacing: -0.02em; margin: 0.5rem 0 1.25rem; text-wrap: balance;
+}
+.book__heading strong { font-weight: 800; }
 .book__label {
   /* var(--blue) on white measures 4.47:1 — just under the 4.5:1 floor at
      this font-size; var(--blue-dark) clears 6.29:1. */
@@ -729,7 +745,7 @@ img { max-width: 100%; height: auto; display: block; }
   /* the phone's first screen must hold the portrait AND the name: 100vh plus a
      7rem portrait offset left ~450px of empty gradient above the fold */
   .hero { min-height: auto; padding-top: 7rem; padding-bottom: 2rem; }
-  .book__covers { max-width: 320px; margin: 0 auto; }
+  .book__covers { flex-basis: auto; width: 260px; max-width: 260px; margin: 0 auto; }
   .hero__portrait { width: 62vw; margin-top: 1rem; }
   .hero__name { font-size: clamp(2.5rem, 12vw, 5rem); }
   .hero__name-row { margin-top: -1.5rem; }
@@ -791,5 +807,15 @@ img { max-width: 100%; height: auto; display: block; }
     animation-duration: .01ms !important; animation-iteration-count: 1 !important;
     transition-duration: .01ms !important; scroll-behavior: auto !important;
   }
+  /* The *-reset above cannot rescue [data-reveal]: its opacity:0 is a static
+     declaration, not an animation. Without this line a reduced-motion reader
+     sees the same blank page a no-JS reader does. (Phase 7 removes the trap
+     structurally by moving the reveal to a scroll-driven animation.) */
+  [data-reveal] { opacity: 1 !important; transform: none !important; }
 }
+.research__card:focus-within, .projects__card:focus-within {
+  transform: translateY(-4px); box-shadow: 0 16px 48px rgba(34,98,153,0.1);
+}
+html { scroll-padding-top: 5rem; }
+[id] { scroll-margin-top: 5rem; }
 h1, h2, h3, .post-hero__title, .card__title { text-wrap: balance; }

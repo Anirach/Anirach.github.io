@@ -1,6 +1,6 @@
 ---
 name: a11y-perf
-description: Accessibility and performance rules for the anirach.com static site (47 hand-written HTML files, no build step, per-file embedded CSS). Use this whenever you touch any .html file in this repo, add or edit a blog post under blog/, add or swap an image in images/, edit a :root palette or a .post-hero gradient, change nav markup, or are asked about contrast, alt text, focus states, keyboard access, page weight, image size, fonts, or Lighthouse/Core Web Vitals — even if the user does not mention accessibility or performance at all, and even for a "just add a card to blog/index.html" request. It carries this site's real measured numbers (blog/index.html is 4.03 MB referenced and fully lazy-loaded; the palette was re-keyed to the book covers 2026-08-26 so --blue #226299 now PASSES as text, while --blue-light is borders-only and the focus ring is scoped; the :focus-visible/reduced-motion/color-scheme baseline is landed in 47/47 pages; .post-hero__meta still fails contrast in 15 files) plus verified drop-in fixes, so use it instead of deriving generic WCAG advice.
+description: Accessibility and performance rules for the anirach.com static site (47 hand-written HTML files, no build step, per-file embedded CSS). Use this whenever you touch any .html file in this repo, add or edit a blog post under blog/, add or swap an image in images/, edit a :root palette or a .post-hero gradient, change nav markup, or are asked about contrast, alt text, focus states, keyboard access, page weight, image size, fonts, or Lighthouse/Core Web Vitals — even if the user does not mention accessibility or performance at all, and even for a "just add a card to blog/index.html" request. It carries this site's real measured numbers (blog/index.html is 4.07 MB referenced and fully lazy-loaded; the palette was re-keyed to the book covers 2026-08-26 so --blue #226299 now PASSES as text, while --blue-light is borders-only and the focus ring is scoped; the :focus-visible/reduced-motion/color-scheme baseline is landed in 47/47 pages; .post-hero__meta and .post-series-footer contrast are both DONE as of 2026-08-26) plus verified drop-in fixes, so use it instead of deriving generic WCAG advice.
 ---
 
 # Accessibility & performance for anirach.com
@@ -157,6 +157,12 @@ Copy that pattern. Never ship a `<button class="nav__hamburger">` outside `index
 
 ### 4. `--blue #226299` is a TEXT colour now. `--blue-light` is borders only. **[RE-KEYED 2026-08-26]**
 
+> **`.post-series-footer` and `.post-hero__meta` are DONE (2026-08-26, whole-site Phase 1).**
+> The 22 `.post-series-footer` rules that read `var(--gray)` at 2.40:1 are now `var(--slate-light)`
+> (5.91:1), and the 24 `.post-hero__meta` rules that read `rgba(255,255,255,0.6–0.95)` are now
+> `#fff` — 5.47–7.68:1 on every surviving dark family. The 9 Sunrise posts keep
+> `var(--slate-light)` on cream and are correct. R3 and R4's paragraphs below are HISTORY.
+
 Still fully outstanding — this is the largest live a11y defect on the site.
 
 **This rule inverted on 2026-08-26.** The palette was re-keyed to the book covers, and the token
@@ -184,7 +190,7 @@ That gradient no longer exists either — the light family is now the sunrise
 `#eef3f3 → #dee7e6 → #e9e1c4`, on which `--navy` measures 10.4–11.3:1 (measured live on the
 landing hero). `references/contrast.md` still holds the OLD palette's table and is stale.
 
-### 5. A visible focus ring exists everywhere. **[DONE]** Hover/focus *parity* does not.
+### 5. A visible focus ring exists everywhere. **[DONE]** Hover/focus parity **[DONE 2026-08-26]**
 
 `e8da9da` installed this block, and the books/publications pages shipped with it — today it
 is in **47 embedded `<style>` blocks + `style.css`** = all 48
@@ -207,10 +213,10 @@ grep -L ':focus-visible' style.css blog/*.html books/*.html news/index.html proj
    focus only, never for keyboard. The old advice in this file — "`outline` is never set
    to `none` anywhere, verify before claiming a focus failure" — will now find 47 matches
    and mislead you into the opposite error. Read the selector, not the declaration.
-2. **The remaining gap is parity, not a ring.** There are **144 `:hover` rules**. Mouse
-   users still get card lift, image scale and a colour shift that keyboard users do not:
-   `.card:focus-within` is not styled anywhere. That is a real but modest finding — do not
-   escalate it to "keyboard inaccessible" on a site with a working 2px ring on every page.
+2. **Parity landed 2026-08-26.** There are **227 `:hover` rules** (the old figure of 144 was
+   an undercount). `.card:focus-within` — plus `.research__card` / `.projects__card` on the
+   landing — now mirror the lift, the image scale and the colour shift across 7 files, so a
+   keyboard user gets the same affordance a mouse user does.
 
 `assets/a11y-block.css` holds the parity rules (`.card:focus-within` lift, the skip link)
 that are still *not* on disk. It deliberately does **not** repeat the ring — that shipped.
@@ -340,7 +346,7 @@ not.** Loops and verification commands: `references/n-file-edits.md`.
 
 ### R1. `blog/index.html` page weight — **[DONE]**
 
-Was 18.41 MB. Now **4.03 MB of referenced bytes, all of it lazy**.
+Was 18.41 MB. Now **4.07 MB of referenced bytes, all of it lazy**.
 
 ```bash
 python3 - <<'EOF'
@@ -355,20 +361,20 @@ h=os.path.getsize('blog/index.html')
 print(f"img tags {len(tags)}  unique {len(u)}  lazy {sum('loading=\"lazy\"' in t for t in tags)}")
 print(f"html {h:,}  images {sum(u.values()):,}  total {h+sum(u.values()):,}")
 EOF
-# → img tags 74  unique 36  lazy 74
-#   html 68,220  images 4,163,304  total 4,231,524   (4.03 MB)
+# → img tags 74  unique 38  lazy 74
+#   html 76,387  images 4,268,081  total 4,344,468   (4.07 MB)
 ```
 
 Three numbers matter and they are not the same number — quote the right one:
 
 | Figure | Value | Meaning |
 |---|---|---|
-| referenced total | **4.03 MB** | every byte the page can eventually pull. Was 18.41 MB. |
+| referenced total | **4.07 MB** | every byte the page can eventually pull. Was 18.41 MB. |
 | eager payload | **67 KB** | the HTML. **All 74 `<img>` tags are `loading="lazy"`**, so nothing else is fetched up front. |
 | realistic first viewport | **≈1.7 MB** | HTML + the first ~10 cards' covers, which a browser fetches because lazy images near the viewport still load. |
 
 Saying "the blog index is 4 MB" overstates what a visitor downloads by ~2.4×; saying
-"67 KB" understates it. Say 4.03 MB referenced / ≈1.7 MB first viewport.
+"67 KB" understates it. Say 4.07 MB referenced / ≈1.7 MB first viewport.
 
 `ec2827b` + `21c8a55` did the cover re-encode; `e8da9da` added the attributes. Heaviest
 posts now: `blog/idle-self-improvement.html`, `openclaw-migration.html`,
@@ -467,7 +473,9 @@ the element is ever added, or delete the rule. Find it with
 been re-cut twice.)
 
 Same substitution for `.post-series-footer { color: var(--gray) }` — a block-aware parse
-finds **22 rules, all still `var(--gray)`**, on `#fff`/`#f8fafc` at 2.56:1/2.45:1.
+found **22 rules on `var(--gray)`** at 2.40:1 on the cream ground. **All 22 were
+switched to `var(--slate-light)` (5.91:1) on 2026-08-26** — this command should now
+print `{'var(--slate-light)': 22}`.
 Switch them to `var(--slate-light)`. A line-based grep reports 13 here because 9 of the
 rules span lines; use the parse:
 
@@ -500,7 +508,7 @@ infinite animation (`pulseArrow`, `blog/openclaw-migration.html`).
 
 | Thing | Count today | Why it is blocked on the other |
 |---|---|---|
-| `<a href="#main" class="skip-link">` | **0 of 47** | a skip link with no target is worse than none |
+| `<a href="#main" class="skip-link">` | **48 of 48 — DONE** | landed 2026-08-26 with its `<main id="main">` target |
 | `<main id="main">` | `<main>` in **16 of 47**, `id="main"` in **5** (the `books/` pages, `ea3c8e8` + `7daf3a4`) | 11 `<main>`s need only the `id`; 31 files need the wrap |
 
 Do `<main id="main">` first, then the skip link. The wrap is not safely scriptable — the
@@ -567,10 +575,8 @@ Ordered by how much they degrade a screen-reader pass:
   `.research__icon` divs in `index.html` and the 2 `.series-icon` spans in
   `blog/index.html`. `index.html` already does this correctly in 3 places;
   `blog/index.html` in **0**.
-- **12 `target="_blank"` anchors with no `rel`,** out of 70 sitewide — so 58 are already
-  correct and a blanket "0 have rel" claim is wrong. The 12 are in
-  `api-request-lifecycle`, `devops-security`, `kubernetes-orchestration`,
-  `linux-command-line`, `monitoring-observability` and `obsidian-ai-jarvis`.
+- ~~12 `target="_blank"` anchors with no `rel`~~ — **DONE 2026-08-26, 0 remain.** All 70
+  `target="_blank"` anchors sitewide now carry `rel="noopener"`.
 
   ```bash
   python3 -c "
