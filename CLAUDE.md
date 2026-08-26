@@ -133,6 +133,15 @@ Four skills live in `.claude/skills/` — use them; they carry the deep, verifie
 - **a11y-perf** — accessibility and performance standing rules plus the measured remediation backlog (real contrast ratios, image weights, focus states).
 - **site-check** — run `python3 .claude/skills/site-check/scripts/check_site.py` from the repo root before every push. 49 cross-file integrity checks; exit 0 means no **new** fail-severity violation (a baseline of pre-existing debt is carried, `0 new, 55 known` today). `INV-25` fails the build if a baseline entry goes stale, so the net cannot silently rot; `INV-26` ties every section-directory detail page (today: the four `books/*.html`) to its own index.
 
+**Complementary user-level design skills** (installed 2026-08-26 into `~/.claude/skills` — not in this
+repo, may be absent on other machines): `fixing-metadata` + `seo` (the verified gap: 0 of 47 pages carry
+og:/twitter:/canonical/JSON-LD, no sitemap or robots.txt), `impeccable` (design critique/polish method),
+`review-animations` (motion review, manual invoke), `color-expert` (OKLCH/contrast craft),
+`dark-mode-design-expert` (dark-theme token architecture), plus the official `playground` plugin for
+throwaway visual A/Bs. **House rules win every conflict**: the four project skills above stay
+authoritative for tokens, type scale, components, and measured a11y numbers — third-party skills
+advise, never override, and any change they motivate still goes through the owner's review-first flow.
+
 News and the homepage "Latest updates" strip have a separate gate — `python3 docs/openclaw/check-news-sync.py` — which checks three things nothing else does: the strip lists the 3 newest news items in order, every news item carries a `<!-- source: … -->` provenance comment, and the four hand-typed counters match reality (`"N updates"` on news, `"N chapters"` on publications, `"N novel"` / `"N complete"` on books). The full procedure for adding news is `docs/openclaw/latest-updates-runbook.md`.
 
 ## Verification
