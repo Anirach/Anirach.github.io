@@ -47,7 +47,7 @@ three flex properties on `.blog-nav__back`). Use this version:
 The glassy `rgba(248,250,252,0.85)` + `blur(20px)` `.blog-nav` block is byte-identical in 24 of the
 26 house files and is the house look — do not change it. `openclaw-memory-architecture.html` and
 `vibe-coding-devops-process.html` are minified forks (`.9` alpha, `blur(14px)`/`blur(16px)`,
-`z-index:50`); `blog/index.html:32` uses `0.88` on `.nav`. 34 files use `backdrop-filter` somewhere.
+`z-index:50`); `blog/index.html:32` uses `0.88` on `.nav`. 48 files use `backdrop-filter` somewhere (re-measured 2026-08-26; the stated 34 was already stale).
 
 `.nav` (used by `index.html`, `blog/index.html` and the island posts) is a **different component
 with the same name in three places**. That collision is the main blocker on ever sharing a

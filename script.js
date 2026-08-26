@@ -80,15 +80,5 @@
     });
   });
 
-  // ── Parallax-lite for hero bg text ──
-  const bgText = document.querySelector('.hero__bg-text');
-  if (bgText && !reduceMotion) {
-    window.addEventListener('scroll', () => {
-      const y = window.scrollY;
-      if (y < window.innerHeight) {
-        bgText.style.transform = `translate(-50%, calc(-55% + ${y * 0.15}px))`;
-      }
-    }, { passive: true });
-  }
 
 })();

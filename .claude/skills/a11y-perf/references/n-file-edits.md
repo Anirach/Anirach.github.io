@@ -291,6 +291,8 @@ Leave them at `h4`, and grep for them as `<h[1-6] class="card__title">`.
 `index.html` already has 3 `aria-hidden="true"`; `blog/index.html` has 0.
 
 ```bash
+# OBSOLETE 2026-08-26 — matches nothing; `.research__icon` no longer exists in index.html.
+# Kept as the shape of the edit, not as a command to run.
 perl -pi -e 's/<div class="research__icon">/<div class="research__icon" aria-hidden="true">/g' index.html
 perl -pi -e 's/<span class="series-icon">/<span class="series-icon" aria-hidden="true">/g' blog/index.html
 grep -rc 'aria-hidden="true"' index.html blog/index.html   # expect index.html 9, blog/index.html 2

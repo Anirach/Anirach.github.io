@@ -571,10 +571,11 @@ Ordered by how much they degrade a screen-reader pass:
   current chip — today it's a bare `<span class="current">#4 Security & Access</span>`
   (find it with `grep -n 'class="current"' blog/openclaw-security.html`), written on disk
   with a literal `&`.
-- **Emoji icons announced as content.** Add `aria-hidden="true"` to the 6
-  `.research__icon` divs in `index.html` and the 2 `.series-icon` spans in
-  `blog/index.html`. `index.html` already does this correctly in 3 places;
-  `blog/index.html` in **0**.
+- **Emoji icons announced as content.** ~~the 6 `.research__icon` divs in
+  `index.html`~~ — **moot 2026-08-26**: the emoji research tiles were replaced by
+  numbered arcs whose marks are inline `<svg aria-hidden="true">`, so there are **0**
+  `.research__icon` divs left. Still open: the 2 `.series-icon` spans in
+  `blog/index.html`, which carry `aria-hidden` in **0** places.
 - ~~12 `target="_blank"` anchors with no `rel`~~ — **DONE 2026-08-26, 0 remain.** All 70
   `target="_blank"` anchors sitewide now carry `rel="noopener"`.
 

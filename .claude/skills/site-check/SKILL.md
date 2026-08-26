@@ -298,9 +298,11 @@ navigation at all on a phone.
 
 ### INV-21 — every DOM hook `script.js` uses exists in `index.html`
 
-0 today. 8 selectors harvested: `#nav`, `#hamburger`, `#navLinks`, `a`, `[data-reveal]` ×2,
-`a[href^="#"]`, `.hero__bg-text`. `index.html` carries 14 `data-reveal` attributes and is the only
-file in the repo that carries any.
+0 today. 7 selectors harvested: `#nav`, `#hamburger`, `#navLinks`, `a`, `[data-reveal]` ×2,
+`a[href^="#"]`. `index.html` carries 12 `data-reveal` attributes and is the only file in the repo
+that carries any. (`.hero__bg-text` was the 8th until 2026-08-26, when the hero watermark was
+deleted — INV-21 caught the orphaned parallax listener left behind in `script.js`, which is
+precisely the failure it exists to catch.)
 
 **INV-21b (info-level)** asks the paired question: does every page holding a `data-reveal` hook load
 the JavaScript that acts on it? `style.css` ships `[data-reveal] { opacity: 0 }` and `script.js`
