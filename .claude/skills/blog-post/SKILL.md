@@ -16,7 +16,7 @@ description: End-to-end recipe for adding, editing, or removing a post in blog/ 
 > `<h2 class="card__title">` against 37 cards that had been `h4` since `635eb94`, silently
 > reporting CLEAN while `check_site.py` independently found 8 stale nav titles.
 >
-> **Last full re-measure: 2026-08-10 against `7867c00`.**
+> **Last full re-measure: 2026-08-26 against `21d5cfc`.**
 
 This site has **no build step, no templating, no partials**. Each of the 38 files in
 `blog/` — 37 posts plus `index.html` — embeds its own `<style>`, its own copy of the nav
@@ -36,26 +36,24 @@ Read the whole recipe before touching anything. The order matters: the card in
 python3 .claude/skills/blog-post/assets/verify-wiring.py
 ```
 
-Stdlib-only, no deps. On a clean checkout it prints `CLEAN` plus a list of `known:` and
-`warn:` lines that are pre-existing and baselined. Run it **before** you edit so you know
-what was already broken, and after every file you touch. Anything that appears as `FAIL:`
+Stdlib-only, no deps. On a clean checkout it prints `CLEAN` with no `known:` and no
+`warn:` lines — its `BASELINE` is empty. Run it **before** you edit so you know the tree
+was clean, and after every file you touch. Anything that appears as `FAIL:` or `warn:`
 was caused by your change.
 
-Baseline on a clean `main` (2026-08-10, `7867c00`):
+Baseline on a clean `main` (2026-08-26, `21d5cfc`):
 
 ```
-posts=37  cards=37  series-nav=7  post-nav=25  no-nav=5
-  known : cover github-actions-cover.jpg shared by github-actions.html, vibe-coding-devops-process.html
-  known : cover monitoring-cover.jpg shared by monitoring-observability.html, openclaw-memory-architecture.html
-  warn  : (8 stale .post-nav__title labels)
+posts=37  cards=37  series-nav=7  post-nav=24  no-nav=6
 
-CLEAN — no new wiring breakage (8 warn).
+CLEAN — no new wiring breakage (0 warn).
 ```
 
-**2** known failures, not 4 — `b9fb125` fixed the two counter violations that used to be
-baselined. **0** broken-link warnings, not 14 — `b9fb125` fixed those too. **8** stale nav
-titles, which match `check_site.py` INV-10's baseline one-for-one. If your run does not
-start from that, something else is already in flight.
+**0** known failures — the two shared-cover keys died with the drawn-cover system
+(2026-08-26) and the counter keys in `b9fb125`. **0** broken-link warnings. **0** stale nav
+titles, matching `check_site.py` INV-10 one-for-one (its `norm()` now strips tags like
+`check_site.norm_title`, so the two linters agree). If your run does not start from that,
+something else is already in flight.
 
 ## Step 1 — pick the category and series, which picks the nav pattern
 
@@ -79,15 +77,15 @@ copy at `assets/post-template.html`; it rotted three sweeps behind and was delet
 |---|---|---|---|
 | Technology → **DevOps & Vibe Coding** (24 posts) | `#series-devops` | `.post-nav` prev/next pair, relative `foo.html` links | `TEMPLATE` — **the default** |
 | Technology → **Numbered OpenClaw** (7 posts) | `#series-openclaw` | `.series-nav` 7-chip strip, absolute `/blog/<slug>` links | copy `blog/openclaw-skills.html`; read `references/openclaw-series.md` first |
-| Technology → **Standalone** (5 posts) | either section | no nav block at all | `TEMPLATE` with the `.post-nav` block deleted |
+| Technology → **Standalone** (6 posts) | either section | no nav block at all | `TEMPLATE` with the `.post-nav` block deleted |
 | **Academic & Philosophy** (0 posts) | new `.blog-grid` inside `#cat-academic` | standalone (no nav) until the category reaches 2 posts, then a per-category `.post-nav` prev/next chain, same shape as DevOps's | `TEMPLATE` with the `.post-nav` block deleted for the 1st post; restore it once a 2nd exists |
 | **Lifestyle** (0 posts) | new `.blog-grid` inside `#cat-lifestyle` | same rule as Academic & Philosophy | same |
 
 Card sections: `#series-openclaw` 13 cards, `#series-devops` 24 = 37 Technology cards ==
 37 total (Academic & Philosophy and Lifestyle carry 0). The nav partition
-(what `verify-wiring.py` prints) is 7 series-nav + 25 post-nav + 5 no-nav = 37.
-`git-branching.html` is a `#series-devops` card with no nav, so it appears in two rows
-above.
+(what `verify-wiring.py` prints) is 7 series-nav + 24 post-nav + 6 no-nav = 37. All 24
+`#series-devops` cards carry a `.post-nav` (the chain head `git-branching.html` included,
+since 2026-08-26); the 6 no-nav posts are all `#series-openclaw` cards.
 
 **Adding the first post to Academic & Philosophy or Lifestyle** replaces that category's
 `.category__note` paragraph with a `.blog-grid` (copy the shape from `#series-devops`'s
@@ -97,14 +95,14 @@ above.
 prev/next chain (Step 7's DevOps recipe applies, scoped to that category's cards instead
 of `#series-devops`'s). Do not build a chain for a lone post.
 
-Default to the DevOps template even for an AI/agent topic. Two posts already do exactly
-that — `claude-code-architecture.html` and `openclaw-memory-architecture.html` are carded
-under `#series-openclaw` but use `.post-nav` chrome. The numbered OpenClaw series is still
-the roughest corner of the site (no `.blog-nav` back link, 5 missing meta descriptions,
-badge markup in 4 different forms); adding to it costs 10 file edits instead of 4. Two of
-its old problems are **gone**: they all have the canonical `:root` now (`6670480`), and
-the 14 broken links were fixed in `b9fb125` — `check_site.py` INV-05 and INV-09 both
-PASS.
+Default to the DevOps template even for an AI/agent topic, but a post carded under
+`#series-openclaw` must NOT carry `.post-nav` chrome — `claude-code-architecture.html`
+and `openclaw-memory-architecture.html` used to, and INV-17 flagged both until their
+blocks were deleted on 2026-08-26 (`f5e53fb`); they are standalone now. The numbered
+OpenClaw series costs 10 file edits instead of 4. Its old problems are **gone**: canonical
+`:root` (`6670480`), the 14 broken links (`b9fb125`), the missing meta descriptions and
+the 4 badge-markup forms (2026-08-26) — `check_site.py` INV-05, INV-09, INV-14 and
+INV-20b all PASS.
 
 A post must never carry two patterns. `verify-wiring.py` fails on `BOTH`.
 
@@ -389,11 +387,12 @@ The exact block to write, from `blog/docker-compose.html:703-712`:
   </div>
 ```
 
-- Use `<div class="post-nav">`, not `<nav>` — 21 posts use `div`, 4 use `nav`.
+- Use `<div class="post-nav">`, not `<nav>` — 24 posts use `div`, 0 use `nav` (INV-04c reports a `<nav>` at warn level).
 - The direction strings are exactly `← Previous` and `Next →` with literal arrow
   characters. `claude-code-architecture.html` invented `Related` / `See also`; do not copy it.
 - Copy `.post-nav__title` from the target's `card__title` verbatim, minus trailing emoji.
-  Eight labels have already gone stale this way.
+  Eight labels had gone stale this way; all were rewritten on 2026-08-26 and INV-10 now
+  reports any new one (warn level — read the status lines, not just the exit code).
 - Some existing Next anchors carry `style="text-align:right;"`. Harmless; leave them if
   present, do not add new ones.
 
@@ -442,8 +441,9 @@ Match the blast radius to what you changed:
 | Deleting a post | remove the card, recompute both counters, and heal the chain by joining its two neighbours to each other |
 
 When editing one of the 7 numbered OpenClaw posts, open
-`references/openclaw-series.md` first — those files have no `.blog-nav` back link and
-their own drift you should not make worse. (They *do* have the canonical `:root` now, and
+`references/openclaw-series.md` first — those files carry the `.blog-nav` back link since
+the 2026-08-26 island→house conversion, but still have their own conventions you should
+not make worse. (They *do* have the canonical `:root` now, and
 their 14 broken links were fixed in `b9fb125`.)
 
 Because there are no shared partials, a request to change styling "everywhere" means
@@ -452,11 +452,11 @@ confirmation before starting; do not change one post and call it done.
 
 ## When something looks broken
 
-`references/known-exceptions.md` lists what is intentionally asymmetric — the chain head
-with no nav, the two off-chain OpenClaw cards, the five no-nav posts, the two shared
-covers — plus the standing drift (4 footer variants, 4 copyright cohorts, 8 stale nav
-titles) and the one genuine bug still worth reporting to the user
-(`deployment-hosting.html` has two `<h1>`). The old second bug — `blog/index.html`
-rendering a hamburger with no JavaScript — was **fixed in Task 9** and replaced with the
-pure-CSS checkbox toggle. Check that file before "fixing" anything you did not
-introduce.
+`references/known-exceptions.md` lists what is intentionally asymmetric — today only the
+six no-nav posts (the chain head `git-branching` now has a real `.post-nav`; the two
+OpenClaw cards that wore DevOps chrome lost it and are no-nav) — and records that the
+standing drift is gone: no shared covers, one footer variant (`blog-footer` ×37), one
+copyright string, 0 stale nav titles, and no two-`<h1>` post. The old second bug —
+`blog/index.html` rendering a hamburger with no JavaScript — was **fixed in Task 9** and
+replaced with the pure-CSS checkbox toggle. Check that file before "fixing" anything you
+did not introduce.

@@ -205,9 +205,11 @@ Pick the one that matches the post's series. Never mix two in one file.
 }
 ```
 
-This flex form is the incumbent — 22 of the 25 house files that declare `.post-nav` use it; the
-three grid variants (the two minified files plus `deployment-hosting.html`) are drift, not the
-pattern.
+This flex form is the only form — all 24 house files that declare `.post-nav` use it
+(re-measured 2026-08-26 after `be68cae` converged the last two grid variants,
+`vibe-coding-devops-process.html` and `deployment-hosting.html`, on it). `openclaw-memory-architecture.html`, the
+other minified fork, no longer declares `.post-nav` at all — its DevOps-style block was deleted
+2026-08-26 (`f5e53fb`) and the post is standalone.
 
 ```html
 <div class="post-nav">

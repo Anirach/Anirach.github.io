@@ -117,16 +117,14 @@ This is a 9-file edit, not a 2-file edit.
 3. Add the ordinal badge. Numerically all 7 are correct today, but the markup is expressed 4 ways
    (`.series-badge` ×4, `.series-info` ×1, bare `<p>` ×1, `<strong>` ×1) and `openclaw-memory.html`
    writes `บทที่ 3` instead of `Post #3`. Use `.series-badge` with `Post #8`.
-4. Add the card inside `<section class="series-section" id="series-openclaw">` — which now sits
-   inside `<div class="category" id="cat-technology">`. The series sections did not move or change;
-   they gained a wrapper. Two further bands exist and are empty by design: `#cat-academic`
-   (Academic & Philosophy) and `#cat-lifestyle` (Lifestyle) — see
-   `blog-post/references/known-exceptions.md` before adding the first post to either.
-5. Do **not** give the post a `.post-nav` as well — INV-08 enforces exclusivity (7 series-nav / 25
-   post-nav / 5 no-nav = 37).
-6. Fix the links you are about to copy: the series-post footers contain the 14 broken
-   `/about`, `/projects`, `/research`, `/teaching`, `/contact` hrefs. Use `../index.html#about` etc.,
-   as `blog/index.html:200-204` does.
+4. Add the card inside `<section class="series-section" id="series-openclaw">`. There is no
+   `.category` wrapper any more — the last band ("Technology") held 100% of the posts and was
+   deleted on 2026-08-26; the two series sections sit directly in `<main>` under the featured post.
+5. Do **not** give the post a `.post-nav` as well — INV-08 enforces exclusivity (7 series-nav / 24
+   post-nav / 6 no-nav = 37 as of 2026-08-26).
+6. The series-post footers used to carry 14 broken `/about`, `/projects`, `/research`, `/teaching`,
+   `/contact` hrefs; they were fixed in `b9fb125` and INV-05 fails on a recurrence. Copy from a
+   sibling that is green today.
 7. `--fix` to resync `:221` and `:235`.
 
 ---

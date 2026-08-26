@@ -554,11 +554,13 @@ Then in a real browser on `index.html`: tab once and confirm a visible focus rin
    which N in the commit. (That same rule also has `color: #4f46e5` hard-coded where
    `var(--blue-dark)` belongs.)
 
-4. **Never reuse a cover image.** Still true and still unfixed: 37 cards resolve to only 35 unique
-   covers. `../images/github-actions-cover.jpg` is shared by `vibe-coding-devops-process.html` and
-   `github-actions.html`; `../images/monitoring-cover.jpg` by `openclaw-memory-architecture.html`
-   and `monitoring-observability.html`. Those pairs are indistinguishable on the listing.
-   `check_site.py` INV-07a baselines exactly these two. The fix is two new images, not a re-point.
+4. **Never reuse a cover image.** Fixed 2026-08-26 by the drawn-cover system (`1103b7a`): every
+   card on the listing now resolves to its own cover. Until then 37 cards shared only 35 —
+   `../images/github-actions-cover.jpg` was double-booked by `vibe-coding-devops-process.html` and
+   `github-actions.html`, `../images/monitoring-cover.jpg` by `openclaw-memory-architecture.html`
+   and `monitoring-observability.html`, and the pairs were indistinguishable on the listing.
+   `check_site.py` INV-07a carries no baseline entry and fails the build on any new sharing. The fix
+   for a future collision is a new image, not a re-point.
 
 5. **Never commit a cover over ~200 KB, and never as PNG. This is now clean — keep it clean.**
    `ec2827b` + `21c8a55` re-encoded every PNG cover to JPG at `formatOptions 70`. Today:
@@ -660,7 +662,6 @@ re-plans them; the only live work is Phase 4 and the short "still open" list bel
 - `var(--measure)` / `var(--wide)` / `var(--radius-lg)` are declared but barely consumed (§1) —
   though the 2026-08 section pages started consuming `var(--measure)` (10 uses now).
 - `aspect-ratio` is not on every `.post-hero__cover` (§6 item 2).
-- 2 covers are still double-booked; commissioning the art is the fix (anti-pattern 4).
 - Contrast: `.post-hero__meta` is still `rgba(255,255,255,0.6)` in 15 files and
   `.post-series-footer` is still `var(--gray)` in 22 — see the a11y-perf skill, R3/R4. The a11y
   *infrastructure* landed; the *palette* corrections did not.
@@ -709,9 +710,9 @@ square cover with `summary_large_image` (half the image is cropped). The 9 share
 `<post>-og.jpg`) are all 1200×630 and are matched by neither the `*-cover.jpg` nor the
 `*-cover-*.jpg` census glob — add `images/*-og.jpg images/og-*.jpg` when counting them.
 
-Genuinely missing sitewide, if the user wants more: dark mode (§6), and the 2 double-booked hero
-covers of anti-pattern 4 — the share cards worked around that for social, but the listing page
-still shows two identical pairs.
+Genuinely missing sitewide, if the user wants more: dark mode (§6). The two double-booked hero
+covers of anti-pattern 4 were fixed 2026-08-26 by the drawn-cover system, so the listing page no
+longer shows any identical pair.
 
 ---
 

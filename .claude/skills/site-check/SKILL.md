@@ -1,6 +1,6 @@
 ---
 name: site-check
-description: Runs the cross-file integrity linter for the anirach.com static site (37 self-contained posts in blog/, no build step, no tests, no CI) and explains how to repair every failure it reports. This repo has zero tooling — this skill IS the test suite. Use it before any push, and immediately after ANY edit under blog/, images/, index.html, style.css, or script.js — every page carries its own copy of the nav, the CSS and the counters, so even a one-line edit silently desynchronises blog/index.html card counts, the post-nav prev/next chain, the 7-entry OpenClaw series strip, or a cover image. Also use it when adding or renaming a blog post, when the user says "check the site", "did I break anything", "is the blog consistent", "verify before deploy", "run the tests", or when reviewing a diff that touches blog/index.html. Run it BEFORE the edit too, to capture the known-red baseline, so you can tell your own breakage apart from the failures that were already there.
+description: Runs the cross-file integrity linter for the anirach.com static site (37 self-contained posts in blog/, no build step, no tests, no CI) and explains how to repair every failure it reports. This repo has zero tooling — this skill IS the test suite. Use it before any push, and immediately after ANY edit under blog/, images/, index.html, style.css, or script.js — every page carries its own copy of the nav, the CSS and the counters, so even a one-line edit silently desynchronises blog/index.html card counts, the post-nav prev/next chain, the 7-entry OpenClaw series strip, or a cover image. Also use it when adding or renaming a blog post, when the user says "check the site", "did I break anything", "is the blog consistent", "verify before deploy", "run the tests", or when reviewing a diff that touches blog/index.html. Run it BEFORE the edit too, to confirm the tree is green (0 new, 0 known since 2026-08-26), so any violation the run after your edit reports is yours.
 ---
 
 # site-check — the site's only test suite
@@ -23,12 +23,12 @@ prints one line, `[STATUS ] INV-id  count  title`, where STATUS is PASS (0 viola
 outside the baseline, at that check's severity). Non-zero checks then print a detail block: new
 violations marked ✗, baselined ones marked `· [known]`. A SUMMARY block closes the report.
 
-Exit 0 = no fail-severity violation outside the hard-coded BASELINE in check_site.py:263-377.
-Exit 1 = at least one fail-severity violation whose key is not in that baseline. Exit 2 = usage or
-environment error (bad `--root`, unknown `--check` id, bad flag). Warn- and info-level checks print
-but never change the exit code, and neither do fail-level violations that match a baseline key —
-today 6 fail-severity violations (INV-04a 2, INV-04f 1, INV-07a 2, INV-11 1) are reported as
-[known] and the script exits 0.
+Exit 0 = no fail-severity violation outside the hard-coded BASELINE in check_site.py (find it with
+`grep -n 'BASELINE = {'`). Exit 1 = at least one fail-severity violation whose key is not in that
+baseline. Exit 2 = usage or environment error (bad `--root`, unknown `--check` id, bad flag). Warn-
+and info-level checks print but never change the exit code, and neither would fail-level violations
+that match a baseline key — but **the table is empty today** (2026-08-26, `21d5cfc`): it holds only
+retirement comments, so every violation of any severity is new, and every fail-severity one exits 1.
 
 A baseline entry is a promise, not a mute button. When you repair baselined debt, delete its key in
 the same commit: **INV-25 audits the whole table and fails if any key has stopped matching a live
@@ -54,50 +54,37 @@ idempotent and touches no other file. Nothing else is auto-fixable — every oth
 judgement call about which of two files is wrong. Line numbers are deliberately not quoted here;
 `blog/index.html` is edited often and `--fix` prints the current ones.
 
-**Run it twice around every edit.** Capture the baseline before you touch anything, then compare.
-The tree exits 0 today but is not violation-free (see below), so "the script passed" means nothing
-on its own; "the script reports a violation that was not in the baseline" means you broke
-something. One blind spot remains: cohort-keyed checks (INV-15's copyright year, INV-16's footer
-class) report one violation per cohort, so a post moving between two already-known cohorts (e.g.
-© 2026 → © 2025) stays [known] and will NOT flip the exit code — read the per-check counts and
-details, not just the exit status.
+**Run it twice around every edit.** Confirm it is green before you touch anything, then compare.
+The tree exits 0 today **and is violation-free** (see below), so the script passing IS the signal;
+any violation it reports, at any severity, is new and is yours. The old blind spot — cohort-keyed
+checks (INV-15's copyright year, INV-16's footer class) letting a post move between two
+already-baselined cohorts without flipping the exit code — is gone with the baseline: with one
+cohort on disk, a second cohort is reported as new. Warn- and info-level violations still do not
+change the exit code, so read the per-check status lines, not just the exit status.
 
-## Expected `[known]` on today's tree — do not panic, do not mass-fix
+## Expected `[known]` on today's tree — none
 
-A clean checkout **exits 0** with **55 violations across 17 checks**, every one of them baselined.
-Verified against the One Day of Light tree of 2026-08-24, `7daf3a4` — 47 HTML files, `books/`
-now holding four detail pages (50 checks:
-31 fail / 15 warn / 4 info — INV-26 and INV-27 both joined at fail level):
+A clean checkout **exits 0 with 0 violations**: `checks run 58 / clean 58 / known baseline 0 /
+violations 0 new, 0 known`. Verified 2026-08-26 at `21d5cfc` — 47 HTML files, 37 posts, `books/`
+holding four detail pages; 58 checks, 39 fail / 17 warn / 2 info. `BASELINE = {}` holds only
+retirement comments. There is no table of expected debt to compare against any more: **any
+violation the script prints is new**, and any fail-severity one blocks the push.
 
-| id | sev | count | what |
-|----|-----|-------|------|
-| INV-03b | warn | 1 | `openclaw-integrations.html` heads its chip strip differently from the other six |
-| INV-04a | fail | 2 | one allowlisted chain-head edge (`cicd-pipeline.prev → git-branching`, by design) + one real defect (`openclaw-memory-architecture` grafted onto `deployment-hosting`) |
-| INV-04c | warn | 4 | `<nav class="post-nav">` instead of `<div>` in 4 posts |
-| INV-04d | warn | 2 | `claude-code-architecture`'s `Related` / `See also` block (allowlisted) |
-| INV-04f | fail | 1 | `deployment-hosting` is claimed as `prev` by 2 posts |
-| INV-04h | info | 2 | the same 2 posts are unreachable from the chain walk |
-| INV-05b | info | 4 | illustrative paths inside `<pre>`/`<code>` in `frontend-performance.html` |
-| INV-06a | warn | 9 | orphan images from a prior template |
-| INV-07a | fail | 2 | two covers each shared by two posts |
-| INV-10 | warn | 8 | stale `.post-nav__title` labels |
-| INV-11 | fail | 1 | `blog/deployment-hosting.html` has two `<h1>` (lines **184** and **196**) |
-| INV-14 | warn | 6 | posts with no `<meta name="description">` |
-| INV-15 | warn | 2 | 25 posts `© 2025`, 8 with no `©` line |
-| INV-16 | warn | 4 | four different footer container classes |
-| INV-17 | warn | 2 | 2 cards whose section contradicts their nav family |
-| INV-20b | warn | 4 | four ordinal-badge markup variants |
-| INV-20c | warn | 1 | `openclaw-memory.html` writes `บทที่ 3` |
+The last 29 baselined violations were paid down honestly in seven commits on 2026-08-26
+(`01332eb` → `21d5cfc`; read those messages for the per-check story). Retired, in order: INV-03b
+and INV-20c (one string each), INV-04d / INV-04f / INV-04h / INV-17 and part of INV-04a / INV-04c /
+INV-10 (two OpenClaw posts stopped wearing DevOps-chain chrome), the rest of INV-04a (the chain head
+gained a real nav — see INV-04a below), the rest of INV-04c and INV-16 (last `<nav>` containers and
+`post-footer` footers normalised), the rest of INV-10 (five labels rewritten), and INV-05b (the
+check itself deleted, not narrowed — its whole domain was illustrative text). Before them, the
+2026-08-26 redesign phases had already retired INV-06a, INV-07a, INV-11, INV-14, INV-15 and INV-20b,
+and earlier commits INV-02a / INV-02c / INV-05 (`b9fb125`), INV-12 (Task 9) and INV-22 / INV-22b
+(`6670480`). Every one of those baseline entries has been deleted, so a recurrence of any of them
+is reported as new — do not re-report them as debt, and do not re-add a key to absorb one.
 
-**Four checks that used to be red are now green — do not re-report them as debt:** INV-02a and
-INV-02c (counters, fixed in `b9fb125`), INV-05 (the 14 dead site-absolute links, fixed in the same
-commit), INV-12 (`blog/index.html`'s dead hamburger, replaced with the CSS checkbox toggle in Task
-9). INV-22/INV-22b likewise: every post now carries the canonical `:root` block (`6670480`). Their
-baseline entries have been deleted, so a recurrence of any of them fails the build.
-
-Fixing the baseline is welcome but is a separate, deliberate task — never bundle it into an
-unrelated edit, because it makes the diff unreviewable. Whatever you fix, delete its BASELINE key in
-the same commit or INV-25 will fail.
+If you ever add a baseline entry, it is a separate, deliberate commit with the debt described in a
+comment — never bundled into an unrelated edit — and it is deleted the moment the debt is paid, or
+INV-25 will fail.
 
 ---
 
@@ -150,14 +137,19 @@ means editing all 7 existing files plus the new one. See `references/adding-a-po
 
 ### INV-04a — prev/next symmetry (`A.next == B` ⟺ `B.prev == A`)
 
-The DevOps posts form one 24-node path. Two edges are broken today and both are genuine:
+The DevOps posts form one 24-node path. **0 today, and no baseline entry remains** — the chain
+verifies end to end, head included. Two edges were baselined until 2026-08-26:
 
-1. `blog/cicd-pipeline.html:607` sets `prev → git-branching.html`, but `git-branching.html` has no
-   nav at all and cannot reciprocate. `git-branching` is the chain **head**; this is arguably
-   working-as-intended and is on the allowlist below.
-2. `blog/openclaw-memory-architecture.html:224` sets `prev → deployment-hosting.html`, but
-   `deployment-hosting.next = vibe-coding-devops-process.html`. `openclaw-memory-architecture` is an
-   OpenClaw-section post grafted onto the DevOps chain. It is the only real defect here.
+1. `cicd-pipeline.prev → git-branching.html`, which this file described as the chain head having
+   "no nav by design" and therefore unable to reciprocate. **That claim was wrong.** The file
+   carried a hand-rolled, inline-styled "Next →" anchor to `cicd-pipeline` with no `.post-nav`
+   classes — a link no linter could see and that would have gone stale silently. `24564b0` gave
+   `git-branching` the house `.post-nav`: `prev → "./"` ("Back to all posts", newly authored to
+   mirror the tail's `next → "./"`) and `next → cicd-pipeline.html`. The script now has
+   `CHAIN_TERMINAL_PREV = "./"` beside `CHAIN_TERMINAL_NEXT = "./"`, `CHAIN_HEAD` is deleted, and
+   every head exemption is gone from INV-04a, INV-04e and INV-04h.
+2. `openclaw-memory-architecture.prev → deployment-hosting.html`, an OpenClaw-section post grafted
+   onto the DevOps chain. `f5e53fb` deleted that `.post-nav` block; the post is standalone now.
 
 **Repair:** fix the *pair*, never one side. If you change `A.next`, change `B.prev` in the same
 edit. For a new post, do not hand-author order — derive it (INV-04e).
@@ -182,13 +174,15 @@ navs.
 
 **Repair:** see `references/adding-a-post.md` — insert the new card at the **top** of
 `#series-devops`, then rewire only three things: `newpost.prev = old_top`, `old_top.next = newpost`,
-`newpost.next = "./"` (moving the `"./"` terminal off the previous tail).
+`newpost.next = "./"` (moving the `"./"` terminal off the previous tail). The chain terminates
+with `"./"` at **both** ends — `CHAIN_TERMINAL_PREV` on the head (`git-branching.prev`) and
+`CHAIN_TERMINAL_NEXT` on the tail — and both are the blog index.
 
 ### INV-04f — no post is `prev` for more than one other post
 
-**Failure means** a fork in a structure that must be a path. Today
-`deployment-hosting.html` is claimed by both `vibe-coding-devops-process.html` and
-`openclaw-memory-architecture.html`.
+**Failure means** a fork in a structure that must be a path. 0 today: until 2026-08-26
+`deployment-hosting.html` was claimed by both `vibe-coding-devops-process.html` and
+`openclaw-memory-architecture.html`; the latter's grafted nav was deleted (`f5e53fb`).
 
 **Repair:** decide which post really follows it and clear the other, or re-parent the interloper to
 a post that has a free slot.
@@ -209,8 +203,15 @@ section directories (`blog/`, `books/`, `news/`, `projects/`, `publications/`).
 | `/contact` | `../index.html#contact` |
 | `/teaching` | `../index.html#research` (no `#teaching` section exists — verify with `grep -n 'id="' index.html` before writing it) |
 
-**INV-05b (never fails the build):** 4 refs inside `<pre>`/`<code>` in
-`blog/frontend-performance.html` are illustrative code samples. Leave them alone.
+**INV-05b is retired** (2026-08-26, `21d5cfc`, 59 → 58 checks). It reported unresolvable paths
+inside `<pre>`/`<code>` at info level, and its entire possible output was illustrative text — four
+teaching samples in `blog/frontend-performance.html` that must not be edited — yet it had to be
+baselined as a count INV-25 audited, so editing that code sample would have failed the build as an
+"overcount". A check with no defect domain was deleted, not narrowed; `_scan_links` documents what
+is skipped and why. The same commit fixed a blind spot in INV-05 itself: a Phase-5 CSS comment
+reading "440 `<pre>` blocks" in every post opened a fake code span that hid 111 real `<head>`
+attributes from the link check. `code_spans()` now blanks `<style>`, `<script>` and comments first,
+and the comment reads "440 pre blocks".
 
 ### INV-06b — every referenced image exists in `images/`
 
@@ -225,13 +226,12 @@ Do not "fix" a missing diagram by inlining markup; regenerate the PNG.
   in `blog/index.html`. Covers are read from both `src="../images/…"` and `url('../images/…')` —
   `blog/openclaw-production.html:84` is the only post using a CSS background.
 - **07c** (green) every post embeds a cover.
-- **07a** no cover is shared by two posts — **2 known failures**:
-  `github-actions-cover.jpg` (`github-actions.html` + `vibe-coding-devops-process.html`) and
-  `monitoring-cover.jpg` (`monitoring-observability.html` + `openclaw-memory-architecture.html`).
+- **07a** (green, no baseline entry remains) no cover is shared by two posts. Two were, until the
+  drawn-cover system of 2026-08-26 (`scripts/make_cover.py`, INV-35) gave `vibe-coding-devops-process`
+  and `openclaw-memory-architecture` their own art instead of `github-actions`' and `monitoring`'s.
 
-**Repair for 07a:** these two posts have no dedicated asset. Generate the missing PNG and point both
-the post body and the index card at it. Do **not** silently re-point one card to a different
-existing image — that produces a card whose picture contradicts the article.
+**Repair for 07a:** add a `covers.tsv` row and draw the missing cover. Do **not** silently re-point
+one card to a different existing image — that produces a card whose picture contradicts the article.
 
 **Do not enforce `<slug>-cover.*`.** Only 23 of 37 posts follow that pattern; 14 deliberately use
 short names (`iac-cover.jpg`, `auth-cover.jpg`, `sre-cover.jpg`, `cicd-cover.png`, `linux-cli-cover.jpg`
@@ -244,8 +244,9 @@ repoint the post.
 
 ### INV-08 — nav-pattern exclusivity
 
-The partition is exact: **7** `.series-nav` + **25** `.post-nav` + **5** no-nav = 37. No file may
-carry two patterns.
+The partition is exact: **7** `.series-nav` + **24** `.post-nav` + **6** no-nav = 37 (since
+2026-08-26 — `git-branching` joined the `.post-nav` set, `claude-code-architecture` and
+`openclaw-memory-architecture` left it). No file may carry two patterns.
 
 **Failure means** you pasted a chip strip into a DevOps post or a prev/next pair into a series post.
 **Repair:** delete the wrong one. Which pattern a post gets is decided by which section its card
@@ -260,8 +261,9 @@ serves them, but only if the file is really there.
 
 ### INV-11 — exactly one `<h1>` per post
 
-`blog/deployment-hosting.html` has two: `:184` the hero title, `:196` a near-duplicate inside the
-article body. **Repair:** delete the body one (`:196`), keep `.post-hero__title`.
+0 today, no baseline entry remains. `blog/deployment-hosting.html` had two until the 2026-08-26
+metadata sweep deleted the near-duplicate inside the article body. **Repair:** delete the body one,
+keep `.post-hero__title`.
 
 ### INV-12 — every menu-toggle control is actually wired
 
@@ -298,7 +300,11 @@ navigation at all on a phone.
 
 ### INV-21 — every DOM hook `script.js` uses exists in `index.html`
 
-0 today. 7 selectors harvested: `#nav`, `#hamburger`, `#navLinks`, `a`, `[data-reveal]` ×2,
+**Retired 2026-08-26 with INV-21b** (`bb9c7dc`, Phase 7): `script.js` was deleted and the site is
+zero-JavaScript, so both checks policed a contract with a file that no longer exists; **INV-38**
+(no page loads executable JavaScript) replaced them. The record below is what they did while alive.
+
+7 selectors were harvested: `#nav`, `#hamburger`, `#navLinks`, `a`, `[data-reveal]` ×2,
 `a[href^="#"]`. `index.html` carries 12 `data-reveal` attributes and is the only file in the repo
 that carries any. (`.hero__bg-text` was the 8th until 2026-08-26, when the hero watermark was
 deleted — INV-21 caught the orphaned parallax listener left behind in `script.js`, which is
@@ -340,7 +346,9 @@ two identical fresh violations and only the non-baselined one was reported. INV-
 those keys.
 
 **Repair:** delete the dead key and leave a one-line retirement comment in its place (the file
-already does this for INV-05, INV-12, INV-22 and INV-22b). Never re-add a key to silence it.
+already does this for every key it ever held — INV-03b, INV-04a, INV-04c, INV-04d, INV-04f,
+INV-04h, INV-05, INV-05b, INV-06a, INV-07a, INV-10, INV-11, INV-12, INV-14, INV-15, INV-16, INV-17,
+INV-20b, INV-20c, INV-22 and INV-22b — the table is nothing but those comments today). Never re-add a key to silence it.
 
 ### INV-26 — section-dir detail pages are wired to their index
 
@@ -371,52 +379,61 @@ automatically; INV-26 is the one check that ties them to their index.
 ## Warn-level checks (real drift, never blocks a push)
 
 Surface these; fix them deliberately, not opportunistically. A linter that fails the build on
-cosmetics gets switched off. The real split is 31 fail / 15 warn / 4 info across 50 checks —
-`--list` prints each check's severity.
+cosmetics gets switched off. The real split is 39 fail / 17 warn / 2 info across 58 checks —
+`--list` prints each check's severity. Every row below reads 0 today; the "repair" column is
+what to keep it at 0.
 
 | id | rule | today | repair |
 |----|------|-------|--------|
-| INV-03b | series-nav `<h3>` identical across the 7 | 1 | `blog/openclaw-integrations.html` says `OpenClaw for Organizations 2026 — Series Navigation`; the other six say `📚 OpenClaw for Organizations 2026`. Make it match the six. |
-| INV-04c | `.post-nav` container is `<div>` | 4 | `<nav class="post-nav">` in `claude-code-architecture`, `deployment-hosting`, `openclaw-memory-architecture`, `vibe-coding-devops-process`. Harmless; normalise to `<div>` only in a dedicated cleanup. |
-| INV-04d | `.post-nav__dir` ∈ {`← Previous`, `Next →`} | 2 | `blog/claude-code-architecture.html:602-609` uses `Related` / `See also` — a post-nav-shaped block that is not part of any chain. Intentional; see allowlist. |
-| INV-06a | every file in `images/` is referenced | 9 | Orphans from a prior template: `Opic02.jpg bg.jpg overlay.png pic01.jpg pic02.jpg pic03.jpg pictop.png xpic01.jpg xpic03.jpg`. Safe to delete in one commit; confirm with `grep -r` first. |
-| INV-10 | `.post-nav__title` matches the target's card title | 8 | Stale labels. Worst: `devops-security.html` calls its Next target "Linux & Shell Essentials" but the post is "Linux Command Line". Copy the card title from `blog/index.html`. |
+| INV-03b | series-nav `<h3>` identical across the 7 | 0 | All seven say `📚 OpenClaw for Organizations 2026` (`openclaw-integrations` was the outlier until `01332eb`). |
+| INV-04c | `.post-nav` container is `<div>` | 0 | All 24 use `<div class="post-nav">`; the last `<nav>` containers went in `08cfd95`. `RE_PNAV_OPEN` still matches `(div\|nav)` on purpose so a `<nav>` regression is reported, not hidden. |
+| INV-04d | `.post-nav__dir` ∈ {`← Previous`, `Next →`} | 0 | `claude-code-architecture`'s `Related` / `See also` block was deleted in `f5e53fb` (the post is no-nav now, and lost those two links). |
+| INV-06a | every file in `images/` (and the repo root) is referenced | 0 | The 9 template leftovers were deleted 2026-08-26. Confirm with `grep -r` before deleting any future orphan. |
+| INV-10 | `.post-nav__title` matches the target's card title | 0 | Copy the card title from `blog/index.html` verbatim, Thai subtitle included (`73032cb` rewrote the last five). `verify-wiring.py` agrees one-for-one. |
 | INV-13 | `lang` attrs | 0 | Green: the 6 nav-bearing index pages and the 4 `books/` detail pages are `lang="en"`, all 37 posts `lang="th"`. |
-| INV-14 | every post has `<meta name="description">` | 6 | Missing in `idle-self-improvement`, `openclaw-101`, `openclaw-agent-teams`, `openclaw-memory`, `openclaw-security`, `openclaw-skills`. |
-| INV-15 | footer copyright year uniform **in posts** | 2 | 25 × `© 2025`, 8 × none, against the expected 4 × `© 2026` (beyond-plugins, obsidian-ai-jarvis, openclaw-101, openclaw-agent-teams). The script reports one violation per non-2026 cohort. |
-| INV-16 | footer container class uniform | 4 variants | `blog-footer` 23, `footer` 7, `post-footer` 3, bare `<footer>` 4. |
-| INV-17 | a card's section matches its nav family | 2 | `claude-code-architecture` and `openclaw-memory-architecture` sit in `#series-openclaw` but carry DevOps `post-nav`. See allowlist. |
+| INV-14 | every post has `<meta name="description">` | 0 | All 47 pages carry one since the 2026-08-26 metadata sweep; INV-27 enforces it at fail level. |
+| INV-15 | footer copyright year uniform **in posts** | 0 | One string, one encoding (the literal `©`, never `&copy;`) on every page since 2026-08-26. The script reports one violation per non-modal cohort. |
+| INV-16 | footer container class uniform | 0 | 37 of 37 posts open with `<footer class="blog-footer">` (the last three `post-footer` posts converged in `08cfd95`). A second cohort is reported as new. |
+| INV-17 | a card's section matches its nav family | 0 | `claude-code-architecture` and `openclaw-memory-architecture` sit in `#series-openclaw` and no longer carry a DevOps `post-nav` (`f5e53fb`). |
 | INV-18 | no `#series-devops` card uses the chip strip | 0 | Green. (The mirror rule, INV-19, is fail-level — see above.) |
-| INV-20b | ordinal badge uses one consistent markup form | 4 | `.series-badge` ×4 (101, agent-teams, memory, production), `.series-info` ×1 (security), bare `<p>` ×1 (integrations), `<strong>` ×1 (skills). |
-| INV-20c | badge is worded "Post #N" | 1 | `blog/openclaw-memory.html:328` writes `บทที่ 3`. |
+| INV-20b | ordinal badge uses one consistent markup form | 0 | All seven use one `.post-hero__tag` line since Phase 3 (2026-08-26). |
+| INV-20c | badge is worded "Post #N" | 0 | `openclaw-memory` wrote `บทที่ 3` until `01332eb`. |
 | INV-22 | every post defines its own `:root` | 0 | Green since `6670480` landed the canonical block (28 tokens since the 2026-08-26 re-key) in all 42 files with embedded CSS, `style.css` included (INV-22b, info-level, is green for the same reason). Baseline entries deleted — a post that loses its `:root` is now reported as new. |
 | INV-24 | the 6 nav-bearing pages agree on the footer `©` year and all carry a meta description | 0 | INV-14/15/16 iterate `site.posts` only, so `blog/index.html` and the landing pages sat outside every footer/meta check — which is how a `© 2025` footer survived on `blog/index.html` while the others read 2026. The year is checked for **consistency** (modal year wins), never against a hardcoded literal, so 1 January is not a linter event. |
 
 Full drift inventory with counts and the reason each cohort exists: `references/drift-budget.md`.
 
-## Allowlist — three things that look broken and must stay
+## Allowlist — the one thing that looks broken and must stay
 
-Hard-coded in the script with comments. A future agent that "fixes" these will corrupt the one chain
-that currently verifies perfectly.
+Hard-coded in the script as `NO_NAV_POSTS`, with comments. Since 2026-08-26 it is the only
+exemption the script carries:
 
-1. **`git-branching.html`** — chain head. It has no nav at all, so it legitimately cannot reciprocate
-   `cicd-pipeline.prev`. Do not invent a nav for it just to satisfy INV-04a.
-2. **`claude-code-architecture.html`** — sits in `#series-openclaw` with a `Related` / `See also`
-   block that belongs to no chain. Off-chain by design.
-3. **The 5 no-nav posts** — `beyond-plugins.html`, `git-branching.html`,
-   `idle-self-improvement.html`, `obsidian-ai-jarvis.html`, `openclaw-migration.html`. Standalone
-   articles, not series members.
+1. **The 6 no-nav posts** — `beyond-plugins.html`, `claude-code-architecture.html`,
+   `idle-self-improvement.html`, `obsidian-ai-jarvis.html`, `openclaw-memory-architecture.html`,
+   `openclaw-migration.html`. Standalone articles, not series members. INV-08 fails if one of them
+   grows a nav, or if any post outside the set has none.
 
-`openclaw-memory-architecture.html` is **not** allowlisted — its graft onto `deployment-hosting` is a
-real INV-04a/04f defect.
+Two entries this section used to carry are gone, and the reasons matter:
+
+- **`git-branching.html`** was listed as the chain head that "has no nav at all" and so could not
+  reciprocate `cicd-pipeline.prev` — with an instruction not to invent a nav for it. That was wrong:
+  it had a nav, a hand-rolled inline-styled "Next →" no regex could see. It now carries the house
+  `.post-nav` (`24564b0`), the chain verifies from head to tail, and it is a DevOps chain member
+  like the other 23 — not an exception.
+- **`claude-code-architecture.html`** was listed as "off-chain by design" for its `Related` /
+  `See also` block. The owner chose to delete the block (`f5e53fb`), which cost the post its only
+  links to `openclaw-101` and `web-architecture`; it is now simply a no-nav post.
+
+`openclaw-memory-architecture.html`'s graft onto `deployment-hosting` — formerly a real
+INV-04a/04f defect — was deleted in the same commit; it is a no-nav post too.
 
 ## Adding or renaming a post
 
 Read `references/adding-a-post.md` before touching `blog/`. It has the exact card block, the
 three-edit chain rewiring recipe, and the copy-paste series strip. The one-line summary: copy a
 DevOps post that already has `<nav class="blog-nav">` + `.post-nav` as your template — the 7
-OpenClaw series posts are the un-templated corner of the site and account for nearly every warn-level
-violation in the table above.
+OpenClaw series posts were the un-templated corner of the site and accounted for most of the
+warn-level drift the table above used to carry, before Phase 3 and `01332eb` normalised them.
 
 ## If you edit the script
 
@@ -427,7 +444,7 @@ nothing and reports PASS forever.
 
 ```python
 CARD  = r'<a\s+href="([^"]+)"\s+class="card">'
-PNAV  = r'<(div|nav)\s+class="post-nav">'                 # BOTH tags: div ×21, nav ×4
+PNAV  = r'<(div|nav)\s+class="post-nav">'                 # BOTH tags: div ×24, nav ×0 — keep both
 PLINK = (r'<a\s+href="([^"]+)"\s+class="post-nav__link"[^>]*>\s*'   # [^>]*> is load-bearing
          r'<div class="post-nav__dir">([^<]*)</div>\s*'
          r'<div class="post-nav__title">(.*?)</div>')
@@ -438,7 +455,9 @@ INERT = r'<(style|script|pre|code)\b[^>]*>.*?</\1>'       # blank_inert(): marku
 
 1. `class="post-nav__link">` (no `[^>]*`) drops the 3 Next anchors that carry
    `style="text-align:right;"` and fabricates 3 phantom dead-ends.
-2. The container is `<nav class="post-nav">` in 4 files; a `div`-only pattern finds 0 links in them.
+2. The container was `<nav class="post-nav">` in 4 files until 2026-08-26; a `div`-only pattern found
+   0 links in them. All 24 are `<div>` now, and the pattern deliberately still matches both so a
+   returning `<nav>` is reported by INV-04c rather than made invisible to INV-04a/b/e.
 3. Non-greedy `<div …>(.*?)</div>` mis-nests, because post-nav blocks contain nested divs — anchor on
    the link pattern, never on the container's closing tag.
 4. Scanning `content=` turns every `<meta name="description">` and the viewport tag into a "broken
@@ -449,8 +468,8 @@ INERT = r'<(style|script|pre|code)\b[^>]*>.*?</\1>'       # blank_inert(): marku
    byte offsets, so reported line numbers stay correct.
 
 Title comparison for INV-10 must be `html.unescape(re.sub(r'\s+',' ',t)).strip()`, then emoji-stripped
-(`[\U0001F000-\U0001FAFF☀-➿️]`), then `.strip().strip('—-').strip()` — see `norm_title` at
-check_site.py:446-451. `&amp;` vs `&` alone yields ~14 false positives.
+(`[\U0001F000-\U0001FAFF☀-➿️]`), then `.strip().strip('—-').strip()` — see `norm_title` in
+check_site.py (`grep -n 'def norm_title'`). `&amp;` vs `&` alone yields ~14 false positives.
 
 **Three rules that outrank "make the run green":**
 

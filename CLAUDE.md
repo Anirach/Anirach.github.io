@@ -90,8 +90,8 @@ Match the pattern to the post's series; do not mix them.
 | Pattern | Used by | Markup | Link style |
 |---|---|---|---|
 | `.series-nav` chip strip | the 7 numbered OpenClaw posts | `<div class="series-nav">` + `.series-links` with `<a>` for others and `<span class="current">` for self | absolute, extensionless: `/blog/openclaw-memory` |
-| `.post-nav` prev/next pair | DevOps posts + a few standalone | two `.post-nav__link` with `.post-nav__dir` (`← Previous` / `Next →`) and `.post-nav__title` | relative with extension: `openclaw-memory.html` |
-| none | `beyond-plugins`, `git-branching`, `idle-self-improvement`, `obsidian-ai-jarvis`, `openclaw-migration` | — | — |
+| `.post-nav` prev/next pair | the 24 DevOps-chain posts, `git-branching` (the head) included since 2026-08-26 | `<div class="post-nav">` (a `div`, never `<nav>` — INV-04c) holding two `.post-nav__link` with `.post-nav__dir` (`← Previous` / `Next →`) and `.post-nav__title`; both chain ends point at `./` | relative with extension: `openclaw-memory.html` |
+| none | `beyond-plugins`, `claude-code-architecture`, `idle-self-improvement`, `obsidian-ai-jarvis`, `openclaw-memory-architecture`, `openclaw-migration` (`NO_NAV_POSTS` in `check_site.py`; the two `-architecture` posts lost their DevOps-style nav on 2026-08-26) | — | — |
 
 The numbered OpenClaw series order is fixed: `openclaw-101` → `agent-teams` → `memory` → `security` → `integrations` → `skills` → `production`. All 7 chips appear in all 7 posts. Adding a post to this series means editing all seven files.
 
@@ -154,7 +154,7 @@ Four skills live in `.claude/skills/` — use them; they carry the deep, verifie
 - **page-design** — the house visual system (canonical `:root` tokens, type scale, component vocabulary, approved hero gradients, modern-CSS adoption verdicts). Load before designing or restyling anything.
 - **blog-post** — the end-to-end recipe for adding/editing a post, with a wiring verifier (`assets/verify-wiring.py`). The starter template itself is not here — it was consolidated into **page-design** (`assets/post-template.html`) as the repo's one canonical copy; see `.claude/skills/blog-post/assets/TEMPLATE-MOVED.md`.
 - **a11y-perf** — accessibility and performance standing rules plus the measured remediation backlog (real contrast ratios, image weights, focus states).
-- **site-check** — run `python3 .claude/skills/site-check/scripts/check_site.py` from the repo root before every push. 59 cross-file integrity checks; exit 0 means no **new** fail-severity violation (a baseline of pre-existing debt is carried, `0 new, 29 known` today — down from 55, as the 2026-08-26 redesign phases paid real debt down rather than baselining it). `INV-25` fails the build if a baseline entry goes stale, so the net cannot silently rot; `INV-26` ties every section-directory detail page (today: the four `books/*.html`) to its own index; `INV-27` enforces the social/canonical head block on all 47 pages. Added 2026-08-26 by the
+- **site-check** — run `python3 .claude/skills/site-check/scripts/check_site.py` from the repo root before every push. 58 cross-file integrity checks (39 fail / 17 warn / 2 info); exit 0 means no fail-severity violation. The `BASELINE` table is **empty** since 2026-08-26 (`0 new, 0 known` — down from 55, then 29, paid down honestly in seven commits `01332eb`…`21d5cfc` rather than baselined; INV-05b was retired outright, 59 → 58), so every violation the script prints is new. `INV-25` fails the build if a baseline entry is ever added and goes stale, so the net cannot silently rot; `INV-26` ties every section-directory detail page (today: the four `books/*.html`) to its own index; `INV-27` enforces the social/canonical head block on all 47 pages. Added 2026-08-26 by the
 critique work, each fault-injected before being trusted: `INV-28` (every `.post-hero` background is
 Sunrise or Deep Blue — the 2 post families, down from 5 on 2026-08-26), `INV-29` (every post carries a home link and a footer
 destination row, so no post is a dead end), `INV-30` (the skip link and its `id="main"` target
@@ -215,9 +215,11 @@ the canonical tag is what resolves the duplicate.
 ≥1.5:1, otherwise `summary`. 25 of the 37 post covers are square, and a square cover in a large
 card loses ~48% of its height — including the caption band these covers carry along the top.
 
-**Three posts and all four books use a dedicated share card** rather than their own cover
-(`images/<slug>-og.jpg`, 1200×630): the two posts whose covers are double-booked, the one post
-with no image at all, and the four books whose portrait covers would lose ~65% of their height —
+**All 37 posts and all four books use a dedicated share card** rather than their own cover
+(`images/<slug>-og.jpg`, 1200×630, 41 files): the posts since the 2026-08-26 drawn-cover system
+(`scripts/make_cover.py` draws the 800×800 cover and the share card together — INV-35 checks both;
+before that only three posts had one, the two whose covers were shared and the one with no image),
+and the four books whose portrait covers would lose ~65% of their height —
 title band included — to a 1.91:1 centre crop. Each book card shows both language faces, English
 left and Thai right, matching how the detail pages render them.
 

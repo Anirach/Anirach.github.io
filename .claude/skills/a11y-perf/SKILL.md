@@ -563,10 +563,12 @@ Ordered by how much they degrade a screen-reader pass:
   `alt=""` — `grep -rn 'alt="[^"]*Cover"' --include='*.html' --exclude-dir=.claude .`
   finds them in `openclaw-101`, `openclaw-agent-teams`, `openclaw-memory` and
   `openclaw-skills`.
-- **Wrong image.** The `openclaw-memory-architecture` card in `blog/index.html` shows
-  `../images/monitoring-cover.jpg` with `alt="OpenClaw Memory Architecture"`. The alt
-  describes the post, not the picture. This is the downstream symptom of the shared-cover
-  problem (`check_site.py` INV-07a); the fix is a dedicated cover, not a reworded alt.
+- **Wrong image — fixed 2026-08-26.** The `openclaw-memory-architecture` card in
+  `blog/index.html` used to show `../images/monitoring-cover.jpg` with
+  `alt="OpenClaw Memory Architecture"` — an alt describing the post, not the picture, the
+  downstream symptom of a shared cover. The drawn-cover system gave it its own
+  `openclaw-memory-architecture-cover.jpg` with `alt=""`; `check_site.py` INV-07a now
+  carries no baseline entry and fails on any new sharing.
 - **`<main id="main">`** — 31 files have no `<main>`, 11 have one without the `id`; only
   the 5 `books/` pages are complete.
   See R5.
