@@ -401,9 +401,16 @@ def hero_family(slug):
     if not p.exists():
         return None
     s = p.read_text(encoding="utf-8")
-    if "#eef3f3" in s and ".post-hero" in s:
+    # Parse the ACTUAL .post-hero rule. A bare `"#eef3f3" in s` was true for
+    # every post the moment resurface.py added `--surface-2: #eef3f3` to all 48
+    # :root blocks — the check then reported all 13 Deep Blue posts as Sunrise.
+    m = re.search(r"\.post-hero\s*\{([^}]*)\}", s, re.S)
+    if not m:
+        return None
+    rule = m.group(1)
+    if "#eef3f3" in rule:
         return "sunrise"
-    if "#11304b 0%" in s:
+    if "#11304b 0%" in rule:
         return "deepblue"
     return None
 

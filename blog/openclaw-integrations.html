@@ -10,7 +10,25 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=Sarabun:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
     <style>
         :root {
-      color-scheme: light;
+      /* ---- surfaces (2026-08-26) --------------------------------------
+         Named so the dark block has something to re-point. Each value is the
+         EXACT literal it replaces, so this pass cannot shift a colour — the
+         first version set --surface-2 to #eef3f3 and mapped #f1f5f9 onto it,
+         which moved every card's image placeholder by 3 units and was caught
+         by diffing computed styles against the pre-token tree. --line made the
+         same mistake with #e8ecf1 -> #e2e8f0.
+
+         The one deliberate normalisation is #f8fafc -> --surface-alt (#f1f5f9):
+         two greys 7 units apart doing the same job, and they must move together
+         under a dark theme regardless. */
+      --surface: #ffffff;
+      --surface-2: #eef3f3;
+      --surface-alt: #f1f5f9;
+      --surface-glass: rgba(248,250,252,0.85);
+      --line: #e8ecf1;
+      --tint: rgba(34,98,153,0.08);
+      --shadow: 0 16px 48px rgba(34,98,153,0.10);
+      color-scheme: light dark;
           /* ink */
           --navy: #11304b; --slate: #334155; --slate-light: #526174; --gray: #94a3b8;
           /* ground */
@@ -47,7 +65,7 @@
     /* ── CHROME ── (house .blog-nav, page-design §4) */
     .blog-nav {
       position: fixed; top: 0; left: 0; right: 0; z-index: 100;
-      background: rgba(248,250,252,0.85); backdrop-filter: blur(20px);
+      background: var(--surface-glass); backdrop-filter: blur(20px);
       border-bottom: 1px solid rgba(0,0,0,0.05);
     }
     .blog-nav__inner {
@@ -132,14 +150,14 @@
     }
     .post-body code {
       font-family: var(--mono); font-size: 0.88em;
-      background: rgba(34,98,153,0.08); color: var(--blue-dark);
+      background: var(--tint); color: var(--blue-dark);
       padding: 0.15em 0.45em; border-radius: 5px;
     }
 
     /* ── SERIES STRIP ── (this post's own component; declared after .post-body
        so its h3 / link rules win at equal specificity) */
         .series-nav {
-            background: #faf7f0;
+            background: var(--bg);
             border-left: 4px solid #226299;
             padding: 1rem;
             margin: 0 0 2.5rem;
@@ -200,7 +218,7 @@
 
     /* ── AUTHOR ── */
         .author-info {
-            background: #f1f5f9;
+            background: var(--surface-alt);
             border-radius: 8px;
             padding: 1.5rem;
             margin: 2rem 0 0;
@@ -451,6 +469,125 @@
       ::view-transition-group(*),
       ::view-transition-old(*),
       ::view-transition-new(*) { animation: none !important; }
+    }
+  
+    /* ═══ DARK THEME ══════════════════════════════════════════════════════
+       prefers-color-scheme only — no toggle, by the owner's decision.
+
+       This block re-points the SURFACE TOKENS that scripts/resurface.py
+       introduced; it only works because that pass first gave 244 hard-coded
+       literals a name. A dark theme laid over the original CSS would have left
+       hundreds of white slabs glowing, because no theme block can reach a
+       literal.
+
+       --gold keeps #c4a46c: it measures 7.04:1 on this ground, so the one brand
+       accent needs no dark variant. --blue MUST be re-pointed — #226299 is
+       2.6:1 here and every link would be unreadable.
+
+       The last rule is a safety net: 458 single-post classes end in -box, -card
+       or -note and paint their own light grounds. Naming them all is not
+       feasible and one miss is a white slab. */
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --bg: #0f1f31;
+        --surface: #162a3f;
+        --surface-2: #0c1928;
+        --surface-alt: #16283a;
+        --surface-glass: rgba(15,31,49,0.85);
+        --line: #24384d;
+        --tint: rgba(140,192,227,0.12);
+        --shadow: 0 16px 48px rgba(0,0,0,0.45);
+        --white: #162a3f;
+        --navy: #f2f5f8;
+        --slate: #dfe6ec;
+        --slate-light: #a6b3c2;
+        --gray: #7e8ea0;
+        --blue: #8cc0e3;
+        --blue-dark: #b3d6ee;
+        --blue-light: #3d7ea6;
+        --gold-dark: #d6bc86;
+        --code-bg: #0a1420;
+        --focus: #8cc0e3;
+        --cloud: #1b2f42;
+        --parchment: #2a2517;
+        --purple: #8cc0e3;
+        --purple-dark: #b3d6ee;
+      }
+      .post-hero--sunrise, .blog-hero, .page-hero {
+        background: linear-gradient(135deg, #16283a 0%, #1f3344 50%, #3a3628 100%);
+      }
+      .post-hero__cover img, .card__image img, .feature__media img { filter: brightness(0.92); }
+      .footer, .blog-footer { background: #0a1420; }
+      .nav, .blog-nav { background: rgba(15,31,49,0.88); }
+      .post-toc { background: rgba(140,192,227,0.07); border-color: rgba(140,192,227,0.18); }
+      /* Translucent WHITE veils over a light ground. Tokenising these would cost
+         one token per alpha, so the dark theme names them directly. Every one
+         was found by the luminance detector, not by reading the CSS. */
+      .blog-hero__stat, .post-nav__link { background: rgba(140,192,227,0.10); }
+      .series-nav { background: var(--surface-2); }
+      .post-body th, .styled-table th, .pub-table th { background: var(--surface-2); }
+      /* The last two the detector found: a translucent-white chip and a zebra
+         table row, both one-offs that no token or suffix rule could reach. */
+      .cache-tag { background: rgba(140,192,227,0.12); }
+      tr:nth-child(even), .post-body tr:nth-child(even) { background: rgba(140,192,227,0.05); }
+      /* ---- contrast repairs the ratio pass found ------------------------
+         Every one of these is a token doing TWO jobs whose needs diverge in the
+         dark: --blue-dark is text (must go light) and also a button GROUND
+         (must stay dark); --tint is a wash under a chip and also under inline
+         code. Naming the surfaces directly is the only honest fix. */
+      .nav__cta, .btn--primary, .btn.btn--pill {
+        background: #1a4d7a; color: #fff !important; border-color: #1a4d7a;
+      }
+      .series-links .current, .series-nav .current {
+        background: rgba(140,192,227,0.16); color: #f2f5f8;
+      }
+      .post-body code, code { background: rgba(140,192,227,0.14); color: #cfe4f4; }
+      .card__tag--live { color: #6ee7a8; background: rgba(34,197,94,0.16); }
+      .card__tag--workshop, .card__tag--upcoming, .card__tag--accent {
+        color: #e3c98f; background: rgba(196,164,108,0.20);
+      }
+      .figure__caption, figcaption { color: var(--slate-light); }
+      /* Text-only tail. The safety net above re-grounds CONTAINERS; these
+         suffixes are inline labels and titles that set a dark ink for a light
+         ground and would otherwise sit dark-on-dark. Colour only — giving them
+         a background would box text that was never meant to be boxed. */
+      .post-body [class*="text"], .post-body [class*="title"],
+      .post-body [class*="label"], .post-body [class*="badge"],
+      .post-body [class*="caption"], .post-body [class*="chunk"],
+      .post-body [class*="name"], .post-body [class*="item"],
+      .error-hero__label { color: var(--slate); }
+      /* ---- the enumerated tail --------------------------------------------
+         Scanning every post for a rule that paints a LIGHT literal ground
+         (luminance > 215) returned exactly NINETEEN selectors — a bounded set,
+         not the 458 the suffix nets were guessing at. Listing them beats
+         widening a wildcard until it catches something it should not. */
+      .arch-container, .arch-layer, .arch-vm, .feature-card, .cache-row,
+      .flow-node, .mini-card, .info-note, .alert, .comparison-card,
+      .styled-table tr:hover, .highlight-box, .example-box,
+      .auth-example, .rbac-permission, .checklist-section {
+        background: var(--surface-2);
+        color: var(--slate);
+        border-color: var(--line);
+      }
+      .cache-tag, .model-tag, .phase-label, .method-badge {
+        background: rgba(140,192,227,0.14);
+        color: #cfe4f4;
+      }
+      .checklist-section__title, [class*="__title"] { color: var(--navy); }
+      /* Headings inside the re-grounded containers still carried a literal dark
+         ink. A heading should follow the heading token, which is light here. */
+      .post-body h2, .post-body h3, .post-body h4, .post-body h5,
+      .post-body h2 span, .post-body h3 span { color: var(--navy); }
+      /* safety net for the 458 single-post classes that paint their own ground */
+      .post-body [class$="-box"], .post-body [class$="-card"],
+      .post-body [class$="-note"], .post-body [class$="-section"],
+      .post-body [class$="-row"], .post-body [class$="-node"], .post-body [class$="-step"],
+      .post-body [class$="-container"], .post-body [class$="-wrapper"],
+      .post-body [class$="-panel"], .post-body [class$="-grid"],
+      .post-body [class$="-item"], .post-body [class$="-block"] {
+        background: var(--surface-2);
+        color: var(--slate);
+      }
     }
   </style>
     <!-- social -->
