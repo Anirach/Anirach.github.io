@@ -22,7 +22,7 @@
       --gold: #c4a46c; --gold-dark: #7a5f22; --cloud: #dee7e6; --parchment: #e9e1c4; --focus: #226299;
       /* status — use only these six, never invent a seventh */
       --green: #22c55e; --red: #ef4444; --amber: #f59e0b;
-      --cyan: #06b6d4; --purple: #8b5cf6; --purple-dark: #7c3aed;
+      --cyan: #06b6d4; --purple: #226299; --purple-dark: #1a4d7a;
       /* type */
       --font: 'Inter', 'Sarabun', -apple-system, BlinkMacSystemFont, sans-serif;
       --mono: 'JetBrains Mono', 'Fira Code', 'Sarabun', monospace;
@@ -75,12 +75,15 @@
       display: flex; align-items: center; justify-content: center; gap: 1.5rem;
     }
     .post-hero__series { font-weight: 600; color: var(--blue); }
-    .post-hero__cover { aspect-ratio: 400/223;
-      max-width: 520px; margin: 2.5rem auto 0;
-      border-radius: 16px; overflow: hidden;
-      box-shadow: 0 20px 60px rgba(34,98,153,0.15);
+    .post-hero__cover {
+      aspect-ratio: 1 / 1;
+      max-width: 380px;
+      margin: 2.5rem auto 0;
+      border-radius: var(--radius-lg, 16px);
+      overflow: hidden;
+      box-shadow: 0 20px 60px rgba(17,48,75,0.14);
     }
-    .post-hero__cover img { width: 100%; display: block; height: auto;}
+    .post-hero__cover img { width: 100%; height: 100%; object-fit: cover; display: block; }
     .post-body { max-width: 720px; margin: 0 auto; padding: 3rem 2rem 6rem; }
     .post-body h2 {
       font-size: 1.6rem; font-weight: 800; color: var(--navy);
@@ -286,7 +289,91 @@
        the series heading sat 15px under it. */
     html { scroll-padding-top: 5rem; }
     [id] { scroll-margin-top: 5rem; }
-</style>
+
+    /* ---- Phase 5: reading chrome -----------------------------------------
+       Thai needs more room than Latin at the same nominal size: taller
+       ascenders, stacked vowel and tone marks above and below the line. 17px
+       Sarabun is measurably harder to read than 17px Inter, so Thai bodies get
+       18px and a looser line. English pages stay at 17. */
+    .post-body:lang(th) { font-size: 18px; line-height: 1.85; }
+
+    /* Avoid the one-word last line. Cheap, and no layout risk. */
+    .post-body p, .post-body li, .post-body blockquote { text-wrap: pretty; }
+
+    /* ---- side-scroll affordance ------------------------------------------
+       440 <pre> blocks and 94 tables can exceed 720px. Nothing said so — a
+       reader on a phone saw a code block cut off at the edge with no hint
+       that it continued. These four layers paint a shadow ONLY where there is
+       more content in that direction: two "cover" gradients pinned to the
+       scroll box (local) and two shadows pinned to the element (scroll); when
+       the content is fully scrolled the cover slides over the shadow and
+       hides it. No JavaScript, no wrapper element. */
+    .post-body pre, .post-body table {
+      overflow-x: auto;
+      background-image:
+        linear-gradient(to right, var(--code-bg, #0f172a) 30%, rgba(15,23,42,0)),
+        linear-gradient(to left,  var(--code-bg, #0f172a) 30%, rgba(15,23,42,0)),
+        radial-gradient(farthest-side at 0 50%, rgba(0,0,0,.28), rgba(0,0,0,0)),
+        radial-gradient(farthest-side at 100% 50%, rgba(0,0,0,.28), rgba(0,0,0,0));
+      background-position: 0 0, 100% 0, 0 0, 100% 0;
+      background-repeat: no-repeat;
+      background-size: 40px 100%, 40px 100%, 14px 100%, 14px 100%;
+      background-attachment: local, local, scroll, scroll;
+    }
+    .post-body table {
+      background-image:
+        linear-gradient(to right, var(--white, #fff) 30%, rgba(255,255,255,0)),
+        linear-gradient(to left,  var(--white, #fff) 30%, rgba(255,255,255,0)),
+        radial-gradient(farthest-side at 0 50%, rgba(17,48,75,.16), rgba(17,48,75,0)),
+        radial-gradient(farthest-side at 100% 50%, rgba(17,48,75,.16), rgba(17,48,75,0));
+      background-position: 0 0, 100% 0, 0 0, 100% 0;
+      background-repeat: no-repeat;
+      background-size: 40px 100%, 40px 100%, 14px 100%, 14px 100%;
+      background-attachment: local, local, scroll, scroll;
+    }
+
+    /* Phone headings: h1 at clamp() maxima and h2 at 1.75rem were set for a
+       desktop measure and crowd a 375px column. */
+    @media (max-width: 600px) {
+      .post-body h2 { font-size: 1.4rem; }
+      .post-body h3 { font-size: 1.15rem; }
+    }
+  
+    /* ---- table of contents ----------------------------------------------
+       <details> so it is collapsible with no JavaScript, open by default on
+       desktop. The posts run to 46 phone-screens; this is the map. */
+    .post-toc {
+      max-width: 720px;
+      margin: 2rem auto 0;
+      padding: 1rem 1.25rem;
+      background: rgba(34,98,153,0.05);
+      border: 1px solid rgba(34,98,153,0.14);
+      border-left: 3px solid var(--gold, #c4a46c);
+      border-radius: 10px;
+      font-size: 0.92rem;
+    }
+    .post-toc > summary {
+      cursor: pointer;
+      font-weight: 700;
+      color: var(--navy);
+      list-style: none;
+    }
+    .post-toc > summary::-webkit-details-marker { display: none; }
+    .post-toc > summary::before {
+      content: "\25B8";
+      display: inline-block;
+      margin-right: 0.5rem;
+      transition: transform 0.2s ease;
+      color: var(--gold-dark, #7a5f22);
+    }
+    .post-toc[open] > summary::before { transform: rotate(90deg); }
+    .post-toc > summary:focus-visible { outline: 3px solid var(--focus, #226299); outline-offset: 3px; }
+    .post-toc ol { margin: 0.85rem 0 0.25rem; padding-left: 1.4rem; }
+    .post-toc li { margin-bottom: 0.4rem; line-height: 1.5; }
+    .post-toc a { color: var(--slate); text-decoration: none; }
+    .post-toc a:hover, .post-toc a:focus-visible { color: var(--blue-dark, #1a4d7a); text-decoration: underline; }
+    @media (max-width: 600px) { .post-toc { margin: 1.25rem 1rem 0; } }
+  </style>
   <!-- social -->
   <link rel="canonical" href="https://anirach.com/blog/kubernetes-orchestration.html">
   <meta property="og:type" content="article">
@@ -341,6 +428,21 @@
   </header>
 
   <article class="post-body" itemscope itemtype="https://schema.org/BlogPosting">
+    <details class="post-toc" open>
+      <summary>In this post &middot; <span lang="th">ในบทความนี้</span></summary>
+      <ol>
+          <li><a href="#kubernetes">Kubernetes คืออะไร?</a></li>
+          <li><a href="#why">ทำไมต้อง Kubernetes?</a></li>
+          <li><a href="#k8s-architecture">K8s Architecture — มีอะไรอยู่ข้างใน?</a></li>
+          <li><a href="#k8s-core-concepts">K8s Core Concepts — คำศัพท์ที่ต้องรู้</a></li>
+          <li><a href="#hands-on">Hands-on — Deploy แอปแรกด้วย K8s</a></li>
+          <li><a href="#self-healing">Self-healing — K8s ซ่อมตัวเอง</a></li>
+          <li><a href="#docker-compose-vs-kubernetes">Docker Compose vs Kubernetes</a></li>
+          <li><a href="#getting-started">เริ่มต้นลองเล่น K8s</a></li>
+          <li><a href="#summary">สรุป</a></li>
+      </ol>
+    </details>
+
 
     <p>จากโพสต์ที่แล้วเราเรียนรู้ Docker ว่ามันช่วยให้เรา pack app + dependencies ไว้ใน Container เดียว ทำให้ deploy ได้ทุกที่</p>
 
@@ -350,7 +452,7 @@
 
     <hr>
 
-    <h2>Kubernetes คืออะไร?</h2>
+    <h2 id="kubernetes">Kubernetes คืออะไร?</h2>
 
     <p><strong>Kubernetes</strong> (อ่านว่า คู-เบอร์-เน-ทิส, ย่อว่า K8s) คือ open-source container orchestration platform ที่พัฒนาโดย Google ปัจจุบันดูแลโดย <a href="https://www.cncf.io/" target="_blank" rel="noopener">CNCF</a></p>
 
@@ -369,7 +471,7 @@
 
     <hr>
 
-    <h2>ทำไมต้อง Kubernetes?</h2>
+    <h2 id="why">ทำไมต้อง Kubernetes?</h2>
 
     <p>Docker Compose ก็จัดการหลาย containers ได้ แล้วทำไมต้อง K8s? คำตอบคือ Compose ทำงานบน <strong>เครื่องเดียว</strong> แต่ K8s ทำงานบน <strong>หลายเครื่อง (cluster)</strong> — auto-scaling, self-healing, rolling updates, service discovery ทั้งหมดอัตโนมัติ ลองนึกภาพว่าเรามี web app ที่ใช้ 3 services:</p>
 
@@ -402,7 +504,7 @@
 
     <hr>
 
-    <h2>K8s Architecture — มีอะไรอยู่ข้างใน?</h2>
+    <h2 id="k8s-architecture">K8s Architecture — มีอะไรอยู่ข้างใน?</h2>
 
     <p>Kubernetes cluster แบ่งเป็น 2 ส่วนหลัก — <strong>Control Plane</strong> (สมอง — ตัดสินใจว่า Pod ไหนรันที่ไหน, ดูแล desired state) กับ <strong>Worker Nodes</strong> (แรงงาน — รัน containers จริง) Control Plane มักมี 3 เครื่องเพื่อ HA ส่วน Worker Nodes มีได้ไม่จำกัด เพิ่ม nodes = เพิ่ม capacity:</p>
 
@@ -456,7 +558,7 @@
 
     <hr>
 
-    <h2>K8s Core Concepts — คำศัพท์ที่ต้องรู้</h2>
+    <h2 id="k8s-core-concepts">K8s Core Concepts — คำศัพท์ที่ต้องรู้</h2>
 
     <p>K8s มีศัพท์เฉพาะเยอะ แต่ core concepts ที่ต้องเข้าใจมีไม่กี่ตัว — <strong>Pod</strong> (หน่วยเล็กที่สุดใน K8s ห่อ 1+ containers), <strong>Deployment</strong> (จัดการ Pods — scaling, rolling updates), <strong>Service</strong> (ทำให้ Pods มี stable endpoint), <strong>Ingress</strong> (route traffic จาก internet เข้า Services) เข้าใจ 4 ตัวนี้ก็เริ่มใช้ K8s ได้แล้ว:</p>
 
@@ -514,7 +616,7 @@
 
     <hr>
 
-    <h2>Hands-on — Deploy แอปแรกด้วย K8s</h2>
+    <h2 id="hands-on">Hands-on — Deploy แอปแรกด้วย K8s</h2>
 
     <p>มาลองใช้จริง! ขั้นตอนหลักคือ: สร้าง <strong>Deployment</strong> (บอกว่ารัน image อะไร กี่ replicas) → สร้าง <strong>Service</strong> (expose ให้เข้าถึงได้) → <strong>Scale</strong> (เพิ่ม/ลด replicas) → <strong>Update</strong> (เปลี่ยน version โดยไม่ downtime)</p>
 
@@ -613,7 +715,7 @@ kubectl rollout undo deployment/my-web-app</code></pre>
 
     <hr>
 
-    <h2>Self-healing — K8s ซ่อมตัวเอง</h2>
+    <h2 id="self-healing">Self-healing — K8s ซ่อมตัวเอง</h2>
 
     <p><strong>Self-healing</strong> คือฟีเจอร์ที่ทำให้ K8s แตกต่างจาก Docker Compose — ถ้า Pod crash, Node ล่ม, หรือ health check fail K8s จะ detect และสร้าง Pod ใหม่อัตโนมัติ ไม่ต้องมีคนมานั่ง monitor แล้ว restart เอง ทำงาน 24/7 ไม่มีวันหยุด:</p>
 
@@ -632,7 +734,7 @@ kubectl get pods
 
     <hr>
 
-    <h2>Docker Compose vs Kubernetes</h2>
+    <h2 id="docker-compose-vs-kubernetes">Docker Compose vs Kubernetes</h2>
 
     <p>คำถามที่พบบ่อย — "ควรใช้ Compose หรือ K8s?" ไม่ใช่เรื่องของ "ตัวไหนดีกว่า" แต่เป็น "ต้องการอะไร" — Compose เหมาะกับ single server, dev environment, small apps ส่วน K8s เหมาะกับ production ที่ต้อง scale, HA, multi-team:</p>
 
@@ -689,7 +791,7 @@ kubectl get pods
 
     <hr>
 
-    <h2>เริ่มต้นลองเล่น K8s</h2>
+    <h2 id="getting-started">เริ่มต้นลองเล่น K8s</h2>
 
     <p>ไม่ต้องมี cluster จริงก็ลองได้! มี tools สำหรับรัน K8s บนเครื่องตัวเอง — เหมาะกับการเรียนรู้และ development แนะนำเริ่มจาก <strong>minikube</strong> (ง่ายที่สุด) หรือ <strong>kind</strong> (K8s ใน Docker — เร็วมาก):</p>
 
@@ -712,7 +814,7 @@ minikube service hello</code></pre>
 
     <hr>
 
-    <h2>สรุป</h2>
+    <h2 id="summary">สรุป</h2>
 
     <p>Kubernetes คือ industry standard สำหรับ container orchestration — ทุก cloud provider รองรับ (EKS, AKS, GKE) และเป็นทักษะที่ DevOps engineers ต้องมี เรียนรู้ curve สูง แต่เมื่อเข้าใจแล้วจะเห็นว่ามันแก้ปัญหาจริงๆ ที่ Docker เดี่ยวๆ ทำไม่ได้:</p>
 

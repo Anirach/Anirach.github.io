@@ -22,7 +22,7 @@
       --gold: #c4a46c; --gold-dark: #7a5f22; --cloud: #dee7e6; --parchment: #e9e1c4; --focus: #226299;
       /* status — use only these six, never invent a seventh */
       --green: #22c55e; --red: #ef4444; --amber: #f59e0b;
-      --cyan: #06b6d4; --purple: #8b5cf6; --purple-dark: #7c3aed;
+      --cyan: #06b6d4; --purple: #226299; --purple-dark: #1a4d7a;
       /* type */
       --font: 'Inter', 'Sarabun', -apple-system, BlinkMacSystemFont, sans-serif;
       --mono: 'JetBrains Mono', 'Fira Code', 'Sarabun', monospace;
@@ -75,12 +75,15 @@
       display: flex; align-items: center; justify-content: center; gap: 1.5rem;
     }
     .post-hero__series { font-weight: 600; color: var(--blue); }
-    .post-hero__cover { aspect-ratio: 1/1;
-      max-width: 480px; margin: 2.5rem auto 0;
-      border-radius: 16px; overflow: hidden;
-      box-shadow: 0 20px 60px rgba(34,98,153,0.15);
+    .post-hero__cover {
+      aspect-ratio: 1 / 1;
+      max-width: 380px;
+      margin: 2.5rem auto 0;
+      border-radius: var(--radius-lg, 16px);
+      overflow: hidden;
+      box-shadow: 0 20px 60px rgba(17,48,75,0.14);
     }
-    .post-hero__cover img { width: 100%; display: block; height: auto;}
+    .post-hero__cover img { width: 100%; height: 100%; object-fit: cover; display: block; }
     .post-body { max-width: 720px; margin: 0 auto; padding: 3rem 2rem 6rem; }
     .post-body h2 {
       font-size: 1.6rem; font-weight: 800; color: var(--navy);
@@ -300,7 +303,91 @@
        the series heading sat 15px under it. */
     html { scroll-padding-top: 5rem; }
     [id] { scroll-margin-top: 5rem; }
-</style>
+
+    /* ---- Phase 5: reading chrome -----------------------------------------
+       Thai needs more room than Latin at the same nominal size: taller
+       ascenders, stacked vowel and tone marks above and below the line. 17px
+       Sarabun is measurably harder to read than 17px Inter, so Thai bodies get
+       18px and a looser line. English pages stay at 17. */
+    .post-body:lang(th) { font-size: 18px; line-height: 1.85; }
+
+    /* Avoid the one-word last line. Cheap, and no layout risk. */
+    .post-body p, .post-body li, .post-body blockquote { text-wrap: pretty; }
+
+    /* ---- side-scroll affordance ------------------------------------------
+       440 <pre> blocks and 94 tables can exceed 720px. Nothing said so — a
+       reader on a phone saw a code block cut off at the edge with no hint
+       that it continued. These four layers paint a shadow ONLY where there is
+       more content in that direction: two "cover" gradients pinned to the
+       scroll box (local) and two shadows pinned to the element (scroll); when
+       the content is fully scrolled the cover slides over the shadow and
+       hides it. No JavaScript, no wrapper element. */
+    .post-body pre, .post-body table {
+      overflow-x: auto;
+      background-image:
+        linear-gradient(to right, var(--code-bg, #0f172a) 30%, rgba(15,23,42,0)),
+        linear-gradient(to left,  var(--code-bg, #0f172a) 30%, rgba(15,23,42,0)),
+        radial-gradient(farthest-side at 0 50%, rgba(0,0,0,.28), rgba(0,0,0,0)),
+        radial-gradient(farthest-side at 100% 50%, rgba(0,0,0,.28), rgba(0,0,0,0));
+      background-position: 0 0, 100% 0, 0 0, 100% 0;
+      background-repeat: no-repeat;
+      background-size: 40px 100%, 40px 100%, 14px 100%, 14px 100%;
+      background-attachment: local, local, scroll, scroll;
+    }
+    .post-body table {
+      background-image:
+        linear-gradient(to right, var(--white, #fff) 30%, rgba(255,255,255,0)),
+        linear-gradient(to left,  var(--white, #fff) 30%, rgba(255,255,255,0)),
+        radial-gradient(farthest-side at 0 50%, rgba(17,48,75,.16), rgba(17,48,75,0)),
+        radial-gradient(farthest-side at 100% 50%, rgba(17,48,75,.16), rgba(17,48,75,0));
+      background-position: 0 0, 100% 0, 0 0, 100% 0;
+      background-repeat: no-repeat;
+      background-size: 40px 100%, 40px 100%, 14px 100%, 14px 100%;
+      background-attachment: local, local, scroll, scroll;
+    }
+
+    /* Phone headings: h1 at clamp() maxima and h2 at 1.75rem were set for a
+       desktop measure and crowd a 375px column. */
+    @media (max-width: 600px) {
+      .post-body h2 { font-size: 1.4rem; }
+      .post-body h3 { font-size: 1.15rem; }
+    }
+  
+    /* ---- table of contents ----------------------------------------------
+       <details> so it is collapsible with no JavaScript, open by default on
+       desktop. The posts run to 46 phone-screens; this is the map. */
+    .post-toc {
+      max-width: 720px;
+      margin: 2rem auto 0;
+      padding: 1rem 1.25rem;
+      background: rgba(34,98,153,0.05);
+      border: 1px solid rgba(34,98,153,0.14);
+      border-left: 3px solid var(--gold, #c4a46c);
+      border-radius: 10px;
+      font-size: 0.92rem;
+    }
+    .post-toc > summary {
+      cursor: pointer;
+      font-weight: 700;
+      color: var(--navy);
+      list-style: none;
+    }
+    .post-toc > summary::-webkit-details-marker { display: none; }
+    .post-toc > summary::before {
+      content: "\25B8";
+      display: inline-block;
+      margin-right: 0.5rem;
+      transition: transform 0.2s ease;
+      color: var(--gold-dark, #7a5f22);
+    }
+    .post-toc[open] > summary::before { transform: rotate(90deg); }
+    .post-toc > summary:focus-visible { outline: 3px solid var(--focus, #226299); outline-offset: 3px; }
+    .post-toc ol { margin: 0.85rem 0 0.25rem; padding-left: 1.4rem; }
+    .post-toc li { margin-bottom: 0.4rem; line-height: 1.5; }
+    .post-toc a { color: var(--slate); text-decoration: none; }
+    .post-toc a:hover, .post-toc a:focus-visible { color: var(--blue-dark, #1a4d7a); text-decoration: underline; }
+    @media (max-width: 600px) { .post-toc { margin: 1.25rem 1rem 0; } }
+  </style>
   <!-- social -->
   <link rel="canonical" href="https://anirach.com/blog/docker-vs-vms.html">
   <meta property="og:type" content="article">
@@ -355,6 +442,21 @@
   </header>
 
   <article class="post-body" itemscope itemtype="https://schema.org/BlogPosting">
+    <details class="post-toc" open>
+      <summary>In this post &middot; <span lang="th">ในบทความนี้</span></summary>
+      <ol>
+          <li><a href="#virtual-machine-vm">Virtual Machine (VM) คืออะไร?</a></li>
+          <li><a href="#docker-container">Docker Container คืออะไร?</a></li>
+          <li><a href="#s-3">เปรียบเทียบ VM vs Container</a></li>
+          <li><a href="#docker">Docker ทำงานยังไง?</a></li>
+          <li><a href="#example">ตัวอย่างจริง: Deploy Web App</a></li>
+          <li><a href="#docker-compose">Docker Compose — รันหลาย Container พร้อมกัน</a></li>
+          <li><a href="#s-7">แล้วเมื่อไหร่ควรใช้อะไร?</a></li>
+          <li><a href="#summary">คำสั่ง Docker ที่ใช้บ่อย — สรุป</a></li>
+          <li><a href="#summary-2">สรุป</a></li>
+      </ol>
+    </details>
+
 
     <p>จากโพสต์ที่แล้วเราพูดถึง CI/CD Pipeline ว่ามันช่วยให้เรา build, test, deploy แบบอัตโนมัติ</p>
 
@@ -372,7 +474,7 @@
 
     <hr>
 
-    <h2>Virtual Machine (VM) คืออะไร?</h2>
+    <h2 id="virtual-machine-vm">Virtual Machine (VM) คืออะไร?</h2>
 
     <p><strong>VM (Virtual Machine)</strong> คือการจำลองคอมพิวเตอร์ทั้งเครื่องด้วย software — มี CPU, RAM, Disk, Network เสมือนครบ รันอยู่บนเครื่องจริง (Host) ผ่าน <strong>Hypervisor</strong> ที่จัดสรร resource ให้แต่ละ VM เหมือนแบ่งห้องในอพาร์ทเมนท์ — แต่ละ VM เป็นอิสระจากกัน ติดตั้ง OS ต่างกันได้ แม้ VM หนึ่งพังก็ไม่กระทบ VM อื่น</p>
 
@@ -417,7 +519,7 @@
 
     <hr>
 
-    <h2>Docker Container คืออะไร?</h2>
+    <h2 id="docker-container">Docker Container คืออะไร?</h2>
 
     <p><strong>Container</strong> คือการจำลองแค่ environment ที่ app ต้องการ — ไม่ต้องจำลอง OS ทั้งตัว! Container ใช้ <strong>kernel ร่วมกับ Host OS</strong> แล้วใช้ Linux features (namespaces, cgroups) แยก process, filesystem, network ของแต่ละ container ผลลัพธ์คือ: <strong>เบามาก</strong> (MB แทน GB), <strong>เร็วมาก</strong> (เริ่มในวินาที แทนนาที), และ <strong>portable</strong> (รันได้ทุกที่ที่มี Docker)</p>
 
@@ -458,7 +560,7 @@
 
     <hr>
 
-    <h2>เปรียบเทียบ VM vs Container</h2>
+    <h2 id="s-3">เปรียบเทียบ VM vs Container</h2>
 
     <p>ตารางด้านล่างเปรียบเทียบ VM กับ Container ในทุกมิติ — สังเกตว่า Container เร็วกว่า เบากว่า และ scale ง่ายกว่าในเกือบทุกด้าน แต่ VM ยังมีข้อดีด้าน <strong>isolation ที่แข็งแกร่งกว่า</strong> (แยก kernel) และรองรับ <strong>ต่าง OS</strong> ได้ (เช่น รัน Windows บน Linux host):</p>
 
@@ -480,7 +582,7 @@
 
     <hr>
 
-    <h2>Docker ทำงานยังไง?</h2>
+    <h2 id="docker">Docker ทำงานยังไง?</h2>
 
     <p>Docker ทำงานบน <strong>client-server architecture</strong> — Docker CLI (client) ส่งคำสั่งไปยัง Docker Engine (daemon) ที่จัดการ images และ containers มี 3 concepts หลักที่ต้องเข้าใจ เปรียบเทียบกับ OOP: Dockerfile = source code, Image = class, Container = object:</p>
 
@@ -553,7 +655,7 @@ docker rm my-app</code></pre>
 
     <hr>
 
-    <h2>ตัวอย่างจริง: Deploy Web App</h2>
+    <h2 id="example">ตัวอย่างจริง: Deploy Web App</h2>
 
     <p>มาเปรียบเทียบขั้นตอนจริงในการ deploy web app ทั้งแบบ VM (วิธีเดิม) กับ Docker (วิธีใหม่) — จะเห็นว่า Docker ลดขั้นตอนได้มาก และที่สำคัญคือ <strong>ทุกคนได้ environment เดียวกัน</strong> ไม่มี "แต่ในเครื่องฉันมันรันได้นะ" อีกต่อไป:</p>
 
@@ -594,7 +696,7 @@ docker run -d -p 3000:3000 my-app:v1
 
     <hr>
 
-    <h2>Docker Compose — รันหลาย Container พร้อมกัน</h2>
+    <h2 id="docker-compose">Docker Compose — รันหลาย Container พร้อมกัน</h2>
 
     <p>App จริงไม่ได้มีแค่ container เดียว — มี web server + database + cache + message queue + ... ถ้าต้อง <code>docker run</code> ทีละตัว ตั้ง network เอง ตั้ง volume เอง จะยุ่งมาก! <strong>Docker Compose</strong> แก้ปัญหานี้โดยกำหนดทุก service ในไฟล์ YAML เดียว แล้วรันทั้งหมดด้วย <code>docker compose up</code> คำสั่งเดียว:</p>
 
@@ -636,7 +738,7 @@ docker compose down</code></pre>
 
     <hr>
 
-    <h2>แล้วเมื่อไหร่ควรใช้อะไร?</h2>
+    <h2 id="s-7">แล้วเมื่อไหร่ควรใช้อะไร?</h2>
 
     <p>ส่วนใหญ่คำตอบคือ <strong>Docker</strong> — แต่มีบาง use cases ที่ VM ยังจำเป็น:</p>
 
@@ -675,7 +777,7 @@ docker compose down</code></pre>
 
     <hr>
 
-    <h2>คำสั่ง Docker ที่ใช้บ่อย — สรุป</h2>
+    <h2 id="summary">คำสั่ง Docker ที่ใช้บ่อย — สรุป</h2>
 
     <p>Docker commands ที่ DevOps ใช้ทุกวัน — ไม่ต้องจำทั้งหมด แค่รู้ว่ามีอะไรบ้าง แล้ว <code>docker --help</code> เมื่อต้องการ คำสั่งที่ใช้บ่อยที่สุดคือ <code>docker build</code>, <code>docker run</code>, <code>docker ps</code>, <code>docker logs</code>:</p>
 
@@ -701,7 +803,7 @@ docker compose logs -f              # ดู logs แบบ realtime</code></pre
 
     <hr>
 
-    <h2>สรุป</h2>
+    <h2 id="summary-2">สรุป</h2>
 
     <p>Docker เปลี่ยนวิธี deploy software ไปตลอดกาล — จาก "ติดตั้งทีละเครื่อง ลุ้นว่าจะรันได้ไหม" เป็น "build once, run anywhere" ทุก cloud provider, CI/CD pipeline, microservice architecture ล้วนใช้ containers เป็นพื้นฐาน เรียนรู้ Docker เป็น skill แรกๆ ที่ DevOps ต้องมี:</p>
 

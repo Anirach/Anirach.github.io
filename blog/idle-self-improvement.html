@@ -21,7 +21,7 @@
           --gold: #c4a46c; --gold-dark: #7a5f22; --cloud: #dee7e6; --parchment: #e9e1c4; --focus: #226299;
           /* status — use only these six, never invent a seventh */
           --green: #22c55e; --red: #ef4444; --amber: #f59e0b;
-          --cyan: #06b6d4; --purple: #8b5cf6; --purple-dark: #7c3aed;
+          --cyan: #06b6d4; --purple: #226299; --purple-dark: #1a4d7a;
           /* type */
           --font: 'Inter', 'Sarabun', -apple-system, BlinkMacSystemFont, sans-serif;
           --mono: 'JetBrains Mono', 'Fira Code', 'Sarabun', monospace;
@@ -89,11 +89,14 @@
             display: flex; align-items: center; justify-content: center; gap: 1.5rem; flex-wrap: wrap;
         }
         .post-hero__cover {
-            aspect-ratio: 1/1; max-width: 480px; margin: 2.5rem auto 0;
-            border-radius: 16px; overflow: hidden;
-            box-shadow: 0 20px 60px rgba(5,46,22,0.32);
-        }
-        .post-hero__cover img { width: 100%; height: 100%; object-fit: cover; display: block; }
+      aspect-ratio: 1 / 1;
+      max-width: 380px;
+      margin: 2.5rem auto 0;
+      border-radius: var(--radius-lg, 16px);
+      overflow: hidden;
+      box-shadow: 0 20px 60px rgba(17,48,75,0.14);
+    }
+    .post-hero__cover img { width: 100%; height: 100%; object-fit: cover; display: block; }
 
         /* ── BODY ── */
         .post-body { max-width: var(--measure); margin: 0 auto; padding: 3rem 2rem 6rem; }
@@ -259,7 +262,91 @@
        the series heading sat 15px under it. */
     html { scroll-padding-top: 5rem; }
     [id] { scroll-margin-top: 5rem; }
-</style>
+
+    /* ---- Phase 5: reading chrome -----------------------------------------
+       Thai needs more room than Latin at the same nominal size: taller
+       ascenders, stacked vowel and tone marks above and below the line. 17px
+       Sarabun is measurably harder to read than 17px Inter, so Thai bodies get
+       18px and a looser line. English pages stay at 17. */
+    .post-body:lang(th) { font-size: 18px; line-height: 1.85; }
+
+    /* Avoid the one-word last line. Cheap, and no layout risk. */
+    .post-body p, .post-body li, .post-body blockquote { text-wrap: pretty; }
+
+    /* ---- side-scroll affordance ------------------------------------------
+       440 <pre> blocks and 94 tables can exceed 720px. Nothing said so — a
+       reader on a phone saw a code block cut off at the edge with no hint
+       that it continued. These four layers paint a shadow ONLY where there is
+       more content in that direction: two "cover" gradients pinned to the
+       scroll box (local) and two shadows pinned to the element (scroll); when
+       the content is fully scrolled the cover slides over the shadow and
+       hides it. No JavaScript, no wrapper element. */
+    .post-body pre, .post-body table {
+      overflow-x: auto;
+      background-image:
+        linear-gradient(to right, var(--code-bg, #0f172a) 30%, rgba(15,23,42,0)),
+        linear-gradient(to left,  var(--code-bg, #0f172a) 30%, rgba(15,23,42,0)),
+        radial-gradient(farthest-side at 0 50%, rgba(0,0,0,.28), rgba(0,0,0,0)),
+        radial-gradient(farthest-side at 100% 50%, rgba(0,0,0,.28), rgba(0,0,0,0));
+      background-position: 0 0, 100% 0, 0 0, 100% 0;
+      background-repeat: no-repeat;
+      background-size: 40px 100%, 40px 100%, 14px 100%, 14px 100%;
+      background-attachment: local, local, scroll, scroll;
+    }
+    .post-body table {
+      background-image:
+        linear-gradient(to right, var(--white, #fff) 30%, rgba(255,255,255,0)),
+        linear-gradient(to left,  var(--white, #fff) 30%, rgba(255,255,255,0)),
+        radial-gradient(farthest-side at 0 50%, rgba(17,48,75,.16), rgba(17,48,75,0)),
+        radial-gradient(farthest-side at 100% 50%, rgba(17,48,75,.16), rgba(17,48,75,0));
+      background-position: 0 0, 100% 0, 0 0, 100% 0;
+      background-repeat: no-repeat;
+      background-size: 40px 100%, 40px 100%, 14px 100%, 14px 100%;
+      background-attachment: local, local, scroll, scroll;
+    }
+
+    /* Phone headings: h1 at clamp() maxima and h2 at 1.75rem were set for a
+       desktop measure and crowd a 375px column. */
+    @media (max-width: 600px) {
+      .post-body h2 { font-size: 1.4rem; }
+      .post-body h3 { font-size: 1.15rem; }
+    }
+  
+    /* ---- table of contents ----------------------------------------------
+       <details> so it is collapsible with no JavaScript, open by default on
+       desktop. The posts run to 46 phone-screens; this is the map. */
+    .post-toc {
+      max-width: 720px;
+      margin: 2rem auto 0;
+      padding: 1rem 1.25rem;
+      background: rgba(34,98,153,0.05);
+      border: 1px solid rgba(34,98,153,0.14);
+      border-left: 3px solid var(--gold, #c4a46c);
+      border-radius: 10px;
+      font-size: 0.92rem;
+    }
+    .post-toc > summary {
+      cursor: pointer;
+      font-weight: 700;
+      color: var(--navy);
+      list-style: none;
+    }
+    .post-toc > summary::-webkit-details-marker { display: none; }
+    .post-toc > summary::before {
+      content: "\25B8";
+      display: inline-block;
+      margin-right: 0.5rem;
+      transition: transform 0.2s ease;
+      color: var(--gold-dark, #7a5f22);
+    }
+    .post-toc[open] > summary::before { transform: rotate(90deg); }
+    .post-toc > summary:focus-visible { outline: 3px solid var(--focus, #226299); outline-offset: 3px; }
+    .post-toc ol { margin: 0.85rem 0 0.25rem; padding-left: 1.4rem; }
+    .post-toc li { margin-bottom: 0.4rem; line-height: 1.5; }
+    .post-toc a { color: var(--slate); text-decoration: none; }
+    .post-toc a:hover, .post-toc a:focus-visible { color: var(--blue-dark, #1a4d7a); text-decoration: underline; }
+    @media (max-width: 600px) { .post-toc { margin: 1.25rem 1rem 0; } }
+  </style>
     <!-- social -->
     <link rel="canonical" href="https://anirach.com/blog/idle-self-improvement.html">
     <meta property="og:type" content="article">
@@ -315,9 +402,22 @@
 
 
 <article class="post-body" itemscope itemtype="https://schema.org/BlogPosting">
+    <details class="post-toc" open>
+      <summary>In this post &middot; <span lang="th">ในบทความนี้</span></summary>
+      <ol>
+          <li><a href="#s-1">ปัญหาที่เรามักมองข้าม</a></li>
+          <li><a href="#idle-improver">Idle Improver คืออะไร?</a></li>
+          <li><a href="#s-3">มันตรวจอะไรบ้าง?</a></li>
+          <li><a href="#vault-intelligence">Vault Intelligence — ให้ Agent เข้าใจ Knowledge Base ของคุณ</a></li>
+          <li><a href="#s-5">ตั้งค่าใน 5 ขั้นตอน</a></li>
+          <li><a href="#why">ทำไมต้องตั้งค่าเรื่องนี้?</a></li>
+          <li><a href="#s-7">เหมาะกับใคร?</a></li>
+      </ol>
+    </details>
+
       <span itemprop="author" itemscope itemtype="https://schema.org/Person"><meta itemprop="name" content="Anirach Mingkhwan"></span>
 
-        <h2>ปัญหาที่เรามักมองข้าม</h2>
+        <h2 id="s-1">ปัญหาที่เรามักมองข้าม</h2>
         <p>AI Agent ส่วนใหญ่ทำงานแบบ "ถาม-ตอบ" — ถ้าคุณไม่ส่งข้อความ มันก็นั่งเฉยๆ ไม่ทำอะไรเลย เหมือนพนักงานที่รอคำสั่งอย่างเดียว ไม่เคยหันไปจัดโต๊ะหรือเช็คงานค้างเอง</p>
         <p>แต่ถ้าเราบอก Agent ได้ว่า <strong>"เมื่อไม่มีใครคุยด้วย ให้ตรวจสอบระบบแทน"</strong> — เวลาว่างที่เคยสูญเปล่าก็กลายเป็นงานจริงที่ช่วยเราได้</p>
 
@@ -326,7 +426,7 @@
             <p style="margin-bottom:0">ลองนึกถึงผู้ช่วยที่ดี — เมื่อเจ้านายไปประชุม แทนที่จะนั่งเล่นโทรศัพท์ ผู้ช่วยคนนี้จะ: จัดเอกสาร, เช็คอีเมล, ดูว่าของในออฟฟิศขาดอะไรไหม นั่นคือสิ่งที่ <strong>Idle Self-Improvement</strong> ทำให้ AI Agent ของคุณ</p>
         </div>
 
-        <h2>Idle Improver คืออะไร?</h2>
+        <h2 id="idle-improver">Idle Improver คืออะไร?</h2>
         <p>Idle Improver เป็น Python script ที่ทำงานทุก 30 นาที ผ่าน cron job โดยมันจะ:</p>
         <ol>
             <li><strong>เช็คก่อนว่าระบบว่างจริงไหม</strong> — ถ้ามีคนกำลังคุยกับ Agent อยู่ มันจะข้ามไปเลย ไม่รบกวน</li>
@@ -338,7 +438,7 @@
                 <img class="post-body__wide" src="../images/idle-self-improvement-flow.png" alt="Idle Self-Improvement Workflow" style="border-radius:12px;box-shadow:0 8px 30px rgba(0,0,0,0.2);" width="2500" height="1000" loading="lazy" decoding="async">
             </div>
 
-        <h2>มันตรวจอะไรบ้าง?</h2>
+        <h2 id="s-3">มันตรวจอะไรบ้าง?</h2>
         <p>Idle Improver ตรวจ 7 ด้านที่สำคัญที่สุดสำหรับเซิร์ฟเวอร์:</p>
 
         <div class="tool-card">
@@ -383,7 +483,7 @@
             <p style="margin-bottom:0">หา symbolic link ที่เสีย — ลดปัญหา "file not found" ลึกลับ</p>
         </div>
 
-        <h2>Vault Intelligence — ให้ Agent เข้าใจ Knowledge Base ของคุณ</h2>
+        <h2 id="vault-intelligence">Vault Intelligence — ให้ Agent เข้าใจ Knowledge Base ของคุณ</h2>
         <p>นอกจาก Idle Improver แล้ว ยังมีเครื่องมืออีก 3 ตัวที่ช่วยให้ Agent ทำงานกับ Obsidian vault ของคุณได้อย่างชาญฉลาด:</p>
 
         <div class="tool-card">
@@ -409,7 +509,7 @@ python3 tools/ask_vault.py "note.md" --related</code></pre>
             <pre><code>python3 tools/vault_insight.py full --save</code></pre>
         </div>
 
-        <h2>ตั้งค่าใน 5 ขั้นตอน</h2>
+        <h2 id="s-5">ตั้งค่าใน 5 ขั้นตอน</h2>
         <p>การติดตั้งไม่ยากอย่างที่คิด — ใช้เวลาประมาณ 10-15 นาที:</p>
 
         <h3>ขั้นที่ 1: สร้างโฟลเดอร์</h3>
@@ -458,7 +558,7 @@ python3 tools/ask_vault.py "test query"</code></pre>
 - `python3 tools/vault_insight.py full` — theme/gap analysis
 - `python3 tools/idle_improver.py --force` — system health scan</code></pre>
 
-        <h2>ทำไมต้องตั้งค่าเรื่องนี้?</h2>
+        <h2 id="why">ทำไมต้องตั้งค่าเรื่องนี้?</h2>
 
         <div class="highlight-box">
             <h4>🎯 ประโยชน์ที่ได้จริง</h4>
@@ -482,7 +582,7 @@ python3 tools/ask_vault.py "test query"</code></pre>
             <p style="margin-bottom:0">คุณรู้ทันทีว่าต้องจัดการอะไร — โดยไม่ต้อง SSH เข้าเซิร์ฟเวอร์ ไม่ต้องจำว่าจะเช็คอะไร Agent ทำให้ตอนตี 3 แล้ว</p>
         </div>
 
-        <h2>เหมาะกับใคร?</h2>
+        <h2 id="s-7">เหมาะกับใคร?</h2>
         <ul>
             <li><strong>Solo developer</strong> ที่รันเซิร์ฟเวอร์เอง — ไม่มี ops team คอยดูให้</li>
             <li><strong>คนใช้ Obsidian</strong> ที่มีโน้ตเยอะ — vault ใหญ่จะหาอะไรยากขึ้นเรื่อยๆ ถ้าไม่มีเครื่องมือช่วย</li>

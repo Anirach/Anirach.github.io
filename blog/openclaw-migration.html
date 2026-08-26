@@ -21,7 +21,7 @@
           --gold: #c4a46c; --gold-dark: #7a5f22; --cloud: #dee7e6; --parchment: #e9e1c4; --focus: #226299;
           /* status — use only these six, never invent a seventh */
           --green: #22c55e; --red: #ef4444; --amber: #f59e0b;
-          --cyan: #06b6d4; --purple: #8b5cf6; --purple-dark: #7c3aed;
+          --cyan: #06b6d4; --purple: #226299; --purple-dark: #1a4d7a;
           /* type */
           --font: 'Inter', 'Sarabun', -apple-system, BlinkMacSystemFont, sans-serif;
           --mono: 'JetBrains Mono', 'Fira Code', 'Sarabun', monospace;
@@ -91,11 +91,14 @@
             gap: 1.5rem; flex-wrap: wrap;
         }
         .post-hero__cover {
-            aspect-ratio: 1/1; max-width: 480px; margin: 2.5rem auto 0;
-            border-radius: var(--radius-lg); overflow: hidden;
-            box-shadow: 0 20px 60px rgba(17,48,75,0.28);
-        }
-        .post-hero__cover img { width: 100%; height: 100%; object-fit: cover; display: block; }
+      aspect-ratio: 1 / 1;
+      max-width: 380px;
+      margin: 2.5rem auto 0;
+      border-radius: var(--radius-lg, 16px);
+      overflow: hidden;
+      box-shadow: 0 20px 60px rgba(17,48,75,0.14);
+    }
+    .post-hero__cover img { width: 100%; height: 100%; object-fit: cover; display: block; }
 
         .hero-cover {
             max-width: 700px; margin: 2.5rem auto 0; border-radius: 16px; overflow: hidden;
@@ -336,7 +339,91 @@
        the series heading sat 15px under it. */
     html { scroll-padding-top: 5rem; }
     [id] { scroll-margin-top: 5rem; }
-</style>
+
+    /* ---- Phase 5: reading chrome -----------------------------------------
+       Thai needs more room than Latin at the same nominal size: taller
+       ascenders, stacked vowel and tone marks above and below the line. 17px
+       Sarabun is measurably harder to read than 17px Inter, so Thai bodies get
+       18px and a looser line. English pages stay at 17. */
+    .post-body:lang(th) { font-size: 18px; line-height: 1.85; }
+
+    /* Avoid the one-word last line. Cheap, and no layout risk. */
+    .post-body p, .post-body li, .post-body blockquote { text-wrap: pretty; }
+
+    /* ---- side-scroll affordance ------------------------------------------
+       440 <pre> blocks and 94 tables can exceed 720px. Nothing said so — a
+       reader on a phone saw a code block cut off at the edge with no hint
+       that it continued. These four layers paint a shadow ONLY where there is
+       more content in that direction: two "cover" gradients pinned to the
+       scroll box (local) and two shadows pinned to the element (scroll); when
+       the content is fully scrolled the cover slides over the shadow and
+       hides it. No JavaScript, no wrapper element. */
+    .post-body pre, .post-body table {
+      overflow-x: auto;
+      background-image:
+        linear-gradient(to right, var(--code-bg, #0f172a) 30%, rgba(15,23,42,0)),
+        linear-gradient(to left,  var(--code-bg, #0f172a) 30%, rgba(15,23,42,0)),
+        radial-gradient(farthest-side at 0 50%, rgba(0,0,0,.28), rgba(0,0,0,0)),
+        radial-gradient(farthest-side at 100% 50%, rgba(0,0,0,.28), rgba(0,0,0,0));
+      background-position: 0 0, 100% 0, 0 0, 100% 0;
+      background-repeat: no-repeat;
+      background-size: 40px 100%, 40px 100%, 14px 100%, 14px 100%;
+      background-attachment: local, local, scroll, scroll;
+    }
+    .post-body table {
+      background-image:
+        linear-gradient(to right, var(--white, #fff) 30%, rgba(255,255,255,0)),
+        linear-gradient(to left,  var(--white, #fff) 30%, rgba(255,255,255,0)),
+        radial-gradient(farthest-side at 0 50%, rgba(17,48,75,.16), rgba(17,48,75,0)),
+        radial-gradient(farthest-side at 100% 50%, rgba(17,48,75,.16), rgba(17,48,75,0));
+      background-position: 0 0, 100% 0, 0 0, 100% 0;
+      background-repeat: no-repeat;
+      background-size: 40px 100%, 40px 100%, 14px 100%, 14px 100%;
+      background-attachment: local, local, scroll, scroll;
+    }
+
+    /* Phone headings: h1 at clamp() maxima and h2 at 1.75rem were set for a
+       desktop measure and crowd a 375px column. */
+    @media (max-width: 600px) {
+      .post-body h2 { font-size: 1.4rem; }
+      .post-body h3 { font-size: 1.15rem; }
+    }
+  
+    /* ---- table of contents ----------------------------------------------
+       <details> so it is collapsible with no JavaScript, open by default on
+       desktop. The posts run to 46 phone-screens; this is the map. */
+    .post-toc {
+      max-width: 720px;
+      margin: 2rem auto 0;
+      padding: 1rem 1.25rem;
+      background: rgba(34,98,153,0.05);
+      border: 1px solid rgba(34,98,153,0.14);
+      border-left: 3px solid var(--gold, #c4a46c);
+      border-radius: 10px;
+      font-size: 0.92rem;
+    }
+    .post-toc > summary {
+      cursor: pointer;
+      font-weight: 700;
+      color: var(--navy);
+      list-style: none;
+    }
+    .post-toc > summary::-webkit-details-marker { display: none; }
+    .post-toc > summary::before {
+      content: "\25B8";
+      display: inline-block;
+      margin-right: 0.5rem;
+      transition: transform 0.2s ease;
+      color: var(--gold-dark, #7a5f22);
+    }
+    .post-toc[open] > summary::before { transform: rotate(90deg); }
+    .post-toc > summary:focus-visible { outline: 3px solid var(--focus, #226299); outline-offset: 3px; }
+    .post-toc ol { margin: 0.85rem 0 0.25rem; padding-left: 1.4rem; }
+    .post-toc li { margin-bottom: 0.4rem; line-height: 1.5; }
+    .post-toc a { color: var(--slate); text-decoration: none; }
+    .post-toc a:hover, .post-toc a:focus-visible { color: var(--blue-dark, #1a4d7a); text-decoration: underline; }
+    @media (max-width: 600px) { .post-toc { margin: 1.25rem 1rem 0; } }
+  </style>
     <!-- social -->
     <link rel="canonical" href="https://anirach.com/blog/openclaw-migration.html">
     <meta property="og:type" content="article">
@@ -408,9 +495,24 @@
 
 
 <article class="post-body" itemscope itemtype="https://schema.org/BlogPosting">
+    <details class="post-toc" open>
+      <summary>In this post &middot; <span lang="th">ในบทความนี้</span></summary>
+      <ol>
+          <li><a href="#why">ทำไมต้องย้าย?</a></li>
+          <li><a href="#s-2">สิ่งที่ต้องเตรียม</a></li>
+          <li><a href="#s-3">เตรียมและ Backup จากเครื่องเก่า</a></li>
+          <li><a href="#s-4">ส่งข้อมูลไปเครื่องใหม่</a></li>
+          <li><a href="#s-5">ติดตั้งและ Restore บนเครื่องใหม่</a></li>
+          <li><a href="#self-check">🔍 Self-Check — ให้ Bot ตรวจตัวเอง</a></li>
+          <li><a href="#s-7">ให้ Bot ตรวจตัวเองผ่านแชท</a></li>
+          <li><a href="#cleanup">Cleanup เครื่องเก่า</a></li>
+          <li><a href="#troubleshooting">Troubleshooting</a></li>
+      </ol>
+    </details>
+
       <span itemprop="author" itemscope itemtype="https://schema.org/Person"><meta itemprop="name" content="Anirach Mingkhwan"></span>
 
-        <h2>ทำไมต้องย้าย?</h2>
+        <h2 id="why">ทำไมต้องย้าย?</h2>
         <p>มีหลายเหตุผลที่คุณอาจต้องย้าย OpenClaw bot ไปเครื่องใหม่ — VPS หมดสัญญา, อยากเปลี่ยนมาใช้เครื่องที่แรงกว่า, ย้ายจาก cloud มาเครื่องบ้าน, หรือแค่อยาก consolidate หลายบอทมาเครื่องเดียว</p>
         <p>ปัญหาคือ OpenClaw bot ไม่ใช่แค่โปรแกรมเดียว — มันมี config, credentials, memory, workspace, skills, cron jobs, และ session data ที่ต้องย้ายมาด้วยกันหมด ถ้าย้ายไม่ครบ bot จะลืมทุกอย่าง หรือแย่กว่านั้น — ส่งข้อความไม่ได้</p>
 
@@ -427,7 +529,7 @@
             </ul>
         </div>
 
-        <h2>สิ่งที่ต้องเตรียม</h2>
+        <h2 id="s-2">สิ่งที่ต้องเตรียม</h2>
         <ul>
             <li><strong>เครื่องเก่า:</strong> VPS Ubuntu ที่รัน OpenClaw อยู่</li>
             <li><strong>เครื่องใหม่:</strong> Mac Studio (macOS) — หรือเครื่องใหม่ใดๆ ที่มี Node.js 18+</li>
@@ -437,7 +539,7 @@
 
         <!-- ========== PHASE 1 ========== -->
         <span class="phase-label">PHASE 1 — เครื่องเก่า (VPS Ubuntu)</span>
-        <h2>เตรียมและ Backup จากเครื่องเก่า</h2>
+        <h2 id="s-3">เตรียมและ Backup จากเครื่องเก่า</h2>
 
         <div class="step-header">
             <span class="step-number">1</span>
@@ -517,7 +619,7 @@ npm list -g openclaw >> ~/openclaw-version.txt</code></pre>
 
         <!-- ========== PHASE 2 ========== -->
         <span class="phase-label orange">PHASE 2 — Transfer ข้ามเครื่อง</span>
-        <h2>ส่งข้อมูลไปเครื่องใหม่</h2>
+        <h2 id="s-4">ส่งข้อมูลไปเครื่องใหม่</h2>
 
         <div class="step-header">
             <span class="step-number">5</span>
@@ -540,7 +642,7 @@ scp user@your-vps-ip:~/openclaw-version.txt ~/Downloads/</code></pre>
 
         <!-- ========== PHASE 3 ========== -->
         <span class="phase-label green">PHASE 3 — เครื่องใหม่ (Mac Studio)</span>
-        <h2>ติดตั้งและ Restore บนเครื่องใหม่</h2>
+        <h2 id="s-5">ติดตั้งและ Restore บนเครื่องใหม่</h2>
 
         <div class="step-header">
             <span class="step-number">6</span>
@@ -623,7 +725,7 @@ openclaw gateway status
 openclaw logs --tail 50</code></pre>
 
         <!-- ========== PHASE 4: SELF-CHECK ========== -->
-        <h2>🔍 Self-Check — ให้ Bot ตรวจตัวเอง</h2>
+        <h2 id="self-check">🔍 Self-Check — ให้ Bot ตรวจตัวเอง</h2>
         <p>นี่คือส่วนสำคัญที่สุด — หลังจากย้ายเสร็จ ให้รันสคริปต์ตรวจสอบว่าทุกอย่างครบ ใช้ได้ทั้งรันเองและให้ bot รัน</p>
 
         <h3>สคริปต์ Self-Check อัตโนมัติ</h3>
@@ -803,7 +905,7 @@ Results: ✅ 12 passed | ❌ 0 failed | ⚠️  0 warnings
 
 🎉 Migration looks good!</code></pre>
 
-        <h2>ให้ Bot ตรวจตัวเองผ่านแชท</h2>
+        <h2 id="s-7">ให้ Bot ตรวจตัวเองผ่านแชท</h2>
         <p>หลังจาก gateway เริ่มแล้ว ส่งข้อความหาบอทผ่าน Telegram แล้วถามให้มันตรวจ:</p>
 
         <div class="highlight-box">
@@ -821,7 +923,7 @@ Results: ✅ 12 passed | ❌ 0 failed | ⚠️  0 warnings
 
         <p>ถ้า bot ตอบได้ทุกข้อ — แสดงว่า memory, config, credentials, และ channel ย้ายมาครบแล้ว ถ้ามันจำคุณไม่ได้หรืออ่านไฟล์ไม่ได้ แสดงว่า workspace path ยังไม่ถูกต้อง</p>
 
-        <h2>Cleanup เครื่องเก่า</h2>
+        <h2 id="cleanup">Cleanup เครื่องเก่า</h2>
         <p>หลังจากมั่นใจว่าเครื่องใหม่ทำงานปกติแล้ว (ใช้งานจริง 1-2 วัน):</p>
         <pre><code><span class="comment"># SSH เข้าเครื่องเก่า</span>
 ssh user@your-vps-ip
@@ -842,7 +944,7 @@ openclaw gateway stop
             <p style="margin-bottom:0">ใช้เครื่องใหม่จริง 2-3 วันก่อน ถ้ามีปัญหาจะได้กลับไป restore จากเครื่องเก่าได้ เก็บ backup file ไว้อย่างน้อย 1 สัปดาห์</p>
         </div>
 
-        <h2>Troubleshooting</h2>
+        <h2 id="troubleshooting">Troubleshooting</h2>
 
         <h3>❌ Bot ไม่ตอบใน Telegram</h3>
         <ul>

@@ -22,7 +22,7 @@
       --gold: #c4a46c; --gold-dark: #7a5f22; --cloud: #dee7e6; --parchment: #e9e1c4; --focus: #226299;
       /* status — use only these six, never invent a seventh */
       --green: #22c55e; --red: #ef4444; --amber: #f59e0b;
-      --cyan: #06b6d4; --purple: #8b5cf6; --purple-dark: #7c3aed;
+      --cyan: #06b6d4; --purple: #226299; --purple-dark: #1a4d7a;
       /* type */
       --font: 'Inter', 'Sarabun', -apple-system, BlinkMacSystemFont, sans-serif;
       --mono: 'JetBrains Mono', 'Fira Code', 'Sarabun', monospace;
@@ -75,12 +75,15 @@
       display: flex; align-items: center; justify-content: center; gap: 1.5rem;
     }
     .post-hero__series { font-weight: 600; color: var(--blue); }
-    .post-hero__cover { aspect-ratio: 256/127;
-      max-width: 520px; margin: 2.5rem auto 0;
-      border-radius: 16px; overflow: hidden;
-      box-shadow: 0 20px 60px rgba(34,98,153,0.15);
+    .post-hero__cover {
+      aspect-ratio: 1 / 1;
+      max-width: 380px;
+      margin: 2.5rem auto 0;
+      border-radius: var(--radius-lg, 16px);
+      overflow: hidden;
+      box-shadow: 0 20px 60px rgba(17,48,75,0.14);
     }
-    .post-hero__cover img { width: 100%; display: block; height: auto;}
+    .post-hero__cover img { width: 100%; height: 100%; object-fit: cover; display: block; }
     .post-body { max-width: 720px; margin: 0 auto; padding: 3rem 2rem 6rem; }
     .post-body h2 {
       font-size: 1.6rem; font-weight: 800; color: var(--navy);
@@ -280,7 +283,91 @@
        the series heading sat 15px under it. */
     html { scroll-padding-top: 5rem; }
     [id] { scroll-margin-top: 5rem; }
-</style>
+
+    /* ---- Phase 5: reading chrome -----------------------------------------
+       Thai needs more room than Latin at the same nominal size: taller
+       ascenders, stacked vowel and tone marks above and below the line. 17px
+       Sarabun is measurably harder to read than 17px Inter, so Thai bodies get
+       18px and a looser line. English pages stay at 17. */
+    .post-body:lang(th) { font-size: 18px; line-height: 1.85; }
+
+    /* Avoid the one-word last line. Cheap, and no layout risk. */
+    .post-body p, .post-body li, .post-body blockquote { text-wrap: pretty; }
+
+    /* ---- side-scroll affordance ------------------------------------------
+       440 <pre> blocks and 94 tables can exceed 720px. Nothing said so — a
+       reader on a phone saw a code block cut off at the edge with no hint
+       that it continued. These four layers paint a shadow ONLY where there is
+       more content in that direction: two "cover" gradients pinned to the
+       scroll box (local) and two shadows pinned to the element (scroll); when
+       the content is fully scrolled the cover slides over the shadow and
+       hides it. No JavaScript, no wrapper element. */
+    .post-body pre, .post-body table {
+      overflow-x: auto;
+      background-image:
+        linear-gradient(to right, var(--code-bg, #0f172a) 30%, rgba(15,23,42,0)),
+        linear-gradient(to left,  var(--code-bg, #0f172a) 30%, rgba(15,23,42,0)),
+        radial-gradient(farthest-side at 0 50%, rgba(0,0,0,.28), rgba(0,0,0,0)),
+        radial-gradient(farthest-side at 100% 50%, rgba(0,0,0,.28), rgba(0,0,0,0));
+      background-position: 0 0, 100% 0, 0 0, 100% 0;
+      background-repeat: no-repeat;
+      background-size: 40px 100%, 40px 100%, 14px 100%, 14px 100%;
+      background-attachment: local, local, scroll, scroll;
+    }
+    .post-body table {
+      background-image:
+        linear-gradient(to right, var(--white, #fff) 30%, rgba(255,255,255,0)),
+        linear-gradient(to left,  var(--white, #fff) 30%, rgba(255,255,255,0)),
+        radial-gradient(farthest-side at 0 50%, rgba(17,48,75,.16), rgba(17,48,75,0)),
+        radial-gradient(farthest-side at 100% 50%, rgba(17,48,75,.16), rgba(17,48,75,0));
+      background-position: 0 0, 100% 0, 0 0, 100% 0;
+      background-repeat: no-repeat;
+      background-size: 40px 100%, 40px 100%, 14px 100%, 14px 100%;
+      background-attachment: local, local, scroll, scroll;
+    }
+
+    /* Phone headings: h1 at clamp() maxima and h2 at 1.75rem were set for a
+       desktop measure and crowd a 375px column. */
+    @media (max-width: 600px) {
+      .post-body h2 { font-size: 1.4rem; }
+      .post-body h3 { font-size: 1.15rem; }
+    }
+  
+    /* ---- table of contents ----------------------------------------------
+       <details> so it is collapsible with no JavaScript, open by default on
+       desktop. The posts run to 46 phone-screens; this is the map. */
+    .post-toc {
+      max-width: 720px;
+      margin: 2rem auto 0;
+      padding: 1rem 1.25rem;
+      background: rgba(34,98,153,0.05);
+      border: 1px solid rgba(34,98,153,0.14);
+      border-left: 3px solid var(--gold, #c4a46c);
+      border-radius: 10px;
+      font-size: 0.92rem;
+    }
+    .post-toc > summary {
+      cursor: pointer;
+      font-weight: 700;
+      color: var(--navy);
+      list-style: none;
+    }
+    .post-toc > summary::-webkit-details-marker { display: none; }
+    .post-toc > summary::before {
+      content: "\25B8";
+      display: inline-block;
+      margin-right: 0.5rem;
+      transition: transform 0.2s ease;
+      color: var(--gold-dark, #7a5f22);
+    }
+    .post-toc[open] > summary::before { transform: rotate(90deg); }
+    .post-toc > summary:focus-visible { outline: 3px solid var(--focus, #226299); outline-offset: 3px; }
+    .post-toc ol { margin: 0.85rem 0 0.25rem; padding-left: 1.4rem; }
+    .post-toc li { margin-bottom: 0.4rem; line-height: 1.5; }
+    .post-toc a { color: var(--slate); text-decoration: none; }
+    .post-toc a:hover, .post-toc a:focus-visible { color: var(--blue-dark, #1a4d7a); text-decoration: underline; }
+    @media (max-width: 600px) { .post-toc { margin: 1.25rem 1rem 0; } }
+  </style>
   <!-- social -->
   <link rel="canonical" href="https://anirach.com/blog/networking-fundamentals.html">
   <meta property="og:type" content="article">
@@ -335,6 +422,23 @@
   </header>
 
   <article class="post-body" itemscope itemtype="https://schema.org/BlogPosting">
+    <details class="post-toc" open>
+      <summary>In this post &middot; <span lang="th">ในบทความนี้</span></summary>
+      <ol>
+          <li><a href="#tcp-ip-model">TCP/IP Model — ภาษากลางของ Internet</a></li>
+          <li><a href="#ip-address">IP Address — ที่อยู่บนโลก Internet</a></li>
+          <li><a href="#ports">Ports — ประตูของ Application</a></li>
+          <li><a href="#dns">DNS — แปลงชื่อเป็น IP</a></li>
+          <li><a href="#firewall">Firewall — กำแพงป้องกัน</a></li>
+          <li><a href="#load-balancer">Load Balancer — กระจาย Traffic</a></li>
+          <li><a href="#reverse-proxy">Reverse Proxy — Nginx ตัวกลาง</a></li>
+          <li><a href="#ssh">SSH — Remote เข้า Server</a></li>
+          <li><a href="#docker-networking">Docker Networking — Container คุยกันยังไง?</a></li>
+          <li><a href="#s-10">เครื่องมือ Networking ที่ DevOps ต้องรู้</a></li>
+          <li><a href="#summary">สรุป</a></li>
+      </ol>
+    </details>
+
 
     <p>จากโพสต์ที่แล้วเราพูดถึง Kubernetes ว่าช่วยจัดการ container ให้ทำงานร่วมกันอย่างเป็นระบบ</p>
 
@@ -344,7 +448,7 @@
 
     <hr>
 
-    <h2>TCP/IP Model — ภาษากลางของ Internet</h2>
+    <h2 id="tcp-ip-model">TCP/IP Model — ภาษากลางของ Internet</h2>
 
     <p>ทุกครั้งที่เราเปิดเว็บหรือส่งข้อมูล ข้อมูลจะเดินทางผ่าน <strong>4 ชั้น (layers)</strong> ของ TCP/IP model — แต่ละชั้นมีหน้าที่เฉพาะ: <strong>Application</strong> (HTTP, DNS — ภาษาที่ apps พูด), <strong>Transport</strong> (TCP/UDP — ส่งข้อมูลแบบ reliable หรือ fast), <strong>Internet</strong> (IP — หาเส้นทางไป destination), <strong>Network Access</strong> (Ethernet/WiFi — ส่ง bits จริงๆ) เข้าใจ model นี้แล้วจะ debug network issues ได้เร็วขึ้นมาก:</p>
 
@@ -410,7 +514,7 @@
 
     <hr>
 
-    <h2>IP Address — ที่อยู่บนโลก Internet</h2>
+    <h2 id="ip-address">IP Address — ที่อยู่บนโลก Internet</h2>
 
     <p>ทุกอุปกรณ์บน network ต้องมี <strong>IP Address</strong> เหมือนบ้านต้องมีเลขที่อยู่:</p>
 
@@ -462,7 +566,7 @@ ipconfig           # Windows</code></pre>
 
     <hr>
 
-    <h2>Ports — ประตูของ Application</h2>
+    <h2 id="ports">Ports — ประตูของ Application</h2>
 
     <p>IP Address บอกว่า "เครื่องไหน" แต่ <strong>Port</strong> บอกว่า "app ไหน" บนเครื่องนั้น — เครื่องเดียวรัน web server (port 80), database (port 5432), SSH (port 22) พร้อมกันได้ ports 0-1023 เป็น "well-known ports" ที่ต้องใช้ root privilege, 1024-65535 ใช้ได้อิสระ DevOps ต้องรู้ว่า service ไหนใช้ port ไหน เพื่อตั้ง firewall ได้ถูกต้อง:</p>
 
@@ -529,7 +633,7 @@ curl -I http://server.com:8080</code></pre>
 
     <hr>
 
-    <h2>DNS — แปลงชื่อเป็น IP</h2>
+    <h2 id="dns">DNS — แปลงชื่อเป็น IP</h2>
 
     <p>เราจำ <code>google.com</code> ได้ง่ายกว่า <code>142.250.199.46</code> — <strong>DNS</strong> ทำหน้าที่แปลงชื่อ domain เป็น IP address</p>
 
@@ -612,7 +716,7 @@ dig @1.1.1.1 mysite.com A      # ถาม Cloudflare DNS</code></pre>
 
     <hr>
 
-    <h2>Firewall — กำแพงป้องกัน</h2>
+    <h2 id="firewall">Firewall — กำแพงป้องกัน</h2>
 
     <p><strong>Firewall</strong> คือตัวกรองที่ตัดสินว่า traffic ไหนเข้า-ออกได้ ไหนบล็อก — หลักการคือ <strong>"default deny"</strong> ปิดทุกอย่างก่อน แล้วเปิดเฉพาะที่จำเป็น เช่น เปิด port 80/443 สำหรับ web, port 22 สำหรับ SSH เฉพาะ IP ที่อนุญาต บน Linux ใช้ <code>ufw</code> (ง่าย) หรือ <code>iptables</code> (powerful) บน cloud ใช้ Security Groups:</p>
 
@@ -635,7 +739,7 @@ sudo iptables -A INPUT -p tcp --dport 3306 -j DROP</code></pre>
 
     <hr>
 
-    <h2>Load Balancer — กระจาย Traffic</h2>
+    <h2 id="load-balancer">Load Balancer — กระจาย Traffic</h2>
 
     <p>เมื่อ app มี traffic เยอะเกินกว่า server เดียวรับไหว ใช้ <strong>Load Balancer</strong> กระจาย requests ไปยังหลาย servers — ทำให้ scale ได้ (เพิ่ม server เมื่อ traffic เพิ่ม) และ HA (ถ้า server หนึ่งล่ม traffic ไปอีกตัว) Load Balancer มี 2 แบบ: <strong>Layer 4</strong> (TCP level — เร็ว, ง่าย) และ <strong>Layer 7</strong> (HTTP level — route ตาม URL path, headers ได้):</p>
 
@@ -685,7 +789,7 @@ sudo iptables -A INPUT -p tcp --dport 3306 -j DROP</code></pre>
 
     <hr>
 
-    <h2>Reverse Proxy — Nginx ตัวกลาง</h2>
+    <h2 id="reverse-proxy">Reverse Proxy — Nginx ตัวกลาง</h2>
 
     <p><strong>Reverse Proxy</strong> รับ request จากภายนอกแล้วส่งต่อไปยัง app ข้างหลัง — ช่วยเรื่อง security, SSL, caching:</p>
 
@@ -728,7 +832,7 @@ server {
 
     <hr>
 
-    <h2>SSH — Remote เข้า Server</h2>
+    <h2 id="ssh">SSH — Remote เข้า Server</h2>
 
     <p>DevOps ต้องใช้ <strong>SSH</strong> เป็นเรื่องปกติ — เข้าจัดการ server จากระยะไกล:</p>
 
@@ -765,7 +869,7 @@ ssh staging</code></pre>
 
     <hr>
 
-    <h2>Docker Networking — Container คุยกันยังไง?</h2>
+    <h2 id="docker-networking">Docker Networking — Container คุยกันยังไง?</h2>
 
     <p>กลับมาเชื่อมกับ Docker — containers ใช้ virtual network ที่ Docker สร้างให้ มี 3 modes หลัก: <strong>bridge</strong> (default — containers คุยกันผ่าน virtual bridge), <strong>host</strong> (ใช้ network ของ host ตรงๆ — เร็วแต่ไม่ isolate), <strong>overlay</strong> (ข้าม hosts — ใช้กับ Docker Swarm/K8s) containers ในเครือข่ายเดียวกันเรียกหากันด้วย container name:</p>
 
@@ -792,7 +896,7 @@ docker run -d --name db  --network myapp-net postgres
 
     <hr>
 
-    <h2>เครื่องมือ Networking ที่ DevOps ต้องรู้</h2>
+    <h2 id="s-10">เครื่องมือ Networking ที่ DevOps ต้องรู้</h2>
 
     <p>สรุป command-line tools สำหรับ debug network issues — จำไม่หมดก็ไม่เป็นไร แค่รู้ว่ามีอะไรบ้าง เมื่อมีปัญหาจะได้เลือกใช้ถูกตัว:</p>
 
@@ -820,7 +924,7 @@ nmap -sT server.com</code></pre>
 
     <hr>
 
-    <h2>สรุป</h2>
+    <h2 id="summary">สรุป</h2>
 
     <p>Networking เป็นพื้นฐานที่ทุกอย่างใน DevOps สร้างอยู่บน — Docker networking, Kubernetes services, Load Balancers, VPCs ล้วนใช้ concepts เดียวกัน (TCP/IP, DNS, ports, firewalls) เข้าใจพื้นฐานดี debug ปัญหาได้เร็ว:</p>
 

@@ -84,7 +84,13 @@ RE_CATEGORY_HEAD = re.compile(
     r'<span class="category__count">([^<]*)</span>\s*'
     r'</div>', re.S)
 RE_SNAV = re.compile(r'<div class="series-nav">(.*?)</div>\s*</div>', re.S)
-RE_SNAV_ITEM = re.compile(r'<(a href="([^"]+)"|span class="current")>([^<]*)<')
+# Tolerates extra attributes on either tag. It did not until 2026-08-26, when
+# adding `aria-current="page"` to the current chip — a real improvement, and one
+# the a11y skill had asked for — made all 7 posts report their own entry as
+# MISSING, because the regex demanded `>` immediately after `class="current"`.
+# A structural check should not be this brittle about attribute order.
+RE_SNAV_ITEM = re.compile(
+    r'<(a href="([^"]+)"[^>]*|span class="current"[^>]*)>([^<]*)<')
 RE_PNAV_OPEN = re.compile(r'<(div|nav)\s+class="post-nav">')
 RE_PLINK = re.compile(                       # trap #1: [^>]*> is load-bearing
     r'<a\s+href="([^"]+)"\s+class="post-nav__link"[^>]*>\s*'

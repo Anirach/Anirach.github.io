@@ -22,7 +22,7 @@
       --gold: #c4a46c; --gold-dark: #7a5f22; --cloud: #dee7e6; --parchment: #e9e1c4; --focus: #226299;
       /* status — use only these six, never invent a seventh */
       --green: #22c55e; --red: #ef4444; --amber: #f59e0b;
-      --cyan: #06b6d4; --purple: #8b5cf6; --purple-dark: #7c3aed;
+      --cyan: #06b6d4; --purple: #226299; --purple-dark: #1a4d7a;
       /* type */
       --font: 'Inter', 'Sarabun', -apple-system, BlinkMacSystemFont, sans-serif;
       --mono: 'JetBrains Mono', 'Fira Code', 'Sarabun', monospace;
@@ -75,12 +75,15 @@
       display: flex; align-items: center; justify-content: center; gap: 1.5rem;
     }
     .post-hero__series { font-weight: 600; color: var(--blue); }
-    .post-hero__cover { aspect-ratio: 1/1;
-      max-width: 520px; margin: 2.5rem auto 0;
-      border-radius: 16px; overflow: hidden;
-      box-shadow: 0 20px 60px rgba(34,98,153,0.15);
+    .post-hero__cover {
+      aspect-ratio: 1 / 1;
+      max-width: 380px;
+      margin: 2.5rem auto 0;
+      border-radius: var(--radius-lg, 16px);
+      overflow: hidden;
+      box-shadow: 0 20px 60px rgba(17,48,75,0.14);
     }
-    .post-hero__cover img { width: 100%; display: block; height: auto;}
+    .post-hero__cover img { width: 100%; height: 100%; object-fit: cover; display: block; }
     .post-body { max-width: 720px; margin: 0 auto; padding: 3rem 2rem 6rem; }
     .post-body h2 {
       font-size: 1.6rem; font-weight: 800; color: var(--navy);
@@ -282,7 +285,91 @@
        the series heading sat 15px under it. */
     html { scroll-padding-top: 5rem; }
     [id] { scroll-margin-top: 5rem; }
-</style>
+
+    /* ---- Phase 5: reading chrome -----------------------------------------
+       Thai needs more room than Latin at the same nominal size: taller
+       ascenders, stacked vowel and tone marks above and below the line. 17px
+       Sarabun is measurably harder to read than 17px Inter, so Thai bodies get
+       18px and a looser line. English pages stay at 17. */
+    .post-body:lang(th) { font-size: 18px; line-height: 1.85; }
+
+    /* Avoid the one-word last line. Cheap, and no layout risk. */
+    .post-body p, .post-body li, .post-body blockquote { text-wrap: pretty; }
+
+    /* ---- side-scroll affordance ------------------------------------------
+       440 <pre> blocks and 94 tables can exceed 720px. Nothing said so — a
+       reader on a phone saw a code block cut off at the edge with no hint
+       that it continued. These four layers paint a shadow ONLY where there is
+       more content in that direction: two "cover" gradients pinned to the
+       scroll box (local) and two shadows pinned to the element (scroll); when
+       the content is fully scrolled the cover slides over the shadow and
+       hides it. No JavaScript, no wrapper element. */
+    .post-body pre, .post-body table {
+      overflow-x: auto;
+      background-image:
+        linear-gradient(to right, var(--code-bg, #0f172a) 30%, rgba(15,23,42,0)),
+        linear-gradient(to left,  var(--code-bg, #0f172a) 30%, rgba(15,23,42,0)),
+        radial-gradient(farthest-side at 0 50%, rgba(0,0,0,.28), rgba(0,0,0,0)),
+        radial-gradient(farthest-side at 100% 50%, rgba(0,0,0,.28), rgba(0,0,0,0));
+      background-position: 0 0, 100% 0, 0 0, 100% 0;
+      background-repeat: no-repeat;
+      background-size: 40px 100%, 40px 100%, 14px 100%, 14px 100%;
+      background-attachment: local, local, scroll, scroll;
+    }
+    .post-body table {
+      background-image:
+        linear-gradient(to right, var(--white, #fff) 30%, rgba(255,255,255,0)),
+        linear-gradient(to left,  var(--white, #fff) 30%, rgba(255,255,255,0)),
+        radial-gradient(farthest-side at 0 50%, rgba(17,48,75,.16), rgba(17,48,75,0)),
+        radial-gradient(farthest-side at 100% 50%, rgba(17,48,75,.16), rgba(17,48,75,0));
+      background-position: 0 0, 100% 0, 0 0, 100% 0;
+      background-repeat: no-repeat;
+      background-size: 40px 100%, 40px 100%, 14px 100%, 14px 100%;
+      background-attachment: local, local, scroll, scroll;
+    }
+
+    /* Phone headings: h1 at clamp() maxima and h2 at 1.75rem were set for a
+       desktop measure and crowd a 375px column. */
+    @media (max-width: 600px) {
+      .post-body h2 { font-size: 1.4rem; }
+      .post-body h3 { font-size: 1.15rem; }
+    }
+  
+    /* ---- table of contents ----------------------------------------------
+       <details> so it is collapsible with no JavaScript, open by default on
+       desktop. The posts run to 46 phone-screens; this is the map. */
+    .post-toc {
+      max-width: 720px;
+      margin: 2rem auto 0;
+      padding: 1rem 1.25rem;
+      background: rgba(34,98,153,0.05);
+      border: 1px solid rgba(34,98,153,0.14);
+      border-left: 3px solid var(--gold, #c4a46c);
+      border-radius: 10px;
+      font-size: 0.92rem;
+    }
+    .post-toc > summary {
+      cursor: pointer;
+      font-weight: 700;
+      color: var(--navy);
+      list-style: none;
+    }
+    .post-toc > summary::-webkit-details-marker { display: none; }
+    .post-toc > summary::before {
+      content: "\25B8";
+      display: inline-block;
+      margin-right: 0.5rem;
+      transition: transform 0.2s ease;
+      color: var(--gold-dark, #7a5f22);
+    }
+    .post-toc[open] > summary::before { transform: rotate(90deg); }
+    .post-toc > summary:focus-visible { outline: 3px solid var(--focus, #226299); outline-offset: 3px; }
+    .post-toc ol { margin: 0.85rem 0 0.25rem; padding-left: 1.4rem; }
+    .post-toc li { margin-bottom: 0.4rem; line-height: 1.5; }
+    .post-toc a { color: var(--slate); text-decoration: none; }
+    .post-toc a:hover, .post-toc a:focus-visible { color: var(--blue-dark, #1a4d7a); text-decoration: underline; }
+    @media (max-width: 600px) { .post-toc { margin: 1.25rem 1rem 0; } }
+  </style>
   <!-- social -->
   <link rel="canonical" href="https://anirach.com/blog/monitoring-observability.html">
   <meta property="og:type" content="article">
@@ -338,6 +425,22 @@
   </header>
 
   <article class="post-body" itemscope itemtype="https://schema.org/BlogPosting">
+    <details class="post-toc" open>
+      <summary>In this post &middot; <span lang="th">ในบทความนี้</span></summary>
+      <ol>
+          <li><a href="#monitoring-vs-observability">Monitoring vs Observability — ต่างกันยังไง?</a></li>
+          <li><a href="#s-3-pillars-of-observability">3 Pillars of Observability</a></li>
+          <li><a href="#pillar-1">Pillar 1: Metrics — ตัวเลขที่ต้องจับตา</a></li>
+          <li><a href="#prometheus-grafana">Prometheus + Grafana — Metrics Stack ยอดนิยม</a></li>
+          <li><a href="#pillar-2">Pillar 2: Logs — บันทึกเหตุการณ์</a></li>
+          <li><a href="#pillar-3">Pillar 3: Traces — ติดตาม Request</a></li>
+          <li><a href="#alerting">Alerting — แจ้งเตือนก่อนพัง</a></li>
+          <li><a href="#monitoring-stack">Monitoring Stack ยอดนิยม</a></li>
+          <li><a href="#s-4-golden-signals-google-sre">4 Golden Signals (Google SRE)</a></li>
+          <li><a href="#summary">สรุป</a></li>
+      </ol>
+    </details>
+
 
     <p>จากโพสต์ที่แล้วเราเรียนรู้ IaC — ใช้ Terraform สร้าง infrastructure และ Ansible ตั้งค่า server อัตโนมัติ</p>
 
@@ -347,7 +450,7 @@
 
     <hr>
 
-    <h2>Monitoring vs Observability — ต่างกันยังไง?</h2>
+    <h2 id="monitoring-vs-observability">Monitoring vs Observability — ต่างกันยังไง?</h2>
 
     <p>หลายคนใช้สองคำนี้แทนกัน แต่จริงๆ ต่างกัน — <strong>Monitoring</strong> คือ "ดูว่าระบบยังทำงานปกติไหม" (CPU สูงไหม? disk เต็มไหม? error rate เพิ่มไหม?) เป็นการถามคำถามที่ "รู้อยู่แล้ว" ส่วน <strong>Observability</strong> คือ "สามารถเข้าใจได้ว่าระบบเป็นยังไงจากข้อมูลที่ส่งออกมา" — ตอบคำถามที่ "ยังไม่เคยถาม" ได้ เหมาะกับ microservices ที่ complex และ failure modes คาดเดาไม่ได้:</p>
 
@@ -384,7 +487,7 @@
 
     <hr>
 
-    <h2>3 Pillars of Observability</h2>
+    <h2 id="s-3-pillars-of-observability">3 Pillars of Observability</h2>
 
     <p>ระบบ Observability ที่ดีต้องมีข้อมูล 3 ประเภทที่ทำงานเสริมกัน — <strong>Metrics</strong> บอกว่า "มีปัญหาไหม" (ตัวเลข), <strong>Logs</strong> บอกว่า "เกิดอะไรขึ้น" (events), <strong>Traces</strong> บอกว่า "ช้าตรงไหน" (request flow) ขาดอันใดอันหนึ่งก็ debug ยาก:</p>
 
@@ -408,7 +511,7 @@
 
     <hr>
 
-    <h2>Pillar 1: Metrics — ตัวเลขที่ต้องจับตา</h2>
+    <h2 id="pillar-1">Pillar 1: Metrics — ตัวเลขที่ต้องจับตา</h2>
 
     <p><strong>Metrics</strong> คือตัวเลขที่วัดได้ตามเวลา (time-series data) — CPU usage 72%, response time 230ms, error rate 0.5% เหมาะกับ alerting (แจ้งเตือนเมื่อเกินเกณฑ์) และ trending (ดู pattern ระยะยาว) Metrics แบ่งเป็น 3 ระดับ:</p>
 
@@ -447,7 +550,7 @@
 
     <hr>
 
-    <h2>Prometheus + Grafana — Metrics Stack ยอดนิยม</h2>
+    <h2 id="prometheus-grafana">Prometheus + Grafana — Metrics Stack ยอดนิยม</h2>
 
     <p><strong>Prometheus</strong> เป็น metrics database (TSDB) ที่เก็บข้อมูลแบบ time-series — ใช้ "pull model" คือ Prometheus ดึงข้อมูลจาก targets (servers, apps) ทุก 15 วินาที ส่วน <strong>Grafana</strong> เป็น dashboard tool ที่แสดง metrics เป็นกราฟสวยๆ ทั้งคู่เป็น open-source, CNCF graduated projects, และเป็น industry standard:</p>
 
@@ -557,7 +660,7 @@ histogram_quantile(0.95, rate(http_request_duration_seconds_bucket[5m]))
 
     <hr>
 
-    <h2>Pillar 2: Logs — บันทึกเหตุการณ์</h2>
+    <h2 id="pillar-2">Pillar 2: Logs — บันทึกเหตุการณ์</h2>
 
     <p><strong>Logs</strong> คือบันทึกเหตุการณ์ที่เกิดขึ้นในระบบ — "user X login สำเร็จ", "payment failed: insufficient funds", "database connection timeout" Metrics บอกว่า "มีปัญหา" แต่ Logs บอกว่า "เกิดอะไรขึ้นจริงๆ" สำคัญมากตอน debug</p>
 
@@ -656,7 +759,7 @@ services:
 
     <hr>
 
-    <h2>Pillar 3: Traces — ติดตาม Request</h2>
+    <h2 id="pillar-3">Pillar 3: Traces — ติดตาม Request</h2>
 
     <p>เมื่อ 1 request ต้องผ่านหลาย services (microservices) เราจะรู้ได้ยังไงว่า <strong>ช้าตรงไหน?</strong></p>
 
@@ -723,7 +826,7 @@ app.get('/api/checkout', async (req, res) => {
 
     <hr>
 
-    <h2>Alerting — แจ้งเตือนก่อนพัง</h2>
+    <h2 id="alerting">Alerting — แจ้งเตือนก่อนพัง</h2>
 
     <p>Dashboard สวยแค่ไหนก็ไม่ช่วย <strong>ถ้าไม่มีใครดู</strong> — ต้องมี Alert!</p>
 
@@ -804,7 +907,7 @@ receivers:
 
     <hr>
 
-    <h2>Monitoring Stack ยอดนิยม</h2>
+    <h2 id="monitoring-stack">Monitoring Stack ยอดนิยม</h2>
 
     <p>มี monitoring tools มากมาย — ตารางด้านล่างเปรียบเทียบ stack ยอดนิยมทั้ง open-source และ commercial ช่วยเลือกตามความต้องการ (budget, scale, complexity):</p>
 
@@ -847,7 +950,7 @@ receivers:
 
     <hr>
 
-    <h2>4 Golden Signals (Google SRE)</h2>
+    <h2 id="s-4-golden-signals-google-sre">4 Golden Signals (Google SRE)</h2>
 
     <p><strong>4 Golden Signals</strong> จาก Google SRE Book — ถ้า monitor ได้แค่ 4 อย่าง ให้เลือก 4 ตัวนี้ ครอบคลุม user experience ทั้งหมด Latency บอกประสบการณ์, Traffic บอก demand, Errors บอกคุณภาพ, Saturation บอกขีดจำกัด:</p>
 
@@ -864,7 +967,7 @@ receivers:
 
     <hr>
 
-    <h2>สรุป</h2>
+    <h2 id="summary">สรุป</h2>
 
     <p>Monitoring & Observability เป็นสิ่งที่ต้องมี ไม่ใช่ "มีก็ดี" — ถ้าไม่มี ก็เหมือนขับรถโดยไม่มี dashboard ไม่รู้ว่าน้ำมันจะหมดเมื่อไร เครื่องยนต์ร้อนแค่ไหน เริ่มจาก metrics + alerting ก่อน (Prometheus + Grafana) แล้วเพิ่ม logs และ traces เมื่อระบบซับซ้อนขึ้น:</p>
 

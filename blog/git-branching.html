@@ -23,7 +23,7 @@
       --gold: #c4a46c; --gold-dark: #7a5f22; --cloud: #dee7e6; --parchment: #e9e1c4; --focus: #226299;
       /* status — use only these six, never invent a seventh */
       --green: #22c55e; --red: #ef4444; --amber: #f59e0b;
-      --cyan: #06b6d4; --purple: #8b5cf6; --purple-dark: #7c3aed;
+      --cyan: #06b6d4; --purple: #226299; --purple-dark: #1a4d7a;
       /* type */
       --font: 'Inter', 'Sarabun', -apple-system, BlinkMacSystemFont, sans-serif;
       --mono: 'JetBrains Mono', 'Fira Code', 'Sarabun', monospace;
@@ -94,13 +94,15 @@
     .post-hero__series {
       font-weight: 600; color: var(--blue);
     }
-    .post-hero__cover { aspect-ratio: 1/1;
-      max-width: 480px; margin: 2.5rem auto 0;
-      border-radius: 16px; overflow: hidden;
-      box-shadow: 0 20px 60px rgba(34,98,153,0.15);
+    .post-hero__cover {
+      aspect-ratio: 1 / 1;
+      max-width: 380px;
+      margin: 2.5rem auto 0;
+      border-radius: var(--radius-lg, 16px);
+      overflow: hidden;
+      box-shadow: 0 20px 60px rgba(17,48,75,0.14);
     }
-    .post-hero__cover img {
-      width: 100%; display: block; height: auto;}
+    .post-hero__cover img { width: 100%; height: 100%; object-fit: cover; display: block; }
 
     /* ── ARTICLE ── */
     .post-body {
@@ -328,7 +330,91 @@
        the series heading sat 15px under it. */
     html { scroll-padding-top: 5rem; }
     [id] { scroll-margin-top: 5rem; }
-</style>
+
+    /* ---- Phase 5: reading chrome -----------------------------------------
+       Thai needs more room than Latin at the same nominal size: taller
+       ascenders, stacked vowel and tone marks above and below the line. 17px
+       Sarabun is measurably harder to read than 17px Inter, so Thai bodies get
+       18px and a looser line. English pages stay at 17. */
+    .post-body:lang(th) { font-size: 18px; line-height: 1.85; }
+
+    /* Avoid the one-word last line. Cheap, and no layout risk. */
+    .post-body p, .post-body li, .post-body blockquote { text-wrap: pretty; }
+
+    /* ---- side-scroll affordance ------------------------------------------
+       440 <pre> blocks and 94 tables can exceed 720px. Nothing said so — a
+       reader on a phone saw a code block cut off at the edge with no hint
+       that it continued. These four layers paint a shadow ONLY where there is
+       more content in that direction: two "cover" gradients pinned to the
+       scroll box (local) and two shadows pinned to the element (scroll); when
+       the content is fully scrolled the cover slides over the shadow and
+       hides it. No JavaScript, no wrapper element. */
+    .post-body pre, .post-body table {
+      overflow-x: auto;
+      background-image:
+        linear-gradient(to right, var(--code-bg, #0f172a) 30%, rgba(15,23,42,0)),
+        linear-gradient(to left,  var(--code-bg, #0f172a) 30%, rgba(15,23,42,0)),
+        radial-gradient(farthest-side at 0 50%, rgba(0,0,0,.28), rgba(0,0,0,0)),
+        radial-gradient(farthest-side at 100% 50%, rgba(0,0,0,.28), rgba(0,0,0,0));
+      background-position: 0 0, 100% 0, 0 0, 100% 0;
+      background-repeat: no-repeat;
+      background-size: 40px 100%, 40px 100%, 14px 100%, 14px 100%;
+      background-attachment: local, local, scroll, scroll;
+    }
+    .post-body table {
+      background-image:
+        linear-gradient(to right, var(--white, #fff) 30%, rgba(255,255,255,0)),
+        linear-gradient(to left,  var(--white, #fff) 30%, rgba(255,255,255,0)),
+        radial-gradient(farthest-side at 0 50%, rgba(17,48,75,.16), rgba(17,48,75,0)),
+        radial-gradient(farthest-side at 100% 50%, rgba(17,48,75,.16), rgba(17,48,75,0));
+      background-position: 0 0, 100% 0, 0 0, 100% 0;
+      background-repeat: no-repeat;
+      background-size: 40px 100%, 40px 100%, 14px 100%, 14px 100%;
+      background-attachment: local, local, scroll, scroll;
+    }
+
+    /* Phone headings: h1 at clamp() maxima and h2 at 1.75rem were set for a
+       desktop measure and crowd a 375px column. */
+    @media (max-width: 600px) {
+      .post-body h2 { font-size: 1.4rem; }
+      .post-body h3 { font-size: 1.15rem; }
+    }
+  
+    /* ---- table of contents ----------------------------------------------
+       <details> so it is collapsible with no JavaScript, open by default on
+       desktop. The posts run to 46 phone-screens; this is the map. */
+    .post-toc {
+      max-width: 720px;
+      margin: 2rem auto 0;
+      padding: 1rem 1.25rem;
+      background: rgba(34,98,153,0.05);
+      border: 1px solid rgba(34,98,153,0.14);
+      border-left: 3px solid var(--gold, #c4a46c);
+      border-radius: 10px;
+      font-size: 0.92rem;
+    }
+    .post-toc > summary {
+      cursor: pointer;
+      font-weight: 700;
+      color: var(--navy);
+      list-style: none;
+    }
+    .post-toc > summary::-webkit-details-marker { display: none; }
+    .post-toc > summary::before {
+      content: "\25B8";
+      display: inline-block;
+      margin-right: 0.5rem;
+      transition: transform 0.2s ease;
+      color: var(--gold-dark, #7a5f22);
+    }
+    .post-toc[open] > summary::before { transform: rotate(90deg); }
+    .post-toc > summary:focus-visible { outline: 3px solid var(--focus, #226299); outline-offset: 3px; }
+    .post-toc ol { margin: 0.85rem 0 0.25rem; padding-left: 1.4rem; }
+    .post-toc li { margin-bottom: 0.4rem; line-height: 1.5; }
+    .post-toc a { color: var(--slate); text-decoration: none; }
+    .post-toc a:hover, .post-toc a:focus-visible { color: var(--blue-dark, #1a4d7a); text-decoration: underline; }
+    @media (max-width: 600px) { .post-toc { margin: 1.25rem 1rem 0; } }
+  </style>
   <!-- social -->
   <link rel="canonical" href="https://anirach.com/blog/git-branching.html">
   <meta property="og:type" content="article">
@@ -385,6 +471,21 @@
 
   <!-- ARTICLE -->
   <article class="post-body" itemscope itemtype="https://schema.org/BlogPosting">
+    <details class="post-toc" open>
+      <summary>In this post &middot; <span lang="th">ในบทความนี้</span></summary>
+      <ol>
+          <li><a href="#branch">Branch คืออะไร?</a></li>
+          <li><a href="#why">ทำไมต้อง Branch?</a></li>
+          <li><a href="#s-3">คำสั่งพื้นฐาน</a></li>
+          <li><a href="#merge">Merge — รวม Branch กลับ</a></li>
+          <li><a href="#merge-conflict">Merge Conflict — เมื่อ code ชนกัน</a></li>
+          <li><a href="#branching-strategy">Branching Strategy ยอดนิยม</a></li>
+          <li><a href="#s-7">เปรียบเทียบ Branching Strategy</a></li>
+          <li><a href="#summary">คำสั่งที่ใช้บ่อย — สรุป</a></li>
+          <li><a href="#summary-2">สรุป</a></li>
+      </ol>
+    </details>
+
 
     <p>ก่อนหน้านี้เราได้พูดถึงพื้นฐานของ Git ว่ามันคืออะไร ทำไมต้องใช้ แล้วมี commit กับ repository ยังไงบ้าง พอเราใช้ Git เป็นแล้ว คำถามต่อมาคือ <strong>ถ้ามีหลายคนทำงานบนโปรเจกต์เดียวกัน หรือเราอยากลองทำฟีเจอร์ใหม่โดยไม่พัง code หลัก จะทำยังไงดี?</strong></p>
 
@@ -392,7 +493,7 @@
 
     <hr>
 
-    <h2>Branch คืออะไร?</h2>
+    <h2 id="branch">Branch คืออะไร?</h2>
 
     <p>Branch ใน Git ก็คือ <strong>ตัวชี้ (pointer) ไปยัง commit ตัวหนึ่ง</strong> เวลาเราสร้าง branch ใหม่ Git ไม่ได้ copy ไฟล์ทั้งหมด แค่สร้าง pointer ตัวใหม่ขึ้นมาชี้ไปที่ commit เดิม ทำให้การสร้าง branch <strong>เร็วมากและแทบไม่เปลืองพื้นที่เลย</strong></p>
 
@@ -420,7 +521,7 @@
 
     <hr>
 
-    <h2>ทำไมต้อง Branch?</h2>
+    <h2 id="why">ทำไมต้อง Branch?</h2>
 
     <h3>1. ทำงานพร้อมกันได้</h3>
     <p>สมมติทีมมี 3 คน:</p>
@@ -439,7 +540,7 @@
 
     <hr>
 
-    <h2>คำสั่งพื้นฐาน</h2>
+    <h2 id="s-3">คำสั่งพื้นฐาน</h2>
 
     <p>Git branch commands ง่ายมาก — สร้าง, สลับ, ดู, ลบ แค่ 4 อย่าง เพราะ branch ใน Git เป็นแค่ pointer (ไม่ copy ไฟล์) ทุกอย่างจึงเร็วมาก ไม่ว่าโปรเจกต์จะใหญ่แค่ไหน:</p>
 
@@ -473,7 +574,7 @@ git branch -D feature-login   # ลบบังคับ (ยังไม่ mer
 
     <hr>
 
-    <h2>Merge — รวม Branch กลับ</h2>
+    <h2 id="merge">Merge — รวม Branch กลับ</h2>
 
     <p>เมื่อทำงานบน feature branch เสร็จแล้ว ต้องรวม code กลับเข้า main — นี่คือ <strong>merge</strong> Git มี 2 วิธี merge: <strong>Fast-Forward</strong> (เลื่อน pointer ไปข้างหน้า — ง่ายสุด) และ <strong>Three-Way Merge</strong> (สร้าง merge commit ใหม่ — เมื่อทั้งสอง branch มี commits ต่างกัน):</p>
 <pre><code>git checkout main
@@ -545,7 +646,7 @@ git merge feature-login</code></pre>
 
     <hr>
 
-    <h2>Merge Conflict — เมื่อ code ชนกัน</h2>
+    <h2 id="merge-conflict">Merge Conflict — เมื่อ code ชนกัน</h2>
 
     <p>Conflict เป็นเรื่องปกติ ไม่ต้องกลัว! เกิดเมื่อทั้งสอง branch แก้ไข <strong>ไฟล์เดียวกัน บรรทัดเดียวกัน</strong> — Git ไม่รู้ว่าจะเอาเวอร์ชันไหน จึงบอกให้เรา "เลือกเอง" วิธีหลีกเลี่ยง: merge บ่อยๆ อย่าปล่อยให้ branch ห่างจาก main นานเกินไป แต่ถ้าเจอก็แก้ได้ง่าย:</p>
 
@@ -567,7 +668,7 @@ console.log("version from feature");
 
     <hr>
 
-    <h2>Branching Strategy ยอดนิยม</h2>
+    <h2 id="branching-strategy">Branching Strategy ยอดนิยม</h2>
 
     <p>Branching strategy คือ "กฎ" ของทีมว่าจะใช้ branch ยังไง — ไม่มีสูตรตายตัว เลือกตามขนาดทีม, release frequency, และ risk tolerance ส่วนใหญ่ใช้ 1 ใน 3 แบบนี้:</p>
 
@@ -603,7 +704,7 @@ console.log("version from feature");
 
     <hr>
 
-    <h2>เปรียบเทียบ Branching Strategy</h2>
+    <h2 id="s-7">เปรียบเทียบ Branching Strategy</h2>
 
     <p>สรุปข้อดีข้อเสียของแต่ละ strategy — เลือกตามทีม ไม่มีถูกผิด ทีมเล็ก deploy บ่อยเลือก GitHub Flow ทีมใหญ่มี release cycle เลือก Git Flow ทีมเก่งมี CI/CD แข็งเลือก Trunk-Based:</p>
 
@@ -621,7 +722,7 @@ console.log("version from feature");
 
     <hr>
 
-    <h2>คำสั่งที่ใช้บ่อย — สรุป</h2>
+    <h2 id="summary">คำสั่งที่ใช้บ่อย — สรุป</h2>
 
     <p>รวม Git branch commands ที่ใช้บ่อยที่สุด — จำไม่ได้ก็ไม่เป็นไร แค่รู้ว่ามีอะไรบ้าง พิมพ์ <code>git branch --help</code> เมื่อต้องการ หรือใช้ GUI tools อย่าง VS Code, GitKraken, SourceTree ก็สะดวกดี:</p>
 
@@ -648,7 +749,7 @@ git log --oneline --graph --all</code></pre>
 
     <hr>
 
-    <h2>สรุป</h2>
+    <h2 id="summary-2">สรุป</h2>
 
     <p>Git Branching เป็นทักษะพื้นฐานที่ developer ทุกคนต้องเชี่ยวชาญ — ไม่ว่าจะทำงานคนเดียวหรือทีม 100 คน branch ทำให้ทำงานพร้อมกันได้โดยไม่ชนกัน, ลองของใหม่ได้โดยไม่เสี่ยง, และ review code ก่อน merge ได้ เลือก branching strategy ที่เหมาะกับทีม แล้ว CI/CD pipeline จะทำที่เหลือให้:</p>
 

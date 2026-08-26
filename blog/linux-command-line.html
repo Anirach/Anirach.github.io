@@ -22,7 +22,7 @@
       --gold: #c4a46c; --gold-dark: #7a5f22; --cloud: #dee7e6; --parchment: #e9e1c4; --focus: #226299;
       /* status — use only these six, never invent a seventh */
       --green: #22c55e; --red: #ef4444; --amber: #f59e0b;
-      --cyan: #06b6d4; --purple: #8b5cf6; --purple-dark: #7c3aed;
+      --cyan: #06b6d4; --purple: #226299; --purple-dark: #1a4d7a;
       /* type */
       --font: 'Inter', 'Sarabun', -apple-system, BlinkMacSystemFont, sans-serif;
       --mono: 'JetBrains Mono', 'Fira Code', 'Sarabun', monospace;
@@ -75,12 +75,15 @@
       display: flex; align-items: center; justify-content: center; gap: 1.5rem;
     }
     .post-hero__series { font-weight: 600; color: var(--blue); }
-    .post-hero__cover { aspect-ratio: 800/531;
-      max-width: 520px; margin: 2.5rem auto 0;
-      border-radius: 16px; overflow: hidden;
-      box-shadow: 0 20px 60px rgba(34,98,153,0.15);
+    .post-hero__cover {
+      aspect-ratio: 1 / 1;
+      max-width: 380px;
+      margin: 2.5rem auto 0;
+      border-radius: var(--radius-lg, 16px);
+      overflow: hidden;
+      box-shadow: 0 20px 60px rgba(17,48,75,0.14);
     }
-    .post-hero__cover img { width: 100%; display: block; height: auto;}
+    .post-hero__cover img { width: 100%; height: 100%; object-fit: cover; display: block; }
     .post-body { max-width: 720px; margin: 0 auto; padding: 3rem 2rem 6rem; }
     .post-body h2 {
       font-size: 1.6rem; font-weight: 800; color: var(--navy);
@@ -221,7 +224,91 @@
        the series heading sat 15px under it. */
     html { scroll-padding-top: 5rem; }
     [id] { scroll-margin-top: 5rem; }
-</style>
+
+    /* ---- Phase 5: reading chrome -----------------------------------------
+       Thai needs more room than Latin at the same nominal size: taller
+       ascenders, stacked vowel and tone marks above and below the line. 17px
+       Sarabun is measurably harder to read than 17px Inter, so Thai bodies get
+       18px and a looser line. English pages stay at 17. */
+    .post-body:lang(th) { font-size: 18px; line-height: 1.85; }
+
+    /* Avoid the one-word last line. Cheap, and no layout risk. */
+    .post-body p, .post-body li, .post-body blockquote { text-wrap: pretty; }
+
+    /* ---- side-scroll affordance ------------------------------------------
+       440 <pre> blocks and 94 tables can exceed 720px. Nothing said so — a
+       reader on a phone saw a code block cut off at the edge with no hint
+       that it continued. These four layers paint a shadow ONLY where there is
+       more content in that direction: two "cover" gradients pinned to the
+       scroll box (local) and two shadows pinned to the element (scroll); when
+       the content is fully scrolled the cover slides over the shadow and
+       hides it. No JavaScript, no wrapper element. */
+    .post-body pre, .post-body table {
+      overflow-x: auto;
+      background-image:
+        linear-gradient(to right, var(--code-bg, #0f172a) 30%, rgba(15,23,42,0)),
+        linear-gradient(to left,  var(--code-bg, #0f172a) 30%, rgba(15,23,42,0)),
+        radial-gradient(farthest-side at 0 50%, rgba(0,0,0,.28), rgba(0,0,0,0)),
+        radial-gradient(farthest-side at 100% 50%, rgba(0,0,0,.28), rgba(0,0,0,0));
+      background-position: 0 0, 100% 0, 0 0, 100% 0;
+      background-repeat: no-repeat;
+      background-size: 40px 100%, 40px 100%, 14px 100%, 14px 100%;
+      background-attachment: local, local, scroll, scroll;
+    }
+    .post-body table {
+      background-image:
+        linear-gradient(to right, var(--white, #fff) 30%, rgba(255,255,255,0)),
+        linear-gradient(to left,  var(--white, #fff) 30%, rgba(255,255,255,0)),
+        radial-gradient(farthest-side at 0 50%, rgba(17,48,75,.16), rgba(17,48,75,0)),
+        radial-gradient(farthest-side at 100% 50%, rgba(17,48,75,.16), rgba(17,48,75,0));
+      background-position: 0 0, 100% 0, 0 0, 100% 0;
+      background-repeat: no-repeat;
+      background-size: 40px 100%, 40px 100%, 14px 100%, 14px 100%;
+      background-attachment: local, local, scroll, scroll;
+    }
+
+    /* Phone headings: h1 at clamp() maxima and h2 at 1.75rem were set for a
+       desktop measure and crowd a 375px column. */
+    @media (max-width: 600px) {
+      .post-body h2 { font-size: 1.4rem; }
+      .post-body h3 { font-size: 1.15rem; }
+    }
+  
+    /* ---- table of contents ----------------------------------------------
+       <details> so it is collapsible with no JavaScript, open by default on
+       desktop. The posts run to 46 phone-screens; this is the map. */
+    .post-toc {
+      max-width: 720px;
+      margin: 2rem auto 0;
+      padding: 1rem 1.25rem;
+      background: rgba(34,98,153,0.05);
+      border: 1px solid rgba(34,98,153,0.14);
+      border-left: 3px solid var(--gold, #c4a46c);
+      border-radius: 10px;
+      font-size: 0.92rem;
+    }
+    .post-toc > summary {
+      cursor: pointer;
+      font-weight: 700;
+      color: var(--navy);
+      list-style: none;
+    }
+    .post-toc > summary::-webkit-details-marker { display: none; }
+    .post-toc > summary::before {
+      content: "\25B8";
+      display: inline-block;
+      margin-right: 0.5rem;
+      transition: transform 0.2s ease;
+      color: var(--gold-dark, #7a5f22);
+    }
+    .post-toc[open] > summary::before { transform: rotate(90deg); }
+    .post-toc > summary:focus-visible { outline: 3px solid var(--focus, #226299); outline-offset: 3px; }
+    .post-toc ol { margin: 0.85rem 0 0.25rem; padding-left: 1.4rem; }
+    .post-toc li { margin-bottom: 0.4rem; line-height: 1.5; }
+    .post-toc a { color: var(--slate); text-decoration: none; }
+    .post-toc a:hover, .post-toc a:focus-visible { color: var(--blue-dark, #1a4d7a); text-decoration: underline; }
+    @media (max-width: 600px) { .post-toc { margin: 1.25rem 1rem 0; } }
+  </style>
   <!-- social -->
   <link rel="canonical" href="https://anirach.com/blog/linux-command-line.html">
   <meta property="og:type" content="article">
@@ -277,6 +364,26 @@
   </header>
 
   <article class="post-body" itemscope itemtype="https://schema.org/BlogPosting">
+    <details class="post-toc" open>
+      <summary>In this post &middot; <span lang="th">ในบทความนี้</span></summary>
+      <ol>
+          <li><a href="#navigation">Navigation — เดินทางใน File System</a></li>
+          <li><a href="#s-2">จัดการไฟล์ — สร้าง ลบ ย้าย คัดลอก</a></li>
+          <li><a href="#s-3">อ่านไฟล์ — ดูเนื้อหาแบบต่างๆ</a></li>
+          <li><a href="#search-filter">Search &amp; Filter — หาของเก่ง</a></li>
+          <li><a href="#pipes-redirection">Pipes &amp; Redirection — ต่อท่อ</a></li>
+          <li><a href="#process-management">Process Management — จัดการโปรเซส</a></li>
+          <li><a href="#permissions">Permissions — สิทธิ์การเข้าถึง</a></li>
+          <li><a href="#package-management">Package Management — ติดตั้ง software</a></li>
+          <li><a href="#user-management">User Management — จัดการ users</a></li>
+          <li><a href="#networking-commands">Networking Commands — เครือข่าย</a></li>
+          <li><a href="#shell-scripting">Shell Scripting — เขียน script อัตโนมัติ</a></li>
+          <li><a href="#cron-jobs">Cron Jobs — ตั้งเวลารันอัตโนมัติ</a></li>
+          <li><a href="#s-13">คำสั่งที่ DevOps ใช้บ่อยที่สุด (Cheat Sheet)</a></li>
+          <li><a href="#summary">สรุป</a></li>
+      </ol>
+    </details>
+
 
     <p>ในซีรีส์ DevOps เราพูดถึง Docker, K8s, Terraform, Ansible มาเยอะแล้ว แต่ทุกเครื่องมือเหล่านั้นล้วนรันบน <strong>Linux</strong> ทั้งนั้น!</p>
 
@@ -286,7 +393,7 @@
 
     <hr>
 
-    <h2>Navigation — เดินทางใน File System</h2>
+    <h2 id="navigation">Navigation — เดินทางใน File System</h2>
 
     <p>ก่อนจะทำอะไรใน Linux ต้อง "เดินทาง" ใน file system เป็นก่อน — Linux จัดโครงสร้างไฟล์เป็น tree เริ่มจาก <code>/</code> (root) ลงไป <code>/home</code>, <code>/etc</code>, <code>/var</code> ไม่มี drive letter เหมือน Windows คำสั่ง 3 ตัวที่ต้องจำ: <code>pwd</code> (อยู่ที่ไหน), <code>ls</code> (มีอะไรบ้าง), <code>cd</code> (ไปที่ไหน):</p>
 
@@ -315,7 +422,7 @@ tree -L 2             # แสดงโครงสร้าง 2 ระดั�
 
     <hr>
 
-    <h2>จัดการไฟล์ — สร้าง ลบ ย้าย คัดลอก</h2>
+    <h2 id="s-2">จัดการไฟล์ — สร้าง ลบ ย้าย คัดลอก</h2>
 
     <p>การจัดการไฟล์ใน Linux ทำผ่าน command line ได้เร็วกว่า GUI มาก — สร้างโฟลเดอร์ 10 ตัวพร้อมกัน, ลบไฟล์ตาม pattern, ย้าย/copy แบบ batch ⚠️ ระวัง <code>rm -rf</code> — ลบแล้วลบเลย ไม่มีถังขยะ! ถ้าไม่แน่ใจ ใช้ <code>rm -i</code> (ถามก่อนลบ):</p>
 
@@ -345,7 +452,7 @@ ln -s /usr/bin/python3 /usr/bin/python   # symbolic link</code></pre>
 
     <hr>
 
-    <h2>อ่านไฟล์ — ดูเนื้อหาแบบต่างๆ</h2>
+    <h2 id="s-3">อ่านไฟล์ — ดูเนื้อหาแบบต่างๆ</h2>
 
     <p>Linux มีคำสั่งอ่านไฟล์หลายตัวเหมาะกับสถานการณ์ต่างกัน — <code>cat</code> แสดงทั้งไฟล์ (เหมาะกับไฟล์สั้น), <code>less</code> เลื่อนอ่านได้ (เหมาะกับไฟล์ยาว), <code>head/tail</code> ดูแค่ต้น/ท้ายไฟล์, <code>tail -f</code> ดู log แบบ real-time — DevOps ใช้ <code>tail -f</code> ตลอดเวลาตอน debug:</p>
 
@@ -367,7 +474,7 @@ df -h                           # ขนาด disk ที่เหลือ</co
 
     <hr>
 
-    <h2>Search & Filter — หาของเก่ง</h2>
+    <h2 id="search-filter">Search & Filter — หาของเก่ง</h2>
 
     <p>ความสามารถในการ "หาของ" คือ superpower ของ Linux — <code>grep</code> หาข้อความในไฟล์ (regex supported), <code>find</code> หาไฟล์ตาม name/size/date, <code>awk</code> และ <code>sed</code> ประมวลผลข้อความ เมื่อ combine กับ pipes จะทำงานที่ซับซ้อนได้ในบรรทัดเดียว:</p>
 
@@ -394,7 +501,7 @@ sed -i 's/8080/3000/g' config.yml         # แทนที่ในไฟล์
 
     <hr>
 
-    <h2>Pipes & Redirection — ต่อท่อ</h2>
+    <h2 id="pipes-redirection">Pipes & Redirection — ต่อท่อ</h2>
 
     <p>พลังที่แท้จริงของ Linux คือการ <strong>ต่อคำสั่งเข้าด้วยกัน</strong> ด้วย pipe <code>|</code>:</p>
 
@@ -423,7 +530,7 @@ command > /dev/null 2>&1         # ไม่แสดงอะไรเลย</c
 
     <hr>
 
-    <h2>Process Management — จัดการโปรเซส</h2>
+    <h2 id="process-management">Process Management — จัดการโปรเซส</h2>
 
     <p>ทุกโปรแกรมที่รันบน Linux คือ "process" ที่มี PID (Process ID) — การจัดการ processes สำคัญมากสำหรับ DevOps: ดูว่า server ใช้ CPU/RAM เท่าไร, หา process ที่กิน resource, kill process ที่ค้าง, รัน process ใน background ให้ทำงานต่อแม้ปิด terminal:</p>
 
@@ -455,7 +562,7 @@ sudo journalctl -u nginx -f     # ดู log real-time</code></pre>
 
     <hr>
 
-    <h2>Permissions — สิทธิ์การเข้าถึง</h2>
+    <h2 id="permissions">Permissions — สิทธิ์การเข้าถึง</h2>
 
     <p><strong>Linux permissions</strong> ควบคุมว่าใครทำอะไรกับไฟล์ได้บ้าง — แบ่งเป็น 3 กลุ่ม: <strong>owner</strong> (เจ้าของ), <strong>group</strong> (กลุ่ม), <strong>others</strong> (คนอื่น) แต่ละกลุ่มมี 3 สิทธิ์: <strong>r</strong> (read), <strong>w</strong> (write), <strong>x</strong> (execute) เข้าใจ permissions เป็นพื้นฐาน security ที่สำคัญที่สุด — web server ไม่ควรรันด้วย root, config files ที่มี secrets ต้อง 600 (owner read/write เท่านั้น):</p>
 
@@ -512,7 +619,7 @@ chown -R www-data:www-data /var/www   # recursive</code></pre>
 
     <hr>
 
-    <h2>Package Management — ติดตั้ง software</h2>
+    <h2 id="package-management">Package Management — ติดตั้ง software</h2>
 
     <p><strong>Package manager</strong> คือ "app store" ของ Linux — ติดตั้ง, อัพเดท, ลบ software ได้ง่ายๆ แต่ละ distro ใช้คนละตัว: <strong>apt</strong> (Ubuntu/Debian), <strong>yum/dnf</strong> (CentOS/RHEL/Fedora), <strong>apk</strong> (Alpine — ที่ใช้ใน Docker) สิ่งสำคัญคือ <code>apt update</code> ก่อน <code>apt install</code> เสมอ เพื่อให้ได้ package list ล่าสุด:</p>
 
@@ -535,7 +642,7 @@ apk add --no-cache nginx curl</code></pre>
 
     <hr>
 
-    <h2>User Management — จัดการ users</h2>
+    <h2 id="user-management">User Management — จัดการ users</h2>
 
     <p>Linux เป็น multi-user OS — แต่ละ user มีสิทธิ์และ home directory แยกกัน <strong>root</strong> คือ superuser ที่ทำได้ทุกอย่าง (อันตราย!) ควรสร้าง regular user แล้วใช้ <code>sudo</code> เมื่อต้องการสิทธิ์ admin DevOps ต้องจัดการ users บน servers เป็นประจำ:</p>
 
@@ -556,7 +663,7 @@ sudo -u deploy command          # รันคำสั่งในฐานะ 
 
     <hr>
 
-    <h2>Networking Commands — เครือข่าย</h2>
+    <h2 id="networking-commands">Networking Commands — เครือข่าย</h2>
 
     <p>DevOps ต้อง debug network issues บ่อยมาก — server เชื่อมต่อ database ไม่ได้? DNS resolve ผิด? port ถูก firewall block? คำสั่ง networking เหล่านี้ช่วยวินิจฉัยปัญหาได้เร็ว:</p>
 
@@ -582,7 +689,7 @@ nslookup example.com            # ดู DNS record</code></pre>
 
     <hr>
 
-    <h2>Shell Scripting — เขียน script อัตโนมัติ</h2>
+    <h2 id="shell-scripting">Shell Scripting — เขียน script อัตโนมัติ</h2>
 
     <p>Shell script คือพลังสูงสุดของ Linux CLI — รวมคำสั่งหลายตัวเป็น automation!</p>
 
@@ -676,7 +783,7 @@ done</code></pre>
 
     <hr>
 
-    <h2>Cron Jobs — ตั้งเวลารันอัตโนมัติ</h2>
+    <h2 id="cron-jobs">Cron Jobs — ตั้งเวลารันอัตโนมัติ</h2>
 
     <p><strong>Cron</strong> คือ scheduler ของ Linux — ตั้งเวลาให้ script รันอัตโนมัติ เช่น backup ทุกคืน, cleanup logs ทุกสัปดาห์, health check ทุก 5 นาที Cron expression มี 5 ช่อง: <code>นาที ชั่วโมง วัน เดือน วันในสัปดาห์</code> ดู syntax ด้วย <a href="https://crontab.guru" target="_blank" rel="noopener">crontab.guru</a>:</p>
 
@@ -706,7 +813,7 @@ grep CRON /var/log/syslog</code></pre>
 
     <hr>
 
-    <h2>คำสั่งที่ DevOps ใช้บ่อยที่สุด (Cheat Sheet)</h2>
+    <h2 id="s-13">คำสั่งที่ DevOps ใช้บ่อยที่สุด (Cheat Sheet)</h2>
 
     <p>สรุปคำสั่งที่ DevOps engineers ใช้ทุกวัน — เก็บไว้เป็น quick reference ไม่ต้องจำทั้งหมด แค่รู้ว่ามี แล้วกลับมาดูเมื่อต้องใช้:</p>
 
@@ -736,7 +843,7 @@ grep CRON /var/log/syslog</code></pre>
 
     <hr>
 
-    <h2>สรุป</h2>
+    <h2 id="summary">สรุป</h2>
 
     <p>Linux CLI เป็นทักษะพื้นฐานที่สำคัญที่สุดสำหรับ DevOps — ทุก server, container, CI/CD runner รันบน Linux ยิ่งใช้คล่อง ยิ่งทำงานเร็ว ไม่ต้องจำทุกคำสั่ง แค่รู้ว่า "ทำอะไรได้" แล้ว Google หรือ <code>man</code> command เมื่อต้องการ:</p>
 

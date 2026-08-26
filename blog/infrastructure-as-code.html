@@ -22,7 +22,7 @@
       --gold: #c4a46c; --gold-dark: #7a5f22; --cloud: #dee7e6; --parchment: #e9e1c4; --focus: #226299;
       /* status — use only these six, never invent a seventh */
       --green: #22c55e; --red: #ef4444; --amber: #f59e0b;
-      --cyan: #06b6d4; --purple: #8b5cf6; --purple-dark: #7c3aed;
+      --cyan: #06b6d4; --purple: #226299; --purple-dark: #1a4d7a;
       /* type */
       --font: 'Inter', 'Sarabun', -apple-system, BlinkMacSystemFont, sans-serif;
       --mono: 'JetBrains Mono', 'Fira Code', 'Sarabun', monospace;
@@ -75,12 +75,15 @@
       display: flex; align-items: center; justify-content: center; gap: 1.5rem;
     }
     .post-hero__series { font-weight: 600; color: var(--blue); }
-    .post-hero__cover { aspect-ratio: 1024/509;
-      max-width: 560px; margin: 2.5rem auto 0;
-      border-radius: 16px; overflow: hidden;
-      box-shadow: 0 20px 60px rgba(34,98,153,0.15);
+    .post-hero__cover {
+      aspect-ratio: 1 / 1;
+      max-width: 380px;
+      margin: 2.5rem auto 0;
+      border-radius: var(--radius-lg, 16px);
+      overflow: hidden;
+      box-shadow: 0 20px 60px rgba(17,48,75,0.14);
     }
-    .post-hero__cover img { width: 100%; display: block; height: auto;}
+    .post-hero__cover img { width: 100%; height: 100%; object-fit: cover; display: block; }
     .post-body { max-width: 720px; margin: 0 auto; padding: 3rem 2rem 6rem; }
     .post-body h2 {
       font-size: 1.6rem; font-weight: 800; color: var(--navy);
@@ -269,7 +272,91 @@
        the series heading sat 15px under it. */
     html { scroll-padding-top: 5rem; }
     [id] { scroll-margin-top: 5rem; }
-</style>
+
+    /* ---- Phase 5: reading chrome -----------------------------------------
+       Thai needs more room than Latin at the same nominal size: taller
+       ascenders, stacked vowel and tone marks above and below the line. 17px
+       Sarabun is measurably harder to read than 17px Inter, so Thai bodies get
+       18px and a looser line. English pages stay at 17. */
+    .post-body:lang(th) { font-size: 18px; line-height: 1.85; }
+
+    /* Avoid the one-word last line. Cheap, and no layout risk. */
+    .post-body p, .post-body li, .post-body blockquote { text-wrap: pretty; }
+
+    /* ---- side-scroll affordance ------------------------------------------
+       440 <pre> blocks and 94 tables can exceed 720px. Nothing said so — a
+       reader on a phone saw a code block cut off at the edge with no hint
+       that it continued. These four layers paint a shadow ONLY where there is
+       more content in that direction: two "cover" gradients pinned to the
+       scroll box (local) and two shadows pinned to the element (scroll); when
+       the content is fully scrolled the cover slides over the shadow and
+       hides it. No JavaScript, no wrapper element. */
+    .post-body pre, .post-body table {
+      overflow-x: auto;
+      background-image:
+        linear-gradient(to right, var(--code-bg, #0f172a) 30%, rgba(15,23,42,0)),
+        linear-gradient(to left,  var(--code-bg, #0f172a) 30%, rgba(15,23,42,0)),
+        radial-gradient(farthest-side at 0 50%, rgba(0,0,0,.28), rgba(0,0,0,0)),
+        radial-gradient(farthest-side at 100% 50%, rgba(0,0,0,.28), rgba(0,0,0,0));
+      background-position: 0 0, 100% 0, 0 0, 100% 0;
+      background-repeat: no-repeat;
+      background-size: 40px 100%, 40px 100%, 14px 100%, 14px 100%;
+      background-attachment: local, local, scroll, scroll;
+    }
+    .post-body table {
+      background-image:
+        linear-gradient(to right, var(--white, #fff) 30%, rgba(255,255,255,0)),
+        linear-gradient(to left,  var(--white, #fff) 30%, rgba(255,255,255,0)),
+        radial-gradient(farthest-side at 0 50%, rgba(17,48,75,.16), rgba(17,48,75,0)),
+        radial-gradient(farthest-side at 100% 50%, rgba(17,48,75,.16), rgba(17,48,75,0));
+      background-position: 0 0, 100% 0, 0 0, 100% 0;
+      background-repeat: no-repeat;
+      background-size: 40px 100%, 40px 100%, 14px 100%, 14px 100%;
+      background-attachment: local, local, scroll, scroll;
+    }
+
+    /* Phone headings: h1 at clamp() maxima and h2 at 1.75rem were set for a
+       desktop measure and crowd a 375px column. */
+    @media (max-width: 600px) {
+      .post-body h2 { font-size: 1.4rem; }
+      .post-body h3 { font-size: 1.15rem; }
+    }
+  
+    /* ---- table of contents ----------------------------------------------
+       <details> so it is collapsible with no JavaScript, open by default on
+       desktop. The posts run to 46 phone-screens; this is the map. */
+    .post-toc {
+      max-width: 720px;
+      margin: 2rem auto 0;
+      padding: 1rem 1.25rem;
+      background: rgba(34,98,153,0.05);
+      border: 1px solid rgba(34,98,153,0.14);
+      border-left: 3px solid var(--gold, #c4a46c);
+      border-radius: 10px;
+      font-size: 0.92rem;
+    }
+    .post-toc > summary {
+      cursor: pointer;
+      font-weight: 700;
+      color: var(--navy);
+      list-style: none;
+    }
+    .post-toc > summary::-webkit-details-marker { display: none; }
+    .post-toc > summary::before {
+      content: "\25B8";
+      display: inline-block;
+      margin-right: 0.5rem;
+      transition: transform 0.2s ease;
+      color: var(--gold-dark, #7a5f22);
+    }
+    .post-toc[open] > summary::before { transform: rotate(90deg); }
+    .post-toc > summary:focus-visible { outline: 3px solid var(--focus, #226299); outline-offset: 3px; }
+    .post-toc ol { margin: 0.85rem 0 0.25rem; padding-left: 1.4rem; }
+    .post-toc li { margin-bottom: 0.4rem; line-height: 1.5; }
+    .post-toc a { color: var(--slate); text-decoration: none; }
+    .post-toc a:hover, .post-toc a:focus-visible { color: var(--blue-dark, #1a4d7a); text-decoration: underline; }
+    @media (max-width: 600px) { .post-toc { margin: 1.25rem 1rem 0; } }
+  </style>
   <!-- social -->
   <link rel="canonical" href="https://anirach.com/blog/infrastructure-as-code.html">
   <meta property="og:type" content="article">
@@ -326,6 +413,20 @@
   </header>
 
   <article class="post-body" itemscope itemtype="https://schema.org/BlogPosting">
+    <details class="post-toc" open>
+      <summary>In this post &middot; <span lang="th">ในบทความนี้</span></summary>
+      <ol>
+          <li><a href="#iac">IaC คืออะไร?</a></li>
+          <li><a href="#terraform-vs-ansible">Terraform vs Ansible — ใช้ตัวไหน?</a></li>
+          <li><a href="#terraform">Terraform — สร้าง Infrastructure ด้วย Code</a></li>
+          <li><a href="#ansible">Ansible — ตั้งค่า Server อัตโนมัติ</a></li>
+          <li><a href="#terraform-ansible">Terraform + Ansible ทำงานร่วมกัน</a></li>
+          <li><a href="#iac-tools">IaC Tools อื่นๆ ที่น่ารู้</a></li>
+          <li><a href="#best-practices">Best Practices</a></li>
+          <li><a href="#summary">สรุป</a></li>
+      </ol>
+    </details>
+
 
     <p>จากโพสต์ที่แล้วเราเรียนรู้ Networking พื้นฐาน — DNS, Firewall, Load Balancer, SSH</p>
 
@@ -335,7 +436,7 @@
 
     <hr>
 
-    <h2>IaC คืออะไร?</h2>
+    <h2 id="iac">IaC คืออะไร?</h2>
 
     <p><strong>Infrastructure as Code</strong> คือแนวคิดที่ว่า — infrastructure (server, network, database, firewall) ควรถูก <strong>กำหนดด้วย code</strong> ไม่ใช่การคลิกบน console หรือพิมพ์คำสั่งทีละบรรทัด</p>
 
@@ -367,7 +468,7 @@
 
     <hr>
 
-    <h2>Terraform vs Ansible — ใช้ตัวไหน?</h2>
+    <h2 id="terraform-vs-ansible">Terraform vs Ansible — ใช้ตัวไหน?</h2>
 
     <p>คำตอบคือ <strong>ใช้ทั้งคู่!</strong> เพราะทำหน้าที่ต่างกัน — <strong>Terraform</strong> "สร้าง" infrastructure (VMs, networks, databases, load balancers) ส่วน <strong>Ansible</strong> "ตั้งค่า" สิ่งที่สร้างมา (install software, configure services, deploy apps) Terraform เป็น <strong>declarative</strong> (บอกว่า "ต้องการอะไร") Ansible เป็น <strong>procedural</strong> (บอกว่า "ทำอะไรทีละขั้น"):</p>
 
@@ -441,7 +542,7 @@
 
     <hr>
 
-    <h2>Terraform — สร้าง Infrastructure ด้วย Code</h2>
+    <h2 id="terraform">Terraform — สร้าง Infrastructure ด้วย Code</h2>
 
     <p><strong>Terraform</strong> โดย HashiCorp เป็น IaC tool ที่ได้รับความนิยมสูงสุด — รองรับ cloud providers ทุกเจ้า (AWS, Azure, GCP, DigitalOcean, etc.) ด้วย provider plugins ใช้ภาษา <strong>HCL (HashiCorp Configuration Language)</strong> ที่อ่านง่าย และจัดการ state ของ infrastructure ให้อัตโนมัติ</p>
 
@@ -572,7 +673,7 @@ output "server_ips" {
 
     <hr>
 
-    <h2>Ansible — ตั้งค่า Server อัตโนมัติ</h2>
+    <h2 id="ansible">Ansible — ตั้งค่า Server อัตโนมัติ</h2>
 
     <p><strong>Ansible</strong> โดย Red Hat เป็น configuration management tool ที่ใช้ง่ายที่สุด — เขียน playbooks ด้วย YAML ธรรมดา ไม่ต้องเรียนภาษาใหม่ เหมาะกับ: install packages, configure services, deploy applications, manage users/permissions</p>
 
@@ -722,7 +823,7 @@ ansible webservers -i inventory.yml -m service -a "name=nginx state=restarted" -
 
     <hr>
 
-    <h2>Terraform + Ansible ทำงานร่วมกัน</h2>
+    <h2 id="terraform-ansible">Terraform + Ansible ทำงานร่วมกัน</h2>
 
     <p>Workflow ที่ดีที่สุดคือใช้ <strong>ทั้งคู่ร่วมกัน</strong> — Terraform สร้าง infrastructure (VMs, VPC, Load Balancer) แล้วส่ง output (IP addresses) ให้ Ansible ไปตั้งค่า (install Docker, deploy app, configure monitoring) เหมือน Terraform "สร้างบ้าน" แล้ว Ansible "ตกแต่งภายใน":</p>
 
@@ -770,7 +871,7 @@ ansible-playbook -i inventory.yml setup-all.yml</code></pre>
 
     <hr>
 
-    <h2>IaC Tools อื่นๆ ที่น่ารู้</h2>
+    <h2 id="iac-tools">IaC Tools อื่นๆ ที่น่ารู้</h2>
 
     <p>นอกจาก Terraform + Ansible ยังมี IaC tools อื่นๆ ที่น่าสนใจ — แต่ละตัวมีจุดแข็งต่างกัน เลือกตามความเหมาะสมของทีมและ use case:</p>
 
@@ -818,7 +919,7 @@ ansible-playbook -i inventory.yml setup-all.yml</code></pre>
 
     <hr>
 
-    <h2>Best Practices</h2>
+    <h2 id="best-practices">Best Practices</h2>
 
     <p>IaC ทำให้ infrastructure เป็น code ดังนั้นต้อง treat เหมือน code จริงๆ — version control, code review, testing, modularization หลักการสำคัญที่ต้องทำ:</p>
 
@@ -849,7 +950,7 @@ terraform {
 
     <hr>
 
-    <h2>สรุป</h2>
+    <h2 id="summary">สรุป</h2>
 
     <p>Infrastructure as Code เปลี่ยนวิธีจัดการ infrastructure จาก "จำในหัว + ทำด้วยมือ" เป็น "เขียน code + automate ทั้งหมด" ผลลัพธ์คือ: สร้าง environment ใหม่ได้ในนาที, disaster recovery เร็วขึ้น 100 เท่า, ทุกการเปลี่ยนแปลงมี audit trail ใน Git:</p>
 
