@@ -20,12 +20,9 @@ IMAGES = os.path.join(ROOT, "images")
 
 # --- Deliberate exceptions. Do NOT "fix" these by inventing links. -----------
 CHAIN_HEAD = "git-branching.html"          # oldest DevOps post, has no nav at all
-OFF_CHAIN = {                              # in #series-openclaw but wear DevOps chrome
-    "claude-code-architecture.html",       # post-nav says Related / See also
-    "openclaw-memory-architecture.html",   # prev grafted onto deployment-hosting
-}
-NO_NAV = {"beyond-plugins.html", "git-branching.html", "idle-self-improvement.html",
-          "obsidian-ai-jarvis.html", "openclaw-migration.html"}
+NO_NAV = {"beyond-plugins.html", "claude-code-architecture.html", "git-branching.html",
+          "idle-self-improvement.html", "obsidian-ai-jarvis.html",
+          "openclaw-memory-architecture.html", "openclaw-migration.html"}
 SERIES7 = ["openclaw-101.html", "openclaw-agent-teams.html", "openclaw-memory.html",
            "openclaw-security.html", "openclaw-integrations.html",
            "openclaw-skills.html", "openclaw-production.html"]
@@ -184,8 +181,7 @@ for p in sorted(nav):
     if nav[p]["n"] != 2:
         fails.append(f"{p} has {nav[p]['n']} .post-nav__link (expected 2)")
     for dr, href in nav[p]["other"]:
-        if p not in OFF_CHAIN:
-            warns.append(f"{p} uses non-standard post-nav__dir {dr!r} -> {href}")
+        warns.append(f"{p} uses non-standard post-nav__dir {dr!r} -> {href}")
 
 expected = list(reversed(CARD.findall(sections.get("series-devops", ""))))
 for i, f in enumerate(expected):

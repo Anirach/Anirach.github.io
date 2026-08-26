@@ -208,9 +208,11 @@ SERIES_NAV_H3 = "\U0001F4DA OpenClaw for Organizations 2026"
 # The 5 posts that legitimately carry no in-post navigation at all.
 NO_NAV_POSTS = {
     "beyond-plugins.html",
+    "claude-code-architecture.html",      # 2026-08-26: DevOps-style nav removed
     "git-branching.html",
     "idle-self-improvement.html",
     "obsidian-ai-jarvis.html",
+    "openclaw-memory-architecture.html",  # 2026-08-26: DevOps-style nav removed
     "openclaw-migration.html",
 }
 
@@ -297,23 +299,16 @@ BASELINE = {
     #  - openclaw-memory-architecture is grafted onto deployment-hosting.
     "INV-04a": {
         "cicd-pipeline.html|prev|git-branching.html",
-        "openclaw-memory-architecture.html|prev|deployment-hosting.html",
     },
     "INV-04c": {
-        "claude-code-architecture.html",
         "deployment-hosting.html",
-        "openclaw-memory-architecture.html",
         "vibe-coding-devops-process.html",
     },
-    "INV-04d": {
-        "claude-code-architecture.html|Related",
-        "claude-code-architecture.html|See also",
-    },
-    "INV-04f": {"deployment-hosting.html"},
-
-    # The same 2 posts are the only nodes not reachable by walking next from
-    # the chain head.  Consequence of INV-17, not an independent defect.
-    "INV-04h": {"claude-code-architecture.html", "openclaw-memory-architecture.html"},
+    # INV-04d, INV-04f, INV-04h RETIRED 2026-08-26 together with INV-17 below:
+    # claude-code-architecture ("Related" / "See also") and
+    # openclaw-memory-architecture (prev grafted onto deployment-hosting) were
+    # OpenClaw posts wearing DevOps-chain chrome. The blocks are gone and both
+    # posts are NO_NAV_POSTS now, like the other standalone OpenClaw posts.
 
     # INV-05 (14 dead /about|/projects|/research|/contact|/teaching links in 6
     # of the 7 OpenClaw posts) was fixed in the counters/gradient/dead-links
@@ -344,13 +339,10 @@ BASELINE = {
     # dropping the target's Thai subtitle; devops-security is the worst — it
     # calls linux-command-line "Linux & Shell Essentials".
     "INV-10": {
-        "claude-code-architecture.html|openclaw-101.html",
-        "claude-code-architecture.html|web-architecture.html",
         "cloud-architecture.html|gitops-argocd.html",
         "deployment-hosting.html|frontend-performance.html",
         "devops-security.html|linux-command-line.html",
         "docker-compose.html|gitops-argocd.html",
-        "openclaw-memory-architecture.html|deployment-hosting.html",
         "vibe-coding-devops-process.html|deployment-hosting.html",
     },
 
@@ -379,9 +371,7 @@ BASELINE = {
         '<footer class="blog-footer">', '<footer class="post-footer">',
     },
 
-    # Two posts sit in #series-openclaw but carry DevOps post-nav chrome.
-    # They are also the only 2 nodes unreachable from the chain walk.
-    "INV-17": {"claude-code-architecture.html", "openclaw-memory-architecture.html"},
+    # INV-17 RETIRED 2026-08-26 — see INV-04d above.
 
     # RETIRED 2026-08-26 by Phase 3. The ordinal badge used four different
     # markup forms across the 7 series posts (.series-badge, .series-info, a
