@@ -501,3 +501,45 @@ not enumerated by `site.pages`. Do not "fix" it by adding one.
 
 The same sweep taught **INV-06a** to see `og:image`: share images are referenced only from
 `content=`, so without `RE_META_IMG_REF` every one of them reported as an unreferenced orphan.
+
+### INV-34 — every `mailto:` is exempt from Cloudflare email obfuscation
+
+**The edge rewrites your HTML, and no repo grep can see it.** anirach.com sits behind Cloudflare
+with Scrape Shield's *Email Address Obfuscation* enabled. The repo ships:
+
+```html
+<a href="mailto:anirach.m@fitm.kmutnb.ac.th" …>anirach.m@fitm.kmutnb.ac.th</a>
+```
+
+and what Cloudflare actually serves is:
+
+```html
+<a href="/cdn-cgi/l/email-protection#a8c9c6c1dac9cbc086…">
+  <span class="__cf_email__" data-cfemail="3657585f4457555e18…">[email&#160;protected]</span></a>
+<script data-cfasync="false" src="/cdn-cgi/scripts/…/email-decode.min.js"></script>
+```
+
+Two things break, and both matter to this site specifically:
+
+1. **A visitor without JavaScript reads the literal string `[email protected]`** — not the address.
+   This was found the same day Phase 2 published the site's first email, on a site that had just
+   spent Phase 1 removing its no-JS blank.
+2. **The injected `<script>` comes from the edge**, so the Phase-7 goal of zero `<script>` sitewide
+   is unverifiable by `grep -rl "<script" --include="*.html"`. The repo can be clean while the
+   served page is not.
+
+**The fix is pure HTML** — Cloudflare's documented opt-out, which Jekyll passes through untouched:
+
+```html
+<!--email_off--><a href="mailto:…" class="contact__pill">…</a><!--email_on-->
+```
+
+Wrap the **whole anchor**, not just the `href` — the visible text is rewritten too.
+
+The check cannot reach the edge, so it polices what it can reach: no `mailto:` may ship without an
+`<!--email_off-->` opened and not yet closed before it. Fault-injected 2026-08-26 by stripping one
+pair, which reproduced the live defect and failed the build.
+
+Alternative fixes that need dashboard access this repo does not have: turning the feature off under
+Scrape Shield, or a Configuration Rule scoped to the site. The comment pair is preferred precisely
+because it lives in version control next to the thing it protects.

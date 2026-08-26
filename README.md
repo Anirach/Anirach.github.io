@@ -17,7 +17,7 @@ A hand-written static site — six top-level pages, four per-book detail pages, 
 | **Stack** | Plain HTML5 + CSS3 + one 83-line vanilla-JS file. Google Fonts is the only external dependency |
 | **Hosting** | GitHub Pages (classic Jekyll build) on the custom domain `anirach.com`, fronted by Cloudflare |
 | **Build step** | None |
-| **Tests** | `.claude/skills/site-check/scripts/check_site.py` — 49 cross-file integrity checks. This is the test suite |
+| **Tests** | `.claude/skills/site-check/scripts/check_site.py` — 57 cross-file integrity checks. This is the test suite |
 
 ## The six pages
 
@@ -92,12 +92,12 @@ python3 -m http.server 8000     # → http://localhost:8000
 Run all three from the repo root before pushing. All must pass:
 
 ```bash
-python3 .claude/skills/site-check/scripts/check_site.py      # 49 cross-file integrity checks
+python3 .claude/skills/site-check/scripts/check_site.py      # 57 cross-file integrity checks
 python3 docs/openclaw/check-news-sync.py                     # news↔homepage sync, provenance, 4 counters
 python3 .claude/skills/blog-post/assets/verify-wiring.py     # blog post wiring
 ```
 
-`check_site.py` exits 0 when no **new** fail-severity violation appears. It carries a baseline of pre-existing debt (`0 new, 55 known` today) — **`0 new` is what matters**, and `INV-25` fails the build if any baseline entry goes stale, so the safety net cannot silently rot. `INV-26` (added with the books split) ties every section-directory detail page to its own `index.html`: an orphan detail page, or an index card linking a file that does not exist, fails the build.
+`check_site.py` exits 0 when no **new** fail-severity violation appears. It carries a baseline of pre-existing debt (`0 new, 29 known` today) — **`0 new` is what matters**, and `INV-25` fails the build if any baseline entry goes stale, so the safety net cannot silently rot. `INV-26` (added with the books split) ties every section-directory detail page to its own `index.html`: an orphan detail page, or an index card linking a file that does not exist, fails the build.
 
 `check-news-sync.py` verifies the homepage strip mirrors the three newest news items, that every news item carries a `<!-- source: … -->` provenance comment, and that all **four** hand-typed counters match reality: `news/index.html` "7 updates", `publications/index.html` "8 chapters", and `books/index.html` "1 novel" and "2 complete" (it strips HTML comments first, so a commented-out card cannot satisfy a counter).
 

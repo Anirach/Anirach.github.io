@@ -2383,5 +2383,48 @@ def _(site):
     return out
 
 
+
+@check("INV-34", "every mailto: is exempt from Cloudflare email obfuscation")
+def _(site):
+    """Measured live 2026-08-26, the day the site first published an address.
+
+    anirach.com sits behind Cloudflare with Scrape Shield's Email Address
+    Obfuscation ON. It rewrites every `mailto:` at the EDGE — the repo is
+    clean, the served HTML is not:
+
+        <a href="mailto:anirach.m@fitm.kmutnb.ac.th">anirach.m@fitm...</a>
+      becomes
+        <a href="/cdn-cgi/l/email-protection#a8c9c6...">
+          <span class="__cf_email__" data-cfemail="3657...">[email protected]</span>
+
+    ...plus an injected <script src="/cdn-cgi/scripts/.../email-decode.min.js">.
+
+    Two things break. A visitor without JavaScript reads the literal string
+    "[email protected]" instead of the address — on a site that deliberately
+    fixed its no-JS blank. And the injected script defeats the zero-<script>
+    goal from the edge, where no repo grep can see it.
+
+    Cloudflare's documented opt-out is the comment pair below, which Jekyll
+    passes through untouched. Wrap the WHOLE anchor, so the visible text is
+    exempt too and not just the href.
+
+    This check cannot see the edge, so it polices the thing it can: that no
+    mailto: ships without the exemption around it.
+    """
+    out = []
+    for rel in site.pages:
+        s = site.text[rel]
+        for m in re.finditer(r'<a\b[^>]*href="mailto:', s):
+            before = s[:m.start()]
+            off = before.rfind("<!--email_off-->")
+            on = before.rfind("<!--email_on-->")
+            if off == -1 or on > off:
+                out.append(Violation("%s|%d" % (rel, m.start()),
+                    "%s:%d a mailto: anchor is not wrapped in "
+                    "<!--email_off--> ... <!--email_on--> — Cloudflare will "
+                    "rewrite it to [email protected] and inject a decoder script"
+                    % (rel, lineno(s, m.start()))))
+    return out
+
 if __name__ == "__main__":
     sys.exit(main())
