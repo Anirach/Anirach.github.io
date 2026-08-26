@@ -307,9 +307,11 @@ grep -c 'alt="" class="card__avatar"' blog/index.html   # expect 37
 
 ## Counters — already correct; recompute, never hardcode
 
-`b9fb125` fixed the two stale counters and Task 11 added two more sites. All five are
-correct today (3 Categories / 2 Series / 37 Articles / `#cat-technology` 37 /
-`#series-openclaw` 13 / `#series-devops` 24) and `check_site.py` INV-02a–INV-02e all PASS.
+`b9fb125` fixed the two stale counters and Task 11 added two more sites. **Three**
+remain and all are correct today (2 Series / 37 Articles / `#series-openclaw` 13 /
+`#series-devops` 24); `check_site.py` INV-02a–INV-02e all PASS. The "N Categories"
+stat and `#cat-technology`'s "37 articles" both went with the category bands on
+2026-08-26 — the last band held 100% of the posts, so it partitioned nothing.
 
 The old `perl -pi -e 's|<strong>33</strong> Articles|...'` recipe is dead — it matches
 nothing now, and hardcoding the *next* pair of numbers would just recreate the problem.

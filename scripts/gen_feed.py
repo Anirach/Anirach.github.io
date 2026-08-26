@@ -49,11 +49,16 @@ def build() -> str:
     items = []
     for m in CARD.finditer(idx):
         href, block = m.group(1), m.group(2)
-        t = re.search(r'<h4 class="card__title">(.*?)</h4>', block, re.S)
+        # Level-agnostic on purpose. The ladder has been re-cut twice (h2 -> h4
+        # in 635eb94/4a31036, then h4 -> h3 when the redundant "Technology"
+        # category band was deleted on 2026-08-26). A hard-coded level makes
+        # this silently return no title and drop every item from the feed.
+        t = re.search(r'<(h[1-6]) class="card__title">(.*?)</\1>', block, re.S)
         e = re.search(r'<p class="card__excerpt">(.*?)</p>', block, re.S)
         if not t:
             continue
-        items.append((href, text_of(t.group(1)),
+        # group(1) is the tag NAME (the backreference), group(2) the title
+        items.append((href, text_of(t.group(2)),
                       text_of(e.group(1)) if e else "",
                       first_commit_date(f"blog/{href}")))
     esc = lambda x: html.escape(x, quote=False)

@@ -28,7 +28,7 @@ Deploy by pushing to `main` — GitHub Pages auto-deploys. There is no `.nojekyl
 ├── style.css           # Landing-page styles — carries the canonical 24-token :root block, same tokens every other page redefines in its own embedded <style>
 ├── script.js           # IIFE: nav scroll state, hamburger, IntersectionObserver reveal, hero parallax
 ├── blog/
-│   ├── index.html      # Blog listing — fully static, zero JavaScript, ONE category band (Technology)
+│   ├── index.html      # Blog listing — fully static, zero JavaScript, a featured post + 2 series (no category band)
 │   └── *.html          # 37 self-contained posts (own <style>, own :root, own nav markup)
 ├── books/              # Books & writing (nav label "Books") — all self-contained
 │   ├── index.html      #   the section index: the last-lecture book + 1 published novel + 2 complete manuscripts
@@ -54,21 +54,34 @@ Deploy by pushing to `main` — GitHub Pages auto-deploys. There is no `.nojekyl
 
 **Every blog page is an island — and so is each of `books/` (its index and all four detail pages), `publications/`, `projects/`, `news/`.** None of them link `style.css` or `script.js`; each embeds its full stylesheet in a `<style>` block and defines its own `:root` variables (copied from the same canonical token set `style.css` also carries). Editing `style.css` affects only the landing page. Editing one post or one of the eight section-directory pages affects only that file — there is no shared partial, so changes that should apply "everywhere" must be repeated per file (this is what commit `4c180c9` "Standardize series navigation across all 7 OpenClaw posts" was doing).
 
-### Content is organized as three categories, one of which holds two series
+### Content is organized as one featured post and two series
 
-`blog/index.html` has ONE `.category` band — there is no category-filter UI and no client-side JS
-on that page:
+There are **no `.category` bands left**. The last one, "Technology", held 100% of the posts, so it
+partitioned nothing — a reader met an emoji, the word "Technology" and "37 articles" (the same 37
+the hero had just announced) before reaching any post. It was deleted on 2026-08-26; the Academic &
+Philosophy and Lifestyle bands had gone earlier, as empty "First posts coming soon" placeholders
+that sat for 16 days with nothing able to expire them.
 
-- **Technology** (`#cat-technology`, 37 articles) — contains two `.series-section` blocks:
-  - `#series-openclaw` — "OpenClaw for Organizations" (13 cards; 7 of them are the numbered series, the rest standalone)
-  - `#series-devops` — "DevOps & Vibe Coding" (24 cards)
+`blog/index.html` is therefore, in order: hero → **one featured post** → two `.series-section`
+blocks. No category-filter UI, no client-side JS.
 
-The hero `.blog-hero__stats` reads **2 Series · 37 Articles**. There is deliberately no
-"N Categories" stat: the Academic & Philosophy and Lifestyle bands were empty "First posts coming
-soon" placeholders that sat for 16 days with nothing able to expire them, and were deleted on
-2026-08-26 along with the stat that counted them. **`check_site.py` INV-02d now fails on any empty
-`.category` band**, so a new category must ship its band, grid, card and count in one commit.
-INV-02e still verifies a "N Categories" stat if one is ever reinstated.
+- `#series-openclaw` — "OpenClaw for Organizations" (13 cards; 7 of them are the numbered series, the rest standalone)
+- `#series-devops` — "DevOps & Vibe Coding" (24 cards)
+
+The hero `.blog-hero__stats` reads **2 Series · 37 Articles**; there is deliberately no
+"N Categories" stat, though INV-02e still verifies one if it is ever reinstated, and INV-02d still
+fails on any empty `.category` band a future commit adds.
+
+**The featured post is `class="feature"`, never `class="card"`.** Three separate regexes count
+`class="card"` (`check_site.py` RE_CARD, `scripts/gen_feed.py`, blog-post's `verify-wiring.py`), so
+a 38th match would inflate every counter and put a duplicate item in the feed. It spotlights the
+newest post by git first-commit date — today `openclaw-migration`, which is already the first card,
+so nothing is reordered. **Card order IS the prev/next chain and must never move.**
+
+The heading ladder is `h1` hero → `h2` series (and the feature) → `h3` card title. It was a level
+deeper until the category band went. `check_site.py` and `verify-wiring.py` read
+`<(h[1-6]) class="card__title">` and follow any re-cut; `gen_feed.py` hard-coded `<h4>` and was
+made level-agnostic in the same commit — a stale level there silently empties the feed.
 
 ### Three mutually exclusive in-post navigation patterns
 
@@ -101,8 +114,8 @@ The numbered OpenClaw series order is fixed: `openclaw-101` → `agent-teams` �
 
 ### Hand-typed counters — now enforced, but still hand-typed
 
-`blog/index.html` carries four: the hero's `N Categories` / `N Series` / `N Articles`, and a
-`.series-count` per series. Nothing *computes* them, so they still drift whenever you add a post —
+`blog/index.html` carries three: the hero's `N Series` / `N Articles`, and a
+`.series-count` per series (`N Categories` is retired with the bands). Nothing *computes* them, so they still drift whenever you add a post —
 but they are no longer silent about it. `check_site.py` INV-02a/b/c/d/e recompute all of them from
 the actual card counts and fail the build on any mismatch, and `--fix` rewrites the ones it can.
 
