@@ -358,7 +358,10 @@ BASELINE = {
     # INV-14 (6 posts with no <meta name="description">) was cleared by the
     # 2026-08-26 metadata sweep — all 47 pages now carry one, and INV-27
     # promotes it from warn to FAIL. No baseline entry remains.
-    "INV-15": {"2025", "NONE"},
+    # Phase 4 (2026-08-26) swept 26 files from "© 2025"/"© 2024" to 2026, so the
+    # '2025' cohort is gone. "NONE" stays: 3 posts still carry no copyright line
+    # at all, which is a different, still-live defect.
+    "INV-15": {"NONE"},
     # Phase 3 (island -> house, 2026-08-26) normalised 11 posts onto
     # <footer class="blog-footer">, retiring the '<footer class="footer">' and
     # bare '<footer>' variants. INV-25 flagged both keys as stale the same day.
