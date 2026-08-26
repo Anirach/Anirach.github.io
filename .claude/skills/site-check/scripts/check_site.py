@@ -2540,6 +2540,126 @@ def _(site):
                     % (f, dims[0], dims[1])))
     return out
 
+@check("INV-36", "every visible date agrees with feed.xml and with og article:published_time")
+def _(site):
+    """Three places state when a post was published, and until 2026-08-26 only
+    one of them was true:
 
+      - `feed.xml`  <pubDate>          — generated from `git log --diff-filter=A`
+      - the head    article:published_time — the same git date, correct
+      - the VISIBLE text on the card and in the hero — the literal string
+        "March 2026" on all 37, hand-typed, month-precision, and wrong for a
+        corpus that actually spans 7-24 March
+
+    A reader saw one date, a feed reader saw another, and "newest" could not be
+    computed from the page at all — which the featured card on blog/index.html
+    now depends on. All three are derived from the same git date now, and this
+    check exists so they cannot drift apart again by hand.
+    """
+    import email.utils
+    out = []
+    feed_path = os.path.join(site.root, "feed.xml")
+    feed_dates = {}
+    if os.path.exists(feed_path):
+        feed = open(feed_path, encoding="utf-8").read()
+        for m in re.finditer(
+                r"<link>[^<]*/blog/([a-z0-9-]+)\.html</link>.*?<pubDate>([^<]*)</pubDate>",
+                feed, re.S):
+            try:
+                feed_dates[m.group(1)] = email.utils.parsedate_to_datetime(
+                    m.group(2)).date().isoformat()
+            except Exception:
+                pass
+
+    # the head block is the reference: it is generated, the visible text is typed
+    for f in site.posts:
+        slug, s_ = f[:-5], site.post(f)
+        m = re.search(r'article:published_time" content="(\d{4}-\d{2}-\d{2})', s_)
+        if not m:
+            continue
+        iso = m.group(1)
+        if slug in feed_dates and feed_dates[slug] != iso:
+            out.append(Violation("%s|feed" % f,
+                "%s: article:published_time is %s but feed.xml says %s — "
+                "regenerate with python3 scripts/gen_feed.py"
+                % (f, iso, feed_dates[slug])))
+        for t in re.finditer(r'<time datetime="([^"]+)"', s_):
+            if t.group(1)[:10] != iso:
+                out.append(Violation("%s|time|%s" % (f, t.group(1)),
+                    "%s:%d <time datetime=\"%s\"> disagrees with this post's "
+                    "article:published_time (%s)"
+                    % (f, lineno(s_, t.start()), t.group(1), iso)))
+
+    # and every card on the index must carry the date of the post it links to
+    idx = site.idx
+    for m in re.finditer(r'<a href="([a-z0-9-]+)\.html" class="card">(.*?)</a>', idx, re.S):
+        slug, block = m.group(1), m.group(2)
+        t = re.search(r'<time datetime="([^"]+)"', block)
+        if not t:
+            out.append(Violation("blog/index.html|%s|missing" % slug,
+                "blog/index.html: the %s card has no <time datetime> — the "
+                "featured card ranks by date and cannot see a bare string" % slug))
+            continue
+        want = feed_dates.get(slug)
+        if want and t.group(1)[:10] != want:
+            out.append(Violation("blog/index.html|%s" % slug,
+                "blog/index.html: the %s card says %s but the post was "
+                "published %s" % (slug, t.group(1), want)))
+    return out
+
+
+
+@check("INV-37", "no inline colour inside a post hero fights its own gradient")
+def _(site):
+    """A regression this repo actually shipped, on 2026-08-26.
+
+    Consolidating the hero families moved 15 posts from a dark gradient to the
+    light Sunrise one and inverted their ink — but 12 of them carried
+    `<strong style="color:#fff">Anirach Mingkhwan</strong>` INLINE in the hero.
+    An inline style beats any stylesheet, so the sweep could not see it and the
+    author's name was painted white on cream: invisible, on twelve pages, live.
+
+    The general rule, and why this is a whole check rather than a one-off fix:
+    an inline colour in the hero is unreachable by every sweep this repo runs
+    (retoken.py, reheroize.py, the Phase-8 dark-mode block), so it survives
+    every future palette change too. There should be none.
+
+    Light ink (#fff, #e9e1c4, rgba(255,255,255,...)) on a Sunrise hero is a
+    FAIL — it is invisible. Dark ink on a Deep Blue hero is the same defect
+    mirrored. Any other inline colour in a hero is reported too, because it is
+    the mechanism, not the shade, that makes it a trap.
+    """
+    out = []
+    LIGHT = re.compile(r"color:\s*(#fff\b|#ffffff|#e9e1c4|rgba\(\s*255\s*,\s*255\s*,\s*255)", re.I)
+    DARK = re.compile(r"color:\s*(#0[0-9a-f]{5}|#1[0-9a-f]{5}|#11304b|var\(--navy\))", re.I)
+    for f in site.posts:
+        s_ = site.post(f)
+        m = re.search(r'<header class="post-hero".*?</header>', s_, re.S)
+        if not m:
+            continue
+        head = m.group(0)
+        gm = RE_POST_HERO_BG.search(s_)
+        if not gm:
+            continue
+        light_hero = "#eef3f3" in gm.group(1)
+        for st in re.finditer(r'style="([^"]*color:[^"]*)"', head):
+            decl = st.group(1)
+            pos = m.start() + st.start()
+            if light_hero and LIGHT.search(decl):
+                out.append(Violation("%s|%d" % (f, pos),
+                    "%s:%d inline %s inside a SUNRISE (light) hero — invisible, "
+                    "and no stylesheet sweep can reach it"
+                    % (f, lineno(s_, pos), decl.strip())))
+            elif not light_hero and DARK.search(decl):
+                out.append(Violation("%s|%d" % (f, pos),
+                    "%s:%d inline %s inside a DEEP BLUE (dark) hero — invisible, "
+                    "and no stylesheet sweep can reach it"
+                    % (f, lineno(s_, pos), decl.strip())))
+            # Any OTHER inline colour in a hero is a latent version of the
+            # same trap — it will survive the next palette change too — but it
+            # is not currently invisible, and severity is per-check here rather
+            # than per-violation, so failing the build on it would be wrong.
+            # The two contradictions above are the ones that are broken NOW.
+    return out
 if __name__ == "__main__":
     sys.exit(main())

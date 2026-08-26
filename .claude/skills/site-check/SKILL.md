@@ -593,3 +593,42 @@ python3 scripts/make_cover.py --check      # validate the table, draw nothing
 python3 scripts/make_cover.py --all        # 37 covers + 37 share cards, ~2s
 python3 scripts/make_cover.py --contact    # .covers/contact-sheet.jpg
 ```
+
+### INV-36 — every visible date agrees with `feed.xml` and with `article:published_time`
+
+Three places stated when a post was published and, until 2026-08-26, only two were true:
+
+| Source | Was |
+|---|---|
+| `feed.xml` `<pubDate>` | generated from `git log --diff-filter=A` — correct |
+| head `article:published_time` | the same git date — correct |
+| **the visible text** | the literal string **"March 2026"** on all 37, hand-typed, month-precision |
+
+The corpus actually spans **7–24 March 2026**. A reader saw one date, a feed reader another, and
+"newest" could not be computed from the page at all — which the featured card on `blog/index.html`
+now depends on. All three derive from the same git date now. INV-36 fails if any `<time datetime>`
+in a post disagrees with that post's own `article:published_time`, if a card's date disagrees with
+the feed, or if a card has no `<time>` at all.
+
+Fault-injected on all three branches. **18 posts had no visible date whatsoever** — a byline and a
+series label but never a *when*, on a blog — and now do.
+
+### INV-37 — no inline colour inside a post hero fights its own gradient
+
+**A regression this repo shipped**, the same day it consolidated the hero families. Moving 15 posts
+from a dark gradient to light Sunrise inverted their ink — but 12 carried
+
+```html
+<strong style="color:#fff">Anirach Mingkhwan</strong>
+```
+
+*inline* in the hero. An inline style beats any stylesheet, so the sweep could not see it and the
+author's name went out white-on-cream: invisible, on twelve live pages.
+
+The rule is about the mechanism, not the shade: **an inline colour in a hero is unreachable by every
+sweep this repo runs** — `retoken.py`, `reheroize.py`, and the dark-mode block Phase 8 adds — so it
+survives every future palette change too. Light ink on Sunrise fails; dark ink on Deep Blue fails
+the same way mirrored. Both branches fault-injected with the exact markup that shipped.
+
+Severity here is per-check rather than per-violation, so a merely *latent* inline colour (one not
+currently invisible) is deliberately not reported — see the note in the check body.

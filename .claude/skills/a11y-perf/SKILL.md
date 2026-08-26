@@ -32,9 +32,12 @@ Everything below was measured on this repo. Re-run the command if you doubt a nu
 
 `ec2827b` + `21c8a55` (covers), `e8da9da` (a11y/perf baseline) and `b9fb125` (counters,
 dead links) closed most of the original remediation list. Marked below as **[DONE]**.
-The genuinely outstanding work is **R3 (hero-meta contrast), R4 (palette contrast on
-light backgrounds), R6 (semantics, labels, landmarks, heading skips)** and **R8 (font
-weights)** — plus skip links and `<main>`, which are the unfinished half of R5.
+The genuinely outstanding work is **R4 (palette contrast on light backgrounds)** and
+**R6 (semantics, labels, landmarks, heading skips)** — plus skip links and `<main>`,
+which are the unfinished half of R5. **R3 (hero-meta contrast) closed 2026-08-26**; so
+did **R8**, whose premise turned out to be backwards — the fix was *adding* the two
+Sarabun weights the site was synthesising, not trimming variable-font weights that cost
+nothing.
 
 ---
 
@@ -613,28 +616,39 @@ It is still the step that is always forgotten on a *new* post, which is why it i
 on `assets/new-post-checklist.md`. **Recompute, never increment** — incrementing by hand
 is how all of them went stale in the first place.
 
-### R8. Dead font weights
+### R8. Font weights — **the premise was backwards, and the real defect is fixed**
 
-Still outstanding. **27** files request
-`Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600`, and
-**37** files request weight 300 in some form (the 27 dual-family files plus the 10
-Inter-only pages — the landing page, the 5 section indexes, the 4 `books/` detail pages).
-Weight 300 is used by exactly **5 declarations**, all in
-`style.css`, i.e. only by `index.html` — dead weight in the other 36. Never trim 300 from
-`index.html`'s Inter-only URL or five headings silently re-render at 400.
+This rule used to say: trim the unused weights (Inter 300, JetBrains Mono 500) to save bytes.
+**That saving is zero.** Google Fonts serves Inter and JetBrains Mono as *variable* fonts — one
+file covering the whole axis — so `wght@300;400;…;900` and `wght@400` download exactly the same
+bytes. Re-measured 2026-08-26: 48 files load webfonts, all 48 request 300, and `style.css` uses
+weight 300 in 6 declarations. Trimming it from the other 47 buys nothing and risks the documented
+trap below.
 
-JetBrains Mono **500** is unused. Mono **600** is used once —
-`.slo-card__example` in `blog/sre-fundamentals.html` — so either keep `wght@400;600` for
-the mono family, or restyle that one rule to 700 (already loaded) before trimming to
-`wght@400`. The trim below targets only the 27 dual-family blog files, which use no
-weight 300:
+**Sarabun is the one that mattered, and it is static.** An unrequested weight is *synthesised* by
+the browser — faux-bold, which smears Thai glyphs far more visibly than Latin ones. The site
+declared:
 
-```html
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400&display=swap" rel="stylesheet">
+| Weight | Declarations | Was loaded? |
+|---|---|---|
+| 400 | 6 | yes |
+| 500 | 43 | **no — synthesised** |
+| 600 | 407 | yes |
+| 700 | 330 | yes |
+| 800 | 122 | **no — synthesised** |
+
+Fixed on 2026-08-26 across all 48 pages:
+
+```
+Sarabun:wght@400;600;700   ->   Sarabun:wght@400;500;600;700;800
 ```
 
-Keep the two `preconnect` lines and `display=swap` — already correct on **37/37**
-font-loading files. The other 10 files (the pure ISLAND posts) load no webfont at all.
+Verified in the browser with `document.fonts`: five real Sarabun faces now load where three did.
+
+**Still true, and still a trap:** never trim 300 from `index.html`'s Inter URL — six headings in
+`style.css` would silently re-render at 400. Keep both `preconnect` lines and `display=swap`
+(correct on all 48). JetBrains Mono is on 37 files and its weight 500 is unused, but it is variable,
+so removing it saves nothing either.
 
 ---
 
