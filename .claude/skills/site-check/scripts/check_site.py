@@ -2326,5 +2326,32 @@ def _(site):
     return out
 
 
+@check("INV-33", "no post can squeeze an image: max-width without height:auto")
+def _(site):
+    """The failure this catches, measured 2026-08-26 on openclaw-migration:
+    a 2750x875 flow diagram rendered 656x875 — width shrunk by max-width:100%
+    while the height ATTRIBUTE stayed authoritative, compressing every glyph to
+    24% of its correct width. It reads as a blurry, "loose" font, so it gets
+    diagnosed as an image-resolution problem when it is a missing CSS line."""
+    out = []
+    for f in site.posts:
+        s = site.post(f)
+        # inline max-width on an <img> that also declares width/height attrs
+        for m in re.finditer(r"<img\b[^>]*>", s):
+            tag = m.group(0)
+            if "max-width" not in tag:
+                continue
+            if 'width="' in tag and 'height="' in tag and "height:auto" not in tag.replace(" ", ""):
+                out.append(Violation("%s|%s" % (f, m.start()),
+                    "%s:%d an <img> sets inline max-width with width/height "
+                    "attributes but no height:auto — it will render squeezed"
+                    % (f, lineno(s, m.start()))))
+        # and the stylesheet rule that protects the rest
+        if ".post-body img" in s and "height: auto" not in s:
+            out.append(Violation("%s|rule" % f,
+                "%s has no `.post-body img { height: auto }` rule" % f))
+    return out
+
+
 if __name__ == "__main__":
     sys.exit(main())
