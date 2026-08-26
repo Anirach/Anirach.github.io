@@ -40,7 +40,9 @@ Deploy by pushing to `main` — GitHub Pages auto-deploys. There is no `.nojekyl
 ├── projects/index.html # Projects & Apps — self-contained page, own <style>/:root
 ├── news/index.html     # News & Updates — self-contained page, own <style>/:root
 ├── 404.html            # custom Not Found — LISTING chrome, noindex, NOT in sitemap.xml
-├── robots.txt          # Allow all + Sitemap: line (Cloudflare prepends its own block live)
+├── robots.txt          # Allow all + Sitemap: line. VERIFIED 2026-08-26 post-deploy:
+│                       #   the repo file REPLACES Cloudflare's Content Signals block
+│                       #   outright — it is not prepended, as was first assumed
 ├── sitemap.xml         # 47 canonical URLs, hand-maintained — 404.html excluded
 ├── favicon.ico         # + apple-touch-icon.png (180×180) — both probed at the root by default
 ├── images/             # 71 files — covers (<slug>-cover.jpg; books/ titles carry both language faces as -cover-en/-th or -cover-front/-back), 9 share cards (og-*.jpg, <slug>-og.jpg — all 1200×630), diagram PNGs, posters, the event QR
@@ -207,6 +209,11 @@ the article counters, and only this sentence enforces it.
   nothing, and adding front matter would make Liquid evaluate the `{{ }}` code samples in 11 posts.
 - **The `news/` event posters stay as direct `.jpg` links.** A shared image URL carries no
   metadata, but lightboxing a poster is a normal pattern and the book page is linked beside it.
+
+**Cloudflare caches for 4 hours** (`max-age=14400` on assets, 600s on HTML). After a deploy that
+adds a root file, the old 404 stays cached at the edge until it expires — `/favicon.ico` served a
+cached 404 for a while after 2026-08-26 while the origin already had it. Append `?cb=$RANDOM` to
+check the real state before diagnosing a deploy problem that is not there.
 
 Two things remain the owner's to do, outside the repo: verify a Search Console property for
 anirach.com, and set Cloudflare SSL/TLS to **Full** (GitHub holds no certificate for the custom
