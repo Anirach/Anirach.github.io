@@ -70,22 +70,31 @@ img { max-width: 100%; height: auto; display: block; }
 .btn:hover .btn__arrow { transform: translateX(3px); }
 
 /* ── Reveal animation ──
-   PROGRESSIVE ENHANCEMENT, deliberately inverted 2026-08-26. The hidden state
-   is now opt-IN: script.js adds .js-reveal to <html>, and only then does
-   [data-reveal] start at opacity 0. Previously the hidden state was the
-   default and script.js was the only thing that undid it, so with JavaScript
-   off 53% of this page rendered as empty coloured bands — measured 2,746 of
-   5,172px at 1440, including the entire One Day of Light block, both PDFs and
-   the seat reservation. A <noscript> override would also have worked, but it
-   would have given index.html its first-ever <style> block and broken the
-   invariant that this page's CSS lives entirely in style.css (7867c00).
-   Phase 7 replaces this with a scroll-driven animation and deletes script.js. */
-[data-reveal] {
-  transition: opacity 0.8s cubic-bezier(0.16,1,0.3,1),
-              transform 0.8s cubic-bezier(0.16,1,0.3,1);
+   HISTORY, because the failure mode here was expensive and is easy to recreate.
+   The hidden state used to be the DEFAULT and script.js the only thing that
+   undid it, so with JavaScript off 53% of this page rendered as empty coloured
+   bands — 2,746 of 5,172px at 1440, including the entire One Day of Light
+   block, both PDFs and the seat reservation. That was first fixed by inverting
+   the default (a .js-reveal class script.js added). script.js is gone now and
+   this is the final form.
+
+   Scroll-driven reveal, no JavaScript.
+   The keyframe has a `from` and NO `to`, so an element at rest is at its
+   natural state — a browser without animation-timeline never applies
+   opacity:0, and the content is simply there. That is why this is safe to ship
+   without the .js-reveal opt-in the IntersectionObserver version needed. */
+@keyframes reveal {
+  from { opacity: 0; transform: translateY(24px); }
 }
-.js-reveal [data-reveal] { opacity: 0; transform: translateY(40px); }
-.js-reveal [data-reveal].revealed { opacity: 1; transform: translateY(0); }
+@supports (animation-timeline: view()) {
+  @media (prefers-reduced-motion: no-preference) {
+    [data-reveal] {
+      animation: reveal linear both;
+      animation-timeline: view();
+      animation-range: entry 0% entry 35%;
+    }
+  }
+}
 
 /* ═══════════════════════════════════════════════════
    NAVIGATION
@@ -96,8 +105,25 @@ img { max-width: 100%; height: auto; display: block; }
   padding: 1.2rem 0;
   transition: background 0.4s, box-shadow 0.4s, padding 0.4s;
 }
+/* The scrolled state was a JS class toggle at scrollY > 60. A scroll-driven
+   animation over the document's own progress does the same thing, and the
+   `.scrolled` selector is kept so nothing else that referenced it breaks. */
+@keyframes nav-settle {
+  to {
+    background: rgba(222,231,230,0.88);
+    box-shadow: 0 1px 30px rgba(0,0,0,0.06);
+    padding: 0.8rem 0;
+  }
+}
+@supports (animation-timeline: scroll(root)) {
+  .nav {
+    animation: nav-settle linear both;
+    animation-timeline: scroll(root);
+    animation-range: 0 80px;
+  }
+}
 .nav.scrolled {
-  background: rgba(232,240,254,0.85);
+  background: rgba(222,231,230,0.88);
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
   box-shadow: 0 1px 30px rgba(0,0,0,0.06);
@@ -143,9 +169,15 @@ img { max-width: 100%; height: auto; display: block; }
   width: 24px; height: 2px; background: #11304b;
   border-radius: 2px; transition: all 0.3s;
 }
-.nav__hamburger.active span:nth-child(1) { transform: translateY(7px) rotate(45deg); }
-.nav__hamburger.active span:nth-child(2) { opacity: 0; }
-.nav__hamburger.active span:nth-child(3) { transform: translateY(-7px) rotate(-45deg); }
+.nav__links:target ~ .nav__right .nav__hamburger span:nth-child(1) { transform: translateY(7px) rotate(45deg); }
+.nav__links:target ~ .nav__right .nav__hamburger span:nth-child(2) { opacity: 0; }
+.nav__links:target ~ .nav__right .nav__hamburger span:nth-child(3) { transform: translateY(-7px) rotate(-45deg); }
+.nav__hamburger { text-decoration: none; }
+.nav__close {
+  display: none;
+  margin-top: 1rem; font-size: 1rem !important; font-weight: 600;
+  color: var(--slate-light) !important;
+}
 .nav__hamburger span { transition: transform 0.3s, opacity 0.3s; }
 
 /* ═══════════════════════════════════════════════════
@@ -778,7 +810,10 @@ img { max-width: 100%; height: auto; display: block; }
     overflow-y: auto;
     gap: 2rem; z-index: 999;
   }
-  .nav__links.open { display: flex; }
+  /* :target rather than a checkbox. Every link in this menu is an in-page
+     anchor, so following one re-targets the document and the menu closes
+     itself — the single behaviour a checkbox cannot reproduce without JS. */
+  .nav__links:target { display: flex; }
   .nav__links a { font-size: 1.5rem; }
   /* Vertical rule reads as a stray line in the column layout — degrade to a
      short horizontal rule between the two groups instead. */
@@ -872,3 +907,25 @@ img { max-width: 100%; height: auto; display: block; }
 html { scroll-padding-top: 5rem; }
 [id] { scroll-margin-top: 5rem; }
 h1, h2, h3, .post-hero__title, .card__title { text-wrap: balance; }
+
+
+/* ---- cross-document view transitions ---------------------------------
+   Opt-in, one line, and completely silent where unsupported. The nav and
+   footer are given a shared name so they hold still while the page under
+   them changes, instead of the whole document flashing.
+
+   Verified before shipping: `.nav`/`.blog-nav` and `.footer`/`.blog-footer`
+   each match EXACTLY ONE element per page (a duplicate name is invalid and
+   disables the transition). Three posts carry no footer at all, which is
+   fine — a missing name is not an error.
+
+   The reduced-motion override needs its own selectors: the existing
+   `*` rule cannot reach the ::view-transition pseudo-tree. */
+@view-transition { navigation: auto; }
+.nav, .blog-nav { view-transition-name: site-nav; }
+.footer, .blog-footer { view-transition-name: site-footer; }
+@media (prefers-reduced-motion: reduce) {
+  ::view-transition-group(*),
+  ::view-transition-old(*),
+  ::view-transition-new(*) { animation: none !important; }
+}

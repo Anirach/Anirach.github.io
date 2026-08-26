@@ -17,7 +17,7 @@ A hand-written static site — six top-level pages, four per-book detail pages, 
 | **Stack** | Plain HTML5 + CSS3 + one 83-line vanilla-JS file. Google Fonts is the only external dependency |
 | **Hosting** | GitHub Pages (classic Jekyll build) on the custom domain `anirach.com`, fronted by Cloudflare |
 | **Build step** | None |
-| **Tests** | `.claude/skills/site-check/scripts/check_site.py` — 60 cross-file integrity checks. This is the test suite |
+| **Tests** | `.claude/skills/site-check/scripts/check_site.py` — 59 cross-file integrity checks. This is the test suite |
 
 ## The six pages
 
@@ -92,7 +92,7 @@ python3 -m http.server 8000     # → http://localhost:8000
 Run all three from the repo root before pushing. All must pass:
 
 ```bash
-python3 .claude/skills/site-check/scripts/check_site.py      # 60 cross-file integrity checks
+python3 .claude/skills/site-check/scripts/check_site.py      # 59 cross-file integrity checks
 python3 docs/openclaw/check-news-sync.py                     # news↔homepage sync, provenance, 4 counters
 python3 .claude/skills/blog-post/assets/verify-wiring.py     # blog post wiring
 ```

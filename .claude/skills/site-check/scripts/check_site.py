@@ -1362,67 +1362,22 @@ def _(site):
 
 
 # ---------------------------------------------------------------------------
-# INV-21 — script.js DOM contract
+# INV-21 / INV-21b — RETIRED 2026-08-26, script.js deleted
 # ---------------------------------------------------------------------------
-def _selector_present(sel, s):
-    """Enough of a CSS-selector evaluator for the handful of hooks script.js
-    actually uses: #id, .class, [attr], tag, tag[attr^="v"]."""
-    sel = sel.strip()
-    if sel.startswith("#"):
-        return ('id="%s"' % sel[1:]) in s
-    if sel.startswith("."):
-        return re.search(r'class="[^"]*\b%s\b' % re.escape(sel[1:]), s) is not None
-    if sel.startswith("["):
-        attr = re.match(r"\[([A-Za-z0-9_-]+)", sel)
-        return bool(attr) and (attr.group(1) in s)
-    tag = re.match(r"^([a-zA-Z]+)", sel)
-    if not tag:
-        return True
-    if ("<" + tag.group(1)) not in s:
-        return False
-    inner = re.search(r"\[([A-Za-z0-9_-]+)", sel)
-    return (inner.group(1) in s) if inner else True
-
-
-@check("INV-21", "every DOM hook script.js uses exists in index.html")
-def _(site):
-    if not site.script_js:
-        return []
-    home = site.text["index.html"]
-    out = []
-    for qsel, gid in RE_JS_SEL.findall(site.script_js):
-        sel = ("#" + gid) if gid else qsel
-        if not _selector_present(sel, home):
-            out.append(Violation(sel, "script.js targets %s — not present in index.html" % sel))
-    return out
-
-
-# This check used to skip index.html — which is the only file in the repo
-# that contains data-reveal, so its domain was guaranteed empty and it could
-# never fire.  The exclusion is gone: the invariant is about the HOOK, not
-# about one page.  style.css ships `[data-reveal] { opacity: 0 }`, so a page
-# that carries the hook and never loads the script that adds `.revealed`
-# doesn't just lose an animation, it renders that content invisible — which
-# is exactly what the detail line now distinguishes.  Severity stays INFO
-# (unchanged); the domain is now every page, so index.html losing its
-# <script> tag, or a blog post inheriting a data-reveal by copy-paste, both
-# report.
-@check("INV-21b", "every data-reveal hook is on a page that loads JavaScript", INFO)
-def _(site):
-    out = []
-    for rel in site.pages:
-        s = site.text[rel]
-        n = s.count("data-reveal")
-        if n and "<script" not in s:
-            hidden = ('href="../style.css"' in s or 'href="style.css"' in s
-                      or "[data-reveal]" in s)
-            out.append(Violation(rel, "%s has %d data-reveal hook%s but loads no JS "
-                                      "— the reveal animation never fires%s"
-                                 % (rel, n, "" if n == 1 else "s",
-                                    " and the opacity:0 rule leaves that content "
-                                    "invisible" if hidden else "")))
-    return out
-
+# Both checks policed the contract between script.js and index.html: that every
+# DOM hook the script queried still existed, and that any page carrying a
+# data-reveal hook actually loaded the script that acted on it. They earned
+# their keep — INV-21 caught the orphaned .hero__bg-text parallax listener the
+# day the hero watermark was deleted.
+#
+# script.js no longer exists. The reveal is a scroll-driven CSS animation whose
+# keyframe has a `from` and no `to`, so a browser without animation-timeline
+# leaves the content at rest rather than hidden; the nav's scrolled state is
+# animation-timeline: scroll(root); and the mobile menu is :target. There is no
+# contract left to check, so these are DELETED rather than baselined — a
+# baseline entry would go stale and INV-25 would fail on it.
+#
+# What replaces them is INV-38: no page may load executable JavaScript at all.
 
 # ---------------------------------------------------------------------------
 # INV-22 — per-post :root
@@ -2667,5 +2622,46 @@ def _(site):
             # than per-violation, so failing the build on it would be wrong.
             # The two contradictions above are the ones that are broken NOW.
     return out
+
+
+@check("INV-38", "no page loads executable JavaScript")
+def _(site):
+    """The site became zero-JavaScript on 2026-08-26 and this is what keeps it
+    that way. It replaces INV-21/21b, which policed script.js's DOM contract
+    until script.js was deleted.
+
+    Everything the script did has a CSS equivalent now:
+
+        IntersectionObserver reveal  ->  animation-timeline: view()
+        scroll listener / .scrolled  ->  animation-timeline: scroll(root)
+        hamburger click handler      ->  :target
+        smooth anchor scroll         ->  scroll-behavior: smooth (native)
+
+    `<script type="application/ld+json">` is DATA, not code — the browser
+    parses it and never executes it — so it is allowed, and two pages use it.
+    Anything else, including an empty <script> or a src=, fails.
+
+    One thing this check CANNOT see: Cloudflare injects its own script at the
+    edge when Scrape Shield rewrites a mailto: (see INV-34). A clean repo is
+    necessary, not sufficient — verify a live page too.
+    """
+    out = []
+    for rel in site.pages:
+        s_ = site.text[rel]
+        for m in re.finditer(r"<script\b([^>]*)>", s_):
+            attrs = m.group(1)
+            if re.search(r'type\s*=\s*"application/(ld\+json|json)"', attrs):
+                continue
+            out.append(Violation("%s|%d" % (rel, m.start()),
+                "%s:%d loads executable JavaScript (<script%s>) — this site is "
+                "zero-JS; the CSS equivalents are listed in the check body"
+                % (rel, lineno(s_, m.start()), attrs[:60])))
+    if os.path.exists(os.path.join(site.root, "script.js")):
+        out.append(Violation("script.js",
+            "script.js is back — it was deleted 2026-08-26 and its four jobs "
+            "are all CSS now"))
+    return out
+
+
 if __name__ == "__main__":
     sys.exit(main())
