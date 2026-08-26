@@ -85,7 +85,7 @@ Adding a book = one new `books/<slug>.html` copied from a sibling detail page + 
 | measure | `.post-body` 720px (24/26) — 760px in openclaw-memory-architecture + vibe-coding-devops-process | 1200 / 1000 / 900 / 800px | 800px |
 
 **The island/house gap is now narrower than it looks.** Two of the sweeps reached every file
-regardless of family: the canonical 24-token `:root` (all 47 files) and the a11y block (46
+regardless of family: the canonical 28-token `:root` (all 49 blocks) and the a11y block (46
 embedded `<style>` blocks + `style.css`). What still separates island from house is **chrome and
 typography**, not tokens or accessibility. Do not re-plan the token or a11y work for island files;
 it is done. See `references/tokens.md` §1.
@@ -121,7 +121,8 @@ That is the architecture, not a bug — see anti-pattern 2 before you reach for 
 **This sweep is finished.** `6670480` put the block below into every file; `36d9814` fixed its one
 bad target, and the 2026-08-23 books/publications split and the 2026-08-24 One Day of Light page kept it clean. All **47** `:root` blocks
 across the 46 HTML files that have one plus `style.css`
-declare all 24 tokens with **zero value deviations** — every token reads `×47` in the audit.
+declare all 28 tokens with **zero value deviations** — every token reads `×49` in the audit
+(47 site pages + `404.html` + `assets/post-template.html`).
 `index.html` is the one file with no `:root` of its own, by design: its CSS is `style.css`, which
 carries the block at line 5.
 
@@ -132,17 +133,20 @@ remaining non-canonical tokens, and the rules for per-post brand tokens.
 :root {
   color-scheme: light;
   /* ink */
-  --navy: #0f172a; --slate: #334155; --slate-light: #64748b; --gray: #94a3b8;
+  --navy: #11304b; --slate: #334155; --slate-light: #526174; --gray: #94a3b8;
   /* ground */
-  --bg: #f8fafc; --white: #ffffff; --code-bg: #1e293b;
+  --bg: #faf7f0; --white: #ffffff; --code-bg: #1e293b;
   /* accent */
-  --blue: #6366f1; --blue-dark: #4f46e5; --blue-light: #818cf8;
+  --blue: #226299; --blue-dark: #1a4d7a; --blue-light: #4992b9;   /* --blue-light is BORDERS ONLY */
+  /* brand — sampled from the book covers (2026-08-26 re-key) */
+  --gold: #c4a46c; --gold-dark: #7a5f22; --cloud: #dee7e6; --parchment: #e9e1c4;
+  --focus: #226299;   /* footers and <pre> re-point this to --gold; see the a11y block */
   /* status — use only these six, never invent a seventh */
   --green: #22c55e; --red: #ef4444; --amber: #f59e0b;
   --cyan: #06b6d4; --purple: #8b5cf6; --purple-dark: #7c3aed;
   /* type */
-  --font: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
-  --mono: 'JetBrains Mono', 'Fira Code', monospace;
+  --font: 'Inter', 'Sarabun', -apple-system, BlinkMacSystemFont, sans-serif;
+  --mono: 'JetBrains Mono', 'Fira Code', 'Sarabun', monospace;
   /* form */
   --radius: 12px; --radius-sm: 8px; --radius-lg: 16px;
   --measure: 720px; --wide: 860px;
@@ -297,8 +301,11 @@ python3 -c "import re,collections; s=open('blog/index.html').read(); print(colle
 `<h2 class="card__title">` is matching 0 of 37 — write `<h[1-6] class="card__title">` and let the
 backreference close it. `verify-wiring.py` was blind for exactly this reason until 2026-08-10.
 
-`.category__count` reads `"First posts coming soon"` — not `"0 articles"` — for the two empty
-categories, and `check_site.py` INV-02d enforces that exact label. Do not "fix" it to a number.
+**Empty `.category` bands are forbidden** since 2026-08-26: `check_site.py` INV-02d fails on any
+band with 0 cards. The two placeholders (`#cat-academic`, `#cat-lifestyle`) and the hero's
+"N Categories" stat were deleted together — they had advertised categories the blog did not have
+for 16 days, with nothing able to expire them. A new category ships its band, grid, card and count
+in one commit. INV-02e still verifies the Categories stat **if** one is present.
 
 The sprawl this replaces is real (counts are exact `class="X"` token occurrences): **18 bespoke
 `*-card` classes** (`info-card` ×27, `tool-card` ×10, `pillar-card` ×9, `skill-card` ×9,
@@ -330,17 +337,19 @@ distinct `.post-hero` gradients across 26 house posts. This is the noisiest thin
 
 | Family | Gradient | Use for |
 |---|---|---|
-| Default / light | `linear-gradient(135deg, #e8f0fe 0%, #ddd6fe 50%, #c7d2fe 100%)` | DevOps fundamentals |
-| Indigo deep | `linear-gradient(135deg, #1e1b4b 0%, #312e81 40%, #3730a3 100%)` | security / auth; the `publications/` hero |
+| Default / light | `linear-gradient(135deg, #eef3f3 0%, #dee7e6 50%, #e9e1c4 100%)` — the sunrise | DevOps fundamentals |
+| Indigo deep → **Deep blue** | `linear-gradient(135deg, #11304b 0%, #1a4d7a 45%, #226299 100%)` | security / auth; the `publications/` hero |
 | Violet | `linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%)` | OpenClaw series |
-| Emerald | `linear-gradient(135deg, #052e16 0%, #064e3b 40%, #065f46 100%)` | testing / quality; the Novels section identity — all 5 `books/` pages (index + 4 detail) |
+| Emerald | `linear-gradient(135deg, #052e16 0%, #064e3b 40%, #065f46 100%)` | testing / quality; the Books section identity — all 5 `books/` pages (index + 4 detail) |
 | Teal | `linear-gradient(135deg, #134e4a 0%, #115e59 40%, #0f766e 100%)` | SRE / observability |
 
 The default is the plurality at **11 uses** (Emerald is next at 7 — 2 posts + the 5 `books/`
 pages), and the `40%`-stop fork `blog/index.html` used to
 carry was fixed by `b9fb125`. Verify it has not come back:
-`grep -ho 'linear-gradient(135deg, *#e8f0fe[^)]*)' index.html blog/*.html books/*.html news/index.html projects/index.html publications/index.html | sort | uniq -c`
-→ **one row**, all `50%`. Two rows means someone forked it again.
+`grep -ho 'linear-gradient(135deg, *#eef3f3[^)]*)' index.html blog/*.html books/*.html news/index.html projects/index.html publications/index.html | sort | uniq -c`
+→ **one row**, all `50%`. Two rows means someone forked it again. (The 2026-08-26 re-key mapped
+every retired hue through `scripts/retoken.py`; two gradients whose stops would have collapsed into
+a dead flat band were replaced whole and are listed in that script's `WHOLE_STRINGS`.)
 
 **Never hand-pick a sixth.** Retire the one-offs when you touch their file: `#0c1929…`
 (docker-compose), `#0d1117…` (github-actions), `#1a0533…` (gitops), `#0369a1…` (cloud), `#0891b2…`

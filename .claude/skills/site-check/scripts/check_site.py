@@ -710,32 +710,29 @@ def _(site):
     return out
 
 
-# The exact label an empty category (0 cards) must show instead of a number
-# — "0 articles" reads like a bug, so it is a distinct, deliberate string
-# rather than a numeric label of zero.
-CATEGORY_COMING_SOON = "First posts coming soon"
-
-# The two categories that intentionally carry 0 cards today (Task 11,
-# 2026-08-10). Not used to *skip* them — INV-02d checks every category,
-# empty or not — only referenced by fault-injection notes / commit history.
-EMPTY_CATEGORIES = {"cat-academic", "cat-lifestyle"}
+# Retired 2026-08-26. Until then an empty .category band was allowed to exist
+# so long as it carried the label "First posts coming soon". Two such bands
+# (#cat-academic, #cat-lifestyle) sat at the foot of the page for 16 days with
+# nothing to expire them, while the hero counted them as real categories.
+# The contract is now stricter, not looser: an empty band may not exist at all,
+# so a placeholder cannot be added and then forgotten. The first post in a new
+# category ships its band, grid, card and count in one commit.
 
 
 @check("INV-02d", ".category__count == cards inside that category "
-                   "(sum of its child series), or the coming-soon label if empty")
+                   "(sum of its child series); an empty band may not exist")
 def _(site):
     out = []
     for c in site.categories:
         ln = lineno(site.idx, c["count_off"])
         if c["cards"] == 0:
-            # An empty category must show the quiet coming-soon label, never
-            # a numeric "0 articles" — and never a stale positive number
-            # left over from before its cards were removed.
-            if c["count_text"] != CATEGORY_COMING_SOON:
-                out.append(Violation(c["id"],
-                    'blog/index.html:%d #%s has 0 cards but .category__count '
-                    'reads %r (want %r)'
-                    % (ln, c["id"], c["count_text"], CATEGORY_COMING_SOON)))
+            # An empty band is a placeholder with no expiry: it advertises a
+            # category the blog does not have. Ship the band with its first
+            # post, not before.
+            out.append(Violation(c["id"],
+                'blog/index.html:%d #%s is an empty .category band (0 cards). '
+                'Remove it, or ship it together with its first post.'
+                % (ln, c["id"])))
             continue
         m = re.match(r'^(\d+)\s+articles?$', c["count_text"])
         if not m:
@@ -752,12 +749,15 @@ def _(site):
     return out
 
 
-@check("INV-02e", 'blog-hero "N Categories" == number of <div class="category">')
+@check("INV-02e", 'blog-hero "N Categories", IF present, == number of <div class="category">')
 def _(site):
     stat = site.hero_stats.get("categories")
     want = len(site.categories)
+    # The stat is optional (dropped 2026-08-26, when the two placeholder bands
+    # went and a lone "1 Categories" would have been worse than silence) — but
+    # if it IS present it must still be recomputable and correct.
     if stat is None:
-        return [Violation("missing", 'blog/index.html has no "N Categories" hero stat')]
+        return []
     got, off = stat
     if got != want:
         ln = lineno(site.idx, off)

@@ -301,7 +301,7 @@ grep -ho 'linear-gradient(135deg[^)]*)' index.html style.css blog/*.html \
 11 linear-gradient(135deg,#e8f0fe 0%,#ddd6fe 50%,#c7d2fe 100%)  <- canonical light hero
  7 linear-gradient(135deg,#8b5cf6,#7c3aed,#a78bfa)           <- violet, 3-stop variant
  7 linear-gradient(135deg,#052e16 0%,#064e3b 40%,#065f46 100%)  <- canonical emerald:
-                                              2 posts + all 5 books/ (Novels) pages
+                                              2 posts + all 5 books/ (Books) pages
  5 linear-gradient(135deg,#8b5cf6 0%,#7c3aed 100%)           <- canonical violet
  4 linear-gradient(135deg,#f59e0b,#d97706)
  4 linear-gradient(135deg,#3b82f6,#2563eb)

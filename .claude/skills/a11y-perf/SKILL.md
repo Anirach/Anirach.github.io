@@ -1,6 +1,6 @@
 ---
 name: a11y-perf
-description: Accessibility and performance rules for the anirach.com static site (47 hand-written HTML files, no build step, per-file embedded CSS). Use this whenever you touch any .html file in this repo, add or edit a blog post under blog/, add or swap an image in images/, edit a :root palette or a .post-hero gradient, change nav markup, or are asked about contrast, alt text, focus states, keyboard access, page weight, image size, fonts, or Lighthouse/Core Web Vitals — even if the user does not mention accessibility or performance at all, and even for a "just add a card to blog/index.html" request. It carries this site's real measured numbers (blog/index.html is 4.03 MB referenced and fully lazy-loaded; --blue #6366f1 fails AA in every light context; the :focus-visible/reduced-motion/color-scheme baseline is landed in 47/47 pages; .post-hero__meta still fails contrast in 15 files) plus verified drop-in fixes, so use it instead of deriving generic WCAG advice.
+description: Accessibility and performance rules for the anirach.com static site (47 hand-written HTML files, no build step, per-file embedded CSS). Use this whenever you touch any .html file in this repo, add or edit a blog post under blog/, add or swap an image in images/, edit a :root palette or a .post-hero gradient, change nav markup, or are asked about contrast, alt text, focus states, keyboard access, page weight, image size, fonts, or Lighthouse/Core Web Vitals — even if the user does not mention accessibility or performance at all, and even for a "just add a card to blog/index.html" request. It carries this site's real measured numbers (blog/index.html is 4.03 MB referenced and fully lazy-loaded; the palette was re-keyed to the book covers 2026-08-26 so --blue #226299 now PASSES as text, while --blue-light is borders-only and the focus ring is scoped; the :focus-visible/reduced-motion/color-scheme baseline is landed in 47/47 pages; .post-hero__meta still fails contrast in 15 files) plus verified drop-in fixes, so use it instead of deriving generic WCAG advice.
 ---
 
 # Accessibility & performance for anirach.com
@@ -155,24 +155,34 @@ baseline entry**, so a regression will fail.
 
 Copy that pattern. Never ship a `<button class="nav__hamburger">` outside `index.html`.
 
-### 4. Use `--blue-dark #4f46e5` for text; `--blue #6366f1` is a background colour.
+### 4. `--blue #226299` is a TEXT colour now. `--blue-light` is borders only. **[RE-KEYED 2026-08-26]**
 
 Still fully outstanding — this is the largest live a11y defect on the site.
 
-`--blue #6366f1` fails WCAG AA in **every** light-background use here: 4.47:1 on white,
+**This rule inverted on 2026-08-26.** The palette was re-keyed to the book covers, and the token
+that used to be the site's largest a11y defect now passes everywhere: `--blue #226299` is 6.41:1 on
+white, 5.99 on the `--bg` cream, 5.09 on cloud and 4.90 on parchment — links, chips and small text
+are all legal. `--blue-dark #1a4d7a` is 8.80:1 and stays the hover/pressed state.
+
+**Two roles need care, both verified live:**
+- `--blue-light #4992b9` is **borders only** (3.45:1 on white, 3.94 on navy). Its 32 former uses
+  were all footer link text; they moved to `--gold` (5.73:1 on the new navy).
+- The focus ring carries `outline-offset: 3px`, so it lands on the *page* ground. Inside a navy
+  footer `--blue` collapses to 2.12:1, so a 28th token exists: `--focus`, re-pointed by
+  `.footer, .blog-footer, pre { --focus: var(--gold) }`.
+
+Historical, for context — the old value's failures, which is why the re-key happened:
+`--blue #6366f1` failed WCAG AA in **every** light-background use: 4.47:1 on white,
 4.09:1 on the tag chip, 3.87:1 on the series-count chip, 3.90:1 and 2.99:1 on the two
-ends of the hero gradient. `--blue-dark #4f46e5` — now declared in **all 47** `:root`
-blocks, so it is always available — clears all of those except the hero gradient.
+ends of the old hero gradient.
 `var(--blue)` is used 279 times against `var(--blue-dark)`'s 60; most of those 279 are
 legitimately borders and backgrounds, but every *text* use is a fail. (The 2026-08
 section pages and `style.css`'s `.btn--primary`/`.nav__cta` already made the
 `--blue-dark` switch, which is most of why its count rose from 23 to 60.)
 
-On the light hero gradient `#e8f0fe → #ddd6fe → #c7d2fe` even `#4f46e5` is only
-4.22:1 at the darkest stop. Use `#4338ca` there (5.30:1).
-
-Keep `#6366f1` for borders, backgrounds, shadows and gradient stops. Full table in
-`references/contrast.md`.
+That gradient no longer exists either — the light family is now the sunrise
+`#eef3f3 → #dee7e6 → #e9e1c4`, on which `--navy` measures 10.4–11.3:1 (measured live on the
+landing hero). `references/contrast.md` still holds the OLD palette's table and is stale.
 
 ### 5. A visible focus ring exists everywhere. **[DONE]** Hover/focus *parity* does not.
 
@@ -432,8 +442,7 @@ does not: on `#38bdf8` it is 2.02:1.
 ### R4. Palette contrast on light backgrounds — **[OUTSTANDING]**
 
 Apply per use site, not by redefining the token. **Do not change `--gray` globally** —
-`.footer span` at `blog/index.html:145` uses `var(--gray)` on `--navy #0f172a` where
-`#94a3b8` is a healthy 6.96:1, and any value dark enough to pass on white
+`.footer span` uses `var(--gray)` on `--navy #11304b` where `#94a3b8` is a healthy 5.29:1, and any value dark enough to pass on white
 (`#64748b` → 4.76:1) drops the footer to 3.75:1 and fails. The often-suggested
 `#6b7a8f` is not a fix either: 4.37:1 on white, still a fail.
 
@@ -446,7 +455,7 @@ sixth site, `.category__count`, which repeats the same `var(--blue)` mistake.
 .card__read,
 .series-count,
 .category__count,
-.blog-hero__stat strong  { color: var(--blue-dark); }    /* #4f46e5  5.16–6.29:1 */
+.blog-hero__stat strong  { color: var(--blue-dark); }    /* #1a4d7a  8.80:1 */
 .blog-hero__label        { color: #4338ca; }             /* 5.30:1 on #c7d2fe */
 .blog-hero__sub          { color: #475569; }             /* 5.08:1 on #c7d2fe */
 ```
@@ -582,7 +591,7 @@ Ordered by how much they degrade a screen-reader pass:
 
 `b9fb125` fixed the two stale ones and Task 11 added two more sites. **All five are
 correct today** and `check_site.py` INV-02a–INV-02e all PASS with no baseline entries:
-3 Categories, 2 Series, 37 Articles, `#cat-technology` 37, `#series-openclaw` 13,
+2 Series, 37 Articles, `#cat-technology` 37, `#series-openclaw` 13,
 `#series-devops` 24.
 
 ```bash

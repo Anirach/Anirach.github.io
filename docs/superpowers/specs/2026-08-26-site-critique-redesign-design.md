@@ -1,8 +1,9 @@
 # Design: anirach.com — Critique-Driven Redesign (identity, front door, blog, islands, system)
 
 **Date:** 2026-08-26
-**Status:** Critique complete (dual-agent impeccable run, 18/36). Owner decisions 1–4 taken. Token
-proposal (§3) and four open decisions (§7) awaiting owner review before any of the 47 files change.
+**Status:** Critique complete (dual-agent impeccable run, 18/36). Owner decisions 1–4 taken; the
+four open decisions in §7 were delegated back and are all SETTLED 2026-08-26. Phase 1 is built and
+verified locally; awaiting the owner's look before it is pushed.
 **Owner:** Dr. Anirach Mingkhwan
 **Supersedes nothing** — extends `2026-08-10-personal-platform-redesign-design.md` (structure stands).
 
@@ -60,7 +61,7 @@ below is WCAG-checked on every ground it can sit on; numbers are computed, not e
 | A Pocketful of Questions | dusk navy `#1f2540` · dusk gold `#eecf97` | — |
 | The Thirteenth Seal | charcoal `#0d0e13`–`#1b1d23` | red cell |
 
-### 3.2 The canonical `:root` — proposed (27 tokens; was 24)
+### 3.2 The canonical `:root` — SHIPPED (28 tokens; was 24 — `--focus` added by the §7.4 corrections)
 
 Changed values are marked. Unchanged tokens keep their measured contrast history.
 
@@ -89,8 +90,8 @@ Changed values are marked. Unchanged tokens keep their measured contrast history
   --green: #22c55e; --red: #ef4444; --amber: #f59e0b;
   --cyan: #06b6d4; --purple: #8b5cf6; --purple-dark: #7c3aed;
   /* type */
-  --font: 'Inter', 'Sarabun', -apple-system, BlinkMacSystemFont, sans-serif;   /* Thai face pending §7.1 */
-  --mono: 'JetBrains Mono', 'Fira Code', monospace;
+  --font: 'Inter', 'Sarabun', -apple-system, BlinkMacSystemFont, sans-serif;  /* §7.1 settled: Sarabun */
+  --mono: 'JetBrains Mono', 'Fira Code', 'Sarabun', monospace;  /* Thai in <code> fell to Courier New on 34 pages */
   /* form — unchanged */
   --radius: 12px; --radius-sm: 8px; --radius-lg: 16px;
   --measure: 720px; --wide: 860px;
@@ -112,7 +113,8 @@ Changed values are marked. Unchanged tokens keep their measured contrast history
 | gold `#c4a46c` on navy `#11304b` | 5.73 | footer links on the navy footer |
 | gray `#94a3b8` on navy `#11304b` | 5.29 | footer meta |
 | gold `#c4a46c` on cream | 2.21 | **decorative only** |
-| blue-light `#4992b9` on white / navy | 3.45 / 3.94 | borders, ≥24px text only |
+| blue-light `#4992b9` on white / navy | 3.45 / 3.94 | **borders only** — its 32 former text uses moved to `--gold` |
+| focus ring `#226299` on navy `#11304b` | 2.12 | why `--focus` is re-pointed to gold inside footers |
 
 ### 3.4 Gradients (the five approved families, re-keyed)
 
@@ -203,15 +205,44 @@ serves a root `404.html` automatically.
 
 ## 7. Open owner decisions (asked 2026-08-26)
 
-1. **Thai typeface** — Sarabun (looped, the Thai standard; best for long body prose) vs Noto Sans
-   Thai (loopless; matches Inter's neo-grotesque tone). Default if unanswered: Sarabun.
-2. **The books section's name** — nav says *Novels*, eyebrow says *Books*, h1 says *Novels &
-   Writing*. Keep *Novels* and fix the eyebrow (1 file), or rename the nav to *Books* (10 files).
-   Default: keep *Novels*, eyebrow → *Novels*.
-3. **Empty blog categories** — hide the two "First posts coming soon" bands (and count "1
-   Category") until posts exist, or keep them as a promise. Default: keep, but move them below
-   the Technology band's last card and stop counting them in the hero stats.
-4. **Token proposal §3.2** — approve as drafted, or adjust before the sweep.
+1. **Thai typeface** — SETTLED 2026-08-26: **Sarabun**, measured rather than argued. In Chrome the
+   mixed-line box is *identical* for Inter-only, Inter+Sarabun and Inter+Noto at every line-height
+   the site uses (30.59px at 17px/1.8), because the site sets unitless line-heights everywhere —
+   so the "metric compatibility" criterion is a tie at zero, and the categorical difference decides
+   it: Noto Sans Thai is loopless (ไม่มีหัว), a display idiom in Thailand, while Thai long-form body
+   convention is looped. Added to 39 pages (`Sarabun:wght@400;600;700`) and to BOTH token stacks.
+   `--mono` needed it too: 34 pages set Thai inside `<code>`, which was falling back to Courier New.
+   The 10 island posts load no webfont at all and are deferred to Phase 3 with the rest of their
+   conversion — ~40,500 Thai characters there still render in OS fallback until then.
+2. **The books section's name** — SETTLED 2026-08-26: **Books**, everywhere (nav, `<title>`,
+   `<h1>`, `og:title`, the 404 card, the four detail pages' back link). *Novels* was false of the
+   flagship — One Day of Light is a last-lecture companion booklet, not fiction — and *Fiction*
+   fails the same test. The index's hero eyebrow is deleted rather than reworded: no other section
+   index has one, and after the rename it duplicated the `<h1>` verbatim. The `.books-hero__label`
+   CSS stays, because the four detail pages use it for status text. 25 lines across 12 files;
+   no gate reads nav anchor text, so `grep -rn 'Novels'` returning nothing IS the test.
+3. **Empty blog categories** — SETTLED 2026-08-26: **both bands deleted, and the "Categories" hero
+   stat deleted with them** (a lone "1 Categories" reads worse than silence). The placeholders had
+   sat 16 days with nothing able to expire them while the hero counted them as real. The linter got
+   *stricter*, not looser, and no check was removed: INV-02d now fails on any empty band at all
+   (was: "an empty band must carry the label 'First posts coming soon'"), and INV-02e became
+   optional-but-verified (absent is fine; present must recompute). Both were fault-injected to
+   prove they still fail. Trade-off accepted: the first Academic/Lifestyle post must ship its band,
+   grid, card and count in one commit.
+4. **Token proposal §3.2** — SETTLED 2026-08-26: **approved with corrections** after an adversarial
+   pass recomputed all 21 ratios (all correct, max Δ 0.005) and then traced the tokens into their
+   real roles, which found two regressions the palette alone would have shipped:
+   - **`--blue-light` had no border uses at all** — all 32 uses were footer link text on the navy
+     ground, which the new navy would have dropped to 3.94:1 (FAIL). Fixed by selector:
+     `.footer a, .blog-footer a { color: var(--gold) }` = 5.73:1, measured live.
+   - **The focus ring failed inside footers** — `outline-offset: 3px` lands it on the page ground,
+     where the new blue on the new navy is 2.12:1 (FAIL SC 1.4.11). Fixed with a 28th token,
+     `--focus`, scoped: `.footer, .blog-footer, pre { --focus: var(--gold) }`.
+   Also added to the sweep: a full hue map (the spec's literal list missed `#0f172a` ×62,
+   `#f8fafc` ×23, `#64748b` ×9, `rgba(15,23,42,` ×22 and the whole periwinkle family in
+   `style.css`, which the canonical-gradient rule could not see), two gradients that would have
+   collapsed into a dead flat band once two of their stops mapped to the same value, and three
+   files the spec never listed: `404.html` and the two skill asset templates.
 
 ## 8. Out of scope
 

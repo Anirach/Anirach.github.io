@@ -7,23 +7,25 @@
   <meta name="description" content="ทดสอบอัตโนมัติทุก git push ด้วย GitHub Actions — static analysis, unit, integration, E2E (Playwright), security scanning และ coverage gate ใน CI pipeline">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=Sarabun:wght@400;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
     :root {
       color-scheme: light;
       /* ink */
-      --navy: #0f172a; --slate: #334155; --slate-light: #64748b; --gray: #94a3b8;
+      --navy: #11304b; --slate: #334155; --slate-light: #526174; --gray: #94a3b8;
       /* ground */
-      --bg: #f8fafc; --white: #ffffff; --code-bg: #1e293b;
+      --bg: #faf7f0; --white: #ffffff; --code-bg: #1e293b;
       /* accent */
-      --blue: #6366f1; --blue-dark: #4f46e5; --blue-light: #818cf8;
+      --blue: #226299; --blue-dark: #1a4d7a; --blue-light: #4992b9;
+      /* brand — sampled from the book covers. --gold is decorative on light grounds (2.2:1); --gold-dark is its text form. */
+      --gold: #c4a46c; --gold-dark: #7a5f22; --cloud: #dee7e6; --parchment: #e9e1c4; --focus: #226299;
       /* status — use only these six, never invent a seventh */
       --green: #22c55e; --red: #ef4444; --amber: #f59e0b;
       --cyan: #06b6d4; --purple: #8b5cf6; --purple-dark: #7c3aed;
       /* type */
-      --font: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
-      --mono: 'JetBrains Mono', 'Fira Code', monospace;
+      --font: 'Inter', 'Sarabun', -apple-system, BlinkMacSystemFont, sans-serif;
+      --mono: 'JetBrains Mono', 'Fira Code', 'Sarabun', monospace;
       /* form */
       --radius: 12px; --radius-sm: 8px; --radius-lg: 16px;
       --measure: 720px; --wide: 860px;
@@ -34,9 +36,9 @@
     .blog-nav { position: fixed; top: 0; left: 0; right: 0; z-index: 100; background: rgba(248,250,252,0.85); backdrop-filter: blur(20px); border-bottom: 1px solid rgba(0,0,0,0.05); }
     .blog-nav__inner { max-width: 860px; margin: 0 auto; padding: 0 2rem; height: 56px; display: flex; align-items: center; justify-content: space-between; }
     .blog-nav__back { font-size: 0.85rem; font-weight: 500; color: var(--blue); text-decoration: none; }
-    .blog-nav__back:hover { color: #4f46e5; }
+    .blog-nav__back:hover { color: #1a4d7a; }
     .blog-nav__title { font-size: 0.85rem; font-weight: 600; color: var(--navy); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 50%; }
-    .post-hero { padding: 8rem 2rem 3rem; background: linear-gradient(135deg, #1e1b4b 0%, #312e81 40%, #4338ca 100%); text-align: center; }
+    .post-hero { padding: 8rem 2rem 3rem; background: linear-gradient(135deg, #11304b 0%, #1a4d7a 45%, #226299 100%); text-align: center; }
     .post-hero__tags { display: flex; gap: 0.5rem; justify-content: center; margin-bottom: 1.25rem; flex-wrap: wrap; }
     .post-hero__tag { font-size: 0.7rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.1em; color: #a5b4fc; background: rgba(165,180,252,0.15); padding: 0.3rem 0.75rem; border-radius: 20px; }
     .post-hero__title { font-size: clamp(1.8rem, 5vw, 3rem); font-weight: 800; color: #fff; line-height: 1.2; margin-bottom: 1rem; max-width: 720px; margin-left: auto; margin-right: auto; }
@@ -45,30 +47,30 @@
     .post-hero__cover { aspect-ratio: 1/1; max-width: 380px; margin: 2.5rem auto 0; border-radius: 16px; overflow: hidden; box-shadow: 0 20px 60px rgba(0,0,0,0.4); }
     .post-hero__cover img { width: 100%; display: block; }
     .post-body { max-width: 720px; margin: 0 auto; padding: 3rem 2rem 6rem; }
-    .post-body h2 { font-size: 1.6rem; font-weight: 800; color: var(--navy); margin: 3rem 0 1rem; padding-bottom: 0.5rem; border-bottom: 2px solid rgba(99,102,241,0.15); }
+    .post-body h2 { font-size: 1.6rem; font-weight: 800; color: var(--navy); margin: 3rem 0 1rem; padding-bottom: 0.5rem; border-bottom: 2px solid rgba(34,98,153,0.15); }
     .post-body h3 { font-size: 1.25rem; font-weight: 700; color: var(--navy); margin: 2.25rem 0 0.75rem; }
     .post-body h4 { font-size: 1.05rem; font-weight: 700; color: var(--navy); margin: 1.75rem 0 0.6rem; }
     .post-body p { margin-bottom: 1.25rem; }
     .post-body strong { font-weight: 700; color: var(--navy); }
     .post-body pre { background: var(--code-bg); border-radius: 12px; padding: 1.5rem; margin: 1.25rem 0 1.5rem; overflow-x: auto; border: 1px solid rgba(255,255,255,0.05); }
     .post-body pre code { font-family: var(--mono); font-size: 0.82rem; color: #e2e8f0; line-height: 1.7; }
-    .post-body code { font-family: var(--mono); font-size: 0.88em; background: rgba(99,102,241,0.08); color: #4f46e5; padding: 0.15em 0.45em; border-radius: 5px; }
+    .post-body code { font-family: var(--mono); font-size: 0.88em; background: rgba(34,98,153,0.08); color: #1a4d7a; padding: 0.15em 0.45em; border-radius: 5px; }
     .post-body pre code { background: none; color: #e2e8f0; padding: 0; }
     .post-body ul, .post-body ol { margin: 0.5rem 0 1.25rem 1.5rem; }
     .post-body li { margin-bottom: 0.4rem; }
     .post-body table { width: 100%; border-collapse: collapse; margin: 1.25rem 0 1.5rem; font-size: 0.9rem; }
-    .post-body th { background: rgba(99,102,241,0.06); font-weight: 700; color: var(--navy); padding: 0.75rem 1rem; text-align: left; border-bottom: 2px solid rgba(99,102,241,0.15); }
+    .post-body th { background: rgba(34,98,153,0.06); font-weight: 700; color: var(--navy); padding: 0.75rem 1rem; text-align: left; border-bottom: 2px solid rgba(34,98,153,0.15); }
     .post-body td { padding: 0.65rem 1rem; border-bottom: 1px solid #e2e8f0; }
-    .post-body blockquote { background: rgba(99,102,241,0.06); border-left: 4px solid var(--blue); padding: 1rem 1.25rem; border-radius: 0 10px 10px 0; margin: 1.25rem 0; font-size: 0.95rem; color: var(--navy); }
-    .post-body hr { border: none; height: 1px; background: linear-gradient(90deg, transparent, rgba(99,102,241,0.2), transparent); margin: 3rem 0; }
+    .post-body blockquote { background: rgba(34,98,153,0.06); border-left: 4px solid var(--blue); padding: 1rem 1.25rem; border-radius: 0 10px 10px 0; margin: 1.25rem 0; font-size: 0.95rem; color: var(--navy); }
+    .post-body hr { border: none; height: 1px; background: linear-gradient(90deg, transparent, rgba(34,98,153,0.2), transparent); margin: 3rem 0; }
     .post-series-footer { text-align: center; font-size: 0.85rem; color: var(--gray); font-style: italic; margin-top: 2rem; padding-top: 2rem; border-top: 1px solid #e2e8f0; }
     .post-nav { max-width: 720px; margin: 0 auto; padding: 0 2rem 3rem; display: flex; gap: 1.5rem; flex-wrap: wrap; }
     .post-nav__link { flex: 1; min-width: 200px; padding: 1.25rem 1.5rem; border-radius: 12px; background: rgba(255,255,255,0.85); backdrop-filter: blur(16px); border: 1px solid rgba(255,255,255,0.6); box-shadow: 0 4px 16px rgba(0,0,0,0.05); text-decoration: none; color: inherit; transition: transform 0.2s, box-shadow 0.2s; }
-    .post-nav__link:hover { transform: translateY(-2px); box-shadow: 0 8px 24px rgba(99,102,241,0.1); }
+    .post-nav__link:hover { transform: translateY(-2px); box-shadow: 0 8px 24px rgba(34,98,153,0.1); }
     .post-nav__dir { font-size: 0.75rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.1em; color: var(--blue); margin-bottom: 0.35rem; }
     .post-nav__title { font-size: 0.9rem; font-weight: 600; color: var(--navy); line-height: 1.4; }
     .blog-footer { background: var(--navy); padding: 2rem 0; text-align: center; }
-    .blog-footer a { color: var(--blue-light); text-decoration: none; font-weight: 600; font-size: 0.9rem; }
+    .blog-footer a { color: var(--gold); text-decoration: none; font-weight: 600; font-size: 0.9rem; }
     .blog-footer span { color: var(--gray); font-size: 0.8rem; display: block; margin-top: 0.4rem; }
     /* Pyramid */
     .pyramid { display: flex; flex-direction: column; align-items: center; margin: 1.5rem 0 2rem; gap: 4px; }
@@ -76,22 +78,22 @@
     .pyramid__level--e2e { background: linear-gradient(135deg, #ef4444, #dc2626); width: 40%; }
     .pyramid__level--int { background: linear-gradient(135deg, #f59e0b, #d97706); width: 55%; }
     .pyramid__level--unit { background: linear-gradient(135deg, #22c55e, #16a34a); width: 70%; }
-    .pyramid__level--static { background: linear-gradient(135deg, #6366f1, #4f46e5); width: 90%; }
+    .pyramid__level--static { background: linear-gradient(135deg, #226299, #1a4d7a); width: 90%; }
     .pyramid__label { font-size: 0.68rem; color: var(--gray); margin-top: 0.1rem; font-weight: 400; }
     /* Pipeline diagram */
-    .pipeline { display: flex; flex-direction: column; gap: 0.5rem; margin: 1.5rem 0 2rem; padding: 1.5rem; background: rgba(99,102,241,0.04); border-radius: 12px; }
+    .pipeline { display: flex; flex-direction: column; gap: 0.5rem; margin: 1.5rem 0 2rem; padding: 1.5rem; background: rgba(34,98,153,0.04); border-radius: 12px; }
     .pipeline__stage { display: flex; gap: 0.5rem; align-items: center; flex-wrap: wrap; }
     .pipeline__label { font-size: 0.72rem; font-weight: 700; color: var(--blue); min-width: 80px; text-transform: uppercase; letter-spacing: 0.05em; }
     .pipeline__box { font-size: 0.78rem; font-weight: 600; padding: 0.4rem 0.75rem; border-radius: 8px; color: #fff; }
     .pipeline__box--pass { background: #16a34a; }
-    .pipeline__box--lint { background: #6366f1; }
+    .pipeline__box--lint { background: #226299; }
     .pipeline__box--test { background: #0891b2; }
     .pipeline__box--int { background: #d97706; }
     .pipeline__box--e2e { background: #dc2626; }
     .pipeline__box--sec { background: #7c3aed; }
     .pipeline__arrow { text-align: center; color: var(--blue); font-weight: 700; font-size: 0.9rem; }
-    .flow-diagram { display: flex; align-items: center; justify-content: center; gap: 0.5rem; flex-wrap: wrap; margin: 1.5rem 0 2rem; padding: 1.5rem; background: rgba(99,102,241,0.04); border-radius: 12px; }
-    .flow-step { text-align: center; padding: 0.75rem 1.25rem; background: white; border-radius: 10px; border: 1.5px solid rgba(99,102,241,0.15); box-shadow: 0 2px 8px rgba(0,0,0,0.04); }
+    .flow-diagram { display: flex; align-items: center; justify-content: center; gap: 0.5rem; flex-wrap: wrap; margin: 1.5rem 0 2rem; padding: 1.5rem; background: rgba(34,98,153,0.04); border-radius: 12px; }
+    .flow-step { text-align: center; padding: 0.75rem 1.25rem; background: white; border-radius: 10px; border: 1.5px solid rgba(34,98,153,0.15); box-shadow: 0 2px 8px rgba(0,0,0,0.04); }
     .flow-step__title { font-size: 0.9rem; font-weight: 700; color: var(--navy); }
     .flow-step__sub { font-size: 0.72rem; color: var(--gray); margin-top: 0.15rem; }
     .flow-arrow { font-size: 1.2rem; color: var(--blue); font-weight: 700; }
@@ -108,7 +110,11 @@
       .pyramid__level--static { width: 100%; }
     }
   
-    :focus-visible { outline: 2px solid var(--blue); outline-offset: 3px; border-radius: 2px; }
+    :focus-visible { outline: 2px solid var(--focus); outline-offset: 3px; border-radius: 2px; }
+    /* the ring sits on the page ground (3px offset). Inside the navy footers
+       and code blocks var(--blue) collapses to 2.12:1, so those scopes
+       re-point --focus to gold (5.73:1 on navy). */
+    .footer, .blog-footer, pre { --focus: var(--gold); }
     :focus:not(:focus-visible) { outline: none; }
     @media (prefers-reduced-motion: reduce) {
       *, *::before, *::after {
@@ -134,7 +140,7 @@
   <meta property="og:image:alt" content="Automated Testing with GitHub — ทดสอบอัตโนมัติทุก Push">
   <meta name="twitter:card" content="summary">
   <meta name="robots" content="max-image-preview:large">
-  <meta name="theme-color" content="#0f172a">
+  <meta name="theme-color" content="#11304b">
   <link rel="icon" href="/favicon.ico" sizes="any">
   <link rel="apple-touch-icon" href="/apple-touch-icon.png">
   <!-- /social -->
@@ -174,7 +180,7 @@
         <div class="flow-step__sub">Developer push code</div>
       </div>
       <span class="flow-arrow">→</span>
-      <div class="flow-step" style="border-color:rgba(99,102,241,0.3);background:rgba(99,102,241,0.04);">
+      <div class="flow-step" style="border-color:rgba(34,98,153,0.3);background:rgba(34,98,153,0.04);">
         <div class="flow-step__title">⚡ 847 tests</div>
         <div class="flow-step__sub">GitHub Actions รัน</div>
       </div>

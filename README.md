@@ -12,7 +12,7 @@ A hand-written static site — six top-level pages, four per-book detail pages, 
 
 | | |
 |---|---|
-| **Pages** | Home · Blog · Publications · Novels · Projects & Apps · News & Updates |
+| **Pages** | Home · Blog · Publications · Books · Projects & Apps · News & Updates |
 | **Blog** | **37 posts** in 3 categories (Technology holds 2 series; Academic & Philosophy and Lifestyle are awaiting their first posts) |
 | **Stack** | Plain HTML5 + CSS3 + one 83-line vanilla-JS file. Google Fonts is the only external dependency |
 | **Hosting** | GitHub Pages (classic Jekyll build) on the custom domain `anirach.com`, fronted by Cloudflare |
@@ -26,7 +26,7 @@ A hand-written static site — six top-level pages, four per-book detail pages, 
 | [`index.html`](index.html) | Single-scroll editorial portfolio: hero, about, latest-news strip, six research areas, featured book, curated live apps, contact |
 | [`blog/`](blog/) | 37 posts under three category bands — see below |
 | [`publications/`](publications/) | The academic record: the Springer book *Libraries in Transformation*, 8 book chapters, and a selected-publications table |
-| [`books/`](books/) | Books & writing (nav label "Novels"): four works — *One Day of Light* (the free last-lecture event book, EN/TH editions with free PDF downloads served from `books/`), the published novel *Three Old Men: The Last Conversation*, and two complete bilingual manuscripts — each with its own detail page (`books/one-day-of-light.html`, `books/three-old-men.html`, `books/a-pocketful-of-questions.html`, `books/the-thirteenth-seal.html`) |
+| [`books/`](books/) | Books & writing (nav label "Books"): four works — *One Day of Light* (the free last-lecture event book, EN/TH editions with free PDF downloads served from `books/`), the published novel *Three Old Men: The Last Conversation*, and two complete bilingual manuscripts — each with its own detail page (`books/one-day-of-light.html`, `books/three-old-men.html`, `books/a-pocketful-of-questions.html`, `books/the-thirteenth-seal.html`) |
 | [`projects/`](projects/) | Live apps (each verified working before it ships) and research-code repositories |
 | [`news/`](news/) | Reverse-chronological timeline of publications, talks and appointments, plus a career timeline |
 

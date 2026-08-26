@@ -30,7 +30,7 @@ Deploy by pushing to `main` — GitHub Pages auto-deploys. There is no `.nojekyl
 ├── blog/
 │   ├── index.html      # Blog listing — fully static, zero JavaScript, 3 category bands (only Technology has posts)
 │   └── *.html          # 37 self-contained posts (own <style>, own :root, own nav markup)
-├── books/              # Books & writing (nav label "Novels") — all self-contained
+├── books/              # Books & writing (nav label "Books") — all self-contained
 │   ├── index.html      #   the section index: the last-lecture book + 1 published novel + 2 complete manuscripts
 │   ├── one-day-of-light.html         # per-book detail page (+ one-day-of-light-{en,th}.pdf — free downloads, served from books/)
 │   ├── three-old-men.html            # per-book detail page
@@ -81,8 +81,8 @@ The numbered OpenClaw series order is fixed: `openclaw-101` → `agent-teams` �
 ## Conventions
 
 - **Language**: `<html lang="th">` on posts. All 6 nav-bearing index pages (`index.html`, `blog/index.html`, `books/index.html`, `publications/index.html`, `projects/index.html`, `news/index.html`) and the 4 `books/` detail pages are `lang="en"`. Headings and technical terms in English, body prose in Thai (marked with `<span lang="th">` on the section pages).
-- **CSS variables**: defined per-file in each blog page's own `:root`. Common set: `--navy: #0f172a`, `--blue`/`--indigo: #6366f1`, `--slate: #334155`, `--slate-light: #64748b`, `--bg: #f8fafc`, `--font` (Inter), `--mono` (JetBrains Mono). Longer posts add semantic accents (`--green`, `--amber`, `--purple`, `--code-bg`). Copy the `:root` from the nearest sibling post rather than inventing one. `openclaw-101.html` predates this and uses raw hex throughout.
-- **Fonts**: Google Fonts `<link>` per page — Inter 300–900, plus JetBrains Mono 400–600 on posts with code.
+- **CSS variables**: defined per-file in each blog page's own `:root`. Re-keyed to the book covers on 2026-08-26 (`scripts/retoken.py`, 28 tokens in 49 blocks): `--navy: #11304b`, `--blue: #226299` (a TEXT colour now — 6.4:1 on white), `--blue-dark: #1a4d7a`, `--blue-light: #4992b9` (**borders only**), `--slate: #334155`, `--slate-light: #526174`, `--bg: #faf7f0`, brand `--gold: #c4a46c` / `--gold-dark: #7a5f22` / `--cloud` / `--parchment`, and `--focus` (re-pointed to gold inside footers and `<pre>`, where the blue ring collapses to 2.12:1). `--font` (Inter + Sarabun for Thai), `--mono` (JetBrains Mono + Sarabun). Longer posts add semantic accents (`--green`, `--amber`, `--purple`, `--code-bg`). Copy the `:root` from the nearest sibling post rather than inventing one. `openclaw-101.html` predates this and uses raw hex throughout.
+- **Fonts**: Google Fonts `<link>` per page — Inter 300–900, **Sarabun 400/600/700 for Thai** (looped, the Thai body-prose convention; added 2026-08-26 to 39 pages — the 10 island posts load no webfont at all and are deferred to the island conversion), plus JetBrains Mono 400–600 on posts with code.
 - **Diagrams**: render as PNG in `images/` and `<img>` them in. Inline HTML/CSS and ASCII-art diagrams have repeatedly broken layout and were replaced (`c270892`, `4ae2660`) — do not reintroduce them.
 - **Images**: covers are `images/<slug>-cover.png|jpg`, referenced from posts as `../images/...` and from `blog/index.html` as `../images/...`. Card `<img>` tags carry an inline `style="background: linear-gradient(...)"` fallback.
 - **Reveal animations**: `data-reveal` attribute — landing page only (driven by `script.js`).

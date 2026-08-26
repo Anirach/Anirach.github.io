@@ -149,7 +149,7 @@ cp .claude/skills/page-design/assets/post-template.html blog/<slug>.html
 ```
 
 That file is the **single** post template in this repo. It already carries the canonical
-24-token `:root`, the 4-line a11y block (`:focus-visible`, `prefers-reduced-motion`,
+28-token `:root`, the 4-line a11y block (`:focus-visible`, `prefers-reduced-motion`,
 `color-scheme`, `text-wrap`), `aspect-ratio` on the cover box, full image attributes, and
 `var(--measure)`/`var(--wide)`/`var(--radius-lg)` instead of hardcoded pixels.
 
@@ -197,7 +197,7 @@ Non-negotiables, each because something on disk got them wrong:
   openclaw-migration) reach the index through other header/footer links; only
   openclaw-memory and openclaw-skills have no route to the blog index at all. Do not
   add a twelfth.
-- **Keep the `:root` block, byte-identical.** Every post has the canonical 24-token block
+- **Keep the `:root` block, byte-identical.** Every post has the canonical 28-token block
   since `6670480` — the "ten posts have none" note that used to be here is obsolete.
   `style.css` is not loaded by any blog page (only `index.html` loads it), so the `:root`
   in the post file is the only place these variables exist. `check_site.py` INV-22 PASSes;
@@ -207,7 +207,7 @@ Non-negotiables, each because something on disk got them wrong:
   a mobile menu, use the pure-CSS `.nav__toggle` checkbox pattern from `blog/index.html` —
   INV-12 enforces that every toggle is actually wired.
 
-The palette is the canonical 24-token block, identical in all 47 `:root` blocks —
+The palette is the canonical 28-token block, identical in all 49 `:root` blocks —
 do not retype it, copy it from the template or from `style.css:5`. Full table:
 `page-design/references/tokens.md` §1.
 
@@ -268,7 +268,7 @@ Copy this exactly, including the odd indentation (the comment is indented 8, the
         <!-- Card: {Short English Name} -->
       <a href="{slug}.html" class="card">
         <div class="card__image">
-          <img src="../images/{cover-file}" alt="{Short English Name}" style="background: linear-gradient(135deg, #4f46e5, #7c3aed, #06b6d4);">
+          <img src="../images/{cover-file}" alt="{Short English Name}" style="background: linear-gradient(135deg, #1a4d7a, #7c3aed, #06b6d4);">
         </div>
         <div class="card__body">
           <div class="card__tags">
@@ -317,7 +317,7 @@ immediately.
 
 | Counter | Value today | Changes when you add a post? |
 |---|---|---|
-| `.blog-hero__stat` "N Categories" | 3 | only if you add a `.category` block |
+| `.blog-hero__stat` "N Categories" | — | the stat was deleted 2026-08-26; re-add it only if a second `.category` band ever ships, and INV-02e will then verify it |
 | `.blog-hero__stat` "N Series" | 2 | only if you add a `.series-section` |
 | `.blog-hero__stat` "N Articles" | 37 | **yes, always** |
 | `.category__count` `#cat-technology` | 37 articles | **yes**, for a Technology post |
@@ -341,7 +341,8 @@ EOF
 
 Set the hero stat, the `.category__count` and the relevant `.series-count` to what those
 commands print. Adding the *first* post to Academic & Philosophy or Lifestyle changes that
-category's `.category__count` from `"First posts coming soon"` to `"1 article"` — see
+category's band, grid, card and `.category__count` in ONE commit (INV-02d rejects an empty
+band since 2026-08-26) — see
 Step 1. INV-02d treats the coming-soon label as clean and flags both a stale number and a
 literal `"0"`.
 

@@ -30,7 +30,7 @@ means writing a deliberate falsehood into a file that is auditable forever.
 
 Four labels are hand-typed: `news/index.html`'s `"N updates"`, `publications/index.html`'s
 `"N chapters"` (this label lived on `books/index.html` until the 2026-08-23 split of Books into
-Publications + Novels), and `books/index.html`'s `"N novel"` and `"N complete"`. All four drift
+Publications + Books), and `books/index.html`'s `"N novel"` and `"N complete"`. All four drift
 silently whenever an item is added without touching the label — a split
 commit nearly desynchronised them once. The gate recomputes all four from the actual item counts
 (after stripping HTML comments, so a commented-out card cannot satisfy a label) and
@@ -207,7 +207,7 @@ items to it and do not give it date chips; the checker deliberately ignores rows
 The three homepage rows are Sep 2026 / Aug 2026 / Jul 2026.
 
 `publications/index.html`'s Chapters section holds **8 chapters** with its own `"N chapters"`
-label, and `books/index.html` (Novels) carries `"1 novel"` and `"2 complete"` — the
+label, and `books/index.html` (Books) carries `"1 novel"` and `"2 complete"` — the
 checker verifies all three too.
 
 Re-derive rather than trusting this paragraph:
