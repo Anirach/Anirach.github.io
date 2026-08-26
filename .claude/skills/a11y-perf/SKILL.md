@@ -1,6 +1,6 @@
 ---
 name: a11y-perf
-description: Accessibility and performance rules for the anirach.com static site (47 hand-written HTML files, no build step, per-file embedded CSS). Use this whenever you touch any .html file in this repo, add or edit a blog post under blog/, add or swap an image in images/, edit a :root palette or a .post-hero gradient, change nav markup, or are asked about contrast, alt text, focus states, keyboard access, page weight, image size, fonts, or Lighthouse/Core Web Vitals — even if the user does not mention accessibility or performance at all, and even for a "just add a card to blog/index.html" request. It carries this site's real measured numbers (blog/index.html is 4.07 MB referenced and fully lazy-loaded; the palette was re-keyed to the book covers 2026-08-26 so --blue #226299 now PASSES as text, while --blue-light is borders-only and the focus ring is scoped; the :focus-visible/reduced-motion/color-scheme baseline is landed in 47/47 pages; .post-hero__meta and .post-series-footer contrast are both DONE as of 2026-08-26) plus verified drop-in fixes, so use it instead of deriving generic WCAG advice.
+description: Accessibility and performance rules for the anirach.com static site (47 hand-written HTML files, no build step, per-file embedded CSS). Use this whenever you touch any .html file in this repo, add or edit a blog post under blog/, add or swap an image in images/, edit a :root palette or a .post-hero gradient, change nav markup, or are asked about contrast, alt text, focus states, keyboard access, page weight, image size, fonts, or Lighthouse/Core Web Vitals — even if the user does not mention accessibility or performance at all, and even for a "just add a card to blog/index.html" request. It carries this site's real measured numbers (blog/index.html is 1.59 MB referenced and fully lazy-loaded after the 2026-08-26 drawn-cover system; the palette was re-keyed to the book covers 2026-08-26 so --blue #226299 now PASSES as text, while --blue-light is borders-only and the focus ring is scoped; the :focus-visible/reduced-motion/color-scheme baseline is landed in 47/47 pages; .post-hero__meta and .post-series-footer contrast are both DONE as of 2026-08-26) plus verified drop-in fixes, so use it instead of deriving generic WCAG advice.
 ---
 
 # Accessibility & performance for anirach.com
@@ -106,20 +106,22 @@ is exactly the kind of small wrongness that makes a reader stop trusting this fi
 
 Card images in `blog/index.html` sit in a 352×220 CSS px slot (1200px section −
 2×2.5rem padding = 1120; `repeat(auto-fill, minmax(340px,1fr))` with `gap:2rem` →
-3 cols of 352px; `.card__image { aspect-ratio: 16/10 }` → 220px). Source covers are
-square on 24 of 35 files (13× 800×800, 11× 1024×1024) and landscape on the other 11
-(1024×680, 800×446, 1024×509, …). On a square source, `object-fit:cover` into the
-16:10 slot throws away 37.5% of the pixels; on the landscape ones only ~6%. Check
+3 cols of 352px; `.card__image { aspect-ratio: 16/10 }` → 220px). Source covers are **800×800 on all 37** as of 2026-08-26 — the drawn cover
+system (`scripts/make_cover.py` + `scripts/covers.tsv`) replaced 35 AI clip-art
+images at mixed canvases (1024×1024, 1024×680, 800×446, …) with one. `object-fit:
+cover` into the 16:10 slot throws away 37.5% of a square source, which is why the
+renderer keeps every glyph and every motif inside a SAFE BAND of y∈[0.20,0.80],
+x∈[0.12,0.88]; the crop eats only ground. Check
 the actual file with `sips -g pixelWidth -g pixelHeight` before quoting a waste figure.
 
 ```html
 <!-- blog/index.html card: below the fold, fixed slot -->
-<img src="../images/openclaw-101-cover.jpg" alt="" width="1024" height="1024"
+<img src="../images/openclaw-101-cover.jpg" alt="" width="800" height="800"
      loading="lazy" decoding="async">
 
 <!-- post hero cover: above the fold, do NOT lazy-load the LCP element -->
 <img src="../images/openclaw-101-cover.jpg" alt="OpenClaw 101 architecture overview"
-     width="1024" height="1024" loading="eager" fetchpriority="high" decoding="async">
+     width="800" height="800" loading="eager" fetchpriority="high" decoding="async">
 ```
 
 `width`/`height` are the **source** pixel size, not the CSS slot size — that is the
@@ -346,7 +348,8 @@ not.** Loops and verification commands: `references/n-file-edits.md`.
 
 ### R1. `blog/index.html` page weight — **[DONE]**
 
-Was 18.41 MB. Now **4.07 MB of referenced bytes, all of it lazy**.
+Was 18.41 MB, then 4.07 MB. Now **1.59 MB of referenced bytes, all of it lazy** —
+the drawn covers (2026-08-26) took the image half from 4.27 MB to 1.59 MB.
 
 ```bash
 python3 - <<'EOF'
@@ -362,19 +365,19 @@ print(f"img tags {len(tags)}  unique {len(u)}  lazy {sum('loading=\"lazy\"' in t
 print(f"html {h:,}  images {sum(u.values()):,}  total {h+sum(u.values()):,}")
 EOF
 # → img tags 74  unique 38  lazy 74
-#   html 76,387  images 4,268,081  total 4,344,468   (4.07 MB)
+#   html 76,032  images 1,588,274  total 1,664,306   (1.59 MB)
 ```
 
 Three numbers matter and they are not the same number — quote the right one:
 
 | Figure | Value | Meaning |
 |---|---|---|
-| referenced total | **4.07 MB** | every byte the page can eventually pull. Was 18.41 MB. |
+| referenced total | **1.59 MB** | every byte the page can eventually pull. Was 18.41 MB, then 4.07 MB. |
 | eager payload | **67 KB** | the HTML. **All 74 `<img>` tags are `loading="lazy"`**, so nothing else is fetched up front. |
-| realistic first viewport | **≈1.7 MB** | HTML + the first ~10 cards' covers, which a browser fetches because lazy images near the viewport still load. |
+| realistic first viewport | **≈0.5 MB** | HTML + the first ~10 cards' covers, which a browser fetches because lazy images near the viewport still load. |
 
-Saying "the blog index is 4 MB" overstates what a visitor downloads by ~2.4×; saying
-"67 KB" understates it. Say 4.07 MB referenced / ≈1.7 MB first viewport.
+Saying "the blog index is 1.6 MB" overstates what a visitor downloads by ~3×; saying
+"74 KB" understates it. Say 1.59 MB referenced / ≈0.5 MB first viewport.
 
 `ec2827b` + `21c8a55` did the cover re-encode; `e8da9da` added the attributes. Heaviest
 posts now: `blog/idle-self-improvement.html`, `openclaw-migration.html`,
@@ -533,7 +536,7 @@ Ordered by how much they degrade a screen-reader pass:
   ```html
   <div class="card">
     <div class="card__image">
-      <img src="../images/openclaw-101-cover.jpg" alt="" width="1024" height="1024"
+      <img src="../images/openclaw-101-cover.jpg" alt="" width="800" height="800"
            loading="lazy" decoding="async">
     </div>
     <h4 class="card__title"><a href="openclaw-101.html" class="card__link">Title…</a></h4>

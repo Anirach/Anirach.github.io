@@ -365,7 +365,7 @@ kept here as *the standard to hold*, not as a plan. Re-verify before you act on 
 
 ### DONE — hold the line, do not re-plan
 
-**1. Image loading — LANDED.** `blog/index.html` now references **4.07 MB across 38 unique
+**1. Image loading — LANDED.** `blog/index.html` now references **1.59 MB across 38 unique
 images** over 74 `<img>` tags, and **all 74 carry `loading="lazy"`**, so the HTML-only first byte
 cost is 67 KB and a first desktop viewport (first ~10 cards) fetches ≈1.7 MB, not 18.4 MB.
 Sitewide, **137 of 137 `<img>` tags have all four of `loading`, `decoding`, `width`, `height`**
@@ -509,7 +509,7 @@ Then in a real browser on `index.html`: tab once and confirm a visible focus rin
 
 - **`content-visibility: auto`.** Long posts exist (`web-architecture.html` 91 KB,
   `frontend-performance.html` 69 KB) but `.post-body` has no section children to apply it to. The
-  image bottleneck that used to dwarf it is gone (18.4 MB → 4.07 MB referenced, all lazy), so this
+  image bottleneck that used to dwarf it is gone (18.4 MB → 4.07 MB → 1.59 MB referenced, all lazy), so this
   is now merely small rather than irrelevant. Revisit only if posts get sectioned.
 
 ### NEVER — with reasons

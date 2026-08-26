@@ -2245,17 +2245,32 @@ def main(argv=None):
 
 # The five approved .post-hero families (page-design §5, re-keyed 2026-08-26 to
 # the book covers). A sixth value is drift, not a design decision.
+# POSTS may use exactly two families as of 2026-08-26. The palette was re-keyed
+# to the book jackets (navy/cream/blue/gold) and violet and teal were never in
+# it; emerald survives as books/'s identity and Deep Blue as publications/', but
+# neither is a POST family any more. Collapsing to two is also what lets the
+# drawn cover system pick a ground that cannot vanish into the hero behind it
+# (scripts/make_cover.py FORBIDDEN).
+#
+#   DevOps & Vibe Coding (24 posts) -> Sunrise
+#   OpenClaw band        (13 posts) -> Deep Blue
+#
+# scripts/reheroize.py performs and re-verifies the mapping. Re-widening this
+# set is how the site would silently drift back to five families, so add an
+# entry only with a deliberate design decision behind it.
 APPROVED_HERO_GRADIENTS = {
-    "linear-gradient(135deg, #eef3f3 0%, #dee7e6 50%, #e9e1c4 100%)",
-    "linear-gradient(135deg, #11304b 0%, #1a4d7a 45%, #226299 100%)",
-    "linear-gradient(135deg, #052e16 0%, #064e3b 40%, #065f46 100%)",
-    "linear-gradient(135deg, #134e4a 0%, #115e59 40%, #0f766e 100%)",
-    "linear-gradient(135deg, #2e1065 0%, #4c1d95 45%, #6d28d9 100%)",
+    "linear-gradient(135deg, #eef3f3 0%, #dee7e6 50%, #e9e1c4 100%)",   # Sunrise
+    "linear-gradient(135deg, #11304b 0%, #1a4d7a 45%, #226299 100%)",   # Deep Blue
+}
+RETIRED_HERO_GRADIENTS = {                                              # posts only
+    "linear-gradient(135deg, #052e16 0%, #064e3b 40%, #065f46 100%)",   # Emerald -> books/
+    "linear-gradient(135deg, #134e4a 0%, #115e59 40%, #0f766e 100%)",   # Teal
+    "linear-gradient(135deg, #2e1065 0%, #4c1d95 45%, #6d28d9 100%)",   # Violet
 }
 RE_POST_HERO_BG = re.compile(r"\.post-hero\s*\{[^}]*?background:\s*([^;]+);", re.S)
 
 
-@check("INV-28", "every .post-hero background is one of the 5 approved gradient families")
+@check("INV-28", "every .post-hero background is Sunrise or Deep Blue (the 2 post families)")
 def _(site):
     out = []
     for f in site.posts:
@@ -2380,6 +2395,33 @@ def _(site):
                 out.append(Violation("%s|hero" % f,
                     "%s: .post-hero__cover img has no height:auto and no "
                     "object-fit — the cover will render squeezed" % f))
+
+    # THIRD MISS, 2026-08-26. This check has now been wrong twice in the same
+    # direction: it looked only inside post bodies, then only inside posts. The
+    # drawn cover system re-rendered every cover at 800x800 and left 46 <img>
+    # tags across blog/index.html and 23 posts still DECLARING 1024x1024 or
+    # 800x446. A declared height that disagrees with the file is the squeeze
+    # trap at its source, so measure the file and compare — do not infer.
+    for rel in ["blog/index.html"] + ["blog/" + f for f in site.posts]:
+        txt = site.text.get(rel, "")
+        for m in re.finditer(r"<img\b[^>]*>", txt):
+            tag = m.group(0)
+            src = re.search(r'src="([^"]*\.(?:jpg|jpeg|png))"', tag)
+            w = re.search(r'width="(\d+)"', tag)
+            h = re.search(r'height="(\d+)"', tag)
+            if not (src and w and h):
+                continue
+            path = os.path.normpath(os.path.join(site.root, os.path.dirname(rel),
+                                                 src.group(1)))
+            if not os.path.exists(path):
+                continue
+            real = image_pixel_size(path)
+            if real and (int(w.group(1)), int(h.group(1))) != real:
+                out.append(Violation("%s|%s" % (rel, src.group(1)),
+                    "%s:%d <img %s> declares %sx%s but the file is %dx%d — the "
+                    "declared size is what sets the intrinsic aspect ratio"
+                    % (rel, lineno(txt, m.start()), os.path.basename(src.group(1)),
+                       w.group(1), h.group(1), real[0], real[1])))
     return out
 
 
@@ -2425,6 +2467,79 @@ def _(site):
                     "rewrite it to [email protected] and inject a decoder script"
                     % (rel, lineno(s, m.start()))))
     return out
+
+
+@check("INV-35", "the drawn cover system is intact: every post has a cover and a share card")
+def _(site):
+    """Guards scripts/make_cover.py + scripts/covers.tsv, which replaced 35 AI
+    clip-art covers with one drawn system on 2026-08-26.
+
+    What can rot, and did rot at least once each while building it:
+
+    - A post gets added with no row in covers.tsv, so it keeps whatever cover
+      it was born with and the family quietly gains an outlier.
+    - A cover is regenerated at the wrong canvas. Every cover is 800x800 because
+      74 <img> tags hard-code those numbers; a 1200x630 cover written over one
+      renders squeezed (this is the INV-33 trap, one level up).
+    - A share card goes missing. og:image points at <slug>-og.jpg, so a missing
+      file is a broken share preview that no page visibly shows.
+    - A cover blows the weight budget. The whole point was 4.1 MB -> 1.6 MB;
+      flat drawn art has no business exceeding 90 KB, and one that does is
+      almost always a photo that slipped in.
+
+    INV-27 already checks that og:image:width/height match the file on disk, so
+    this deliberately does not re-check that.
+    """
+    out = []
+    table = os.path.join(site.root, "scripts", "covers.tsv")
+    if not os.path.exists(table):
+        return [Violation("covers.tsv", "scripts/covers.tsv is missing — the "
+                          "cover system's spec table is its source of truth")]
+    rows = {}
+    with open(table, encoding="utf-8") as fh:
+        head = fh.readline().rstrip("\n").split("\t")
+        for line in fh:
+            if not line.strip():
+                continue
+            r = dict(zip(head, line.rstrip("\n").split("\t")))
+            rows[r["slug"]] = r
+
+    for f in site.posts:
+        slug = f[:-5]
+        if slug not in rows:
+            out.append(Violation("%s|row" % f,
+                "%s has no row in scripts/covers.tsv — it will keep whatever "
+                "cover it was born with instead of a drawn one" % f))
+            continue
+        cover = os.path.join(site.images, rows[slug]["out"])
+        if not os.path.exists(cover):
+            out.append(Violation("%s|cover" % f,
+                "%s: covers.tsv names %s but that file does not exist"
+                % (f, rows[slug]["out"])))
+        else:
+            dims = image_pixel_size(cover)
+            if dims and dims != (800, 800):
+                out.append(Violation("%s|dims" % f,
+                    "%s: cover %s is %dx%d, not 800x800 — 74 <img> tags "
+                    "hard-code 800" % (f, rows[slug]["out"], dims[0], dims[1])))
+            kb = os.path.getsize(cover) / 1024
+            if kb > 90:
+                out.append(Violation("%s|kb" % f,
+                    "%s: cover %s is %.0f KB, over the 90 KB budget for flat "
+                    "drawn art" % (f, rows[slug]["out"], kb)))
+        og = os.path.join(site.images, slug + "-og.jpg")
+        if not os.path.exists(og):
+            out.append(Violation("%s|og" % f,
+                "%s: no share card images/%s-og.jpg — og:image points at one"
+                % (f, slug)))
+        else:
+            dims = image_pixel_size(og)
+            if dims and dims != (1200, 630):
+                out.append(Violation("%s|ogdims" % f,
+                    "%s: share card is %dx%d, not 1200x630"
+                    % (f, dims[0], dims[1])))
+    return out
+
 
 if __name__ == "__main__":
     sys.exit(main())

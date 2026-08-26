@@ -543,3 +543,53 @@ pair, which reproduced the live defect and failed the build.
 Alternative fixes that need dashboard access this repo does not have: turning the feature off under
 Scrape Shield, or a Configuration Rule scoped to the site. The comment pair is preferred precisely
 because it lives in version control next to the thing it protects.
+
+### INV-35 — the drawn cover system is intact
+
+Guards `scripts/make_cover.py` + `scripts/covers.tsv`, which on 2026-08-26 replaced 35 AI clip-art
+covers (glowing circuit-brains, dogs in hard hats) with one drawn system in the book-jacket
+language. `blog/index.html` went from **4.07 MB → 1.59 MB** of referenced bytes as a side effect.
+
+The spec table is the source of truth — one row per post:
+
+```
+slug | out | motif | ground | eyebrow | title | thai | opts
+```
+
+Five motifs (`planes` `chain` `nest` `tree` `grid`), four grounds (`navy` `deep` `cloud`
+`parchment`). Adding a post means adding a row, never editing the renderer.
+
+INV-35 checks the four things that actually rot, each of which broke at least once while the
+system was being built:
+
+| Branch | Why it matters |
+|---|---|
+| every post has a row | a post added later keeps whatever cover it was born with, and the family gains a silent outlier |
+| cover is exactly 800×800 | 74 `<img>` tags hard-code those numbers — a different canvas renders squeezed (INV-33's trap, one level up) |
+| share card exists at 1200×630 | `og:image` points at `<slug>-og.jpg`; a missing one is a broken share preview no page visibly shows |
+| cover ≤ 90 KB | the whole point was the weight; flat drawn art has no business exceeding it, and one that does is usually a photo that slipped in |
+
+All four were fault-injected before the check was trusted.
+
+**Two rules live in `make_cover.py --check`, not here**, because they are authoring rules rather
+than repo invariants:
+
+1. **A cover's ground may never be the same tone as its post's hero.** Sunrise (light) heroes take
+   `navy`/`deep` covers; Deep Blue (dark) heroes take `cloud`/`parchment`. The site shipped the
+   opposite once — a teal cover on a teal hero, which vanished. The checker reads each post's
+   ACTUAL `.post-hero` gradient rather than a second table that could drift.
+2. **No two cards adjacent on `blog/index.html` may share both ground and motif.** "37 covers that
+   all look like one cover" is the real failure mode of a system this regular, and it shows up
+   worst between neighbours. Checked in reading order, not table order.
+
+`cream` (#faf7f0) was designed in and then **retired**: cards are `var(--white)`, so a cream cover
+had no visible edge and read as a missing image.
+
+Contact sheet for review — writes to `.covers/`, a dot-dir, because the first version wrote to the
+repo root and INV-06a correctly reported it as an unreferenced published image:
+
+```bash
+python3 scripts/make_cover.py --check      # validate the table, draw nothing
+python3 scripts/make_cover.py --all        # 37 covers + 37 share cards, ~2s
+python3 scripts/make_cover.py --contact    # .covers/contact-sheet.jpg
+```
