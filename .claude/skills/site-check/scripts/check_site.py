@@ -327,9 +327,13 @@ BASELINE = {
         "pic03.jpg", "pictop.png", "xpic01.jpg", "xpic03.jpg",
     },
 
-    # The only 2 posts with no dedicated cover asset.  The fix is to generate
-    # the missing PNGs, NOT to silently re-point a card.
-    "INV-07a": {"github-actions-cover.jpg", "monitoring-cover.jpg"},
+    # RETIRED 2026-08-26. Two posts had no cover of their own and borrowed a
+    # neighbour's — openclaw-memory-architecture wore monitoring's, and
+    # vibe-coding-devops-process wore github-actions'. Both now have dedicated
+    # art drawn by scripts/make_cover.py in the house language (the post's own
+    # hero gradient, flat geometric forms, one gold accent, real typography),
+    # so the check passes on its own and every key here was stale. The comment
+    # was right that the fix is a real asset, not a re-pointed card.
 
     # 8 stale prev/next labels.  All but the first two are the nav label
     # dropping the target's Thai subtitle; devops-security is the worst — it
@@ -2350,6 +2354,19 @@ def _(site):
         if ".post-body img" in s and "height: auto" not in s:
             out.append(Violation("%s|rule" % f,
                 "%s has no `.post-body img { height: auto }` rule" % f))
+
+        # The HERO cover is the same trap and the first version of this check
+        # missed it entirely: `.post-hero__cover img { width: 100% }` with no
+        # height rule lets the height ATTRIBUTE win, so an 800x800 cover
+        # rendered 380x800 on 26 posts. object-fit:cover is the other safe
+        # answer — it crops rather than distorts.
+        m = re.search(r"\.post-hero__cover img\s*\{([^}]*)\}", s)
+        if m:
+            rule = m.group(1)
+            if "object-fit" not in rule and not re.search(r"height:\s*auto", rule):
+                out.append(Violation("%s|hero" % f,
+                    "%s: .post-hero__cover img has no height:auto and no "
+                    "object-fit — the cover will render squeezed" % f))
     return out
 
 
