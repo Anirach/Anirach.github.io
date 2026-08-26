@@ -336,16 +336,10 @@ BASELINE = {
     # so the check passes on its own and every key here was stale. The comment
     # was right that the fix is a real asset, not a re-pointed card.
 
-    # 8 stale prev/next labels.  All but the first two are the nav label
-    # dropping the target's Thai subtitle; devops-security is the worst — it
-    # calls linux-command-line "Linux & Shell Essentials".
-    "INV-10": {
-        "cloud-architecture.html|gitops-argocd.html",
-        "deployment-hosting.html|frontend-performance.html",
-        "devops-security.html|linux-command-line.html",
-        "docker-compose.html|gitops-argocd.html",
-        "vibe-coding-devops-process.html|deployment-hosting.html",
-    },
+    # INV-10 RETIRED 2026-08-26: the 8 stale prev/next labels are gone — 3 with
+    # the grafted posts' navs, 5 rewritten to the target's card title verbatim
+    # (Thai subtitle included; norm_title strips emoji, never Thai). No
+    # baseline entry remains, a drifted label fails as new.
 
     # INV-11 (deployment-hosting.html carried two <h1>) was fixed by the
     # 2026-08-26 metadata sweep, which deleted the duplicate heading and
