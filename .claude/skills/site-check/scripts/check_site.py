@@ -209,17 +209,19 @@ SERIES_NAV_H3 = "\U0001F4DA OpenClaw for Organizations 2026"
 NO_NAV_POSTS = {
     "beyond-plugins.html",
     "claude-code-architecture.html",      # 2026-08-26: DevOps-style nav removed
-    "git-branching.html",
     "idle-self-improvement.html",
     "obsidian-ai-jarvis.html",
     "openclaw-memory-architecture.html",  # 2026-08-26: DevOps-style nav removed
     "openclaw-migration.html",
 }
 
-# git-branching.html is the head of the DevOps chain.  It has no nav block at
-# all, so it cannot reciprocate cicd-pipeline's prev pointer.  This is by
-# design — do NOT "fix" it by inventing a post-nav.
-CHAIN_HEAD = "git-branching.html"
+# The DevOps chain terminates at BOTH ends with "./" — the tail's next and the
+# head's prev both point at the blog index ("Back to all posts"). Until
+# 2026-08-26 the head (git-branching) had no .post-nav and its "next" was an
+# inline-styled anchor no linter could see; the docs called that "by design".
+# It now carries the house block, so the whole 24-node chain is verifiable
+# end to end, and the old head exemption is gone from every check.
+CHAIN_TERMINAL_PREV = "./"
 CHAIN_TERMINAL_NEXT = "./"
 
 EXPECTED_COPYRIGHT_YEAR = "2026"
@@ -294,12 +296,11 @@ BASELINE = {
     # the one of seven that dropped the 📚 and appended " — Series Navigation". One
     # string; no baseline entry remains, a recurrence fails as new.
 
-    # Two genuine chain asymmetries, both understood:
-    #  - cicd-pipeline points back at the chain head, which has no nav.
-    #  - openclaw-memory-architecture is grafted onto deployment-hosting.
-    "INV-04a": {
-        "cicd-pipeline.html|prev|git-branching.html",
-    },
+    # INV-04a RETIRED 2026-08-26. Its last key was cicd-pipeline.prev -> the chain
+    # head, which "had no nav by design" — in fact it had an inline-styled next
+    # link no regex could see. git-branching carries the house .post-nav now
+    # (prev "./", next cicd-pipeline), the chain verifies end to end, and no
+    # baseline entry remains.
     "INV-04c": {
         "deployment-hosting.html",
         "vibe-coding-devops-process.html",
@@ -845,12 +846,10 @@ def _(site):
             elif nav[n]["prev"] != f:
                 out.append(Violation("%s|next|%s" % (f, n),
                                      "%s next->%s but %s.prev=%s" % (f, n, n, nav[n]["prev"])))
-        if p:
+        if p and p != CHAIN_TERMINAL_PREV:
             if p not in nav:
                 out.append(Violation("%s|prev|%s" % (f, p),
-                                     "%s prev->%s but %s has no post-nav%s"
-                                     % (f, p, p,
-                                        " (chain head, by design)" if p == CHAIN_HEAD else "")))
+                                     "%s prev->%s but %s has no post-nav" % (f, p, p)))
             elif nav[p]["next"] != f:
                 out.append(Violation("%s|prev|%s" % (f, p),
                                      "%s prev->%s but %s.next=%s" % (f, p, p, nav[p]["next"])))
@@ -888,9 +887,8 @@ def _(site):
         ep = expect[i - 1] if i > 0 else None
         en = expect[i + 1] if i + 1 < len(expect) else None
         if f not in nav:
-            if f != CHAIN_HEAD:
-                out.append(Violation(f + "|nonav",
-                                     "%s is in the chain but has no post-nav" % f))
+            out.append(Violation(f + "|nonav",
+                                 "%s is in the chain but has no post-nav" % f))
             continue
         if ep is not None and nav[f]["prev"] != ep:
             out.append(Violation(f + "|prev",
@@ -907,7 +905,8 @@ def _(site):
 
 @check("INV-04f", "no post is the prev of more than one other post")
 def _(site):
-    c = Counter(site.nav[f]["prev"] for f in site.nav if site.nav[f]["prev"])
+    c = Counter(site.nav[f]["prev"] for f in site.nav
+                if site.nav[f]["prev"] and site.nav[f]["prev"] != CHAIN_TERMINAL_PREV)
     out = []
     for target, n in sorted(c.items()):
         if n > 1:
@@ -938,9 +937,7 @@ def _(site):
 def _(site):
     expect = site.devops_chain()
     nav = site.nav
-    # Skip the head only when it actually is the documented no-nav head.
-    start = (expect[1] if (len(expect) > 1 and expect[0] == CHAIN_HEAD)
-             else (expect[0] if expect else None))
+    start = expect[0] if expect else None
     seen, cur, guard = [], start, 0
     while cur and cur in nav and cur not in seen and guard < 200:
         seen.append(cur)

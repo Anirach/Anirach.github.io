@@ -19,8 +19,7 @@ BLOG = os.path.join(ROOT, "blog")
 IMAGES = os.path.join(ROOT, "images")
 
 # --- Deliberate exceptions. Do NOT "fix" these by inventing links. -----------
-CHAIN_HEAD = "git-branching.html"          # oldest DevOps post, has no nav at all
-NO_NAV = {"beyond-plugins.html", "claude-code-architecture.html", "git-branching.html",
+NO_NAV = {"beyond-plugins.html", "claude-code-architecture.html",
           "idle-self-improvement.html", "obsidian-ai-jarvis.html",
           "openclaw-memory-architecture.html", "openclaw-migration.html"}
 SERIES7 = ["openclaw-101.html", "openclaw-agent-teams.html", "openclaw-memory.html",
@@ -188,8 +187,7 @@ for i, f in enumerate(expected):
     want_prev = expected[i - 1] if i else None
     want_next = expected[i + 1] if i + 1 < len(expected) else "./"
     if f not in nav:
-        if f != CHAIN_HEAD:
-            fails.append(f"{f} is in #series-devops but has no post-nav")
+        fails.append(f"{f} is in #series-devops but has no post-nav")
         continue
     if want_prev and nav[f]["prev"] != want_prev:
         fails.append(f"{f} prev={nav[f]['prev']} but the card below it is {want_prev}")
@@ -197,7 +195,7 @@ for i, f in enumerate(expected):
         fails.append(f"{f} next={nav[f]['next']} but the card above it is {want_next}")
 
 for target, n in Counter(nav[f]["prev"] for f in nav if nav[f]["prev"]).items():
-    if n > 1 and target != "deployment-hosting.html":
+    if n > 1:
         fails.append(f"{target} is claimed as prev by {n} posts")
 
 for f in sorted(nav):
