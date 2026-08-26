@@ -301,10 +301,10 @@ BASELINE = {
     # link no regex could see. git-branching carries the house .post-nav now
     # (prev "./", next cicd-pipeline), the chain verifies end to end, and no
     # baseline entry remains.
-    "INV-04c": {
-        "deployment-hosting.html",
-        "vibe-coding-devops-process.html",
-    },
+    # INV-04c RETIRED 2026-08-26: the last two <nav class="post-nav"> became <div>,
+    # the documented house form (post-template.html, blog-post/SKILL.md,
+    # components.md). RE_PNAV_OPEN still matches (div|nav) on purpose, so a
+    # <nav> regression is reported rather than hidden.
     # INV-04d, INV-04f, INV-04h RETIRED 2026-08-26 together with INV-17 below:
     # claude-code-architecture ("Related" / "See also") and
     # openclaw-memory-architecture (prev grafted onto deployment-hosting) were
@@ -368,9 +368,10 @@ BASELINE = {
     # Phase 3 (island -> house, 2026-08-26) normalised 11 posts onto
     # <footer class="blog-footer">, retiring the '<footer class="footer">' and
     # bare '<footer>' variants. INV-25 flagged both keys as stale the same day.
-    "INV-16": {
-        '<footer class="blog-footer">', '<footer class="post-footer">',
-    },
+    # INV-16 RETIRED 2026-08-26: the three remaining <footer class="post-footer">
+    # posts (deployment-hosting, openclaw-memory-architecture, vibe-coding-devops-
+    # process) converged on <footer class="blog-footer"> with the canonical navy
+    # box rules. One cohort remains; the check returns [] on its own.
 
     # INV-17 RETIRED 2026-08-26 — see INV-04d above.
 
