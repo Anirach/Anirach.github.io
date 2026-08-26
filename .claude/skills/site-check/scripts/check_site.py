@@ -288,8 +288,9 @@ def nav_dest_dirs_for(root):
 # counters).  They are the thing --fix repairs, so they must fail.
 # ---------------------------------------------------------------------------
 BASELINE = {
-    # The .series-nav <h3> drifts in exactly one of seven files.
-    "INV-03b": {"openclaw-integrations.html"},
+    # INV-03b RETIRED 2026-08-26: openclaw-integrations.html's .series-nav <h3> was
+    # the one of seven that dropped the 📚 and appended " — Series Navigation". One
+    # string; no baseline entry remains, a recurrence fails as new.
 
     # Two genuine chain asymmetries, both understood:
     #  - cicd-pipeline points back at the chain head, which has no nav.
@@ -389,7 +390,8 @@ BASELINE = {
     # Post #N" on one source line (INV-20a requires that co-location). INV-20b
     # now returns [] on its own, so every key here was stale and INV-25 said so.
     # A fifth form appearing tomorrow is a NEW violation, not an absorbed one.
-    "INV-20c": {"openclaw-memory.html"},
+    # INV-20c RETIRED 2026-08-26: openclaw-memory.html wrote "บทที่ 3" where its six
+    # siblings write "Post #N". One string; no baseline entry remains.
 
     # INV-22 (10 island posts with no :root block of their own) and INV-22b
     # (style.css carrying zero custom properties) were both retired by the
