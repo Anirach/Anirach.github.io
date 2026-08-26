@@ -28,7 +28,7 @@ Deploy by pushing to `main` — GitHub Pages auto-deploys. There is no `.nojekyl
 ├── style.css           # Landing-page styles — carries the canonical 24-token :root block, same tokens every other page redefines in its own embedded <style>
 ├── script.js           # IIFE: nav scroll state, hamburger, IntersectionObserver reveal, hero parallax
 ├── blog/
-│   ├── index.html      # Blog listing — fully static, zero JavaScript, 3 category bands (only Technology has posts)
+│   ├── index.html      # Blog listing — fully static, zero JavaScript, ONE category band (Technology)
 │   └── *.html          # 37 self-contained posts (own <style>, own :root, own nav markup)
 ├── books/              # Books & writing (nav label "Books") — all self-contained
 │   ├── index.html      #   the section index: the last-lecture book + 1 published novel + 2 complete manuscripts
@@ -56,15 +56,19 @@ Deploy by pushing to `main` — GitHub Pages auto-deploys. There is no `.nojekyl
 
 ### Content is organized as three categories, one of which holds two series
 
-`blog/index.html` groups posts into three `.category` bands — there is no category-filter UI and no client-side JS on that page. Only **Technology** has posts; the other two are placeholders:
+`blog/index.html` has ONE `.category` band — there is no category-filter UI and no client-side JS
+on that page:
 
 - **Technology** (`#cat-technology`, 37 articles) — contains two `.series-section` blocks:
   - `#series-openclaw` — "OpenClaw for Organizations" (13 cards; 7 of them are the numbered series, the rest standalone)
   - `#series-devops` — "DevOps & Vibe Coding" (24 cards)
-- **Academic & Philosophy** (`#cat-academic`) — "First posts coming soon"
-- **Lifestyle** (`#cat-lifestyle`) — "First posts coming soon"
 
-The hero `.blog-hero__stats` mirrors this: 3 Categories, 2 Series, 37 Articles.
+The hero `.blog-hero__stats` reads **2 Series · 37 Articles**. There is deliberately no
+"N Categories" stat: the Academic & Philosophy and Lifestyle bands were empty "First posts coming
+soon" placeholders that sat for 16 days with nothing able to expire them, and were deleted on
+2026-08-26 along with the stat that counted them. **`check_site.py` INV-02d now fails on any empty
+`.category` band**, so a new category must ship its band, grid, card and count in one commit.
+INV-02e still verifies a "N Categories" stat if one is ever reinstated.
 
 ### Three mutually exclusive in-post navigation patterns
 
@@ -112,8 +116,8 @@ deliberately carries **no** counter: the gate slices only `#published` and `#man
 `#last-lecture` sits above both, outside every slice — the precedent is `#academic`, which is
 also counter-free. Do not "fix" it by adding one.
 
-Current values, re-derive rather than trust: 3 Categories · 2 Series · 37 Articles (13 OpenClaw +
-24 DevOps) · 7 news updates · 8 chapters (publications) · 1 novel + 2 complete (books).
+Current values, re-derive rather than trust: 2 Series · 37 Articles (13 OpenClaw + 24 DevOps) ·
+7 news updates · 8 chapters (publications) · 1 novel + 2 complete (books).
 
 `books/` detail pages have their own wiring check: `check_site.py` INV-26 fails if a
 `books/*.html` detail page is not linked from `books/index.html`, or if the index links a
@@ -137,7 +141,11 @@ Four skills live in `.claude/skills/` — use them; they carry the deep, verifie
 - **page-design** — the house visual system (canonical `:root` tokens, type scale, component vocabulary, approved hero gradients, modern-CSS adoption verdicts). Load before designing or restyling anything.
 - **blog-post** — the end-to-end recipe for adding/editing a post, with a wiring verifier (`assets/verify-wiring.py`). The starter template itself is not here — it was consolidated into **page-design** (`assets/post-template.html`) as the repo's one canonical copy; see `.claude/skills/blog-post/assets/TEMPLATE-MOVED.md`.
 - **a11y-perf** — accessibility and performance standing rules plus the measured remediation backlog (real contrast ratios, image weights, focus states).
-- **site-check** — run `python3 .claude/skills/site-check/scripts/check_site.py` from the repo root before every push. 50 cross-file integrity checks; exit 0 means no **new** fail-severity violation (a baseline of pre-existing debt is carried, `0 new, 48 known` today). `INV-25` fails the build if a baseline entry goes stale, so the net cannot silently rot; `INV-26` ties every section-directory detail page (today: the four `books/*.html`) to its own index; `INV-27` enforces the social/canonical head block on all 47 pages.
+- **site-check** — run `python3 .claude/skills/site-check/scripts/check_site.py` from the repo root before every push. 53 cross-file integrity checks; exit 0 means no **new** fail-severity violation (a baseline of pre-existing debt is carried, `0 new, 41 known` today — down from 55 before the 2026-08-26 redesign phases paid debt down). `INV-25` fails the build if a baseline entry goes stale, so the net cannot silently rot; `INV-26` ties every section-directory detail page (today: the four `books/*.html`) to its own index; `INV-27` enforces the social/canonical head block on all 47 pages. Added 2026-08-26 by the
+critique work, each fault-injected before being trusted: `INV-28` (every `.post-hero` background is
+one of the 5 approved gradient families), `INV-29` (every post carries a home link and a footer
+destination row, so no post is a dead end), `INV-30` (the skip link and its `id="main"` target
+exist together), `INV-31`/`INV-32` (feed and sitemap drift).
 
 **Complementary user-level design skills** (installed 2026-08-26 into `~/.claude/skills` — not in this
 repo, may be absent on other machines): `fixing-metadata` + `seo` (the gap they found was closed by the
@@ -200,9 +208,13 @@ the article counters, and only this sentence enforces it.
 
 **Decisions taken deliberately, so they are not re-litigated every sweep:**
 
-- **No RSS/Atom feed.** `<link rel="alternate">` appears nowhere and that is intentional — a
-  hand-written `atom.xml` would be a 49th hand-maintained file with the same drift profile as
-  `sitemap.xml`, and a generator would introduce the build step this repo has rejected.
+- **RSS feed: REVERSED 2026-08-26, with the original objection answered rather than ignored.**
+  The standing decision was "no feed", because a hand-written one would drift like `sitemap.xml`
+  and a generator would mean a build step. Both halves are now addressed: `feed.xml` is produced
+  by `python3 scripts/gen_feed.py` **on demand** (no build step — the published tree is still
+  plain static files), and `check_site.py` **INV-31** fails when the feed and the blog index
+  disagree. The drift objection was also under-stated: `sitemap.xml` had no check whatsoever, so
+  **INV-32** now covers it too. Regenerate the feed in the same commit as any new post.
 - **The two free PDFs stay crawlable** but are excluded from `sitemap.xml`, so the detail page is
   what gets promoted. `robots.txt` carries the two commented-out `Disallow` lines to flip that.
 - **`jekyll-seo-tag` is never the answer here** — these files have no front matter, so it emits

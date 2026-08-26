@@ -2219,5 +2219,112 @@ def main(argv=None):
     return 1 if failed_ids else 0
 
 
+# ---------------------------------------------------------------------------
+# INV-28 .. INV-30 — the Phase 4/5 consistency sweep, made un-regressable.
+# Each of these was fixed by hand once. Without a check, the next edit that
+# reintroduces the defect ships green — which is exactly how the site
+# accumulated 13 hero gradients and 4 copyright strings in the first place.
+# ---------------------------------------------------------------------------
+
+# The five approved .post-hero families (page-design §5, re-keyed 2026-08-26 to
+# the book covers). A sixth value is drift, not a design decision.
+APPROVED_HERO_GRADIENTS = {
+    "linear-gradient(135deg, #eef3f3 0%, #dee7e6 50%, #e9e1c4 100%)",
+    "linear-gradient(135deg, #11304b 0%, #1a4d7a 45%, #226299 100%)",
+    "linear-gradient(135deg, #052e16 0%, #064e3b 40%, #065f46 100%)",
+    "linear-gradient(135deg, #134e4a 0%, #115e59 40%, #0f766e 100%)",
+    "linear-gradient(135deg, #2e1065 0%, #4c1d95 45%, #6d28d9 100%)",
+}
+RE_POST_HERO_BG = re.compile(r"\.post-hero\s*\{[^}]*?background:\s*([^;]+);", re.S)
+
+
+@check("INV-28", "every .post-hero background is one of the 5 approved gradient families")
+def _(site):
+    out = []
+    for f in site.posts:
+        m = RE_POST_HERO_BG.search(site.post(f))
+        if not m:
+            continue
+        val = re.sub(r"\s+", " ", m.group(1)).strip()
+        if val not in APPROVED_HERO_GRADIENTS:
+            out.append(Violation("%s|%s" % (f, val),
+                                 "%s uses an unapproved hero gradient:\n        %s" % (f, val)))
+    return out
+
+
+@check("INV-29", "every post can reach the rest of the site (home link + footer nav)")
+def _(site):
+    out = []
+    for f in site.posts:
+        s = site.post(f)
+        if "blog-nav__home" not in s:
+            out.append(Violation("%s|home" % f, "%s has no home link in its nav bar" % f))
+        if "blog-footer__nav" not in s:
+            out.append(Violation("%s|footer" % f,
+                                 "%s has no footer destination row — its only exit is /blog/" % f))
+    return out
+
+
+@check("INV-30", "the skip link and its #main target exist together on every page", WARN)
+def _(site):
+    out = []
+    for rel in sorted(site.pages):
+        s = site.text[rel]
+        has_link = 'class="skip-link"' in s
+        has_target = re.search(r'<[a-z]+[^>]*\bid="main"', s) is not None
+        if has_link != has_target:
+            out.append(Violation(rel, "%s has %s but not %s"
+                                 % (rel, "the skip link" if has_link else 'an id="main" target',
+                                    'an id="main" target' if has_link else "the skip link")))
+    return out
+
+
+# ---------------------------------------------------------------------------
+# INV-31 / INV-32 — the two generated/hand-maintained XML files.
+# CLAUDE.md's standing objection to an RSS feed was drift ("the same drift
+# profile as sitemap.xml"). That objection was correct AND under-stated:
+# sitemap.xml itself had no check at all. Both are gated now.
+# ---------------------------------------------------------------------------
+
+@check("INV-31", "feed.xml lists exactly the posts carded in blog/index.html")
+def _(site):
+    feed_path = os.path.join(site.root, "feed.xml")
+    if not os.path.exists(feed_path):
+        return [Violation("missing", "feed.xml does not exist "
+                                     "(regenerate: python3 scripts/gen_feed.py)")]
+    feed = open(feed_path, encoding="utf-8").read()
+    in_feed = set(re.findall(r"<link>https://anirach\.com/blog/([a-z0-9-]+\.html)</link>", feed))
+    carded = set(re.findall(r'<a href="([a-z0-9-]+\.html)" class="card">', site.idx))
+    out = []
+    for f in sorted(carded - in_feed):
+        out.append(Violation("missing|" + f,
+                             "%s is carded on the blog index but absent from feed.xml "
+                             "— run: python3 scripts/gen_feed.py" % f))
+    for f in sorted(in_feed - carded):
+        out.append(Violation("extra|" + f,
+                             "%s is in feed.xml but has no card on the blog index" % f))
+    return out
+
+
+@check("INV-32", "sitemap.xml covers every published page", WARN)
+def _(site):
+    sm_path = os.path.join(site.root, "sitemap.xml")
+    if not os.path.exists(sm_path):
+        return [Violation("missing", "sitemap.xml does not exist")]
+    sm = open(sm_path, encoding="utf-8").read()
+    listed = set(re.findall(r"<loc>https://anirach\.com/([^<]*)</loc>", sm))
+    def canon(rel):
+        if rel == "index.html":
+            return ""
+        return rel[: -len("index.html")] if rel.endswith("/index.html") else rel
+    out = []
+    for rel in sorted(site.pages):
+        if rel == "404.html":            # deliberately excluded (noindex)
+            continue
+        if canon(rel) not in listed:
+            out.append(Violation(rel, "%s is published but missing from sitemap.xml" % rel))
+    return out
+
+
 if __name__ == "__main__":
     sys.exit(main())
