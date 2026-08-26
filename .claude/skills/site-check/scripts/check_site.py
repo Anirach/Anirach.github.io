@@ -138,6 +138,17 @@ RE_MENU_TOKEN = re.compile(
 RE_ATTR_ANY = re.compile(r'([A-Za-z_:][-A-Za-z0-9_:.]*)\s*=\s*"([^"]*)"')
 
 
+RE_NONCONTENT = re.compile(r"<style\b[^>]*>.*?</style>|<script\b[^>]*>.*?</script>|<!--.*?-->", re.S)
+
+
+def blank_noncontent(s):
+    """Blank <style>, <script> and comment bodies to same-length spaces (newlines
+    kept), so a tag name that merely appears inside them cannot be mistaken for
+    markup. Narrower than blank_inert(), which also blanks <pre>/<code> and
+    therefore cannot be used to FIND them."""
+    return RE_NONCONTENT.sub(lambda m: re.sub(r"[^\n]", " ", m.group(0)), s)
+
+
 def blank_inert(s):
     """Blank the bodies of <style>/<script>/<pre>/<code>, preserving byte
     offsets and newlines so line numbers stay accurate.  A markup-shape check
@@ -316,13 +327,13 @@ BASELINE = {
     # cleanup — every one now points at /#about|/#projects|/#research|/#contact
     # on index.html. No baseline entry remains; a future recurrence must fail.
 
-    # Illustrative paths inside code samples — never a real defect.
-    # /css/app.css appears twice (lines 1199 and 1201, two <link> examples).
-    "INV-05b": {
-        "blog/frontend-performance.html|hero.jpg": 1,
-        "blog/frontend-performance.html|/css/app.css": 2,
-        "blog/frontend-performance.html|/fonts/inter-var.woff2": 1,
-    },
+    # INV-05b RETIRED 2026-08-26. It reported unresolvable paths inside
+    # <pre>/<code> at INFO level and its own comment called them "never a real
+    # defect" — its whole domain was illustrative text (frontend-performance's
+    # teaching samples: hero.jpg, /css/app.css x2, /fonts/inter-var.woff2). A
+    # check with no defect domain, baselined as a COUNT, meant an edit to a
+    # code sample failed the build as an INV-25 overcount. Deleted, not
+    # narrowed; _scan_links documents what is skipped and why.
 
     # RETIRED 2026-08-26. The 9 template leftovers were deleted (749 KB), and
     # the check now also walks the repo ROOT, where two 1.2 MB screenshots had
@@ -642,7 +653,17 @@ class Site(object):
 
     # -- helpers -----------------------------------------------------------
     def code_spans(self, s):
-        return [(m.start(), m.end()) for m in RE_CODE_SPAN.finditer(s)]
+        """Byte ranges of <pre>/<code> blocks — found on a copy with <style>,
+        <script> and HTML comments blanked to same-length spaces, so offsets
+        still index the original.
+
+        Why the blanking: on 2026-08-26 a CSS comment in every post's <style>
+        read "440 <pre> blocks and 94 tables can exceed 720px". RE_CODE_SPAN
+        took that <pre> as an opener and swallowed everything up to the first
+        real </pre> in the body — ~250 head lines per post, 111 real <head>
+        attributes across 37 files, all routed OUT of INV-05's FAIL bucket.
+        A tag name inside a comment or a stylesheet can never open a span."""
+        return [(m.start(), m.end()) for m in RE_CODE_SPAN.finditer(blank_noncontent(s))]
 
     def devops_chain(self):
         """The canonical DevOps reading order IS reversed(#series-devops card
@@ -948,14 +969,40 @@ def _(site):
 # ---------------------------------------------------------------------------
 # INV-05 — link resolution
 # ---------------------------------------------------------------------------
+def _escaped_markup(s, pos):
+    """True if the attribute at `pos` sits inside HTML-ESCAPED markup — text a
+    reader sees, like `&lt;link rel="preload" href="/css/app.css"&gt;` in a
+    code sample — rather than inside a real tag.
+
+    Two questions, in order. Is a REAL tag still open here (a `<` before pos
+    with no `>` since)? Then this is a real attribute, full stop — even if the
+    tag's own alt text contains `&lt;`. Fault injection proved the naive
+    "nearest `&lt;` wins" rule hid `<img alt="&lt;3" src="missing.png">`.
+    Only if no real tag is open: is an `&lt;` open (no `&gt;` since)?"""
+    lt = s.rfind("<", 0, pos)
+    if lt != -1 and ">" not in s[lt:pos]:
+        return False
+    elt = s.rfind("&lt;", 0, pos)
+    return elt != -1 and "&gt;" not in s[elt:pos]
+
+
 def _scan_links(site):
-    """Returns (real_markup_violations, code_span_violations)."""
-    real, incode = [], []
+    """Unresolvable href|src|srcset|poster values in REAL markup.
+
+    Skipped, on purpose: attributes inside <pre>/<code> (a code sample's
+    paths are illustrative by definition) and attributes inside escaped
+    markup anywhere. INV-05b, which used to REPORT the in-code set at INFO
+    level, was retired 2026-08-26 — its entire possible output was by-design
+    illustrative text, yet it had to be baselined as a COUNT that INV-25
+    audited, so editing a teaching sample failed the build as an "overcount"."""
+    real = []
     for rel in site.pages:
         s = site.text[rel]
         d = os.path.dirname(os.path.join(site.root, rel))
         spans = site.code_spans(s)
         for m in RE_ATTR.finditer(s):
+            if any(a <= m.start() < b for a, b in spans) or _escaped_markup(s, m.start()):
+                continue
             u = m.group(2).strip()
             if u.startswith(("http://", "https://", "//", "mailto:", "tel:",
                              "data:", "javascript:", "#")):
@@ -975,20 +1022,14 @@ def _scan_links(site):
                     ok = os.path.exists(cand)
             if ok:
                 continue
-            v = Violation("%s|%s" % (rel, u),
-                          '%s:%d %s="%s"' % (rel, lineno(s, m.start()), m.group(1), u))
-            (incode if any(a <= m.start() < b for a, b in spans) else real).append(v)
-    return real, incode
+            real.append(Violation("%s|%s" % (rel, u),
+                                  '%s:%d %s="%s"' % (rel, lineno(s, m.start()), m.group(1), u)))
+    return real
 
 
 @check("INV-05", "every relative/site-absolute href|src|srcset|poster resolves on disk")
 def _(site):
-    return _scan_links(site)[0]
-
-
-@check("INV-05b", "refs inside <pre>/<code> that do not resolve (illustrative)", INFO)
-def _(site):
-    return _scan_links(site)[1]
+    return _scan_links(site)
 
 
 @check("INV-09", "every extensionless /blog/<slug> link resolves")
