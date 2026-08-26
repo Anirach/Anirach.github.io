@@ -176,13 +176,23 @@ Non-negotiables, each because something on disk got them wrong:
 
 - **`lang="th"`.** All 37 posts are `th`; `index.html` and `blog/index.html` are `en`.
 - **Exactly one `<h1>`**, the `.post-hero__title`. Do not repeat the title in the body —
-  `deployment-hosting.html` did and now has two (lines 164 and 176).
-- **`<meta name="description">` in Thai.** Six posts are missing it
-  (`idle-self-improvement` + 5 numbered OpenClaw); `check_site.py` INV-14 lists them.
+  `deployment-hosting.html` did, and the duplicate was removed on 2026-08-26; every post
+  has exactly one now, and INV-11 carries no baseline entry, so a regression will fail.
+- **`<meta name="description">` in Thai.** All 47 pages carry one since the 2026-08-26
+  metadata sweep (the 6 that did not are fixed). `check_site.py` **INV-27** now fails the
+  build on a missing or empty one — this is no longer a warning you can defer.
+- **The `<!-- social -->` block.** Every page has one: canonical, `og:*`, `twitter:card`,
+  icons, `theme-color`. The template ships it with placeholders; fill them, do not delete
+  them. INV-27 recomputes the canonical from the file path and reads the cover's real
+  pixel size out of the JPEG header, so `og:url` and `og:image:width/height` cannot be
+  guessed. `twitter:card` is `summary` for a square cover — `summary_large_image` crops
+  ~48% off it.
 - **`<nav class="blog-nav">` with `<a href="./" class="blog-nav__back">‹ Blog</a>`.**
   All 26 posts that have this nav use `href="./"` and nothing else. Eleven posts have no
   `<nav class="blog-nav">` back link. Five of them (openclaw-101, -agent-teams,
-  -integrations, -production, -security) still link back with a bare `href="/blog"`;
+  -integrations, -production, -security) link back with `href="/blog/"` — the trailing
+  slash was added on 2026-08-26; the bare `/blog` cost two redirects, one of them an
+  https→http downgrade. Never write a bare directory href;
   four more (beyond-plugins, idle-self-improvement, obsidian-ai-jarvis,
   openclaw-migration) reach the index through other header/footer links; only
   openclaw-memory and openclaw-skills have no route to the blog index at all. Do not
@@ -395,23 +405,26 @@ Adding a DevOps post touches **4 files** (5 with a diagram):
 
 1. `images/<slug>-cover.jpg` — new file, JPG, ≤200 KB, not shared with any other post.
 2. `blog/<slug>.html` — from `page-design/assets/post-template.html`; one `<h1>`,
-   `lang="th"`, meta description, canonical `:root`, the 4-line a11y block, `blog-nav`,
-   `post-nav`, `blog-footer`.
+   `lang="th"`, meta description, the filled-in `<!-- social -->` block, canonical
+   `:root`, the 4-line a11y block, `blog-nav`, `post-nav`, `blog-footer`.
 3. `blog/index.html` — card at the top of the right `.blog-grid` with an
    `<h4 class="card__title">`, hero `Articles`, `.category__count` and the section's
    `.series-count` all **recomputed**.
 4. The old top card's post file — its `next` changes from `"./"` to the new slug
    (plus a second neighbour if you inserted mid-chain).
-5. Both linters, from the repo root:
+5. `sitemap.xml` — add a `<loc>` for `https://anirach.com/blog/<slug>.html` with today's
+   date as `lastmod`. It is hand-maintained; nothing computes it and no gate checks it.
+6. Both linters, from the repo root:
    ```bash
    python3 .claude/skills/blog-post/assets/verify-wiring.py     # no FAIL: lines
    python3 .claude/skills/site-check/scripts/check_site.py      # exit 0
    ```
 
-Adding a numbered OpenClaw post touches **10 files**: the above, minus the post-nav
+Adding a numbered OpenClaw post touches **11 files**: the above, minus the post-nav
 rewire, plus the `.series-nav` strip in all 7 existing series posts.
 
-Do not update `CLAUDE.md`'s counts unless asked; it does not carry any.
+`CLAUDE.md` now does carry counts that a new post invalidates — the `images/` file count
+and the sitemap's URL count. Update them in the same commit (page-design's standing rule).
 
 ## Editing an existing post
 

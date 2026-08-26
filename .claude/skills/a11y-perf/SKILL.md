@@ -177,7 +177,7 @@ Keep `#6366f1` for borders, backgrounds, shadows and gradient stops. Full table 
 ### 5. A visible focus ring exists everywhere. **[DONE]** Hover/focus *parity* does not.
 
 `e8da9da` installed this block, and the books/publications pages shipped with it — today it
-is in **46 embedded `<style>` blocks + `style.css`** = all 47
+is in **47 embedded `<style>` blocks + `style.css`** = all 48
 pages:
 
 ```css
@@ -275,7 +275,7 @@ These are right; flagging them wastes the user's time:
 - All **137/137** `<img>` tags have an `alt` attribute (the *quality* is the problem, not
   the presence) **and** `loading`, `decoding`, `width`, `height`.
 - `:focus-visible`, `prefers-reduced-motion`, `color-scheme: light` and `text-wrap:
-  balance` on all 47 pages (46 embedded + `style.css`) — rule 5.
+  balance` on all 48 pages (47 embedded + `style.css`) — rule 5.
 - `outline: none` scoped to `:focus:not(:focus-visible)` — correct, not a defect.
 - `script.js:12` guards the scroll work with
   `window.matchMedia('(prefers-reduced-motion: reduce)').matches`.
@@ -294,7 +294,7 @@ These are right; flagging them wastes the user's time:
 
 ### 10. State the file count before starting, and script the edit.
 
-There are no partials. **The site is 47 HTML files.** Before proposing a sitewide change,
+There are no partials. **The site is 48 HTML files** — 47 enumerated by `check_site.py` plus `404.html`, which it deliberately skips. Before proposing a sitewide change,
 count and say the number out loud so the user can judge scope:
 
 ```bash
@@ -304,7 +304,7 @@ find . -name "*.html" -not -path "./.git/*" -not -path "./.claude/*" | wc -l   #
 | Change | Files still needing it |
 |---|---|
 | Palette / `:root` patch | **0** — landed in all 47 (`6670480` + the compliant 2026-08 pages) |
-| `:focus-visible` + reduced-motion + `color-scheme` + `text-wrap` | **0** — landed in 46 + `style.css` (`e8da9da`) |
+| `:focus-visible` + reduced-motion + `color-scheme` + `text-wrap` | **0** — landed in 47 + `style.css` (`e8da9da`, plus `404.html`) |
 | `<main id="main">` wrap | **42** — 31 have no `<main>`, 11 have one without the `id`; only the 5 `books/` pages are done |
 | Skip link | **47** — 0 exist; the 5 `books/` pages now have the `id="main"` target, the other 42 do not |
 | `.post-hero__meta` colour | 15 (+2 minified variants) |
@@ -312,14 +312,16 @@ find . -name "*.html" -not -path "./.git/*" -not -path "./.claude/*" | wc -l   #
 | Font URL trim | 27 |
 | `rel="noopener"` | 12 links across 6 files |
 
-Write a loop or `sed` script, never 47 sequential Edit calls.
+Write a loop or `sed` script, never 47 sequential Edit calls. The 2026-08-26 metadata
+sweep is the worked example: one idempotent Python pass rewrote a delimited `<head>` block
+in all 47 pages, and `check_site.py` INV-27 verifies the result rather than trusting it.
 
 **The old "`sed` on `:root` misses 11 files" warning is obsolete** — every file except
 `index.html` now has a `:root`, and `index.html`'s lives in `style.css`. What is still
 true about those same 10 island posts is that they **load no webfont** and declare their
 own stacks (`'Segoe UI', Tahoma, Geneva, Verdana` in `blog/openclaw-memory.html`;
 `-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto` in `blog/beyond-plugins.html`), so
-the Inter design system does not reach them: **37 of 47 files load Google Fonts, 10 do
+the Inter design system does not reach them: **38 of 48 files load Google Fonts, 10 do
 not.** Loops and verification commands: `references/n-file-edits.md`.
 
 ---

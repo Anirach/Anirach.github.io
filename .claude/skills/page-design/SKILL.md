@@ -25,12 +25,16 @@ self-consistent families plus one hybrid**, and every design decision starts by 
 file you are about to touch.
 
 ```
-47 HTML files
+48 HTML files
   = index.html            (landing — the only page with <script> and the only one
                            with no embedded <style>; its CSS is all style.css)
   + 5 LISTING pages       blog/index.html, books/index.html, news/index.html,
                            projects/index.html, publications/index.html
                                                 — .nav chrome, 16px/1.7, 1200px
+  + 404.html              (root; LISTING chrome and type, but NOT a section index —
+                           it is noindex, carries no social block, and is excluded
+                           from sitemap.xml. check_site.py does not enumerate it,
+                           which is why every count below still reads 47.)
   + 4 DETAIL pages        books/three-old-men.html, books/a-pocketful-of-questions.html,
                            books/the-thirteenth-seal.html, books/one-day-of-light.html
                            — same .nav chrome and type
@@ -41,7 +45,7 @@ file you are about to touch.
 ```
 
 ```bash
-find . -name '*.html' -not -path './.git/*' -not -path './.claude/*' | wc -l   # → 47
+find . -name '*.html' -not -path './.git/*' -not -path './.claude/*' | wc -l   # → 48
 for f in blog/*.html; do grep -q 'class="blog-nav"' "$f" || basename "$f"; done # → 12
 ```
 
@@ -218,23 +222,23 @@ when you convert an island file: `'SF Pro Display', …`
 | listing/detail container (5 LISTING + 3 DETAIL) | **1200px** | 31 |
 | hero cover box | **380px** max-width (13 of 25), border-radius 16px = `--radius-lg` (25/25) | retire 420/480/520/560 |
 | listing card image | `.card__image`: width 100%; aspect-ratio 16/10 | `grep -n 'card__image' blog/index.html` |
-| tablet breakpoint | **768px** | 24 (22 spaced + 2 unspaced) |
-| phone breakpoint | **600px** | 28 |
-| island-chrome nav takeover | **800px** | 8 — the 5 LISTING + 3 DETAIL pages, nav rules only (`5178252`) |
+| tablet breakpoint | **768px** | 26 (24 spaced + 2 unspaced) |
+| phone breakpoint | **600px** | 30 |
+| island-chrome nav takeover | **800px** | 10 — the 5 LISTING + 4 DETAIL pages + `404.html`, nav rules only (`5178252`) |
 | landing nav takeover | **1080px** | 1 — `style.css` only (`5178252`) |
 | wide breakpoint | **1024px** | 1 — `style.css`, landing grids only |
 | retire | `480px` (2), `500px` (1) | fold into 600px |
 
 ```bash
-grep -ho '@media[^{]*' index.html style.css blog/*.html books/*.html news/index.html projects/index.html publications/index.html \
+grep -ho '@media[^{]*' index.html style.css 404.html blog/*.html books/*.html news/index.html projects/index.html publications/index.html \
   | sed 's/[[:space:]]*$//' | sort | uniq -c | sort -rn
 ```
-→ `47 (prefers-reduced-motion: reduce)`, `29 (max-width: 600px)`, `23 (max-width: 768px)`,
-`9 (max-width: 800px)`, `2 (max-width:768px)`, `2 480px`, `1 500px`, `1 1080px`, `1 1024px`.
+→ `48 (prefers-reduced-motion: reduce)`, `30 (max-width: 600px)`, `24 (max-width: 768px)`,
+`10 (max-width: 800px)`, `2 (max-width:768px)`, `2 480px`, `1 500px`, `1 1080px`, `1 1024px`.
 Two of the 768px hits are unspaced (`max-width:768px`) — match the spaced form in new code so
-grep-based sweeps find them. The 47 reduced-motion blocks are the `e8da9da` a11y sweep (46
-embedded `<style>` blocks + `style.css`); they are not layout breakpoints. The 9 `800px` blocks
-are the island-chrome mobile-nav takeover and the 1 `1080px` block is `style.css`'s — the desktop
+grep-based sweeps find them. The 48 reduced-motion blocks are the `e8da9da` a11y sweep (47
+embedded `<style>` blocks + `style.css`, `404.html` included); they are not layout breakpoints. The 9 `800px` blocks
+are the island-chrome mobile-nav takeover (9 section pages + `404.html`) and the 1 `1080px` block is `style.css`'s — the desktop
 bar with the 6-link nav last fits at 772px on the island-chrome pages, so 768px left a broken
 769–771px band (`5178252`); keep the takeover block byte-identical across all 9 pages.
 
@@ -385,14 +389,15 @@ makes a reader distrust the whole file.
 Above-the-fold hero covers get `loading="eager" fetchpriority="high"` instead.
 
 **3–6. `:focus-visible`, `prefers-reduced-motion`, `color-scheme: light`, `text-wrap: balance` —
-ALL LANDED** in `e8da9da`, as one 4-line block, now in **46 embedded `<style>` blocks +
+ALL LANDED** in `e8da9da`, as one 4-line block, now in **47 embedded `<style>` blocks +
 `style.css`**
-= complete 47/47 page coverage (the 2026-08 books/publications pages and `books/one-day-of-light.html` shipped with it).
+= complete 48/48 page coverage (the 2026-08 books/publications pages, `books/one-day-of-light.html`
+and `404.html` all shipped with it).
 `index.html` is the one HTML file without the block in its own
 source, correctly, because it has no `<style>` block at all.
 
 ```bash
-grep -L ':focus-visible' style.css blog/*.html books/*.html news/index.html projects/index.html publications/index.html  # → empty
+grep -L ':focus-visible' style.css 404.html blog/*.html books/*.html news/index.html projects/index.html publications/index.html  # → empty
 grep -c ':focus-visible' style.css                                                                   # → 2
 ```
 
@@ -681,10 +686,23 @@ Leave these alone unless the user explicitly asks:
 - `<meta name="viewport">` on 47/47 files
 - `blog/index.html` has 0 `<script>` tags — a feature, not an omission (anti-pattern 12)
 
-Genuinely missing sitewide, if the user wants more: `og:image`, `og:title` and `rel="canonical"` are
-on **0** of 47 files, so every shared link renders as a bare URL; and 6 posts still lack a
-`<meta name="description">` (`idle-self-improvement` + 5 numbered OpenClaw posts — `check_site.py`
-INV-14 lists them).
+**Social metadata landed 2026-08-26 — hold this line too.** All **47** enumerated pages carry a
+`<!-- social -->` … `<!-- /social -->` block (canonical, `og:*`, `twitter:card`, icons,
+`theme-color`, `robots`), and all 47 now carry a `<meta name="description">` — the 6 that lacked
+one are fixed and their INV-14 baseline entries are deleted. `check_site.py` **INV-27** (FAIL
+severity) recomputes the canonical path from each file's location and reads real pixel dimensions
+out of the JPEG/PNG header, so a wrong `og:url` or a stale `og:image:width` fails the build.
+`404.html` is deliberately outside all of this: noindex, no social block, not in `sitemap.xml`.
+
+Do not hand-edit a social block — regenerate it, and never point `og:image` at a diagram PNG or a
+square cover with `summary_large_image` (half the image is cropped). The 9 share cards in
+`images/` (`og-site-card.jpg`, `og-publications.jpg`, four `<book>-og.jpg` diptychs, three
+`<post>-og.jpg`) are all 1200×630 and are matched by neither the `*-cover.jpg` nor the
+`*-cover-*.jpg` census glob — add `images/*-og.jpg images/og-*.jpg` when counting them.
+
+Genuinely missing sitewide, if the user wants more: dark mode (§6), and the 2 double-booked hero
+covers of anti-pattern 4 — the share cards worked around that for social, but the listing page
+still shows two identical pairs.
 
 ---
 

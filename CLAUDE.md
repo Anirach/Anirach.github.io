@@ -39,7 +39,11 @@ Deploy by pushing to `main` — GitHub Pages auto-deploys. There is no `.nojekyl
 ├── publications/index.html  # Academic: Springer book, 8 chapters, selected publications — self-contained
 ├── projects/index.html # Projects & Apps — self-contained page, own <style>/:root
 ├── news/index.html     # News & Updates — self-contained page, own <style>/:root
-├── images/             # 62 files — covers (<slug>-cover.jpg; books/ titles carry both language faces as -cover-en/-th or -cover-front/-back), diagram PNGs, posters, the event QR
+├── 404.html            # custom Not Found — LISTING chrome, noindex, NOT in sitemap.xml
+├── robots.txt          # Allow all + Sitemap: line (Cloudflare prepends its own block live)
+├── sitemap.xml         # 47 canonical URLs, hand-maintained — 404.html excluded
+├── favicon.ico         # + apple-touch-icon.png (180×180) — both probed at the root by default
+├── images/             # 71 files — covers (<slug>-cover.jpg; books/ titles carry both language faces as -cover-en/-th or -cover-front/-back), 9 share cards (og-*.jpg, <slug>-og.jpg — all 1200×630), diagram PNGs, posters, the event QR
 ├── docs/               # design spec, implementation plan, OpenClaw news runbook + gate
 ├── .claude/skills/     # page-design · blog-post · a11y-perf · site-check
 ├── _config.yml         # Jekyll excludes: docs/, CLAUDE.md (see Development)
@@ -131,11 +135,11 @@ Four skills live in `.claude/skills/` — use them; they carry the deep, verifie
 - **page-design** — the house visual system (canonical `:root` tokens, type scale, component vocabulary, approved hero gradients, modern-CSS adoption verdicts). Load before designing or restyling anything.
 - **blog-post** — the end-to-end recipe for adding/editing a post, with a wiring verifier (`assets/verify-wiring.py`). The starter template itself is not here — it was consolidated into **page-design** (`assets/post-template.html`) as the repo's one canonical copy; see `.claude/skills/blog-post/assets/TEMPLATE-MOVED.md`.
 - **a11y-perf** — accessibility and performance standing rules plus the measured remediation backlog (real contrast ratios, image weights, focus states).
-- **site-check** — run `python3 .claude/skills/site-check/scripts/check_site.py` from the repo root before every push. 49 cross-file integrity checks; exit 0 means no **new** fail-severity violation (a baseline of pre-existing debt is carried, `0 new, 55 known` today). `INV-25` fails the build if a baseline entry goes stale, so the net cannot silently rot; `INV-26` ties every section-directory detail page (today: the four `books/*.html`) to its own index.
+- **site-check** — run `python3 .claude/skills/site-check/scripts/check_site.py` from the repo root before every push. 50 cross-file integrity checks; exit 0 means no **new** fail-severity violation (a baseline of pre-existing debt is carried, `0 new, 48 known` today). `INV-25` fails the build if a baseline entry goes stale, so the net cannot silently rot; `INV-26` ties every section-directory detail page (today: the four `books/*.html`) to its own index; `INV-27` enforces the social/canonical head block on all 47 pages.
 
 **Complementary user-level design skills** (installed 2026-08-26 into `~/.claude/skills` — not in this
-repo, may be absent on other machines): `fixing-metadata` + `seo` (the verified gap: 0 of 47 pages carry
-og:/twitter:/canonical/JSON-LD, no sitemap or robots.txt), `impeccable` (design critique/polish method),
+repo, may be absent on other machines): `fixing-metadata` + `seo` (the gap they found was closed by the
+2026-08-26 sweep — see "Social metadata" below), `impeccable` (design critique/polish method),
 `review-animations` (motion review, manual invoke), `color-expert` (OKLCH/contrast craft),
 `dark-mode-design-expert` (dark-theme token architecture), plus the official `playground` plugin for
 throwaway visual A/Bs. **House rules win every conflict**: the four project skills above stay
@@ -143,6 +147,71 @@ authoritative for tokens, type scale, components, and measured a11y numbers — 
 advise, never override, and any change they motivate still goes through the owner's review-first flow.
 
 News and the homepage "Latest updates" strip have a separate gate — `python3 docs/openclaw/check-news-sync.py` — which checks three things nothing else does: the strip lists the 3 newest news items in order, every news item carries a `<!-- source: … -->` provenance comment, and the four hand-typed counters match reality (`"N updates"` on news, `"N chapters"` on publications, `"N novel"` / `"N complete"` on books). The full procedure for adding news is `docs/openclaw/latest-updates-runbook.md`.
+
+## Social metadata — the `<!-- social -->` block
+
+Added 2026-08-26. Every one of the 47 enumerated pages carries a delimited block in `<head>`:
+
+```html
+<!-- social -->
+<link rel="canonical" href="https://anirach.com/blog/<slug>.html">
+<meta property="og:type" ...>  <!-- article | book | website | profile -->
+...11 more tags...
+<!-- /social -->
+```
+
+**Do not hand-edit one.** `check_site.py` **INV-27** (FAIL severity) recomputes the canonical path
+from the file's own location and reads the real pixel size out of the JPEG/PNG header, so a wrong
+`og:url` or a stale `og:image:width` fails the build. The delimiters make the block idempotently
+replaceable by a sweep.
+
+The canonical URL form is fixed and everything derives from it:
+
+| Page | Canonical |
+|---|---|
+| root | `https://anirach.com/` |
+| section index | `https://anirach.com/<dir>/` — trailing slash, never `/index.html` |
+| blog post | `https://anirach.com/blog/<slug>.html` — **with** the extension |
+| book detail | `https://anirach.com/books/<slug>.html` |
+
+`.html` won over the extensionless form because 136 of the site's own links already use it, it is
+the real on-disk path, and extensionless URLs 404 on the documented local dev server. The 7
+`.series-nav` chips still link extensionless — that is fine and deliberate (INV-03 enforces it);
+the canonical tag is what resolves the duplicate.
+
+**`twitter:card` is chosen by cover shape**, not by preference: `summary_large_image` only at
+≥1.5:1, otherwise `summary`. 25 of the 37 post covers are square, and a square cover in a large
+card loses ~48% of its height — including the caption band these covers carry along the top.
+
+**Three posts and all four books use a dedicated share card** rather than their own cover
+(`images/<slug>-og.jpg`, 1200×630): the two posts whose covers are double-booked, the one post
+with no image at all, and the four books whose portrait covers would lose ~65% of their height —
+title band included — to a 1.91:1 centre crop. Each book card shows both language faces, English
+left and Thai right, matching how the detail pages render them.
+
+`404.html` is deliberately excluded from all of this: noindex, no social block, not in
+`sitemap.xml`, not enumerated by `check_site.py`. Do not "fix" it by adding one.
+
+**`sitemap.xml` is hand-maintained** — 47 `<loc>` entries with a per-file `lastmod` taken from
+git. Nothing computes it; adding a page means adding its entry. This is the same drift profile as
+the article counters, and only this sentence enforces it.
+
+**Decisions taken deliberately, so they are not re-litigated every sweep:**
+
+- **No RSS/Atom feed.** `<link rel="alternate">` appears nowhere and that is intentional — a
+  hand-written `atom.xml` would be a 49th hand-maintained file with the same drift profile as
+  `sitemap.xml`, and a generator would introduce the build step this repo has rejected.
+- **The two free PDFs stay crawlable** but are excluded from `sitemap.xml`, so the detail page is
+  what gets promoted. `robots.txt` carries the two commented-out `Disallow` lines to flip that.
+- **`jekyll-seo-tag` is never the answer here** — these files have no front matter, so it emits
+  nothing, and adding front matter would make Liquid evaluate the `{{ }}` code samples in 11 posts.
+- **The `news/` event posters stay as direct `.jpg` links.** A shared image URL carries no
+  metadata, but lightboxing a poster is a normal pattern and the book page is linked beside it.
+
+Two things remain the owner's to do, outside the repo: verify a Search Console property for
+anirach.com, and set Cloudflare SSL/TLS to **Full** (GitHub holds no certificate for the custom
+domain, so Cloudflare currently proxies to it over plain HTTP and every GitHub-issued redirect
+targets `http://`). See `docs/openclaw/latest-updates-runbook.md` for the post-event copy expiry.
 
 ## Verification
 

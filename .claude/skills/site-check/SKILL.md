@@ -66,8 +66,8 @@ details, not just the exit status.
 
 A clean checkout **exits 0** with **55 violations across 17 checks**, every one of them baselined.
 Verified against the One Day of Light tree of 2026-08-24, `7daf3a4` — 47 HTML files, `books/`
-now holding four detail pages (49 checks:
-30 fail / 15 warn / 4 info — INV-26 joined at fail level):
+now holding four detail pages (50 checks:
+31 fail / 15 warn / 4 info — INV-26 and INV-27 both joined at fail level):
 
 | id | sev | count | what |
 |----|-----|-------|------|
@@ -369,7 +369,7 @@ automatically; INV-26 is the one check that ties them to their index.
 ## Warn-level checks (real drift, never blocks a push)
 
 Surface these; fix them deliberately, not opportunistically. A linter that fails the build on
-cosmetics gets switched off. The real split is 30 fail / 15 warn / 4 info across 49 checks —
+cosmetics gets switched off. The real split is 31 fail / 15 warn / 4 info across 50 checks —
 `--list` prints each check's severity.
 
 | id | rule | today | repair |
@@ -465,3 +465,37 @@ check_site.py:446-451. `&amp;` vs `&` alone yields ~14 false positives.
 Every new or modified check must be proven failable by fault injection **on a copy of the repo**
 (`--root /tmp/copy`), never on the real tree. Paste the injected output into the commit or the PR;
 "it passes" is not evidence that a check works.
+
+### INV-27 — the social / canonical head block
+
+Added 2026-08-26 with the metadata sweep. Nothing in this repo generates a `<head>`; all 47
+enumerated pages carry a hand-copied one, and a wrong canonical or a stale `og:url` is invisible
+in a browser — it only shows up in a search result or a LINE preview, where nobody on this project
+ever looks. So INV-27 **derives** every value it can and compares the file against the derivation,
+never one hand-typed tag against another:
+
+| Facet | Derived from |
+|---|---|
+| `canonical` + `og:url` | the file's own path — `/blog/<slug>.html`, `/books/<slug>.html`, `/<dir>/`, `/`. Never `/index.html`, never extensionless. |
+| `og:image:width` / `:height` | the real pixel size, read out of the JPEG SOF / PNG IHDR marker with `struct`. **Pillow is not a dependency and must never become one.** |
+| `og:locale` | the same `blog/`-prefix rule INV-13 uses for `lang=` — `th_TH` on posts, `en_US` on the 10 English pages |
+| `og:site_name` | the one constant: `Anirach Mingkhwan` |
+
+It also requires `og:title`, `og:description`, `og:type`, `twitter:card` and a `<meta name="description">`
+to be present and non-empty, and `og:image` to resolve to a file that exists.
+
+Two deliberate design choices worth keeping:
+
+- **It reads `content="`, and that does not violate trap #4.** Trap #4 forbids `content=` to the
+  *link* scanner (`RE_ATTR`) because a viewport string is not a path. A metadata checker has
+  nothing else to read. `RE_ATTR` is untouched; INV-27 owns its own regexes, and both run over
+  `blank_inert()` text so a `<code>` sample showing an `og:` tag can neither satisfy nor break a
+  real page's block.
+- **A page with no social block at all reports ONE violation, not eight.** The fix is a single
+  block; eight lines per page would bury the pages that have a block with something *wrong* inside it.
+
+`404.html` is deliberately outside all of this — it is noindex, carries no social block, and is
+not enumerated by `site.pages`. Do not "fix" it by adding one.
+
+The same sweep taught **INV-06a** to see `og:image`: share images are referenced only from
+`content=`, so without `RE_META_IMG_REF` every one of them reported as an unreferenced orphan.

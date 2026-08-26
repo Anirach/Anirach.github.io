@@ -56,6 +56,7 @@ import argparse
 import html as htmlmod
 import os
 import re
+import struct
 import sys
 from collections import Counter, defaultdict
 
@@ -92,6 +93,11 @@ RE_PLINK = re.compile(                       # trap #1: [^>]*> is load-bearing
 RE_ATTR = re.compile(r'\b(href|src|srcset|poster)\s*=\s*"([^"]+)"')  # never content=
 RE_CODE_SPAN = re.compile(r'<(pre|code)\b[^>]*>.*?</\1>', re.S)      # trap #4
 RE_IMG_REF = re.compile(r'(?:src|href)="([^"]*images/[^"]+)"')
+# og:image / twitter:image live in content=, which RE_IMG_REF cannot see and
+# RE_ATTR must never learn to read (trap #4 — the link resolver would then try
+# to resolve absolute share URLs as on-disk links).  Without this, every share
+# image added by the INV-27 sweep reports as an unreferenced orphan in INV-06a.
+RE_META_IMG_REF = re.compile(r'content="[^"]*?/images/([^"]+)"')
 RE_URL_REF = re.compile(r"url\(\s*['\"]?([^'\"\)]*images/[^'\"\)]+)")
 RE_POST_COVER_SRC = re.compile(r'src="\.\./images/([^"]+)"')
 RE_POST_COVER_URL = re.compile(r"url\(\s*['\"]?\.\./images/([^'\"\)]+)")
@@ -339,18 +345,19 @@ BASELINE = {
         "vibe-coding-devops-process.html|deployment-hosting.html",
     },
 
-    "INV-11": {"deployment-hosting.html"},
+    # INV-11 (deployment-hosting.html carried two <h1>) was fixed by the
+    # 2026-08-26 metadata sweep, which deleted the duplicate heading and
+    # the orphaned import line beside it. No baseline entry remains; a
+    # future regression must fail.
 
     # INV-12 (blog/index.html rendered a hamburger button but loaded no JS)
     # was fixed by Task 9: the dead button was replaced with the checkbox-
     # toggle pattern from projects/index.html. No baseline entry remains; a
     # future regression must fail.
 
-    "INV-14": {
-        "idle-self-improvement.html", "openclaw-101.html",
-        "openclaw-agent-teams.html", "openclaw-memory.html",
-        "openclaw-security.html", "openclaw-skills.html",
-    },
+    # INV-14 (6 posts with no <meta name="description">) was cleared by the
+    # 2026-08-26 metadata sweep — all 47 pages now carry one, and INV-27
+    # promotes it from warn to FAIL. No baseline entry remains.
     "INV-15": {"2025", "NONE"},
     "INV-16": {
         '<footer class="blog-footer">', '<footer class="footer">',
@@ -993,7 +1000,8 @@ def _images_used(site):
     used = set()
     for rel in site.pages:
         s = site.text[rel]
-        for u in RE_IMG_REF.findall(s) + RE_URL_REF.findall(s):
+        for u in (RE_IMG_REF.findall(s) + RE_URL_REF.findall(s)
+                  + RE_META_IMG_REF.findall(s)):
             used.add(os.path.basename(u))
     return used
 
@@ -1635,6 +1643,335 @@ def _(site):
                 out.append(Violation("%s|dead|%s" % (d, h),
                                      '%s links href="%s" but %s/%s does not exist'
                                      % (idx_rel, h, d, h)))
+    return out
+
+
+
+
+# ---------------------------------------------------------------------------
+# INV-27 — the social / canonical head block
+#
+# Nothing in this repo generates a <head>.  Every one of the 47 pages carries
+# a hand-copied one, which is exactly the shape of drift the other 26 checks
+# exist for — except that a wrong canonical or a stale og:url is invisible in
+# a browser.  It only shows up in a search result, a Slack unfurl or a Line
+# preview, i.e. somewhere nobody on this project ever looks.
+#
+# So every value this check can DERIVE, it derives, and compares the file's
+# text against the derivation — never one hand-typed tag against another:
+#   canonical/og:url  <- the file's own path on disk (canonical_path_for)
+#   og:locale         <- the same blog/-prefix rule INV-13 uses for lang=
+#   og:image w/h      <- the actual pixel dimensions of the actual file,
+#                        parsed out of the PNG IHDR chunk / the JPEG SOF
+#                        marker with struct (image_pixel_size).  Pillow is
+#                        not a dependency and must never become one.
+# The only value compared against a constant is og:site_name, which is a
+# constant by definition.
+#
+# NOTE ON TRAP #4: this is the one check in the file that deliberately reads
+# content=".  Trap #4 forbids that to the LINK scanner (RE_ATTR), because a
+# viewport or description string is not a path — it does not forbid it to a
+# metadata checker, which has nothing else to read.  RE_ATTR is untouched;
+# the two regexes below are INV-27's own.  Both are applied to blank_inert()
+# text so that a <code> sample showing an og: tag can never satisfy — or
+# break — a real page's head block.
+#
+# A page with no social head AT ALL reports ONE violation, not eight: the
+# fix is a single block, and eight lines per page would bury the pages that
+# have a block with something wrong inside it.  Facet (h), the meta
+# description, is scored separately — it is ordinary <head> hygiene, not
+# part of the social block, and it is the one facet that already exists on
+# most pages.
+# ---------------------------------------------------------------------------
+SITE_ORIGIN = "https://anirach.com"
+SITE_IMAGE_PREFIX = SITE_ORIGIN + "/images/"
+OG_SITE_NAME = "Anirach Mingkhwan"
+OG_LOCALE_TH = "th_TH"
+OG_LOCALE_EN = "en_US"
+
+# Presence-and-non-empty only; their VALUES are checked individually below
+# where a value is derivable (og:url, og:image, og:site_name, og:locale).
+REQUIRED_SOCIAL_TAGS = (
+    "og:title", "og:description", "og:image", "og:type",
+    "og:site_name", "og:locale", "twitter:card",
+)
+
+RE_LINK_TAG = re.compile(r"<link\b[^>]*>", re.I)
+RE_META_TAG = re.compile(r"<meta\b[^>]*>", re.I)
+
+# JPEG start-of-frame markers.  0xC4 (DHT), 0xC8 (JPG) and 0xCC (DAC) live in
+# the same 0xC0-0xCF range and are NOT frame headers — reading dimensions out
+# of a Huffman table returns confident garbage.
+JPEG_SOF_MARKERS = frozenset(
+    set(range(0xC0, 0xD0)) - {0xC4, 0xC8, 0xCC})
+
+
+def image_pixel_size(path):
+    """(width, height) of a PNG or JPEG on disk, or None if it is neither /
+    is truncated / is a format this stdlib-only reader cannot measure.
+
+    PNG:  the IHDR chunk is mandatory and mandatory-first — width and height
+          are two big-endian uint32 at a fixed offset of 16.
+    JPEG: walk the marker segments until a SOF; its payload is
+          precision(1) height(2) width(2), height FIRST.  Walking is
+          required, not optional: a cover with an EXIF/ICC block in front of
+          the frame header puts the SOF hundreds of bytes in."""
+    try:
+        with open(path, "rb") as fh:
+            head = fh.read(24)
+            if head[:8] == b"\x89PNG\r\n\x1a\n" and head[12:16] == b"IHDR":
+                if len(head) < 24:
+                    return None
+                w, h = struct.unpack(">II", head[16:24])
+                return (int(w), int(h))
+            if head[:2] != b"\xff\xd8":
+                return None
+            fh.seek(2)
+            for _ in range(256):                 # guard: no unbounded walk
+                b = fh.read(1)
+                while b and b != b"\xff":        # resync on the marker byte
+                    b = fh.read(1)
+                if not b:
+                    return None
+                m = fh.read(1)
+                while m == b"\xff":              # 0xFF fill bytes
+                    m = fh.read(1)
+                if not m:
+                    return None
+                mk = m[0]
+                if mk in (0x01, 0xD8) or 0xD0 <= mk <= 0xD7:
+                    continue                     # standalone, no payload
+                if mk in (0xD9, 0xDA):
+                    return None                  # end of header, no SOF seen
+                raw = fh.read(2)
+                if len(raw) < 2:
+                    return None
+                (seglen,) = struct.unpack(">H", raw)
+                if mk in JPEG_SOF_MARKERS:
+                    seg = fh.read(5)
+                    if len(seg) < 5:
+                        return None
+                    h, w = struct.unpack(">HH", seg[1:5])
+                    return (int(w), int(h))
+                if seglen < 2:
+                    return None
+                fh.seek(seglen - 2, 1)
+    except (OSError, struct.error):
+        return None
+    return None
+
+
+def canonical_path_for(rel):
+    """The ONE canonical path a page at `rel` may claim, derived from where
+    the file sits.  index.html anywhere is its directory, with the trailing
+    slash and without the filename (GitHub Pages serves /books/ and
+    /books/index.html as the same document; only one of them may be
+    advertised).  Everything else keeps its .html, matching the URL form the
+    site's own cards and post-navs already link."""
+    rel = rel.replace(os.sep, "/")
+    d, base = os.path.split(rel)
+    if base == "index.html":
+        return "/" + (d + "/" if d else "")
+    return "/" + rel
+
+
+def canonical_url_for(rel):
+    return SITE_ORIGIN + canonical_path_for(rel)
+
+
+def og_locale_for(rel):
+    """Same domain rule as INV-13's lang= check, and for the same reason: a
+    blog post is Thai prose, every index and every section detail page is
+    English chrome."""
+    return (OG_LOCALE_TH
+            if rel.startswith("blog/") and rel != "blog/index.html"
+            else OG_LOCALE_EN)
+
+
+def social_head(s):
+    """(canonical_hrefs, tags) for one page.
+
+    canonical_hrefs  [href, ...] in document order, one per
+                     <link rel="canonical"> — a LIST, because "exactly one"
+                     is the invariant and a count of 2 must be reportable.
+    tags             {key: content} for every <meta> carrying a property= or
+                     name= of og:*/twitter:*/description, first occurrence
+                     wins.  Both attribute spellings are accepted: og: is
+                     property= per the OGP spec, twitter: and description are
+                     name=, and enough of the world emits the other spelling
+                     that policing WHICH attribute carries the key would fail
+                     pages whose preview actually works."""
+    s = blank_inert(s)
+    canon = []
+    for m in RE_LINK_TAG.finditer(s):
+        a = {k.lower(): v for k, v in RE_ATTR_ANY.findall(m.group(0))}
+        if a.get("rel", "").strip().lower() == "canonical":
+            canon.append(a.get("href", ""))
+    tags = {}
+    for m in RE_META_TAG.finditer(s):
+        a = {k.lower(): v for k, v in RE_ATTR_ANY.findall(m.group(0))}
+        key = (a.get("property") or a.get("name") or "").strip().lower()
+        if not key:
+            continue
+        if key == "description" or key.startswith(("og:", "twitter:")):
+            tags.setdefault(key, a.get("content", ""))
+    return canon, tags
+
+
+@check("INV-27", "every page carries a self-consistent social/canonical head block")
+def _(site):
+    out = []
+    for rel in site.pages:
+        s = site.text[rel]
+        canon, tags = social_head(s)
+        want_url = canonical_url_for(rel)
+
+        def bad(facet, detail):
+            out.append(Violation("%s|%s" % (rel, facet), "%s %s" % (rel, detail)))
+
+        # (h) — scored for EVERY page, block or no block.  INV-14 asks the
+        # same question of posts only, and only warns.
+        desc = htmlmod.unescape(tags.get("description", "")).strip()
+        if "description" not in tags:
+            bad("meta-description", 'has no <meta name="description">')
+        elif not desc:
+            bad("meta-description", 'has an empty <meta name="description" content="">')
+
+        # A page with no social block: ONE violation, not eight.  This fires on
+        # "no og:/twitter: tags at all" regardless of the canonical, because a
+        # page that has a stray canonical but no og: block is the same missing
+        # block — and reporting its eight absent tags individually is exactly
+        # the bury-the-signal case this short-circuit exists to prevent.
+        if not any(k.startswith(("og:", "twitter:")) for k in tags):
+            bad("no-social-head",
+                "carries no og:/twitter: meta at all%s — wants the whole block "
+                "(canonical %s)"
+                % ("" if not canon else ", though it does declare a canonical",
+                   want_url))
+            continue
+
+        # (a) canonical: exactly one, right origin, path derived from the
+        # file's own location, never .../index.html.
+        href, canon_bad = None, False
+        if not canon:
+            bad("canonical-missing",
+                'has og:/twitter: meta but no <link rel="canonical"> '
+                '(want href="%s")' % want_url)
+            canon_bad = True
+        else:
+            if len(canon) > 1:
+                bad("canonical-dup",
+                    'declares %d <link rel="canonical"> (want exactly 1): %s'
+                    % (len(canon), ", ".join(repr(h) for h in canon)))
+                canon_bad = True
+                href = None          # the duplicate IS the finding; do not also
+                                     # grade whichever href happened to come first
+            else:
+                href = canon[0]
+            if href is None:
+                pass
+            elif not href.startswith(SITE_ORIGIN):
+                bad("canonical-origin",
+                    'canonical %r does not start with "%s"' % (href, SITE_ORIGIN))
+                canon_bad = True
+            elif href.endswith("/index.html"):
+                bad("canonical-index",
+                    "canonical %r ends in /index.html — the directory form %r "
+                    "is the one URL this page may advertise" % (href, want_url))
+                canon_bad = True
+            elif href != want_url:
+                bad("canonical-path",
+                    "canonical %r does not match the path this file sits at "
+                    "(want %r)" % (href, want_url))
+                canon_bad = True
+
+        # (b) og:url == want_url.  The separate "og:url must equal the canonical
+        # href" comparison that used to live here was DEAD CODE: reaching it
+        # required href == want_url and ogurl == want_url, so the two were
+        # already equal by construction.  Both values are graded against the
+        # same derivation instead, which is the stronger check anyway — and one
+        # typo still produces one violation, not two.
+        if "og:url" not in tags:
+            bad("og:url", "has no og:url (want %r)" % want_url)
+        else:
+            ogurl = tags["og:url"]
+            if ogurl != want_url:
+                bad("og:url",
+                    "og:url %r does not match the path this file sits at "
+                    "(want %r)" % (ogurl, want_url))
+
+        # (c) the seven presence-only tags.
+        for key in REQUIRED_SOCIAL_TAGS:
+            if key not in tags:
+                bad(key, "has no %s" % key)
+            elif not tags[key].strip():
+                bad(key, 'has %s with an empty content=""' % key)
+
+        # (d) og:image absolute, under /images/, and on disk.
+        img = tags.get("og:image", "").strip()
+        img_path = None
+        if img:
+            if not img.startswith(SITE_IMAGE_PREFIX):
+                bad("og:image-url",
+                    'og:image %r is not an absolute "%s..." URL — a relative '
+                    "or off-origin og:image does not unfurl"
+                    % (img, SITE_IMAGE_PREFIX))
+            else:
+                name = img[len(SITE_ORIGIN):].split("#")[0].split("?")[0]
+                name = name.lstrip("/")
+                # normpath + the images/ containment test: a ".." in the URL
+                # must report as missing, never resolve to a file elsewhere
+                # in the checkout and quietly pass.
+                cand = os.path.normpath(os.path.join(site.root, name))
+                if (cand.startswith(site.images + os.sep)
+                        and os.path.isfile(cand)):
+                    img_path = cand
+                else:
+                    bad("og:image-file",
+                        "og:image %r has no file on disk at %s" % (img, name))
+
+        # (e) declared dimensions vs the file's real pixels.  Absent is
+        # allowed (they are optional tags); wrong is not — a lying width is
+        # worse than none, it reserves the wrong box in the unfurl.
+        declared = [(k, tags[k]) for k in ("og:image:width", "og:image:height")
+                    if k in tags]
+        if declared and img_path:
+            size = image_pixel_size(img_path)
+            if size is None:
+                bad("og:image-unreadable",
+                    "declares %s but %s is not a PNG/JPEG this checker can "
+                    "measure — the numbers cannot be verified"
+                    % ("/".join(k for k, _v in declared),
+                       os.path.relpath(img_path, site.root)))
+            else:
+                for k, v in declared:
+                    real = size[0] if k.endswith("width") else size[1]
+                    v = v.strip()
+                    if not v.isdigit():
+                        bad(k, "%s=%r is not a number (real %s is %d)"
+                            % (k, tags[k], k.rsplit(":", 1)[1], real))
+                    elif int(v) != real:
+                        bad(k, "%s=%s but %s is %dx%d — real %s is %d"
+                            % (k, v, os.path.relpath(img_path, site.root),
+                               size[0], size[1], k.rsplit(":", 1)[1], real))
+
+        # (f) og:site_name is a constant on every page.
+        if "og:site_name" in tags:
+            got = htmlmod.unescape(tags["og:site_name"]).strip()
+            if got != OG_SITE_NAME:
+                bad("og:site_name-value",
+                    "og:site_name %r (want %r on every page)" % (got, OG_SITE_NAME))
+
+        # (g) og:locale follows the file's location, not the author's mood.
+        if "og:locale" in tags:
+            want_loc = og_locale_for(rel)
+            got = tags["og:locale"].strip()
+            if got != want_loc:
+                bad("og:locale-value",
+                    "og:locale %r (want %r — %s)"
+                    % (got, want_loc,
+                       "blog posts are Thai prose" if want_loc == OG_LOCALE_TH
+                       else 'this is one of the lang="en" chrome pages'))
     return out
 
 

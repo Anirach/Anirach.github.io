@@ -231,3 +231,34 @@ markup change.
 This failure mode — a checker whose pattern stops matching and therefore passes on an empty set —
 has occurred twice in this repository. Treat "0 problems found" as suspicious until you have seen
 the checker report a real problem at least once.
+
+---
+
+## Dated content that expires
+
+Two things on this site are written around a date that has not happened yet, and both go stale
+silently the day after. Nothing computes them, and no gate can — a checker cannot know what the
+copy *should* say once the event is over.
+
+**The Last Lecture — Saturday 19 September 2026.** After that date, revise all four of these
+in one commit:
+
+| Where | What is date-bound |
+|---|---|
+| `books/one-day-of-light.html` | the `Event` JSON-LD block in `<head>` — past-tense it or remove it |
+| `books/one-day-of-light.html` | `<meta name="description">` **and** the `og:description` in the `<!-- social -->` block — both are written around the upcoming event |
+| `index.html` | the `.latest` strip line announcing the lecture |
+| `news/index.html` | the corresponding news item |
+
+The `og:description` matters more than it looks: Facebook and LINE cache the card on first
+scrape, so a stale description outlives the edit until someone re-scrapes the URL through the
+Facebook Sharing Debugger. Do that as the last step.
+
+**Adding a new page?** It needs a `<!-- social -->` block in `<head>` and a `<loc>` entry in
+`/sitemap.xml`. `check_site.py` INV-27 fails the build without the first; nothing but this
+sentence enforces the second.
+
+```bash
+python3 .claude/skills/site-check/scripts/check_site.py --check INV-27
+grep -c '<loc>' sitemap.xml    # must equal the page count (47 today, excluding 404.html)
+```
