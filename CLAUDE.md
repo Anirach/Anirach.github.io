@@ -262,7 +262,8 @@ symptom that proved the old Flexible mode — GitHub's own redirects targeting `
 requests are upgraded at the edge (Always Use HTTPS). Verify with
 `curl -sI https://anirach.com/blog | grep -i location`. Not needed: GitHub's "Enforce HTTPS"
 checkbox — it cannot provision a certificate behind the Cloudflare proxy, and the edge already
-enforces it.
+enforces it. See `docs/openclaw/latest-updates-runbook.md` for the post-event copy
+expiry.
 
 ## Verification
 
