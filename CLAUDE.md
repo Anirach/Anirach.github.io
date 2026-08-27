@@ -251,10 +251,18 @@ adds a root file, the old 404 stays cached at the edge until it expires — `/fa
 cached 404 for a while after 2026-08-26 while the origin already had it. Append `?cb=$RANDOM` to
 check the real state before diagnosing a deploy problem that is not there.
 
-Two things remain the owner's to do, outside the repo: verify a Search Console property for
-anirach.com, and set Cloudflare SSL/TLS to **Full** (GitHub holds no certificate for the custom
-domain, so Cloudflare currently proxies to it over plain HTTP and every GitHub-issued redirect
-targets `http://`). See `docs/openclaw/latest-updates-runbook.md` for the post-event copy expiry.
+One thing remains the owner's to do, outside the repo: verify a Search Console property for
+anirach.com. The other is DONE — Cloudflare SSL/TLS was set to **Full (strict)** on 2026-08-27.
+The old note here ("GitHub holds no certificate for the custom domain, so Cloudflare proxies over
+plain HTTP") was half right: GitHub's origin presents a `*.github.io` Let's Encrypt certificate,
+not one for anirach.com (`gh api repos/Anirach/Anirach.github.io/pages` → `https_enforced: false`,
+no certificate), but strict mode only requires a trusted, unexpired certificate, so it passes. The
+symptom that proved the old Flexible mode — GitHub's own redirects targeting `http://` (e.g.
+`/blog` → `http://anirach.com/blog/`) — is gone; they target `https://` now, and plain `http://`
+requests are upgraded at the edge (Always Use HTTPS). Verify with
+`curl -sI https://anirach.com/blog | grep -i location`. Not needed: GitHub's "Enforce HTTPS"
+checkbox — it cannot provision a certificate behind the Cloudflare proxy, and the edge already
+enforces it.
 
 ## Verification
 
