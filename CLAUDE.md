@@ -24,9 +24,11 @@ Deploy by pushing to `main` — GitHub Pages auto-deploys. There is no `.nojekyl
 
 ```
 /
-├── index.html          # Portfolio landing page — the ONLY consumer of style.css + script.js
-├── style.css           # Landing-page styles — carries the canonical 24-token :root block, same tokens every other page redefines in its own embedded <style>
-├── script.js           # IIFE: nav scroll state, hamburger, IntersectionObserver reveal, hero parallax
+├── index.html          # Portfolio landing page — the ONLY consumer of style.css
+├── style.css           # Landing-page styles — the canonical 24-token :root block (same tokens every other page redefines in its own embedded <style>), plus the scroll-driven reveal and nav animations that replaced script.js
+│                       # NOTE: there is no script.js. It was deleted 2026-08-26 (bb9c7dc);
+│                       #   the site is zero-JavaScript and INV-38 fails the build on any
+│                       #   <script> that is not application/ld+json. See "Zero JavaScript" below.
 ├── blog/
 │   ├── index.html      # Blog listing — fully static, zero JavaScript, a featured post + 2 series (no category band)
 │   └── *.html          # 37 self-contained posts (own <style>, own :root, own nav markup)
@@ -52,7 +54,7 @@ Deploy by pushing to `main` — GitHub Pages auto-deploys. There is no `.nojekyl
 └── CNAME               # anirach.com
 ```
 
-**Every blog page is an island — and so is each of `books/` (its index and all four detail pages), `publications/`, `projects/`, `news/`.** None of them link `style.css` or `script.js`; each embeds its full stylesheet in a `<style>` block and defines its own `:root` variables (copied from the same canonical token set `style.css` also carries). Editing `style.css` affects only the landing page. Editing one post or one of the eight section-directory pages affects only that file — there is no shared partial, so changes that should apply "everywhere" must be repeated per file (this is what commit `4c180c9` "Standardize series navigation across all 7 OpenClaw posts" was doing).
+**Every blog page is an island — and so is each of `books/` (its index and all four detail pages), `publications/`, `projects/`, `news/`.** None of them link `style.css`; each embeds its full stylesheet in a `<style>` block and defines its own `:root` variables (copied from the same canonical token set `style.css` also carries). Editing `style.css` affects only the landing page. Editing one post or one of the eight section-directory pages affects only that file — there is no shared partial, so changes that should apply "everywhere" must be repeated per file (this is what commit `4c180c9` "Standardize series navigation across all 7 OpenClaw posts" was doing).
 
 ### Content is organized as one featured post and two series
 
@@ -102,7 +104,7 @@ The numbered OpenClaw series order is fixed: `openclaw-101` → `agent-teams` �
 - **Fonts**: Google Fonts `<link>` per page — Inter 300–900, **Sarabun 400/600/700 for Thai** (looped, the Thai body-prose convention; added 2026-08-26 to 39 pages — the 10 island posts load no webfont at all and are deferred to the island conversion), plus JetBrains Mono 400–600 on posts with code.
 - **Diagrams**: render as PNG in `images/` and `<img>` them in. Inline HTML/CSS and ASCII-art diagrams have repeatedly broken layout and were replaced (`c270892`, `4ae2660`) — do not reintroduce them.
 - **Images**: covers are `images/<slug>-cover.png|jpg`, referenced from posts as `../images/...` and from `blog/index.html` as `../images/...`. Card `<img>` tags carry an inline `style="background: linear-gradient(...)"` fallback.
-- **Reveal animations**: `data-reveal` attribute — landing page only (driven by `script.js`).
+- **Reveal animations**: `data-reveal` attribute — landing page only, driven by a scroll-driven CSS animation in `style.css` (`@keyframes reveal` + `animation-timeline: view()`), never by JavaScript.
 
 ## Adding a New Blog Post
 
@@ -160,14 +162,39 @@ Sunrise or Deep Blue — the 2 post families, down from 5 on 2026-08-26), `INV-2
 destination row, so no post is a dead end), `INV-30` (the skip link and its `id="main"` target
 exist together), `INV-31`/`INV-32` (feed and sitemap drift).
 
-**Progressive enhancement is now the rule on `index.html`.** `[data-reveal]` starts VISIBLE; the
-hidden state is opt-in via a `.js-reveal` class that `script.js` adds to `<html>` as its first act.
-Before 2026-08-26 the hidden state was the default and the script was the only thing that undid it,
-so with JavaScript off **53% of the landing page rendered as empty coloured bands** (2,746 of
-5,172px at 1440) — including the entire One Day of Light block, both PDF links and the seat
-reservation. A `<noscript><style>` override was the obvious patch and was deliberately rejected: it
-would have given `index.html` its first `<style>` block and broken the invariant that this page's
-CSS lives entirely in `style.css` (7867c00). Never re-invert this.
+### Zero JavaScript — enforced, not merely preferred
+
+**The site loads no executable JavaScript at all.** `script.js` was deleted on 2026-08-26
+(`bb9c7dc`, "Delete script.js — the site is zero-JavaScript — Phase 7") and **`check_site.py`
+INV-38 fails the build if it returns**, or if any page grows a `<script>` that is not
+`application/ld+json`. That one type is allowed because the browser parses it as data and never
+executes it; exactly three pages use it (`index.html`, `books/one-day-of-light.html`,
+`books/three-old-men.html`), all for schema.org metadata. INV-38 replaced INV-21/INV-21b, which
+had policed `script.js`'s DOM contract and were deleted rather than baselined when the file went.
+
+Each of the script's four jobs has a CSS replacement, all of them in `style.css`:
+
+| was, in `script.js` | is now |
+|---|---|
+| IntersectionObserver reveal | `@keyframes reveal` + `animation-timeline: view()` |
+| scroll listener toggling `.scrolled` | `@keyframes nav-settle` + `animation-timeline: scroll(root)` |
+| hamburger click handler | `.nav__links:target` (the 10 island-chrome pages use a `.nav__toggle` checkbox instead — two different mechanisms, both pure CSS) |
+| smooth anchor scroll | native `scroll-behavior: smooth` |
+
+**The reveal keyframe has a `from` and deliberately no `to`.** An element at rest is therefore in
+its natural state, so a browser without `animation-timeline` never applies `opacity: 0` and the
+content is simply *there*. That property is what makes the effect safe to ship unconditionally —
+do not "complete" the keyframe by adding a `to`.
+
+This matters because of what it replaced. Before 2026-08-26 the hidden state was the default and
+the script was the only thing that undid it, so with JavaScript off **53% of the landing page
+rendered as empty coloured bands** (2,746 of 5,172px at 1440) — including the entire One Day of
+Light block, both PDF links and the seat reservation. The first fix inverted the default behind a
+`.js-reveal` class that `script.js` added to `<html>`; deleting the script made even that
+unnecessary, and the `from`-only keyframe is the final form. A `<noscript><style>` override was the
+obvious patch and was deliberately rejected: it would have given `index.html` its first `<style>`
+block and broken the invariant that this page's CSS lives entirely in `style.css` (`7867c00`).
+Never re-invert this, and never reach for JavaScript to restore it.
 
 **Complementary user-level design skills** (installed 2026-08-26 into `~/.claude/skills` — not in this
 repo, may be absent on other machines): `fixing-metadata` + `seo` (the gap they found was closed by the
