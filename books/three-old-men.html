@@ -290,6 +290,59 @@
       color: var(--gold-dark); font-size: 0.8rem; line-height: 1.9;
     }
 
+    /* ── ORDER: THE TOTALS TABLE ──
+       Payment happens BEFORE the buyer messages, so these figures are
+       load-bearing, not decoration — a wrong transfer is a refund. They lead
+       the section for that reason. book-* page-local namespace, the convention
+       .book-downloads / .book-request already set here (page-design §4 freezes
+       the GLOBAL vocabulary; this does not add to it). */
+    .book-price { list-style: none; padding: 0; margin: 0 0 1.5rem; max-width: var(--measure); }
+    .book-price li {
+      display: flex; justify-content: space-between; gap: 1rem;
+      padding: 0.6rem 0; border-bottom: 1px solid #e8ecf1;
+      font-size: 0.95rem; color: var(--slate); line-height: 1.6;
+    }
+    .book-price li span:last-child { text-align: right; white-space: nowrap; }
+    .book-price__total { font-weight: 700; color: var(--navy) !important; }
+
+    /* ── ORDER: THE COPY-PASTE TEMPLATE ──
+       Messenger can validate nothing — no required fields, no format check —
+       so this block is the whole mitigation: every field pre-labelled, so the
+       buyer fills blanks instead of composing an address from memory.
+       Three deliberate choices, each of which looks like an oversight:
+       1. font-family: inherit, NOT var(--mono). This page loads only Inter +
+          Sarabun — no JetBrains Mono — so var(--mono) falls through to a
+          generic monospace, which renders Thai badly. (--mono and --code-bg
+          are declared on this page but referenced nowhere. Leave them.)
+       2. NOTHING FOCUSABLE GOES IN HERE. The a11y block below re-points
+          --focus to gold inside any `pre` — right for dark code blocks, but
+          gold is 2.2:1 on this cream ground. Plain text only, no links.
+       3. white-space: pre-wrap, not overflow-x: auto. The house scrolling
+          code-block pattern is scoped to .post-body, which does not exist on
+          this page; wrapping is what keeps a phone scroll-free. */
+    .book-template {
+      font-family: inherit; white-space: pre-wrap; word-break: break-word;
+      background: var(--white); border: 1px solid #e8ecf1;
+      border-left: 3px solid var(--gold); border-radius: var(--radius);
+      padding: 1.1rem 1.35rem; margin: 0 0 1.25rem; max-width: var(--measure);
+      font-size: 0.95rem; line-height: 1.9; color: var(--slate);
+    }
+
+    /* the four ordered steps — numbers come from the ordered list, not hand-typed */
+    .book-steps { list-style: none; padding: 0; margin: 0; counter-reset: step; }
+    .book-steps > li { counter-increment: step; margin-bottom: 2.25rem; }
+    .book-steps > li:last-child { margin-bottom: 0; }
+    .book-steps__head {
+      display: flex; align-items: center; gap: 0.7rem;
+      font-size: 1.02rem; font-weight: 700; color: var(--navy); margin-bottom: 0.75rem;
+    }
+    .book-steps__head::before {
+      content: counter(step); flex: 0 0 1.75rem; height: 1.75rem;
+      display: inline-flex; align-items: center; justify-content: center;
+      background: var(--blue-dark); color: #fff; border-radius: 50%;
+      font-size: 0.85rem; font-variant-numeric: tabular-nums;
+    }
+
     /* ── BUTTONS ── copied from books/one-day-of-light.html, unchanged */
     .btn {
       display: inline-flex; align-items: center; gap: 0.4em;
@@ -441,10 +494,22 @@
   "genre": "Novel",
   "offers": {
     "@type": "Offer",
-    "url": "https://anirach.com/books/three-old-men.html",
+    "url": "https://anirach.com/books/three-old-men.html#order",
     "price": "200",
     "priceCurrency": "THB",
-    "availability": "https://schema.org/InStock"
+    "availability": "https://schema.org/InStock",
+    "shippingDetails": {
+      "@type": "OfferShippingDetails",
+      "shippingRate": {
+        "@type": "MonetaryAmount",
+        "value": "50",
+        "currency": "THB"
+      },
+      "shippingDestination": {
+        "@type": "DefinedRegion",
+        "addressCountry": "TH"
+      }
+    }
   }
 }
 </script>
@@ -765,14 +830,114 @@
                target="_blank" rel="noopener" type="application/pdf">Read the first chapter — PDF, 568 KB <span aria-hidden="true">↗</span></a>
           </div>
 
-          <p>The printed book is <strong>200 baht</strong>. It was printed in August 2026
-             in a first edition of 500 copies — 240 pages, English and Thai in the one
-             volume. To ask about a copy, please <a href="../index.html#contact">get in
-             touch</a> — I am always glad to hear from readers.</p>
+          <!-- The price and the how-to-buy copy used to live here. Both moved into
+               #order below: two competing calls to action on one screen is the thing
+               to avoid, and ordering now has real steps that need room. What is left
+               is a pointer, not a second CTA. -->
+          <p>The printed book is <strong>200 baht</strong> plus 50 baht postage —
+             <a href="#order">order a copy below</a>.</p>
           <p><span lang="th">หนังสือเล่มพิมพ์ ราคา <strong>200 บาท</strong>
-             พิมพ์เดือนสิงหาคม 2569 พิมพ์ครั้งแรกจำนวน 500 เล่ม 240 หน้า
-             มีทั้งภาษาไทยและภาษาอังกฤษในเล่มเดียวกัน หากสนใจสอบถามเรื่องหนังสือ</span>
-             <a href="../index.html#contact"><span lang="th">ติดต่อผู้เขียนได้ที่นี่</span></a></p>
+             ค่าจัดส่ง 50 บาท</span> · <a href="#order"><span lang="th">สั่งซื้อได้ด้านล่าง</span></a></p>
+        </section>
+
+        <!-- ═══════════════════ ORDER ═══════════════════ -->
+        <!-- Ordering is a hand-off to Facebook Messenger. There is no form here and
+             there cannot be one: the site has no server-side capability of any kind,
+             and INV-38 fails the build on any script tag that is not ld+json, so nothing
+             can POST and nothing can validate.
+             Consequence worth stating plainly: Messenger CANNOT enforce a single
+             field. The four ordered steps and the copy-paste template below are the
+             entire mitigation — they make a complete message the easy path rather
+             than a required one. Do not describe this section as validating anything.
+             The steps run in the order the buyer performs them, and payment comes
+             LAST: the PromptPay details are given privately in the owner's reply and
+             deliberately do NOT appear on this page, so a buyer cannot pay before
+             writing. Do not add a "transfer first" step or publish an account number
+             here without the owner asking — the private reply is the point. -->
+        <section class="books-section" id="order">
+          <div class="series-header">
+            <div class="series-header__left">
+              <span class="series-icon" aria-hidden="true">📮</span>
+              <h2 class="series-title">Order a copy · <span lang="th">สั่งซื้อหนังสือ</span></h2>
+            </div>
+          </div>
+
+          <p>The book is posted anywhere in Thailand. Send me your address on Messenger
+             and I will reply with the total and how to pay — there is nothing to
+             transfer yet.</p>
+          <p><span lang="th">จัดส่งทั่วประเทศไทย ส่งที่อยู่มาทางเมสเซนเจอร์
+             แล้วผมจะแจ้งยอดรวมและวิธีชำระเงินกลับไป ยังไม่ต้องโอนเงินตอนนี้ครับ</span></p>
+
+          <ol class="book-steps">
+
+            <li>
+              <p class="book-steps__head">Work out your total · <span lang="th">คิดยอดรวม</span></p>
+              <ul class="book-price">
+                <li><span>The book · <span lang="th">ค่าหนังสือ</span></span><span>฿200 each</span></li>
+                <li><span>Postage · <span lang="th">ค่าจัดส่ง</span></span><span>฿50 per order</span></li>
+                <li class="book-price__total"><span>1 copy · <span lang="th">1 เล่ม</span></span><span>฿250</span></li>
+                <li class="book-price__total"><span>2 copies · <span lang="th">2 เล่ม</span></span><span>฿450</span></li>
+                <li class="book-price__total"><span>3 copies · <span lang="th">3 เล่ม</span></span><span>฿650</span></li>
+              </ul>
+              <p>Postage is a flat ฿50 however many copies you order — so the more books,
+                 the less each one costs to send.</p>
+              <p><span lang="th">ค่าจัดส่ง 50 บาทต่อหนึ่งคำสั่งซื้อ ไม่ว่าจะสั่งกี่เล่มก็ตาม</span></p>
+            </li>
+
+            <li>
+              <p class="book-steps__head">Copy this and fill it in · <span lang="th">คัดลอกแบบฟอร์มนี้แล้วกรอก</span></p>
+<!-- The content of this preformatted block MUST stay flush against the left margin:
+     white-space
+     is significant, and pre-wrap would render any source indentation as leading
+     spaces in the buyer's pasted message. Nothing focusable may go inside — see the
+     .book-template comment in the stylesheet. -->
+<pre class="book-template">ชื่อ-นามสกุล / Name:
+ที่อยู่ บ้านเลขที่ หมู่ ถนน / Address:
+ตำบล-แขวง / Sub-district:
+อำเภอ-เขต / District:
+จังหวัด / Province:
+รหัสไปรษณีย์ / Postcode:
+เบอร์โทรศัพท์ / Phone:
+จำนวนเล่ม / Copies:</pre>
+              <p>Every line matters for the post — an address without a postcode cannot
+                 be delivered.</p>
+              <p><span lang="th">กรุณากรอกให้ครบทุกบรรทัด โดยเฉพาะรหัสไปรษณีย์
+                 เพราะที่อยู่ที่ไม่มีรหัสไปรษณีย์จะจัดส่งไม่ได้</span></p>
+            </li>
+
+            <li>
+              <p class="book-steps__head">Send it on Messenger · <span lang="th">ส่งทางเมสเซนเจอร์</span></p>
+              <p>Paste the filled-in form into the chat and send it. No payment yet.</p>
+              <p><span lang="th">วางข้อความที่กรอกแล้วในแชทแล้วกดส่ง ยังไม่ต้องโอนเงินในขั้นตอนนี้</span></p>
+              <div class="book-downloads">
+                <!-- m.me/anirach — confirmed by the owner 2026-08-30. Note this is the
+                     PERSONAL PROFILE handle (the repo already publishes
+                     facebook.com/anirach), not a Page: messages from people who are not
+                     friends land in Messenger's "Message Requests" folder rather than the
+                     main inbox. The owner knows and watches it. If a Page is ever created
+                     for the books, re-point this and add it to index.html's sameAs. -->
+                <a class="btn btn--pill btn--primary" href="https://m.me/anirach"
+                   target="_blank" rel="noopener">Order on Messenger · <span lang="th">สั่งซื้อทางเมสเซนเจอร์</span> →</a>
+              </div>
+            </li>
+
+            <li>
+              <p class="book-steps__head">I reply, then you pay · <span lang="th">ผมตอบกลับ แล้วค่อยโอน</span></p>
+              <p>I will confirm your total and send you the PromptPay details in the
+                 chat. Transfer, send the slip back, and I will post the book to you.</p>
+              <p><span lang="th">ผมจะยืนยันยอดรวมและส่งข้อมูลพร้อมเพย์ให้ในแชท
+                 เมื่อโอนแล้วส่งสลิปกลับมา ผมจะจัดส่งหนังสือให้ครับ</span></p>
+              <p>Payment details are sent privately in the chat, never published here —
+                 so please do not transfer to any account you find elsewhere.</p>
+              <p><span lang="th">ข้อมูลการชำระเงินจะส่งให้เป็นการส่วนตัวในแชทเท่านั้น
+                 ไม่ประกาศบนหน้าเว็บ กรุณาอย่าโอนเข้าบัญชีอื่นที่พบจากที่อื่น</span></p>
+            </li>
+
+          </ol>
+
+          <p>If anything is unclear, just ask — <a href="../index.html#contact">any of my
+             other contacts</a> work too.</p>
+          <p><span lang="th">หากมีข้อสงสัยสอบถามได้เสมอครับ</span></p>
         </section>
 
         <!-- ═══════════════════ THE LAST REQUEST ═══════════════════ -->
