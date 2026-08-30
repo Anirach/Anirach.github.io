@@ -266,8 +266,20 @@ the article counters, and only this sentence enforces it.
   plain static files), and `check_site.py` **INV-31** fails when the feed and the blog index
   disagree. The drift objection was also under-stated: `sitemap.xml` had no check whatsoever, so
   **INV-32** now covers it too. Regenerate the feed in the same commit as any new post.
-- **The two free PDFs stay crawlable** but are excluded from `sitemap.xml`, so the detail page is
+- **The three free PDFs stay crawlable** (`one-day-of-light-{en,th}.pdf` and
+  `sample-three-old-men-book.pdf`) but are excluded from `sitemap.xml`, so the detail page is
   what gets promoted. `robots.txt` carries the two commented-out `Disallow` lines to flip that.
+- **A PDF link cannot be *made* to download from here — name the file as if it will not.**
+  GitHub Pages serves `application/pdf` and offers no way to set `Content-Disposition`, so the
+  `download` attribute is the only lever, and it is a hint: Safari and the in-app browsers
+  (LINE, Facebook, Messenger) preview the PDF instead of saving it. Two rules follow. Always give
+  `download` an **explicit filename** — bare `download` falls back to the URL basename, which is
+  how the first-chapter sample briefly shipped saving itself as `three-old-men-preview.pdf`. And
+  name the file on disk as the thing a reader should end up with (`sample-three-old-men-book.pdf`),
+  because in every case where the attribute is ignored — preview-then-save, right-click Save As,
+  a shared link — the URL basename *is* the filename. The only universal fix is a Cloudflare
+  Transform Rule adding `Content-Disposition: attachment` on `/books/*.pdf`; that lives in the
+  Cloudflare dashboard, not this repo, and is not configured today.
 - **`jekyll-seo-tag` is never the answer here** — these files have no front matter, so it emits
   nothing, and adding front matter would make Liquid evaluate the `{{ }}` code samples in 11 posts.
 - **The `news/` event posters stay as direct `.jpg` links.** A shared image URL carries no
