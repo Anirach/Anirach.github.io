@@ -269,17 +269,23 @@ the article counters, and only this sentence enforces it.
 - **The three free PDFs stay crawlable** (`one-day-of-light-{en,th}.pdf` and
   `sample-three-old-men-book.pdf`) but are excluded from `sitemap.xml`, so the detail page is
   what gets promoted. `robots.txt` carries the two commented-out `Disallow` lines to flip that.
-- **A PDF link cannot be *made* to download from here — name the file as if it will not.**
-  GitHub Pages serves `application/pdf` and offers no way to set `Content-Disposition`, so the
-  `download` attribute is the only lever, and it is a hint: Safari and the in-app browsers
-  (LINE, Facebook, Messenger) preview the PDF instead of saving it. Two rules follow. Always give
-  `download` an **explicit filename** — bare `download` falls back to the URL basename, which is
-  how the first-chapter sample briefly shipped saving itself as `three-old-men-preview.pdf`. And
-  name the file on disk as the thing a reader should end up with (`sample-three-old-men-book.pdf`),
-  because in every case where the attribute is ignored — preview-then-save, right-click Save As,
-  a shared link — the URL basename *is* the filename. The only universal fix is a Cloudflare
-  Transform Rule adding `Content-Disposition: attachment` on `/books/*.pdf`; that lives in the
-  Cloudflare dashboard, not this repo, and is not configured today.
+- **A PDF link cannot be *made* to download from here, so the sample OPENS instead.**
+  GitHub Pages serves `application/pdf` and offers no way to set `Content-Disposition`, which
+  makes `download` only a hint — Safari and the in-app browsers (LINE, Facebook, Messenger)
+  ignore it and preview the file. `books/three-old-men.html` therefore uses
+  `target="_blank" rel="noopener"` and **no `download` attribute**: previewing is what those
+  browsers were always going to do, the button says "Read", and the tab behind it keeps the price
+  and the contact link alive. **Never re-add `download` beside `target="_blank"`** — where it is
+  honoured it wins, and the new tab never opens.
+  The two rules that survive: name the file on disk as the thing a reader should end up with
+  (`sample-three-old-men-book.pdf`), because the URL basename is the filename whenever someone
+  saves from the viewer or forwards the link; and if a link ever *does* use `download`, give it an
+  **explicit filename** — bare `download` falls back to that same basename and does nothing, which
+  is how this sample briefly shipped saving itself as `three-old-men-preview.pdf`.
+  `one-day-of-light-{en,th}.pdf` still use `download`, and are the place to test any change.
+  The only way to force a true download is a Cloudflare Transform Rule setting
+  `Content-Disposition: attachment` on `/books/*.pdf` — dashboard config, not repo config, and not
+  configured today.
 - **`jekyll-seo-tag` is never the answer here** — these files have no front matter, so it emits
   nothing, and adding front matter would make Liquid evaluate the `{{ }}` code samples in 11 posts.
 - **The `news/` event posters stay as direct `.jpg` links.** A shared image URL carries no
