@@ -365,7 +365,7 @@ kept here as *the standard to hold*, not as a plan. Re-verify before you act on 
 
 ### DONE — hold the line, do not re-plan
 
-**1. Image loading — LANDED.** `blog/index.html` now references **1.59 MB across 38 unique
+**1. Image loading — LANDED.** `blog/index.html` now references **1.80 MB across 39 unique
 images** over 74 `<img>` tags, and **all 74 carry `loading="lazy"`**, so the HTML-only first byte
 cost is 67 KB and a first desktop viewport (first ~10 cards) fetches ≈1.7 MB, not 18.4 MB.
 Sitewide, **137 of 137 `<img>` tags have all four of `loading`, `decoding`, `width`, `height`**
@@ -509,7 +509,7 @@ Then in a real browser on `index.html`: tab once and confirm a visible focus rin
 
 - **`content-visibility: auto`.** Long posts exist (`web-architecture.html` 91 KB,
   `frontend-performance.html` 69 KB) but `.post-body` has no section children to apply it to. The
-  image bottleneck that used to dwarf it is gone (18.4 MB → 4.07 MB → 1.59 MB referenced, all lazy), so this
+  image bottleneck that used to dwarf it is gone (18.4 MB → 4.07 MB → 1.80 MB referenced, all lazy), so this
   is now merely small rather than irrelevant. Revisit only if posts get sectioned.
 
 ### NEVER — with reasons
@@ -564,7 +564,7 @@ Then in a real browser on `index.html`: tab once and confirm a visible focus rin
 
 5. **Never commit a cover over ~200 KB, and never as PNG. This is now clean — keep it clean.**
    `ec2827b` + `21c8a55` re-encoded every PNG cover to JPG at `formatOptions 70`. Today:
-   **44 JPG covers (36 `*-cover.jpg` + 8 suffixed), 0 PNG covers, average 107 KB, largest 194 KB,
+   **46 JPG covers (38 `*-cover.jpg` + 8 suffixed), 0 PNG covers, average 51 KB, largest 174 KB,
    zero over 200 KB** (the eight paired book faces — `three-old-men-cover-front/-back` 175 / 120 KB,
    `a-pocketful-of-questions-cover-en/-th` 73 / 77 KB, `the-thirteenth-seal-cover-en/-th` 54 / 62 KB,
    `one-day-of-light-cover-en/-th` 67 KB each — all comply; the `*-cover.jpg` glob alone reports

@@ -597,12 +597,19 @@ than repo invariants:
    `navy`/`deep` covers; Deep Blue (dark) heroes take `cloud`/`parchment`. The site shipped the
    opposite once — a teal cover on a teal hero, which vanished. The checker reads each post's
    ACTUAL `.post-hero` gradient rather than a second table that could drift.
-2. **No two cards adjacent on `blog/index.html` may share both ground and motif.** "37 covers that
-   all look like one cover" is the real failure mode of a system this regular, and it shows up
-   worst between neighbours. Checked in reading order, not table order.
+2. **No two posts may share a motif — one drawing per post, 37 of them.** This replaced a weaker
+   "no two ADJACENT cards share ground+motif" rule on 2026-09-01. The weaker rule passed happily
+   while five generic motifs were spread over 37 posts, which is exactly how the listing ended up
+   with six near-identical grey wireframes; the owner reported it with screenshots. Uniqueness is
+   now structural: `MOTIFS` has one named function per slug and `--check` rejects a repeat.
 
 `cream` (#faf7f0) was designed in and then **retired**: cards are `var(--white)`, so a cream cover
 had no visible edge and read as a missing image.
+
+A third authoring rule arrived with the 2026-09-01 redesign: **`accent` must be a known key.**
+DevOps covers are coloured by TOPIC CLUSTER, not per post — cyan containers, green testing, amber
+CI/CD, red security, teal reliability — so a reader learns the code across covers. OpenClaw is
+always `violet`. All nine accents are `:root` tokens; no seventh status colour was invented.
 
 Contact sheet for review — writes to `.covers/`, a dot-dir, because the first version wrote to the
 repo root and INV-06a correctly reported it as an unreferenced published image:
