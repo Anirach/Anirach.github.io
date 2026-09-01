@@ -1,0 +1,1245 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Models &amp; Cost — From Nous Portal to Your Own GPUs — จาก Nous Portal ถึง GPU ของเราเอง | Anirach Mingkhwan</title>
+  <meta name="description" content="เจาะเรื่องเงินของ Hermes Agent แบบเต็มตอน — บันไดห้าขั้นจาก Nous Portal ถึง GPU ของเราเอง, fallback chain และ credential pool, เศรษฐศาสตร์ของ prompt cache, ตัวเลขที่ /insights วัดได้และวัดไม่ได้, การรัน open-weight ในบ้าน และคำถาม PDPA ว่าข้อมูลขององค์กรไปอยู่ที่ไหน">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=Sarabun:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      color-scheme: light;
+      /* ink */
+      --navy: #11304b; --slate: #334155; --slate-light: #526174; --gray: #94a3b8;
+      /* ground */
+      --bg: #faf7f0; --white: #ffffff; --code-bg: #1e293b;
+      /* accent */
+      --blue: #226299; --blue-dark: #1a4d7a; --blue-light: #4992b9;
+      /* brand — sampled from the book covers. --gold is decorative on light grounds (2.2:1); --gold-dark is its text form. */
+      --gold: #c4a46c; --gold-dark: #7a5f22; --cloud: #dee7e6; --parchment: #e9e1c4; --focus: #226299;
+      /* status — use only these six, never invent a seventh */
+      --green: #22c55e; --red: #ef4444; --amber: #f59e0b;
+      --cyan: #06b6d4; --purple: #226299; --purple-dark: #1a4d7a;
+      /* type */
+      --font: 'Inter', 'Sarabun', -apple-system, BlinkMacSystemFont, sans-serif;
+      --mono: 'JetBrains Mono', 'Fira Code', 'Sarabun', monospace;
+      /* form */
+      --radius: 12px; --radius-sm: 8px; --radius-lg: 16px;
+      --measure: 720px; --wide: 860px;
+      --transition: 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+    html { scroll-behavior: smooth; }
+    body { font-family: var(--font); font-size: 17px; line-height: 1.8; color: var(--slate); background: var(--bg); -webkit-font-smoothing: antialiased; }
+    .blog-nav { position: fixed; top: 0; left: 0; right: 0; z-index: 100; background: rgba(248,250,252,0.85); backdrop-filter: blur(20px); border-bottom: 1px solid rgba(0,0,0,0.05); }
+    .blog-nav__inner { max-width: 860px; margin: 0 auto; padding: 0 2rem; height: 56px; display: flex; align-items: center; justify-content: space-between; }
+    .blog-nav__back { font-size: 0.85rem; font-weight: 500; color: var(--blue); text-decoration: none; }
+    .blog-nav__back:hover { color: #1a4d7a; }
+    .blog-nav__title { font-size: 0.85rem; font-weight: 600; color: var(--navy); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 50%; }
+    /* ── HERO ── house .post-hero on the approved Deep Blue gradient (page-design
+       §5 / INV-28). Ink is inverted for the dark ground: white title/meta, tag
+       pills white on 18% white — the openclaw-production treatment. The
+       background value must stay byte-identical to the approved string. */
+    .post-hero { padding: 8rem 2rem 3rem; background: linear-gradient(135deg, #11304b 0%, #1a4d7a 45%, #226299 100%); color: #fff; text-align: center; }
+    .post-hero__tags { display: flex; gap: 0.5rem; justify-content: center; margin-bottom: 1.25rem; flex-wrap: wrap; }
+    .post-hero__tag { display: inline-block; font-size: 0.72rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.1em; color: #fff; background: rgba(255,255,255,0.18); padding: 0.35rem 0.9rem; border-radius: 20px; }
+    .post-hero__title { font-size: clamp(1.8rem, 5vw, 3rem); font-weight: 800; color: #fff; line-height: 1.2; margin-bottom: 1rem; max-width: 720px; margin-left: auto; margin-right: auto; }
+    .post-hero__sub { font-size: 1.05rem; max-width: 640px; margin: 0 auto 1.5rem; line-height: 1.7; color: #fff; }
+    .post-hero__meta { font-size: 0.85rem; color: #fff; display: flex; align-items: center; justify-content: center; gap: 1.5rem; flex-wrap: wrap; }
+    .post-hero__series { font-weight: 600; color: #fff; }
+    /* the switch pill and the focus ring both sit on the dark hero: the pill is
+       a light chip so its labels keep their light-ground colours, and --focus
+       re-points to gold here (blue collapses on blue — the footer/pre
+       precedent). */
+    .post-hero { --focus: var(--gold); }
+    .post-hero__cover {
+      aspect-ratio: 1 / 1;
+      max-width: 380px;
+      margin: 2.5rem auto 0;
+      border-radius: var(--radius-lg, 16px);
+      overflow: hidden;
+      box-shadow: 0 20px 60px rgba(17,48,75,0.14);
+    }
+    .post-hero__cover img { width: 100%; height: 100%; object-fit: cover; display: block; }
+    .post-body { max-width: 720px; margin: 0 auto; padding: 3rem 2rem 6rem; }
+    .post-body h2 { font-size: 1.6rem; font-weight: 800; color: var(--navy); margin: 3rem 0 1rem; padding-bottom: 0.5rem; border-bottom: 2px solid rgba(34,98,153,0.15); }
+    .post-body h3 { font-size: 1.25rem; font-weight: 700; color: var(--navy); margin: 2.25rem 0 0.75rem; }
+    .post-body p { margin-bottom: 1.25rem; }
+    .post-body strong { font-weight: 700; color: var(--navy); }
+    .post-body a { color: var(--blue); text-decoration: underline; text-decoration-thickness: 1px; text-underline-offset: 2px; }
+    .post-body ul, .post-body ol { margin: 0.5rem 0 1.25rem 1.5rem; }
+    .post-body li { margin-bottom: 0.4rem; }
+    .post-body blockquote { background: rgba(34,98,153,0.06); border-left: 4px solid var(--blue); padding: 1rem 1.25rem; border-radius: 0 10px 10px 0; margin: 1.25rem 0; font-size: 0.95rem; color: var(--navy); }
+    .post-body hr { border: none; height: 1px; background: linear-gradient(90deg, transparent, rgba(34,98,153,0.2), transparent); margin: 3rem 0; }
+    /* ── CODE ── */
+    .post-body pre { background: var(--code-bg); border-radius: 12px; padding: 1.5rem; margin: 1.25rem 0 1.5rem; overflow-x: auto; border: 1px solid rgba(255,255,255,0.05); }
+    .post-body pre code { font-family: var(--mono); font-size: 0.85rem; color: #e2e8f0; line-height: 1.7; background: none; padding: 0; white-space: pre-wrap; }
+    .post-body code { font-family: var(--mono); font-size: 0.88em; background: rgba(34,98,153,0.08); color: var(--blue-dark); padding: 0.15em 0.45em; border-radius: 5px; }
+    /* ── TABLES ── */
+    .table-wrapper { overflow-x: auto; margin: 1.5rem 0; border-radius: 0.5rem; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1); }
+    table { width: 100%; border-collapse: collapse; background: white; }
+    th { background: #226299; color: white; padding: 1rem; text-align: left; font-weight: 600; }
+    td { padding: 1rem; border-bottom: 1px solid #e5e7eb; }
+    .post-body table { display: block; width: 100%; overflow-x: auto; }
+    /* ── ALERTS ── */
+    .alert { background: #fef3cd; border: 1px solid #facc15; border-radius: 0.5rem; padding: 1rem; margin: 1.5rem 0; }
+    .alert.danger { background: #fee2e2; border-color: #ef4444; }
+    .alert.info { background: #e0f2fe; border-color: #06b6d4; }
+    .alert.success { background: #d1fae5; border-color: #10b981; }
+    /* ── KEY TAKEAWAYS ── */
+    .key-takeaways { background: linear-gradient(135deg, #f3f4f6 0%, #e5e7eb 100%); border-radius: 1rem; padding: 2rem; margin: 3rem 0; }
+    .key-takeaways h3 { color: #226299; margin-bottom: 1.5rem; }
+    .post-series-footer { text-align: center; font-size: 0.85rem; color: var(--slate-light); font-style: italic; margin-top: 2rem; padding-top: 2rem; border-top: 1px solid #e2e8f0; }
+    .blog-footer { background: var(--navy); padding: 2rem 0; text-align: center; }
+    .blog-footer a { color: var(--gold); text-decoration: none; font-weight: 600; font-size: 0.9rem; }
+    .blog-footer span { color: var(--gray); font-size: 0.8rem; display: block; margin-top: 0.4rem; }
+    @media (max-width: 600px) {
+      .post-hero { padding: 7rem 1.25rem 2.5rem; }
+      .post-body { padding: 2rem 1.25rem 4rem; }
+      .post-hero__meta { flex-direction: column; gap: 0.4rem; }
+      .post-body h2 { font-size: 1.4rem; }
+      .post-body h3 { font-size: 1.15rem; }
+      .post-body pre { padding: 1rem; border-radius: 8px; }
+    }
+
+    :focus-visible { outline: 2px solid var(--focus); outline-offset: 3px; border-radius: 2px; }
+    /* the ring sits on the page ground (3px offset). Inside the navy footers
+       and code blocks var(--blue) collapses to 2.12:1, so those scopes
+       re-point --focus to gold (5.73:1 on navy). */
+    .footer, .blog-footer, pre { --focus: var(--gold); }
+    :focus:not(:focus-visible) { outline: none; }
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after {
+        animation-duration: .01ms !important; animation-iteration-count: 1 !important;
+        transition-duration: .01ms !important; scroll-behavior: auto !important;
+      }
+    }
+    h1, h2, h3, .post-hero__title, .card__title { text-wrap: balance; }
+
+    .post-body img, .post-body svg { max-width: 100%; height: auto; }
+
+    /* ── SKIP LINK ── a11y-perf R5: the link and the landmark it targets are a
+       pair — useless without both halves. Off-screen until focused, then the
+       first tab stop on every page. */
+    .skip-link { position: absolute; left: -9999px; }
+    .skip-link:focus {
+      left: 1rem; top: 1rem; z-index: 999;
+      background: var(--navy); color: #fff;
+      padding: 0.75rem 1.25rem; border-radius: var(--radius-sm);
+      font-weight: 600; text-decoration: none;
+    }
+
+    /* ── POST WAYFINDING ── the wordmark is the home link; the footer carries
+       the full destination row. */
+    .blog-nav__home {
+      font-size: 0.9rem; font-weight: 800; color: var(--navy);
+      text-decoration: none; margin-right: 1rem;
+    }
+    .blog-nav__home:hover { color: var(--blue); }
+    .blog-nav__inner > .blog-nav__back { margin-right: auto; }
+    .blog-footer__nav {
+      display: flex; flex-wrap: wrap; justify-content: center; gap: 0.35rem 1.25rem;
+      max-width: 860px; margin: 0 auto 1.25rem; padding: 0 2rem 1.25rem;
+      border-bottom: 1px solid rgba(255,255,255,0.12);
+    }
+    .blog-footer__nav a { color: var(--gold); font-size: 0.85rem; font-weight: 600; text-decoration: none; }
+    .blog-footer__nav a:hover { color: #fff; text-decoration: underline; }
+
+    html { scroll-padding-top: 5rem; }
+    [id] { scroll-margin-top: 5rem; }
+
+    /* Thai needs more room than Latin at the same nominal size. */
+    .post-body:lang(th) { font-size: 18px; line-height: 1.85; }
+    .post-body p, .post-body li, .post-body blockquote { text-wrap: pretty; }
+
+    /* ---- side-scroll affordance ----
+       pre blocks and tables can exceed 720px. These layers paint a shadow ONLY
+       where there is more content in that direction; when fully scrolled the
+       cover slides over the shadow and hides it. No JavaScript, no wrapper. */
+    .post-body pre, .post-body table {
+      overflow-x: auto;
+      background-image:
+        linear-gradient(to right, var(--code-bg, #0f172a) 30%, rgba(15,23,42,0)),
+        linear-gradient(to left, var(--code-bg, #0f172a) 30%, rgba(15,23,42,0)),
+        radial-gradient(farthest-side at 0 50%, rgba(0,0,0,.28), rgba(0,0,0,0)),
+        radial-gradient(farthest-side at 100% 50%, rgba(0,0,0,.28), rgba(0,0,0,0));
+      background-position: 0 0, 100% 0, 0 0, 100% 0;
+      background-repeat: no-repeat;
+      background-size: 40px 100%, 40px 100%, 14px 100%, 14px 100%;
+      background-attachment: local, local, scroll, scroll;
+    }
+    .post-body table {
+      background-image:
+        linear-gradient(to right, var(--white, #fff) 30%, rgba(255,255,255,0)),
+        linear-gradient(to left, var(--white, #fff) 30%, rgba(255,255,255,0)),
+        radial-gradient(farthest-side at 0 50%, rgba(17,48,75,.16), rgba(17,48,75,0)),
+        radial-gradient(farthest-side at 100% 50%, rgba(17,48,75,.16), rgba(17,48,75,0));
+      background-position: 0 0, 100% 0, 0 0, 100% 0;
+      background-repeat: no-repeat;
+      background-size: 40px 100%, 40px 100%, 14px 100%, 14px 100%;
+      background-attachment: local, local, scroll, scroll;
+    }
+
+    /* ---- table of contents ---- */
+    .post-toc {
+      max-width: 720px;
+      margin: 2rem auto 0;
+      padding: 1rem 1.25rem;
+      background: rgba(34,98,153,0.05);
+      border: 1px solid rgba(34,98,153,0.14);
+      border-left: 3px solid var(--gold, #c4a46c);
+      border-radius: 10px;
+      font-size: 0.92rem;
+    }
+    .post-toc > summary {
+      cursor: pointer;
+      font-weight: 700;
+      color: var(--navy);
+      list-style: none;
+    }
+    .post-toc > summary::-webkit-details-marker { display: none; }
+    .post-toc > summary::before {
+      content: "\25B8";
+      display: inline-block;
+      margin-right: 0.5rem;
+      transition: transform 0.2s ease;
+      color: var(--gold-dark, #7a5f22);
+    }
+    .post-toc[open] > summary::before { transform: rotate(90deg); }
+    .post-toc > summary:focus-visible { outline: 3px solid var(--focus, #226299); outline-offset: 3px; }
+    .post-toc ol { margin: 0.85rem 0 0.25rem; padding-left: 1.4rem; }
+    .post-toc li { margin-bottom: 0.4rem; line-height: 1.5; }
+    .post-toc a { color: var(--slate); text-decoration: none; }
+    .post-toc a:hover, .post-toc a:focus-visible { color: var(--blue-dark, #1a4d7a); text-decoration: underline; }
+    @media (max-width: 600px) { .post-toc { margin: 1.25rem 1rem 0; } }
+
+    /* ---- cross-document view transitions ---- */
+    @view-transition { navigation: auto; }
+    .nav, .blog-nav { view-transition-name: site-nav; }
+    .footer, .blog-footer { view-transition-name: site-footer; }
+    @media (prefers-reduced-motion: reduce) {
+      ::view-transition-group(*),
+      ::view-transition-old(*),
+      ::view-transition-new(*) { animation: none !important; }
+    }
+
+    /* ── SERIES STRIP — Hermes Agent in Practice ──
+       Same class and inner-wrapper shape as the OpenClaw strip because the
+       linter's RE_SNAV recognises exactly `series-nav` + a nested div; a
+       renamed strip would read as "no nav" and fail INV-08. All content
+       checks (INV-03 family) iterate the SERIES7 list only, so this strip's
+       labels are convention, not contract. House-styled, not the island CSS. */
+    .series-nav {
+      max-width: 720px; margin: 2rem auto 0; padding: 1.1rem 1.4rem;
+      background: rgba(255,255,255,0.75); border: 1px solid rgba(34,98,153,0.15);
+      border-left: 3px solid var(--gold); border-radius: 12px;
+    }
+    .series-nav h3 {
+      font-size: 0.78rem; font-weight: 700; text-transform: uppercase;
+      letter-spacing: 0.08em; color: var(--gold-dark); margin-bottom: 0.6rem;
+    }
+    .series-links { display: flex; flex-wrap: wrap; gap: 0.5rem; }
+    .series-links a, .series-links .current {
+      font-size: 0.82rem; font-weight: 600; padding: 0.35rem 0.8rem;
+      border-radius: 50px; text-decoration: none;
+    }
+    .series-links a { color: var(--blue-dark); background: rgba(34,98,153,0.08); }
+    .series-links a:hover { background: rgba(34,98,153,0.16); }
+    .series-links .current { color: #fff; background: var(--blue-dark); }
+    @media (max-width: 600px) { .series-nav { margin: 1.5rem 1rem 0; } }
+
+    /* ── LANGUAGE SWITCH — pure CSS, zero JavaScript (INV-38) ──
+       One visually-hidden checkbox as a direct child of body, BEFORE the main landmark,
+       so `#langSwitch:checked ~ main …` reaches every content block. The two
+       tracks are paired blocks: .l-th (default) and .l-en (hidden until
+       checked; display:revert restores block for divs, inline for spans).
+       Naming stays clear of INV-12's menu-token regex (hamburger|burger|
+       nav__toggle|nav-toggle|navtoggle|menu-toggle|menu__toggle) — verified.
+       No JS also means no persistence across posts; each post opens in Thai. */
+    .lang-switch-box { position: absolute; left: -9999px; }
+    .l-en { display: none; }
+    #langSwitch:checked ~ main .l-en { display: revert; }
+    #langSwitch:checked ~ main .l-th { display: none; }
+    .lang-switch {
+      display: inline-flex; align-items: center; gap: 0.55rem;
+      margin-top: 1.4rem; padding: 0.4rem 1.1rem; border-radius: 50px;
+      background: rgba(255,255,255,0.85); border: 1px solid rgba(255,255,255,0.4);
+      cursor: pointer; font-size: 0.85rem; user-select: none;
+    }
+    .lang-switch span { color: var(--slate-light); font-weight: 600; transition: color 0.2s; }
+    .lang-switch .lang-sep { color: var(--gray); font-weight: 400; }
+    .lang-switch .lang-th { color: var(--navy); font-weight: 800; }
+    #langSwitch:checked ~ main .lang-switch .lang-th { color: var(--slate-light); font-weight: 600; }
+    #langSwitch:checked ~ main .lang-switch .lang-en { color: var(--navy); font-weight: 800; }
+    .lang-switch:hover { border-color: #fff; }
+    #langSwitch:focus-visible ~ main .lang-switch {
+      outline: 2px solid var(--focus); outline-offset: 3px;
+    }
+  </style>
+  <!-- social -->
+  <link rel="canonical" href="https://anirach.com/blog/hermes-models-cost.html">
+  <meta property="og:type" content="article">
+  <meta property="og:url" content="https://anirach.com/blog/hermes-models-cost.html">
+  <meta property="og:site_name" content="Anirach Mingkhwan">
+  <meta property="og:locale" content="th_TH">
+  <meta property="article:published_time" content="2026-09-01">
+  <meta property="article:author" content="https://anirach.com/">
+  <meta property="og:title" content="Models &amp; Cost — จาก Nous Portal ถึง GPU ของเราเอง">
+  <meta property="og:description" content="เจาะเรื่องเงินของ Hermes Agent แบบเต็มตอน — บันไดห้าขั้นจาก Nous Portal ถึง GPU ของเราเอง, fallback chain และ credential pool, เศรษฐศาสตร์ของ prompt cache, ตัวเลขที่ /insights วัดได้และวัดไม่ได้, การรัน open-weight ในบ้าน และคำถาม PDPA ว่าข้อมูลขององค์กรไปอยู่ที่ไหน">
+  <meta itemprop="image" property="og:image" content="https://anirach.com/images/hermes-models-cost-og.jpg">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
+  <meta property="og:image:alt" content="Models &amp; Cost — จาก Nous Portal ถึง GPU ของเราเอง">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:image" content="https://anirach.com/images/hermes-models-cost-og.jpg">
+  <meta name="twitter:image:alt" content="Models &amp; Cost — จาก Nous Portal ถึง GPU ของเราเอง">
+  <meta name="robots" content="max-image-preview:large">
+  <meta name="theme-color" content="#11304b">
+  <link rel="icon" href="/favicon.ico" sizes="any">
+  <link rel="apple-touch-icon" href="/apple-touch-icon.png">
+  <!-- /social -->
+</head>
+<body>
+<a href="#main" class="skip-link">Skip to content</a>
+<input type="checkbox" id="langSwitch" class="lang-switch-box" aria-label="Switch language: Thai / English">
+
+  <nav class="blog-nav">
+    <div class="blog-nav__inner">
+      <a href="../index.html" class="blog-nav__home">Anirach</a>
+      <a href="./" class="blog-nav__back">‹ Blog</a>
+      <div class="blog-nav__title">Models &amp; Cost · จาก Portal ถึง GPU ของเราเอง</div>
+    </div>
+  </nav>
+
+  <main id="main">
+
+  <header class="post-hero">
+    <div class="post-hero__tags">
+      <span class="post-hero__tag">Hermes</span>
+      <span class="post-hero__tag">AI Agents</span>
+      <span class="post-hero__tag">Models &amp; Cost</span>
+    </div>
+    <h1 class="post-hero__title" itemprop="headline"><span class="l-th">Models &amp; Cost — จาก Nous Portal ถึง GPU ของเราเอง</span><span class="l-en" lang="en">Models &amp; Cost — From Nous Portal to Your Own GPUs</span></h1>
+    <p class="post-hero__sub"><span class="l-th">บันไดห้าขั้นของการเลือกโมเดล ต้นทุนที่ซ่อนอยู่ใน prompt cache ตัวเลขที่ /insights วัดได้จริง (และวัดไม่ได้) การรันโมเดล open-weight ในบ้านตัวเอง และคำถาม PDPA ว่าข้อมูลขององค์กรไปอยู่ที่ไหน</span><span class="l-en" lang="en">The five-rung model ladder, the cost hidden inside the prompt cache, what /insights really measures (and what it cannot), running open-weight models on your own hardware, and the PDPA question of where your organization's data actually goes.</span></p>
+    <div class="post-hero__meta">
+      <span>By <strong>Anirach Mingkhwan</strong></span>
+      <span class="post-hero__series">Hermes Agent in Practice 2026 • Post #9</span>
+      <span><time datetime="2026-09-01" itemprop="datePublished">1 Sep 2026</time></span>
+      <span>29 min read</span>
+    </div>
+    <label for="langSwitch" class="lang-switch" title="สลับภาษา · Switch language"><span class="lang-th">ไทย</span><span class="lang-sep">·</span><span class="lang-en" lang="en">English</span></label>
+    <div class="post-hero__cover">
+      <img src="../images/hermes-models-cost-cover.jpg" alt="Models &amp; Cost — จาก Nous Portal ถึง GPU ของเราเอง" width="800" height="800" loading="eager" fetchpriority="high" decoding="async">
+    </div>
+  </header>
+
+  <nav aria-label="Hermes Agent in Practice">
+  <div class="series-nav">
+    <h3>⚡ Hermes Agent in Practice 2026</h3>
+    <div class="series-links">
+        <a href="/blog/hermes-101">#1 Hermes 101</a>
+        <a href="/blog/hermes-agent-teams">#2 Agent Teams</a>
+        <a href="/blog/hermes-memory">#3 Memory</a>
+        <a href="/blog/hermes-security">#4 Security</a>
+        <a href="/blog/hermes-integrations">#5 Integrations</a>
+        <a href="/blog/hermes-skills">#6 Skills</a>
+        <a href="/blog/hermes-production">#7 Production</a>
+        <a href="/blog/hermes-automation">#8 Automation</a>
+        <span class="current" aria-current="page">#9 Models &amp; Cost</span>
+        <a href="/blog/hermes-desktop-fleet">#10 Desktop &amp; Fleet</a>
+    </div>
+  </div>
+  </nav>
+
+  <article class="post-body" itemscope itemtype="https://schema.org/BlogPosting">
+    <span itemprop="author" itemscope itemtype="https://schema.org/Person"><meta itemprop="name" content="Anirach Mingkhwan"></span>
+
+    <details class="post-toc l-th" open>
+      <summary>ในบทความนี้</summary>
+      <ol>
+          <li><a href="#th-ladder">บันไดห้าขั้นของการเลือก Model</a></li>
+          <li><a href="#th-portal">Portal ในฐานะ Routing Tier — ไม่ใช่ศาสนา</a></li>
+          <li><a href="#th-resilience">สามชั้นของความทนทาน — Pool, Fallback, Auxiliary</a></li>
+          <li><a href="#th-tokens">Token หายไปไหน — ต้นทุนคงที่ต่อการเรียกหนึ่งครั้ง</a></li>
+          <li><a href="#th-cache">เศรษฐศาสตร์ของ Prompt Cache</a></li>
+          <li><a href="#th-measure">ตัวเลขต้นทุนวัดอะไรกันแน่</a></li>
+          <li><a href="#th-gpu">GPU ของเราเอง — vLLM, llama.cpp, Ollama และพื้น 64K</a></li>
+          <li><a href="#th-data">ข้อมูลไปอยู่ที่ไหน — Telemetry, Privacy Policy และ Air Gap ที่ยังไม่มี</a></li>
+          <li><a href="#th-pdpa">PDPA และ Decision Tree สำหรับองค์กรไทย</a></li>
+      </ol>
+    </details>
+    <details class="post-toc l-en" open>
+      <summary>In this post</summary>
+      <ol>
+          <li><a href="#en-ladder">The Model Ladder: Five Rungs an Organization Climbs</a></li>
+          <li><a href="#en-portal">Portal as a Routing Tier, Not a Religion</a></li>
+          <li><a href="#en-resilience">Three Layers of Resilience: Pools, Fallbacks, Auxiliaries</a></li>
+          <li><a href="#en-tokens">Where the Tokens Go: The Fixed Cost of Every Call</a></li>
+          <li><a href="#en-cache">Prompt-Cache Economics</a></li>
+          <li><a href="#en-measure">What the Cost Numbers Actually Measure</a></li>
+          <li><a href="#en-gpu">Bring Your Own GPUs: vLLM, llama.cpp, Ollama and the 64K Floor</a></li>
+          <li><a href="#en-data">Where the Data Goes: Telemetry, the Privacy Policy and the Air Gap That Isn't</a></li>
+          <li><a href="#en-pdpa">PDPA and a Decision Tree for Thai Organizations</a></li>
+      </ol>
+    </details>
+    <div class="l-th">
+
+    <p>🤔 ลองนึกภาพนี้ดูครับ — ปลายเดือน บิลจาก provider มาถึงพร้อมตัวเลขที่สูงกว่าที่ dashboard ของ agent บอกไว้หลายเท่า คุณเปิด <code>/insights</code> ก็เห็นตัวเลขหนึ่ง เปิดหน้า billing ของ provider ก็เห็นอีกตัวเลขหนึ่ง แล้วตัวเลขไหนคือ "ความจริง"? และคำถามที่ซ่อนอยู่ใต้คำถามนั้น — ระหว่างที่ agent วิ่งอยู่ทั้งคืน ข้อมูลขององค์กรที่มันอ่านผ่านตา ไปนอนอยู่บน server ของใครบ้าง?</p>
+
+    <p>สองคำถามนี้ — <strong>จ่ายเท่าไร</strong> กับ <strong>ข้อมูลไปไหน</strong> — พันกันแน่นกว่าที่เห็น เพราะทุกครั้งที่เราขยับขึ้นลงบันไดของการเลือก model ตั้งแต่ Nous Portal ที่จ่ายบิลใบเดียว ไปจนถึง GPU ในห้อง server ของเราเอง เรากำลังแลกต้นทุนกับการควบคุมพร้อมกันเสมอ ในซีรีส์นี้ผมแตะเรื่องเงินไว้แล้วสองครั้ง — ตาราง tier ของ Portal และกรอบคิด "MIT ฟรี จ่ายเฉพาะค่า model" อยู่ใน <a href="/blog/hermes-101">#1 Hermes 101</a> ส่วนหัวข้อสั้น ๆ เรื่องคุมค่าใช้จ่ายและ BYO keys vs Portal อยู่ใน <a href="/blog/hermes-production">#7 Production</a> — บทความนี้คือฉบับเต็มของทั้งสองหัวข้อนั้น</p>
+
+    <p>ผมจะไล่จากบันไดห้าขั้นของการเลือก model, สามชั้นของกลไก fallback, ที่ที่ token หายไป, เศรษฐศาสตร์ของ prompt cache, ตัวเลขต้นทุนที่ Hermes รายงานให้ (และสิ่งที่มันมองไม่เห็น), การรัน open-weight บน GPU ของเราเอง แล้วปิดด้วยคำถามที่องค์กรไทยหนีไม่พ้น — <strong>PDPA</strong> ทุกตัวเลขในบทความมาจากเอกสารทางการ, release notes, issue tracker หรือหน้า Portal ที่ผมดึงเมื่อ 1 กันยายน 2026 ตรงไหนที่แหล่งข้อมูลขัดกันเอง ผมจะบอกว่าขัดกันอย่างไร แทนที่จะเลือกตัวเลขที่ฟังดูดีกว่า</p>
+
+    <h2 id="th-ladder">บันไดห้าขั้นของการเลือก Model</h2>
+
+    <p>เวลาผมคุยกับหน่วยงานที่กำลังพิจารณา Hermes คำถามแรกมักเป็น "ควรใช้ Portal หรือเอา key ตัวเองมาเสียบ" ซึ่งเป็นคำถามที่ตั้งแคบไป ในความเป็นจริง Hermes ให้เราเลือกยืนได้ห้าขั้น และแต่ละขั้นตอบคำถามสามข้อต่างกัน: ใครถือ key, ข้อมูลวิ่งไปที่ไหน และใครเป็นคนส่งบิล</p>
+
+    <ol>
+      <li><strong>Nous Portal</strong> — OAuth ครั้งเดียว บิลใบเดียว README ระบุ <em>"300+ models — pick any of them with /model &lt;name&gt;"</em> และ subscription แบบจ่ายเงินปลดล็อก Tool Gateway (web, image, TTS, cloud browser) ให้ด้วย ขั้นนี้เร็วที่สุด และเป็นขั้นเดียวที่ข้อมูลผ่านมือ Nous เพิ่มมาอีกหนึ่งทอด</li>
+      <li><strong>BYO keys</strong> — key ของ OpenRouter หรือ key ตรงของ provider (Anthropic, OpenAI ฯลฯ) บิลกระจายไปตามเจ้าของ key แต่เส้นทางข้อมูลสั้นลงหนึ่งทอด</li>
+      <li><strong>Named custom provider หลัง gateway ขององค์กร</strong> — ประกาศ provider ชื่อของเราเองใน config ให้ชี้ไปที่ LLM gateway ภายใน (LiteLLM, proxy ของฝ่าย IT หรือสัญญา Bedrock ที่มีอยู่แล้ว) พร้อม token จาก SSO ที่หมดอายุสั้น ๆ</li>
+      <li><strong>Self-hosted inference</strong> — vLLM, llama.cpp, SGLang, LM Studio หรือ Ollama บน GPU ของเราเอง ค่า token เป็นศูนย์ ค่าไฟและค่าคนไม่เป็นศูนย์</li>
+      <li><strong>Air-gapped</strong> — ขั้นที่หลายหน่วยงานราชการอยากได้ และเป็นขั้นที่ Hermes <strong>ยังไปไม่ถึงอย่างเป็นทางการ</strong> (ผมจะอธิบายในหัวข้อเรื่องข้อมูล)</li>
+    </ol>
+
+    <p>สิ่งที่ทำให้บันไดนี้ใช้งานได้จริงคือทุกขั้นสลับกันด้วยคำสั่งเดียวกัน หลักการที่เอกสาร configuring-models วางไว้: <code>hermes model</code> คือ wizard นอก session ที่ใช้ <em>เพิ่ม</em> provider ส่วน <code>/model</code> ใน session ใช้ <em>สลับ</em> เฉพาะสิ่งที่ตั้งค่าไว้แล้ว และมีขอบเขตสามระดับ:</p>
+
+    <pre><code># สลับเฉพาะ session นี้ — ปิด session แล้วกลับเป็นค่าเดิม
+/model &lt;name&gt; --provider &lt;p&gt;
+
+# เขียนลง config.yaml ถาวร
+/model &lt;name&gt; --provider &lt;p&gt; --global
+
+# ใช้แค่ turn เดียว แล้วคืนค่าเดิมอัตโนมัติ
+/model &lt;name&gt; --once
+
+# ตั้ง model_aliases ไว้ใน config แล้วเรียกสั้น ๆ
+/model fav</code></pre>
+
+    <p>ข้อควรจำสำหรับคนดูแล gateway: session ที่รันผ่าน gateway จะรับค่า config ใหม่เฉพาะ <strong>session ใหม่</strong> เท่านั้น เว้นแต่จะ restart gateway — ถ้าเปลี่ยน model แล้วบอทใน Telegram ยังตอบด้วย model เดิม นี่คือสาเหตุแรกที่ควรสงสัย</p>
+
+    <p>ขั้นที่สามคือขั้นที่องค์กรขนาดกลางขึ้นไปมักลงเอย และเป็นขั้นที่เอกสารรองรับดีเกินคาด <code>providers.&lt;name&gt;</code> รับ <code>api</code>, <code>key_env</code> และ <code>transport</code> ที่เลือกได้ระหว่าง <code>chat_completions</code> กับ <code>anthropic_messages</code> ส่วน <code>key_cmd</code> จะรัน CLI ของเราเพื่อ mint token อายุสั้นจาก enterprise SSO แล้วต่ออายุให้เองก่อนหมดอายุ:</p>
+
+    <pre><code># config.yaml — provider ชื่อของเราเอง หลัง gateway ขององค์กร
+providers:
+  corp-gateway:
+    api: https://llm-gateway.internal.example.ac.th/v1
+    transport: chat_completions        # หรือ anthropic_messages
+    key_cmd: "my-auth-cli print-token --profile prod"   # token จาก SSO อายุสั้น ต่ออายุเอง
+
+# สลับใน session
+/model custom:corp-gateway:&lt;model&gt;</code></pre>
+
+    <p>และตั้งแต่ v0.21.0 (31 สิงหาคม 2026) บุคคลที่สามส่ง provider มาเป็น pip package ที่ Hermes ค้นพบผ่าน entry points ได้ — แปลว่าฝ่าย platform ขององค์กรสามารถแพ็ก provider ภายในเป็น package หนึ่งตัวแล้วแจกให้ทุกเครื่อง โดยไม่ต้องแก้ config ทีละคน (เรื่องนี้ต่อเนื่องไปถึงการดูแล fleet ใน <a href="/blog/hermes-desktop-fleet">#10 Desktop &amp; Fleet</a>)</p>
+
+    <h2 id="th-portal">Portal ในฐานะ Routing Tier — ไม่ใช่ศาสนา</h2>
+
+    <p>ใน #7 ผมยังไม่ยอมฟันธงว่า Free tier ให้อะไรบ้าง เพราะหน้าเอกสารกับหน้า pricing ไม่ตรงกัน วันนี้หน้า pricing ของ <a href="https://portal.nousresearch.com/">portal.nousresearch.com</a> (ดึงเมื่อ 1 กันยายน 2026) ตอบชัดแล้ว: Free คือ "Free models only" กับเครดิต $0 ต่อเดือน ส่วนตาราง tier ทั้งสี่ (Free $0 · Plus $20 → เครดิต $22 · Super $100 → $110 · Ultra $200 → $220) ผมพิมพ์ไว้แล้วใน <a href="/blog/hermes-101">#1 Hermes 101</a> จึงไม่ยกมาซ้ำ — สิ่งที่ #1 ยังไม่มีคือรายละเอียดต่อไปนี้:</p>
+
+    <ul>
+      <li><strong>Rollover cap</strong> — เครดิตที่ใช้ไม่หมดยกไปเดือนหน้าได้ แต่มีเพดาน $10 (Plus) / $50 (Super) / $100 (Ultra) องค์กรที่ใช้งานเป็นจังหวะ เช่น หนักปลายภาคเรียนแล้วเงียบช่วงปิดเทอม จะเสียเครดิตส่วนที่เกินเพดานไปเปล่า ๆ ทุกเดือนเบา</li>
+      <li><strong>การ์ด tier จ่ายเงิน</strong> ระบุเพิ่มว่า "Hosted tool usage" และ "High rate limits" (Free ได้ "Standard rate limits")</li>
+      <li><strong>Top-up</strong> — เติมเครดิตแบบ pay-as-you-go ได้ครั้งละ $10, $20, $50, $100 หรือ $200</li>
+      <li><strong>Copy ที่ยังไม่ตรงกันเอง</strong> — การ์ด tier เขียน "200+ Models" ขณะที่ catalog บนหน้าเดียวกันเขียน "over 300" และ README เขียน "300+" ผมยึด 300+ ตาม README และบันทึกไว้ว่าการ์ดยังตามไม่ทัน หน้าเดียวกันระบุช่วงราคา catalog ว่า <em>"free to $24 per million input tokens"</em></li>
+    </ul>
+
+    <p>เรื่อง <strong>"10%"</strong> ต้องแยกให้ออกว่ามีสองตัวที่คนละความหมาย ตัวแรกคือ <strong>โบนัสเครดิต</strong> บนหน้า pricing — "10% bonus" หมายถึงจ่าย $20 ได้เครดิต $22 (และ $100 → $110, $200 → $220) ตัวที่สองคือ <strong>ส่วนลด provider</strong> ในเอกสาร configuring-models — <em>"Portal subscribers also get 10% off token-billed providers"</em> คือราคาต่อ token ที่ถูกลงเมื่อ route ผ่าน Portal ไม่ใช่เครดิตแถม ส่วนตัวเลขที่สาม — โพสต์ของ Teknium (ผู้ร่วมก่อตั้ง Nous) บน X ตอนออก release Herald ที่พูดถึง <em>"20% Discount on all models"</em> — มีอยู่บน X เท่านั้น ไม่ปรากฏบนหน้า Portal หรือในเอกสาร และผมยืนยันไม่ได้ว่ายังใช้อยู่หรือเคยใช้กับอะไร ผมจะไม่พิมพ์ 20% เป็นข้อสรุป — เข้า Portal แบบ login แล้วดูตัวเลขจริงก่อนคำนวณงบ</p>
+
+    <p>สิ่งที่ subscription แบบจ่ายเงินให้เพิ่มจริง ๆ คือ <strong>Tool Gateway</strong> — เอกสารบอกว่า <em>"included with every paid Nous Portal subscription"</em> ส่วนบัญชี Free <em>"can use Portal for inference but don't include managed tools"</em> (โดยมีข้อยกเว้นว่า <em>"some accounts are also entitled to a free tool pool"</em>) backend ที่ Nous จัดการให้มีห้าตัว: Firecrawl สำหรับ web, FAL สำหรับ image generation, OpenAI TTS, Browser Use สำหรับ cloud browser และ Modal cloud terminal เป็น add-on เสริม — จุดที่ผมชอบคือมัน <em>"opt-in per tool, not all-or-nothing"</em>:</p>
+
+    <pre><code># config.yaml — เลือกใช้ managed tool ของ Nous ทีละตัว ไม่ต้องยกทั้งชุด
+web:
+  backend: nous            # Firecrawl ผ่าน Portal
+image_gen:
+  provider: nous           # FAL
+tts:
+  provider: nous           # OpenAI TTS
+stt:
+  provider: nous
+browser:
+  cloud_provider: nous     # Browser Use — เปิดเฉพาะเมื่อต้องการ</code></pre>
+
+    <p>ตั้งแต่ v0.19.0 (20 กรกฎาคม 2026) การจัดการแผนทำได้จากใน TUI/CLI โดยตรงผ่าน <code>/subscription</code> และ <code>/topup</code> — สองคำสั่งนี้ยังไม่ปรากฏในรายการ slash command ของคู่มือผู้ใช้ ผมอ้างจาก release notes — และ <code>hermes portal info</code> แสดงสถานะ login, subscription และ routing ปัจจุบัน เบื้องหลัง Hermes จะ mint JWT อายุสั้นจาก refresh token ของ Portal ทุกครั้งที่เรียก inference</p>
+
+    <p>ทีนี้ถึงคำถามที่ตอบผิดกันบ่อยที่สุด: <em>"ก็ Nous ทำโมเดล Hermes 4 เอง ทำไมไม่รัน Hermes Agent บน Hermes 4 ให้ถูกที่สุดไปเลย"</em> คำตอบมาจาก Nous เอง ในคู่มือ run-hermes-with-nous-portal:</p>
+
+    <blockquote>💡 <em>"Hermes-4-70B and Hermes-4-405B are available on the Portal at deep discounts, but they're chat/reasoning models, not tool-call-tuned. They will struggle with multi-step agent loops… For Hermes Agent itself, stick to the frontier agentic models."</em> — ชื่อเดียวกัน แต่ไม่ใช่ของสำหรับงานเดียวกัน</blockquote>
+
+    <p>ที่ที่ Hermes 4 เข้าที่เข้าทางคือ <strong>subscription proxy</strong> — <code>hermes proxy start</code> เปิด server แบบ OpenAI-compatible บนเครื่องเรา (<code>/v1/chat/completions</code>, <code>/v1/completions</code>, <code>/v1/embeddings</code>, <code>/v1/models</code>) ให้แอปที่ไม่ใช่ agent เช่น Open WebUI ใช้ subscription เดียวกันสำหรับงาน chat/research ตอนนี้ส่งมาแค่ <code>nous</code> กับ xAI:</p>
+
+    <pre><code># เปิด proxy บนเครื่องนี้ แล้วชี้แอปอื่นมาที่ localhost
+hermes proxy start</code></pre>
+
+    <div class="alert danger">
+      <strong>อย่าเปิด proxy ออกนอก localhost:</strong> เอกสารระบุตรง ๆ ว่ามัน <em>รับ bearer token อะไรก็ได้</em> แล้วแนบ credential จริงของเราให้ — ถ้า bind ออกไปทั้ง network <em>"anyone on your network can now use your Portal subscription"</em> ใครที่อ่านเรื่อง gateway หลุดใน <a href="/blog/hermes-security">#4 Security</a> มาแล้วคงเห็นภาพทันที
+    </div>
+
+    <p>ปิดหัวข้อนี้ด้วยเชิงอรรถสำหรับสาย Claude ซึ่งกระทบผู้อ่านทั้งซีรีส์นี้และ <a href="/blog/openclaw-101">ซีรีส์ OpenClaw</a>: เส้นทาง OAuth ของ Anthropic ใน Hermes ต้องการ <em>"Claude Max subscription + purchased extra usage credits"</em> และกินเฉพาะเครดิตส่วนเกินนั้น ส่วน <em>"Claude Pro subscribers cannot use the OAuth path; the supported alternative is an ANTHROPIC_API_KEY"</em> แบบจ่ายตาม token — ถ้าคุณตั้ง OpenClaw ไว้ด้วย Claude Pro เมื่อต้นปี บันไดขั้นที่สองของคุณคือ API key ไม่ใช่ subscription</p>
+
+    <h2 id="th-resilience">สามชั้นของความทนทาน — Pool, Fallback, Auxiliary</h2>
+
+    <p>ใน #7 ผมสรุป fallback chain ไว้บรรทัดเดียวว่าเป็น "ทางรอดจาก 429" ฉบับเต็มมีสามชั้นซ้อนกัน และเอกสาร fallback-providers แยกไว้ชัด: <strong>credential pool</strong> หมุนหลาย key ของ provider <em>เดียวกัน</em>, <strong>fallback_providers</strong> ย้ายไป provider:model <em>คนละตัว</em> และ <strong>auxiliary task</strong> แต่ละงานมีเส้นทางหา provider ของตัวเอง ลำดับคือ pool ถูกลองก่อน fallback เสมอ</p>
+
+    <p>ชั้นแรก — fallback chain มาตั้งแต่ v0.6.0 (30 มีนาคม 2026) เป็น list ระดับบนสุดของ YAML และมีคำสั่งจัดการมาตั้งแต่ v0.12.0:</p>
+
+    <pre><code># config.yaml — ลำดับสำรองเมื่อ primary ล้ม
+fallback_providers:
+  - provider: openrouter
+    model: &lt;provider/model&gt;
+  - provider: nous
+    model: &lt;model&gt;
+
+# หรือจัดการผ่าน CLI โดยไม่แก้ไฟล์
+hermes fallback list
+hermes fallback add &lt;provider&gt; &lt;model&gt;
+hermes fallback remove &lt;provider&gt; &lt;model&gt;</code></pre>
+
+    <p>ค่าเดิม <code>fallback_model</code> แบบเอกพจน์ยังใช้ได้ แต่ถ้ามีทั้งสองแบบ list จะชนะ และไม่มี environment variable ให้ตั้ง — เอกสารบอกว่าเป็นความตั้งใจให้ควบคุมผ่าน YAML/CLI เท่านั้น สิ่งที่ต้องรู้ให้แม่นคือ <em>อะไร</em> ทำให้ fallback ทำงาน:</p>
+
+    <div class="table-wrapper">
+      <table>
+        <thead>
+          <tr><th>สถานการณ์</th><th>พฤติกรรม</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>HTTP 429 · 500 · 502 · 503</td><td>retry จนครบก่อน แล้วจึง fallback</td></tr>
+          <tr><td>HTTP 401 · 403 · 404</td><td>fallback ทันที</td></tr>
+          <tr><td>response ผิดรูปซ้ำ ๆ</td><td>fallback</td></tr>
+          <tr><td>429 ชั่วคราวที่แจ้ง reset window มาด้วย</td><td><strong>ไม่</strong> fallback — Hermes รอ</td></tr>
+          <tr><td>ขอบเขต</td><td>ต่อ turn — ข้อความใหม่ทุกครั้งเริ่มที่ primary เสมอ</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <p>ชั้นที่สอง — credential pool (v0.7.0, 3 เมษายน 2026, release ที่ Nous เรียกว่า "the resilience release") รองรับ OpenRouter, Anthropic, Nous Portal และ custom endpoint แบบ OpenAI-compatible:</p>
+
+    <pre><code># เพิ่ม key ที่สองของ provider เดิมเข้า pool
+hermes auth add &lt;provider&gt;
+hermes auth list
+hermes auth reset       # ล้างสถานะ cooldown
+
+# config.yaml — กลยุทธ์การหมุนต่อ provider
+credential_pool_strategies:
+  openrouter: round_robin     # fill_first (ค่าเริ่มต้น) | round_robin | least_used | random</code></pre>
+
+    <p>กติกาการหมุนละเอียดกว่าที่คิด: เจอ 429 จะ retry หนึ่งครั้ง ถ้าโดน 429 ติดกันครั้งที่สองจึงหมุน key (cooldown 1 ชั่วโมง), เจอ 402 หมุนทันที (cooldown 1 ชั่วโมง), เจอ 401 ลอง refresh token ก่อนแล้วค่อยหมุน (cooldown 5 นาที) และเมื่อทุก key ใน pool หมดสภาพ จึงตกไปที่ fallback สถานะทั้งหมดอยู่ใน <code>~/.hermes/auth.json</code> — อีกไฟล์หนึ่งที่ต้องอยู่ใน backup ตามสูตร #7</p>
+
+    <p>ชั้นที่สาม — <strong>auxiliary tasks</strong> คืองานเบื้องหลังที่ไม่ใช่ตัว agent หลัก หน้า configuring-models แจกแจงไว้สิบเอ็ดช่อง: title generation, vision, compression, approval scoring, web extraction, skills hub, MCP tool routing, triage specifier, Kanban decomposer, profile describer และ curator (ในเอกสาร fallback-providers ช่องเหล่านี้ปรากฏเป็น key ของ YAML เช่น <code>vision</code>, <code>compression</code>, <code>skills_hub</code>, <code>mcp</code>, <code>approval</code>, <code>title_generation</code>, <code>triage_specifier</code>) ค่าเริ่มต้น <code>provider: auto</code> คือใช้ model หลักก่อน และตั้งแต่ v0.15.0 (28 พฤษภาคม 2026) มีบันไดสำรองเป็นชั้น ๆ: model หลัก → <code>auxiliary.&lt;task&gt;.fallback_chain</code> → <code>fallback_providers</code> → discovery chain ในตัว (OpenRouter → Nous Portal → custom endpoint → Codex OAuth → provider ที่มี API key → ยอมแพ้)</p>
+
+    <pre><code># config.yaml — งานเบื้องหลังใช้ model ฟรี/ถูก แยกจาก model หลัก (รูปแบบตามตัวอย่างในเอกสาร fallback-providers)
+auxiliary:
+  compression:
+    provider: auto                   # ลอง model หลักก่อน
+    model: ""
+    fallback_chain:
+      - provider: openrouter
+        model: inclusionai/ring-2.6-1t:free   # ตัวอย่าง :free ในเอกสารเอง
+  vision:
+    provider: auto                   # ใช้ model หลักถ้ามัน "มองเห็น" ได้</code></pre>
+
+    <p>นี่คือรูปแบบ "auxiliary ศูนย์บาท" ที่เอกสารรับรอง — v0.8.0 (8 เมษายน 2026) เพิ่ม Xiaomi MiMo v2 Pro แบบฟรีบน Portal สำหรับ compression/vision/summarization และตัวอย่างในเอกสาร fallback-providers ก็วาง <code>inclusionai/ring-2.6-1t:free</code> ของ OpenRouter ไว้ใน fallback_chain ของ compression (อีกตัวอย่างหนึ่งบนหน้าเดียวกันตั้ง <code>google/gemini-3-flash-preview</code> เป็น model ของ compression ซึ่งไม่ใช่ตัว <code>:free</code>) สองข้อควรระวัง: compression ที่หา model ไม่ได้จะ <em>"degrade to no-summary"</em> คือเงียบ ๆ ไม่สรุปให้ และ subagent สืบทอด chain ของ parent ทั้งชุด — ผลทางต้นทุนของการ delegate ผมเล่าไว้ใน <a href="/blog/hermes-agent-teams">#2 Agent Teams</a></p>
+
+    <p>ราคาที่ทุกชั้นเรียกเก็บเหมือนกัน และเอกสารเขียนไว้ตรง ๆ: การ fallback หรือการหมุน key จะ reset cache key ทำให้ <em>"the next request re-reads the entire history at full input-token price"</em> — และเสียอีกรอบตอนสลับกลับ ผมจะกลับมาที่เรื่องนี้ในหัวข้อ cache</p>
+    <h2 id="th-tokens">Token หายไปไหน — ต้นทุนคงที่ต่อการเรียกหนึ่งครั้ง</h2>
+
+    <p>ก่อนคุยเรื่องราคาต่อล้าน token เราต้องรู้ก่อนว่า <em>แต่ละคำขอ</em> ส่งอะไรออกไปบ้าง เพราะ agent อย่าง Hermes ไม่ได้ส่งแค่ข้อความของผู้ใช้ — มันแนบ system prompt, schema ของทุก tool ที่เปิดอยู่, ดัชนี skills, ความจำ และ profile ไปด้วยทุกครั้ง</p>
+
+    <p>ตัวเลขที่ทำให้เรื่องนี้เป็นรูปธรรมมาจาก issue #4379 (เปิด 1 เมษายน 2026 โดยผู้ใช้ชื่อ Bichev, ยังเปิดอยู่, P2, label area/usage-cost) ซึ่งวัดที่ <strong>v0.6.0</strong> ได้ overhead คงที่ราว 13,935 tokens ต่อการเรียกหนึ่งครั้ง — ประมาณ 73% ของคำขอทั่วไป — แยกเป็น system prompt ~5,176, tool definitions 31 ตัว ~8,759 และดัชนี skills ~2,200 และหนึ่งค่ำคืนของ gateway Telegram/WhatsApp/cron กินไป ~3.9 ล้าน tokens จาก 207 API calls</p>
+
+    <div class="alert">
+      <strong>ตัวเลขนี้เก่าแล้ว:</strong> ทั้งหมดผูกกับ v0.6.0 (มีนาคม 2026) และ Hermes เปลี่ยนไปมากตั้งแต่นั้น — ผมยกมาเพื่อให้เห็น <em>รูปร่าง</em> ของปัญหา ไม่ใช่ขนาดปัจจุบัน ก่อนเอาตัวเลขไปใส่สไลด์งบประมาณ ให้วัดของตัวเองด้วย <code>hermes prompt-size</code> ซึ่งทำงาน offline และไม่เสียเงิน
+    </div>
+
+    <pre><code># งบ prompt คงที่ต่อข้อความ — system prompt, skills index, memory, profile, tool schemas
+# "Runs entirely offline — no API call"  (v0.16.0, tagged 2026.6.5)
+hermes prompt-size
+hermes prompt-size --platform telegram --json   # แยกตาม platform เพราะ toolset ต่างกัน
+
+# toolset ไหนกิน token เท่าไร (ตัวเลขประมาณการ)
+hermes tools</code></pre>
+
+    <p>สูตรลดน้ำหนักที่ FAQ ทางการวางไว้เรียบง่าย: วัดก่อน แล้วปิด toolset กับ skill ที่ไม่ใช้ ตั้งแต่ v0.11.0 cron job แต่ละงานกำหนด <code>enabled_toolsets</code> ของตัวเองได้เพื่อ <em>"cap token overhead + cost per job"</em> — งานสรุปข่าวตอนเช้าไม่ต้องแบก schema ของ browser automation ไปด้วย (รายละเอียดฝั่ง scheduling อยู่ใน <a href="/blog/hermes-automation">#8 Automation</a>)</p>
+
+    <p>เครื่องมือชิ้นใหญ่กว่านั้นคือ <strong>Tool Search</strong> — โหมด opt-in ที่แทน schema ของ MCP tools และ plugin tools ที่ไม่ใช่ core ด้วย bridge tool สามตัว <code>tool_search</code> / <code>tool_describe</code> / <code>tool_call</code> แล้วให้ model ค้นหา tool ที่ต้องใช้เมื่อถึงเวลา แทนที่จะแบกทุก schema ไปทุก turn (progressive disclosure) กติกาสำคัญ: <em>"Built-in Hermes tools never defer"</em> — tool ในตัวยังอยู่ครบเสมอ ดังนั้นประโยชน์จะมากเป็นพิเศษกับองค์กรที่ต่อ MCP server หลายตัวตามที่เล่าใน <a href="/blog/hermes-integrations">#5 Integrations</a></p>
+
+    <p>คันโยกถัดมาที่เอกสาร configuration ระบุตรง ๆ ว่าเป็นเรื่องต้นทุนคือ <strong>reasoning effort</strong> — ตั้งได้ทั้งระดับ agent และแยกต่อ auxiliary task:</p>
+
+    <pre><code># config.yaml — ความลึกของการคิดเป็นเงิน
+agent:
+  reasoning_effort: medium        # none | minimal | low | medium | high | max  (v0.19.0 เพิ่มชั้นบนสุด max/ultra)
+
+auxiliary:
+  compression:
+    reasoning_effort: low         # งานสรุปไม่ต้องคิดลึก
+  vision:
+    reasoning_effort: none        # อ่านภาพ ไม่ต้อง reasoning</code></pre>
+
+    <p>และ Nous เองก็ไล่ตัดค่าใช้จ่ายซ่อนเร้นของตัวเองมาเป็นระยะ ซึ่งบอกเราได้ว่าเงินเคยรั่วตรงไหน: v0.15.0 สร้าง <code>session_search</code> ใหม่แบบไม่ใช้ LLM — release notes บอกว่าของเดิม <em>"cost ~$0.30/call and took ~30 seconds to summarize three sessions, sometimes confabulating"</em>; v0.17.0 ทำให้ consolidation pass ของ skill Curator เป็น opt-in (<code>curator.consolidate: true</code>) เพื่อให้รอบปกติ <em>"no aux-model spend"</em>; และ v0.18.0 ย้าย self-improvement fork หลังจบ turn ไปใช้ auxiliary model ที่ย่อย context แทนการเล่นทั้งบทสนทนาซ้ำ กฎง่าย ๆ ที่ผมสรุปจากทั้งหมดนี้: <strong>งานเบื้องหลังทุกชิ้นคือการเรียก model และทุกการเรียกคือเงิน</strong> — ให้แน่ใจว่าคุณรู้ว่ามีงานเบื้องหลังอะไรเปิดอยู่บ้าง</p>
+
+    <h2 id="th-cache">เศรษฐศาสตร์ของ Prompt Cache</h2>
+
+    <p>ถ้า overhead คงที่คือปัญหา prompt cache คือคำตอบครึ่งหนึ่ง — เพราะส่วนที่ซ้ำทุก turn (system prompt, tool schemas) คือส่วนที่ cache ได้ดีที่สุด กลไกของ Hermes ตาม developer guide: caching เปิดอัตโนมัติเมื่อชื่อ model เป็น Claude และ provider รองรับ <code>cache_control</code> ใช้กลยุทธ์ <code>system_and_3</code> คือวาง breakpoint สี่จุด — system prompt บวกข้อความล่าสุดสามข้อความที่ไม่ใช่ system — และเอกสารอ้างว่า <em>"Reduces input token costs by ~75% on multi-turn conversations"</em></p>
+
+    <pre><code># config.yaml
+prompt_caching:
+  cache_ttl: "5m"     # รับแค่ "5m" (ค่าเริ่มต้น) หรือ "1h" — ปรับได้ตั้งแต่ v0.12.0</code></pre>
+
+    <p>สิ่งที่ทำให้ cache แตกมีสามอย่าง และสองในสามคือสิ่งที่เราเพิ่งตั้งค่าไปในหัวข้อก่อน: การแก้ไขประวัติกลางทาง, การเปลี่ยนตัวตนของ model (<code>/model</code>, fallback อัตโนมัติ, การหมุน credential) และ compression — ข้อสุดท้ายนี้ cache ของ system prompt รอด และส่วนที่เหลือกลับมาติดใหม่ภายใน 1–2 turn หน้า tips ทางการสรุปเป็นกฎที่ผมอยากให้ทุกทีมจำ:</p>
+
+    <blockquote>💡 <em>"an explicit /model switch, an automatic provider fallback, or a credential-pool rotation all force the next turn to re-read the entire conversation at full input price"</em> — และใน session ยาว ๆ <em>"it's often cheaper to start a fresh session on the other model than to bounce back and forth"</em></blockquote>
+
+    <p>คำถามที่ตามมาคือ "แล้ว provider ไหน cache ได้บ้าง" ซึ่งเป็นจุดที่ <strong>เอกสารตามหลัง release notes</strong> — developer guide ยังเขียนว่าเฉพาะ Anthropic native หรือ OpenRouter แต่ configuration.md เพิ่ม Nous Portal ไว้แล้ว และ release notes เพิ่มไปอีกหลายราย: xAI ผ่าน header <code>x-grok-conv-id</code> (v0.8.0), Bedrock Converse API ผ่าน <code>cachePoint</code> และ DeepSeek บน OpenCode gateway (v0.20.0), Claude ผ่าน LiteLLM บน OpenAI wire (v0.20.2/v0.21.0) และ api.meta.ai ผ่าน Responses API (v0.21.0) v0.20.0 ยังทำให้ tool schema บน Anthropic native cache ได้ <em>"without history loss"</em> — พูดอีกแบบ ถ้าคุณอยู่ที่บันไดขั้นสาม (gateway ขององค์กร) โอกาสที่ cache จะทำงานสูงกว่าที่เอกสารหน้าหลักบอกไว้ แต่ต้องดู <code>cache_read</code> ใน <code>/usage</code> ยืนยันเอง</p>
+
+    <p>อีกครึ่งของสมการคือ <strong>compression</strong> ซึ่งผมเล่ากลไกไว้ใน <a href="/blog/hermes-memory">#3 Memory</a> วันนี้ขอเพิ่มเฉพาะมิติต้นทุน ค่าเริ่มต้นตาม developer guide:</p>
+
+    <pre><code># ค่าเริ่มต้นของ compression (developer guide) — ตัวอย่างประกอบสำหรับ model 200K
+compression:
+  threshold: 0.50            # เริ่มบีบเมื่อใช้ context ถึง 50%   → 100,000 tokens
+  target_ratio: 0.20         # สัดส่วนส่วนท้ายที่เก็บไว้          → tail budget 20,000
+  tail_mode: lean            # ค่าเริ่มต้นตั้งแต่ v0.20.6: 2.5% ของ context, พื้น 10K / เพดาน 25K
+# gateway มี safety net ที่ 0.85
+# งบ summary = content × 0.20, ต่ำสุด 2,000, สูงสุด min(context × 0.05, 12,000) → 10,000</code></pre>
+
+    <p>ผลทางเงินสองข้อ ข้อแรก — ทุกครั้งที่บีบ คือการเรียก auxiliary compression model หนึ่งครั้งด้วยเนื้อหาเกือบทั้งหมดของ session และเอกสารกำหนดว่า model ตัวนั้น <em>"must have a context window at least as large as the main agent model's"</em> ดังนั้น "ใช้ model เล็กราคาถูกมาบีบ" ใช้ได้เฉพาะเมื่อ model เล็กนั้นมี context ใหญ่พอ ข้อสอง — หลังบีบ cache ส่วนประวัติแตก ดังนั้น turn ถัดไปแพงกว่าปกติเสมอ ถ้าเห็น <code>/usage</code> พุ่งเป็นช่วง ๆ โดยไม่มีสาเหตุ ให้ดูว่าตรงกับจังหวะ compression หรือไม่</p>
+
+    <div class="alert">
+      <strong>ข้อควรระวัง (ณ 29 สิงหาคม 2026):</strong> คำแนะนำเรื่องต้นทุนของ compression ข้างต้นตั้งอยู่บนสมมติฐานว่า compression ทำงานสำเร็จจริง ซึ่งตอนนี้ยังวางใจไม่ได้ — มี regression ระดับ P1 สองรายการที่ยัง <em>เปิดอยู่</em>: <a href="https://github.com/NousResearch/hermes-agent/issues/97963">#97963</a> turn-hold ของ hygiene compression (ค่าเริ่มต้น 10 วินาที) ทำให้ auto-compress ล้มเหลว 100% กับ thinking model ใน session ยาว (regression จาก #92318) และ <a href="https://github.com/NousResearch/hermes-agent/issues/97948">#97948</a> <code>/compress</code> แบบ manual รายงาน timeout 120 วินาทีทั้งที่ worker เบื้องหลังทำสำเร็จในอีกหลายนาทีถัดมา ส่วน session ขนาดใหญ่ล้มด้วย lease lost / session_split_failed ถ้าคุณพึ่ง compression เพื่อคุมค่าใช้จ่ายของ session ยาว ให้ตรวจสถานะสองรายการนี้ก่อนอัปเกรด และดูใน <code>/usage</code> ว่า summary เกิดขึ้นจริง
+    </div>
+
+    <p>เรื่อง cache ยังเป็นเหตุผลที่ prefix caching สำคัญมากเมื่อลงไปรัน model เอง — recipe ของนักพัฒนาอิสระบน dev.to (Qwen3.6-27B + vLLM บน RTX 3090 24 GB, พฤษภาคม 2026 — third-party ล้วน) วัด time-to-first-token ของ prompt ใหญ่ที่ 38.6 วินาทีแบบ cold เทียบกับ 1.59 วินาทีเมื่อ prefix cache ติด ต่างกันยี่สิบกว่าเท่า และ prompt ใหญ่ที่ว่านั้นก็คือ overhead คงที่ของ Hermes ที่เราเพิ่งวัดกันนั่นเอง</p>
+
+    <h2 id="th-measure">ตัวเลขต้นทุนวัดอะไรกันแน่</h2>
+
+    <p>Hermes มีพื้นผิวรายงานต้นทุนอยู่หลายชั้น และแต่ละชั้นวัดคนละอย่าง ไล่จากใกล้ตัวที่สุด:</p>
+
+    <pre><code># ใน session
+/usage                 # token ของ session นี้ + rate-limit headers และ cost detail (v0.9.0),
+                       # account limits (v0.11.0), แยกตามหมวดของ context (v0.18.0)
+/insights --days 7     # ภาพรวมย้อนหลัง
+
+# นอก session
+hermes insights --days 30 --source telegram
+
+# งาน non-interactive (hermes -z) — เขียนรายงาน JSON "even when the run fails" (v0.19.0)
+hermes -z &lt;prompt&gt; --usage-file ./nightly-usage.json</code></pre>
+
+    <p>ไฟล์จาก <code>--usage-file</code> มี <code>estimated_cost_usd</code>, token แยกเป็น input/output/cache_read/cache_write/reasoning, <code>api_calls</code>, <code>model</code>, <code>provider</code>, <code>session_id</code> และสถานะ completed/failed — สำหรับ cron job ในองค์กร นี่คือสิ่งที่ควรส่งเข้า log pipeline ทุกคืน เพราะมันคือหลักฐานต่อการรันหนึ่งครั้งที่จับต้องได้ที่สุดที่ Hermes ให้</p>
+
+    <p>v0.21.0 เพิ่มสองอย่างที่ผมรอมานาน อย่างแรกคือ status bar ที่แสดง cache hit ratio, latency (ค่าเฉลี่ยเคลื่อนที่ของ 10 call ล่าสุด) และ tok/s ใน CLI แบบสด อย่างที่สองคือ <code>model_overrides</code> ที่ให้เราใส่ราคาต่อล้าน token ของ model ที่ Hermes ยังไม่รู้จัก — สำคัญมากสำหรับบันไดขั้นสามและสี่ เพราะ model หลัง gateway ขององค์กรหรือบน GPU ของเราไม่มีราคาอยู่ใน registry สาธารณะ และถ้าไม่ใส่ ทุกตัวเลขต้นทุนจะเป็นศูนย์ปลอม ๆ:</p>
+
+    <pre><code># config.yaml — v0.21.0
+display:
+  show_cost: true
+  status_bar:
+    fields: [cache_hit, latency, tps]    # cache_hit reset เมื่อสลับ model หรือ compression; แสดงผลอย่างเดียว
+
+model_overrides:
+  &lt;model-id&gt;:
+    context_length: 128000
+    input_price_per_mtok: 0.50          # ราคาตามสัญญาของเรา (ตัวเลขสมมติ) — ไหลเข้า session cost summary
+    output_price_per_mtok: 1.50
+    capabilities: [tool_use, vision]</code></pre>
+
+    <p>ทีนี้ถึงตัวเลขที่คนอ่านผิดมากที่สุด — หน้า <strong>Analytics</strong> ใน web dashboard (token 7/30/90 วัน, cache-hit %, ค่าใช้จ่าย, ตารางต่อ model) ซึ่ง <em>ปิดเป็นค่าเริ่มต้น</em> ด้วยเหตุผลที่เขียนไว้ใน PR ที่ปิดมัน — ไม่ใช่บนหน้าเอกสาร dashboard:</p>
+
+    <div class="alert info">
+      <strong>ไม่ใช่บิล:</strong> <a href="https://github.com/NousResearch/hermes-agent/pull/25438">PR #25438</a> (merge 14 พฤษภาคม 2026, ออกใน v0.14.0) ตั้ง <code>dashboard.show_token_analytics: false</code> พร้อมเหตุผลว่าตัวเลขเป็น <em>"a local lower-bound estimate (they exclude auxiliary calls, retries, fallbacks, and cache writes), so they can read far below the provider bill. Set true only if you understand they're not billing."</em> ถ้อยคำนี้อยู่ใน PR ไม่ใช่บนหน้าเอกสาร dashboard ซึ่งไม่ได้กล่าวถึงค่านี้เลย — และ PR เดียวกันยกกรณีจริงที่ dashboard บอก 150K tokens ขณะที่บิลจริงคือ 27M — ต่างกันเกือบสองร้อยเท่า
+    </div>
+
+    <p>ผมอยากให้ทุกคนที่ดูแลงบอ่านประโยคนั้นสองรอบ เพราะสิ่งที่มันตัดออก — auxiliary calls, retries, fallbacks, cache writes — คือทุกอย่างที่เราเพิ่งคุยกันมาสี่หัวข้อ พูดอีกแบบ ตัวเลขใน Hermes บอก <em>รูปร่าง</em> ของค่าใช้จ่าย ส่วน <em>ขนาด</em> ต้องอ่านจากบิลของ provider เท่านั้น เครื่องมือชุมชนอย่าง hermes-dashboard ของ Bichev (proxy + SQLite dashboard ที่อ่าน <code>state.db</code> เพื่อดู cache-hit และค่าใช้จ่ายรายวัน) เกิดขึ้นเพราะช่องว่างนี้ — ผมยกมาเป็นหลักฐานของช่องว่าง ไม่ใช่คำแนะนำให้ติดตั้ง และ <code>hermes sessions cost</code> ที่จะรายงาน cache-hit ต่อ session (PR #76596, 2 สิงหาคม 2026) ยัง <strong>ไม่ถูก merge</strong> ณ วันที่เขียน</p>
+
+    <p>เรื่องที่ต้องพูดให้ชัดที่สุด: <strong>Hermes ไม่มีเพดานค่าใช้จ่ายเป็นดอลลาร์</strong> ไม่ว่ารายวันหรือรายเดือน issue #26382 (เปิด 15 พฤษภาคม 2026, ยังเปิดอยู่, P3) ขอ <code>budget.daily_usd_cap</code>/<code>monthly_usd_cap</code> และชี้ว่า <code>/usage</code> กับ <code>/insights</code> ดูได้แค่ย้อนหลัง ส่วน flag <code>--max-budget-usd</code> ที่คู่มือต้นทุนของบุคคลที่สามหลายฉบับยกมาเป็น "option ของ Hermes" นั้น <strong>เป็น flag ของ Claude Code</strong> — มันปรากฏใน repo แค่ใน SKILL.md ของ skill claude-code ที่แถมมา ไม่มีใน cli-commands.md, configuration.md หรือ FAQ สิ่งที่มีจริงคือรั้วเชิงพฤติกรรม:</p>
+
+    <pre><code># config.yaml — รั้วที่มีจริง (ไม่ใช่เพดานเงิน)
+agent:
+  max_turns: 500                 # งบจำนวนรอบต่องาน (ค่าเริ่มต้น 500)
+  run_budget_seconds: 1800       # แจ้งให้เริ่มสรุปงานเมื่อใช้เวลาไป 80%
+# loop_caps: จำกัด web_search / การ spawn subagent ต่อ turn
+# hard_stop_enabled: สำหรับ gateway ที่ไม่มีคนเฝ้า</code></pre>
+
+    <p>สำหรับองค์กร คำตอบเรื่องเพดานเงินจึงอยู่ <em>นอก</em> Hermes — spend limit ฝั่ง OpenRouter/provider, quota บน gateway ขององค์กรในบันไดขั้นสาม หรือยอดเครดิตของ Portal เอง (Portal ที่เครดิตหมดก็หยุด ซึ่งเป็นเพดานแบบหนึ่ง)</p>
+    <h2 id="th-gpu">GPU ของเราเอง — vLLM, llama.cpp, Ollama และพื้น 64K</h2>
+
+    <p>บันไดขั้นที่สี่ตัดค่า token เป็นศูนย์ และเพิ่มปัญหาใหม่สองข้อ: context กับ tool calling ข้อแรกเป็นตัวเลขตายตัว — เอกสาร providers ระบุว่า Hermes <em>"requires at least 64,000 tokens of context for agent use with tools"</em> เพราะ overhead คงที่ที่เราวัดกันไปกินพื้นที่มากอยู่แล้ว ข้อสองคือ server ต้องแปลง tool call ของ model ให้ถูกรูป ซึ่งแต่ละ engine มี flag ของตัวเอง:</p>
+
+    <pre><code># vLLM — parser "hermes" คือรูปแบบ tool call ที่ Hermes Agent ใช้ (ยังมี llama3_json, mistral, deepseek_v3, xlam)
+vllm serve &lt;model&gt; \
+  --enable-auto-tool-choice --tool-call-parser hermes \
+  --max-model-len 65536
+
+# llama.cpp — "Without --jinja, the server ignores the tools parameter entirely"
+llama-server -m &lt;model.gguf&gt; --jinja -fa -c 64000 -ngl 99
+# ระวัง: -np แบ่ง context ตาม slot  →  -c 64000 -np 4 = 16K ต่อ slot ต่ำกว่าพื้น
+
+# SGLang — เพิ่ม --tool-call-parser qwen ตอน launch; เพดาน output เริ่มต้นแค่ 128 tokens
+# ยกด้วย --default-max-tokens หรือ model.max_tokens
+
+# LM Studio — provider ชั้นหนึ่งตั้งแต่ v0.12.0 พร้อม doctor checks; endpoint :1234/v1
+lms load &lt;model&gt; --context-length 64000</code></pre>
+
+    <pre><code># config.yaml — ชี้ Hermes ไปที่ server ของเรา
+model:
+  provider: custom
+  base_url: http://vllm.internal:8000/v1
+  api_key: none
+  context_length: 65536        # บอก Hermes ตรง ๆ ไม่ต้องรอมันเดา</code></pre>
+
+    <p>เรื่อง context length Hermes มีลำดับการหาค่าที่ควรรู้: <code>model.context_length</code> ที่เราตั้ง → cache ถาวร → endpoint <code>/models</code> → Anthropic API → metadata ของ OpenRouter → registry models.dev → ค่าเริ่มต้น 128K สำหรับ model ที่ไม่รู้จัก สำหรับ server ของเราเอง ตั้งค่าแรกไว้ตรง ๆ จะประหยัดเวลาไล่ปัญหาได้มาก</p>
+
+    <p>คู่มือทางการ "Run Hermes Locally with Ollama — Zero API Cost" (เพิ่มใน v0.13.0, 7 พฤษภาคม 2026) คือหน้าที่ซื่อสัตย์ที่สุดในเอกสารทั้งชุด เพราะมันบอกตรง ๆ ว่า model เล็กส่วนใหญ่ <em>chat ได้แต่ทำงานไม่ได้</em>: ในตาราง model ของคู่มือ มี <code>gemma4:31b</code> (~20 GB, RAM 24 GB ขึ้นไป) ตัวเดียวที่ tool calling ได้ ส่วน gemma2:27b/9b และ llama3.2:3b <em>"can only chat; they can't take actions"</em> สเปกขั้นต่ำที่ระบุคือ RAM 8 GB / 4 cores แนะนำ 32 GB ขึ้นไป / 8 cores / GPU NVIDIA VRAM 8 GB ขึ้นไป และความเร็วบน CPU ล้วน ๆ อยู่ที่ ~2–5 tokens/วินาที สำหรับ 31B — ใช้ได้กับ cron job กลางคืน ไม่ใช่กับคนนั่งรอ</p>
+
+    <div class="alert danger">
+      <strong>กับดัก 2048:</strong> คู่มือ Ollama ของ Hermes บอกว่า Ollama ตั้ง context เริ่มต้นไว้ 2,048 tokens (FAQ ของ Ollama เองระบุ 4,096 ในปัจจุบัน — ต่ำกว่าพื้น 64,000 ที่ Hermes ต้องการทั้งคู่) — model จะ "ลืม" tool schema ของตัวเองตั้งแต่ turn แรกโดยไม่มี error ให้เห็น วิธีแก้ที่คู่มือ Hermes แสดงคือ <code>PARAMETER num_ctx 64000</code> ใน Modelfile ส่วนทางเลือกระดับ daemon <code>OLLAMA_CONTEXT_LENGTH=64000</code> มาจาก FAQ ของ Ollama เอง ไม่ได้อยู่ในคู่มือ Hermes และถ้ารันบน CPU ให้ตั้ง <code>HERMES_API_TIMEOUT=1800</code> ด้วย
+    </div>
+
+    <pre><code># Modelfile — ยก context ให้ถึงพื้นที่ Hermes ต้องการ
+FROM gemma4:31b
+PARAMETER num_ctx 64000
+
+# หรือระดับ daemon — ตัวแปรนี้มาจาก FAQ ของ Ollama เอง ไม่ได้อยู่ในคู่มือ Hermes
+OLLAMA_CONTEXT_LENGTH=64000 ollama serve
+
+# CPU-only: ให้เวลา prefill นาน ๆ
+export HERMES_API_TIMEOUT=1800</code></pre>
+
+    <p>แล้ว <strong>Hermes 4 ของ Nous เอง</strong> อยู่ตรงไหนในภาพนี้? ตระกูล Hermes 4 (405B, 70B, 14B) ออกเมื่อ 26 สิงหาคม 2025 และ Hermes-4.3-36B (Apache-2.0, base จาก Seed-OSS-36B, ฝึกด้วย context ถึง 512K, มี GGUF ระดับ 4/5/6/8-bit) ออกเมื่อ 3 ธันวาคม 2025 — แต่ในคลัง Ollama เมื่อ 1 กันยายน 2026 entry ทางการล่าสุดคือ <code>hermes3</code> ที่อัปเดตเมื่อหนึ่งปีก่อน <strong>ไม่มี Hermes 4 หรือ 4.3 แบบทางการ</strong> มีแต่ community upload บวกกับคำเตือนของ Nous เองที่ผมยกไว้ในหัวข้อ Portal ว่า 70B/405B ไม่ได้จูนสำหรับ tool call ข้อสรุปของผม: การรัน Hermes Agent บนน้ำหนัก Hermes 4 ในบ้าน <em>ทำได้</em> ผ่าน GGUF กับ llama.cpp/LM Studio แต่ไม่ใช่เส้นทางที่ทางการรับรอง และคุณต้องทดสอบ tool calling เอง</p>
+
+    <p>ที่แย่กว่านั้นคือรายการ "Recommended Local Models" บนหน้า providers (Qwen 2.5 Coder, Llama 3.1, "Hermes 2/3", DeepSeek 67B, Mistral) ขัดกับคู่มือ Ollama บนเว็บเดียวกัน (gemma4:31b) และกับ recipe ของ Red Hat (Qwen2.5-7B-Instruct) — เอกสารทางการยังไม่เห็นตรงกันเอง ดังนั้นกฎเดียวที่ปลอดภัยคือ <strong>ทดสอบ tool calling ด้วย workload ของคุณเองก่อนตัดสินใจซื้อ GPU</strong></p>
+
+    <p>สำหรับองค์กรที่มี Kubernetes อยู่แล้ว recipe ของ Red Hat Developer (2 มิถุนายน 2026, โดย Gerald Trotman) วาง Hermes บน OpenShift AI กับ KServe vLLM InferenceService, model เริ่มต้น <code>Qwen/Qwen2.5-7B-Instruct</code>, GPU 1 ตัวต่อ replica แล้วชี้ agent ไปที่ <code>OPENAI_BASE_URL=http://hermes-llm-predictor.hermes.svc.cluster.local:8080/v1</code> — พร้อมประโยคที่ควรติดไว้หน้าห้อง server: <em>"Inference on CPU is 10-100x slower"</em> ฝั่ง AMD ก็มี technical article เรื่อง Hermes + vLLM บน Instinct MI300X ใน AMD Developer Cloud แต่หน้านั้น timeout ตอนผมดึง จึงยังไม่ยก flag ใด ๆ มาอ้าง</p>
+
+    <p>สองบันทึกปิดท้าย ข้อแรก — เรื่อง Nemotron ที่หลายคนถามถึง: Nous <em>ไม่ได้</em> เป็นสมาชิกก่อตั้ง Nemotron Coalition (ประกาศของ NVIDIA เมื่อ 16 มีนาคม 2026 ระบุแปดห้องแล็บโดยไม่มี Nous) แต่เข้าร่วมราวต้นมิถุนายน และเสิร์ฟ <code>nvidia/nemotron-3-ultra:free</code> บน Portal ผ่าน Nebius เฉพาะช่วง 4–18 มิถุนายน 2026 คู่มือหน้านั้นยังค้างอยู่ทั้งที่หมดเขตแล้ว (issue #53729 เปิดอยู่) และ Nemotron SKU ไหนฟรีอยู่ตอนนี้บ้าง ผมยืนยันไม่ได้ ข้อสอง — Hermes ปรับตัวให้ local inference ดีขึ้นเรื่อย ๆ: Ollama ได้ <code>max_tokens</code> เริ่มต้น 65536 ใน v0.17.0, v0.19.0 ข้ามการ probe Ollama สำหรับ provider ที่รู้ว่าไม่ใช่ Ollama (ส่วนหนึ่งของการลด TTFT ~80% จาก ~4.3 วินาทีเหลือ ~0.9 — ตัวเลขนี้มาจาก release tracker ของบุคคลที่สาม ไม่ใช่ release notes ทางการ) และ configuration.md ระบุว่า local endpoint จะ <em>"auto-raise socket and stale timeouts"</em> เพื่อรองรับ prefill ที่ช้า</p>
+
+    <h2 id="th-data">ข้อมูลไปอยู่ที่ไหน — Telemetry, Privacy Policy และ Air Gap ที่ยังไม่มี</h2>
+
+    <p>มาถึงอีกครึ่งของคำถามเปิด ตัว runtime ของ Hermes ให้คำตอบที่สะอาด — FAQ ทางการ: <em>"API calls go only to the LLM provider you configure… Hermes Agent does not collect telemetry, usage data, or analytics"</em> และบทสนทนา ความจำ skills อยู่ใน <code>~/.hermes/</code> ทั้งหมด แต่ "ไม่มี telemetry" ไม่เท่ากับ "ไม่ออก network เลย" — จากเอกสารเดียวกันและ release notes มีการเรียกออกที่รู้จักสี่อย่าง: ตรวจ update, ค้น registry models.dev (cache ก่อน), ดึง plugin index (cache 24 ชั่วโมง, ถ้า offline ใช้ seed ที่แถมมา) และ header <code>originator: hermes-agent</code> ในคำขอไปยัง Codex ฝ่าย network ขององค์กรควรรู้ทั้งสี่ก่อนเขียน firewall rule</p>
+
+    <p>คำถามใหญ่กว่าจึงไม่ใช่ตัว agent แต่คือ <strong>Portal</strong> ซึ่งเป็นบันไดขั้นแรก และนี่คือหน้าที่ผมอยากให้ทุก DPO อ่านเอง — Privacy Policy ของ Nous Research (ปรับปรุงล่าสุด 11 มิถุนายน 2026) สำหรับ Portal/Cloud ระบุว่า inference payload ถูก <em>เก็บเป็นค่าเริ่มต้น</em>; prompt และ output <em>"may be shared with such providers as necessary to provide the Services"</em>; Nous อาจใช้ข้อมูลเพื่อ <em>"training, fine-tuning"</em> และสร้างหรือ license ข้อมูลรวมหรืออนุพันธ์ได้ ทางออกคือ <strong>Privacy Mode</strong> ที่เมื่อเปิดแล้ว Nous จะไม่เก็บ payload และไม่ใช้เพื่อ training/product improvement/support ยกเว้นเท่าที่จำเป็นด้านความปลอดภัยและกฎหมาย — และเป็นการ opt-out ไปข้างหน้า ไม่ย้อนหลัง</p>
+
+    <blockquote>💡 สิ่งที่นโยบายฉบับนี้ <em>ไม่</em> ระบุ สำคัญพอ ๆ กับสิ่งที่ระบุ: ไม่มีระยะเวลาเก็บรักษา, ไม่มีที่ตั้งของข้อมูล, ไม่มี zero-data-retention tier, ไม่มีรายชื่อ sub-processor และไม่มี DPA ให้ลงนาม ผมจะไม่อนุมานสิ่งใดในข้อเหล่านี้แทน Nous — และคุณก็ไม่ควร</blockquote>
+
+    <p>ฝั่ง software มีของช่วยอยู่สองชิ้น ชิ้นแรกคือ data-training-tier guard ใน v0.21.0 — <em>"a unified selection-guard registry warns you across every picker surface when a model trains on your data"</em> และงานแบบ non-interactive จะ <em>fail closed</em> เว้นแต่ตั้ง <code>security.allow_data_training_tiers_noninteractive: true</code> (เรื่อง secrets และ vault ผมยกไว้ใน <a href="/blog/hermes-security">#4 Security</a>) ชิ้นที่สองคือ knob ของ OpenRouter:</p>
+
+    <pre><code># config.yaml — กันไม่ให้ route ไปหา provider ที่เก็บข้อมูล (OpenRouter)
+provider_routing:
+  data_collection: deny
+  sort: price                 # price | throughput | latency
+  # only: [...] / ignore: [...] เลือกหรือตัด provider เป็นรายชื่อ
+
+# v0.21.0 — งาน non-interactive จะหยุดเอง ถ้า model ที่เลือกฝึกจากข้อมูลเรา
+security:
+  allow_data_training_tiers_noninteractive: false</code></pre>
+
+    <p>แต่ต้องซื่อสัตย์กับข้อจำกัด: issue #32757 "[Bug]: Data privacy" (26 พฤษภาคม 2026) รายงานว่า <code>data_collection: deny</code> ไม่ได้กัน model ที่เก็บ log เมื่อ route ผ่าน Nous Portal issue ถูกปิดแบบ not planned พร้อม label ว่า implemented on main แต่ไม่มีคำตอบจากผู้ดูแลให้เห็น — ผมจัดเป็น <em>คำถามที่ยังเปิด</em> ไม่ใช่บั๊กที่แก้แล้ว</p>
+
+    <p>แล้ว <strong>Hermes Cloud</strong> ล่ะ? หน้า <a href="https://portal.nousresearch.com/cloud">portal.nousresearch.com/cloud</a> บอกว่ายังเป็น preview ต้องมีเครดิต $10 หรือ subscription ที่ active และ <em>"scales to zero when idle — you only pay while it works"</em> ซึ่งเป็นทั้งหมดที่หน้านั้นพูดเรื่องการคิดเงิน (คำว่า "hourly" ไม่ปรากฏบนหน้านั้น) ส่วน FAQ บนหน้านั้นตั้งคำถามเอง "Where are the servers located?" โดยไม่มีคำตอบในเนื้อหาที่ผมดึงได้ — ไม่มีขนาดเครื่อง ราคา หรือ region เผยแพร่ ตัวเลขที่เห็นตามบล็อกอื่นล้วนเป็นของบุคคลที่สาม สำหรับองค์กรไทย ข้อนี้ตัดสินตัวเองได้เลย: ตราบใดที่ตอบไม่ได้ว่า server อยู่ประเทศไหน Cloud ยังไม่ผ่านด่านแรกของ PDPA</p>
+
+    <p>ส่วนบันไดขั้นที่ห้า — <strong>air-gapped</strong> — ยังเป็นคำขอ ไม่ใช่ฟีเจอร์ issue #17696 (เปิด 30 เมษายน 2026, P3, ยังเปิดอยู่) ระบุว่า installer ต้องการ GitHub, source และ public registry สิ่งที่พอทำได้วันนี้คือ wheel บน PyPI (PR #26593 merge 15 พฤษภาคม 2026 — แต่เวอร์ชันบน PyPI ล่าสุด 0.19.0 ตามหลัง GitHub v0.21.0 และตาราง platform ระบุว่า pip install ยังไม่ supported) กับ image ทางการ <code>nousresearch/hermes-agent</code> (ดึงเกิน 5 ล้านครั้ง ขนาดราว 900 MB) ที่ mirror เข้า registry ภายในได้ และอย่าสับสนกับ <code>terminal.docker_network: false</code>:</p>
+
+    <pre><code># config.yaml — sandbox ไม่มี network (--network=none)
+terminal:
+  docker_network: false
+# ตัด egress เฉพาะคำสั่งของ agent (terminal, execute_code, file tools)
+# ไม่ได้ตัดการเรียก model ของตัว agent เอง — และการสลับค่านี้จะลบ container เดิมที่มี network ทิ้ง</code></pre>
+
+    <h2 id="th-pdpa">PDPA และ Decision Tree สำหรับองค์กรไทย</h2>
+
+    <p>ใน #4 ผมเล่าเหตุการณ์ Hermes ในโหมด YOLO ที่วิ่งอยู่ในเครือข่ายกระทรวงการคลังไว้แล้ว เหตุการณ์นั้นเป็นเรื่อง <em>ใครควบคุม agent</em> หัวข้อนี้เป็นอีกด้านของเหรียญเดียวกัน — เมื่อเราเป็นคนควบคุมเอง <em>ข้อมูลที่ agent อ่านไปอยู่ที่ไหน</em> และคำตอบต้องผ่าน PDPA</p>
+
+    <p>กรอบกฎหมายที่เกี่ยวโดยตรงคือประกาศลูกภายใต้มาตรา 28 (การส่งข้อมูลไปยังประเทศที่มีมาตรฐานคุ้มครองเพียงพอ) และมาตรา 29 (นโยบายคุ้มครองข้อมูลภายในเครือกิจการ) ซึ่งประกาศในราชกิจจานุเบกษาเมื่อ 25 ธันวาคม 2023 และมีผล 24 มีนาคม 2024 บทสรุปของสำนักกฎหมายหลายแห่งระบุตรงกันว่า <strong>ยังไม่มีการประกาศรายชื่อประเทศที่มีมาตรฐานเพียงพอ</strong> — ผมยังไม่ได้อ่านตัวประกาศฉบับเต็มจาก pdpc.or.th จึงขอวางไว้เป็นข้อสังเกตจากแหล่งรอง ผลในทางปฏิบัติคือ การส่ง prompt ที่มีข้อมูลส่วนบุคคลออกนอกประเทศต้องพึ่งข้อยกเว้นอื่นตามมาตรา 28 (ซึ่งควรให้ฝ่ายกฎหมายเป็นผู้ชี้) และการอธิบายเรื่องนี้กับ DPO จะง่ายกว่ามากถ้า inference อยู่ในประเทศ</p>
+
+    <p>ข่าวดีคือทางเลือกในประเทศมีจริงแล้ว: AWS Asia Pacific (Thailand) <code>ap-southeast-7</code> เปิดเมื่อ 8 มกราคม 2025 (3 AZ), Google Cloud region กรุงเทพฯ เปิด 21 มกราคม 2026 (3 zones) ส่วน Microsoft ประกาศ region ประเทศไทยแล้วแต่ผมยังไม่พบวันที่ GA สองรายแรกให้เราวางบันไดขั้นสาม (LLM gateway ในประเทศ) หรือขั้นสี่ (vLLM บน GPU ใน region ไทย) ได้โดยที่ Hermes ไม่รู้ความต่างเลย</p>
+
+    <p>อีกทางที่น่าจับตาสำหรับงานภาษาไทยคือ <strong>Typhoon</strong> ของ SCB 10X — endpoint <code>https://api.opentyphoon.ai/v1</code> เป็น OpenAI-compatible และเอกสารของ Typhoon มีตัวอย่าง tool calling (เช่น <code>typhoon-v2.1-12b-instruct</code>) ส่วน <code>typhoon2.5-qwen3-4b</code> อยู่บน Ollama พร้อม function calling และ context 256K บนกระดาษจึงเป็น custom provider ของ Hermes ได้:</p>
+
+    <pre><code># config.yaml — Typhoon เป็น named custom provider (ยังไม่ผ่านการทดสอบกับ Hermes)
+providers:
+  typhoon:
+    api: https://api.opentyphoon.ai/v1
+    transport: chat_completions
+    key_env: TYPHOON_API_KEY
+
+/model custom:typhoon:typhoon-v2.1-12b-instruct</code></pre>
+
+    <p>ย้ำว่า <em>ยังไม่มีใครทดสอบ Typhoon กับ Hermes</em> อย่างเป็นทางการ ที่ตั้ง server และราคาก็ไม่อยู่ในหน้าเอกสารที่ผมดึงได้ และพื้น 64K ยังใช้บังคับ — นี่คือการทดลองที่ผมตั้งใจจะทำเอง ไม่ใช่คำแนะนำ</p>
+
+    <p>บริบทที่กำลังมาคือ <strong>ร่าง พ.ร.บ. AI</strong> ที่ ETDA เปิดรับฟังความเห็นเมื่อ 9 กรกฎาคม 2026 ถึง 14 สิงหาคม 2026 เป็นกรอบแบบ risk-based และบทวิเคราะห์ของ Baker McKenzie คาดว่าจะใช้เวลา 2–3 ปีกว่าจะบังคับใช้ — ยังไม่ผูกพัน แต่การเลือกบันไดขั้นที่ควบคุมข้อมูลได้ตั้งแต่วันนี้ คือการซื้อประกันราคาถูกสำหรับวันที่มันบังคับใช้</p>
+
+    <p>รวมทุกอย่างเป็นตารางตัดสินใจหนึ่งตาราง — ไม่ใช่คำตอบสำเร็จรูป แต่เป็นคำถามที่ควรถามเรียงลำดับ:</p>
+
+    <div class="table-wrapper">
+      <table>
+        <thead>
+          <tr><th>ข้อมูลที่ agent จะเห็น</th><th>ขั้นบันไดที่ผมแนะนำ</th><th>เหตุผล</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>สาธารณะ / ไม่มีข้อมูลส่วนบุคคล (สรุปเอกสารเปิด, โค้ดบน repo สาธารณะ)</td><td>ขั้น 1 Portal (เปิด Privacy Mode) หรือขั้น 2 BYO</td><td>เร็ว ถูก และไม่มีอะไรให้ PDPA คุ้มครอง</td></tr>
+          <tr><td>ข้อมูลภายในองค์กร ไม่มีข้อมูลส่วนบุคคล</td><td>ขั้น 2 ที่ตั้ง <code>data_collection: deny</code> หรือขั้น 3</td><td>ตัดทอดของ Nous ออก เหลือสัญญากับ provider เดียว</td></tr>
+          <tr><td>มีข้อมูลส่วนบุคคลของนักศึกษา / ลูกค้า / บุคลากร</td><td>ขั้น 3 gateway ใน region ไทย หรือขั้น 4</td><td>inference ไม่ออกนอกประเทศ คำถามมาตรา 28 จึงไม่เกิดตั้งแต่ต้น</td></tr>
+          <tr><td>ข้อมูลอ่อนไหว / ข้อมูลราชการชั้นความลับ</td><td>ขั้น 4 บน hardware ของเราเอง — และยอมรับว่าขั้น 5 ยังไม่มี</td><td>ไม่มี provider ให้ไว้ใจ และ Hermes เองยังต้องออก network เพื่อติดตั้ง/อัปเดต</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <p>จุดยืนของผม ณ 1 กันยายน 2026: สำหรับทีมวิจัยหรือทีม dev ที่ข้อมูลไม่มีชื่อคน Portal ยังเป็นบันไดที่คุ้มที่สุด — เปิด Privacy Mode, ตั้ง auxiliary เป็น model ฟรี, ดู <code>/usage</code> ให้เป็นนิสัย สำหรับหน่วยงานที่แตะข้อมูลส่วนบุคคล คำตอบที่ยั่งยืนคือขั้นสาม — LLM gateway ขององค์กรใน region ไทย ที่ Hermes มองเห็นเป็น provider ธรรมดาตัวหนึ่ง — เพราะมันย้ายคำถาม PDPA ทั้งหมดไปอยู่ในสัญญาฉบับเดียวที่ฝ่ายกฎหมายอ่านออก และปล่อยให้ Hermes ทำสิ่งที่มันเก่ง: สลับ model ได้ทุกเมื่อโดยไม่มี lock-in</p>
+
+    <div class="key-takeaways">
+      <h3>🎯 สิ่งสำคัญที่ต้องจำ</h3>
+      <ul>
+        <li><strong>บันไดห้าขั้น</strong> = Portal → BYO keys → custom provider หลัง gateway องค์กร → self-hosted → air-gapped (ขั้นสุดท้ายยังเป็น issue #17696 ที่เปิดอยู่)</li>
+        <li><strong>Portal Free</strong> = "Free models only, $0 monthly credits" — Tool Gateway มาพร้อม tier จ่ายเงินและเปิดทีละ tool; "10%" มีสองตัวที่คนละความหมาย (โบนัสเครดิต $20 → $22 กับส่วนลด 10% สำหรับ token-billed providers) ส่วน 20% ของ Teknium ยืนยันไม่ได้นอก X</li>
+        <li><strong>Hermes 4 ≠ Hermes Agent</strong> = Nous เองบอกว่า 70B/405B ไม่ได้จูนสำหรับ tool call — ใช้ผ่าน subscription proxy กับแอป chat ไม่ใช่กับ agent</li>
+        <li><strong>Pool → Fallback → Auxiliary</strong> = สามชั้นที่ทุกชั้นเก็บค่าผ่านทางเป็นการอ่านประวัติใหม่เต็มราคา — session ยาวให้เปิด session ใหม่แทนการเด้งไปมา</li>
+        <li><strong>hermes prompt-size</strong> = วัด overhead คงที่ของตัวเองแบบ offline ก่อนเชื่อตัวเลข 73% จาก issue #4379 ที่ผูกกับ v0.6.0</li>
+        <li><strong>system_and_3</strong> = breakpoint สี่จุด อ้าง ~75% — แตกเมื่อสลับ model, fallback, หมุน key และ compression; provider ที่ cache ได้มีมากกว่าที่ developer guide เขียน</li>
+        <li><strong>Dashboard Analytics</strong> = "local lower-bound estimate" ปิดเป็นค่าเริ่มต้นเพราะเคยบอก 150K เทียบบิลจริง 27M — ไม่มีเพดานดอลลาร์ใน Hermes และ <code>--max-budget-usd</code> เป็นของ Claude Code</li>
+        <li><strong>พื้น 64K</strong> = context ขั้นต่ำสำหรับงาน tool; Ollama เริ่มต้นที่ 2,048 ตามคู่มือ Hermes (4,096 ตาม FAQ ของ Ollama) — และ gemma4:31b คือ model เดียวในคู่มือทางการที่ tool calling ได้</li>
+        <li><strong>PDPA</strong> = Portal เก็บ payload เป็นค่าเริ่มต้นและไม่ระบุที่ตั้ง server; ข้อมูลส่วนบุคคลควรอยู่บันไดขั้นสามขึ้นไปใน region ไทย (AWS ap-southeast-7, Google Cloud Bangkok)</li>
+      </ul>
+    </div>
+
+    </div>
+    <div class="l-en" lang="en">
+
+    <p>Picture the end of the month. The provider's invoice arrives, and the number on it is several times what the agent's own dashboard had been telling you. You open <code>/insights</code> and see one figure; you open the provider's billing page and see another. Which one is the truth? And the question underneath that one — while the agent was working through the night, whose servers did your organization's data sleep on?</p>
+
+    <p>Those two questions — <strong>what does it cost</strong> and <strong>where does the data go</strong> — are more entangled than they look, because every step up or down the model ladder, from a single Nous Portal bill to GPUs in your own server room, trades cost against control at the same time. I have touched money twice already in this series: the Portal tier table and the "MIT-free, pay only for the model" framing live in <a href="/blog/hermes-101">#1 Hermes 101</a>, and a brief section on cost control and BYO keys versus Portal sits in <a href="/blog/hermes-production">#7 Production</a>. This post is the full treatment of both.</p>
+
+    <p>I will walk the five rungs of the ladder, the three layers of fallback, where the tokens actually go, the economics of the prompt cache, the cost figures Hermes reports (and what they cannot see), running open-weight models on your own GPUs, and then close with the question no Thai organization gets to skip — <strong>PDPA</strong>. Every number here comes from the official docs, the release notes, the issue tracker or the Portal pages as I fetched them on September 1, 2026. Where the sources disagree with each other, I will tell you how they disagree rather than pick the nicer figure.</p>
+
+    <h2 id="en-ladder">The Model Ladder: Five Rungs an Organization Climbs</h2>
+
+    <p>When I talk to a department weighing Hermes, the first question is usually "Portal, or our own keys?" — which is too narrow a question. Hermes lets you stand on any of five rungs, and each rung answers three questions differently: who holds the key, where the data travels, and who sends the bill.</p>
+
+    <ol>
+      <li><strong>Nous Portal</strong> — one OAuth, one bill. The README promises <em>"300+ models — pick any of them with /model &lt;name&gt;"</em>, and a paid subscription unlocks the Tool Gateway (web, image, TTS, cloud browser). The fastest rung, and the only one that adds Nous as an extra hop in the data path.</li>
+      <li><strong>BYO keys</strong> — an OpenRouter key or a direct provider key (Anthropic, OpenAI and so on). Bills scatter across key owners, but the data path is one hop shorter.</li>
+      <li><strong>A named custom provider behind your corporate gateway</strong> — declare a provider of your own in config, pointing at an internal LLM gateway (LiteLLM, the IT department's proxy, or a Bedrock contract you already hold), authenticated with short-lived SSO tokens.</li>
+      <li><strong>Self-hosted inference</strong> — vLLM, llama.cpp, SGLang, LM Studio or Ollama on your own GPUs. Token cost zero; electricity and staff cost not zero.</li>
+      <li><strong>Air-gapped</strong> — the rung many government agencies want, and the one Hermes <strong>has not officially reached</strong> (more on that in the data section).</li>
+    </ol>
+
+    <p>What makes the ladder usable is that every rung is switched with the same commands. The configuring-models doc draws the line clearly: <code>hermes model</code> is the out-of-session wizard that <em>adds</em> providers, while <code>/model</code> inside a session only <em>switches</em> among providers already configured — with three scopes:</p>
+
+    <pre><code># This session only — reverts when the session ends
+/model &lt;name&gt; --provider &lt;p&gt;
+
+# Persist to config.yaml
+/model &lt;name&gt; --provider &lt;p&gt; --global
+
+# One turn, then auto-restore
+/model &lt;name&gt; --once
+
+# A model_aliases entry lets a short name expand to provider + model
+/model fav</code></pre>
+
+    <p>One thing gateway operators must remember: gateway sessions pick up config changes only for <strong>new sessions</strong> unless the gateway is restarted. If you changed the model and the Telegram bot is still answering on the old one, that is the first thing to suspect.</p>
+
+    <p>The third rung is where mid-sized and larger organizations tend to settle, and the docs support it better than I expected. <code>providers.&lt;name&gt;</code> takes <code>api</code>, <code>key_env</code> and a <code>transport</code> of either <code>chat_completions</code> or <code>anthropic_messages</code>; <code>key_cmd</code> runs a CLI of yours to mint a short-lived token from enterprise SSO and refreshes it before expiry:</p>
+
+    <pre><code># config.yaml — a provider of your own, behind the corporate gateway
+providers:
+  corp-gateway:
+    api: https://llm-gateway.internal.example.ac.th/v1
+    transport: chat_completions        # or anthropic_messages
+    key_cmd: "my-auth-cli print-token --profile prod"   # short-lived SSO token, auto-refreshed
+
+# Switch to it in a session
+/model custom:corp-gateway:&lt;model&gt;</code></pre>
+
+    <p>And since v0.21.0 (August 31, 2026), third parties can ship providers as pip packages that Hermes discovers through entry points — which means a platform team can package the internal provider once and distribute it to every machine without editing configs one by one (a thread that continues into <a href="/blog/hermes-desktop-fleet">#10 Desktop &amp; Fleet</a>).</p>
+
+    <h2 id="en-portal">Portal as a Routing Tier, Not a Religion</h2>
+
+    <p>In #7 I declined to say what the Free tier includes, because the docs page and the pricing page disagreed. The pricing page at <a href="https://portal.nousresearch.com/">portal.nousresearch.com</a>, fetched September 1, 2026, now settles it: Free is "Free models only" with $0 in monthly credits. The four-tier table itself (Free $0 · Plus $20 → $22 credits · Super $100 → $110 · Ultra $200 → $220) is already printed in <a href="/blog/hermes-101">#1 Hermes 101</a>, so I will not repeat it — what #1 does not carry is the following:</p>
+
+    <ul>
+      <li><strong>Rollover caps</strong> — unused credits carry into the next month, but only up to $10 (Plus) / $50 (Super) / $100 (Ultra). An organization with bursty usage — heavy at the end of term, quiet over the break — quietly forfeits whatever sits above that cap in every light month.</li>
+      <li><strong>The paid cards</strong> add "Hosted tool usage" and "High rate limits" (Free gets "Standard rate limits").</li>
+      <li><strong>Top-ups</strong> — pay-as-you-go credit top-ups come in $10, $20, $50, $100 or $200.</li>
+      <li><strong>Copy that contradicts itself</strong> — the tier cards say "200+ Models" while the catalog copy on the same page says "over 300" and the README says "300+". I go with 300+, as the README does, and note that the cards have not caught up. The same page prices the catalog at <em>"free to $24 per million input tokens"</em>.</li>
+    </ul>
+
+    <p>The <strong>"10%"</strong> needs untangling, because there are two of them and they mean different things. The first is the <strong>credit bonus</strong> on the pricing page — "10% bonus" means you pay $20 and receive $22 in credits (and $100 → $110, $200 → $220). The second is the <strong>provider discount</strong> in the configuring-models doc — <em>"Portal subscribers also get 10% off token-billed providers"</em> — a lower per-token price when you route through the Portal, not extra credit. A third figure — Teknium (a Nous co-founder) wrote <em>"20% Discount on all models"</em> in his X post for the Herald release — exists only on X, appears on neither the Portal pages nor the docs, and I cannot verify whether it still applies or what it ever applied to. I will not print the 20% as settled — log into the Portal and read the live number before it goes into a budget.</p>
+
+    <p>What a paid subscription genuinely adds is the <strong>Tool Gateway</strong>. The doc says it is <em>"included with every paid Nous Portal subscription"</em>, while Free-tier accounts <em>"can use Portal for inference but don't include managed tools"</em> (with the caveat that <em>"some accounts are also entitled to a free tool pool"</em>). Nous manages five backends: Firecrawl for web, FAL for image generation, OpenAI TTS, Browser Use for a cloud browser, and a Modal cloud terminal as an optional add-on — and, the part I like, it is <em>"opt-in per tool, not all-or-nothing"</em>:</p>
+
+    <pre><code># config.yaml — adopt Nous-managed tools one at a time
+web:
+  backend: nous            # Firecrawl via the Portal
+image_gen:
+  provider: nous           # FAL
+tts:
+  provider: nous           # OpenAI TTS
+stt:
+  provider: nous
+browser:
+  cloud_provider: nous     # Browser Use — only when you want it</code></pre>
+
+    <p>Since v0.19.0 (July 20, 2026) the plan can be managed from inside the TUI/CLI with <code>/subscription</code> and <code>/topup</code> — neither is in the user guide's slash-command list yet, so I am citing the release notes — and <code>hermes portal info</code> shows login, subscription and routing status. Under the hood Hermes mints a short-lived JWT from your stored Portal refresh token on every inference call.</p>
+
+    <p>Now the question people get wrong most often: <em>"Nous makes the Hermes 4 models — why not run Hermes Agent on Hermes 4 and get the cheapest possible loop?"</em> The answer comes from Nous itself, in the run-hermes-with-nous-portal guide:</p>
+
+    <blockquote>💡 <em>"Hermes-4-70B and Hermes-4-405B are available on the Portal at deep discounts, but they're chat/reasoning models, not tool-call-tuned. They will struggle with multi-step agent loops… For Hermes Agent itself, stick to the frontier agentic models."</em> Same name; not the same job.</blockquote>
+
+    <p>Where Hermes 4 does fit is the <strong>subscription proxy</strong>. <code>hermes proxy start</code> exposes a local OpenAI-compatible server (<code>/v1/chat/completions</code>, <code>/v1/completions</code>, <code>/v1/embeddings</code>, <code>/v1/models</code>) so that non-agent apps such as Open WebUI can spend the same subscription on chat and research work; only <code>nous</code> and xAI are shipped today:</p>
+
+    <pre><code># Start the proxy on this machine, then point other apps at localhost
+hermes proxy start</code></pre>
+
+    <div class="alert danger">
+      <strong>Never expose the proxy beyond localhost:</strong> the doc states plainly that it <em>accepts any bearer token</em> and attaches your real credentials — bind it to the network and <em>"anyone on your network can now use your Portal subscription"</em>. Anyone who read the exposed-gateway history in <a href="/blog/hermes-security">#4 Security</a> will recognise the shape of that immediately.
+    </div>
+
+    <p>A closing footnote for Claude users, which affects readers of both this series and the <a href="/blog/openclaw-101">OpenClaw series</a>: the Anthropic OAuth path in Hermes requires a <em>"Claude Max subscription + purchased extra usage credits"</em> and consumes only those overage credits, while <em>"Claude Pro subscribers cannot use the OAuth path; the supported alternative is an ANTHROPIC_API_KEY"</em>, billed per token. If you set up OpenClaw on Claude Pro earlier this year, your second rung is an API key, not a subscription.</p>
+
+    <h2 id="en-resilience">Three Layers of Resilience: Pools, Fallbacks, Auxiliaries</h2>
+
+    <p>In #7 I summarized the fallback chain in one line as "the way out of a 429." The full picture has three stacked layers, and the fallback-providers doc keeps them distinct: <strong>credential pools</strong> rotate several keys for the <em>same</em> provider, <strong>fallback_providers</strong> switch to a <em>different</em> provider:model, and each <strong>auxiliary task</strong> resolves its provider independently. Pools are always tried before fallbacks.</p>
+
+    <p>The first layer — the fallback chain, shipped in v0.6.0 (March 30, 2026) — is a top-level YAML list, with a management command since v0.12.0:</p>
+
+    <pre><code># config.yaml — the order to try when the primary fails
+fallback_providers:
+  - provider: openrouter
+    model: &lt;provider/model&gt;
+  - provider: nous
+    model: &lt;model&gt;
+
+# Or manage it from the CLI without touching the file
+hermes fallback list
+hermes fallback add &lt;provider&gt; &lt;model&gt;
+hermes fallback remove &lt;provider&gt; &lt;model&gt;</code></pre>
+
+    <p>The legacy singular <code>fallback_model</code> still works, but the list wins when both exist, and there is deliberately no environment variable — the doc wants this controlled by YAML and CLI only. What you need to know precisely is <em>what</em> triggers it:</p>
+
+    <div class="table-wrapper">
+      <table>
+        <thead>
+          <tr><th>Situation</th><th>Behaviour</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>HTTP 429 · 500 · 502 · 503</td><td>retries are exhausted first, then fallback</td></tr>
+          <tr><td>HTTP 401 · 403 · 404</td><td>fallback immediately</td></tr>
+          <tr><td>repeated malformed responses</td><td>fallback</td></tr>
+          <tr><td>a transient 429 with a known reset window</td><td><strong>no</strong> fallback — Hermes waits</td></tr>
+          <tr><td>scope</td><td>per turn — every new user message starts on the primary again</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <p>The second layer — credential pools, from v0.7.0 (April 3, 2026, which Nous called "the resilience release") — supports OpenRouter, Anthropic, Nous Portal and custom OpenAI-compatible endpoints:</p>
+
+    <pre><code># Add a second key for the same provider to its pool
+hermes auth add &lt;provider&gt;
+hermes auth list
+hermes auth reset       # clear cooldown state
+
+# config.yaml — rotation strategy per provider
+credential_pool_strategies:
+  openrouter: round_robin     # fill_first (default) | round_robin | least_used | random</code></pre>
+
+    <p>The rotation rules are finer-grained than you might expect: a 429 is retried once, and only a second consecutive 429 rotates the key (one-hour cooldown); a 402 rotates immediately (one-hour cooldown); a 401 tries a token refresh first, then rotates (five-minute cooldown); and only when every key in the pool is exhausted does the request fall through to the fallback chain. All of this state lives in <code>~/.hermes/auth.json</code> — one more file that belongs in the backup routine from #7.</p>
+
+    <p>The third layer — <strong>auxiliary tasks</strong> — is the background work that is not the main agent. The configuring-models page enumerates eleven slots: title generation, vision, compression, approval scoring, web extraction, skills hub, MCP tool routing, triage specifier, Kanban decomposer, profile describer and curator (in the fallback-providers doc the same slots appear as YAML keys such as <code>vision</code>, <code>compression</code>, <code>skills_hub</code>, <code>mcp</code>, <code>approval</code>, <code>title_generation</code>, <code>triage_specifier</code>). The default <code>provider: auto</code> means the main model first, and since v0.15.0 (May 28, 2026) there is a layered ladder: main model → <code>auxiliary.&lt;task&gt;.fallback_chain</code> → <code>fallback_providers</code> → the built-in discovery chain (OpenRouter → Nous Portal → custom endpoint → Codex OAuth → API-key providers → give up).</p>
+
+    <pre><code># config.yaml — background work on a free/cheap model, separate from the main one (shape follows the fallback-providers doc's example)
+auxiliary:
+  compression:
+    provider: auto                   # try the main model first
+    model: ""
+    fallback_chain:
+      - provider: openrouter
+        model: inclusionai/ring-2.6-1t:free   # the doc's own :free example
+  vision:
+    provider: auto                   # use the main model if it can see</code></pre>
+
+    <p>This is the documented "zero-cost auxiliary" pattern: v0.8.0 (April 8, 2026) added a free Xiaomi MiMo v2 Pro on the Portal for compression, vision and summarization, and the fallback-providers doc's own example puts <code>inclusionai/ring-2.6-1t:free</code> on OpenRouter in the compression fallback_chain (its other example sets <code>google/gemini-3-flash-preview</code> as the compression model — not a <code>:free</code> one). Two caveats. Compression that cannot find a model will <em>"degrade to no-summary"</em> — quietly, with no summary produced. And subagents inherit the parent's whole chain; the cost argument for delegation lives in <a href="/blog/hermes-agent-teams">#2 Agent Teams</a>.</p>
+
+    <p>Every layer charges the same toll, and the doc says so in plain words: a fallback or a credential rotation resets the cache keys, so <em>"the next request re-reads the entire history at full input-token price"</em> — and again when you switch back. I will return to that in the cache section.</p>
+    <h2 id="en-tokens">Where the Tokens Go: The Fixed Cost of Every Call</h2>
+
+    <p>Before talking about price per million tokens, you need to know what <em>each request</em> actually sends, because an agent like Hermes never sends just the user's message — it attaches the system prompt, the schema of every enabled tool, the skills index, memory and profile, every single time.</p>
+
+    <p>The number that made this concrete comes from issue #4379 (opened April 1, 2026 by a user named Bichev; still open, P2, labelled area/usage-cost), which measured at <strong>v0.6.0</strong> a fixed per-call overhead of roughly 13,935 tokens — about 73% of a typical request — broken down as system prompt ~5,176, 31 tool definitions ~8,759, skills index ~2,200. One evening of Telegram, WhatsApp and cron gateways consumed ~3.9 million tokens across 207 API calls.</p>
+
+    <div class="alert">
+      <strong>These numbers are old:</strong> all of them are pinned to v0.6.0 (March 2026), and Hermes has changed a great deal since. I quote them for the <em>shape</em> of the problem, not its current size. Before any of this goes on a budget slide, measure your own installation with <code>hermes prompt-size</code>, which runs offline and costs nothing.
+    </div>
+
+    <pre><code># The fixed per-message budget — system prompt, skills index, memory, profile, tool schemas
+# "Runs entirely offline — no API call"  (v0.16.0, tagged 2026.6.5)
+hermes prompt-size
+hermes prompt-size --platform telegram --json   # per platform, because toolsets differ
+
+# Estimated token cost per toolset
+hermes tools</code></pre>
+
+    <p>The diet the official FAQ prescribes is simple: measure first, then disable the toolsets and skills you do not use. Since v0.11.0 each cron job can carry its own <code>enabled_toolsets</code> to <em>"cap token overhead + cost per job"</em> — a morning news digest does not need to carry the browser-automation schemas (the scheduling side is in <a href="/blog/hermes-automation">#8 Automation</a>).</p>
+
+    <p>The bigger instrument is <strong>Tool Search</strong>: an opt-in mode that replaces the schemas of MCP tools and non-core plugin tools with three bridge tools — <code>tool_search</code> / <code>tool_describe</code> / <code>tool_call</code> — and lets the model look up the tool it needs when it needs it, instead of carrying every schema on every turn (progressive disclosure). The key rule: <em>"Built-in Hermes tools never defer"</em> — the built-ins are always present, so the benefit is largest for organizations that attach many MCP servers, as described in <a href="/blog/hermes-integrations">#5 Integrations</a>.</p>
+
+    <p>The next lever the configuration doc names explicitly as a cost lever is <strong>reasoning effort</strong>, settable at the agent level and per auxiliary task:</p>
+
+    <pre><code># config.yaml — thinking depth is money
+agent:
+  reasoning_effort: medium        # none | minimal | low | medium | high | max  (v0.19.0 added the top tiers, max and ultra)
+
+auxiliary:
+  compression:
+    reasoning_effort: low         # summarizing does not need deep thought
+  vision:
+    reasoning_effort: none        # reading an image needs no reasoning</code></pre>
+
+    <p>Nous has also been trimming its own hidden costs release by release, which tells you where money used to leak: v0.15.0 rebuilt <code>session_search</code> without an LLM — the release notes say the old version <em>"cost ~$0.30/call and took ~30 seconds to summarize three sessions, sometimes confabulating"</em>; v0.17.0 made the skill Curator's consolidation pass opt-in (<code>curator.consolidate: true</code>) so routine runs incur <em>"no aux-model spend"</em>; and v0.18.0 routed the post-turn self-improvement fork to an auxiliary model that digests context instead of replaying the whole conversation. The rule I draw from all of it: <strong>every background job is a model call, and every model call is money</strong> — make sure you know which background jobs are on.</p>
+
+    <h2 id="en-cache">Prompt-Cache Economics</h2>
+
+    <p>If the fixed overhead is the problem, the prompt cache is half of the answer — because the part that repeats every turn (system prompt, tool schemas) is exactly the part that caches best. The mechanics per the developer guide: caching is enabled automatically when the model name is an Anthropic Claude model and the provider supports <code>cache_control</code>; the strategy is <code>system_and_3</code>, which places four breakpoints — the system prompt plus the last three non-system messages — and the doc claims it <em>"Reduces input token costs by ~75% on multi-turn conversations"</em>.</p>
+
+    <pre><code># config.yaml
+prompt_caching:
+  cache_ttl: "5m"     # only "5m" (default) or "1h" are accepted — configurable since v0.12.0</code></pre>
+
+    <p>Three things break the cache, and two of them are things we just configured in the previous sections: mid-history edits, a change of model identity (<code>/model</code>, an automatic fallback, a credential rotation), and compression — where the system-prompt cache survives and the rest re-establishes within one or two turns. The official tips page condenses it into a rule I want every team to memorize:</p>
+
+    <blockquote>💡 <em>"an explicit /model switch, an automatic provider fallback, or a credential-pool rotation all force the next turn to re-read the entire conversation at full input price"</em> — and in long sessions <em>"it's often cheaper to start a fresh session on the other model than to bounce back and forth"</em>.</blockquote>
+
+    <p>The natural follow-up is "which providers actually cache?", and this is where <strong>the docs lag the release notes</strong>. The developer guide still says Anthropic native or OpenRouter only, but configuration.md already adds Nous Portal, and the release notes add several more: xAI via the <code>x-grok-conv-id</code> header (v0.8.0), the Bedrock Converse API via <code>cachePoint</code> and DeepSeek on OpenCode gateways (v0.20.0), Claude through LiteLLM on the OpenAI wire (v0.20.2/v0.21.0), and api.meta.ai via the Responses API (v0.21.0). v0.20.0 also made tool schemas cacheable on native Anthropic <em>"without history loss"</em>. Put differently: if you stand on rung three, behind a corporate gateway, the odds that caching engages are better than the main doc page suggests — but confirm it yourself by watching <code>cache_read</code> in <code>/usage</code>.</p>
+
+    <p>The other half of the equation is <strong>compression</strong>, whose mechanics I covered in <a href="/blog/hermes-memory">#3 Memory</a>; today I add only the cost dimension. The defaults per the developer guide:</p>
+
+    <pre><code># Compression defaults (developer guide) — worked example for a 200K model
+compression:
+  threshold: 0.50            # compress at 50% of the context window  → 100,000 tokens
+  target_ratio: 0.20         # share of the tail that is kept          → tail budget 20,000
+  tail_mode: lean            # default since v0.20.6: 2.5% of context, 10K floor / 25K cap
+# the gateway keeps a safety net at 0.85
+# summary budget = content × 0.20, min 2,000, max min(context × 0.05, 12,000) → 10,000</code></pre>
+
+    <p>Two financial consequences. First, every compression is one call to the auxiliary compression model with nearly the whole session as input, and the doc requires that model to have <em>"a context window at least as large as the main agent model's"</em> — so "use a small cheap model to compress" only works when the small model also has a large enough window. Second, compression breaks the history part of the cache, so the turn after it is always more expensive than usual. If <code>/usage</code> spikes periodically for no visible reason, check whether the spikes line up with compression events.</p>
+
+    <div class="alert">
+      <strong>Caveat (as of August 29, 2026):</strong> the compression-cost advice above assumes compression actually completes, which right now is not a safe assumption — two P1 regressions were <em>open</em>: <a href="https://github.com/NousResearch/hermes-agent/issues/97963">#97963</a> (the hygiene-compression turn-hold, 10 s by default, makes auto-compress fail 100% for thinking models with long sessions — a regression from #92318) and <a href="https://github.com/NousResearch/hermes-agent/issues/97948">#97948</a> (a manual <code>/compress</code> reports a 120 s timeout while the background worker succeeds minutes later; large-session compression fails with lease lost / session_split_failed). If you rely on compression to hold down the cost of long sessions, check both before upgrading, and confirm in <code>/usage</code> that a summary was in fact produced.
+    </div>
+
+    <p>Caching is also why prefix caching matters so much once you run models yourself. An independent developer's recipe on dev.to (Qwen3.6-27B + vLLM on a 24 GB RTX 3090, May 2026 — third-party throughout) measured time-to-first-token on a large prompt at 38.6 seconds cold versus 1.59 seconds with the prefix cache warm, a difference of more than twenty times — and that "large prompt" is precisely the fixed Hermes overhead we just measured.</p>
+
+    <h2 id="en-measure">What the Cost Numbers Actually Measure</h2>
+
+    <p>Hermes has several cost-reporting surfaces, and each measures something different. From the nearest outward:</p>
+
+    <pre><code># In a session
+/usage                 # this session's tokens + rate-limit headers and cost detail (v0.9.0),
+                       # account limits (v0.11.0), per-category context breakdown (v0.18.0)
+/insights --days 7     # the retrospective view
+
+# Outside a session
+hermes insights --days 30 --source telegram
+
+# Non-interactive runs (hermes -z) — a JSON report written "even when the run fails" (v0.19.0)
+hermes -z &lt;prompt&gt; --usage-file ./nightly-usage.json</code></pre>
+
+    <p>The <code>--usage-file</code> report carries <code>estimated_cost_usd</code>; input, output, cache_read, cache_write and reasoning tokens; <code>api_calls</code>; <code>model</code>; <code>provider</code>; <code>session_id</code>; and a completed/failed status. For an organization's cron jobs, this is what should flow into the log pipeline every night — it is the most tangible per-run evidence Hermes produces.</p>
+
+    <p>v0.21.0 added two things I had been waiting for. The first is a status bar that shows the cache-hit ratio, latency (a rolling mean of the last ten calls) and tokens per second live in the CLI. The second is <code>model_overrides</code>, which lets you enter per-million-token prices for models Hermes does not know — essential on rungs three and four, because a model behind your corporate gateway or on your own GPU has no price in any public registry, and without an override every cost figure is a false zero:</p>
+
+    <pre><code># config.yaml — v0.21.0
+display:
+  show_cost: true
+  status_bar:
+    fields: [cache_hit, latency, tps]    # cache_hit resets on model switch and compression; display only
+
+model_overrides:
+  &lt;model-id&gt;:
+    context_length: 128000
+    input_price_per_mtok: 0.50          # your contracted rate (illustrative) — flows into session cost summaries
+    output_price_per_mtok: 1.50
+    capabilities: [tool_use, vision]</code></pre>
+
+    <p>Now the figure people misread most: the <strong>Analytics</strong> page in the web dashboard (7/30/90-day tokens, cache-hit %, cost, per-model table), which is <em>off by default</em> for a reason spelled out in the PR that turned it off — not on the dashboard docs page:</p>
+
+    <div class="alert info">
+      <strong>Not a bill:</strong> <a href="https://github.com/NousResearch/hermes-agent/pull/25438">PR #25438</a> (merged May 14, 2026, shipped in v0.14.0) set <code>dashboard.show_token_analytics: false</code> on the grounds that the figures are <em>"a local lower-bound estimate (they exclude auxiliary calls, retries, fallbacks, and cache writes), so they can read far below the provider bill. Set true only if you understand they're not billing."</em> That wording lives in the PR, not on the dashboard docs page, which does not mention the setting at all — and the same PR cites a real case where the dashboard reported 150K tokens against an actual bill of 27M, nearly two hundred times apart.
+    </div>
+
+    <p>I want everyone who owns a budget to read that sentence twice, because what it excludes — auxiliary calls, retries, fallbacks, cache writes — is everything the last four sections were about. Put differently, Hermes's numbers tell you the <em>shape</em> of your spend; the <em>size</em> can only be read off the provider's bill. Community tooling such as Bichev's hermes-dashboard (a proxy plus a SQLite dashboard that reads <code>state.db</code> for cache-hit rates and daily cost) exists precisely because of this gap — I cite it as evidence of the gap, not as a recommendation to install it. And <code>hermes sessions cost</code>, which would report cache hits per session (PR #76596, August 2, 2026), is <strong>not merged</strong> as I write.</p>
+
+    <p>The thing that must be said most plainly: <strong>Hermes has no spend cap in dollars</strong>, daily or monthly. Issue #26382 (opened May 15, 2026; still open, P3) asks for <code>budget.daily_usd_cap</code>/<code>monthly_usd_cap</code> and points out that <code>/usage</code> and <code>/insights</code> only look backwards. The <code>--max-budget-usd</code> flag that several third-party cost guides list as a "Hermes option" <strong>is a Claude Code flag</strong> — it appears in the repo only inside the bundled claude-code skill's SKILL.md, and not in cli-commands.md, configuration.md or the FAQ. What does exist are behavioural guardrails:</p>
+
+    <pre><code># config.yaml — the guardrails that actually exist (not a dollar cap)
+agent:
+  max_turns: 500                 # iteration budget per task (default 500)
+  run_budget_seconds: 1800       # wrap-up notice at 80% of the budget
+# loop_caps: cap web_search calls / subagent spawns per turn
+# hard_stop_enabled: for unattended gateways</code></pre>
+
+    <p>For an organization, the dollar ceiling therefore lives <em>outside</em> Hermes — a spend limit on the OpenRouter or provider side, a quota on the corporate gateway of rung three, or the Portal's own credit balance (a Portal that runs out of credit stops, which is a ceiling of a kind).</p>
+    <h2 id="en-gpu">Bring Your Own GPUs: vLLM, llama.cpp, Ollama and the 64K Floor</h2>
+
+    <p>The fourth rung takes the token cost to zero and adds two new problems: context and tool calling. The first is a hard number — the providers doc says Hermes <em>"requires at least 64,000 tokens of context for agent use with tools"</em>, because the fixed overhead we measured already eats a large share. The second is that the server must parse the model's tool calls correctly, and every engine has its own flags:</p>
+
+    <pre><code># vLLM — the "hermes" parser is the tool-call format Hermes Agent speaks (others: llama3_json, mistral, deepseek_v3, xlam)
+vllm serve &lt;model&gt; \
+  --enable-auto-tool-choice --tool-call-parser hermes \
+  --max-model-len 65536
+
+# llama.cpp — "Without --jinja, the server ignores the tools parameter entirely"
+llama-server -m &lt;model.gguf&gt; --jinja -fa -c 64000 -ngl 99
+# careful: -np divides the context across slots  →  -c 64000 -np 4 = 16K per slot, below the floor
+
+# SGLang — add --tool-call-parser qwen at launch; the default output cap is only 128 tokens,
+# raise it with --default-max-tokens or model.max_tokens
+
+# LM Studio — a first-class provider with doctor checks since v0.12.0; endpoint :1234/v1
+lms load &lt;model&gt; --context-length 64000</code></pre>
+
+    <pre><code># config.yaml — point Hermes at your server
+model:
+  provider: custom
+  base_url: http://vllm.internal:8000/v1
+  api_key: none
+  context_length: 65536        # tell Hermes directly instead of letting it guess</code></pre>
+
+    <p>On context length, Hermes resolves the value in a documented order: your <code>model.context_length</code> → the persistent cache → the endpoint's <code>/models</code> → the Anthropic API → OpenRouter metadata → the models.dev registry → a 128K default for unknown models. For your own server, setting the first one explicitly saves a lot of debugging.</p>
+
+    <p>The official guide "Run Hermes Locally with Ollama — Zero API Cost" (added in v0.13.0, May 7, 2026) is the most honest page in the whole documentation set, because it says outright that most small models <em>can chat but cannot act</em>. In its model table, <code>gemma4:31b</code> (~20 GB, 24+ GB RAM) is the only entry with tool calling; gemma2:27b/9b and llama3.2:3b <em>"can only chat; they can't take actions"</em>. The stated minimum is 8 GB RAM / 4 cores, the recommendation 32+ GB / 8+ cores / an NVIDIA GPU with 8+ GB VRAM, and CPU-only speed for the 31B is ~2–5 tokens per second — fine for an overnight cron job, not for a person waiting.</p>
+
+    <div class="alert danger">
+      <strong>The 2048 trap:</strong> the Hermes Ollama guide says Ollama's default context is 2,048 tokens (Ollama's own FAQ currently says 4,096 — both far below the 64,000 Hermes needs) — the model "forgets" its own tool schemas from the first turn, with no error to show for it. The fix the Hermes guide shows is <code>PARAMETER num_ctx 64000</code> in a Modelfile; the daemon-level alternative, <code>OLLAMA_CONTEXT_LENGTH=64000</code>, comes from Ollama's own FAQ, not from the Hermes guide. On CPU-only hardware set <code>HERMES_API_TIMEOUT=1800</code> as well.
+    </div>
+
+    <pre><code># Modelfile — raise the context to the floor Hermes needs
+FROM gemma4:31b
+PARAMETER num_ctx 64000
+
+# or at the daemon level — this variable comes from Ollama's own FAQ, not the Hermes guide
+OLLAMA_CONTEXT_LENGTH=64000 ollama serve
+
+# CPU-only: allow long prefill
+export HERMES_API_TIMEOUT=1800</code></pre>
+
+    <p>So where does <strong>Nous's own Hermes 4</strong> fit in this picture? The Hermes 4 family (405B, 70B, 14B) was released on August 26, 2025, and Hermes-4.3-36B (Apache-2.0, based on Seed-OSS-36B, trained with context up to 512K, with GGUFs at 4/5/6/8-bit) on December 3, 2025 — but in the Ollama library on September 1, 2026 the newest official entry is <code>hermes3</code>, updated a year ago. <strong>There is no official Hermes 4 or 4.3 entry</strong>, only community uploads, on top of Nous's own warning, quoted in the Portal section, that the 70B/405B are not tool-call-tuned. My conclusion: running Hermes Agent on Hermes 4 weights at home is <em>possible</em> via a GGUF with llama.cpp or LM Studio, but it is not an officially endorsed path, and you must test tool calling yourself.</p>
+
+    <p>Worse, the "Recommended Local Models" list on the providers page (Qwen 2.5 Coder, Llama 3.1, "Hermes 2/3", DeepSeek 67B, Mistral) contradicts the Ollama guide on the same site (gemma4:31b) and Red Hat's recipe (Qwen2.5-7B-Instruct) — the official docs do not agree with themselves, so the only safe rule is <strong>test tool calling on your own workload before buying a GPU</strong>.</p>
+
+    <p>For organizations already running Kubernetes, the Red Hat Developer recipe (June 2, 2026, by Gerald Trotman) places Hermes on OpenShift AI with a KServe vLLM InferenceService, default model <code>Qwen/Qwen2.5-7B-Instruct</code>, one GPU per replica, and points the agent at <code>OPENAI_BASE_URL=http://hermes-llm-predictor.hermes.svc.cluster.local:8080/v1</code> — with a sentence worth taping to the server-room door: <em>"Inference on CPU is 10-100x slower"</em>. AMD has a technical article on Hermes plus vLLM on an Instinct MI300X in the AMD Developer Cloud as well, but the page timed out when I fetched it, so I quote no flags from it.</p>
+
+    <p>Two closing notes. First, on the Nemotron question people keep asking: Nous was <em>not</em> a founding member of the Nemotron Coalition (NVIDIA's March 16, 2026 announcement names eight labs, Nous not among them) but joined around early June and served <code>nvidia/nemotron-3-ultra:free</code> on the Portal through Nebius only from June 4 to June 18, 2026. That guide is still live past its expiry (issue #53729 open), and I cannot verify whether any Nemotron SKU is free today. Second, Hermes keeps adapting to local inference: Ollama got a default <code>max_tokens</code> of 65536 in v0.17.0, v0.19.0 skips the Ollama probe for providers known not to be Ollama (part of the ~80% TTFT cut, from ~4.3 s to ~0.9 s — a figure from third-party release trackers, not the official release notes), and configuration.md says local endpoints <em>"auto-raise socket and stale timeouts"</em> to accommodate slow prefill.</p>
+
+    <h2 id="en-data">Where the Data Goes: Telemetry, the Privacy Policy and the Air Gap That Isn't</h2>
+
+    <p>Now the other half of the opening question. The Hermes runtime gives a clean answer — the official FAQ: <em>"API calls go only to the LLM provider you configure… Hermes Agent does not collect telemetry, usage data, or analytics"</em>, with conversations, memory and skills all under <code>~/.hermes/</code>. But "no telemetry" is not "no network egress at all": from the same doc and the release notes, four known outbound calls remain — the update check, models.dev registry lookups (cache-first), the plugin index fetch (24-hour cache, falling back to a bundled seed offline), and an <code>originator: hermes-agent</code> header on Codex requests. Your network team should know all four before writing firewall rules.</p>
+
+    <p>The bigger question, then, is not the agent but <strong>the Portal</strong>, which is rung one — and this is the page I want every DPO to read for themselves. The Nous Research Privacy Policy (last updated June 11, 2026) for Portal and Cloud states that inference payloads are <em>stored by default</em>; that prompts and outputs <em>"may be shared with such providers as necessary to provide the Services"</em>; that Nous may use data for <em>"training, fine-tuning"</em> and may generate or license aggregated or derivative data. The way out is <strong>Privacy Mode</strong>: once enabled, Nous will not store inference payloads and will not use them for training, product improvement or support, except to the limited extent necessary for security and legal purposes — and it is a prospective opt-out, not a retroactive one.</p>
+
+    <blockquote>💡 What this policy does <em>not</em> state matters as much as what it does: no retention period, no data location, no zero-data-retention tier, no sub-processor list, and no DPA to sign. I will not infer any of those on Nous's behalf — and neither should you.</blockquote>
+
+    <p>On the software side there are two helpers. The first is the data-training-tier guard in v0.21.0 — <em>"a unified selection-guard registry warns you across every picker surface when a model trains on your data"</em>, and non-interactive workloads <em>fail closed</em> unless you set <code>security.allow_data_training_tiers_noninteractive: true</code> (secrets and vault integration are covered in <a href="/blog/hermes-security">#4 Security</a>). The second is OpenRouter's routing knob:</p>
+
+    <pre><code># config.yaml — refuse routes to data-collecting providers (OpenRouter)
+provider_routing:
+  data_collection: deny
+  sort: price                 # price | throughput | latency
+  # only: [...] / ignore: [...] to allow-list or block providers by name
+
+# v0.21.0 — non-interactive runs stop themselves if the chosen model trains on your data
+security:
+  allow_data_training_tiers_noninteractive: false</code></pre>
+
+    <p>But honesty about the limits: issue #32757 "[Bug]: Data privacy" (May 26, 2026) reported that <code>data_collection: deny</code> did not prevent a data-logging model when routed via Nous Portal. It was closed as not planned with a label saying implemented on main, and no maintainer reply is visible — I file it as an <em>open question</em>, not a fixed bug.</p>
+
+    <p>And <strong>Hermes Cloud</strong>? The <a href="https://portal.nousresearch.com/cloud">portal.nousresearch.com/cloud</a> page says it is in preview, requires $10 in credits or an active subscription, and <em>"scales to zero when idle — you only pay while it works"</em> — which is the whole of what the page says about billing (the word "hourly" does not appear on it); its own FAQ asks "Where are the servers located?" and the content I could fetch gives no answer. No machine sizes, prices or regions are published — the figures on other blogs are all third-party. For a Thai organization this one decides itself: until someone can say which country the servers are in, Cloud does not clear the first PDPA gate.</p>
+
+    <p>As for the fifth rung — <strong>air-gapped</strong> — it is still a request, not a feature. Issue #17696 (opened April 30, 2026, P3, still open) notes that the installer needs GitHub, source and public registries. What can be done today: the PyPI wheel (PR #26593, merged May 15, 2026 — though the latest PyPI release, 0.19.0, lags GitHub's v0.21.0, and the platform matrix lists pip installs as unsupported), and the official <code>nousresearch/hermes-agent</code> image (5M+ pulls, roughly 900 MB), which can be mirrored into an internal registry. And do not confuse any of this with <code>terminal.docker_network: false</code>:</p>
+
+    <pre><code># config.yaml — a sandbox with no network (--network=none)
+terminal:
+  docker_network: false
+# cuts egress only for agent commands (terminal, execute_code, file tools)
+# NOT for the agent process's own model calls — and flipping it removes the existing networked container</code></pre>
+
+    <h2 id="en-pdpa">PDPA and a Decision Tree for Thai Organizations</h2>
+
+    <p>In #4 I told the story of a Hermes instance in YOLO mode running inside the Ministry of Finance network. That incident was about <em>who controls the agent</em>. This section is the other side of the same coin — when we are the ones in control, <em>where does the data the agent reads end up</em>, and the answer has to pass through PDPA.</p>
+
+    <p>The directly relevant law is the pair of sub-regulations under section 28 (transfers to countries with adequate protection) and section 29 (binding corporate rules), gazetted on December 25, 2023 and in force since March 24, 2024. Several law-firm summaries agree that <strong>no adequacy list has been published</strong> — I have not read the full notification text on pdpc.or.th myself, so I flag that as a secondary-source observation. The practical effect is that sending prompts containing personal data abroad must rest on one of the other section 28 exceptions (which your legal team, not this post, should identify), and that conversation with your DPO is far easier when inference stays in the country.</p>
+
+    <p>The good news is that in-country options now exist: AWS Asia Pacific (Thailand) <code>ap-southeast-7</code> launched on January 8, 2025 (3 AZs); Google Cloud's Bangkok region launched on January 21, 2026 (3 zones); Microsoft has announced a Thailand region, but I found no GA date. The first two let you place rung three (an in-country LLM gateway) or rung four (vLLM on GPUs in a Thai region) without Hermes noticing any difference.</p>
+
+    <p>Another option worth watching for Thai-language work is <strong>Typhoon</strong> from SCB 10X: the endpoint <code>https://api.opentyphoon.ai/v1</code> is OpenAI-compatible, Typhoon's docs include tool-calling examples (e.g. <code>typhoon-v2.1-12b-instruct</code>), and <code>typhoon2.5-qwen3-4b</code> is on Ollama with function calling and a 256K context. On paper, that makes it a Hermes custom provider:</p>
+
+    <pre><code># config.yaml — Typhoon as a named custom provider (untested with Hermes)
+providers:
+  typhoon:
+    api: https://api.opentyphoon.ai/v1
+    transport: chat_completions
+    key_env: TYPHOON_API_KEY
+
+/model custom:typhoon:typhoon-v2.1-12b-instruct</code></pre>
+
+    <p>To be clear: <em>nobody has tested Typhoon with Hermes</em> officially, its hosting location and pricing were not on the pages I fetched, and the 64K floor still applies — this is an experiment I intend to run myself, not a recommendation.</p>
+
+    <p>The context on the horizon is Thailand's <strong>draft AI Act</strong>, which ETDA opened for consultation on July 9, 2026 through August 14, 2026 — a risk-based framework that Baker McKenzie's analysis expects to take two to three years to enact. Not binding yet; but choosing a rung that keeps the data under your control today is cheap insurance for the day it is.</p>
+
+    <p>Everything above folds into one decision table — not a ready-made answer, but the questions to ask, in order:</p>
+
+    <div class="table-wrapper">
+      <table>
+        <thead>
+          <tr><th>What the agent will see</th><th>The rung I recommend</th><th>Why</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>Public / no personal data (summarizing open documents, code in public repos)</td><td>Rung 1 Portal (Privacy Mode on) or rung 2 BYO</td><td>fast, cheap, and nothing for PDPA to protect</td></tr>
+          <tr><td>Internal data, no personal data</td><td>Rung 2 with <code>data_collection: deny</code>, or rung 3</td><td>removes the Nous hop; one contract with one provider</td></tr>
+          <tr><td>Personal data of students / customers / staff</td><td>Rung 3 gateway in a Thai region, or rung 4</td><td>inference never leaves the country, so the section 28 question never arises</td></tr>
+          <tr><td>Sensitive data / classified government data</td><td>Rung 4 on your own hardware — accepting that rung 5 does not exist yet</td><td>no provider to trust, and Hermes itself still needs the network to install and update</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <p>My position as of September 1, 2026: for a research or development team whose data carries no names, the Portal is still the best-value rung — turn on Privacy Mode, put the auxiliaries on a free model, and make <code>/usage</code> a habit. For any unit that touches personal data, the durable answer is rung three — a corporate LLM gateway in a Thai region that Hermes sees as just another provider — because it moves the entire PDPA question into a single contract your legal team can read, and leaves Hermes doing what it is good at: switching models at will, with no lock-in.</p>
+
+    <div class="key-takeaways">
+      <h3>🎯 Key Takeaways</h3>
+      <ul>
+        <li><strong>The five-rung ladder</strong> = Portal → BYO keys → a custom provider behind the corporate gateway → self-hosted → air-gapped (the last rung is still open issue #17696)</li>
+        <li><strong>Portal Free</strong> = "Free models only, $0 monthly credits" — the Tool Gateway comes with paid tiers and is enabled per tool; there are two different "10%"s (the $20 → $22 credit bonus and the 10% off token-billed providers), and Teknium's 20% is unverifiable outside X</li>
+        <li><strong>Hermes 4 ≠ Hermes Agent</strong> = Nous itself says the 70B/405B are not tool-call-tuned — use them through the subscription proxy from chat apps, not under the agent</li>
+        <li><strong>Pool → Fallback → Auxiliary</strong> = three layers, each charging the same toll of re-reading the history at full price — on long sessions start a fresh session instead of bouncing</li>
+        <li><strong>hermes prompt-size</strong> = measure your own fixed overhead offline before trusting the 73% figure from issue #4379, which is pinned to v0.6.0</li>
+        <li><strong>system_and_3</strong> = four breakpoints, ~75% claimed — broken by a model switch, a fallback, a key rotation and compression; more providers cache than the developer guide lists</li>
+        <li><strong>Dashboard Analytics</strong> = a "local lower-bound estimate", off by default after it read 150K against a 27M bill — Hermes has no dollar cap, and <code>--max-budget-usd</code> belongs to Claude Code</li>
+        <li><strong>The 64K floor</strong> = the minimum context for tool work; Ollama defaults to 2,048 per the Hermes guide (4,096 per Ollama's own FAQ) — and gemma4:31b is the only model in the official guide that can call tools</li>
+        <li><strong>PDPA</strong> = the Portal stores payloads by default and names no server location; personal data belongs on rung three or higher in a Thai region (AWS ap-southeast-7, Google Cloud Bangkok)</li>
+      </ul>
+    </div>
+
+    </div>
+
+    <div class="post-series-footer">
+      <span class="l-th">บทความจากซีรีส์ Hermes Agent in Practice 2026</span><span class="l-en" lang="en">From the Hermes Agent in Practice 2026 series</span>
+    </div>
+
+  </article>
+
+  </main>
+
+  <footer class="blog-footer">
+    <nav class="blog-footer__nav" aria-label="Site">
+      <a href="../index.html">Home</a>
+      <a href="./">Blog</a>
+      <a href="../publications/">Publications</a>
+      <a href="../books/">Books</a>
+      <a href="../projects/">Projects</a>
+      <a href="../news/">News</a>
+      <a href="../index.html#contact">Contact</a>
+    </nav>
+    <a href="./">← Back to Blog</a>
+    <span>© 2026 Anirach Mingkhwan — Associate Professor, KMUTNB</span>
+  </footer>
+
+</body>
+</html>

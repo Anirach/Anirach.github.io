@@ -1,0 +1,1411 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Automation — Scheduled, Event-Driven, and Zero-Token Work — งานที่รันเองตามเวลาและตามเหตุการณ์ | Anirach Mingkhwan</title>
+  <meta name="description" content="เจาะระบบ automation ของ Hermes Agent สำหรับองค์กร — cron ที่จำงานครั้งก่อนได้และไม่ปลุก LLM เมื่อไม่มีอะไรเปลี่ยน webhook ที่ตรวจลายเซ็นก่อนเชื่อ hook ขาออก blueprint ที่เป็นแค่ skill พร้อมตารางเวลา และ API server ให้แอปในองค์กรเรียกใช้ พร้อม CVE ของทุกพอร์ตที่เปิด">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=Sarabun:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      color-scheme: light;
+      /* ink */
+      --navy: #11304b; --slate: #334155; --slate-light: #526174; --gray: #94a3b8;
+      /* ground */
+      --bg: #faf7f0; --white: #ffffff; --code-bg: #1e293b;
+      /* accent */
+      --blue: #226299; --blue-dark: #1a4d7a; --blue-light: #4992b9;
+      /* brand — sampled from the book covers. --gold is decorative on light grounds (2.2:1); --gold-dark is its text form. */
+      --gold: #c4a46c; --gold-dark: #7a5f22; --cloud: #dee7e6; --parchment: #e9e1c4; --focus: #226299;
+      /* status — use only these six, never invent a seventh */
+      --green: #22c55e; --red: #ef4444; --amber: #f59e0b;
+      --cyan: #06b6d4; --purple: #226299; --purple-dark: #1a4d7a;
+      /* type */
+      --font: 'Inter', 'Sarabun', -apple-system, BlinkMacSystemFont, sans-serif;
+      --mono: 'JetBrains Mono', 'Fira Code', 'Sarabun', monospace;
+      /* form */
+      --radius: 12px; --radius-sm: 8px; --radius-lg: 16px;
+      --measure: 720px; --wide: 860px;
+      --transition: 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+    html { scroll-behavior: smooth; }
+    body { font-family: var(--font); font-size: 17px; line-height: 1.8; color: var(--slate); background: var(--bg); -webkit-font-smoothing: antialiased; }
+    .blog-nav { position: fixed; top: 0; left: 0; right: 0; z-index: 100; background: rgba(248,250,252,0.85); backdrop-filter: blur(20px); border-bottom: 1px solid rgba(0,0,0,0.05); }
+    .blog-nav__inner { max-width: 860px; margin: 0 auto; padding: 0 2rem; height: 56px; display: flex; align-items: center; justify-content: space-between; }
+    .blog-nav__back { font-size: 0.85rem; font-weight: 500; color: var(--blue); text-decoration: none; }
+    .blog-nav__back:hover { color: #1a4d7a; }
+    .blog-nav__title { font-size: 0.85rem; font-weight: 600; color: var(--navy); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 50%; }
+    /* ── HERO ── house .post-hero on the approved Deep Blue gradient (page-design
+       §5 / INV-28). Ink is inverted for the dark ground: white title/meta, tag
+       pills white on 18% white — the openclaw-production treatment. The
+       background value must stay byte-identical to the approved string. */
+    .post-hero { padding: 8rem 2rem 3rem; background: linear-gradient(135deg, #11304b 0%, #1a4d7a 45%, #226299 100%); color: #fff; text-align: center; }
+    .post-hero__tags { display: flex; gap: 0.5rem; justify-content: center; margin-bottom: 1.25rem; flex-wrap: wrap; }
+    .post-hero__tag { display: inline-block; font-size: 0.72rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.1em; color: #fff; background: rgba(255,255,255,0.18); padding: 0.35rem 0.9rem; border-radius: 20px; }
+    .post-hero__title { font-size: clamp(1.8rem, 5vw, 3rem); font-weight: 800; color: #fff; line-height: 1.2; margin-bottom: 1rem; max-width: 720px; margin-left: auto; margin-right: auto; }
+    .post-hero__sub { font-size: 1.05rem; max-width: 640px; margin: 0 auto 1.5rem; line-height: 1.7; color: #fff; }
+    .post-hero__meta { font-size: 0.85rem; color: #fff; display: flex; align-items: center; justify-content: center; gap: 1.5rem; flex-wrap: wrap; }
+    .post-hero__series { font-weight: 600; color: #fff; }
+    /* the switch pill and the focus ring both sit on the dark hero: the pill is
+       a light chip so its labels keep their light-ground colours, and --focus
+       re-points to gold here (blue collapses on blue — the footer/pre
+       precedent). */
+    .post-hero { --focus: var(--gold); }
+    .post-hero__cover {
+      aspect-ratio: 1 / 1;
+      max-width: 380px;
+      margin: 2.5rem auto 0;
+      border-radius: var(--radius-lg, 16px);
+      overflow: hidden;
+      box-shadow: 0 20px 60px rgba(17,48,75,0.14);
+    }
+    .post-hero__cover img { width: 100%; height: 100%; object-fit: cover; display: block; }
+    .post-body { max-width: 720px; margin: 0 auto; padding: 3rem 2rem 6rem; }
+    .post-body h2 { font-size: 1.6rem; font-weight: 800; color: var(--navy); margin: 3rem 0 1rem; padding-bottom: 0.5rem; border-bottom: 2px solid rgba(34,98,153,0.15); }
+    .post-body h3 { font-size: 1.25rem; font-weight: 700; color: var(--navy); margin: 2.25rem 0 0.75rem; }
+    .post-body p { margin-bottom: 1.25rem; }
+    .post-body strong { font-weight: 700; color: var(--navy); }
+    .post-body a { color: var(--blue); text-decoration: underline; text-decoration-thickness: 1px; text-underline-offset: 2px; }
+    .post-body ul, .post-body ol { margin: 0.5rem 0 1.25rem 1.5rem; }
+    .post-body li { margin-bottom: 0.4rem; }
+    .post-body blockquote { background: rgba(34,98,153,0.06); border-left: 4px solid var(--blue); padding: 1rem 1.25rem; border-radius: 0 10px 10px 0; margin: 1.25rem 0; font-size: 0.95rem; color: var(--navy); }
+    .post-body hr { border: none; height: 1px; background: linear-gradient(90deg, transparent, rgba(34,98,153,0.2), transparent); margin: 3rem 0; }
+    /* ── CODE ── */
+    .post-body pre { background: var(--code-bg); border-radius: 12px; padding: 1.5rem; margin: 1.25rem 0 1.5rem; overflow-x: auto; border: 1px solid rgba(255,255,255,0.05); }
+    .post-body pre code { font-family: var(--mono); font-size: 0.85rem; color: #e2e8f0; line-height: 1.7; background: none; padding: 0; white-space: pre-wrap; }
+    .post-body code { font-family: var(--mono); font-size: 0.88em; background: rgba(34,98,153,0.08); color: var(--blue-dark); padding: 0.15em 0.45em; border-radius: 5px; }
+    /* ── TABLES ── */
+    .table-wrapper { overflow-x: auto; margin: 1.5rem 0; border-radius: 0.5rem; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1); }
+    table { width: 100%; border-collapse: collapse; background: white; }
+    th { background: #226299; color: white; padding: 1rem; text-align: left; font-weight: 600; }
+    td { padding: 1rem; border-bottom: 1px solid #e5e7eb; }
+    .post-body table { display: block; width: 100%; overflow-x: auto; }
+    /* ── ALERTS ── */
+    .alert { background: #fef3cd; border: 1px solid #facc15; border-radius: 0.5rem; padding: 1rem; margin: 1.5rem 0; }
+    .alert.danger { background: #fee2e2; border-color: #ef4444; }
+    .alert.info { background: #e0f2fe; border-color: #06b6d4; }
+    .alert.success { background: #d1fae5; border-color: #10b981; }
+    /* ── KEY TAKEAWAYS ── */
+    .key-takeaways { background: linear-gradient(135deg, #f3f4f6 0%, #e5e7eb 100%); border-radius: 1rem; padding: 2rem; margin: 3rem 0; }
+    .key-takeaways h3 { color: #226299; margin-bottom: 1.5rem; }
+    .post-series-footer { text-align: center; font-size: 0.85rem; color: var(--slate-light); font-style: italic; margin-top: 2rem; padding-top: 2rem; border-top: 1px solid #e2e8f0; }
+    .blog-footer { background: var(--navy); padding: 2rem 0; text-align: center; }
+    .blog-footer a { color: var(--gold); text-decoration: none; font-weight: 600; font-size: 0.9rem; }
+    .blog-footer span { color: var(--gray); font-size: 0.8rem; display: block; margin-top: 0.4rem; }
+    @media (max-width: 600px) {
+      .post-hero { padding: 7rem 1.25rem 2.5rem; }
+      .post-body { padding: 2rem 1.25rem 4rem; }
+      .post-hero__meta { flex-direction: column; gap: 0.4rem; }
+      .post-body h2 { font-size: 1.4rem; }
+      .post-body h3 { font-size: 1.15rem; }
+      .post-body pre { padding: 1rem; border-radius: 8px; }
+    }
+
+    :focus-visible { outline: 2px solid var(--focus); outline-offset: 3px; border-radius: 2px; }
+    /* the ring sits on the page ground (3px offset). Inside the navy footers
+       and code blocks var(--blue) collapses to 2.12:1, so those scopes
+       re-point --focus to gold (5.73:1 on navy). */
+    .footer, .blog-footer, pre { --focus: var(--gold); }
+    :focus:not(:focus-visible) { outline: none; }
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after {
+        animation-duration: .01ms !important; animation-iteration-count: 1 !important;
+        transition-duration: .01ms !important; scroll-behavior: auto !important;
+      }
+    }
+    h1, h2, h3, .post-hero__title, .card__title { text-wrap: balance; }
+
+    .post-body img, .post-body svg { max-width: 100%; height: auto; }
+
+    /* ── SKIP LINK ── a11y-perf R5: the link and the landmark it targets are a
+       pair — useless without both halves. Off-screen until focused, then the
+       first tab stop on every page. */
+    .skip-link { position: absolute; left: -9999px; }
+    .skip-link:focus {
+      left: 1rem; top: 1rem; z-index: 999;
+      background: var(--navy); color: #fff;
+      padding: 0.75rem 1.25rem; border-radius: var(--radius-sm);
+      font-weight: 600; text-decoration: none;
+    }
+
+    /* ── POST WAYFINDING ── the wordmark is the home link; the footer carries
+       the full destination row. */
+    .blog-nav__home {
+      font-size: 0.9rem; font-weight: 800; color: var(--navy);
+      text-decoration: none; margin-right: 1rem;
+    }
+    .blog-nav__home:hover { color: var(--blue); }
+    .blog-nav__inner > .blog-nav__back { margin-right: auto; }
+    .blog-footer__nav {
+      display: flex; flex-wrap: wrap; justify-content: center; gap: 0.35rem 1.25rem;
+      max-width: 860px; margin: 0 auto 1.25rem; padding: 0 2rem 1.25rem;
+      border-bottom: 1px solid rgba(255,255,255,0.12);
+    }
+    .blog-footer__nav a { color: var(--gold); font-size: 0.85rem; font-weight: 600; text-decoration: none; }
+    .blog-footer__nav a:hover { color: #fff; text-decoration: underline; }
+
+    html { scroll-padding-top: 5rem; }
+    [id] { scroll-margin-top: 5rem; }
+
+    /* Thai needs more room than Latin at the same nominal size. */
+    .post-body:lang(th) { font-size: 18px; line-height: 1.85; }
+    .post-body p, .post-body li, .post-body blockquote { text-wrap: pretty; }
+
+    /* ---- side-scroll affordance ----
+       pre blocks and tables can exceed 720px. These layers paint a shadow ONLY
+       where there is more content in that direction; when fully scrolled the
+       cover slides over the shadow and hides it. No JavaScript, no wrapper. */
+    .post-body pre, .post-body table {
+      overflow-x: auto;
+      background-image:
+        linear-gradient(to right, var(--code-bg, #0f172a) 30%, rgba(15,23,42,0)),
+        linear-gradient(to left, var(--code-bg, #0f172a) 30%, rgba(15,23,42,0)),
+        radial-gradient(farthest-side at 0 50%, rgba(0,0,0,.28), rgba(0,0,0,0)),
+        radial-gradient(farthest-side at 100% 50%, rgba(0,0,0,.28), rgba(0,0,0,0));
+      background-position: 0 0, 100% 0, 0 0, 100% 0;
+      background-repeat: no-repeat;
+      background-size: 40px 100%, 40px 100%, 14px 100%, 14px 100%;
+      background-attachment: local, local, scroll, scroll;
+    }
+    .post-body table {
+      background-image:
+        linear-gradient(to right, var(--white, #fff) 30%, rgba(255,255,255,0)),
+        linear-gradient(to left, var(--white, #fff) 30%, rgba(255,255,255,0)),
+        radial-gradient(farthest-side at 0 50%, rgba(17,48,75,.16), rgba(17,48,75,0)),
+        radial-gradient(farthest-side at 100% 50%, rgba(17,48,75,.16), rgba(17,48,75,0));
+      background-position: 0 0, 100% 0, 0 0, 100% 0;
+      background-repeat: no-repeat;
+      background-size: 40px 100%, 40px 100%, 14px 100%, 14px 100%;
+      background-attachment: local, local, scroll, scroll;
+    }
+
+    /* ---- table of contents ---- */
+    .post-toc {
+      max-width: 720px;
+      margin: 2rem auto 0;
+      padding: 1rem 1.25rem;
+      background: rgba(34,98,153,0.05);
+      border: 1px solid rgba(34,98,153,0.14);
+      border-left: 3px solid var(--gold, #c4a46c);
+      border-radius: 10px;
+      font-size: 0.92rem;
+    }
+    .post-toc > summary {
+      cursor: pointer;
+      font-weight: 700;
+      color: var(--navy);
+      list-style: none;
+    }
+    .post-toc > summary::-webkit-details-marker { display: none; }
+    .post-toc > summary::before {
+      content: "\25B8";
+      display: inline-block;
+      margin-right: 0.5rem;
+      transition: transform 0.2s ease;
+      color: var(--gold-dark, #7a5f22);
+    }
+    .post-toc[open] > summary::before { transform: rotate(90deg); }
+    .post-toc > summary:focus-visible { outline: 3px solid var(--focus, #226299); outline-offset: 3px; }
+    .post-toc ol { margin: 0.85rem 0 0.25rem; padding-left: 1.4rem; }
+    .post-toc li { margin-bottom: 0.4rem; line-height: 1.5; }
+    .post-toc a { color: var(--slate); text-decoration: none; }
+    .post-toc a:hover, .post-toc a:focus-visible { color: var(--blue-dark, #1a4d7a); text-decoration: underline; }
+    @media (max-width: 600px) { .post-toc { margin: 1.25rem 1rem 0; } }
+
+    /* ---- cross-document view transitions ---- */
+    @view-transition { navigation: auto; }
+    .nav, .blog-nav { view-transition-name: site-nav; }
+    .footer, .blog-footer { view-transition-name: site-footer; }
+    @media (prefers-reduced-motion: reduce) {
+      ::view-transition-group(*),
+      ::view-transition-old(*),
+      ::view-transition-new(*) { animation: none !important; }
+    }
+
+    /* ── SERIES STRIP — Hermes Agent in Practice ──
+       Same class and inner-wrapper shape as the OpenClaw strip because the
+       linter's RE_SNAV recognises exactly `series-nav` + a nested div; a
+       renamed strip would read as "no nav" and fail INV-08. All content
+       checks (INV-03 family) iterate the SERIES7 list only, so this strip's
+       labels are convention, not contract. House-styled, not the island CSS. */
+    .series-nav {
+      max-width: 720px; margin: 2rem auto 0; padding: 1.1rem 1.4rem;
+      background: rgba(255,255,255,0.75); border: 1px solid rgba(34,98,153,0.15);
+      border-left: 3px solid var(--gold); border-radius: 12px;
+    }
+    .series-nav h3 {
+      font-size: 0.78rem; font-weight: 700; text-transform: uppercase;
+      letter-spacing: 0.08em; color: var(--gold-dark); margin-bottom: 0.6rem;
+    }
+    .series-links { display: flex; flex-wrap: wrap; gap: 0.5rem; }
+    .series-links a, .series-links .current {
+      font-size: 0.82rem; font-weight: 600; padding: 0.35rem 0.8rem;
+      border-radius: 50px; text-decoration: none;
+    }
+    .series-links a { color: var(--blue-dark); background: rgba(34,98,153,0.08); }
+    .series-links a:hover { background: rgba(34,98,153,0.16); }
+    .series-links .current { color: #fff; background: var(--blue-dark); }
+    @media (max-width: 600px) { .series-nav { margin: 1.5rem 1rem 0; } }
+
+    /* ── LANGUAGE SWITCH — pure CSS, zero JavaScript (INV-38) ──
+       One visually-hidden checkbox as a direct child of body, BEFORE the main landmark,
+       so `#langSwitch:checked ~ main …` reaches every content block. The two
+       tracks are paired blocks: .l-th (default) and .l-en (hidden until
+       checked; display:revert restores block for divs, inline for spans).
+       Naming stays clear of INV-12's menu-token regex (hamburger|burger|
+       nav__toggle|nav-toggle|navtoggle|menu-toggle|menu__toggle) — verified.
+       No JS also means no persistence across posts; each post opens in Thai. */
+    .lang-switch-box { position: absolute; left: -9999px; }
+    .l-en { display: none; }
+    #langSwitch:checked ~ main .l-en { display: revert; }
+    #langSwitch:checked ~ main .l-th { display: none; }
+    .lang-switch {
+      display: inline-flex; align-items: center; gap: 0.55rem;
+      margin-top: 1.4rem; padding: 0.4rem 1.1rem; border-radius: 50px;
+      background: rgba(255,255,255,0.85); border: 1px solid rgba(255,255,255,0.4);
+      cursor: pointer; font-size: 0.85rem; user-select: none;
+    }
+    .lang-switch span { color: var(--slate-light); font-weight: 600; transition: color 0.2s; }
+    .lang-switch .lang-sep { color: var(--gray); font-weight: 400; }
+    .lang-switch .lang-th { color: var(--navy); font-weight: 800; }
+    #langSwitch:checked ~ main .lang-switch .lang-th { color: var(--slate-light); font-weight: 600; }
+    #langSwitch:checked ~ main .lang-switch .lang-en { color: var(--navy); font-weight: 800; }
+    .lang-switch:hover { border-color: #fff; }
+    #langSwitch:focus-visible ~ main .lang-switch {
+      outline: 2px solid var(--focus); outline-offset: 3px;
+    }
+  </style>
+  <!-- social -->
+  <link rel="canonical" href="https://anirach.com/blog/hermes-automation.html">
+  <meta property="og:type" content="article">
+  <meta property="og:url" content="https://anirach.com/blog/hermes-automation.html">
+  <meta property="og:site_name" content="Anirach Mingkhwan">
+  <meta property="og:locale" content="th_TH">
+  <meta property="article:published_time" content="2026-09-01">
+  <meta property="article:author" content="https://anirach.com/">
+  <meta property="og:title" content="Automation — งานที่รันเองตามเวลา ตามเหตุการณ์ และไม่เปลือง token">
+  <meta property="og:description" content="เจาะระบบ automation ของ Hermes Agent สำหรับองค์กร — cron ที่จำงานครั้งก่อนได้และไม่ปลุก LLM เมื่อไม่มีอะไรเปลี่ยน webhook ที่ตรวจลายเซ็นก่อนเชื่อ hook ขาออก blueprint ที่เป็นแค่ skill พร้อมตารางเวลา และ API server ให้แอปในองค์กรเรียกใช้ พร้อม CVE ของทุกพอร์ตที่เปิด">
+  <meta itemprop="image" property="og:image" content="https://anirach.com/images/hermes-automation-og.jpg">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
+  <meta property="og:image:alt" content="Automation — งานที่รันเองตามเวลา ตามเหตุการณ์ และไม่เปลือง token">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:image" content="https://anirach.com/images/hermes-automation-og.jpg">
+  <meta name="twitter:image:alt" content="Automation — งานที่รันเองตามเวลา ตามเหตุการณ์ และไม่เปลือง token">
+  <meta name="robots" content="max-image-preview:large">
+  <meta name="theme-color" content="#11304b">
+  <link rel="icon" href="/favicon.ico" sizes="any">
+  <link rel="apple-touch-icon" href="/apple-touch-icon.png">
+  <!-- /social -->
+</head>
+<body>
+<a href="#main" class="skip-link">Skip to content</a>
+<input type="checkbox" id="langSwitch" class="lang-switch-box" aria-label="Switch language: Thai / English">
+
+  <nav class="blog-nav">
+    <div class="blog-nav__inner">
+      <a href="../index.html" class="blog-nav__home">Anirach</a>
+      <a href="./" class="blog-nav__back">‹ Blog</a>
+      <div class="blog-nav__title">Automation · งานที่รันเองไม่ต้องสั่ง</div>
+    </div>
+  </nav>
+
+  <main id="main">
+
+  <header class="post-hero">
+    <div class="post-hero__tags">
+      <span class="post-hero__tag">Hermes</span>
+      <span class="post-hero__tag">AI Agents</span>
+      <span class="post-hero__tag">Automation</span>
+    </div>
+    <h1 class="post-hero__title" itemprop="headline"><span class="l-th">Automation — งานที่รันเองตามเวลา ตามเหตุการณ์ และไม่เปลือง token</span><span class="l-en" lang="en">Automation — Scheduled, Event-Driven, and Zero-Token Work</span></h1>
+    <p class="post-hero__sub"><span class="l-th">cron ที่จำงานครั้งก่อนได้ webhook ที่ตรวจลายเซ็นก่อนเชื่อ hook ที่ส่งเหตุการณ์ออกไปหาระบบอื่น และ API server ที่ให้แอปในองค์กรเรียก Hermes ได้ — นี่คืองานประจำวันขององค์กรหลังจากติดตั้งเสร็จ</span><span class="l-en" lang="en">Cron that remembers its last run, webhooks that verify before they trust, hooks that push events to the systems you already own, and an API server your apps can call — the daily work of an organization once the install is done.</span></p>
+    <div class="post-hero__meta">
+      <span>By <strong>Anirach Mingkhwan</strong></span>
+      <span class="post-hero__series">Hermes Agent in Practice 2026 • Post #8</span>
+      <span><time datetime="2026-09-01" itemprop="datePublished">1 Sep 2026</time></span>
+      <span>27 min read</span>
+    </div>
+    <label for="langSwitch" class="lang-switch" title="สลับภาษา · Switch language"><span class="lang-th">ไทย</span><span class="lang-sep">·</span><span class="lang-en" lang="en">English</span></label>
+    <div class="post-hero__cover">
+      <img src="../images/hermes-automation-cover.jpg" alt="Automation — งานที่รันเองตามเวลา ตามเหตุการณ์ และไม่เปลือง token" width="800" height="800" loading="eager" fetchpriority="high" decoding="async">
+    </div>
+  </header>
+
+  <nav aria-label="Hermes Agent in Practice">
+  <div class="series-nav">
+    <h3>⚡ Hermes Agent in Practice 2026</h3>
+    <div class="series-links">
+        <a href="/blog/hermes-101">#1 Hermes 101</a>
+        <a href="/blog/hermes-agent-teams">#2 Agent Teams</a>
+        <a href="/blog/hermes-memory">#3 Memory</a>
+        <a href="/blog/hermes-security">#4 Security</a>
+        <a href="/blog/hermes-integrations">#5 Integrations</a>
+        <a href="/blog/hermes-skills">#6 Skills</a>
+        <a href="/blog/hermes-production">#7 Production</a>
+        <span class="current" aria-current="page">#8 Automation</span>
+        <a href="/blog/hermes-models-cost">#9 Models &amp; Cost</a>
+        <a href="/blog/hermes-desktop-fleet">#10 Desktop &amp; Fleet</a>
+    </div>
+  </div>
+  </nav>
+
+  <article class="post-body" itemscope itemtype="https://schema.org/BlogPosting">
+    <span itemprop="author" itemscope itemtype="https://schema.org/Person"><meta itemprop="name" content="Anirach Mingkhwan"></span>
+
+    <details class="post-toc l-th" open>
+      <summary>ในบทความนี้</summary>
+      <ol>
+          <li><a href="#th-surfaces">ห้าประตูที่งานเดินเข้ามาหา Gateway</a></li>
+          <li><a href="#th-cron">กายวิภาคของ Cron Job</a></li>
+          <li><a href="#th-zero-token">Zero-Token Automation — งานที่ไม่ต้องปลุก LLM</a></li>
+          <li><a href="#th-remember">Cron ที่จำได้ และวงจร Ops</a></li>
+          <li><a href="#th-webhooks">Inbound Webhooks ที่ตรวจลายเซ็นก่อนเชื่อ</a></li>
+          <li><a href="#th-outbound">ส่งเหตุการณ์ออกไป — Outbound Webhooks, Shell Hooks และ Deliverable Mode</a></li>
+          <li><a href="#th-blueprints">Blueprints — Skill ที่มีตารางเวลา</a></li>
+          <li><a href="#th-backend">Hermes เป็น Backend ให้แอปที่องค์กรมีอยู่แล้ว</a></li>
+          <li><a href="#th-hardening">Hardening และการ Scale ระนาบ Automation</a></li>
+      </ol>
+    </details>
+    <details class="post-toc l-en" open>
+      <summary>In this post</summary>
+      <ol>
+          <li><a href="#en-surfaces">Five Doors Into the Gateway</a></li>
+          <li><a href="#en-cron">Anatomy of a Cron Job</a></li>
+          <li><a href="#en-zero-token">Zero-Token Automation: Work That Never Wakes the Model</a></li>
+          <li><a href="#en-remember">Cron That Remembers — and the Ops Loop</a></li>
+          <li><a href="#en-webhooks">Inbound Webhooks Done Properly</a></li>
+          <li><a href="#en-outbound">Pushing Events Out: Outbound Webhooks, Shell Hooks, and Deliverable Mode</a></li>
+          <li><a href="#en-blueprints">Blueprints: A Skill With a Schedule</a></li>
+          <li><a href="#en-backend">Hermes as a Backend for the Apps You Already Run</a></li>
+          <li><a href="#en-hardening">Hardening and Scaling the Automation Plane</a></li>
+      </ol>
+    </details>
+    <div class="l-th">
+
+    <p>🤔 ลองนึกภาพเช้าวันจันทร์ครับ — ก่อนที่ใครในทีมจะเปิด laptop มีสรุป PR ที่ค้างรีวิวมาทั้งสุดสัปดาห์รออยู่ใน Slack แล้ว dependency ที่เพิ่งมี CVE ใหม่เมื่อคืนก็ถูกเปิด ticket ไว้แล้ว และไม่มีใครพิมพ์คำสั่งอะไรเลยตั้งแต่เย็นวันศุกร์ คำถามของบทความนี้ไม่ใช่ว่า agent ทำแบบนั้น <em>ได้ไหม</em> แต่คือ งานพวกนี้ควรเดินเข้ามาหา agent ทาง <em>ประตูไหน</em> — ตามเวลา ตามเหตุการณ์ หรือให้แอปอื่นเรียกเข้ามา — และรอบไหนบ้างที่ไม่จำเป็นต้องจ่ายค่า token สักบาท</p>
+
+    <p>พื้นฐานของ cron อยู่ใน <a href="/blog/hermes-agent-teams">#2 Agent Teams</a> หัวข้อ "Always-On Work" ครบแล้ว — action ของ tool <code>cronjob</code> รูปแบบตารางเวลา session ที่แยกขาดกันทุกรอบ <code>continuity</code>/<code>context_from</code> ปลายทางส่ง <code>[SILENT]</code> <code>no_agent</code> และ "cron ที่จำได้" ของ v0.21.0 — ส่วนใน <a href="/blog/hermes-integrations">#5 Integrations</a> API server กับ A2A ได้ที่ทางเพียงหัวข้อสั้น ๆ บทความนี้จึงไม่แนะนำสิ่งเหล่านั้นซ้ำ แต่เป็น<strong>ชั้น ops</strong> ที่ต่อจากตรงนั้น: ไฟล์และ ledger เบื้องหลังระบบ cron ในตัวของ <strong>Hermes Agent</strong> ค่า default ที่ควรรู้ วงจร incidents/doctor/runs webhook ขาเข้าที่ตรวจลายเซ็นก่อนเชื่อ hook และ webhook ขาออกที่ส่งเหตุการณ์ไปหาระบบที่องค์กรมีอยู่แล้ว blueprint ที่เป็นแค่ skill พร้อมตารางเวลา และ API server ที่ให้แอปภายในเรียก Hermes ได้เหมือนเรียก model ตัวหนึ่ง</p>
+
+    <p>สำหรับคนที่ตามซีรีส์ OpenClaw ของบล็อกนี้มา รูปแบบ heartbeat ที่ผมเล่าใน <a href="/blog/openclaw-integrations">OpenClaw #5: Integrations</a> คือจุดเปรียบเทียบที่ดี — แนวคิด "ปลุก agent เป็นระยะให้ไปดูว่ามีอะไรต้องทำไหม" ยังอยู่ แต่ Hermes แยกมันออกเป็นชิ้นส่วนที่มีชื่อ ตรวจสอบได้ และที่สำคัญ ปิด LLM ทิ้งได้ในรอบที่ไม่มีอะไรเปลี่ยน ผมจะเปรียบเทียบเชิงคุณภาพเท่านั้น ไม่มีตัวเลขใดในบทความนี้มาจากการวัดของผมเอง ทุกเวอร์ชัน ค่า default และคำพูดที่ยกมา อ้างอิงเอกสารทางการและ release notes บน GitHub ของ Nous Research ณ วันที่ 1 กันยายน 2026 (v0.21.0, tag v2026.8.31)</p>
+
+    <h2 id="th-surfaces">ห้าประตูที่งานเดินเข้ามาหา Gateway</h2>
+
+    <p>สิ่งแรกที่ควรเข้าใจคือ ระบบ automation ทั้งหมดของ Hermes อาศัย <strong>gateway daemon</strong> ตัวเดียวกับที่รับข้อความจาก Telegram หรือ Slack — เครื่องเดียวกับ VPS หรือ Docker container ที่ผมเล่าใน <a href="/blog/hermes-production">#7 Production</a> ไม่มี scheduler แยก ไม่มี worker pool แยก งานเดินเข้ามาหา daemon ตัวนี้ได้ห้าทาง:</p>
+
+    <div class="table-wrapper">
+      <table>
+        <thead>
+          <tr><th>ประตู</th><th>กลไก</th><th>เหมาะกับ</th><th>มาตั้งแต่</th></tr>
+        </thead>
+        <tbody>
+          <tr><td><strong>Cron</strong></td><td>gateway tick ทุก 60 วินาที อ่าน <code>~/.hermes/cron/jobs.json</code></td><td>รายงานประจำ, watchdog, งานตามรอบ</td><td>มีตั้งแต่ release แรกที่มองเห็นบน GitHub (v0.2.0, 12 มี.ค. 2026)</td></tr>
+          <tr><td><strong>Inbound webhook</strong></td><td>HTTP POST เข้าพอร์ต 8644 พร้อมลายเซ็น HMAC</td><td>GitHub/GitLab events, ระบบ monitoring, n8n</td><td>v0.4.0 (มี.ค. 2026)</td></tr>
+          <tr><td><strong>Hooks / outbound webhooks</strong></td><td>shell script ในจังหวะ lifecycle + HTTP POST ขาออกที่ลงลายเซ็น</td><td>veto คำสั่งอันตราย, ส่ง audit event ไป SIEM</td><td>shell hooks v0.11.0 (เม.ย. 2026), outbound v0.20.0 (ส.ค. 2026)</td></tr>
+          <tr><td><strong>API server</strong></td><td>OpenAI-compatible endpoint ที่พอร์ต 8642</td><td>Open WebUI, แอปภายในองค์กร, <code>hermes peer</code></td><td>v0.4.0</td></tr>
+          <tr><td><strong>A2A / peer</strong></td><td>JSON-RPC ตามมาตรฐาน A2A v1.0 ที่พอร์ต 9900 / peer ผ่าน API server</td><td>agent ต่าง host คุยกัน</td><td>A2A v0.20.0, <code>hermes peer</code> v0.21.0</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <p>คำแนะนำสำหรับองค์กรที่เพิ่งเริ่ม: <strong>เริ่มจาก cron</strong> เพราะมันเป็นประตูเดียวที่คุณกำหนดจังหวะเอง ไม่มีใครภายนอกยิงเข้ามา และตั้งแต่ v0.13.0 มีโหมดที่ไม่แตะ model เลย ถัดมาคือ inbound webhook เมื่อคุณอยากให้ GitHub หรือระบบ monitoring เป็นคนปลุก ส่วน API server และ A2A เก็บไว้ท้ายสุด — ทั้งคู่เปิดพื้นผิวเครือข่ายที่มีประวัติ CVE เป็นของตัวเอง ซึ่งผมเก็บไว้เล่าในหัวข้อสุดท้าย</p>
+
+    <blockquote>💡 ถ้าอ่านตอน #2 มาแล้ว ให้มองอย่างนี้ครับ: heartbeat คือ "agent ที่ตื่นมาถามว่ามีอะไรไหม" ส่วน cron job ของ Hermes คือ "หน่วยงานที่มีชื่อ มีตารางเวลา และมี ledger ของตัวเอง" — และในสองหัวข้อถัดไปคุณจะเห็นว่ามันแยก "การตื่น" ออกจาก "การคิด" ได้</blockquote>
+
+    <h2 id="th-cron">กายวิภาคของ Cron Job</h2>
+
+    <p>Cron ของ Hermes ไม่ใช่ crontab ของ Linux ที่ยิงคำสั่งเปล่า ๆ แต่เป็น <strong>job ที่ห่อ prompt</strong> (หรือ script) ไว้พร้อม metadata ทั้งหมดถูกเก็บเป็นไฟล์ธรรมดาที่คุณเปิดอ่านได้เอง:</p>
+
+    <pre><code>~/.hermes/cron/
+├── jobs.json                 # นิยาม job ทุกตัว — เขียนแบบ atomic
+├── executions.db             # ledger: claimed → running → completed | failed | unknown
+├── .tick.lock                # file lock กัน tick ซ้อนกัน
+└── output/
+    └── {job_id}/
+        └── {timestamp}.md    # ผลลัพธ์ทุกรอบ ย้อนอ่านได้</code></pre>
+
+    <p>tick ทุก 60 วินาทีที่ตอน #2 เล่าไว้ มีนัยเชิง ops สองข้อ: ความละเอียดต่ำสุดของตารางเวลาคือหนึ่งนาที และ <code>.tick.lock</code> คือสิ่งที่กันไม่ให้สอง process (เช่น gateway สองตัวที่เผลอ mount volume เดียวกัน) รัน job เดียวกันซ้ำ</p>
+
+    <p>สร้าง job ได้สามทาง — CLI (<code>hermes cron create</code>), tool ชื่อ <code>cronjob</code> ที่ agent เรียกเองใน session และ dashboard บนพอร์ต 9119 (ซึ่งตั้งแต่ v0.4.0 ก็มี REST API <code>/api/jobs</code> หนุนอยู่ข้างหลัง) ผมขอแสดงรูปแบบของ tool เพราะเป็นรายการพารามิเตอร์ที่เอกสารระบุครบที่สุด — ใน chat คุณเพียงบอก agent ว่าอยากได้ job แบบไหน มันจะเรียกสิ่งนี้ให้ ส่วน flag ฝั่ง CLI ให้ดูจาก <code>hermes cron create --help</code>:</p>
+
+    <pre><code># tool เดียวรวมทุก action — release v0.3.0 (17 มี.ค. 2026) รวมหลายคำสั่งเป็นตัวเดียว
+cronjob(
+  action="create",            # list | update | pause | resume | run | remove
+  schedule="0 9 * * 1-5",     # cron 5 ช่อง — เช้าวันทำงาน
+  name="morning-brief",
+  prompt="สรุป issue ที่เปิดใหม่ใน repo ทีมเมื่อวาน จัดกลุ่มตาม label",
+  deliver="slack",
+  skills=["github-triage"],   # แนบ skill จากตอน #6
+  workdir="/srv/repo",        # scope file/terminal tools + โหลด AGENTS.md ของ repo นั้น (absolute path เท่านั้น)
+  enabled_toolsets=["web", "file", "terminal"],
+  continuity=True,            # v0.21.0 — จำผลรอบก่อนของตัวเอง
+  context_from="deps-scan",   # v0.12.0 — ต่อจากผลสำเร็จล่าสุดของ job อื่น
+  reasoning_effort="high",    # v0.21.0 — pin ต่อ job
+  no_agent=False,
+  attach_to_session=False,
+)</code></pre>
+
+    <p>รูปแบบตารางเวลาอยู่ในตอน #2 แล้ว (หน้า feature ระบุห้าแบบ: relative, interval, ภาษาธรรมชาติ, cron 5 ช่อง และ ISO timestamp) มีข้อเดียวที่ควรเสริม: หน้า feature ของ cron ลิสต์รูปแบบภาษาธรรมชาติอย่าง <code>daily at 7am</code> ไว้ และตอน #2 ก็ใช้ <code>weekdays at 9am</code> เป็นตัวอย่าง แต่คู่มือ <em>automate-with-cron</em> ซึ่งเป็นเอกสารทางการอีกหน้าหนึ่ง เขียนว่าภาษาธรรมชาติอย่าง "daily at 9am" <em>ไม่รองรับ</em> — ผมยังไม่ได้ทดสอบเองว่าหน้าไหนตรงกับโค้ด ในงานจริงจึงแนะนำให้ยึด cron 5 ช่องเป็นหลัก และถ้าอยากใช้ภาษาธรรมชาติ ให้ทดสอบบน build ของคุณเอง (v0.21.0) ก่อนพึ่งพา</p>
+
+    <p>ค่า default ในบล็อก <code>cron:</code> ของ <code>config.yaml</code> มีหลายตัวที่องค์กรควรรู้จักก่อนคิดจะแก้:</p>
+
+    <div class="table-wrapper">
+      <table>
+        <thead>
+          <tr><th>Key</th><th>Default</th><th>ความหมาย</th></tr>
+        </thead>
+        <tbody>
+          <tr><td><code>script_timeout_seconds</code></td><td>3600</td><td>script รันได้นานสุดหนึ่งชั่วโมง (override ด้วย <code>HERMES_CRON_SCRIPT_TIMEOUT</code>)</td></tr>
+          <tr><td><code>failure_nudge_threshold</code></td><td>3</td><td>ล้มติดกันกี่ครั้งจึงจะสะกิดเตือน</td></tr>
+          <tr><td><code>misfire_grace_minutes</code></td><td>10</td><td>gateway ดับแล้วกลับมาภายในสิบนาที job ที่พลาดไปยังได้รัน</td></tr>
+          <tr><td><code>model_drift_guard</code></td><td>true</td><td>job ที่ไม่ได้ pin model จะ snapshot provider/model ตอนสร้าง — ถ้า default ทั้งระบบเปลี่ยน job จะข้ามรอบพร้อมแจ้งเตือนครั้งเดียว</td></tr>
+          <tr><td><code>allow_agent_scheduling</code></td><td>false</td><td>session ที่ cron ปลุกขึ้นมา สร้าง cron job เพิ่มไม่ได้</td></tr>
+          <tr><td><code>preflight</code></td><td>true</td><td>ตรวจ API key, env ของ skill ที่แนบ และปลายทางส่ง ก่อน dispatch</td></tr>
+          <tr><td><code>mirror_delivery</code></td><td>false</td><td>ถ้า true ผลทุกรอบจะไปโผล่เป็น thread ที่คุยต่อได้</td></tr>
+          <tr><td><code>max_parallel_jobs</code></td><td>(ไม่ตั้ง)</td><td>เพดานจำนวน job ที่รันพร้อมกัน</td></tr>
+          <tr><td><code>cleanup_timeout_seconds</code></td><td>10</td><td>เพดานเวลาเก็บกวาดหลังจบรอบ</td></tr>
+          <tr><td><code>media_send_timeout_seconds</code></td><td>300</td><td>เพดานเวลาส่งไฟล์สื่อไปยังปลายทาง</td></tr>
+          <tr><td><code>bot_chat_delivery_timeout_seconds</code></td><td>600</td><td>เพดานเวลาส่งผลลัพธ์เข้า Bot Chat</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="alert info">
+      <strong>สิ่งที่ตอน #2 ไม่ได้บอก:</strong> นอกจากกำแพง <code>allow_agent_scheduling: false</code> ที่ตอน #2 อธิบายไว้แล้ว prompt ทุกตัวยังถูกสแกนตอน create/update หา prompt injection, Unicode ที่มองไม่เห็น, SSH backdoor และรูปแบบขโมย credential — ถ้าเข้าข่ายจะถูกบล็อกก่อนได้รันด้วยซ้ำ นี่คือบทเรียนโดยตรงจากเรื่อง malicious skill ที่ผมเล่าไว้ใน <a href="/blog/hermes-security">#4 Security</a>
+    </div>
+
+    <p>เรื่อง <strong>ปลายทางส่ง</strong> — ตอน #2 ยกตัวอย่างไว้บางส่วน รายการเต็มตามหน้า feature คือ <code>origin</code>, <code>local</code>, <code>telegram</code>, <code>discord</code>, <code>slack</code>, <code>whatsapp</code>, <code>signal</code>, <code>matrix</code>, <code>mattermost</code>, <code>email</code>, <code>sms</code>, <code>homeassistant</code>, <code>dingtalk</code>, <code>feishu</code>, <code>wecom</code>, <code>weixin</code>, <code>bluebubbles</code>, <code>qqbot</code>, <code>bot-chat</code> และ <code>all</code> ระบุ chat และ thread เจาะจงได้ (<code>telegram:-100123:17585</code>) หรือ fan-out หลายปลายทางคั่นด้วย comma กติกา <code>[SILENT]</code> อยู่ในตอน #2 แล้ว สิ่งที่ควรเพิ่มคือสองข้อ: ผลลัพธ์ที่ถูกเงียบยังถูกบันทึกลง <code>output/</code> และ <strong>job ที่ล้มเหลวจะส่งเสมอ</strong> ไม่ว่าคุณจะขอให้เงียบแค่ไหน</p>
+
+    <p>ฝั่ง tool ที่ job ใช้ได้ — <code>toolsets.py</code> นิยาม toolset <code>hermes-cron</code> ให้สะท้อน <code>hermes-cli</code> แล้วค่อยถูกทับด้วย <code>enabled_toolsets</code> ต่อ job และ config ของ platform cron ใน <code>hermes tools</code> ตามลำดับ ส่วน <code>workdir</code> นอกจากจะจำกัดขอบเขต file/terminal tools แล้ว ยังโหลด <code>AGENTS.md</code>, <code>CLAUDE.md</code> หรือ <code>.cursorrules</code> จาก directory นั้นเข้ามาด้วย — cron job ที่ทำงานกับ repo จึงได้กติกาของ repo นั้นติดมาโดยไม่ต้องยัดลง prompt</p>
+
+    <h2 id="th-zero-token">Zero-Token Automation — งานที่ไม่ต้องปลุก LLM</h2>
+
+    <p>นี่คือหัวข้อที่ทำให้ผมมองระบบ cron ของ Hermes ต่างจาก heartbeat ยุค OpenClaw ที่สุด ในรูปแบบ heartbeat ทุกรอบที่ตื่นคือหนึ่ง LLM call แม้ไม่มีอะไรเปลี่ยน — Hermes มี <strong>สามชั้น</strong> ที่ตัดค่าใช้จ่ายส่วนนี้ทิ้ง</p>
+
+    <h3>ชั้นที่ 1 — script-only job (<code>--no-agent</code>, v0.13.0)</h3>
+
+    <p>ตอน #2 เอ่ยถึง <code>no_agent=True</code> ไว้ประโยคเดียว นี่คือกติกาฉบับเต็มของมัน — Release v0.13.0 "The Tenacity Release" (7 พฤษภาคม 2026) เพิ่ม <strong>watchdog mode</strong>: job ที่รัน script ธรรมดาและไม่มี agent อยู่ในวงจรเลย</p>
+
+    <pre><code># script ต้องอยู่ใน $HERMES_HOME/scripts/ เท่านั้น — path traversal ถูกปฏิเสธ
+cat &gt; ~/.hermes/scripts/watchdog.sh &lt;&lt;'EOF'
+#!/usr/bin/env bash
+# shebang ถูกเพิกเฉย — .sh/.bash รันด้วย bash เสมอ ไฟล์อื่นรันด้วย Python ตัวปัจจุบัน
+code=$(curl -s -o /dev/null -w '%{http_code}' https://intranet.example.ac.th/health)
+if [ "$code" != "200" ]; then
+  echo "⚠️ intranet health = $code"     # มี stdout → ข้อความนี้ถูกส่งตรง ๆ
+  exit 0
+fi
+# exit 0 + stdout ว่าง = tick เงียบ ไม่ส่งอะไร ไม่เสีย token
+EOF
+
+hermes cron create "every 5m" --no-agent --script watchdog.sh --deliver telegram</code></pre>
+
+    <p>กติกาของ watchdog สรุปได้สี่บรรทัด: <code>exit 0</code> + stdout ว่าง = เงียบ; มี stdout = ส่งข้อความนั้นออกไปตรง ๆ; exit ไม่เป็นศูนย์หรือ timeout = แจ้งเตือนข้อผิดพลาด; และถ้าบรรทัดสุดท้ายของ stdout เป็น <code>{"wakeAgent": false}</code> ระบบก็ถือว่าเงียบเช่นกัน ที่ผมชอบเป็นพิเศษคือ environment ของ subprocess ถูก <strong>ล้าง credential ของ provider ออก</strong> — script ที่คุณเขียน (หรือที่ agent เขียนให้) จะไม่ได้ API key ของ model ติดมือไปด้วย</p>
+
+    <h3>ชั้นที่ 2 — monitor-mode ที่ข้าม LLM เมื่อไม่มีอะไรเปลี่ยน (v0.21.0)</h3>
+
+    <p>v0.21.0 "Pantheon" (31 สิงหาคม 2026) เพิ่ม <strong>hash-suppressed change detection</strong> (PR #81138): job ในโหมด monitor จะเทียบ hash ของสิ่งที่มันเฝ้าดูกับรอบก่อน และถ้าเท่ากัน จะ <em>ไม่เรียก LLM เลย</em> — นี่คือคำตอบตรง ๆ ของปัญหา "heartbeat ที่จ่ายเงินให้กับการบอกว่าไม่มีอะไรเกิดขึ้น" ที่ผมบ่นไว้ในซีรีส์ก่อน ข้อควรระวังเรื่องแหล่งอ้างอิง: ณ วันที่เขียน โหมด monitor ปรากฏใน release notes ของ v0.21.0 และ PR #81138 <em>เท่านั้น</em> หน้า cron ในเอกสารที่ render แล้วยังไม่ได้บรรยายมัน ผมจึงยังไม่พบตัวเลขว่าประหยัดกี่เปอร์เซ็นต์และจะไม่เดาให้ แต่ตรรกะชัด: รอบที่ไม่มีการเปลี่ยนแปลงมีต้นทุน token เป็นศูนย์</p>
+
+    <h3>ชั้นที่ 3 — <code>deliver_only</code> และ <code>hermes send</code></h3>
+
+    <p>ฝั่ง webhook ก็มีของแบบเดียวกัน — route ที่ตั้ง <code>deliver_only: true</code> (v0.11.0, PR #12473) จะส่ง payload ที่แปลงแล้วไปยังช่องทางปลายทางโดยไม่ผ่าน agent และสำหรับ script ใด ๆ บนเครื่อง มี <code>hermes send</code> จาก v0.15.0 "The Velocity Release" (28 พฤษภาคม 2026, PR #27188) ที่ release note สรุปว่า "pipe any script's output to any messaging platform":</p>
+
+    <pre><code># ส่งข้อความหนึ่งครั้งไปยังช่องทางที่ตั้งค่าไว้ — ไม่มี agent loop ไม่มี token
+hermes send --to slack "Backup เสร็จแล้ว: 2.1 GB"
+hermes send --to telegram --file /var/log/nightly-report.pdf
+hermes send --list             # ดูปลายทางที่ใช้ได้
+
+# ต่อท้าย script เดิมขององค์กรได้ทันที
+./run-etl.sh 2&gt;&amp;1 | tail -n 5 | xargs -0 hermes send --to slack</code></pre>
+
+    <p>ข้อละเอียดที่มีผลกับ script บน server: สำหรับ platform ที่ใช้ bot token — Telegram, Discord, Slack, Signal, SMS และ WhatsApp Cloud API — <code>hermes send</code> ส่งได้เองโดย<strong>ไม่ต้องมี gateway รันอยู่</strong> ส่วน platform ที่มาเป็น plugin ยังต้องมี gateway ทำงานอยู่</p>
+
+    <div class="alert">
+      <strong>วิธีคิดที่ผมใช้:</strong> ถามก่อนว่า "รอบนี้ต้องใช้<em>วิจารณญาณ</em>ไหม" ถ้าคำตอบคือแค่ตรวจแล้วรายงาน ให้ใช้ชั้นที่ 1 หรือ 3 ถ้าต้องเฝ้าดูของที่นาน ๆ เปลี่ยนที ใช้ชั้นที่ 2 และเก็บ LLM ไว้สำหรับรอบที่ต้องอ่าน สรุป หรือตัดสินใจจริง ๆ — ตอน <a href="/blog/hermes-models-cost">#9 Models &amp; Cost</a> จะพูดถึงว่า token ที่ประหยัดได้ตรงนี้คิดเป็นเงินเท่าไร
+    </div>
+
+    <h2 id="th-remember">Cron ที่จำได้ และวงจร Ops</h2>
+
+    <p>สะพานข้ามรอบทั้งสามอยู่ในตอน #2 แล้ว — <code>context_from</code> (v0.12.0, 30 เมษายน 2026, PR #15606) ที่นำผลสำเร็จล่าสุดของ job <em>อื่น</em> มาต่อหน้า prompt, <code>continuity=True</code> ที่ฉีดผลรอบก่อนของ job เดียวกัน และ persistent memory กับ notepad ต่อ job ของ v0.21.0 สองข้อที่ตอน #2 ไม่ได้บอก: memory ที่ cron agent โหลดคือ <code>MEMORY.md</code> ตัวเดียวกับที่มีขอบเขตและเพดานตาม <a href="/blog/hermes-memory">#3 Memory</a> (สิ่งที่ job เรียนรู้ตอนตีสองจึงอยู่กับ session ตอนเช้าของคุณด้วย) และ ณ วันที่เขียน ทั้ง memory และ notepad ของ cron ปรากฏใน release notes ของ v0.21.0 กับ PR #81138 <em>เท่านั้น</em> — หน้า cron ที่ render แล้วยังบรรยายแค่ <code>continuity</code> และ <code>context_from</code> นี่คือหน้าตาของ chain ในงานจริง:</p>
+
+    <pre><code># chain สองขั้น: สแกนตอนตีหนึ่ง แล้วให้ job ตีสองอ่านผลนั้นต่อ
+cronjob(action="create", name="deps-scan", schedule="0 1 * * *",
+        prompt="รัน pip-audit และ npm audit ใน repo สรุปเฉพาะรายการ CVSS ≥ 7",
+        workdir="/srv/repo", deliver="local")
+
+cronjob(action="create", name="deps-triage", schedule="0 2 * * *",
+        context_from="deps-scan",     # ผลสำเร็จล่าสุดของ deps-scan ถูกต่อหน้า prompt
+        continuity=True,              # และจำว่ารอบก่อนตัวเองเปิด issue อะไรไปแล้ว
+        prompt="จากผลสแกนที่แนบมา เปิด issue ให้ทีม ข้ามรายการที่เคยเปิดแล้ว",
+        deliver="slack")</code></pre>
+
+    <p>ของใหม่อีกสองชิ้นใน v0.21.0 ที่คนทำ ops จะชอบ: ผลลัพธ์ส่งเข้า <strong>Bot Chat</strong> ประจำตัวของ bot ได้ (แนวคิด Bot Mode อยู่ในตอน #2 — ผมจะไม่เล่าซ้ำ) และปุ่ม <strong>"Trigger now"</strong> (#70638) ใน Desktop app และ dashboard ที่รัน job ทันทีเพื่อทดสอบโดยไม่ต้องแก้ตารางเวลา — บน CLI คำสั่งเดียวกันคือ <code>hermes cron run &lt;job&gt;</code></p>
+
+    <h3>วงจร ops: incidents → doctor → runs</h3>
+
+    <p>ระบบ cron ที่รันตอนไม่มีใครดู ต้องตอบคำถาม "เมื่อคืนมีอะไรพังไหม" ได้ในสามคำสั่ง:</p>
+
+    <pre><code># 1) เหตุการณ์ที่ระบบตรวจพบ — detected → alerted → closed
+hermes cron incidents
+hermes cron incidents ack &lt;incident-id&gt;    # v0.21.0: ack แล้ว signature เดิมจะไม่ ping ซ้ำ (#95017)
+
+# 2) ตรวจสุขภาพแบบ read-only — exit 1 ถ้ามีปัญหา เหมาะใส่ใน monitoring
+hermes cron doctor
+#   ตรวจ: รอบล่าสุดล้ม / ส่งไม่ถึง / next_run_at ค้าง / script หาย / workdir หาย
+
+# 3) ประวัติการรัน
+hermes cron runs deps-triage --limit 20</code></pre>
+
+    <p>รายละเอียดที่ผมให้คะแนน: ข้อความ error ใน incident ถูก <strong>redact ก่อนเก็บ</strong> เพราะ stack trace มักลาก credential ติดมาด้วย และ <code>hermes cron doctor</code> ถูกออกแบบให้ exit code มีความหมาย — เอาไปวางใน monitoring ของตอน #7 ได้ทันที ส่วน <strong>model-drift guard</strong> คือความรอบคอบที่ผมยังไม่เคยเห็นในระบบ cron ของ agent ตัวอื่น: ถ้าคุณเปลี่ยน model default ทั้งระบบด้วย <code>hermes model</code> job ที่ไม่ได้ pin model จะข้ามรอบและแจ้งเตือนครั้งเดียว แทนที่จะรันเงียบ ๆ ด้วย model ที่คุณไม่เคยทดสอบกับ prompt นั้น (ลำดับการเลือก model คือ pin ต่อ job → <code>cron.model</code> → default ทั้งระบบ)</p>
+
+    <p>สำหรับผลลัพธ์ที่อยากคุยต่อ — ตั้ง <code>cron.mirror_delivery: true</code> ทั้งระบบ หรือ <code>attach_to_session=True</code> ต่อ job แล้วบน platform ที่มี thread (Telegram topics, Discord/Slack threads) ทุกรอบจะเปิด thread ใหม่ที่คุณตอบกลับได้เหมือนคุยกับ agent ปกติ Slack แบบ in-channel ต้องตั้ง <code>slack.cron_continuable_surface: in_channel</code> พร้อม <code>reply_in_thread: false</code> เพิ่ม</p>
+
+    <hr>
+
+    <h2 id="th-webhooks">Inbound Webhooks ที่ตรวจลายเซ็นก่อนเชื่อ</h2>
+
+    <p>Webhook adapter มาพร้อม v0.4.0 (tag v2026.3.23, เผยแพร่ 24 มีนาคม 2026) ในชุดเดียวกับ Signal, DingTalk, SMS, Mattermost และ Matrix — Hermes มองมันเป็น "platform" หนึ่งเหมือน Telegram เพียงแต่ผู้ส่งคือเครื่องจักร ไม่ใช่คน กติกาพื้นฐานทั้งหมดอยู่ในตารางเดียว:</p>
+
+    <div class="table-wrapper">
+      <table>
+        <thead>
+          <tr><th>รายการ</th><th>ค่า</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>พอร์ต default</td><td>8644 (env <code>WEBHOOK_PORT</code>; เปิดด้วย <code>WEBHOOK_ENABLED</code>)</td></tr>
+          <tr><td>Endpoint</td><td><code>POST /webhooks/&lt;route-name&gt;</code> และ <code>GET /health</code></td></tr>
+          <tr><td>ลายเซ็นที่รับ</td><td>GitHub <code>X-Hub-Signature-256</code> · GitLab <code>X-Gitlab-Token</code> · Generic V2 <code>X-Webhook-Signature-V2</code> + <code>X-Webhook-Timestamp</code> (HMAC-SHA256 ของ <code>&lt;timestamp&gt;.&lt;body&gt;</code> ยอมรับภายใน ±300 วินาที) · Generic V1 เลิกใช้แล้ว ไม่กัน replay</td></tr>
+          <tr><td>Secret</td><td>ทุก route ต้องมี — ไม่มีข้อยกเว้น</td></tr>
+          <tr><td>Rate limit</td><td>30 req/นาที ต่อ route</td></tr>
+          <tr><td>ขนาด body</td><td>1 MB</td></tr>
+          <tr><td>Idempotency</td><td>cache 1 ชั่วโมงบน <code>X-GitHub-Delivery</code> / <code>X-Request-ID</code></td></tr>
+          <tr><td>Response codes</td><td>200 · 400 · 401 · 404 · 413 · 429 · 502</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <p>Route แบบ static อยู่ใน <code>config.yaml</code> ใต้ <code>platforms.webhook.extra.routes.&lt;name&gt;</code> — นี่คือโครงของ recipe รีวิว PR ที่เอกสารทางการเผยแพร่ ปรับข้อความเป็นภาษาไทย:</p>
+
+    <pre><code># config.yaml — โครงตามคู่มือ webhook-github-pr-review ทางการ
+platforms:
+  webhook:
+    enabled: true
+    extra:
+      port: 8644
+      rate_limit: 30
+      routes:
+        pr-review:
+          secret: "&lt;long-random-secret&gt;"      # ใส่ค่าเดียวกันฝั่ง GitHub
+          events: [pull_request]
+          prompt: |
+            รีวิว PR "{pull_request.title}" ใน {repository.full_name}
+            payload ไม่มี diff — รัน: gh pr diff {number} --repo {repository.full_name}
+            สรุปความเสี่ยงและข้อเสนอแนะเป็นภาษาไทย ไม่เกิน 10 ข้อ
+          deliver: github_comment
+        alerts:
+          secret: "&lt;another-secret&gt;"
+          deliver_only: true                    # ไม่ผ่าน agent — zero token
+          deliver: telegram</code></pre>
+
+    <p>สิ่งที่ template ทำได้: dot-notation อ้างฟิลด์ใน payload (<code>{pull_request.title}</code>) และ <code>{__raw__}</code> ที่ dump ทั้ง payload เป็น JSON ตัดที่ 4,000 ตัวอักษร นอกจากนี้แต่ละ route ยังมี <code>filters</code> (exists / missing / equals / not_equals / contains / in / in_file / regex ประกอบกันด้วย all / any / not) เพื่อคัดเหตุการณ์ก่อนถึง agent และ <code>script</code> สำหรับ transform ด้วย script ใน <code>~/.hermes/scripts/</code> — stdout ที่เป็น JSON จะแทน payload, stdout ว่างหรือ <code>[SILENT]</code> หรือ <code>{"__hermes_ignore__": true}</code> จะตอบ 200 แล้วทิ้งเหตุการณ์นั้นไปเงียบ ๆ ปลายทาง <code>deliver</code> ของ webhook มี <code>log</code> และ <code>github_comment</code> เพิ่มจากรายการช่องทางปกติ</p>
+
+    <div class="alert danger">
+      <strong>Toolset ของ webhook มีแค่สี่ตัว — โดยตั้งใจ:</strong> session ที่ webhook ปลุกขึ้นมาได้เฉพาะ <code>web_search</code>, <code>web_extract</code>, <code>vision_analyze</code> และ <code>clarify</code> (<code>_HERMES_WEBHOOK_SAFE_TOOLS</code> ใน <code>toolsets.py</code> ระบุเหตุผลไว้ตรง ๆ ว่า "to prevent prompt injection attacks") ไม่มี terminal ไม่มี file เอกสารสรุปหลักคิดไว้ประโยคเดียวที่ควรจำขึ้นใจ — <em>"HMAC validation authenticates the sender, not the content"</em> ลายเซ็นบอกว่า GitHub เป็นคนส่ง แต่ชื่อ PR นั้นใครก็เขียนได้ และคู่มือ PR-review ทางการก็เตือนซ้ำว่า "PR titles and descriptions are attacker-controlled" — ถ้าเปิดสู่อินเทอร์เน็ต ให้รัน gateway ใน Docker หรือ VM
+    </div>
+
+    <p>ถ้า route ไหนต้องการ tool มากกว่านั้นจริง ๆ — recipe PR-review ข้างบนให้ agent รัน <code>gh pr diff</code> ซึ่งอยู่นอกสี่ tool นี้ — key <code>toolsets</code> ของ route จะ <strong>แทนที่</strong> ค่า default ของ platform ทั้งชุด ไม่ใช่รวมเพิ่ม ดังนั้นเปิดเท่าที่ต้องใช้ และเปิดโดยรู้ตัวว่ากำลังยกกำแพงลง ฝั่ง GitHub คุณเพียงชี้ webhook ไปที่ <code>https://&lt;host&gt;/webhooks/pr-review</code> เลือก content type เป็น JSON ใส่ secret เดียวกัน และเลือก event <em>Pull requests</em> — คู่มือบอกว่า comment จะปรากฏบน PR ภายในราว 30–90 วินาที และเหตุการณ์ซ้ำจาก GitHub ถูก dedupe ไว้หนึ่งชั่วโมง</p>
+
+    <h3>Subscribe แบบไม่ต้อง restart</h3>
+
+    <p>นอกจาก route แบบ static ยังมี <strong>dynamic subscription</strong> ที่มีผลทันที:</p>
+
+    <pre><code>hermes webhook subscribe ci-failed \
+  --events workflow_run \
+  --prompt "อ่าน log ของ workflow ที่ล้ม สรุปว่าสาเหตุน่าจะเป็นอะไร" \
+  --deliver telegram --deliver-chat-id -100123 \
+  --skills ci-triage
+
+hermes webhook list
+hermes webhook test ci-failed --payload ./sample.json   # ยิง payload ตัวอย่างใส่ route
+hermes webhook remove ci-failed
+
+# เก็บที่ ~/.hermes/webhook_subscriptions.json
+# ถ้าชื่อชนกับ route ใน config.yaml — route static ชนะ</code></pre>
+
+    <p>เอกสารเขียนไว้ชัด: <em>"No gateway restart required — subscribe and it's immediately live"</em> และมีจุดที่ผมอยากให้สังเกต — ตัว agent เอง <strong>ไม่มี tool สำหรับ webhook</strong> เมื่อคุณบอกใน chat ว่า "ช่วยตั้ง webhook รับ event จาก GitLab" มันจะใช้ terminal tool ยิงคำสั่ง <code>hermes webhook subscribe</code> ข้างบนนี้ โดยมี skill ชื่อ <code>webhook-subscriptions</code> ที่มาพร้อมระบบเป็นคู่มือ (โครงสร้าง SKILL.md อยู่ใน <a href="/blog/hermes-skills">#6 Skills</a>) แปลว่าถ้า session นั้นไม่มี terminal tool agent ก็ทำไม่ได้ — ซึ่งถูกต้องแล้วสำหรับ session ที่ webhook เป็นคนปลุก</p>
+
+    <p>ตลาดรอบ ๆ พอร์ต 8644 ก็เริ่มก่อตัว — Hookdeck เขียนคู่มือวาง relay ของตัวเองไว้หน้า Hermes และ fast.io เขียนคู่มือให้ n8n เรียก <code>hermes webhook subscribe</code> พร้อม node คำนวณ HMAC ทั้งสองเป็นเนื้อหาการตลาดของผู้ขาย ผมยกมาเพียงเป็นหลักฐานว่าองค์กรกำลังเอาเครื่องมือ workflow ที่มีอยู่แล้วมาต่อหน้าประตูนี้ ไม่ใช่คำแนะนำ</p>
+
+    <h2 id="th-outbound">ส่งเหตุการณ์ออกไป — Outbound Webhooks, Shell Hooks และ Deliverable Mode</h2>
+
+    <p>ประตูฝั่งขาออกมีสามแบบที่ต่างกันโดยสิ้นเชิง และผมอยากให้เห็นความต่างชัด ๆ เพราะเอกสารเรียกหลายอย่างว่า "hook" เหมือนกันหมด</p>
+
+    <h3>1) Outbound webhooks ที่ลงลายเซ็น (v0.20.0)</h3>
+
+    <p>PR #69406 (merge 2 สิงหาคม 2026 และออกใน v0.20.0 "Herald" วันถัดมา) เพิ่ม <code>hooks.outbound</code>: ทุกครั้งที่เหตุการณ์ใน lifecycle เกิดขึ้น gateway จะ POST ไปยัง URL ที่คุณกำหนดพร้อม HMAC — นี่คือวิธีที่หัวข้อ observability ในตอน #7 จะได้เห็น lifecycle event โดยไม่ต้อง scrape log:</p>
+
+    <pre><code># config.yaml
+hooks:
+  outbound:
+    - name: siem
+      url: https://siem.example.ac.th/hermes
+      events: [on_session_end, subagent_stop, post_tool_call]   # event ใดก็ได้ในแคตตาล็อก plugin hook
+      secret_env: HERMES_SIEM_SECRET        # อ่านจาก ~/.hermes/.env — แนะนำกว่า secret: ตรง ๆ
+      timeout: 10                           # 1–60 วินาที
+      matcher: "^(terminal|write_file)$"    # regex คัดเฉพาะ tool ที่สนใจ สำหรับ event ระดับ tool</code></pre>
+
+    <pre><code># สิ่งที่ปลายทางได้รับ
+POST /hermes HTTP/1.1
+Content-Type: application/json
+X-Hermes-Event: post_tool_call
+X-Hermes-Delivery: &lt;delivery-id&gt;
+X-Hermes-Signature-256: sha256=&lt;hex ของ HMAC-SHA256 บน raw body&gt;
+
+{ "hook_event_name": "post_tool_call", "tool_name": "terminal", "session_id": "…",
+  "delivery_id": "…", "timestamp": "…", … }      # โครงเดียวกับ stdin ของ shell hook + สองฟิลด์ท้าย</code></pre>
+
+    <p>นโยบายส่งเป็นแบบ <strong>fire-and-forget</strong> ผ่าน bounded queue และ daemon thread ตัวเดียว: ลองซ้ำหนึ่งครั้งพร้อม backoff เมื่อ connection error หรือ 5xx, ไม่ลองซ้ำเมื่อ 4xx, ไม่ตาม 3xx และการแก้รายการ target มีผลใน CLI session ถัดไปหรือหลัง restart gateway — พูดตรง ๆ คือมันไม่ใช่ message queue ที่รับประกันการส่ง ถ้าองค์กรต้องการ at-least-once ให้เอา relay ที่รับผิดชอบเรื่องนั้นมาคั่น <code>hermes hooks list</code> แสดง outbound target ทั้งหมดรวมกับ shell hook</p>
+
+    <h3>2) Shell hooks ที่ veto ได้ (v0.11.0)</h3>
+
+    <p>Shell hooks (v0.11.0, 23 เมษายน 2026, PR #13296) เป็นคนละเรื่องกับ webhook — มันคือ script บนเครื่องที่รันใน<em>จังหวะ</em>ของ agent และบางจังหวะ <strong>ยับยั้ง</strong>การกระทำได้:</p>
+
+    <pre><code># config.yaml
+hooks:
+  pre_tool_call:
+    - matcher: "^terminal$"
+      command: ~/.hermes/agent-hooks/guard-terminal.sh
+      timeout: 30          # default 60 สูงสุด 300
+      fail_closed: true    # ถ้า script พัง = บล็อก (default คือ fail-open!)</code></pre>
+
+    <pre><code>#!/usr/bin/env bash
+# ~/.hermes/agent-hooks/guard-terminal.sh — อ่าน JSON จาก stdin
+payload=$(cat)
+cmd=$(printf '%s' "$payload" | jq -r '.tool_input.command // ""')
+if printf '%s' "$cmd" | grep -Eq 'rm -rf /|mkfs|DROP TABLE'; then
+  echo '{"action":"block","reason":"คำสั่งอันตราย — ต้องให้คนอนุมัติ"}'
+  exit 2              # exit 2 = บล็อกเช่นกัน
+fi
+exit 0</code></pre>
+
+    <p>ฟิลด์บน stdin ได้แก่ <code>hook_event_name</code>, <code>tool_name</code>, <code>tool_input</code>, <code>session_id</code>, <code>cwd</code>, <code>extra</code> คำตอบของ <code>pre_tool_call</code> รับทั้ง <code>{"action":"block"|"modify"}</code> และรูปแบบของ Claude Code <code>{"decision":"block"}</code> — ตั้งใจให้ hook ที่องค์กรเขียนไว้กับ Claude Code ย้ายมาได้ ครั้งแรกที่คู่ (event, command) ใดถูกเรียก Hermes จะขอ consent และบันทึกใน <code>~/.hermes/shell-hooks-allowlist.json</code> (ข้ามได้ด้วย <code>--accept-hooks</code> หรือ <code>HERMES_ACCEPT_HOOKS=1</code> สำหรับเครื่อง headless)</p>
+
+    <pre><code>hermes hooks list                 # shell hooks + outbound targets
+hermes hooks test pre_tool_call   # ยิง event จำลอง — ทำทุกครั้งหลังแก้ config
+hermes hooks doctor
+hermes hooks revoke               # ถอน consent ที่เคยให้</code></pre>
+
+    <p>นอกจาก plugin-level hook 26 ตัวที่เอกสาร plugins ระบุ (กลุ่ม directive: <code>pre_tool_call</code>, <code>pre_llm_call</code>, <code>pre_verify</code>, <code>pre_gateway_dispatch</code>; กลุ่ม transform; และ observer อย่าง <code>on_session_start/end</code>, <code>subagent_start/stop</code>, <code>kanban_task_*</code>) ยังมี gateway-only event แยกอีกชุด — <code>gateway:startup</code>, <code>session:start/end/reset/compress</code>, <code>agent:start/step/end</code>, <code>reaction:added/removed</code>, <code>command:*</code> hook ที่มีขอบเขตเวลาจะ timeout ตาม <code>plugins.hook_callback_timeout</code> (default 30 วินาที สูงสุด 600) โดย <code>pre_tool_call</code> เป็นตัวเดียวที่ <strong>fail closed</strong> เมื่อ timeout ตัวอื่น fail open</p>
+
+    <h3>3) Deliverable Mode — ไฟล์ที่ agent ทำเสร็จ ไปถึงมือคนใน chat</h3>
+
+    <p>ประตูขาออกแบบสุดท้ายไม่ใช่ event แต่เป็น<em>ไฟล์</em> — ใน <strong>Deliverable Mode</strong> gateway จะสแกนคำตอบของ agent หา path แบบ absolute (<code>/tmp/report.pdf</code>) หรือ home-relative (<code>~/out/chart.png</code>) ที่มีนามสกุลที่รองรับ แล้วอัปโหลดเป็นไฟล์แนบจริงบน Slack/Discord/Telegram/WhatsApp/Signal: รูปแสดง inline, เสียงเป็น voice note, ที่เหลือเป็นไฟล์ path ที่อยู่ใน code block ถูกข้าม และไฟล์ source อย่าง <code>.py</code> ถูกตัดออกโดยตั้งใจ worker ของ Kanban ก็แนบ deliverable ไปกับ <code>kanban_complete</code> ได้ เอกสารเตือนว่า <em>"the agent doesn't reach for artifacts by default"</em> — ถ้าอยากให้ cron job ทุกเช้าส่ง PDF แทนข้อความยาว ต้องบอกใน prompt หรือใส่ไว้ใน <code>AGENTS.md</code>/<code>SOUL.md</code></p>
+
+    <blockquote>💡 คำว่า "artifact" ใน Hermes หมายถึงสามสิ่งที่ไม่เกี่ยวกัน: Deliverable Mode ข้างบนนี้, แผงแสดงผลด้านขวาใน Desktop app (PR #72345, v0.20.0 — ฟีเจอร์ UI ล้วน ๆ เก็บใน localStorage ของเครื่องนั้น) และคำว่า "task artifact" ในโปรโตคอล A2A อย่าคาดหวังว่าจะมี "artifact store" กลางให้ pipeline ดึงใช้ — วันนี้ยังไม่มี และ issue #19489 ที่ขอ artifact builder skill ยังเปิดอยู่</blockquote>
+
+    <hr>
+
+    <h2 id="th-blueprints">Blueprints — Skill ที่มีตารางเวลา</h2>
+
+    <p>ถ้า cron คือเครื่องยนต์ <strong>Automation Blueprints</strong> (v0.17.0, 19 มิถุนายน 2026, PR #41309) คือหน้าปัดที่ทำให้คนที่ไม่อยากเห็น cron syntax ใช้มันได้ — release note สรุปว่า <em>"Pick an automation by name and Hermes asks you for what it needs — no cron syntax"</em> แต่สิ่งที่ผมอยากให้จำจริง ๆ คือประโยคใน <code>tools/blueprints.py</code>:</p>
+
+    <blockquote>"A blueprint is NOT a new object type. It is an ordinary skill that additionally declares an automation schedule in its frontmatter."</blockquote>
+
+    <p>นั่นแปลว่าทุกอย่างที่คุณรู้จาก <a href="/blog/hermes-skills">#6 Skills</a> ใช้ได้ทันที — SKILL.md เดิม เพิ่มบล็อก <code>metadata.hermes.blueprint</code> ก็กลายเป็น blueprint ที่ไหลผ่าน pipeline เดียวกับ skills hub และตามตรรกะของเอกสาร กลไกทุกอย่างที่ครอบ skill (รวมถึงการสแกนตอนติดตั้งที่เล่าไว้ในตอน #6) ก็ครอบ blueprint ด้วย:</p>
+
+    <pre><code>---
+name: nightly-backlog-triage
+description: จัดลำดับ issue ค้างทุกคืน แล้วสรุปเข้า Slack ของทีม
+metadata:
+  hermes:
+    blueprint:                   # โครงตามฟิลด์ของ BlueprintSpec — ตรวจกับ tools/blueprints.py ก่อนใช้จริง
+      schedule: "0 2 * * *"      # skill_name, schedule, deliver (default origin), prompt,
+      deliver: slack             # no_agent, model, provider, enabled_toolsets
+      prompt: "รัน skill นี้กับ repo ของทีม"
+      enabled_toolsets: [web, file, terminal]
+---
+
+# Nightly Backlog Triage
+1. ดึง issue ที่เปิดอยู่ทั้งหมดด้วย gh …
+2. จัดกลุ่มตาม label และอายุ …</code></pre>
+
+    <p>นิยามเดียวถูก render ออกมาสี่หน้าตา: ฟอร์มใน dashboard, คำสั่ง <code>/blueprint</code> ใน CLI/TUI และ messenger, บทสนทนาที่ agent ถามสิ่งที่ต้องรู้ทีละข้อ และรายการใน catalog ของเอกสาร หน้า <em>Automation Blueprints</em> สำหรับนักพัฒนาแสดงตัวอย่างที่องค์กรสาย software จะรู้สึกคุ้น:</p>
+
+    <div class="table-wrapper">
+      <table>
+        <thead>
+          <tr><th>Blueprint</th><th>สิ่งที่ทำ</th></tr>
+        </thead>
+        <tbody>
+          <tr><td><strong>Nightly Backlog Triage</strong></td><td>จัดกลุ่มและลำดับ issue ค้าง — ตัวอย่างในหน้า catalog ใช้ <code>0 2 * * *</code></td></tr>
+          <tr><td><strong>Automatic PR Code Review</strong></td><td>รีวิว PR ใหม่และ comment กลับ — จุดชนวนคือ webhook ไม่ใช่ cron</td></tr>
+          <tr><td><strong>Docs Drift Detection</strong></td><td>ตรวจว่าเอกสารตามโค้ดทันไหม</td></tr>
+          <tr><td><strong>Dependency Security Audit</strong></td><td>รายงานช่องโหว่ CVSS ≥ 7.0</td></tr>
+          <tr><td><strong>Issue Auto-Labeling</strong></td><td>ติด label ให้ issue ใหม่</td></tr>
+          <tr><td><strong>CI Failure Analysis</strong></td><td>วิเคราะห์สาเหตุ workflow ที่ล้ม</td></tr>
+          <tr><td><strong>Auto-Port Changes Across Repos</strong></td><td>ย้าย patch ข้าม repo</td></tr>
+          <tr><td><strong>Security Audit Pipeline · Deploy Verification · Alert Triage · Uptime Monitor</strong></td><td>ชุดงาน ops</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <p>หน้าคู่มือ <em>Automation Blueprints</em> (hermes-agent.nousresearch.com/docs/guides/automation-blueprints) แสดง blueprint ทั้งหมด <strong>17 ตัว</strong> ณ วันที่ 1 กันยายน 2026 — นอกจากในตารางแล้วยังมี Competitive Repository Scout, AI News Digest, Paper Digest, Stripe Payment Monitoring, Daily Revenue Summary และ Content Pipeline (ตัวเลขนี้อ้างอิงหน้าคู่มือเท่านั้น หน้า reference catalog เป็นแบบ client-rendered ผมนับจากมันไม่ได้) ข้อดีเชิงองค์กรที่ตามมาจากนิยาม "blueprint = skill": คุณจัดการมันด้วยวิธีเดียวกับ skill ทุกตัว — ผ่าน skills hub, ผ่านการ export profile — และเมื่อต้องดูแลหลายเครื่อง ตอน <a href="/blog/hermes-desktop-fleet">#10 Desktop &amp; Fleet</a> จะเล่าต่อ</p>
+
+    <h2 id="th-backend">Hermes เป็น Backend ให้แอปที่องค์กรมีอยู่แล้ว</h2>
+
+    <p>ประตูที่ห้าคือการกลับด้าน — แทนที่ Hermes จะไปเรียกระบบอื่น ให้ระบบอื่นเรียก Hermes ตั้งแต่ v0.4.0 gateway มี <strong>OpenAI-compatible API server</strong> ในตัว (release note ระบุว่ามาพร้อม "input limits, field whitelists, SQLite-backed response persistence, and CORS origin protection" ตั้งแต่วันแรก):</p>
+
+    <pre><code># ~/.hermes/.env  (หรือ gateway.api_server.* ใน config.yaml — env ชนะ)
+API_SERVER_ENABLED=true
+API_SERVER_KEY=&lt;long-random-key&gt;      # บังคับ แม้ฟังแค่ loopback
+
+# เริ่ม gateway ตามปกติ — API server ฟังที่ http://127.0.0.1:8642
+hermes gateway</code></pre>
+
+    <pre><code># ใช้ client ของ OpenAI ตัวไหนก็ได้
+curl http://127.0.0.1:8642/v1/chat/completions \
+  -H "Authorization: Bearer $API_SERVER_KEY" \
+  -H "X-Hermes-Session-Key: helpdesk-user-4471" \
+  -H "Content-Type: application/json" \
+  -d '{"model":"hermes","messages":[{"role":"user","content":"สรุป ticket ที่ค้างของผม"}],"stream":true}'
+# ชื่อ model ตั้งได้ด้วย gateway.api_server.model_name — ดูค่าจริงจาก GET /v1/models</code></pre>
+
+    <div class="table-wrapper">
+      <table>
+        <thead>
+          <tr><th>Endpoint</th><th>ลักษณะ</th></tr>
+        </thead>
+        <tbody>
+          <tr><td><code>POST /v1/chat/completions</code></td><td>stateless; stream ผ่าน SSE พร้อม event <code>hermes.tool.progress</code> ให้ UI แสดงว่า agent กำลังใช้ tool อะไร (v0.7.0)</td></tr>
+          <tr><td><code>POST /v1/responses</code></td><td>ประวัติฝั่ง server ผ่าน <code>previous_response_id</code> หรือ <code>conversation</code> ที่ตั้งชื่อ; เก็บใน SQLite แบบ LRU 100 responses</td></tr>
+          <tr><td><code>POST /v1/runs</code> · <code>GET /v1/runs/{id}</code> · <code>/events</code></td><td>งานยาวแบบ asynchronous พร้อม SSE; หยุดได้ด้วย <code>POST /v1/runs/{id}/stop</code> (v0.12.0)</td></tr>
+          <tr><td><code>GET /v1/models</code> · <code>GET /v1/capabilities</code></td><td>ให้ client ตรวจว่า server นี้ทำอะไรได้</td></tr>
+          <tr><td><code>X-Hermes-Session-Id</code> / <code>X-Hermes-Session-Key</code></td><td>Id = transcript; Key (≤256 ตัวอักษร) = ขอบเขต memory ที่คงที่ต่อผู้ใช้</td></tr>
+          <tr><td><code>/p/&lt;profile&gt;/…</code></td><td>หลาย profile บน server เดียว แต่ละ profile มี key ของตัวเอง</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <p>ข้อจำกัดที่ต้องรู้ก่อนออกแบบ: <strong>ไม่มี file upload</strong>, เพดาน concurrent run default 10 (<code>max_concurrent_runs</code>) และ toolset <code>hermes-api-server</code> ตัด <code>clarify</code>, TTS, <code>computer_use</code> และ <code>send_message</code> ออก — เพราะไม่มีมนุษย์อยู่ปลายสายให้ถามกลับ</p>
+
+    <p>แอปตัวแรกที่องค์กรมักเสียบคือ <strong>Open WebUI</strong> — และเอกสารของ Open WebUI เองมีหน้า "Connect an agent → Hermes Agent": base URL <code>http://localhost:8642/v1</code> (จาก Docker ใช้ <code>host.docker.internal</code> และต้องมี <code>/v1</code> ต่อท้าย) API key คือ <code>API_SERVER_KEY</code> และ gateway ต้องรันค้างไว้ หน้า Open WebUI ฝั่ง Hermes เสริมว่า tool รันบนเครื่องที่ API server อยู่ Open WebUI คุยแบบ server-to-server จึงไม่ต้องตั้ง CORS และถ้าอยากแยกผู้ใช้ ให้ใช้ profile คนละพอร์ต</p>
+
+    <h3><code>hermes peer</code>, A2A และสิ่งที่ <code>hermes mcp serve</code> ไม่ได้ทำ</h3>
+
+    <p>สามสิ่งนี้มักถูกเข้าใจสลับกัน:</p>
+
+    <ul>
+      <li><strong><code>hermes peer</code></strong> (v0.21.0, PR #88725) ให้ Hermes สองตัวคุยกันข้าม host — แต่มัน<em>ไม่ใช่</em> A2A: PR ระบุว่ามัน "uses the peer's existing api_server platform as the wire" (POST <code>/api/sessions/{id}/chat</code> ด้วย bearer key) ตั้งค่า peer ใต้ <code>bot_peers</code> เก็บ key เป็น <code>HERMES_PEER_&lt;NAME&gt;_KEY</code> ใน <code>.env</code> แล้วใช้ <code>hermes peer add|dm|run --idempotency-key|status|stop</code> คำตอบไปโผล่ใน Bot Chat ของแต่ละฝั่ง</li>
+      <li><strong>A2A</strong> (plugin ที่มาพร้อมระบบ, A2A v1.0, PR #77109, v0.20.0) เปิดที่พอร์ต 9900 มี <code>/.well-known/agent-card.json</code> และ JSON-RPC 2.0 (SendMessage, SendStreamingMessage, GetTask, ListTasks, CancelTask) — สำหรับคุยกับ agent<em>ต่างค่าย</em>ที่พูดมาตรฐานเดียวกัน toolset ฝั่ง client ปิดโดย default, bind 127.0.0.1 โดย default และการ bind ออกนอกต้องมี token มี audit log ที่ <code>~/.hermes/a2a_audit.jsonl</code> เอกสารเองบอกว่างานบนเครื่องเดียวกันควรใช้ delegation หรือ Kanban (ตอน #2) แทน</li>
+      <li><strong><code>hermes mcp serve</code></strong> (v0.6.0, 30 มีนาคม 2026) <em>ไม่ได้</em>เปิด agent ให้ใครเรียก — docstring ของ <code>mcp_serve.py</code> บอกว่ามัน "expose messaging conversations as MCP tools": 10 tool ฝั่ง messaging bridge (<code>conversations_list</code>, <code>messages_read</code>, <code>messages_send</code>, <code>events_wait</code>, <code>permissions_respond</code> ฯลฯ) ผ่าน stdio เท่านั้น ไม่มี tool "ask the agent" ถ้าคุณอยากให้ Claude Desktop อ่านและตอบข้อความในช่องทางที่ Hermes ดูแล นี่คือของสำหรับสิ่งนั้น แต่ถ้าอยากให้แอปเรียก Hermes<em>คิด</em> ให้กลับไปที่ 8642</li>
+    </ul>
+
+    <pre><code># Claude Desktop config — เข้าถึง "กล่องข้อความ" ของ Hermes ไม่ใช่สมองของมัน (gateway ต้องรันอยู่)
+{ "mcpServers": { "hermes-messaging": { "command": "hermes", "args": ["mcp", "serve"] } } }</code></pre>
+
+    <div class="alert">
+      <strong>สามพอร์ต อย่าสับสน:</strong> 8642 = API server (แอปเรียก Hermes) · 8644 = inbound webhook (ระบบอื่นยิง event เข้า) · 9119 = dashboard สำหรับ operator ที่มี auth แบบ fail-closed เมื่อ bind ออกนอก loopback และคำสั่งที่คู่มือ third-party บางเจ้าเขียนว่า <code>hermes serve</code> คือ backend แบบ headless ของ Desktop app ไม่ใช่วิธีเปิด API server — คำสั่งทางการคือ <code>hermes gateway</code> พร้อม <code>API_SERVER_ENABLED=true</code>
+    </div>
+
+    <h2 id="th-hardening">Hardening และการ Scale ระนาบ Automation</h2>
+
+    <p>ทุกประตูที่เปิดในบทความนี้เคยมีคนเดินเข้ามาแบบไม่ได้รับเชิญ ใน <a href="/blog/hermes-security">#4 Security</a> ผมเล่าบันทึก CVE ของ Hermes ไว้ในภาพรวม สี่รายการที่เป็นของหัวข้อนี้โดยตรง:</p>
+
+    <div class="table-wrapper">
+      <table>
+        <thead>
+          <tr><th>CVE</th><th>องค์ประกอบ</th><th>สาระ</th></tr>
+        </thead>
+        <tbody>
+          <tr><td><strong>CVE-2026-7113</strong><br>GHSA-mq9g-m88j-mmvx · 27 เม.ย. 2026 · Moderate · CWE-287</td><td><code>gateway/platforms/webhook.py</code></td><td>อาร์กิวเมนต์ <code>_INSECURE_NO_AUTH</code> ปิดการตรวจลายเซ็นบน <code>/webhooks/{route}</code> ได้ — issue #6440 ของชุมชน (9 เม.ย.) บรรยายไว้ก่อนแล้ว รายการ GHSA เป็น mirror ที่ GitHub รีวิวแล้วของ record จาก VulDB (CNA) ไม่ใช่การวิเคราะห์อิสระ และระบุ "Patched versions: Unknown"</td></tr>
+          <tr><td><strong>CVE-2026-7112</strong><br>GHSA-r7hr-pvjh-r4p3 · 27 เม.ย. 2026 · Moderate</td><td><code>gateway/platforms/api_server.py</code> — ฟังก์ชัน <code>_check_auth</code></td><td>improper authentication บนตัวจัดการ <code>API_SERVER_KEY</code> — GHSA เป็น mirror ของ VulDB เช่นกัน และระบุ "Patched versions: Unknown"</td></tr>
+          <tr><td><strong>CVE-2026-14628</strong><br>NVD · 4 ก.ค. 2026 · CVSS 3.1 5.3 (Medium)</td><td><code>gateway/platforms/base.py</code> — ฟังก์ชัน <code>extract_media</code> (องค์ประกอบ "Live Webhook Endpoint")</td><td>path traversal; ระบุ hermes-agent ถึง 2026.5.16</td></tr>
+          <tr><td><strong>CVE-2026-14626</strong><br>NVD · 4 ก.ค. 2026 · CVSS 3.1 4.3 (Medium)</td><td><code>run_agent.py</code> — <code>AIAgent.run_conversation</code> ผ่าน HTTP API</td><td>denial of service ผ่านอาร์กิวเมนต์ <code>todos</code>; ระบุ hermes-agent ถึง 2026.4.30</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <p>สองรายการแรกระบุ hermes-agent 0.8.0 เรื่อง <code>INSECURE_NO_AUTH</code> ต้องเล่าให้ครบ: หน้า webhooks ในเอกสารทางการเอง<em>อนุญาต</em>ให้ใช้มันสำหรับทดสอบบน loopback — มันคือสวิตช์ทดสอบที่มีเอกสารรองรับ ไม่ใช่ backdoor ที่ซ่อนไว้ — สิ่งที่ CVE บันทึกคือสวิตช์นั้นปิดการตรวจลายเซ็นทั้ง route ได้ และคู่มือ PR-review ก็มีบรรทัดที่ควรพิมพ์ติดผนัง: <em>"Never use INSECURE_NO_AUTH in production"</em> อีกสามรายการบนพื้นผิวเดียวกันตอนนี้อยู่บน NVD แล้ว (ตรวจ 1 กันยายน 2026): CVE-2026-10224 (เผยแพร่ 1 มิ.ย. 2026, CVSS 3.1 5.3 — <code>_handle_webhook_request</code> ใน <code>gateway/platforms/feishu.py</code> นำไปสู่ resource consumption โจมตีจากระยะไกลได้ ระบุ 2026.4.0–2026.4.30; แก้ด้วย "webhook body-cap sweep" PR #59215), CVE-2026-53869 (17 มิ.ย. 2026, CVSS 3.1 7.5 HIGH — DNS rebinding บน WebSocket endpoint ข้ามการตรวจ Host/Origin ได้, &lt;0.16.0) และ CVE-2026-53870 (17 มิ.ย. 2026, CVSS 3.1 5.5 — <code>response_store.db</code> และ <code>webhook_subscriptions.json</code> ถูกสร้างด้วยสิทธิ์ 0o644 เปิดเผยประวัติสนทนาและ HMAC secret ให้ผู้ใช้ในเครื่อง, &lt;0.16.0) หลังจากนั้น ระหว่าง 3 กรกฎาคมถึง 6 สิงหาคม ยังมีรายการความรุนแรงต่ำจาก VulDB ทยอยออกมาอีกสิบเอ็ดรายการบนพื้นผิวอื่นของ Hermes — บันทึกรวมอยู่ใน <a href="/blog/hermes-security">#4 Security</a></p>
+
+    <p>เช็กลิสต์ hardening ที่ผมกลั่นจากเอกสารทั้งหมดในบทความนี้:</p>
+
+    <ul>
+      <li>☐ อยู่บน v0.21.0 หรือใหม่กว่า — ทุกรายการข้างบนระบุเวอร์ชันก่อน 0.16.0 ทั้งสิ้น</li>
+      <li>☐ พอร์ต 8644 อยู่หลัง reverse proxy ที่ทำ TLS; ทุก route มี secret ยาวสุ่ม; ใช้ Generic V2 ที่มี timestamp ไม่ใช่ V1</li>
+      <li>☐ ไม่แตะ <code>toolsets</code> ของ route ถ้าไม่จำเป็น — สี่ tool ปลอดภัยคือ default ที่ถูกแล้ว</li>
+      <li>☐ 8642 และ 9900 ฟังที่ 127.0.0.1 เว้นแต่มีเหตุผล และมี key/token เสมอ</li>
+      <li>☐ shell hook ที่ทำหน้าที่ guard ตั้ง <code>fail_closed: true</code> — default fail-open หมายความว่า script พัง = ไม่มีการ์ด</li>
+      <li>☐ <code>cron.allow_agent_scheduling</code> ยังเป็น false และ <code>preflight</code> ยังเป็น true</li>
+      <li>☐ ทดสอบ hook จริงหลังทุกการอัปเดต — ข้อนี้มีที่มา</li>
+    </ul>
+
+    <p>ประวัติเรื่องความน่าเชื่อถือของ hook ไม่ราบรื่นนัก: issue #2817 (hook ไม่ยิง) มาก่อน release note v0.5.0 (28 มีนาคม 2026) ที่ประกาศว่า lifecycle hooks "now fire" และ issue #44582 (เปิด 12 มิถุนายน 2026 บน 0.16.0: "pre_tool_call plugin hook not invoked during agent tool execution") ถูกปิดแบบ <em>not planned</em> โดยไม่มีคำตอบจาก maintainer ที่มองเห็นได้ ผมไม่ได้บอกว่า hook ไม่ทำงานวันนี้ — ผมบอกว่าอย่าเชื่อจนกว่าจะเห็นเอง:</p>
+
+    <pre><code># หลัง hermes update ทุกครั้ง — ให้เป็นส่วนหนึ่งของ runbook
+hermes hooks test pre_tool_call
+hermes hooks test on_session_end
+hermes plugins doctor --ci        # exit code ใช้ใน CI ได้
+hermes cron doctor</code></pre>
+
+    <h3>Chronos — cron สำหรับ gateway ที่หลับได้</h3>
+
+    <p>ปัญหาเชิงสถาปัตยกรรมข้อเดียวของ cron ในตัวคือ มันต้องการ gateway ที่<strong>ตื่นตลอดเวลา</strong>เพื่อ tick ทุก 60 วินาที — ซึ่งขัดกับ hosting แบบ scale-to-zero ที่ตอน #7 พูดถึง v0.17.0 (PR #48275) จึงทำให้ scheduler ถอดเปลี่ยนได้และเพิ่ม provider ชื่อ <strong>Chronos</strong> ตาม wire spec ในเอกสาร <code>docs/chronos-managed-cron-contract.md</code> ของ repo: แทนที่จะ tick เอง gateway ลงทะเบียน job กับบริการภายนอกที่ตั้ง one-shot timer ให้ เมื่อถึงเวลา บริการนั้นเรียกกลับมาที่ <code>/api/cron/fire</code> พร้อม JWT อายุสั้น (ราว 60–120 วินาที, <code>aud=agent:{instance_id}</code>, <code>purpose=cron_fire</code>) gateway ตอบ <code>202 {"status":"accepted"}</code> แล้วรัน job ใน background — at-most-once ผ่าน compare-and-set ฝั่ง store</p>
+
+    <pre><code># config.yaml — เปิดใช้ Chronos; ถ้าไม่ตั้ง ระบบใช้ ticker ในตัวตามเดิม
+cron:
+  provider: chronos
+  chronos:
+    portal_url: …
+    callback_url: …
+    expected_audience: …
+    nas_jwks_url: …</code></pre>
+
+    <p>นี่คือกลไกสำหรับ gateway แบบ hosted ที่ scale to zero — แบบที่ Hermes Cloud โฆษณาไว้ — ให้ยังตั้ง cron ได้โดยไม่ต้องจ่ายค่าเครื่องตอน idle ผมจะไม่พิมพ์ราคาหรือขนาดเครื่องของ Cloud เพราะไม่มีตัวเลขทางการ สำหรับ self-host บน VPS ตัวเดียว ticker ในตัวก็เพียงพอ และ Chronos คือทางเลือกเมื่อคุณย้ายไป hosting ที่คิดเงินตามเวลาทำงานจริง</p>
+
+    <p>ปิดท้ายด้วยข้อสังเกตสำหรับคนที่ย้ายจาก OpenClaw: ตามที่เล่าไว้ในตอน #7 <code>hermes claw migrate</code> ไม่ได้พา cron job และ hook ข้ามมาด้วย — ซึ่งผมมองว่าเป็นโอกาสมากกว่าภาระ heartbeat แต่ละตัวในระบบเดิมควรถูกถามใหม่ว่ามันคือ watchdog (ชั้นที่ 1), monitor (ชั้นที่ 2) หรืองานที่ต้องคิดจริง (cron ปกติ) และผมพนันว่าส่วนใหญ่จะตกอยู่ในสองกลุ่มแรก</p>
+
+    <div class="key-takeaways">
+      <h3>🎯 สิ่งสำคัญที่ต้องจำ</h3>
+      <ul>
+        <li><strong>ห้าประตู</strong> = cron · inbound webhook · hooks/outbound · API server · A2A/peer — เริ่มจาก cron แล้วค่อยขยาย</li>
+        <li><strong>Cron = ไฟล์ธรรมดา</strong> = <code>jobs.json</code> + <code>executions.db</code> + <code>output/*.md</code>; gateway tick ทุก 60 วินาที; agent ตั้งเวลา agent ไม่ได้โดย default</li>
+        <li><strong>Zero-token สามชั้น</strong> = <code>--no-agent</code> (v0.13.0) · monitor-mode ที่ hash เท่าเดิมไม่เรียก LLM (v0.21.0) · <code>deliver_only</code> / <code>hermes send</code></li>
+        <li><strong>Cron ที่จำได้</strong> = memory + continuity + notepad (v0.21.0) และ <code>context_from</code> (v0.12.0) ต่อ job เป็น chain</li>
+        <li><strong>Ops loop</strong> = <code>hermes cron incidents / doctor / runs</code> — error ถูก redact, exit code ใช้ใน monitoring ได้, model-drift guard กันรันด้วย model ที่ไม่ได้ทดสอบ</li>
+        <li><strong>Webhook</strong> = 8644, secret ทุก route, ±300 s replay window, สี่ tool ปลอดภัย — "HMAC authenticates the sender, not the content"</li>
+        <li><strong>ขาออก</strong> = <code>hooks.outbound</code> ลงลายเซ็น HMAC (v0.20.0), shell hook veto ด้วย exit 2 (v0.11.0), Deliverable Mode แนบไฟล์จริง</li>
+        <li><strong>Blueprint</strong> = skill ธรรมดาที่มี schedule ใน frontmatter — ทุกอย่างจากตอน #6 ใช้ได้ หน้าคู่มือแสดง 17 ตัว ณ 1 ก.ย. 2026</li>
+        <li><strong>8642</strong> = OpenAI-compatible API; <code>hermes mcp serve</code> คือ messaging bridge ไม่ใช่ agent; <code>hermes serve</code> ไม่ใช่คำสั่งเปิด API</li>
+        <li><strong>Hardening</strong> = CVE-2026-7113/7112 บน 0.8.0 (GHSA = mirror ของ VulDB, patch ไม่ระบุ) และ 14628/14626 บน NVD ก.ค. 2026; ทดสอบ hook ด้วย <code>hermes hooks test</code> หลังทุก update; Chronos สำหรับ gateway ที่ scale to zero</li>
+      </ul>
+    </div>
+
+    </div>
+    <div class="l-en" lang="en">
+
+    <p>Picture a Monday morning. Before anyone on the team has opened a laptop, the pull requests that sat unreviewed all weekend have a summary waiting in Slack, the dependency that acquired a new CVE overnight already has a ticket, and nobody has typed an instruction since Friday evening. The question this post answers is not <em>whether</em> an agent can do that — it is <em>which door</em> the work should walk through: a schedule, an external event, or another application calling in. And, just as important for whoever pays the bill: which of those rounds never need to spend a token at all.</p>
+
+    <p>The introduction to cron is already in <a href="/blog/hermes-agent-teams">#2 Agent Teams</a>, under "Always-On Work" — the <code>cronjob</code> actions, the schedule dialects, fresh isolated sessions, <code>continuity</code> and <code>context_from</code>, the delivery targets, <code>[SILENT]</code>, <code>no_agent</code>, and v0.21.0's "cron jobs that remember". In <a href="/blog/hermes-integrations">#5 Integrations</a> the API server and A2A each got a brief section. This post does not re-introduce any of that; it is the <strong>ops layer</strong> on top: the files and ledger behind the built-in cron of <strong>Hermes Agent</strong>, the defaults worth knowing, the incidents/doctor/runs loop; inbound webhooks that verify a signature before they believe anything; hooks and outbound webhooks that push events to systems your organization already owns; blueprints, which turn out to be nothing more than a skill with a schedule; and an OpenAI-compatible API server that lets internal apps call Hermes the way they would call any model.</p>
+
+    <p>Readers who followed this blog's OpenClaw series will recognise the heartbeat pattern from <a href="/blog/openclaw-integrations">OpenClaw #5: Integrations</a> — wake the agent periodically and let it check whether anything needs doing. The idea survives in Hermes, but it has been broken into named, inspectable pieces, and the most important of those pieces can leave the model switched off when nothing has changed. I will keep that comparison qualitative. No number in this post is my own measurement; every version, default and quotation comes from the official documentation or the GitHub release notes of Nous Research, as of 1 September 2026 (v0.21.0, tag v2026.8.31).</p>
+
+    <h2 id="en-surfaces">Five Doors Into the Gateway</h2>
+
+    <p>The first thing to internalise is that all of Hermes's automation lives inside the same <strong>gateway daemon</strong> that receives your Telegram and Slack messages — the same VPS or Docker container from <a href="/blog/hermes-production">#7 Production</a>. There is no separate scheduler process and no worker pool. Work reaches that one daemon through five doors:</p>
+
+    <div class="table-wrapper">
+      <table>
+        <thead>
+          <tr><th>Door</th><th>Mechanism</th><th>Best for</th><th>Since</th></tr>
+        </thead>
+        <tbody>
+          <tr><td><strong>Cron</strong></td><td>the gateway ticks every 60 seconds and reads <code>~/.hermes/cron/jobs.json</code></td><td>recurring reports, watchdogs, anything on a rhythm</td><td>present in the earliest release visible on GitHub (v0.2.0, 12 March 2026)</td></tr>
+          <tr><td><strong>Inbound webhook</strong></td><td>HTTP POST to port 8644 with an HMAC signature</td><td>GitHub/GitLab events, monitoring stacks, n8n</td><td>v0.4.0 (March 2026)</td></tr>
+          <tr><td><strong>Hooks / outbound webhooks</strong></td><td>shell scripts at lifecycle moments + signed outbound HTTP POSTs</td><td>vetoing dangerous commands, shipping audit events to a SIEM</td><td>shell hooks v0.11.0 (April 2026), outbound v0.20.0 (August 2026)</td></tr>
+          <tr><td><strong>API server</strong></td><td>OpenAI-compatible endpoint on port 8642</td><td>Open WebUI, internal apps, <code>hermes peer</code></td><td>v0.4.0</td></tr>
+          <tr><td><strong>A2A / peer</strong></td><td>JSON-RPC per the A2A v1.0 standard on port 9900 / peer over the API server</td><td>agents on different hosts talking to each other</td><td>A2A v0.20.0, <code>hermes peer</code> v0.21.0</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <p>My advice for an organization starting out: <strong>begin with cron</strong>. It is the only door where you set the tempo, nothing external can knock, and since v0.13.0 it has a mode that never touches the model. Add inbound webhooks when you want GitHub or your monitoring stack to do the waking. Leave the API server and A2A for last — both open network surfaces with a CVE history of their own, which I keep for the final section.</p>
+
+    <blockquote>💡 If you have read #2, hold the distinction this way: a heartbeat is an agent that wakes up and asks whether anything has happened; a Hermes cron job is a named unit of work with a schedule and a ledger of its own — and, as the next two sections show, it can separate "waking up" from "thinking".</blockquote>
+
+    <h2 id="en-cron">Anatomy of a Cron Job</h2>
+
+    <p>Hermes cron is not the Linux crontab firing bare commands. A job is a <strong>prompt wrapped in metadata</strong> (or a script wrapped in the same metadata), and every piece of state is a plain file you can open yourself:</p>
+
+    <pre><code>~/.hermes/cron/
+├── jobs.json                 # every job definition — written atomically
+├── executions.db             # the ledger: claimed → running → completed | failed | unknown
+├── .tick.lock                # file lock so two ticks never overlap
+└── output/
+    └── {job_id}/
+        └── {timestamp}.md    # every run's output, readable after the fact</code></pre>
+
+    <p>The 60-second tick from #2 has two operational consequences: one minute is the finest schedule resolution you get, and <code>.tick.lock</code> is what stops two processes (say, two gateways accidentally mounting the same volume) from running the same job twice.</p>
+
+    <p>There are three ways to create a job — the CLI (<code>hermes cron create</code>), the <code>cronjob</code> tool the agent calls for itself inside a session, and the dashboard on port 9119 (backed since v0.4.0 by a <code>/api/jobs</code> REST API). I show the tool form because it is the parameter list the documentation spells out most completely; in chat you simply describe the job you want and the agent calls this. For the CLI flags, <code>hermes cron create --help</code> is the source of truth:</p>
+
+    <pre><code># one tool for every action — release v0.3.0 (17 March 2026) folded several commands into it
+cronjob(
+  action="create",            # list | update | pause | resume | run | remove
+  schedule="0 9 * * 1-5",     # five-field cron — weekday mornings
+  name="morning-brief",
+  prompt="Summarise the issues opened in the team repo yesterday, grouped by label",
+  deliver="slack",
+  skills=["github-triage"],   # attach a skill from post #6
+  workdir="/srv/repo",        # scopes file/terminal tools and loads that repo's AGENTS.md (absolute paths only)
+  enabled_toolsets=["web", "file", "terminal"],
+  continuity=True,            # v0.21.0 — remember this job's own previous output
+  context_from="deps-scan",   # v0.12.0 — prepend another job's last successful output
+  reasoning_effort="high",    # v0.21.0 — pinned per job
+  no_agent=False,
+  attach_to_session=False,
+)</code></pre>
+
+    <p>The schedule dialects are covered in #2 (the feature page lists five: relative, interval, natural language, five-field cron, and ISO timestamps). One thing worth adding: the cron feature page lists natural-language forms such as <code>daily at 7am</code>, and #2 uses <code>weekdays at 9am</code> as its example, but the <em>automate-with-cron</em> guide, another official page, states that natural language such as "daily at 9am" is <em>not</em> supported. I have not tested which page matches the code. In production I would standardise on five-field cron, and if you want natural language, test it on your own build (v0.21.0) before you depend on it.</p>
+
+    <p>The <code>cron:</code> block of <code>config.yaml</code> carries defaults an organization should know before touching them:</p>
+
+    <div class="table-wrapper">
+      <table>
+        <thead>
+          <tr><th>Key</th><th>Default</th><th>Meaning</th></tr>
+        </thead>
+        <tbody>
+          <tr><td><code>script_timeout_seconds</code></td><td>3600</td><td>a script may run for one hour (override with <code>HERMES_CRON_SCRIPT_TIMEOUT</code>)</td></tr>
+          <tr><td><code>failure_nudge_threshold</code></td><td>3</td><td>consecutive failures before you get nudged</td></tr>
+          <tr><td><code>misfire_grace_minutes</code></td><td>10</td><td>if the gateway was down and returns within ten minutes, missed jobs still run</td></tr>
+          <tr><td><code>model_drift_guard</code></td><td>true</td><td>an unpinned job snapshots provider/model at creation; if the global default later changes, the job skips its run with a one-time alert</td></tr>
+          <tr><td><code>allow_agent_scheduling</code></td><td>false</td><td>a session started by cron cannot create further cron jobs</td></tr>
+          <tr><td><code>preflight</code></td><td>true</td><td>checks the API key, the attached skills' env and commands, and the delivery targets before dispatch</td></tr>
+          <tr><td><code>mirror_delivery</code></td><td>false</td><td>when true, every run lands as a thread you can continue</td></tr>
+          <tr><td><code>max_parallel_jobs</code></td><td>(unset)</td><td>cap on concurrently running jobs</td></tr>
+          <tr><td><code>cleanup_timeout_seconds</code></td><td>10</td><td>post-run cleanup timeout</td></tr>
+          <tr><td><code>media_send_timeout_seconds</code></td><td>300</td><td>timeout for sending media to a delivery target</td></tr>
+          <tr><td><code>bot_chat_delivery_timeout_seconds</code></td><td>600</td><td>timeout for delivering a result into Bot Chat</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="alert info">
+      <strong>What #2 did not say:</strong> beyond the <code>allow_agent_scheduling: false</code> wall that #2 explains, every prompt is scanned at create/update time for prompt injection, invisible Unicode, SSH backdoors and credential-exfiltration patterns — a suspicious prompt is blocked before it ever runs. That is a direct lesson from the malicious-skill story I told in <a href="/blog/hermes-security">#4 Security</a>.
+    </div>
+
+    <p>On <strong>delivery</strong>: #2 gave a partial list; the full one on the feature page is <code>origin</code>, <code>local</code>, <code>telegram</code>, <code>discord</code>, <code>slack</code>, <code>whatsapp</code>, <code>signal</code>, <code>matrix</code>, <code>mattermost</code>, <code>email</code>, <code>sms</code>, <code>homeassistant</code>, <code>dingtalk</code>, <code>feishu</code>, <code>wecom</code>, <code>weixin</code>, <code>bluebubbles</code>, <code>qqbot</code>, <code>bot-chat</code> and <code>all</code>. You can target a specific chat and thread (<code>telegram:-100123:17585</code>) or fan out to several targets separated by commas. The <code>[SILENT]</code> rule is in #2; two things to add: a suppressed result is still saved under <code>output/</code>, and <strong>a failed job always delivers</strong>, however quiet you asked it to be.</p>
+
+    <p>As for what a job may use: <code>toolsets.py</code> defines a <code>hermes-cron</code> toolset that mirrors <code>hermes-cli</code>, then per-job <code>enabled_toolsets</code> and the cron platform entry in <code>hermes tools</code> override it in that order. And <code>workdir</code> does more than fence the file and terminal tools — it also loads <code>AGENTS.md</code>, <code>CLAUDE.md</code> or <code>.cursorrules</code> from that directory, so a job working on a repository inherits that repository's rules without you pasting them into the prompt.</p>
+
+    <h2 id="en-zero-token">Zero-Token Automation: Work That Never Wakes the Model</h2>
+
+    <p>This is where Hermes cron most clearly parts company with the OpenClaw-era heartbeat. In the heartbeat pattern every wake-up is an LLM call, even when nothing has changed. Hermes offers <strong>three layers</strong> that remove that cost.</p>
+
+    <h3>Layer 1 — script-only jobs (<code>--no-agent</code>, v0.13.0)</h3>
+
+    <p>#2 gave <code>no_agent=True</code> one sentence; this is its full contract. Release v0.13.0, "The Tenacity Release" (7 May 2026), added <strong>watchdog mode</strong>: a job that runs an ordinary script with no agent in the loop at all.</p>
+
+    <pre><code># scripts must live in $HERMES_HOME/scripts/ — path traversal is rejected
+cat &gt; ~/.hermes/scripts/watchdog.sh &lt;&lt;'EOF'
+#!/usr/bin/env bash
+# the shebang is ignored — .sh/.bash always run under bash, anything else under the current Python
+code=$(curl -s -o /dev/null -w '%{http_code}' https://intranet.example.ac.th/health)
+if [ "$code" != "200" ]; then
+  echo "⚠️ intranet health = $code"     # stdout present → this text is delivered as-is
+  exit 0
+fi
+# exit 0 + empty stdout = a silent tick: nothing sent, no tokens spent
+EOF
+
+hermes cron create "every 5m" --no-agent --script watchdog.sh --deliver telegram</code></pre>
+
+    <p>The watchdog contract fits in four lines: <code>exit 0</code> with empty stdout is silent; any stdout is delivered verbatim; a non-zero exit or a timeout raises an error alert; and if the last line of stdout is <code>{"wakeAgent": false}</code> the tick is treated as silent too. The detail I like most is that the subprocess environment is <strong>scrubbed of provider credentials</strong> — a script you wrote (or one the agent wrote for you) does not walk away with your model API keys.</p>
+
+    <h3>Layer 2 — monitor mode that skips the LLM when nothing changed (v0.21.0)</h3>
+
+    <p>v0.21.0 "Pantheon" (31 August 2026) added <strong>hash-suppressed change detection</strong> (PR #81138): a job in monitor mode hashes what it is watching, compares it with the previous run, and if nothing changed it <em>never calls the model</em>. This is the direct answer to the complaint I made in the earlier series about heartbeats that pay for the privilege of reporting that nothing happened. A sourcing caveat: as of this writing, monitor mode appears in the v0.21.0 release notes and PR #81138 <em>only</em> — the rendered cron documentation does not describe it yet. So I have found no percentage for what it saves and will not invent one, but the logic is plain: an unchanged round costs zero tokens.</p>
+
+    <h3>Layer 3 — <code>deliver_only</code> and <code>hermes send</code></h3>
+
+    <p>The webhook side has the same idea: a route with <code>deliver_only: true</code> (v0.11.0, PR #12473) forwards the transformed payload to a channel without involving the agent. And for any script on the box there is <code>hermes send</code>, from v0.15.0 "The Velocity Release" (28 May 2026, PR #27188), which the release note describes as "pipe any script's output to any messaging platform":</p>
+
+    <pre><code># one-shot delivery to a configured channel — no agent loop, no tokens
+hermes send --to slack "Backup finished: 2.1 GB"
+hermes send --to telegram --file /var/log/nightly-report.pdf
+hermes send --list             # which targets are available
+
+# bolt it onto the scripts you already run
+./run-etl.sh 2&gt;&amp;1 | tail -n 5 | xargs -0 hermes send --to slack</code></pre>
+
+    <p>A detail that matters for scripts on a server: for the bot-token platforms — Telegram, Discord, Slack, Signal, SMS and the WhatsApp Cloud API — <code>hermes send</code> delivers on its own, with <strong>no running gateway required</strong>; plugin platforms still need one.</p>
+
+    <div class="alert">
+      <strong>The rule I apply:</strong> ask first whether this round needs <em>judgement</em>. If the answer is "check and report", use layer 1 or 3. If the job watches something that rarely changes, use layer 2. Keep the model for the rounds that must read, summarise or decide — <a href="/blog/hermes-models-cost">#9 Models &amp; Cost</a> puts a price on the tokens this saves.
+    </div>
+
+    <h2 id="en-remember">Cron That Remembers — and the Ops Loop</h2>
+
+    <p>All three bridges across runs are already in #2 — <code>context_from</code> (v0.12.0, 30 April 2026, PR #15606), which prepends the most recent successful output of <em>another</em> job; <code>continuity=True</code>, which injects the same job's previous output; and v0.21.0's persistent memory and per-job notepad. Two things #2 did not say: the memory a cron agent loads is the same bounded <code>MEMORY.md</code> whose rules and caps are in <a href="/blog/hermes-memory">#3 Memory</a> (so what a job learns at 2 a.m. is there for your session at 9), and, as of this writing, cron memory and the notepad rest on the v0.21.0 release notes and PR #81138 <em>only</em> — the rendered cron page still documents just <code>continuity</code> and <code>context_from</code>. Here is what the chain looks like in practice:</p>
+
+    <pre><code># a two-step chain: scan at 01:00, let the 02:00 job read that result
+cronjob(action="create", name="deps-scan", schedule="0 1 * * *",
+        prompt="Run pip-audit and npm audit in the repo; report only CVSS ≥ 7",
+        workdir="/srv/repo", deliver="local")
+
+cronjob(action="create", name="deps-triage", schedule="0 2 * * *",
+        context_from="deps-scan",     # deps-scan's last successful output is prepended
+        continuity=True,              # and it remembers which issues it opened last time
+        prompt="From the attached scan, open issues for the team; skip anything already filed",
+        deliver="slack")</code></pre>
+
+    <p>Two more v0.21.0 additions ops people will appreciate: output can land in a bot's own <strong>Bot Chat</strong> (the Bot Mode concept lives in #2 — I will not re-explain it), and a <strong>"Trigger now"</strong> button (#70638) in the Desktop app and the dashboard runs a job immediately for testing without touching its schedule — on the CLI the same verb is <code>hermes cron run &lt;job&gt;</code>.</p>
+
+    <h3>The ops loop: incidents → doctor → runs</h3>
+
+    <p>A cron system that runs while nobody is watching must answer "did anything break last night?" in three commands:</p>
+
+    <pre><code># 1) what the system noticed — detected → alerted → closed
+hermes cron incidents
+hermes cron incidents ack &lt;incident-id&gt;    # v0.21.0: an acked failure signature stops re-pinging (#95017)
+
+# 2) read-only health check — exits 1 on problems, so it slots straight into monitoring
+hermes cron doctor
+#   checks: last run failed / delivery failed / stale next_run_at / missing script / missing workdir
+
+# 3) run history
+hermes cron runs deps-triage --limit 20</code></pre>
+
+    <p>Details I give credit for: incident error text is <strong>redacted before storage</strong>, because stack traces drag credentials along; <code>hermes cron doctor</code> is designed so its exit code means something, which is exactly what the monitoring section of #7 wants. And the <strong>model-drift guard</strong> is a piece of care I have not seen in other agents' cron systems: change the global default with <code>hermes model</code> and every unpinned job skips its run with a one-time alert, instead of silently executing with a model you never tested against that prompt (resolution order is per-job pin → <code>cron.model</code> → the global default).</p>
+
+    <p>For output you want to keep talking to, set <code>cron.mirror_delivery: true</code> globally or <code>attach_to_session=True</code> per job; on thread-capable platforms (Telegram topics, Discord and Slack threads) each run opens its own thread you can reply in as if you were chatting with the agent. Slack's in-channel mode additionally needs <code>slack.cron_continuable_surface: in_channel</code> with <code>reply_in_thread: false</code>.</p>
+
+    <hr>
+
+    <h2 id="en-webhooks">Inbound Webhooks Done Properly</h2>
+
+    <p>The webhook adapter arrived in v0.4.0 (tag v2026.3.23, published 24 March 2026) in the same batch as Signal, DingTalk, SMS, Mattermost and Matrix. Hermes treats it as one more "platform", like Telegram — except the sender is a machine rather than a person. The ground rules fit in one table:</p>
+
+    <div class="table-wrapper">
+      <table>
+        <thead>
+          <tr><th>Item</th><th>Value</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>Default port</td><td>8644 (env <code>WEBHOOK_PORT</code>; enabled with <code>WEBHOOK_ENABLED</code>)</td></tr>
+          <tr><td>Endpoints</td><td><code>POST /webhooks/&lt;route-name&gt;</code> and <code>GET /health</code></td></tr>
+          <tr><td>Signatures accepted</td><td>GitHub <code>X-Hub-Signature-256</code> · GitLab <code>X-Gitlab-Token</code> · Generic V2 <code>X-Webhook-Signature-V2</code> + <code>X-Webhook-Timestamp</code> (HMAC-SHA256 over <code>&lt;timestamp&gt;.&lt;body&gt;</code>, accepted within ±300 seconds) · Generic V1 is deprecated and has no replay protection</td></tr>
+          <tr><td>Secret</td><td>required on every route — no exceptions</td></tr>
+          <tr><td>Rate limit</td><td>30 requests/minute per route</td></tr>
+          <tr><td>Body size</td><td>1 MB</td></tr>
+          <tr><td>Idempotency</td><td>a 1-hour cache keyed on <code>X-GitHub-Delivery</code> / <code>X-Request-ID</code></td></tr>
+          <tr><td>Response codes</td><td>200 · 400 · 401 · 404 · 413 · 429 · 502</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <p>Static routes live in <code>config.yaml</code> under <code>platforms.webhook.extra.routes.&lt;name&gt;</code>. This is the skeleton of the PR-review recipe the official docs publish:</p>
+
+    <pre><code># config.yaml — shape follows the official webhook-github-pr-review guide
+platforms:
+  webhook:
+    enabled: true
+    extra:
+      port: 8644
+      rate_limit: 30
+      routes:
+        pr-review:
+          secret: "&lt;long-random-secret&gt;"      # the same value goes into GitHub's webhook settings
+          events: [pull_request]
+          prompt: |
+            Review PR "{pull_request.title}" in {repository.full_name}.
+            The payload carries no diff — run: gh pr diff {number} --repo {repository.full_name}
+            Summarise risks and suggestions in at most 10 points.
+          deliver: github_comment
+        alerts:
+          secret: "&lt;another-secret&gt;"
+          deliver_only: true                    # skips the agent — zero tokens
+          deliver: telegram</code></pre>
+
+    <p>What the template can do: dot-notation into the payload (<code>{pull_request.title}</code>), and <code>{__raw__}</code>, which dumps the whole payload as JSON truncated at 4,000 characters. Each route may also carry <code>filters</code> (exists / missing / equals / not_equals / contains / in / in_file / regex, composed with all / any / not) to screen events before they reach the agent, and a <code>script</code> transform from <code>~/.hermes/scripts/</code> — JSON on stdout replaces the payload, while empty stdout, <code>[SILENT]</code>, or <code>{"__hermes_ignore__": true}</code> returns 200 and quietly drops the event. Webhook <code>deliver</code> adds <code>log</code> and <code>github_comment</code> to the usual channel list.</p>
+
+    <div class="alert danger">
+      <strong>The webhook toolset has exactly four tools — on purpose:</strong> a session woken by a webhook gets <code>web_search</code>, <code>web_extract</code>, <code>vision_analyze</code> and <code>clarify</code> and nothing else (<code>_HERMES_WEBHOOK_SAFE_TOOLS</code> in <code>toolsets.py</code> states the reason plainly: "to prevent prompt injection attacks"). No terminal, no file access. The docs compress the principle into one sentence worth memorising — <em>"HMAC validation authenticates the sender, not the content."</em> The signature proves GitHub sent it; anyone can write the PR title. The official PR-review guide repeats the warning — "PR titles and descriptions are attacker-controlled" — and tells you to run the gateway in Docker or a VM when it is internet-exposed.
+    </div>
+
+    <p>If a route genuinely needs more — the recipe above asks the agent to run <code>gh pr diff</code>, which is outside those four tools — the route's <code>toolsets</code> key <strong>replaces</strong> the platform default wholesale; it does not merge. Open only what the job needs, and know that you are lowering a wall when you do. On the GitHub side you point the webhook at <code>https://&lt;host&gt;/webhooks/pr-review</code>, choose JSON as the content type, paste the same secret, and select the <em>Pull requests</em> event. The guide says the comment lands on the PR in roughly 30–90 seconds, and duplicate deliveries from GitHub are deduplicated for one hour.</p>
+
+    <h3>Subscribing without a restart</h3>
+
+    <p>Beyond static routes there are <strong>dynamic subscriptions</strong> that take effect immediately:</p>
+
+    <pre><code>hermes webhook subscribe ci-failed \
+  --events workflow_run \
+  --prompt "Read the failed workflow's log and summarise the likely cause" \
+  --deliver telegram --deliver-chat-id -100123 \
+  --skills ci-triage
+
+hermes webhook list
+hermes webhook test ci-failed --payload ./sample.json   # fire a sample payload at the route
+hermes webhook remove ci-failed
+
+# stored in ~/.hermes/webhook_subscriptions.json
+# on a name collision, the static config.yaml route wins</code></pre>
+
+    <p>The docs are explicit: <em>"No gateway restart required — subscribe and it's immediately live."</em> One thing I want you to notice: the agent itself has <strong>no webhook tool</strong>. When you say in chat "set up a webhook for GitLab events", it uses the terminal tool to run the <code>hermes webhook subscribe</code> command above, guided by a bundled skill called <code>webhook-subscriptions</code> (the SKILL.md anatomy is in <a href="/blog/hermes-skills">#6 Skills</a>). Which means a session without the terminal tool cannot do it — correct behaviour, for a session that was itself woken by a webhook.</p>
+
+    <p>A small market has already formed around port 8644 — Hookdeck publishes a guide to putting its own relay in front of Hermes, and fast.io a guide to having n8n call <code>hermes webhook subscribe</code> with an HMAC-computing node. Both are vendor marketing; I cite them only as evidence that organizations are wiring their existing workflow tools in front of this door, not as recommendations.</p>
+
+    <h2 id="en-outbound">Pushing Events Out: Outbound Webhooks, Shell Hooks, and Deliverable Mode</h2>
+
+    <p>The outbound side has three doors that are entirely different from one another, and I want the difference to be sharp, because the docs call several of them "hooks".</p>
+
+    <h3>1) Signed outbound webhooks (v0.20.0)</h3>
+
+    <p>PR #69406 (merged 2 August 2026, shipped in v0.20.0 "Herald" the next day) added <code>hooks.outbound</code>: whenever a lifecycle event fires, the gateway POSTs to a URL you choose, with an HMAC. This is how the observability section of #7 gets lifecycle events without scraping logs:</p>
+
+    <pre><code># config.yaml
+hooks:
+  outbound:
+    - name: siem
+      url: https://siem.example.ac.th/hermes
+      events: [on_session_end, subagent_stop, post_tool_call]   # any event from the plugin-hook catalog
+      secret_env: HERMES_SIEM_SECRET        # read from ~/.hermes/.env — preferred over an inline secret:
+      timeout: 10                           # 1–60 seconds
+      matcher: "^(terminal|write_file)$"    # regex to narrow tool-scoped events to the tools you care about</code></pre>
+
+    <pre><code># what the receiver sees
+POST /hermes HTTP/1.1
+Content-Type: application/json
+X-Hermes-Event: post_tool_call
+X-Hermes-Delivery: &lt;delivery-id&gt;
+X-Hermes-Signature-256: sha256=&lt;hex of HMAC-SHA256 over the raw body&gt;
+
+{ "hook_event_name": "post_tool_call", "tool_name": "terminal", "session_id": "…",
+  "delivery_id": "…", "timestamp": "…", … }      # same shape as shell-hook stdin, plus the last two fields</code></pre>
+
+    <p>Delivery is <strong>fire-and-forget</strong> through a bounded queue and a single daemon thread: one retry with backoff on a connection error or 5xx, no retry on 4xx, 3xx not followed, and edits to the target list take effect on the next CLI session or gateway restart. Put bluntly, this is not a message queue with delivery guarantees. If your organization needs at-least-once, put a relay that owns that responsibility in between. <code>hermes hooks list</code> shows outbound targets alongside shell hooks.</p>
+
+    <h3>2) Shell hooks that can veto (v0.11.0)</h3>
+
+    <p>Shell hooks (v0.11.0, 23 April 2026, PR #13296) are a different animal from webhooks: local scripts that run at <em>moments</em> in the agent's loop, and at some of those moments can <strong>block</strong> the action:</p>
+
+    <pre><code># config.yaml
+hooks:
+  pre_tool_call:
+    - matcher: "^terminal$"
+      command: ~/.hermes/agent-hooks/guard-terminal.sh
+      timeout: 30          # default 60, maximum 300
+      fail_closed: true    # if the script breaks, block (the default is fail-open!)</code></pre>
+
+    <pre><code>#!/usr/bin/env bash
+# ~/.hermes/agent-hooks/guard-terminal.sh — reads JSON on stdin
+payload=$(cat)
+cmd=$(printf '%s' "$payload" | jq -r '.tool_input.command // ""')
+if printf '%s' "$cmd" | grep -Eq 'rm -rf /|mkfs|DROP TABLE'; then
+  echo '{"action":"block","reason":"dangerous command — needs a human"}'
+  exit 2              # exit code 2 also blocks
+fi
+exit 0</code></pre>
+
+    <p>The stdin fields are <code>hook_event_name</code>, <code>tool_name</code>, <code>tool_input</code>, <code>session_id</code>, <code>cwd</code> and <code>extra</code>. A <code>pre_tool_call</code> hook may answer with <code>{"action":"block"|"modify"}</code> or with the Claude Code form <code>{"decision":"block"}</code> — deliberately, so hooks an organization wrote for Claude Code can move across. The first time any (event, command) pair fires, Hermes asks for consent and records it in <code>~/.hermes/shell-hooks-allowlist.json</code> (bypass with <code>--accept-hooks</code> or <code>HERMES_ACCEPT_HOOKS=1</code> on headless machines).</p>
+
+    <pre><code>hermes hooks list                 # shell hooks + outbound targets
+hermes hooks test pre_tool_call   # fire a synthetic event — do this after every config change
+hermes hooks doctor
+hermes hooks revoke               # withdraw a consent you gave earlier</code></pre>
+
+    <p>Besides the 26 plugin-level hooks the plugins doc lists (directive: <code>pre_tool_call</code>, <code>pre_llm_call</code>, <code>pre_verify</code>, <code>pre_gateway_dispatch</code>; the transform family; and observers such as <code>on_session_start/end</code>, <code>subagent_start/stop</code>, <code>kanban_task_*</code>), there is a separate set of gateway-only events — <code>gateway:startup</code>, <code>session:start/end/reset/compress</code>, <code>agent:start/step/end</code>, <code>reaction:added/removed</code>, <code>command:*</code>. Bounded hooks time out after <code>plugins.hook_callback_timeout</code> (30 seconds by default, 600 at most), and <code>pre_tool_call</code> is the only one that <strong>fails closed</strong> on timeout; the rest fail open.</p>
+
+    <h3>3) Deliverable Mode — the files an agent produces reach the people in the chat</h3>
+
+    <p>The last outbound door carries <em>files</em>, not events. In <strong>Deliverable Mode</strong> the gateway scans the agent's response for absolute (<code>/tmp/report.pdf</code>) or home-relative (<code>~/out/chart.png</code>) paths with supported extensions and uploads them as native attachments on Slack, Discord, Telegram, WhatsApp and Signal — images inline, audio as voice notes, everything else as files. Paths inside code blocks are ignored, and source files such as <code>.py</code> are deliberately excluded. Kanban workers can attach deliverables to <code>kanban_complete</code> too. The doc warns that <em>"the agent doesn't reach for artifacts by default"</em> — if you want the morning cron job to send a PDF instead of a wall of text, say so in the prompt or in <code>AGENTS.md</code>/<code>SOUL.md</code>.</p>
+
+    <blockquote>💡 "Artifact" means three unrelated things in Hermes: Deliverable Mode above; the right-rail viewer in the Desktop app (PR #72345, v0.20.0 — a pure UI feature, persisted in that machine's localStorage); and the "task artifact" of the A2A protocol. Do not expect a central artifact store your pipelines can pull from — there is none today, and issue #19489 asking for an artifact-builder skill is still open.</blockquote>
+
+    <hr>
+
+    <h2 id="en-blueprints">Blueprints: A Skill With a Schedule</h2>
+
+    <p>If cron is the engine, <strong>Automation Blueprints</strong> (v0.17.0, 19 June 2026, PR #41309) are the dashboard that lets people who never want to see cron syntax drive it — the release note's summary is <em>"Pick an automation by name and Hermes asks you for what it needs — no cron syntax."</em> But the line I want you to remember is the one in <code>tools/blueprints.py</code>:</p>
+
+    <blockquote>"A blueprint is NOT a new object type. It is an ordinary skill that additionally declares an automation schedule in its frontmatter."</blockquote>
+
+    <p>Everything you know from <a href="/blog/hermes-skills">#6 Skills</a> therefore applies unchanged. Take an existing SKILL.md, add a <code>metadata.hermes.blueprint</code> block, and it becomes a blueprint that flows through the same skills-hub pipeline — which, by the docs' own logic, means every mechanism that wraps a skill (including the install-time scanning described in #6) wraps a blueprint too:</p>
+
+    <pre><code>---
+name: nightly-backlog-triage
+description: Rank the open backlog every night and post a summary to the team's Slack
+metadata:
+  hermes:
+    blueprint:                   # shape follows the BlueprintSpec fields — verify against tools/blueprints.py before relying on it
+      schedule: "0 2 * * *"      # skill_name, schedule, deliver (default origin), prompt,
+      deliver: slack             # no_agent, model, provider, enabled_toolsets
+      prompt: "Run this skill against the team repository"
+      enabled_toolsets: [web, file, terminal]
+---
+
+# Nightly Backlog Triage
+1. Fetch every open issue with gh …
+2. Group by label and age …</code></pre>
+
+    <p>One definition is rendered four ways: a form in the dashboard, a <code>/blueprint</code> command in the CLI, the TUI and the messengers, a conversation in which the agent asks for what it needs one question at a time, and an entry in the docs catalog. The developer-facing <em>Automation Blueprints</em> page shows examples any software organization will recognise:</p>
+
+    <div class="table-wrapper">
+      <table>
+        <thead>
+          <tr><th>Blueprint</th><th>What it does</th></tr>
+        </thead>
+        <tbody>
+          <tr><td><strong>Nightly Backlog Triage</strong></td><td>groups and ranks the open backlog — the catalog example runs on <code>0 2 * * *</code></td></tr>
+          <tr><td><strong>Automatic PR Code Review</strong></td><td>reviews new PRs and comments back — triggered by a webhook, not cron</td></tr>
+          <tr><td><strong>Docs Drift Detection</strong></td><td>checks whether the documentation still matches the code</td></tr>
+          <tr><td><strong>Dependency Security Audit</strong></td><td>reports vulnerabilities at CVSS ≥ 7.0</td></tr>
+          <tr><td><strong>Issue Auto-Labeling</strong></td><td>labels incoming issues</td></tr>
+          <tr><td><strong>CI Failure Analysis</strong></td><td>explains why a workflow failed</td></tr>
+          <tr><td><strong>Auto-Port Changes Across Repos</strong></td><td>carries a patch across repositories</td></tr>
+          <tr><td><strong>Security Audit Pipeline · Deploy Verification · Alert Triage · Uptime Monitor</strong></td><td>the ops set</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <p>The <em>Automation Blueprints</em> guide page (hermes-agent.nousresearch.com/docs/guides/automation-blueprints) lists <strong>17 blueprints</strong> as of 1 September 2026 — beyond the table above it adds Competitive Repository Scout, AI News Digest, Paper Digest, Stripe Payment Monitoring, Daily Revenue Summary and Content Pipeline (that count is attributed to the guide page only; the reference catalog is client-rendered and I could not count it). The organizational consequence of "blueprint = skill" is the useful part: you manage them the way you manage every skill — through the skills hub, through profile export — and when you are looking after many machines, <a href="/blog/hermes-desktop-fleet">#10 Desktop &amp; Fleet</a> picks the story up.</p>
+
+    <h2 id="en-backend">Hermes as a Backend for the Apps You Already Run</h2>
+
+    <p>The fifth door is the inversion: instead of Hermes calling other systems, other systems call Hermes. Since v0.4.0 the gateway carries an <strong>OpenAI-compatible API server</strong> (the release note says it shipped "hardened with input limits, field whitelists, SQLite-backed response persistence, and CORS origin protection" from day one):</p>
+
+    <pre><code># ~/.hermes/.env  (or gateway.api_server.* in config.yaml — env wins)
+API_SERVER_ENABLED=true
+API_SERVER_KEY=&lt;long-random-key&gt;      # mandatory, even on loopback
+
+# start the gateway as usual — the API server listens on http://127.0.0.1:8642
+hermes gateway</code></pre>
+
+    <pre><code># any OpenAI client works
+curl http://127.0.0.1:8642/v1/chat/completions \
+  -H "Authorization: Bearer $API_SERVER_KEY" \
+  -H "X-Hermes-Session-Key: helpdesk-user-4471" \
+  -H "Content-Type: application/json" \
+  -d '{"model":"hermes","messages":[{"role":"user","content":"Summarise my open tickets"}],"stream":true}'
+# the model name is configurable via gateway.api_server.model_name — read the real value from GET /v1/models</code></pre>
+
+    <div class="table-wrapper">
+      <table>
+        <thead>
+          <tr><th>Endpoint</th><th>Behaviour</th></tr>
+        </thead>
+        <tbody>
+          <tr><td><code>POST /v1/chat/completions</code></td><td>stateless; SSE streaming with <code>hermes.tool.progress</code> events so a UI can show which tool the agent is using (v0.7.0)</td></tr>
+          <tr><td><code>POST /v1/responses</code></td><td>server-side history via <code>previous_response_id</code> or a named <code>conversation</code>; SQLite store, LRU of 100 responses</td></tr>
+          <tr><td><code>POST /v1/runs</code> · <code>GET /v1/runs/{id}</code> · <code>/events</code></td><td>long asynchronous jobs with SSE; stoppable with <code>POST /v1/runs/{id}/stop</code> (v0.12.0)</td></tr>
+          <tr><td><code>GET /v1/models</code> · <code>GET /v1/capabilities</code></td><td>lets a client discover what this server can do</td></tr>
+          <tr><td><code>X-Hermes-Session-Id</code> / <code>X-Hermes-Session-Key</code></td><td>Id = the transcript; Key (≤256 characters) = a stable memory scope per user</td></tr>
+          <tr><td><code>/p/&lt;profile&gt;/…</code></td><td>several profiles on one server, each with its own key</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <p>Limits to know before you design around it: <strong>no file upload</strong>, a default cap of 10 concurrent runs (<code>max_concurrent_runs</code>), and the <code>hermes-api-server</code> toolset drops <code>clarify</code>, TTS, <code>computer_use</code> and <code>send_message</code> — there is no human on the other end to ask.</p>
+
+    <p>The first app most organizations plug in is <strong>Open WebUI</strong> — and Open WebUI's own documentation carries a "Connect an agent → Hermes Agent" page: base URL <code>http://localhost:8642/v1</code> (<code>host.docker.internal</code> from Docker; the <code>/v1</code> suffix is required), the API key is <code>API_SERVER_KEY</code>, and the gateway must stay running. Hermes's Open WebUI page adds that tools execute on the API-server host, that Open WebUI talks server-to-server so no CORS setting is needed, and that per-user isolation is done with profiles on separate ports.</p>
+
+    <h3><code>hermes peer</code>, A2A, and what <code>hermes mcp serve</code> does not do</h3>
+
+    <p>These three are routinely confused with one another:</p>
+
+    <ul>
+      <li><strong><code>hermes peer</code></strong> (v0.21.0, PR #88725) lets two Hermes instances talk across hosts — but it is <em>not</em> A2A. The PR says it "uses the peer's existing api_server platform as the wire" (POST <code>/api/sessions/{id}/chat</code> with a bearer key). Peers are configured under <code>bot_peers</code>, keys live in <code>.env</code> as <code>HERMES_PEER_&lt;NAME&gt;_KEY</code>, and the CLI is <code>hermes peer add|dm|run --idempotency-key|status|stop</code>. Replies land in each side's Bot Chat.</li>
+      <li><strong>A2A</strong> (a bundled plugin implementing A2A v1.0, PR #77109, v0.20.0) listens on port 9900, serves <code>/.well-known/agent-card.json</code> and JSON-RPC 2.0 (SendMessage, SendStreamingMessage, GetTask, ListTasks, CancelTask) — for talking to <em>other vendors'</em> agents that speak the standard. The client toolset is off by default, the server binds 127.0.0.1 by default, a remote bind requires a token, and there is an audit log at <code>~/.hermes/a2a_audit.jsonl</code>. The doc itself says that for same-machine work you should prefer delegation or Kanban (#2).</li>
+      <li><strong><code>hermes mcp serve</code></strong> (v0.6.0, 30 March 2026) does <em>not</em> expose the agent to anyone. The <code>mcp_serve.py</code> docstring says it exists to "expose messaging conversations as MCP tools": ten messaging-bridge tools (<code>conversations_list</code>, <code>messages_read</code>, <code>messages_send</code>, <code>events_wait</code>, <code>permissions_respond</code> and so on) over stdio only. There is no "ask the agent" tool. If you want Claude Desktop to read and answer messages in the channels Hermes manages, this is the thing for that; if you want an app to make Hermes <em>think</em>, go back to 8642.</li>
+    </ul>
+
+    <pre><code># Claude Desktop config — this reaches Hermes's inbox, not its brain (the gateway must be running)
+{ "mcpServers": { "hermes-messaging": { "command": "hermes", "args": ["mcp", "serve"] } } }</code></pre>
+
+    <div class="alert">
+      <strong>Three ports, do not mix them up:</strong> 8642 = API server (apps call Hermes) · 8644 = inbound webhooks (other systems push events in) · 9119 = the operator dashboard, with fail-closed auth on any non-loopback bind. And the <code>hermes serve</code> that one third-party guide uses is the Desktop app's headless backend, not the way to start the API server — the documented path is <code>hermes gateway</code> with <code>API_SERVER_ENABLED=true</code>.
+    </div>
+
+    <h2 id="en-hardening">Hardening and Scaling the Automation Plane</h2>
+
+    <p>Every door opened in this post has had an uninvited visitor. <a href="/blog/hermes-security">#4 Security</a> tells the CVE record as a whole; four entries belong specifically here:</p>
+
+    <div class="table-wrapper">
+      <table>
+        <thead>
+          <tr><th>CVE</th><th>Component</th><th>Substance</th></tr>
+        </thead>
+        <tbody>
+          <tr><td><strong>CVE-2026-7113</strong><br>GHSA-mq9g-m88j-mmvx · 27 April 2026 · Moderate · CWE-287</td><td><code>gateway/platforms/webhook.py</code></td><td>the <code>_INSECURE_NO_AUTH</code> argument could disable signature verification on <code>/webhooks/{route}</code> — community issue #6440 (9 April) had described it first. The GHSA entry is a GitHub-reviewed mirror of the VulDB (CNA) record, not independent analysis, and lists "Patched versions: Unknown".</td></tr>
+          <tr><td><strong>CVE-2026-7112</strong><br>GHSA-r7hr-pvjh-r4p3 · 27 April 2026 · Moderate</td><td><code>gateway/platforms/api_server.py</code> — function <code>_check_auth</code></td><td>improper authentication in the <code>API_SERVER_KEY</code> handler — likewise a GHSA mirror of VulDB, "Patched versions: Unknown"</td></tr>
+          <tr><td><strong>CVE-2026-14628</strong><br>NVD · 4 July 2026 · CVSS 3.1 5.3 (Medium)</td><td><code>gateway/platforms/base.py</code> — function <code>extract_media</code> (component "Live Webhook Endpoint")</td><td>path traversal; names hermes-agent up to 2026.5.16</td></tr>
+          <tr><td><strong>CVE-2026-14626</strong><br>NVD · 4 July 2026 · CVSS 3.1 4.3 (Medium)</td><td><code>run_agent.py</code> — <code>AIAgent.run_conversation</code> via the HTTP API</td><td>denial of service through the <code>todos</code> argument; names hermes-agent up to 2026.4.30</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <p>The first two name hermes-agent 0.8.0. The <code>INSECURE_NO_AUTH</code> story needs its full context: the official webhooks page itself <em>sanctions</em> it for loopback testing — it is a documented test switch, not a hidden backdoor — and what the CVE records is that the switch can disable signature verification for a whole route. The PR-review guide carries the line worth pinning to the wall: <em>"Never use INSECURE_NO_AUTH in production."</em> Three further entries on the same surface are now NVD-listed (checked 1 September 2026): CVE-2026-10224 (published 1 June 2026, CVSS 3.1 5.3 — <code>_handle_webhook_request</code> in <code>gateway/platforms/feishu.py</code> leads to resource consumption, remotely triggerable, 2026.4.0–2026.4.30; fixed by the "webhook body-cap sweep" PR #59215), CVE-2026-53869 (17 June 2026, CVSS 3.1 7.5 HIGH — a DNS-rebinding vulnerability in WebSocket endpoints that bypasses Host and Origin validation, &lt;0.16.0) and CVE-2026-53870 (17 June 2026, CVSS 3.1 5.5 — <code>response_store.db</code> and <code>webhook_subscriptions.json</code> created world-readable at 0o644, exposing conversation history and HMAC secrets to local users, &lt;0.16.0). After that, between 3 July and 6 August, a steady trickle of eleven further low-severity VulDB entries landed on other Hermes surfaces — the consolidated record is in <a href="/blog/hermes-security">#4 Security</a>.</p>
+
+    <p>The hardening checklist I distilled from every document in this post:</p>
+
+    <ul>
+      <li>☐ Run v0.21.0 or later — every entry above names a version before 0.16.0.</li>
+      <li>☐ Port 8644 sits behind a TLS-terminating reverse proxy; every route has a long random secret; use Generic V2 with its timestamp, never V1.</li>
+      <li>☐ Leave a route's <code>toolsets</code> alone unless you must — the four safe tools are the right default.</li>
+      <li>☐ 8642 and 9900 listen on 127.0.0.1 unless there is a reason, and always carry a key or token.</li>
+      <li>☐ A shell hook acting as a guard sets <code>fail_closed: true</code> — the fail-open default means a broken script is no guard at all.</li>
+      <li>☐ <code>cron.allow_agent_scheduling</code> is still false and <code>preflight</code> is still true.</li>
+      <li>☐ Test the hooks for real after every update — this one has a history.</li>
+    </ul>
+
+    <p>Hook reliability has not been a smooth story: issue #2817 (hooks not firing) preceded the v0.5.0 release note of 28 March 2026 announcing that lifecycle hooks "now fire", and issue #44582 (opened 12 June 2026 on 0.16.0: "pre_tool_call plugin hook not invoked during agent tool execution") was closed as <em>not planned</em> with no visible maintainer response. I am not saying hooks do not work today — I am saying do not believe it until you have seen it:</p>
+
+    <pre><code># after every hermes update — make it part of the runbook
+hermes hooks test pre_tool_call
+hermes hooks test on_session_end
+hermes plugins doctor --ci        # CI-friendly exit code
+hermes cron doctor</code></pre>
+
+    <h3>Chronos — cron for a gateway that is allowed to sleep</h3>
+
+    <p>The one architectural problem with built-in cron is that it needs a gateway that is <strong>awake all the time</strong> to tick every 60 seconds — which contradicts the scale-to-zero hosting #7 discussed. v0.17.0 (PR #48275) therefore made the scheduler pluggable and added a provider called <strong>Chronos</strong>, specified in the repo document <code>docs/chronos-managed-cron-contract.md</code>: instead of ticking itself, the gateway registers its jobs with an external service that arms one-shot timers; when one fires, the service calls back to <code>/api/cron/fire</code> with a short-lived JWT (roughly 60–120 seconds, <code>aud=agent:{instance_id}</code>, <code>purpose=cron_fire</code>), the gateway answers <code>202 {"status":"accepted"}</code> and runs the job in the background — at-most-once via a compare-and-set on the store.</p>
+
+    <pre><code># config.yaml — enable Chronos; leave it unset and the built-in ticker is used
+cron:
+  provider: chronos
+  chronos:
+    portal_url: …
+    callback_url: …
+    expected_audience: …
+    nas_jwks_url: …</code></pre>
+
+    <p>This is the mechanism that lets a hosted gateway that scales to zero — the kind Hermes Cloud advertises — keep its cron jobs without paying for an idle machine. I will not print Cloud prices or server sizes, because there are no official figures. For a self-hosted single VPS the built-in ticker is enough; Chronos is the option when you move to hosting that bills only for time actually worked.</p>
+
+    <p>A closing note for anyone migrating from OpenClaw: as #7 recorded, <code>hermes claw migrate</code> does not carry cron jobs or hooks across — and I see that as an opportunity rather than a chore. Every heartbeat in the old system deserves to be asked again whether it is a watchdog (layer 1), a monitor (layer 2), or work that genuinely needs thought (a regular cron job). My bet is that most of them fall into the first two.</p>
+
+    <div class="key-takeaways">
+      <h3>🎯 Key Takeaways</h3>
+      <ul>
+        <li><strong>Five doors</strong> = cron · inbound webhook · hooks/outbound · API server · A2A/peer — start with cron and widen from there</li>
+        <li><strong>Cron is plain files</strong> = <code>jobs.json</code> + <code>executions.db</code> + <code>output/*.md</code>; the gateway ticks every 60 seconds; agents cannot schedule agents by default</li>
+        <li><strong>Three zero-token layers</strong> = <code>--no-agent</code> (v0.13.0) · monitor mode that never calls the LLM on an unchanged hash (v0.21.0) · <code>deliver_only</code> / <code>hermes send</code></li>
+        <li><strong>Cron that remembers</strong> = memory + continuity + notepad (v0.21.0), plus <code>context_from</code> (v0.12.0) to chain jobs</li>
+        <li><strong>The ops loop</strong> = <code>hermes cron incidents / doctor / runs</code> — errors redacted, exit codes fit for monitoring, a model-drift guard against untested models</li>
+        <li><strong>Webhooks</strong> = 8644, a secret on every route, a ±300 s replay window, four safe tools — "HMAC authenticates the sender, not the content"</li>
+        <li><strong>Outbound</strong> = HMAC-signed <code>hooks.outbound</code> (v0.20.0), shell hooks that veto with exit 2 (v0.11.0), Deliverable Mode for real attachments</li>
+        <li><strong>A blueprint</strong> = an ordinary skill with a schedule in its frontmatter — everything from #6 applies; the guide page lists 17 as of 1 September 2026</li>
+        <li><strong>8642</strong> = the OpenAI-compatible API; <code>hermes mcp serve</code> is a messaging bridge, not the agent; <code>hermes serve</code> is not the API server command</li>
+        <li><strong>Hardening</strong> = CVE-2026-7113/7112 on 0.8.0 (GHSA mirrors VulDB, patch unknown) plus 14628/14626 on NVD, July 2026; <code>hermes hooks test</code> after every update; Chronos for a gateway that scales to zero</li>
+      </ul>
+    </div>
+
+    </div>
+
+    <div class="post-series-footer">
+      <span class="l-th">บทความจากซีรีส์ Hermes Agent in Practice 2026</span><span class="l-en" lang="en">From the Hermes Agent in Practice 2026 series</span>
+    </div>
+
+  </article>
+
+  </main>
+
+  <footer class="blog-footer">
+    <nav class="blog-footer__nav" aria-label="Site">
+      <a href="../index.html">Home</a>
+      <a href="./">Blog</a>
+      <a href="../publications/">Publications</a>
+      <a href="../books/">Books</a>
+      <a href="../projects/">Projects</a>
+      <a href="../news/">News</a>
+      <a href="../index.html#contact">Contact</a>
+    </nav>
+    <a href="./">← Back to Blog</a>
+    <span>© 2026 Anirach Mingkhwan — Associate Professor, KMUTNB</span>
+  </footer>
+
+</body>
+</html>

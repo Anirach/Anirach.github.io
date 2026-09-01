@@ -1,0 +1,1179 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Desktop &amp; Fleet — One Backend, Every Laptop in the Organization — หนึ่ง backend ทุกเครื่องในองค์กร | Anirach Mingkhwan</title>
+  <meta name="description" content="Hermes Desktop ในฐานะจุดสัมผัสของทั้งองค์กร — ต่อทุก laptop เข้า hermes serve ตัวเดียว, sign in ด้วย OIDC หรือ Nous Portal, profile ต่อบทบาทที่แจกด้วย git, managed scope ให้ฝ่าย IT ปักค่า, อัปเดตทั้ง fleet จากปุ่มเดียว และข้อจำกัดที่ยังไม่มีใครแก้ — RBAC ที่ยังไม่มี, secrets ที่รั่วข้าม profile และ Hermes Cloud ที่ยังไม่บอกราคา">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=Sarabun:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      color-scheme: light;
+      /* ink */
+      --navy: #11304b; --slate: #334155; --slate-light: #526174; --gray: #94a3b8;
+      /* ground */
+      --bg: #faf7f0; --white: #ffffff; --code-bg: #1e293b;
+      /* accent */
+      --blue: #226299; --blue-dark: #1a4d7a; --blue-light: #4992b9;
+      /* brand — sampled from the book covers. --gold is decorative on light grounds (2.2:1); --gold-dark is its text form. */
+      --gold: #c4a46c; --gold-dark: #7a5f22; --cloud: #dee7e6; --parchment: #e9e1c4; --focus: #226299;
+      /* status — use only these six, never invent a seventh */
+      --green: #22c55e; --red: #ef4444; --amber: #f59e0b;
+      --cyan: #06b6d4; --purple: #226299; --purple-dark: #1a4d7a;
+      /* type */
+      --font: 'Inter', 'Sarabun', -apple-system, BlinkMacSystemFont, sans-serif;
+      --mono: 'JetBrains Mono', 'Fira Code', 'Sarabun', monospace;
+      /* form */
+      --radius: 12px; --radius-sm: 8px; --radius-lg: 16px;
+      --measure: 720px; --wide: 860px;
+      --transition: 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+    html { scroll-behavior: smooth; }
+    body { font-family: var(--font); font-size: 17px; line-height: 1.8; color: var(--slate); background: var(--bg); -webkit-font-smoothing: antialiased; }
+    .blog-nav { position: fixed; top: 0; left: 0; right: 0; z-index: 100; background: rgba(248,250,252,0.85); backdrop-filter: blur(20px); border-bottom: 1px solid rgba(0,0,0,0.05); }
+    .blog-nav__inner { max-width: 860px; margin: 0 auto; padding: 0 2rem; height: 56px; display: flex; align-items: center; justify-content: space-between; }
+    .blog-nav__back { font-size: 0.85rem; font-weight: 500; color: var(--blue); text-decoration: none; }
+    .blog-nav__back:hover { color: #1a4d7a; }
+    .blog-nav__title { font-size: 0.85rem; font-weight: 600; color: var(--navy); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 50%; }
+    /* ── HERO ── house .post-hero on the approved Deep Blue gradient (page-design
+       §5 / INV-28). Ink is inverted for the dark ground: white title/meta, tag
+       pills white on 18% white — the openclaw-production treatment. The
+       background value must stay byte-identical to the approved string. */
+    .post-hero { padding: 8rem 2rem 3rem; background: linear-gradient(135deg, #11304b 0%, #1a4d7a 45%, #226299 100%); color: #fff; text-align: center; }
+    .post-hero__tags { display: flex; gap: 0.5rem; justify-content: center; margin-bottom: 1.25rem; flex-wrap: wrap; }
+    .post-hero__tag { display: inline-block; font-size: 0.72rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.1em; color: #fff; background: rgba(255,255,255,0.18); padding: 0.35rem 0.9rem; border-radius: 20px; }
+    .post-hero__title { font-size: clamp(1.8rem, 5vw, 3rem); font-weight: 800; color: #fff; line-height: 1.2; margin-bottom: 1rem; max-width: 720px; margin-left: auto; margin-right: auto; }
+    .post-hero__sub { font-size: 1.05rem; max-width: 640px; margin: 0 auto 1.5rem; line-height: 1.7; color: #fff; }
+    .post-hero__meta { font-size: 0.85rem; color: #fff; display: flex; align-items: center; justify-content: center; gap: 1.5rem; flex-wrap: wrap; }
+    .post-hero__series { font-weight: 600; color: #fff; }
+    /* the switch pill and the focus ring both sit on the dark hero: the pill is
+       a light chip so its labels keep their light-ground colours, and --focus
+       re-points to gold here (blue collapses on blue — the footer/pre
+       precedent). */
+    .post-hero { --focus: var(--gold); }
+    .post-hero__cover {
+      aspect-ratio: 1 / 1;
+      max-width: 380px;
+      margin: 2.5rem auto 0;
+      border-radius: var(--radius-lg, 16px);
+      overflow: hidden;
+      box-shadow: 0 20px 60px rgba(17,48,75,0.14);
+    }
+    .post-hero__cover img { width: 100%; height: 100%; object-fit: cover; display: block; }
+    .post-body { max-width: 720px; margin: 0 auto; padding: 3rem 2rem 6rem; }
+    .post-body h2 { font-size: 1.6rem; font-weight: 800; color: var(--navy); margin: 3rem 0 1rem; padding-bottom: 0.5rem; border-bottom: 2px solid rgba(34,98,153,0.15); }
+    .post-body h3 { font-size: 1.25rem; font-weight: 700; color: var(--navy); margin: 2.25rem 0 0.75rem; }
+    .post-body p { margin-bottom: 1.25rem; }
+    .post-body strong { font-weight: 700; color: var(--navy); }
+    .post-body a { color: var(--blue); text-decoration: underline; text-decoration-thickness: 1px; text-underline-offset: 2px; }
+    .post-body ul, .post-body ol { margin: 0.5rem 0 1.25rem 1.5rem; }
+    .post-body li { margin-bottom: 0.4rem; }
+    .post-body blockquote { background: rgba(34,98,153,0.06); border-left: 4px solid var(--blue); padding: 1rem 1.25rem; border-radius: 0 10px 10px 0; margin: 1.25rem 0; font-size: 0.95rem; color: var(--navy); }
+    .post-body hr { border: none; height: 1px; background: linear-gradient(90deg, transparent, rgba(34,98,153,0.2), transparent); margin: 3rem 0; }
+    /* ── CODE ── */
+    .post-body pre { background: var(--code-bg); border-radius: 12px; padding: 1.5rem; margin: 1.25rem 0 1.5rem; overflow-x: auto; border: 1px solid rgba(255,255,255,0.05); }
+    .post-body pre code { font-family: var(--mono); font-size: 0.85rem; color: #e2e8f0; line-height: 1.7; background: none; padding: 0; white-space: pre-wrap; }
+    .post-body code { font-family: var(--mono); font-size: 0.88em; background: rgba(34,98,153,0.08); color: var(--blue-dark); padding: 0.15em 0.45em; border-radius: 5px; }
+    /* ── TABLES ── */
+    .table-wrapper { overflow-x: auto; margin: 1.5rem 0; border-radius: 0.5rem; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1); }
+    table { width: 100%; border-collapse: collapse; background: white; }
+    th { background: #226299; color: white; padding: 1rem; text-align: left; font-weight: 600; }
+    td { padding: 1rem; border-bottom: 1px solid #e5e7eb; }
+    .post-body table { display: block; width: 100%; overflow-x: auto; }
+    /* ── ALERTS ── */
+    .alert { background: #fef3cd; border: 1px solid #facc15; border-radius: 0.5rem; padding: 1rem; margin: 1.5rem 0; }
+    .alert.danger { background: #fee2e2; border-color: #ef4444; }
+    .alert.info { background: #e0f2fe; border-color: #06b6d4; }
+    .alert.success { background: #d1fae5; border-color: #10b981; }
+    /* ── KEY TAKEAWAYS ── */
+    .key-takeaways { background: linear-gradient(135deg, #f3f4f6 0%, #e5e7eb 100%); border-radius: 1rem; padding: 2rem; margin: 3rem 0; }
+    .key-takeaways h3 { color: #226299; margin-bottom: 1.5rem; }
+    .post-series-footer { text-align: center; font-size: 0.85rem; color: var(--slate-light); font-style: italic; margin-top: 2rem; padding-top: 2rem; border-top: 1px solid #e2e8f0; }
+    .blog-footer { background: var(--navy); padding: 2rem 0; text-align: center; }
+    .blog-footer a { color: var(--gold); text-decoration: none; font-weight: 600; font-size: 0.9rem; }
+    .blog-footer span { color: var(--gray); font-size: 0.8rem; display: block; margin-top: 0.4rem; }
+    @media (max-width: 600px) {
+      .post-hero { padding: 7rem 1.25rem 2.5rem; }
+      .post-body { padding: 2rem 1.25rem 4rem; }
+      .post-hero__meta { flex-direction: column; gap: 0.4rem; }
+      .post-body h2 { font-size: 1.4rem; }
+      .post-body h3 { font-size: 1.15rem; }
+      .post-body pre { padding: 1rem; border-radius: 8px; }
+    }
+
+    :focus-visible { outline: 2px solid var(--focus); outline-offset: 3px; border-radius: 2px; }
+    /* the ring sits on the page ground (3px offset). Inside the navy footers
+       and code blocks var(--blue) collapses to 2.12:1, so those scopes
+       re-point --focus to gold (5.73:1 on navy). */
+    .footer, .blog-footer, pre { --focus: var(--gold); }
+    :focus:not(:focus-visible) { outline: none; }
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after {
+        animation-duration: .01ms !important; animation-iteration-count: 1 !important;
+        transition-duration: .01ms !important; scroll-behavior: auto !important;
+      }
+    }
+    h1, h2, h3, .post-hero__title, .card__title { text-wrap: balance; }
+
+    .post-body img, .post-body svg { max-width: 100%; height: auto; }
+
+    /* ── SKIP LINK ── a11y-perf R5: the link and the landmark it targets are a
+       pair — useless without both halves. Off-screen until focused, then the
+       first tab stop on every page. */
+    .skip-link { position: absolute; left: -9999px; }
+    .skip-link:focus {
+      left: 1rem; top: 1rem; z-index: 999;
+      background: var(--navy); color: #fff;
+      padding: 0.75rem 1.25rem; border-radius: var(--radius-sm);
+      font-weight: 600; text-decoration: none;
+    }
+
+    /* ── POST WAYFINDING ── the wordmark is the home link; the footer carries
+       the full destination row. */
+    .blog-nav__home {
+      font-size: 0.9rem; font-weight: 800; color: var(--navy);
+      text-decoration: none; margin-right: 1rem;
+    }
+    .blog-nav__home:hover { color: var(--blue); }
+    .blog-nav__inner > .blog-nav__back { margin-right: auto; }
+    .blog-footer__nav {
+      display: flex; flex-wrap: wrap; justify-content: center; gap: 0.35rem 1.25rem;
+      max-width: 860px; margin: 0 auto 1.25rem; padding: 0 2rem 1.25rem;
+      border-bottom: 1px solid rgba(255,255,255,0.12);
+    }
+    .blog-footer__nav a { color: var(--gold); font-size: 0.85rem; font-weight: 600; text-decoration: none; }
+    .blog-footer__nav a:hover { color: #fff; text-decoration: underline; }
+
+    html { scroll-padding-top: 5rem; }
+    [id] { scroll-margin-top: 5rem; }
+
+    /* Thai needs more room than Latin at the same nominal size. */
+    .post-body:lang(th) { font-size: 18px; line-height: 1.85; }
+    .post-body p, .post-body li, .post-body blockquote { text-wrap: pretty; }
+
+    /* ---- side-scroll affordance ----
+       pre blocks and tables can exceed 720px. These layers paint a shadow ONLY
+       where there is more content in that direction; when fully scrolled the
+       cover slides over the shadow and hides it. No JavaScript, no wrapper. */
+    .post-body pre, .post-body table {
+      overflow-x: auto;
+      background-image:
+        linear-gradient(to right, var(--code-bg, #0f172a) 30%, rgba(15,23,42,0)),
+        linear-gradient(to left, var(--code-bg, #0f172a) 30%, rgba(15,23,42,0)),
+        radial-gradient(farthest-side at 0 50%, rgba(0,0,0,.28), rgba(0,0,0,0)),
+        radial-gradient(farthest-side at 100% 50%, rgba(0,0,0,.28), rgba(0,0,0,0));
+      background-position: 0 0, 100% 0, 0 0, 100% 0;
+      background-repeat: no-repeat;
+      background-size: 40px 100%, 40px 100%, 14px 100%, 14px 100%;
+      background-attachment: local, local, scroll, scroll;
+    }
+    .post-body table {
+      background-image:
+        linear-gradient(to right, var(--white, #fff) 30%, rgba(255,255,255,0)),
+        linear-gradient(to left, var(--white, #fff) 30%, rgba(255,255,255,0)),
+        radial-gradient(farthest-side at 0 50%, rgba(17,48,75,.16), rgba(17,48,75,0)),
+        radial-gradient(farthest-side at 100% 50%, rgba(17,48,75,.16), rgba(17,48,75,0));
+      background-position: 0 0, 100% 0, 0 0, 100% 0;
+      background-repeat: no-repeat;
+      background-size: 40px 100%, 40px 100%, 14px 100%, 14px 100%;
+      background-attachment: local, local, scroll, scroll;
+    }
+
+    /* ---- table of contents ---- */
+    .post-toc {
+      max-width: 720px;
+      margin: 2rem auto 0;
+      padding: 1rem 1.25rem;
+      background: rgba(34,98,153,0.05);
+      border: 1px solid rgba(34,98,153,0.14);
+      border-left: 3px solid var(--gold, #c4a46c);
+      border-radius: 10px;
+      font-size: 0.92rem;
+    }
+    .post-toc > summary {
+      cursor: pointer;
+      font-weight: 700;
+      color: var(--navy);
+      list-style: none;
+    }
+    .post-toc > summary::-webkit-details-marker { display: none; }
+    .post-toc > summary::before {
+      content: "\25B8";
+      display: inline-block;
+      margin-right: 0.5rem;
+      transition: transform 0.2s ease;
+      color: var(--gold-dark, #7a5f22);
+    }
+    .post-toc[open] > summary::before { transform: rotate(90deg); }
+    .post-toc > summary:focus-visible { outline: 3px solid var(--focus, #226299); outline-offset: 3px; }
+    .post-toc ol { margin: 0.85rem 0 0.25rem; padding-left: 1.4rem; }
+    .post-toc li { margin-bottom: 0.4rem; line-height: 1.5; }
+    .post-toc a { color: var(--slate); text-decoration: none; }
+    .post-toc a:hover, .post-toc a:focus-visible { color: var(--blue-dark, #1a4d7a); text-decoration: underline; }
+    @media (max-width: 600px) { .post-toc { margin: 1.25rem 1rem 0; } }
+
+    /* ---- cross-document view transitions ---- */
+    @view-transition { navigation: auto; }
+    .nav, .blog-nav { view-transition-name: site-nav; }
+    .footer, .blog-footer { view-transition-name: site-footer; }
+    @media (prefers-reduced-motion: reduce) {
+      ::view-transition-group(*),
+      ::view-transition-old(*),
+      ::view-transition-new(*) { animation: none !important; }
+    }
+
+    /* ── SERIES STRIP — Hermes Agent in Practice ──
+       Same class and inner-wrapper shape as the OpenClaw strip because the
+       linter's RE_SNAV recognises exactly `series-nav` + a nested div; a
+       renamed strip would read as "no nav" and fail INV-08. All content
+       checks (INV-03 family) iterate the SERIES7 list only, so this strip's
+       labels are convention, not contract. House-styled, not the island CSS. */
+    .series-nav {
+      max-width: 720px; margin: 2rem auto 0; padding: 1.1rem 1.4rem;
+      background: rgba(255,255,255,0.75); border: 1px solid rgba(34,98,153,0.15);
+      border-left: 3px solid var(--gold); border-radius: 12px;
+    }
+    .series-nav h3 {
+      font-size: 0.78rem; font-weight: 700; text-transform: uppercase;
+      letter-spacing: 0.08em; color: var(--gold-dark); margin-bottom: 0.6rem;
+    }
+    .series-links { display: flex; flex-wrap: wrap; gap: 0.5rem; }
+    .series-links a, .series-links .current {
+      font-size: 0.82rem; font-weight: 600; padding: 0.35rem 0.8rem;
+      border-radius: 50px; text-decoration: none;
+    }
+    .series-links a { color: var(--blue-dark); background: rgba(34,98,153,0.08); }
+    .series-links a:hover { background: rgba(34,98,153,0.16); }
+    .series-links .current { color: #fff; background: var(--blue-dark); }
+    @media (max-width: 600px) { .series-nav { margin: 1.5rem 1rem 0; } }
+
+    /* ── LANGUAGE SWITCH — pure CSS, zero JavaScript (INV-38) ──
+       One visually-hidden checkbox as a direct child of body, BEFORE the main landmark,
+       so `#langSwitch:checked ~ main …` reaches every content block. The two
+       tracks are paired blocks: .l-th (default) and .l-en (hidden until
+       checked; display:revert restores block for divs, inline for spans).
+       Naming stays clear of INV-12's menu-token regex (hamburger|burger|
+       nav__toggle|nav-toggle|navtoggle|menu-toggle|menu__toggle) — verified.
+       No JS also means no persistence across posts; each post opens in Thai. */
+    .lang-switch-box { position: absolute; left: -9999px; }
+    .l-en { display: none; }
+    #langSwitch:checked ~ main .l-en { display: revert; }
+    #langSwitch:checked ~ main .l-th { display: none; }
+    .lang-switch {
+      display: inline-flex; align-items: center; gap: 0.55rem;
+      margin-top: 1.4rem; padding: 0.4rem 1.1rem; border-radius: 50px;
+      background: rgba(255,255,255,0.85); border: 1px solid rgba(255,255,255,0.4);
+      cursor: pointer; font-size: 0.85rem; user-select: none;
+    }
+    .lang-switch span { color: var(--slate-light); font-weight: 600; transition: color 0.2s; }
+    .lang-switch .lang-sep { color: var(--gray); font-weight: 400; }
+    .lang-switch .lang-th { color: var(--navy); font-weight: 800; }
+    #langSwitch:checked ~ main .lang-switch .lang-th { color: var(--slate-light); font-weight: 600; }
+    #langSwitch:checked ~ main .lang-switch .lang-en { color: var(--navy); font-weight: 800; }
+    .lang-switch:hover { border-color: #fff; }
+    #langSwitch:focus-visible ~ main .lang-switch {
+      outline: 2px solid var(--focus); outline-offset: 3px;
+    }
+  </style>
+  <!-- social -->
+  <link rel="canonical" href="https://anirach.com/blog/hermes-desktop-fleet.html">
+  <meta property="og:type" content="article">
+  <meta property="og:url" content="https://anirach.com/blog/hermes-desktop-fleet.html">
+  <meta property="og:site_name" content="Anirach Mingkhwan">
+  <meta property="og:locale" content="th_TH">
+  <meta property="article:published_time" content="2026-09-01">
+  <meta property="article:author" content="https://anirach.com/">
+  <meta property="og:title" content="Desktop &amp; Fleet — หนึ่ง backend ทุกเครื่องในองค์กร">
+  <meta property="og:description" content="Hermes Desktop ในฐานะจุดสัมผัสของทั้งองค์กร — ต่อทุก laptop เข้า hermes serve ตัวเดียว, sign in ด้วย OIDC หรือ Nous Portal, profile ต่อบทบาทที่แจกด้วย git, managed scope ให้ฝ่าย IT ปักค่า, อัปเดตทั้ง fleet จากปุ่มเดียว และข้อจำกัดที่ยังไม่มีใครแก้ — RBAC ที่ยังไม่มี, secrets ที่รั่วข้าม profile และ Hermes Cloud ที่ยังไม่บอกราคา">
+  <meta itemprop="image" property="og:image" content="https://anirach.com/images/hermes-desktop-fleet-og.jpg">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
+  <meta property="og:image:alt" content="Desktop &amp; Fleet — หนึ่ง backend ทุกเครื่องในองค์กร">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:image" content="https://anirach.com/images/hermes-desktop-fleet-og.jpg">
+  <meta name="twitter:image:alt" content="Desktop &amp; Fleet — หนึ่ง backend ทุกเครื่องในองค์กร">
+  <meta name="robots" content="max-image-preview:large">
+  <meta name="theme-color" content="#11304b">
+  <link rel="icon" href="/favicon.ico" sizes="any">
+  <link rel="apple-touch-icon" href="/apple-touch-icon.png">
+  <!-- /social -->
+</head>
+<body>
+<a href="#main" class="skip-link">Skip to content</a>
+<input type="checkbox" id="langSwitch" class="lang-switch-box" aria-label="Switch language: Thai / English">
+
+  <nav class="blog-nav">
+    <div class="blog-nav__inner">
+      <a href="../index.html" class="blog-nav__home">Anirach</a>
+      <a href="./" class="blog-nav__back">‹ Blog</a>
+      <div class="blog-nav__title">Desktop &amp; Fleet · หนึ่ง backend ทุกเครื่อง</div>
+    </div>
+  </nav>
+
+  <main id="main">
+
+  <header class="post-hero">
+    <div class="post-hero__tags">
+      <span class="post-hero__tag">Hermes</span>
+      <span class="post-hero__tag">AI Agents</span>
+      <span class="post-hero__tag">Desktop &amp; Fleet</span>
+    </div>
+    <h1 class="post-hero__title" itemprop="headline"><span class="l-th">Desktop &amp; Fleet — หนึ่ง backend ทุกเครื่องในองค์กร</span><span class="l-en" lang="en">Desktop &amp; Fleet — One Backend, Every Laptop in the Organization</span></h1>
+    <p class="post-hero__sub"><span class="l-th">Hermes Desktop ในฐานะจุดสัมผัสของทั้งองค์กร — remote gateway, sign in ด้วย OIDC, profile ที่ version ด้วย git, managed scope สำหรับฝ่าย IT, อัปเดตทั้ง fleet ในคลิกเดียว และข้อจำกัดที่ยังไม่มีใครแก้</span><span class="l-en" lang="en">Hermes Desktop as the organization's point of contact — remote gateways, OIDC sign-in, git-versioned profiles, a managed scope for IT, one-click fleet updates, and the limits nobody has closed yet</span></p>
+    <div class="post-hero__meta">
+      <span>By <strong>Anirach Mingkhwan</strong></span>
+      <span class="post-hero__series">Hermes Agent in Practice 2026 • Post #10</span>
+      <span><time datetime="2026-09-01" itemprop="datePublished">1 Sep 2026</time></span>
+      <span>21 min read</span>
+    </div>
+    <label for="langSwitch" class="lang-switch" title="สลับภาษา · Switch language"><span class="lang-th">ไทย</span><span class="lang-sep">·</span><span class="lang-en" lang="en">English</span></label>
+    <div class="post-hero__cover">
+      <img src="../images/hermes-desktop-fleet-cover.jpg" alt="Desktop &amp; Fleet — หนึ่ง backend ทุกเครื่องในองค์กร" width="800" height="800" loading="eager" fetchpriority="high" decoding="async">
+    </div>
+  </header>
+
+  <nav aria-label="Hermes Agent in Practice">
+  <div class="series-nav">
+    <h3>⚡ Hermes Agent in Practice 2026</h3>
+    <div class="series-links">
+        <a href="/blog/hermes-101">#1 Hermes 101</a>
+        <a href="/blog/hermes-agent-teams">#2 Agent Teams</a>
+        <a href="/blog/hermes-memory">#3 Memory</a>
+        <a href="/blog/hermes-security">#4 Security</a>
+        <a href="/blog/hermes-integrations">#5 Integrations</a>
+        <a href="/blog/hermes-skills">#6 Skills</a>
+        <a href="/blog/hermes-production">#7 Production</a>
+        <a href="/blog/hermes-automation">#8 Automation</a>
+        <a href="/blog/hermes-models-cost">#9 Models &amp; Cost</a>
+        <span class="current" aria-current="page">#10 Desktop &amp; Fleet</span>
+    </div>
+  </div>
+  </nav>
+
+  <article class="post-body" itemscope itemtype="https://schema.org/BlogPosting">
+    <span itemprop="author" itemscope itemtype="https://schema.org/Person"><meta itemprop="name" content="Anirach Mingkhwan"></span>
+
+    <details class="post-toc l-th" open>
+      <summary>ในบทความนี้</summary>
+      <ol>
+          <li><a href="#th-fleet">ทำไม "fleet" คือคำถามที่ชุมชนถามจริง</a></li>
+          <li><a href="#th-anatomy">กายวิภาคของ Hermes Desktop</a></li>
+          <li><a href="#th-topology">ยี่สิบ laptop หนึ่ง backend ที่ hardened แล้ว</a></li>
+          <li><a href="#th-signin">Sign in: fail-closed, OIDC และ audit log</a></li>
+          <li><a href="#th-profiles">หนึ่ง agent ต่อหนึ่งบทบาท: profiles และ distributions</a></li>
+          <li><a href="#th-managed">สิ่งที่ฝ่าย IT ปักได้วันนี้ (Linux host) และยังปักไม่ได้ (laptop): managed scope</a></li>
+          <li><a href="#th-update">อัปเดตทั้ง fleet โดยไม่ทำมันพัง</a></li>
+          <li><a href="#th-cost">มองเห็นต้นทุนและการใช้งานทั้ง fleet</a></li>
+          <li><a href="#th-limits">ข้อจำกัดที่ต้องพูดตรง ๆ และ checklist สำหรับองค์กร</a></li>
+      </ol>
+    </details>
+    <details class="post-toc l-en" open>
+      <summary>In this post</summary>
+      <ol>
+          <li><a href="#en-fleet">Why "fleet" is the question the community is actually asking</a></li>
+          <li><a href="#en-anatomy">Anatomy of Hermes Desktop</a></li>
+          <li><a href="#en-topology">Twenty laptops, one hardened backend</a></li>
+          <li><a href="#en-signin">Signing in: fail-closed auth, OIDC and the audit log</a></li>
+          <li><a href="#en-profiles">One agent per role: profiles and distributions</a></li>
+          <li><a href="#en-managed">What IT can pin today (Linux hosts) and cannot (the laptops): managed scope</a></li>
+          <li><a href="#en-update">Updating a fleet without breaking it</a></li>
+          <li><a href="#en-cost">Seeing cost and usage across the fleet</a></li>
+          <li><a href="#en-limits">Honest limits and an org checklist</a></li>
+      </ol>
+    </details>
+    <div class="l-th">
+
+    <p>🤔 ลองนึกภาพนี้ดูครับ — ทีมของคุณมียี่สิบคน แต่ละคนมี laptop ของตัวเอง ทุกคนอยากได้ AI agent ที่ "เป็นของทีม" ไม่ใช่ของใครคนใดคนหนึ่ง จำ context เดียวกัน ใช้ skills ชุดเดียวกัน อยู่ใต้กติกาความปลอดภัยชุดเดียวกัน — แล้วคุณจะติดตั้ง Hermes กี่ครั้ง? ยี่สิบครั้ง หรือครั้งเดียว?</p>
+
+    <p>เจ็ดตอนแรกของซีรีส์นี้ตอบคำถามเกือบทุกข้อจากมุมของ terminal — <a href="/blog/hermes-101">#1 Hermes 101</a> วางแบบจำลองความคิดว่า Hermes คือ CLI + gateway daemon + session plane, <a href="/blog/hermes-agent-teams">#2 Agent Teams</a> เปิดชั้น multi-agent ทั้ง delegation, Kanban และ Bot Mode, <a href="/blog/hermes-security">#4 Security</a> ไล่แนวป้องกันทุกชั้นและเขียนไว้ตรง ๆ ว่า Hermes ไม่มี SSO/RBAC ในตัว ส่วน <a href="/blog/hermes-production">#7 Production</a> ทำให้เครื่องเดียวรัน 24/7 ได้อย่างน่าเบื่อ สิ่งที่ยังขาดคือมุมของ <strong>คนที่นั่งอยู่หน้าเครื่อง</strong> — และนั่นคือมุมที่ชุมชน Hermes ส่งเสียงดังที่สุดตลอดสามเดือนที่ผ่านมา</p>
+
+    <p>ตอนปิดซีรีส์นี้จึงว่าด้วย <strong>Hermes Desktop</strong> ในฐานะจุดสัมผัสของทั้งองค์กร: แอป native ที่ต่อเข้า backend เดียวกันจากทุก laptop, sign in ด้วย identity provider ขององค์กรเอง, profile ต่อบทบาทที่แจกและอัปเดตด้วย git, ค่าที่ฝ่าย IT ปักไว้บน Linux backend แล้วผู้ใช้แก้ไม่ได้ (บน laptop เองยังปักไม่ได้) และปุ่มอัปเดตทั้ง fleet — พร้อมรายการข้อจำกัดที่ผมจะไม่กลบ เพราะบางข้อ (RBAC ที่ยังไม่มี, secrets ที่รั่วข้าม profile) เป็นเรื่องที่ CTO ต้องรู้ก่อนเซ็นอนุมัติ และในบทความนี้ผมจะแก้ประโยค "ไม่มี SSO" จากตอน #4 ให้แม่นขึ้นด้วย: self-hosted OIDC มีจริง, org claims ใน Nous Portal มีจริง, ส่วน RBAC แบบเป็นชั้น — ยังไม่มี</p>
+
+    <h2 id="th-fleet">ทำไม "fleet" คือคำถามที่ชุมชนถามจริง</h2>
+
+    <p>ผมชอบเริ่มจากข้อมูลมากกว่าความรู้สึก ใน repo <code>NousResearch/hermes-agent</code> ซึ่งปิด GitHub Discussions ไว้ (ชุมชนจึงคุยกันผ่าน issue กับ Discord) issue ที่ได้ reaction มากที่สุดตลอดกาลไม่ใช่เรื่อง model ไม่ใช่เรื่อง memory แต่คือ <strong>#38602 "Desktop Client-Only Installation"</strong> — 68 reactions เปิดเมื่อ 4 มิถุนายน 2026 (ปิดแล้ว) ตามมาด้วย #36970 ที่ขอ onboarding สำหรับ remote client โดยเฉพาะ (31 reactions) และคำขอเดียวกันยังกลับมาอีกใน #50643 (GUI-only install — ยังเปิดอยู่) กับ #85422 ที่บ่นว่า installer macOS ทางการยังบังคับ bootstrap agent บนเครื่อง ทั้งที่ผู้ใช้แค่อยากต่อไปหา gateway ที่มีอยู่แล้ว (เปิดตั้งแต่ 13 สิงหาคม 2026)</p>
+
+    <p>อ่านรวมกันแล้วข้อความชัดมาก: คนไม่ได้อยากได้ agent ตัวที่ยี่สิบเอ็ด เขาอยากได้ <strong>หน้าต่างบานที่ยี่สิบเอ็ด</strong> ไปยัง agent ตัวเดิม</p>
+
+    <p>อีกด้านของเหรียญคือ issue ที่มีคน comment มากที่สุดในบรรดา issue ที่มนุษย์เปิดตั้งแต่ 1 กรกฎาคม 2026 — เกือบทั้งหมดเป็น <strong>Desktop regression</strong>: #83683 restart แล้ว Desktop ไป reap gateway ทิ้งแต่ไม่ launch กลับ (33 comments), #63047 ค้างสนิทบน macOS 27 beta (28), #89675 ไม่มี session ขึ้นเลยหลังอัปเดต (21), #73082 renderer กิน CPU 100% ตอน idle (18) และ #93888 ที่ Desktop ส่ง runtime ID ของเครื่อง local ไปให้ remote gateway จน restore session ไม่ได้ (17 comments, ยังเปิดอยู่) นี่คือ product ที่คนใช้จริงจนเจ็บจริง ไม่ใช่ demo</p>
+
+    <p>ปลายเดือนสิงหาคมก็ยังไม่เงียบ: <a href="https://github.com/NousResearch/hermes-agent/issues/96282">#96282</a> Desktop boot timeout (P1 — เปิดและปิดในวันเดียวคือ 27 สิงหาคม 2026), <a href="https://github.com/NousResearch/hermes-agent/issues/95189">#95189</a> gateway ตายทุก ~2 นาทีบน WSL2 จนดัน renderer ไป OOM (ยังเปิดอยู่ P2) และ <a href="https://github.com/NousResearch/hermes-agent/issues/95028">#95028</a> "[Architecture] Hermes Authority Execution Layer — the twelve issues are one defect" (ยังเปิดอยู่ label needs-decision) ซึ่งเป็นฉากหลังของความปั่นป่วนเรื่อง remote auth ที่จะโผล่มาอีกในบทความนี้</p>
+
+    <p>เส้นเวลาสั้น ๆ เพื่อให้เห็นว่าเรื่องนี้ใหม่แค่ไหน: Nous ประกาศ Hermes Desktop เป็น <strong>public preview</strong> ผ่านบัญชี X ทางการเมื่อ 2 มิถุนายน 2026 — โพสต์ X นั้นเป็นแหล่งเดียวของวันที่นี้ และผมดึงซ้ำไม่ได้ (<em>"First demoed in Jensen's GTC keynote, it's now in public preview"</em>) — สื่อ third-party เรียกมันว่า v0.15.2 แต่ผมต้องบอกตามตรงว่า <strong>ไม่มี GitHub release ที่ tag นั้น</strong>: รายการ release กระโดดจาก v2026.5.29 ไป v2026.6.5 ซึ่ง release notes นับเองว่า "874 commits since v0.15.2" จากนั้น v0.16.0 "The Surface Release" (tag 2026.6.5 เผยแพร่ 6 มิถุนายน) รวม desktop PR ราวร้อยตัว, v0.17.0 (19 มิถุนายน) ประกาศว่า <em>"The desktop is now a serious daily driver, not a preview."</em> และ v0.21.0 "Pantheon" (31 สิงหาคม 2026) คือเวอร์ชันที่หน้า product แสดงอยู่วันนี้</p>
+
+    <blockquote>💡 ขนาดของ repo วันที่ผมเขียน (1 กันยายน 2026) ตาม search API: 25,442 open PRs และ 12,961 open issues โดยมี issue เปิดใหม่ 6,875 รายการเฉพาะเดือนสิงหาคม — ผมจงใจไม่อ้างตัวเลข <code>open_issues_count</code> รวมของ GitHub เพราะมันนับ PR ปนเข้าไปด้วย</blockquote>
+
+    <h2 id="th-anatomy">กายวิภาคของ Hermes Desktop</h2>
+
+    <p>เอกสารทางการนิยาม Desktop ไว้ในประโยคเดียวที่ควรจำ: <em>"a native app built around the same agent you get from the CLI and the gateway"</em> — same config, same API keys, same sessions ในเชิงสถาปัตยกรรมมันคือ <strong>Electron shell</strong> ที่มี renderer เป็น React คุยกับ process <code>hermes serve</code> แบบ headless ผ่าน API <code>tui_gateway</code> ที่เป็น JSON-RPC บน WebSocket ถ้าคุณจำแบบจำลองสามกล่องจากตอน #1 ได้ (CLI · gateway daemon · session plane) Desktop คือกล่องที่สี่ที่เสียบเข้ากับ session plane เดิม ไม่ใช่ agent ตัวใหม่</p>
+
+    <pre><code># เปิด Desktop จาก terminal (alias: hermes gui)
+hermes desktop
+
+# สิ่งที่ Desktop รันอยู่เบื้องหลัง — backend headless ที่ renderer ต่อเข้าไป
+hermes serve
+
+# บ้านของ agent — ที่เดียวกับที่ CLI ใช้
+#   macOS / Linux : ~/.hermes
+#   Windows       : %LOCALAPPDATA%\hermes</code></pre>
+
+    <p>ประเด็นสำคัญคือ <code>hermes serve</code> <strong>ไม่ใช่</strong> API server ที่พอร์ต 8642 จากตอน <a href="/blog/hermes-integrations">#5 Integrations</a> — ตัวนั้นคือช่องทางเอา Hermes ไปอยู่หลังแอปอื่น ส่วน <code>hermes serve</code> คือ backend ของ Desktop โดยเฉพาะ ผมเห็นบทความหลายชิ้นใช้สองคำนี้สลับกันแล้วพาผู้อ่านหลงทาง</p>
+
+    <p>เรื่อง platform ต้องอ่าน matrix ทางการให้ครบ เพราะหน้า product เขียนกว้าง ๆ ว่า macOS 12 ขึ้นไป, Windows 10/11 และ Linux แต่หน้า platform support บอกละเอียดกว่านั้น:</p>
+
+    <div class="table-wrapper">
+      <table>
+        <thead>
+          <tr><th>ระดับ</th><th>Platform</th><th>วิธีติดตั้ง / หมายเหตุจากเอกสาร</th></tr>
+        </thead>
+        <tbody>
+          <tr><td><strong>Tier 1</strong></td><td>macOS Apple Silicon</td><td>Hermes Desktop หรือ <code>install.sh</code></td></tr>
+          <tr><td><strong>Tier 1</strong></td><td>Windows 10/11 x86_64 / aarch64</td><td>Hermes Desktop หรือ <code>install.ps1</code> — <em>"A few features are not available"</em></td></tr>
+          <tr><td><strong>Tier 1</strong></td><td>Linux / WSL2</td><td>ทดสอบบน Ubuntu ล่าสุด; ต้องมี glibc, systemd, FHS</td></tr>
+          <tr><td><strong>Tier 1</strong></td><td>Docker</td><td><em>"Docker installs do not support hermes update"</em></td></tr>
+          <tr><td><strong>Tier 2</strong></td><td>Android/Termux, Nix</td><td>ใช้ได้แต่ไม่รับประกัน (Nix: <em>"Breaks often"</em>)</td></tr>
+          <tr><td><strong>Unsupported</strong></td><td>AUR, macOS Intel, pypi, brew</td><td>ไม่อยู่ในขอบเขตการรองรับ</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <p>สองจุดที่ทำให้คนตกม้าตาย: <strong>Mac Intel อยู่ในกลุ่ม unsupported</strong> — องค์กรที่ยังมี MacBook รุ่นก่อน Apple Silicon ปนอยู่ต้องนับก่อนวางแผน และ <strong>pip install อยู่ในกลุ่ม unsupported เช่นกัน</strong> ทั้งที่ v0.14.0 เคยประกาศ package บน PyPI (เวอร์ชันล่าสุดบน PyPI ค้างที่ 0.19.0 ขณะที่ GitHub อยู่ที่ v0.21.0) — อย่าเอา pip เข้ารายการวิธีติดตั้งขององค์กร</p>
+
+    <p>ฝั่ง Windows native เป็นข่าวดีสำหรับฝ่าย IT: one-liner PowerShell ติดตั้งลง <code>%LOCALAPPDATA%\hermes</code> <strong>โดยไม่ต้องใช้สิทธิ์ admin</strong> จัดหา Python 3.11 ผ่าน uv, Node 26, Git แบบ portable, ffmpeg และ ripgrep ให้เอง installer แบบ GUI กับ CLI ใช้ install dir เดียวกัน และข้อจำกัดที่เอกสารระบุมีข้อเดียวคือ terminal pane ที่ฝังอยู่ในหน้า <code>/chat</code> ของ dashboard (ต้องการ POSIX PTY)</p>
+
+    <pre><code># Windows (PowerShell) — ไม่ต้องใช้สิทธิ์ admin
+iex (irm https://hermes-agent.nousresearch.com/install.ps1)
+
+# Linux / macOS / WSL2
+curl -fsSL https://hermes-agent.nousresearch.com/install.sh | bash
+
+# Electron runtime ที่ Desktop ดาวน์โหลดเพิ่มมีขนาดราว 114 MB</code></pre>
+
+    <p>และข้อที่ผมชอบที่สุดจากหน้า product: <em>"No account is needed to run the base app"</em> — Desktop เป็น MIT ดาวน์โหลดฟรี การ sign in ด้วย Nous Portal เป็นทางเลือกที่เปิดประตูไป Hermes Cloud และ model ผ่าน Portal ไม่ใช่ประตูหน้าบ้าน</p>
+
+    <h2 id="th-topology">ยี่สิบ laptop หนึ่ง backend ที่ hardened แล้ว</h2>
+
+    <p>หัวใจของบทความนี้อยู่ที่หน้า Settings → Gateways ซึ่งตั้งแต่ v0.20.2 (tag v2026.8.16) กลายเป็น <strong>Connections registry</strong> แบบหลาย gateway เอกสารทางการสรุปเป้าหมายไว้ว่า <em>"Register every Hermes backend you own — the local runtime, remote gateways on your LAN or VPS, SSH hosts, and Hermes Cloud instances — in one desktop app"</em> มีสี่ชนิด:</p>
+
+    <div class="table-wrapper">
+      <table>
+        <thead>
+          <tr><th>Connection</th><th>คืออะไร</th><th>Auth</th><th>tools รันที่ไหน</th></tr>
+        </thead>
+        <tbody>
+          <tr><td><strong>Local</strong></td><td>runtime บนเครื่องนี้ Desktop start ให้เอง</td><td>—</td><td>laptop ของผู้ใช้</td></tr>
+          <tr><td><strong>Remote gateway</strong></td><td><code>hermes serve</code> ที่ปลายทาง reach ได้ทาง HTTP(S) — <em>"LAN, Tailscale, or the internet"</em> Desktop ไม่ start ให้</td><td>session token หรือ OAuth</td><td>host ปลายทาง</td></tr>
+          <tr><td><strong>SSH</strong></td><td><em>"the app opens the tunnel and starts the dashboard for you"</em> แล้ว adopt dashboard token</td><td>SSH key + dashboard token</td><td>host ปลายทาง</td></tr>
+          <tr><td><strong>Hermes Cloud</strong></td><td>instance ที่ auto-discover ผ่านบัญชี Portal มี organization picker เมื่ออยู่หลาย org</td><td>Portal sign-in</td><td>container ของ Nous</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <p>ประโยคที่เปลี่ยนวิธีคิดเรื่องความปลอดภัยทั้งหมดอยู่ใน README ของแอป: remote mode <em>"treats the gateway host as the execution boundary: agent tools, terminal commands, and file operations run against the remote Hermes host"</em> แปลว่าใน topology ที่ผมเสนอ — ยี่สิบ laptop ต่อเข้า <code>hermes serve</code> ตัวเดียวบนเครื่องที่ hardened ตามตอน #7 — <strong>คำสั่ง shell ทุกคำสั่งรันบนเครื่องนั้น ไม่ใช่บน laptop</strong> ไฟล์ที่ agent แก้อยู่บนเครื่องนั้น credential ที่ agent ใช้อยู่บนเครื่องนั้น laptop เป็นแค่จอ</p>
+
+    <p>ลำดับชั้นภายใน registry คือ <strong>gateway → profile → sessions</strong> ถ้าสอง gateway มี profile ชื่อซ้ำกัน Desktop จะแสดงเป็น <code>@name-device</code> เพื่อไม่ให้สับสน มี connection หนึ่งเป็น Primary เสมอ และเมื่อ profile เกินสิบสามตัว แถบ profile จะย่อตัวลง (v0.20.6 เรียกมันว่า fleet profile rail) ทั้งหมดนี้ไม่ได้เสร็จใน release เดียว — issue tracking <a href="https://github.com/NousResearch/hermes-agent/issues/94724">#94724</a> "Desktop persistent multi-gateway connections — CAMPAIGN COMPLETE (29 PRs)" ปิดเมื่อ 27 สิงหาคม 2026 โดยมี PR ยี่สิบเก้าตัวอยู่เบื้องหลัง registry ที่คุณเห็นวันนี้</p>
+
+    <p>เรื่อง token เอกสารเขียนละเอียดพอให้ทีม security อ่านได้: token ของแต่ละ connection เก็บเป็นไฟล์ <strong>owner-only (0600)</strong> ใน user-data directory ของแอป อยู่ในมือ Electron main process — <em>"the renderer and plugins never see token bytes"</em> — และตั้งแต่ v0.20.6 เลือกเข้ารหัสด้วย OS keychain เพิ่มได้แบบ opt-in ผมย้ำคำว่า "plugins never see" ไว้ตรงนี้เพราะจะกลับมาที่มันในหัวข้อ managed scope</p>
+
+    <pre><code># เช็กว่า backend ปลายทางเปิด auth gate อยู่จริง ก่อนแจก URL ให้ทีม
+curl -s https://hermes.example.internal:9119/api/status | jq '.auth_required, .auth_providers'
+
+# ถ้า Desktop ต่อไม่ติด — WebSocket close code บอกชั้นที่ล้ม
+#   4401 = ยังไม่ได้ authenticate     4403 = authenticate แล้วแต่ไม่มีสิทธิ์</code></pre>
+
+    <p>ข้อเดียวที่ registry ไม่ทำให้อัตโนมัติคือการข้าม trust boundary: <em>"Direct bot mentions and delegation remain gateway-local by default. Crossing a backend boundary changes filesystem, credentials, tools, and trust context"</em> — ถ้าอยากให้ bot บนเครื่อง A คุยกับ bot บนเครื่อง B ต้องตั้ง <code>hermes peer</code> อย่างจงใจ (คำสั่ง peer อยู่ในตอน <a href="/blog/hermes-agent-teams">#2 Agent Teams</a> แล้ว ผมจะไม่ทวน)</p>
+
+    <div class="alert danger"><strong>เตือนก่อนเอาไปใช้กับเครื่องที่มีคนใช้อยู่แล้ว:</strong> issue <a href="https://github.com/NousResearch/hermes-agent/issues/40656">#40656</a> "Desktop remote gateway can destabilize self-hosted host when used concurrently with TUI/gateway" เปิดตั้งแต่ 6 มิถุนายน 2026 ยัง <strong>เปิดอยู่</strong> (P3) ไม่มีคำตอบจาก maintainer และไม่มี fix ที่ link ไว้ — บนเครื่องที่ยังมีคนใช้ TUI หรือ gateway session พร้อมกัน ผมจะไม่ประกาศว่า remote mode ปลอดภัยจนกว่าจะทดสอบเอง ทางที่ผมเลือกคือให้ backend ของ Desktop เป็นเครื่องเฉพาะกิจ</div>
+
+    <h2 id="th-signin">Sign in: fail-closed, OIDC และ audit log</h2>
+
+    <p>นี่คือหัวข้อที่ผมต้องแก้คำพูดของตัวเองจากตอน #4 ประโยค "Hermes ไม่มี SSO/RBAC ในตัว" ถูกครึ่งเดียว ครึ่งที่ผิดคือ SSO — สำหรับ <strong>dashboard และ remote gateway ที่ self-host</strong> Hermes มี enterprise sign-in ที่จริงจังกว่าที่ผมให้เครดิตไว้ ครึ่งที่ยังถูกคือ RBAC (หัวข้อสุดท้ายจะว่าด้วยเรื่องนั้น)</p>
+
+    <p>เริ่มจากหลักการ: dashboard bind ที่ <code>127.0.0.1:9119</code> โดย default และเมื่อคุณ bind ไปยัง address ที่ไม่ใช่ loopback โดยยังไม่ได้ตั้ง provider เอกสารแยกพฤติกรรมไว้สองแบบ: รันจาก terminal จริง Hermes <em>"doesn't just fail — it offers to set one up on the spot"</em> (เลือก username &amp; password หรือ OAuth ได้ตรงนั้น) ส่วน <em>"Non-interactive callers — Docker/s6, CI, piped runs — skip the prompt and hit the fail-closed error"</em> — backend ของ fleet รันเป็น service เสมอ สำหรับมันจึงเป็น <strong>fail-closed</strong> จริง: deploy ที่ไม่มีคนเฝ้าไม่มีทางเริ่มโดยไม่มี auth มีสาม provider ให้เลือก (ใน source tree อยู่ที่ <code>plugins/dashboard_auth/</code>: basic, nous, self_hosted และ drain):</p>
+
+    <div class="table-wrapper">
+      <table>
+        <thead>
+          <tr><th>Provider</th><th>กลไก</th><th>เหมาะกับ</th></tr>
+        </thead>
+        <tbody>
+          <tr><td><strong>Username / password</strong></td><td>env <code>HERMES_DASHBOARD_BASIC_AUTH_*</code></td><td>เอกสารตั้งใจให้ใช้กับ dashboard บน <em>"trusted network"</em> หรือที่เข้าถึงได้ผ่าน VPN เท่านั้น — <em>"not suitable for exposing a dashboard directly to the public internet"</em></td></tr>
+          <tr><td><strong>Nous Portal OAuth</strong></td><td><code>hermes dashboard register</code>; authorization-code + PKCE (S256)</td><td>เอกสารแนะนำสำหรับอะไรก็ตามที่ reach ได้นอกเครื่องตัวเอง ผูกกับบัญชี Portal</td></tr>
+          <tr><td><strong>Self-hosted OIDC</strong></td><td>plugin <code>self_hosted</code>: PKCE public client, OIDC discovery, ตรวจ ID token แบบ RS256/ES256</td><td><em>"Authentik · Keycloak · Zitadel · Authelia · Auth0 · Okta · Google"</em> — identity provider ขององค์กรเอง</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <pre><code># ทางที่ 1 — username/password: เฉพาะหลัง VPN เท่านั้น
+HERMES_DASHBOARD_BASIC_AUTH_USERNAME=ops
+HERMES_DASHBOARD_BASIC_AUTH_PASSWORD=&lt;long-random&gt;
+HERMES_DASHBOARD_BASIC_AUTH_SECRET=&lt;session-signing-secret&gt;</code></pre>
+
+    <div class="alert"><strong>คำเตือนจากเอกสารทางการเอง:</strong> <em>"…never expose a password-protected dashboard directly to the open internet. Put it behind a VPN."</em> — เอกสารแนะนำ Tailscale ตรง ๆ และผมเห็นด้วยทั้งประโยค</div>
+
+    <pre><code># ทางที่ 2 — Nous Portal OAuth: ลงทะเบียน install นี้กับบัญชี Portal
+hermes dashboard register
+# → เขียน HERMES_DASHBOARD_OAUTH_CLIENT_ID ลง ~/.hermes/.env ให้เอง
+# หรือเปิด /local-dashboards ใน Portal เพื่อตั้งชื่อ จัดการ และเพิกถอน dashboard ที่ self-host
+
+# ทางที่ 3 — OIDC ขององค์กรเอง (ตัวอย่างกับ Keycloak)
+# config.yaml
+dashboard:
+  oauth:
+    self_hosted:
+      issuer: https://sso.example.ac.th/realms/staff
+      client_id: hermes-desktop
+
+# หรือผ่าน environment
+HERMES_DASHBOARD_OIDC_ISSUER=https://sso.example.ac.th/realms/staff
+HERMES_DASHBOARD_OIDC_CLIENT_ID=hermes-desktop</code></pre>
+
+    <p>ฝั่ง Desktop รองรับสิ่งนี้ด้วย <strong>Native Sign-In ตาม RFC 8252</strong>: แอปเปิด system browser พร้อม PKCE รับ token กลับมาเก็บเป็นไฟล์ owner-only (เข้ารหัสด้วย OS keychain ได้) — <em>"No embedded webview, no browser session cookies"</em> ส่วน embedded webview เหลือไว้เป็น legacy fallback สำหรับ gateway รุ่นเก่า หลัง sign in Desktop จะ <em>"sign in once and reuse the resulting session for the WebSocket via a single-use ticket"</em> และมี DNS-rebinding guard ที่บังคับให้ Host header ตรงกับที่ตั้งไว้</p>
+
+    <p>ชิ้นที่ทำให้ผมมั่นใจพอจะเอาไปคุยกับฝ่ายตรวจสอบภายใน: <strong>audit log</strong> — <em>"Every login start, success, failure, and session-verify failure is written as a JSON line to $HERMES_HOME/logs/dashboard-auth.log"</em> โดย redact access_token, refresh_token, code, code_verifier, state และ Authorization header ออกก่อนเขียน</p>
+
+    <pre><code># ดู login event ล่าสุด — หนึ่ง event ต่อหนึ่งบรรทัด JSON
+tail -n 20 $HERMES_HOME/logs/dashboard-auth.log
+
+# ส่งเข้า SIEM ขององค์กรได้ทันที เพราะเป็น JSON lines อยู่แล้ว
+tail -F $HERMES_HOME/logs/dashboard-auth.log | your-log-shipper</code></pre>
+
+    <p>ขอบเขตที่ต้องพูดให้ชัด: OIDC ที่ว่ามาทั้งหมดใช้กับ <strong>dashboard/remote gateway ที่คุณ host เอง</strong> ไม่ใช่กับบัญชี Nous Portal สำหรับ Portal สิ่งที่มีเอกสารรองรับคือ organization picker ตอน sign in, claims <code>org_id</code>/<code>org_role</code> ใน token, การเช็ค membership ซ้ำทุก call และหน้า /local-dashboards เท่านั้น — ผมหาเอกสาร SSO/SAML สำหรับ Portal organization ไม่พบ ณ วันที่เขียน (หน้า /manage-subscription, /api-docs, /help และ /local-dashboards ตอบ HTTP 429 ทุกครั้งที่ผมลองดึง)</p>
+
+    <h2 id="th-profiles">หนึ่ง agent ต่อหนึ่งบทบาท: profiles และ distributions</h2>
+
+    <p>เมื่อทุก laptop ต่อ backend เดียวกันแล้ว คำถามถัดไปคือ "ทุกคนต้องคุยกับ agent ตัวเดียวกันหรือ?" คำตอบของ Hermes คือ <strong>profile</strong> — <a href="/blog/hermes-agent-teams">#2 Agent Teams</a> อธิบายกลไกไว้ครบแล้ว — profile, multiplexing, Bot Mode และ <code>hermes peer</code> (หัวข้อ 6 และ 8 ของตอนนั้น) ผมจะไม่ทวน วันนี้ผมอยากมองมันเป็น <strong>operating model ขององค์กร</strong>: หนึ่ง profile ต่อหนึ่งบทบาท</p>
+
+    <p>เอกสารนิยามชัด: <em>"A profile is a separate Hermes home directory"</em> ที่ <code>~/.hermes/profiles/&lt;name&gt;</code> มี <code>config.yaml</code>, <code>.env</code>, <code>SOUL.md</code>, memories, sessions, skills, cron jobs และ state DB ของตัวเอง</p>
+
+    <pre><code># สร้าง profile ต่อบทบาท — --description ป้อนเข้าระบบ routing ของ Kanban
+hermes profile create research --description "งานวิจัย: literature review, สรุปเปเปอร์, ร่าง proposal"
+hermes profile create finance  --description "งานการเงิน: ใบเสร็จ, งบโครงการ, ตรวจสอบยอด" --clone
+
+# --clone คัดลอก config/.env/SOUL/skills — ไม่คัดลอก sessions และ memory
+# ทางเลือกอื่น: --clone-all | --clone-from &lt;profile&gt; | --no-skills | --portal
+
+# แต่ละ profile ได้ alias ของตัวเอง
+research            # เทียบเท่า hermes -p research
+finance</code></pre>
+
+    <p>สองบรรทัดจากเอกสารที่ทีมต้องท่องขึ้นใจ: <em>"Profiles do not sandbox the agent"</em> — มันแยก state ไม่ได้แยก permission ระดับ OS — และ <em>"Never point two agent processes at the same profile"</em> เพราะ state DB ไม่ได้ออกแบบมาให้เขียนพร้อมกัน</p>
+
+    <h3>หนึ่ง gateway process ต่อหนึ่ง profile</h3>
+
+    <p>Default ของ Hermes คือ <strong>แยก process ต่อ profile</strong> — LaunchAgent หรือ systemd unit ต่อ profile พร้อม <strong>token lock</strong> กัน gateway ตัวที่สองใช้ token ซ้ำ (รายละเอียดอยู่ในตอน #2 หัวข้อ 8) ส่วน multiplexing หลาย profile ใน process เดียวเป็น opt-in ผ่าน <code>gateway.multiplex_profiles</code> สิ่งเดียวที่ผมเพิ่มจากมุมองค์กร: ปล่อย default ไว้ — เหตุผลอยู่ในหัวข้อสุดท้าย</p>
+
+    <h3>Bot Mode: bot ก็คือ profile — และห้องกลุ่มยังผูกกับ Desktop</h3>
+
+    <p>สิ่งที่องค์กรต้องรู้จาก Bot Mode (bundle มากับ Desktop ตั้งแต่ v0.20.3 เป็นทางการใน v0.21.0 — กลไก <code>message_agent</code>, group chat และ peer อยู่ในตอน #2 หัวข้อ 6) มีสามข้อ: <em>"a Bot is a Hermes profile"</em> ดังนั้นทุกอย่างในหัวข้อนี้ใช้กับ bot ได้ทั้งหมด; รายชื่อทีม — <em>"names and roles from each profile's title/description"</em> — ถูกฉีดเข้า system prompt ของทุก Bot Chat จึงควรเขียน <code>--description</code> เป็นภาษาที่อยากให้ bot ตัวอื่นอ่าน; และ bot ทุกตัว <strong>ใช้ OAuth/token pool เดียวกับ profile หลักโดย default</strong> — บิลรวมที่บัญชีเดียว</p>
+
+    <p>ข้อจำกัดที่ทำให้คำว่า "fleet ของ bots" ต้องเล็กลง: วันนี้ <strong>รอบสนทนาของห้องกลุ่มถูกขับโดย renderer ของ Desktop</strong> ไม่ใช่ gateway — ประวัติและสมาชิกของห้องถูก mirror ไปยัง gateway (<em>"Rooms follow your gateways, not one Desktop"</em>) แต่ตัวขับรอบยังอยู่ในแอป issue <a href="https://github.com/NousResearch/hermes-agent/issues/95163">#95163</a> "Opt-in backend-hosted group rooms" (เปิด 26 สิงหาคม 2026, P3, needs-decision) เขียนไว้เองว่า <em>"Rooms stall when the driving client goes away"</em> และ <a href="https://github.com/NousResearch/hermes-agent/issues/97681">#97681</a> "Bot Group Chats should keep working after Desktop closes" (เปิด 29 สิงหาคม 2026, P2, ยังเปิดอยู่) รายงานว่า gateway-owned authority <em>"now on main"</em> แล้วแต่ parity ยังไม่ครบ — bot ที่ต้องทำงานตอนไม่มีใครเปิด Desktop จึงควรอยู่บน cron ของ profile หรือ <code>hermes peer</code> ระหว่าง gateway ตามตอน #2 ไม่ใช่ในห้องกลุ่ม</p>
+
+    <h3>Profile distributions: agent ที่ version ด้วย git</h3>
+
+    <p>นี่คือชิ้นที่ทำให้ "หนึ่ง agent ต่อบทบาท" กลายเป็นของที่แจกได้จริง เอกสารนิยาม <em>"A profile distribution packages a complete Hermes agent — personality, skills, cron jobs, MCP connections, config — as a git repository"</em> และแบ่งความเป็นเจ้าของไฟล์ไว้ชัดเจน:</p>
+
+    <ul>
+      <li><strong>Distribution เป็นเจ้าของ</strong> (ถูกแทนที่เมื่อ update): <code>SOUL.md</code>, <code>config.yaml</code>, <code>mcp.json</code>, <code>skills/</code>, <code>cron/</code>, <code>distribution.yaml</code></li>
+      <li><strong>ผู้ใช้เป็นเจ้าของ</strong> (ไม่ถูกแตะเลย): <code>memories/</code>, <code>sessions/</code>, <code>state.db*</code>, <code>auth.json</code>, <code>.env</code>, <code>logs/</code>, <code>workspace/</code>, <code>plans/</code>, <code>home/</code>, <code>*_cache/</code>, <code>local/</code></li>
+    </ul>
+
+    <pre><code># ติดตั้ง agent ประจำบทบาทจาก repo ภายในองค์กร
+hermes profile install github.com/your-org/hermes-research-agent
+
+# เมื่อทีมกลาง merge เวอร์ชันใหม่ — ทุกเครื่องดึงเฉพาะส่วนที่ distribution เป็นเจ้าของ
+hermes profile update
+hermes profile update --force-config   # ทับ config.yaml ที่ผู้ใช้แก้เอง
+
+# ส่งออกแบบ tarball (ระวัง: export สามารถรวม memories/sessions ไปด้วยได้)
+hermes profile export</code></pre>
+
+    <p>ข้อควรระวังสามข้อจากเอกสาร: distribution เป็น <strong>unsigned by default</strong>; cron jobs ที่มากับ distribution <strong>ไม่ถูก schedule อัตโนมัติ</strong> (ต้องเปิดเอง — ซึ่งดี); และ <em>"SOULs and skills are active immediately, so vet distributions from unknown sources"</em> — สำหรับองค์กร ผมมองว่า repo distribution ควรอยู่ใต้ branch protection และ PR review เหมือน infrastructure code ทุกชิ้น ส่วน <code>skills/</code> ที่ distribution เป็นเจ้าของคือคำตอบเชิงปฏิบัติของหัวข้อ "แชร์ skills ในทีม" จากตอน <a href="/blog/hermes-skills">#6 Skills</a></p>
+
+    <p>เรื่อง memory: distribution ไม่แตะ <code>memories/</code> เลย และแต่ละ profile ถือ <code>MEMORY.md</code> (เพดาน 2,200 ตัวอักษร) กับ <code>USER.md</code> (1,375) ของตัวเองเป็น snapshot ที่ freeze ตอนเริ่ม session — รายละเอียดอยู่ในตอน <a href="/blog/hermes-memory">#3 Memory</a> ส่วน <code>SOUL.md</code> โหลดจาก <code>$HERMES_HOME/SOUL.md</code> เท่านั้น ถูกสแกน prompt-injection แล้วฉีดเข้า slot แรกของ system prompt ตามที่เขียนไว้ทุกตัวอักษร (ค่า default ใน repo เป็นย่อหน้าเดียว 546 ตัวอักษร)</p>
+
+    <p>ถ้าอยากให้ agent ตัวเดียวพูดต่างกันตามห้อง โดยไม่ต้องสร้าง profile ใหม่ มี <code>channel_overrides</code> ใน <code>gateway-config.yaml</code>:</p>
+
+    <pre><code># gateway-config.yaml — override ต่อห้อง: model / provider / system_prompt
+platforms:
+  slack:
+    channel_overrides:
+      "C0FINANCE01":
+        model: &lt;model-id&gt;
+        system_prompt: "ตอบเฉพาะเรื่องการเงินโครงการ อ้างเลขที่เอกสารทุกครั้ง"
+# system_prompt นี้แทนที่ global gateway prompt เฉพาะห้องนั้น
+# และเป็น ephemeral — ฉีดต่อ turn ไม่ถูกเก็บลง history</code></pre>
+
+    <p>(PR #56967 merge เมื่อ 2 กรกฎาคม 2026 แต่ release ที่ ship ยังไม่ถูก pin ในเอกสาร ส่วนคำขอ "personality ต่อ channel" #21637 ถูกปิดแบบ not planned — บุคลิกจึงยังผูกกับ profile ไม่ใช่ห้อง) และเมื่อองค์กรของคุณย้ายมาจาก OpenClaw ตามตอน <a href="/blog/openclaw-migration">OpenClaw Migration</a> profiles + distributions คือ topology ปลายทางที่ pattern multi-agent ยุค OpenClaw ไม่มีให้</p>
+
+    <h2 id="th-managed">สิ่งที่ฝ่าย IT ปักได้วันนี้ (Linux host) และยังปักไม่ได้ (laptop): managed scope</h2>
+
+    <p>ปัญหาคลาสสิกของ agent บน laptop พนักงานคือ config อยู่ใน home directory ของผู้ใช้ — ใครก็แก้ได้ Hermes ตอบด้วย <strong>managed scope</strong>: ไฟล์ <code>/etc/hermes/config.yaml</code> และ <code>/etc/hermes/.env</code> ที่ root เป็นเจ้าของ ซึ่งเอกสารระบุว่า <em>"win over the user's ~/.hermes/config.yaml, ~/.hermes/.env, and even the shell environment — for exactly the keys it pins"</em> เจตนาที่เขียนไว้ตรงตัวคือ <em>"for fleet/org deployments where IT needs to pin… the model provider, a shared API base URL, or security.redact_secrets: true"</em></p>
+
+    <pre><code># /etc/hermes/config.yaml  (root:root 0644) — ปักเฉพาะ key ที่องค์กรต้องคุม
+model:
+  provider: custom
+  base_url: https://llm-gateway.example.ac.th/v1   # ทุกเครื่องออกทางนี้เท่านั้น
+security:
+  redact_secrets: true
+approvals:
+  mode: manual
+
+# /etc/hermes/.env  (root:root 0644 — world-readable โดยออกแบบ)
+#   ใส่เฉพาะค่าที่แชร์ได้และไม่อ่อนไหว เช่น org API base URL หรือ feature default
+#   API key ไม่ควรอยู่ในไฟล์นี้ — ผู้ใช้ทุกคนบนเครื่องอ่านได้ (ดูข้อจำกัดด้านล่าง)
+
+# ย้ายตำแหน่งได้ผ่าน HERMES_MANAGED_DIR — แต่ตัวแปรนี้ต้องถูก admin ล็อกไว้เอง
+# ไม่อย่างนั้นผู้ใช้ชี้มันไปที่ไหนก็ได้</code></pre>
+
+    <p>Key ที่ไม่ได้ปักยังเป็นของผู้ใช้ตามปกติ — นี่คือความสวยของมัน: IT คุม provider, endpoint และนโยบาย redact ส่วนผู้ใช้ยังตั้ง SOUL.md, skills และ profile ของตัวเองได้</p>
+
+    <p>แต่ต้องอ่านหน้า managed scope ให้จบ เพราะ v1 มีข้อจำกัดที่เอกสารเขียนเอง และมันเปลี่ยนความหมายของหัวข้อนี้สำหรับ fleet ของ laptop: <strong>(1)</strong> <em>"Enforcement is filesystem permissions only"</em> — ถ้าผู้ใช้เขียน directory นั้นได้ หรือรัน Hermes เป็น root managed scope เป็นแค่คำแนะนำ; <strong>(2)</strong> <em>"The managed .env is world-readable (0644), so any local user can read secrets pushed through it"</em> — เอกสารบอกให้ใช้กับค่าที่แชร์ได้และไม่อ่อนไหว ไม่ใช่ secret สำคัญ; <strong>(3)</strong> <em>"The agent's own tools are not hard-blocked from a managed env value"</em> — ค่า env ที่ปักถูกใส่ตอน start แต่ agent ตั้งค่าอื่นใน subprocess shell ของตัวเองได้; และ <strong>(4)</strong> สิ่งที่อยู่ <em>"out of scope for v1"</em> อย่างชัดเจน: ตำแหน่ง managed แบบ native บน macOS และ Windows (<em>"v1 is Linux/POSIX-first"</em>), directory แบบ layered (<code>managed.d/</code>), ไฟล์ที่ลงนาม และการส่งผ่าน MDM</p>
+
+    <p>เอาข้อ (4) มาวางทับตาราง platform ด้านบน: Tier-1 desktop คือ Apple Silicon กับ Windows — ทั้งสองไม่มี managed scope ดังนั้นสิ่งที่ฝ่าย IT ปักได้ <strong>วันนี้</strong> คือ <strong>Linux host และ container</strong>: backend ตัวเดียวที่ยี่สิบ laptop ต่อเข้า ซึ่งใน topology ของบทความนี้ก็คือที่ที่ execution boundary อยู่พอดี ส่วน laptop ที่รัน Local connection เอง — ยังปักอะไรไม่ได้เลยจนกว่าจะมีเวอร์ชันถัดไป และการส่งผ่าน MDM ก็ยังอยู่แค่ในรายการ "may come later"</p>
+
+    <p>คู่มือ "Running Hermes on a Personal or Work Machine" ให้ default ที่ผมอยากให้ CTO ทุกคนอ่านก่อนกังวล: <code>approvals.mode: smart</code> (LLM ตัวช่วยประเมินความเสี่ยงของคำสั่ง), approval timeout 300 วินาทีแล้ว <strong>fail closed</strong>, hardline blocklist ที่เปิดตลอดและ <em>"no override flag"</em>, write guard บน <code>~/.ssh ~/.aws ~/.kube /etc/sudoers ~/.netrc auth.json .env</code>, <code>security.redact_secrets</code> เปิด และ <em>"Hermes Agent does not collect telemetry"</em> ข้อแนะนำเพิ่มสำหรับเครื่องทำงาน:</p>
+
+    <pre><code># ~/.hermes/config.yaml บนเครื่องพนักงาน (หรือบน Linux host ปักผ่าน /etc/hermes)
+approvals:
+  mode: manual                 # คนกดอนุมัติทุกคำสั่งที่เสี่ยง
+checkpoints:
+  enabled: true                # shadow-git ให้ /rollback ใช้งานได้
+
+# จำกัดขอบเขตการเขียนไฟล์
+HERMES_WRITE_SAFE_ROOT=/Users/staff/work
+# และเลือก backend เป็น Docker หรือ SSH แทน local เมื่อทำได้</code></pre>
+
+    <p>Threat model ที่คู่มือประกาศคือ <em>"an honest-but-wrong agent"</em> ไม่ใช่ process ที่ตั้งใจร้าย — สำหรับฝ่ายหลัง กลับไปอ่านตอน #4 ซึ่งยังใช้ได้ทุกบรรทัด</p>
+
+    <h3>Governance ของ Desktop plugin</h3>
+
+    <p>Desktop มี plugin system ของตัวเอง (Plugin SDK จาก v0.20.0) ที่ <strong>ไม่เกี่ยวอะไรเลย</strong> กับ Python plugin ของตัว agent — เอกสารเขียนว่ามันแชร์ <em>"no code, no APIs, and no delivery mechanism"</em> กัน plugin เป็นไฟล์ ESM ไฟล์เดียวที่ <code>$HERMES_HOME/desktop-plugins/&lt;id&gt;/plugin.js</code> และประโยคที่ IT ต้องอ่านสองรอบคือ <em>"A loaded plugin is evaluated as ESM in the renderer realm with full app authority"</em> — สิทธิ์เต็มของแอป (ยกเว้น token bytes ที่อยู่ใน main process ตามที่กล่าวไว้)</p>
+
+    <pre><code># การแจก plugin ทำผ่าน deep link ที่ต้องกดยืนยันก่อนติดตั้ง
+hermes://plugin/install?repo=your-org/hermes-desktop-theme&amp;enable=1
+
+# นโยบายที่ผมใช้: allowlist เฉพาะ repo ภายใน
+# และปิด scan โฟลเดอร์ home สำหรับ Projects sidebar บนเครื่องที่มีข้อมูลอ่อนไหว
+repo_scan_enabled: false</code></pre>
+
+    <p>สามฟีเจอร์ล่าสุดที่เกี่ยวกับ governance โดยตรง: v0.20.6 เพิ่ม <strong>consent-gated real-profile browsing</strong> — agent ใช้ Chromium profile จริงของผู้ใช้ได้ก็ต่อเมื่อได้รับความยินยอม (บน Windows มี close-with-approval flow) และตั้งแต่ v0.21.0 in-app browser <em>"stopped being a window the agent could only look at: Hermes now navigates, clicks, and reads it directly"</em>; ปุ่ม <strong>Send diagnostics</strong> <em>"uploads a redacted debug bundle to Nous-internal storage"</em> — opt-in ต่อครั้ง ไม่ใช่ telemetry; และบน macOS <code>hermes desktop --setup-tcc-identity</code> ทำให้ <em>"Permission grants survive every update"</em> — ไม่ต้องกดอนุญาต Accessibility/Screen Recording ใหม่ทุกครั้งที่อัปเดต ซึ่งสำหรับ fleet ยี่สิบเครื่องคือความต่างระหว่างอัปเดตเงียบ ๆ กับตั๋ว helpdesk ยี่สิบใบ</p>
+
+    <h2 id="th-update">อัปเดตทั้ง fleet โดยไม่ทำมันพัง</h2>
+
+    <p>ตอน #7 สอน <code>hermes update --backup</code> บนเครื่องเดียว fleet ทำให้เรื่องเดียวกันยากขึ้นเป็นเท่าตัว — และ Nous ยอมรับเรื่องนี้เป็นลายลักษณ์อักษร — แล้วปิดมันได้: issue tracking <a href="https://github.com/NousResearch/hermes-agent/issues/91277">#91277 "[Tracking] Fleet update reliability"</a> (เปิด 21 สิงหาคม 2026 และปิดแบบ completed เมื่อ 27 สิงหาคม — หกวัน) เปิดด้วยประโยค <em>"~30 open issues and ~15 open PRs each patch one corner of the same class"</em> นิยาม "ชนิดของ deployment" ให้แต่ละชนิดมีเส้นทางอัปเดตของตัวเอง แล้วปิด Phase 0–2 ครบ: #91283 update receipts + การตรวจเวอร์ชันทั้ง fleet, #91321 แก้ ps-scan บน macOS + ยกเว้น launchd, #91378 restart fleet ที่เป็น launchd ทั้งชุด และ #91439 receipt finalisation — receipts และการตรวจเวอร์ชันชุดนี้คือสิ่งที่ปุ่ม Update all instances ด้านล่างพึ่งพาอยู่วันนี้ ข้อที่สำคัญที่สุดสำหรับ topology ของเรา: <em>"Docker / Hermes Cloud image — NOT updatable in place — pull new image + recreate"</em></p>
+
+    <p>ฝั่ง Desktop ปุ่ม <strong>Update all instances</strong> บนหน้า Gateways <em>"dispatches hermes update to every eligible gateway"</em> ด้วยลำดับที่เอกสารระบุชัด: <em>"the connected backend first, then every other eligible registered gateway (Hermes Cloud entries are platform-managed and skipped), and the desktop app itself last"</em> — backend ก่อน แอปทีหลัง เพื่อไม่ให้ renderer ใหม่คุยกับ backend เก่า ส่วน SSH connection ได้ <strong>managed SSH remote-update engine</strong> ตั้งแต่ v0.20.6 และ v0.21.0 เพิ่ม <em>"Detached update hand-off on every OS"</em> ซึ่งแก้อาการ Windows ค้างที่หน้า "Updating Hermes"</p>
+
+    <pre><code># บน backend (git install) — วินัยเดิมจากตอน #7 ใช้ได้ทั้ง fleet
+hermes update --check          # มีเวอร์ชันใหม่ไหม ยังไม่ลงมือ
+hermes update --backup         # สำรองก่อน แล้วค่อยอัปเดต
+# hermes update rebuild ครั้งเดียวทั้ง install แล้ว sync skills ไปทุก profile
+
+# บน backend ที่เป็น Docker — ไม่มี in-place update
+docker compose pull
+docker compose up -d           # state อยู่ใน volume จึงไม่หาย
+
+# Hermes Cloud — Desktop ข้ามให้เอง (platform-managed)
+# หรือสั่งผ่าน Portal MCP server: agent → update container image
+
+# ถอนออกสามระดับ — เลือกให้ตรงกับสิ่งที่ต้องการลบ
+hermes uninstall --gui     # ลบเฉพาะ Desktop app — agent และข้อมูลยังอยู่
+hermes uninstall           # ลบ runtime — ~/.hermes ยังอยู่
+hermes uninstall --full    # ลบทุกอย่างรวม ~/.hermes  ← เครื่องที่คืนองค์กร</code></pre>
+
+    <p>ลำดับที่ผมใช้กับ fleet: (1) อ่าน release notes — เดือนสิงหาคมเดือนเดียวมี release ไล่จาก v0.20.0 ถึง v0.21.0 (2) อัปเดต backend ตัว staging ก่อน แล้วให้ทีมเล็ก ๆ ใช้หนึ่งวัน (3) กด Update all instances จาก Desktop ของเครื่อง ops เครื่องเดียว (4) ค่อยปล่อย Desktop auto-update ให้ผู้ใช้ทั่วไป — เพราะ regression ที่ดังที่สุด (#83683, #89675 และ boot/repair-loop ใน #96282/#96297) ล้วนเกิด "หลังอัปเดต"</p>
+
+    <h2 id="th-cost">มองเห็นต้นทุนและการใช้งานทั้ง fleet</h2>
+    <div class="alert info"><strong>ตัวเลขวัดอะไร:</strong> หัวข้อนี้ว่าด้วย "เห็นที่ไหน" — ส่วน "ตัวเลขนั้นหมายถึงอะไร นับอะไรและไม่นับอะไร" (prompt cache, fallback chain, ทำไม Analytics เป็นแค่ lower-bound estimate) อยู่ในตอน <a href="/blog/hermes-models-cost">#9 Models &amp; Cost</a> และงานที่ไม่กิน token เลยอยู่ในตอน <a href="/blog/hermes-automation">#8 Automation</a></div>
+
+    <p>สิ่งที่ v0.21.0 เพิ่มมาและตอบโจทย์ fleet ตรง ๆ คือ <strong>MCP command center</strong> พร้อม <em>"a fleet cost/usage overlay showing schema token estimates and 30-day usage per server, and hermes:// deep links that install an MCP server with explicit confirmation"</em> — คุณเห็นได้ว่า MCP server ตัวไหนกิน schema token เท่าไรและถูกเรียกแค่ไหนใน 30 วัน ข้าม gateway ที่ลงทะเบียนไว้ ส่วน <strong>per-delegation cost surfacing</strong> ทำให้ subagent แต่ละตัวที่ตอน #2 สอนให้ delegate มีป้ายราคาติดตัว</p>
+
+    <p>เครื่องมือชิ้นที่สองคือ <strong>Context-usage meter</strong> ที่แจกแจง token ของ context ปัจจุบันเป็น system prompt, tool definitions, skills, memory, rules, MCP และ subagent definitions — เวอร์ชัน GUI ของ <code>hermes prompt-size</code> ที่ตอน #7 แนะนำ และเป็นที่แรกที่ผมจะดูเมื่อมีคนบ่นว่า "agent ช้าลง"</p>
+
+    <p>ฝั่งบิล ตั้งแต่ v0.19.0 "Quicksilver" (20 กรกฎาคม 2026) มี <code>/subscription</code> และ <code>/topup</code> ใน TUI/CLI พร้อม <strong>billing tab</strong> ที่ตรงกันใน Desktop — ผู้ใช้เติมเครดิต Portal ได้โดยไม่ต้องออกจากแอป (คำสั่งสองตัวนี้ยังไม่อยู่ในรายการ slash command ของ user guide ผมอ้างจาก release notes) และ v0.19.0 เดียวกันคือตัวที่เพิ่ม Bitwarden กับ 1Password เป็นแหล่ง secret — ทางออกสำหรับข้อ "secrets ไม่นอนเปลือยใน .env" ที่ตอน #7 ตั้งไว้</p>
+
+    <h3>จัดการ Hermes Cloud จาก CLI ผ่าน MCP</h3>
+
+    <p>สำหรับองค์กรที่บาง agent อยู่บน <strong>Hermes Cloud</strong> (ยังเป็น preview; เงื่อนไขคือเครดิตขั้นต่ำ $10 หรือ subscription ที่ active, scale to zero เมื่อ idle; ช่องทาง Telegram, Discord, Slack, Email, CLI — ชุดย่อยของแพลตฟอร์มที่ตอน #5 ไล่ไว้) Desktop จะ auto-discover instance ผ่านบัญชี Portal ตั้งแต่ 10 กรกฎาคม 2026 — บัญชีที่อยู่หลาย org จะเจอ organization picker (ภายในคือ HTTP 409 <code>org_selection_required</code>) และ Nous สรุปคุณค่าไว้ในโพสต์ X วันที่ 14 สิงหาคมว่า <em>"an agent that keeps working after you close the laptop"</em> ส่วนงาน ops ทำจาก terminal ได้ผ่าน MCP server ทางการของ Portal:</p>
+
+    <pre><code># เพิ่ม Portal เป็น MCP server (OAuth + PKCE — เปิด browser หนึ่งรอบ)
+hermes mcp add --url https://portal.nousresearch.com/mcp --auth oauth hermes-cloud
+hermes mcp test hermes-cloud
+
+# จากนั้นใน session:
+#   agents  (read-only) — list, status, estimate costs
+#   agent   (mutating)  — start / stop / restart / create / destroy
+#                          update env vars / update container image
+# token อยู่ที่ ~/.hermes/mcp-tokens/ และ "membership is re-checked on each call"</code></pre>
+
+    <p>สิ่งที่ผมจะไม่เขียนเพราะไม่มีเอกสารสาธารณะรองรับ: ขนาดเครื่อง, ราคา, rate limit ต่อ tier และ <strong>ตำแหน่งของ server</strong> — หน้า /cloud มีคำถาม "Where are the servers located?" ใน FAQ แต่ในเนื้อหาที่ผมดึงมาไม่มีคำตอบ สำหรับองค์กรไทยที่ต้องตอบ PDPA เรื่องนี้เพียงพอให้เลือก self-host backend ก่อนจนกว่าจะมีเอกสาร</p>
+
+    <h2 id="th-limits">ข้อจำกัดที่ต้องพูดตรง ๆ และ checklist สำหรับองค์กร</h2>
+
+    <p>ผมสัญญาไว้ตอนต้นว่าจะไม่กลบ นี่คือรายการ ณ 1 กันยายน 2026:</p>
+
+    <p><strong>1. ไม่มี RBAC เป็นชั้น</strong> — issue <a href="https://github.com/NousResearch/hermes-agent/issues/527">#527</a> "Gateway Permission Tiers — RBAC (Owner/Admin/User/Guest)" เปิดตั้งแต่ 6 มีนาคม 2026 (22 reactions, label needs-decision) การอนุญาตวันนี้เป็นแบบ binary ไล่ลำดับ: per-platform allow-all → DM pairing → per-platform allowlist → global allowlist → global allow-all → default deny และ FAQ ยืนยันว่าหลายคนใช้ instance เดียวกันได้ผ่าน allowlist กับ DM pairing เท่านั้น — ใครผ่าน allowlist ได้ก็ทำได้ทุกอย่างที่ agent ทำได้</p>
+
+    <p><strong>2. secrets รั่วข้าม profile เมื่อ multiplex</strong> — issue <a href="https://github.com/NousResearch/hermes-agent/issues/82936">#82936</a> รายงานว่าภายใต้ <code>gateway.multiplex_profiles</code> secrets ของ default profile รั่วเข้าไปใน terminal tool และ Kanban worker subprocess ของ profile รอง เปิดเมื่อ 10 สิงหาคม 2026 label type/security P2 และ <strong>ยังเปิดอยู่</strong> — ขัดกับที่เอกสาร multiplexing อ้างว่า .env แยกต่อ profile ผมนำเสนอเป็นความขัดแย้งที่ยังไม่ปิด ไม่ใช่ bug ที่แก้แล้ว</p>
+
+    <div class="alert danger"><strong>ผลที่ตามมาสำหรับองค์กร:</strong> ปล่อยให้ default เป็นหนึ่ง process ต่อหนึ่ง profile — เอกสารเองแนะนำแบบนี้ <em>"when you want hard process-level isolation"</em> — และอย่ารัน <code>hermes config set gateway.multiplex_profiles true</code> บน backend ที่ profile ต่างกันถือ credential ต่างกัน จนกว่า #82936 จะปิด</div>
+
+    <p><strong>3. การแยกข้อมูลในห้องกลุ่มยังเป็นหน้าที่ของ model</strong> — บทวิจารณ์ของ bednars.me (12 กรกฎาคม 2026 บน Portal tier $20) เล่าว่า agent เปิดเผย context ส่วนตัวเมื่อถูกดึงเข้าห้องทดสอบ และสรุปว่า <em>"the model should never be responsible for deciding whether another participant may access data"</em> — เป็นความเห็น third-party แต่สอดคล้องกับข้อ 1 และกับ issue <a href="https://github.com/NousResearch/hermes-agent/issues/4281">#4281</a> (session จาก gateway บน local backend ไม่ถูก sandbox) ที่ยังเปิดอยู่ตามที่ตอน #4 บันทึกไว้</p>
+
+    <p><strong>4. ไม่มีเอกสาร SSO/SAML/RBAC สำหรับ Portal organization</strong> — วลี "granular access controls" จากโพสต์ประกาศ Hermes Cloud (โพสต์ X วันที่ 8 กรกฎาคม 2026 — แหล่งเดียว และผมดึงซ้ำไม่ได้) ยังเป็นแค่วลี กลไก org ที่มีเอกสารคือ org picker, claims org_id/org_role, การเช็ค membership ต่อ call และ /local-dashboards; Terms of Service ของ Portal (อัปเดต 18 มิถุนายน 2026) ไม่มีกลไก org account หรือ seat เลย มีแต่ค่าธรรมเนียม non-refundable, ลบบัญชีภายในหกเดือนหลังยกเลิก และอนุญาโตตุลาการที่ Cupertino</p>
+
+    <p><strong>5. ไม่มี status page สาธารณะ</strong> ที่ผมหาพบ และ Hermes Cloud ยังไม่เผยแพร่ขนาดเครื่อง ราคา หรือ region</p>
+
+    <p><strong>6. egress proxy ยังคุมเฉพาะ Docker</strong> — iron-proxy <em>"wires the egress proxy into the Docker backend only. Modal, Daytona, SSH, and Singularity do not receive proxy env vars or CA mounts yet."</em> ถ้า backend ของ fleet ใช้ SSH mode การควบคุม egress ต้องทำที่ระดับเครือข่ายเอง</p>
+
+    <p><strong>7. ห้องกลุ่มของ Bot Mode หยุดเมื่อ Desktop ปิด</strong> — ตัวขับรอบสนทนาอยู่ใน renderer ของ Desktop (<a href="https://github.com/NousResearch/hermes-agent/issues/95163">#95163</a> เปิดอยู่ P3 needs-decision; <a href="https://github.com/NousResearch/hermes-agent/issues/97681">#97681</a> เปิดอยู่ P2 ตั้งแต่ 29 สิงหาคม 2026 — gateway-owned authority <em>"now on main"</em> แล้วแต่ยังไม่ครบ) "ทีม bot ที่ทำงาน 24/7" วันนี้จึงหมายถึง cron ต่อ profile และ peer ระหว่าง gateway ไม่ใช่ห้องกลุ่ม</p>
+
+    <p>เพื่อความเป็นธรรม รายงาน "State of Hermes Agent — July 2026" ของ Hermes Atlas (โครงการชุมชนที่ไม่เกี่ยวข้องกับ Nous) ชี้ scale-to-zero, managed scope, profile multiplexing และ drain coordination เป็นสัญญาณ "hosted/team deployment" ของไตรมาส — ทิศทางถูก แต่ยังไม่ครบ</p>
+
+    <h3>Checklist ก่อนแจก Hermes Desktop ให้ทั้งองค์กร</h3>
+
+    <ul>
+      <li>☐ นับเครื่อง: Mac Intel และวิธีติดตั้งผ่าน pip/brew/AUR อยู่ในกลุ่ม unsupported</li>
+      <li>☐ backend ของ Desktop เป็นเครื่องเฉพาะกิจ ไม่ใช่เครื่องที่มีคนใช้ TUI/gateway อยู่ (#40656 ยังเปิด)</li>
+      <li>☐ dashboard ไม่เคย bind นอก loopback โดยไม่มี OIDC/OAuth — และ username/password อยู่หลัง VPN เท่านั้น</li>
+      <li>☐ <code>dashboard-auth.log</code> ถูกส่งเข้า SIEM แล้ว</li>
+      <li>☐ หนึ่ง profile ต่อบทบาท หนึ่ง gateway process ต่อ profile — ไม่เปิด multiplexing (#82936)</li>
+      <li>☐ distribution ของทุกบทบาทอยู่ใน repo ที่มี branch protection; cron จาก distribution เปิดด้วยมือหลัง review</li>
+      <li>☐ บน Linux backend: <code>/etc/hermes</code> ปัก provider, base_url, redact_secrets, <code>HERMES_MANAGED_DIR</code> ถูกล็อก และไม่มี secret ใน managed <code>.env</code> ที่ world-readable — laptop Mac/Windows ยังไม่มี managed scope</li>
+      <li>☐ Desktop plugin ติดตั้งได้จาก allowlist repo เท่านั้น เพราะ plugin มี full app authority</li>
+      <li>☐ ลำดับอัปเดต staging → backend → Update all instances → Desktop ของผู้ใช้ เขียนเป็น runbook แล้ว</li>
+      <li>☐ ถ้าใช้ Hermes Cloud: ทีมกฎหมายรับทราบว่า region และ retention ยังไม่มีเอกสาร</li>
+    </ul>
+
+    <p>จุดยืนของผมปิดซีรีส์: Hermes Desktop ในฐานะ "หน้าต่างบานที่ยี่สิบเอ็ด" สู่ backend ที่ hardened แล้ว เป็น topology ที่ผมพร้อม pilot กับทีมเล็กวันนี้ — สิ่งที่ Nous สร้างในสามเดือน (Connections registry, OIDC, distributions, managed scope, fleet update) ครอบคลุมเกินครึ่งของสิ่งที่องค์กรต้องการ ครึ่งที่เหลือ — RBAC, การแยก tenant ที่ไม่พึ่ง model และเอกสาร Cloud ที่ตอบคำถามเรื่องที่อยู่ของข้อมูล — คือรายการที่ผมจะกลับมาตรวจก่อนอนุมัติให้ทั้งองค์กร ระบบที่ดีที่สุดยังคงเป็นระบบที่น่าเบื่อที่สุด และ fleet ที่น่าเบื่อคือ fleet ที่คนตั้งใจออกแบบให้น่าเบื่อตั้งแต่วันแรก</p>
+
+    <div class="key-takeaways">
+      <h3>🎯 สิ่งสำคัญที่ต้องจำ</h3>
+      <ul>
+        <li><strong>#38602</strong> = issue ที่ได้ reaction มากที่สุดตลอดกาลคือ "Desktop Client-Only Installation" — ชุมชนอยากได้หน้าต่างบานที่ยี่สิบเอ็ด ไม่ใช่ agent ตัวที่ยี่สิบเอ็ด</li>
+        <li><strong>hermes serve</strong> = backend headless ของ Desktop (JSON-RPC/WebSocket) — ไม่ใช่ API server พอร์ต 8642 และ Desktop คือกล่องที่สี่ของสถาปัตยกรรมจากตอน #1</li>
+        <li><strong>Execution boundary</strong> = ใน remote mode คำสั่ง ไฟล์ และ credential ทั้งหมดอยู่บน host ปลายทาง — laptop เป็นแค่จอ แต่ #40656 ยังเปิด อย่าใช้ host ร่วมกับ TUI</li>
+        <li><strong>Auth gate</strong> = bind นอก loopback โดยไม่มี provider: ใน terminal จะเสนอให้ตั้งทันที ส่วน non-interactive (service, Docker, CI) fail-closed ไม่ยอมเริ่ม; OIDC กับ Keycloak/Okta/Auth0 ใช้ได้จริง พร้อม audit log แบบ JSON lines</li>
+        <li><strong>Profile</strong> = home directory แยกต่อบทบาท หนึ่ง gateway process ต่อ profile; ไม่ sandbox และห้ามสอง process ชี้ profile เดียวกัน</li>
+        <li><strong>Profile distribution</strong> = agent ทั้งตัวเป็น git repo — SOUL/config/skills/cron เป็นของ distribution, memories/sessions/workspace/.env เป็นของผู้ใช้; unsigned by default ต้อง vet</li>
+        <li><strong>Managed scope</strong> = <code>/etc/hermes</code> ที่ root เป็นเจ้าของ ชนะ config ผู้ใช้เฉพาะ key ที่ปัก — provider, base_url, redact_secrets; v1 เป็น Linux เท่านั้น บังคับด้วยสิทธิ์ไฟล์อย่างเดียว และ .env นั้น world-readable — มันปัก backend ไม่ใช่ laptop</li>
+        <li><strong>Update all instances</strong> = backend ที่ต่ออยู่ก่อน → gateway อื่น → แอปทีหลัง; Docker และ Cloud ไม่ update in place; #91277 คือ campaign ที่ Nous เปิดเองและปิดแบบ completed ใน 6 วัน — update receipts จากมันคือสิ่งที่ปุ่มนี้พึ่งพา</li>
+        <li><strong>MCP command center</strong> = overlay ต้นทุน/การใช้งาน 30 วันต่อ server ข้าม fleet (v0.21.0) — ส่วน "ตัวเลขหมายถึงอะไร" อยู่ในตอน #9</li>
+        <li><strong>ยังไม่มี</strong> = RBAC เป็นชั้น (#527 เปิดตั้งแต่มีนาคม), การแยก tenant ที่ไม่พึ่ง model, SSO/SAML สำหรับ Portal org, status page และราคา/region ของ Hermes Cloud, ห้องกลุ่ม Bot Mode ที่อยู่รอดหลังปิด Desktop (#97681)</li>
+      </ul>
+    </div>
+
+    </div>
+    <div class="l-en" lang="en">
+
+    <p>Picture it. Your team has twenty people, each with their own laptop, and all of them want an AI agent that belongs to <em>the team</em> rather than to any one person — the same context, the same skills, the same security rules. So how many times do you install Hermes? Twenty, or once?</p>
+
+    <p>The first seven posts in this series answered almost everything from the terminal's point of view. <a href="/blog/hermes-101">#1 Hermes 101</a> set the mental model — CLI + gateway daemon + session plane. <a href="/blog/hermes-agent-teams">#2 Agent Teams</a> opened the multi-agent layers: delegation, Kanban, Bot Mode. <a href="/blog/hermes-security">#4 Security</a> walked every defensive layer and stated flatly that Hermes has no native SSO/RBAC. <a href="/blog/hermes-production">#7 Production</a> made a single box run 24/7, boringly. What was still missing was the view from <strong>the person sitting at the machine</strong> — and that is exactly where the Hermes community has been loudest for three months.</p>
+
+    <p>So this closing post is about <strong>Hermes Desktop</strong> as the organization's point of contact: a native app that attaches to one shared backend from every laptop, signs in through your own identity provider, ships one profile per role that is distributed and updated with git, respects values IT has pinned on the Linux backend that users cannot override (the laptops themselves cannot be pinned yet), and carries a button that updates the whole fleet. It also carries a list of limits I will not soften, because some of them — the RBAC that does not exist, the secrets that leak across profiles — are things a CTO must know before signing. And along the way I will sharpen my own "no SSO" line from #4: self-hosted OIDC is real, Portal org claims are real, tiered RBAC is not.</p>
+
+    <h2 id="en-fleet">Why "fleet" is the question the community is actually asking</h2>
+
+    <p>I prefer to start from data rather than mood. In the <code>NousResearch/hermes-agent</code> repository — which has GitHub Discussions disabled, so the community talks through issues and Discord — the most-reacted issue of all time is not about models and not about memory. It is <strong>#38602 "Desktop Client-Only Installation"</strong>: 68 reactions, opened 4 June 2026, now closed. Behind it sits #36970, first-class remote-client onboarding for existing Hermes instances (31 reactions), and the same request keeps returning — #50643 for a GUI-only install (still open) and #85422, complaining that the official macOS installer still forces a local agent bootstrap when the user only wants to connect to a gateway that already exists (open since 13 August 2026).</p>
+
+    <p>Read together, the message is unambiguous: people do not want a twenty-first agent. They want a <strong>twenty-first window</strong> onto the agent they already have.</p>
+
+    <p>The other side of that coin is the most-commented human-filed issues since 1 July 2026 — almost all of them <strong>Desktop regressions</strong>: #83683, a restart reaps the live gateway and never relaunches it (33 comments); #63047, completely unresponsive on the macOS 27 beta (28); #89675, no sessions load for any profile after an update (21); #73082, renderer and GPU processes at 100% CPU while idle (18); and #93888, the Desktop sending a local runtime ID to a remote gateway and failing to restore stored sessions (17 comments, still open). That is the signature of a product people use hard enough to get hurt by, not a demo.</p>
+
+    <p>Late August was not quiet either: <a href="https://github.com/NousResearch/hermes-agent/issues/96282">#96282</a>, a Desktop boot timeout (P1, opened and closed on the same day, 27 August 2026); <a href="https://github.com/NousResearch/hermes-agent/issues/95189">#95189</a>, the gateway exiting every ~2 minutes on WSL2 and driving the renderer to OOM (open, P2); and <a href="https://github.com/NousResearch/hermes-agent/issues/95028">#95028</a>, "[Architecture] Hermes Authority Execution Layer — the twelve issues are one defect" (open, needs-decision) — the backdrop to the remote-auth churn that resurfaces later in this post.</p>
+
+    <p>A short timeline, to show how young all of this is. Nous announced Hermes Desktop as a <strong>public preview</strong> on its official X account on 2 June 2026 (that X post is the only source for the date, and I could not re-fetch it) — <em>"First demoed in Jensen's GTC keynote, it's now in public preview."</em> Third-party coverage calls that build v0.15.2, but I have to be precise: <strong>there is no GitHub release with that tag</strong>. The release list jumps from v2026.5.29 to v2026.6.5, whose notes count "874 commits since v0.15.2". Then v0.16.0 "The Surface Release" (tag 2026.6.5, published 6 June) folded in roughly a hundred desktop PRs; v0.17.0 (19 June) declared <em>"The desktop is now a serious daily driver, not a preview."</em>; and v0.21.0 "Pantheon" (31 August 2026) is the version the product page shows today.</p>
+
+    <blockquote>💡 Repository scale on the day I write this (1 September 2026), via the search API: 25,442 open PRs and 12,961 open issues, with 6,875 issues opened in August alone. I deliberately do not quote GitHub's combined <code>open_issues_count</code>, because it folds PRs into the number.</blockquote>
+
+    <h2 id="en-anatomy">Anatomy of Hermes Desktop</h2>
+
+    <p>The official docs define the Desktop in one sentence worth memorising: <em>"a native app built around the same agent you get from the CLI and the gateway"</em> — same config, same API keys, same sessions. Architecturally it is an <strong>Electron shell</strong> whose React renderer talks to a headless <code>hermes serve</code> process over the <code>tui_gateway</code> API, JSON-RPC on a WebSocket. If you remember the three boxes from #1 — CLI, gateway daemon, session plane — the Desktop is a fourth box plugged into the same session plane, not a new agent.</p>
+
+    <pre><code># launch the Desktop from a terminal (alias: hermes gui)
+hermes desktop
+
+# what the Desktop runs underneath — the headless backend the renderer attaches to
+hermes serve
+
+# the agent's home — the same directory the CLI uses
+#   macOS / Linux : ~/.hermes
+#   Windows       : %LOCALAPPDATA%\hermes</code></pre>
+
+    <p>One distinction matters: <code>hermes serve</code> is <strong>not</strong> the API server on port 8642 from <a href="/blog/hermes-integrations">#5 Integrations</a>. That one is how you put Hermes behind other applications; <code>hermes serve</code> is the Desktop's own backend. I have seen several articles swap the two and send their readers down the wrong path.</p>
+
+    <p>On platforms, read the whole official matrix, because the product page speaks broadly — macOS 12 or later, Windows 10/11, Linux — while the platform-support page is more specific:</p>
+
+    <div class="table-wrapper">
+      <table>
+        <thead>
+          <tr><th>Tier</th><th>Platform</th><th>Install path / note from the docs</th></tr>
+        </thead>
+        <tbody>
+          <tr><td><strong>Tier 1</strong></td><td>macOS Apple Silicon</td><td>Hermes Desktop or <code>install.sh</code></td></tr>
+          <tr><td><strong>Tier 1</strong></td><td>Windows 10/11 x86_64 / aarch64</td><td>Hermes Desktop or <code>install.ps1</code> — <em>"A few features are not available"</em></td></tr>
+          <tr><td><strong>Tier 1</strong></td><td>Linux / WSL2</td><td>tested on latest Ubuntu; needs glibc, systemd, FHS</td></tr>
+          <tr><td><strong>Tier 1</strong></td><td>Docker</td><td><em>"Docker installs do not support hermes update"</em></td></tr>
+          <tr><td><strong>Tier 2</strong></td><td>Android/Termux, Nix</td><td>works, not guaranteed (Nix: <em>"Breaks often"</em>)</td></tr>
+          <tr><td><strong>Unsupported</strong></td><td>AUR, macOS Intel, pypi, brew</td><td>outside the support boundary</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <p>Two lines trip people up. <strong>Intel Macs are unsupported</strong> — an organization with pre-Apple-Silicon MacBooks still in circulation needs to count them before planning. And <strong>pip installs are unsupported too</strong>, even though v0.14.0 once announced a PyPI package (the latest PyPI release is stuck at 0.19.0 while GitHub is at v0.21.0). Keep pip off your organization's install list.</p>
+
+    <p>Native Windows is good news for IT: the PowerShell one-liner installs into <code>%LOCALAPPDATA%\hermes</code> <strong>without admin rights</strong>, provisioning Python 3.11 via uv, Node 26, a portable Git, ffmpeg and ripgrep on its own. The GUI installer and the CLI share one install directory, and the single documented limitation is the embedded terminal pane on the dashboard's <code>/chat</code> page, which needs a POSIX PTY.</p>
+
+    <pre><code># Windows (PowerShell) — no admin rights required
+iex (irm https://hermes-agent.nousresearch.com/install.ps1)
+
+# Linux / macOS / WSL2
+curl -fsSL https://hermes-agent.nousresearch.com/install.sh | bash
+
+# the Electron runtime the Desktop pulls down is roughly 114 MB</code></pre>
+
+    <p>And my favourite line on the product page: <em>"No account is needed to run the base app."</em> The Desktop is MIT-licensed and free to download; signing in with Nous Portal is an option that opens the door to Hermes Cloud and Portal-routed models, not the front door itself.</p>
+
+    <h2 id="en-topology">Twenty laptops, one hardened backend</h2>
+
+    <p>The heart of this post is Settings → Gateways, which since v0.20.2 (tag v2026.8.16) has been a multi-gateway <strong>Connections registry</strong>. The docs state the goal directly: <em>"Register every Hermes backend you own — the local runtime, remote gateways on your LAN or VPS, SSH hosts, and Hermes Cloud instances — in one desktop app."</em> There are four connection types:</p>
+
+    <div class="table-wrapper">
+      <table>
+        <thead>
+          <tr><th>Connection</th><th>What it is</th><th>Auth</th><th>Where tools run</th></tr>
+        </thead>
+        <tbody>
+          <tr><td><strong>Local</strong></td><td>the runtime on this machine; the Desktop starts it for you</td><td>—</td><td>the user's laptop</td></tr>
+          <tr><td><strong>Remote gateway</strong></td><td>a <code>hermes serve</code> reachable over HTTP(S) — <em>"LAN, Tailscale, or the internet"</em>; the Desktop does not start it</td><td>session token or OAuth</td><td>the remote host</td></tr>
+          <tr><td><strong>SSH</strong></td><td><em>"the app opens the tunnel and starts the dashboard for you"</em>, then adopts a dashboard token</td><td>SSH key + dashboard token</td><td>the remote host</td></tr>
+          <tr><td><strong>Hermes Cloud</strong></td><td>an instance auto-discovered through your Portal account, with an organization picker for multi-org accounts</td><td>Portal sign-in</td><td>a Nous-hosted container</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <p>The sentence that reframes the whole security conversation sits in the app's README: remote mode <em>"treats the gateway host as the execution boundary: agent tools, terminal commands, and file operations run against the remote Hermes host."</em> In the topology I am proposing — twenty laptops attached to a single <code>hermes serve</code> on a box hardened the way #7 describes — <strong>every shell command runs on that box, not on the laptop</strong>. The files the agent edits live there; the credentials it uses live there. The laptop is a screen.</p>
+
+    <p>Inside the registry the hierarchy is <strong>gateway → profile → sessions</strong>. If two gateways carry a profile with the same name, the Desktop shows them as <code>@name-device</code> to keep them apart. One connection is always Primary, and past thirteen profiles the strip condenses — v0.20.6 calls it the fleet profile rail. None of this landed in one release: the tracking issue <a href="https://github.com/NousResearch/hermes-agent/issues/94724">#94724</a>, "Desktop persistent multi-gateway connections — CAMPAIGN COMPLETE (29 PRs)", closed on 27 August 2026 with twenty-nine PRs behind the registry you see today.</p>
+
+    <p>On tokens the docs are detailed enough for a security team to read: each connection's token is stored as an <strong>owner-only (0600) file</strong> in the app's user-data directory, held by the Electron main process — <em>"the renderer and plugins never see token bytes"</em> — with opt-in OS-keychain encryption since v0.20.6. I am underlining "plugins never see" here because I will come back to it under managed scope.</p>
+
+    <pre><code># confirm the target backend's auth gate is really on before you hand the URL to the team
+curl -s https://hermes.example.internal:9119/api/status | jq '.auth_required, .auth_providers'
+
+# if the Desktop cannot connect — the WebSocket close code names the failing layer
+#   4401 = not authenticated        4403 = authenticated but not authorized</code></pre>
+
+    <p>The one thing the registry does not automate is crossing a trust boundary: <em>"Direct bot mentions and delegation remain gateway-local by default. Crossing a backend boundary changes filesystem, credentials, tools, and trust context."</em> If you want a bot on host A talking to a bot on host B, you configure <code>hermes peer</code> deliberately (the peer commands are in <a href="/blog/hermes-agent-teams">#2 Agent Teams</a>; I will not repeat them).</p>
+
+    <div class="alert danger"><strong>Before pointing this at a box people already use:</strong> issue <a href="https://github.com/NousResearch/hermes-agent/issues/40656">#40656</a>, "Desktop remote gateway can destabilize self-hosted host when used concurrently with TUI/gateway", has been <strong>open</strong> since 6 June 2026 — P3, no maintainer response, no linked fix. On a host that still serves TUI or gateway sessions at the same time, I will not call remote mode safe until I have tested it myself. My choice is a dedicated box as the Desktop backend.</div>
+
+    <h2 id="en-signin">Signing in: fail-closed auth, OIDC and the audit log</h2>
+
+    <p>This is where I correct myself. The line "Hermes has no native SSO/RBAC" from #4 was half right. The wrong half is SSO: for a <strong>self-hosted dashboard or remote gateway</strong>, Hermes has a more serious enterprise sign-in story than I gave it credit for. The half that still stands is RBAC, which the last section covers.</p>
+
+    <p>Start from the principle. The dashboard binds to <code>127.0.0.1:9119</code> by default, and when you bind to a non-loopback address with no provider configured, the docs describe two behaviours. From a real terminal, Hermes <em>"doesn't just fail — it offers to set one up on the spot"</em> — pick username &amp; password or OAuth right there. <em>"Non-interactive callers — Docker/s6, CI, piped runs — skip the prompt and hit the fail-closed error."</em> A fleet backend always runs as a service, so for it this is genuinely <strong>fail-closed</strong>: an unattended deploy never starts without auth. Three providers ship (in the source tree under <code>plugins/dashboard_auth/</code>: basic, nous, self_hosted, plus drain):</p>
+
+    <div class="table-wrapper">
+      <table>
+        <thead>
+          <tr><th>Provider</th><th>Mechanism</th><th>Fit</th></tr>
+        </thead>
+        <tbody>
+          <tr><td><strong>Username / password</strong></td><td>env <code>HERMES_DASHBOARD_BASIC_AUTH_*</code></td><td>the docs intend it for dashboards on a <em>"trusted network"</em> or reachable only over a VPN — <em>"not suitable for exposing a dashboard directly to the public internet"</em></td></tr>
+          <tr><td><strong>Nous Portal OAuth</strong></td><td><code>hermes dashboard register</code>; authorization-code + PKCE (S256)</td><td>the docs' preference for anything reachable beyond your own machine; tied to a Portal account</td></tr>
+          <tr><td><strong>Self-hosted OIDC</strong></td><td>the <code>self_hosted</code> plugin: PKCE public client, OIDC discovery, RS256/ES256 ID-token verification</td><td><em>"Authentik · Keycloak · Zitadel · Authelia · Auth0 · Okta · Google"</em> — your own identity provider</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <pre><code># option 1 — username/password: behind a VPN, nowhere else
+HERMES_DASHBOARD_BASIC_AUTH_USERNAME=ops
+HERMES_DASHBOARD_BASIC_AUTH_PASSWORD=&lt;long-random&gt;
+HERMES_DASHBOARD_BASIC_AUTH_SECRET=&lt;session-signing-secret&gt;</code></pre>
+
+    <div class="alert"><strong>The docs' own warning:</strong> <em>"…never expose a password-protected dashboard directly to the open internet. Put it behind a VPN."</em> They recommend Tailscale by name, and I agree with every word.</div>
+
+    <pre><code># option 2 — Nous Portal OAuth: register this install with your Portal account
+hermes dashboard register
+# → writes HERMES_DASHBOARD_OAUTH_CLIENT_ID into ~/.hermes/.env for you
+# or open /local-dashboards in the Portal to name, manage and revoke self-hosted dashboards
+
+# option 3 — your organization's own OIDC (Keycloak shown)
+# config.yaml
+dashboard:
+  oauth:
+    self_hosted:
+      issuer: https://sso.example.ac.th/realms/staff
+      client_id: hermes-desktop
+
+# or via the environment
+HERMES_DASHBOARD_OIDC_ISSUER=https://sso.example.ac.th/realms/staff
+HERMES_DASHBOARD_OIDC_CLIENT_ID=hermes-desktop</code></pre>
+
+    <p>The Desktop side matches this with <strong>Native Sign-In per RFC 8252</strong>: the app opens the system browser with PKCE and stores the returned tokens as owner-only files, optionally encrypted with the OS keychain — <em>"No embedded webview, no browser session cookies."</em> The embedded webview survives only as a legacy fallback for older gateways. After sign-in the Desktop will <em>"sign in once and reuse the resulting session for the WebSocket via a single-use ticket"</em>, and a DNS-rebinding guard requires the Host header to match what you configured.</p>
+
+    <p>The piece that gives me enough confidence to take this to internal audit is the <strong>audit log</strong>: <em>"Every login start, success, failure, and session-verify failure is written as a JSON line to $HERMES_HOME/logs/dashboard-auth.log"</em>, with access_token, refresh_token, code, code_verifier, state and the Authorization header redacted before the write.</p>
+
+    <pre><code># the latest login events — one JSON object per line
+tail -n 20 $HERMES_HOME/logs/dashboard-auth.log
+
+# ship straight into the organization's SIEM — it is already JSON lines
+tail -F $HERMES_HOME/logs/dashboard-auth.log | your-log-shipper</code></pre>
+
+    <p>The boundary needs stating plainly: all of that OIDC applies to the <strong>dashboard and remote gateway you host yourself</strong>, not to Nous Portal accounts. For the Portal, the documented organization mechanics are the organization picker at sign-in, <code>org_id</code>/<code>org_role</code> claims in the token, a membership re-check on every call, and the /local-dashboards page — nothing more. I could find no SSO/SAML documentation for Portal organizations as of writing (the /manage-subscription, /api-docs, /help and /local-dashboards pages returned HTTP 429 on every fetch I tried).</p>
+
+    <h2 id="en-profiles">One agent per role: profiles and distributions</h2>
+
+    <p>Once every laptop attaches to the same backend, the next question is "does everyone have to talk to the same agent?" Hermes's answer is the <strong>profile</strong>. <a href="/blog/hermes-agent-teams">#2 Agent Teams</a> already covers the mechanics — profiles, multiplexing, Bot Mode and <code>hermes peer</code> (its sections 6 and 8) — and I will not repeat them; today I want to treat the profile as the <strong>organization's operating model</strong>: one profile per role.</p>
+
+    <p>The definition is crisp: <em>"A profile is a separate Hermes home directory"</em> at <code>~/.hermes/profiles/&lt;name&gt;</code>, with its own <code>config.yaml</code>, <code>.env</code>, <code>SOUL.md</code>, memories, sessions, skills, cron jobs and state DB.</p>
+
+    <pre><code># one profile per role — --description feeds Kanban's routing
+hermes profile create research --description "Research: literature review, paper summaries, proposal drafts"
+hermes profile create finance  --description "Finance: receipts, project budgets, reconciliation" --clone
+
+# --clone copies config/.env/SOUL/skills — never sessions or memory
+# alternatives: --clone-all | --clone-from &lt;profile&gt; | --no-skills | --portal
+
+# each profile gets its own shell alias
+research            # same as hermes -p research
+finance</code></pre>
+
+    <p>Two lines from the docs the team must know by heart: <em>"Profiles do not sandbox the agent"</em> — they separate state, not OS-level permission — and <em>"Never point two agent processes at the same profile"</em>, because the state DB was not designed for concurrent writers.</p>
+
+    <h3>One gateway process per profile</h3>
+
+    <p>Hermes's default is <strong>one process per profile</strong> — a LaunchAgent or systemd unit each, with a <strong>token lock</strong> that stops a second gateway from reusing a token (#2, section 8, has the details) — and multiplexing several profiles into one process is opt-in through <code>gateway.multiplex_profiles</code>. The only thing I add from the organization's side: keep the default. The last section explains why.</p>
+
+    <h3>Bot Mode: a bot is a profile — and group rooms are still Desktop-bound</h3>
+
+    <p>What an organization needs from Bot Mode (bundled with the Desktop since v0.20.3, official in v0.21.0 — the <code>message_agent</code>, group-chat and peer mechanics are in #2, section 6) comes down to three points. <em>"a Bot is a Hermes profile"</em>, so everything in this section applies to bots unchanged. The team roster — <em>"names and roles from each profile's title/description"</em> — is injected into every Bot Chat's system prompt, so write each <code>--description</code> in the language you want the other bots to read. And every bot <strong>shares one OAuth/token pool with the main profile by default</strong>, so the bill lands on one account.</p>
+
+    <p>The limit that shrinks any "fleet of bots" framing: today <strong>a group room's rounds are driven by the Desktop renderer</strong>, not by a gateway. Room history and membership are mirrored to the gateways (<em>"Rooms follow your gateways, not one Desktop"</em>), but the round driver lives in the app. Issue <a href="https://github.com/NousResearch/hermes-agent/issues/95163">#95163</a>, "Opt-in backend-hosted group rooms" (opened 26 August 2026, P3, needs-decision), says so itself — <em>"Rooms stall when the driving client goes away"</em> — and <a href="https://github.com/NousResearch/hermes-agent/issues/97681">#97681</a>, "Bot Group Chats should keep working after Desktop closes" (opened 29 August 2026, P2, open), reports gateway-owned authority <em>"now on main"</em> with parity work remaining. A bot that must work while nobody has the Desktop open belongs on a profile cron job or on gateway-to-gateway <code>hermes peer</code> per #2, not in a group room.</p>
+
+    <h3>Profile distributions: an agent versioned with git</h3>
+
+    <p>This is the piece that turns "one agent per role" into something you can actually hand out. The docs define it — <em>"A profile distribution packages a complete Hermes agent — personality, skills, cron jobs, MCP connections, config — as a git repository"</em> — and draw a clean ownership line:</p>
+
+    <ul>
+      <li><strong>Distribution-owned</strong> (replaced on update): <code>SOUL.md</code>, <code>config.yaml</code>, <code>mcp.json</code>, <code>skills/</code>, <code>cron/</code>, <code>distribution.yaml</code></li>
+      <li><strong>User-owned</strong> (never touched): <code>memories/</code>, <code>sessions/</code>, <code>state.db*</code>, <code>auth.json</code>, <code>.env</code>, <code>logs/</code>, <code>workspace/</code>, <code>plans/</code>, <code>home/</code>, <code>*_cache/</code>, <code>local/</code></li>
+    </ul>
+
+    <pre><code># install a role agent from an internal repository
+hermes profile install github.com/your-org/hermes-research-agent
+
+# when the central team merges a new version, every machine pulls only what the distribution owns
+hermes profile update
+hermes profile update --force-config   # overwrite a config.yaml the user edited
+
+# tarball export (careful: an export CAN include memories and sessions)
+hermes profile export</code></pre>
+
+    <p>Three cautions straight from the docs: distributions are <strong>unsigned by default</strong>; cron jobs that ship in a distribution are <strong>not auto-scheduled</strong> (you enable them yourself — good); and <em>"SOULs and skills are active immediately, so vet distributions from unknown sources."</em> For an organization, I would put the distribution repo under branch protection and PR review like any other piece of infrastructure code. The distribution-owned <code>skills/</code> directory is also the practical answer to the "sharing" question from <a href="/blog/hermes-skills">#6 Skills</a>.</p>
+
+    <p>On memory: a distribution never touches <code>memories/</code>, and each profile carries its own <code>MEMORY.md</code> (2,200-character cap) and <code>USER.md</code> (1,375) as snapshots frozen at session start — the details are in <a href="/blog/hermes-memory">#3 Memory</a>. <code>SOUL.md</code> is loaded only from <code>$HERMES_HOME/SOUL.md</code>, scanned for prompt-injection patterns, and injected verbatim as the first slot of the system prompt (the repo's default is a single 546-character paragraph).</p>
+
+    <p>If you want one agent to speak differently per room without minting a new profile, <code>channel_overrides</code> in <code>gateway-config.yaml</code> does that:</p>
+
+    <pre><code># gateway-config.yaml — per-room override: model / provider / system_prompt
+platforms:
+  slack:
+    channel_overrides:
+      "C0FINANCE01":
+        model: &lt;model-id&gt;
+        system_prompt: "Answer only on project finance; cite the document number every time."
+# this system_prompt replaces the global gateway prompt for that channel only,
+# and it is ephemeral — injected per turn, never stored in history</code></pre>
+
+    <p>(PR #56967 merged on 2 July 2026, but the shipping release is unpinned in the docs; the request for per-channel <em>personality</em>, #21637, was closed as not planned — so personality stays bound to the profile, not the room.) And when your organization arrives from OpenClaw via <a href="/blog/openclaw-migration">OpenClaw Migration</a>, profiles plus distributions are the destination topology that the OpenClaw-era multi-agent pattern never had.</p>
+
+    <h2 id="en-managed">What IT can pin today (Linux hosts) and cannot (the laptops): managed scope</h2>
+
+    <p>The classic problem with an agent on a staff laptop is that its config lives in the user's home directory — anyone can change it. Hermes answers with <strong>managed scope</strong>: root-owned <code>/etc/hermes/config.yaml</code> and <code>/etc/hermes/.env</code>, which the docs say <em>"win over the user's ~/.hermes/config.yaml, ~/.hermes/.env, and even the shell environment — for exactly the keys it pins."</em> The stated intent is verbatim: <em>"for fleet/org deployments where IT needs to pin… the model provider, a shared API base URL, or security.redact_secrets: true."</em></p>
+
+    <pre><code># /etc/hermes/config.yaml  (root:root 0644) — pin only the keys the organization must control
+model:
+  provider: custom
+  base_url: https://llm-gateway.example.ac.th/v1   # every machine egresses here, nowhere else
+security:
+  redact_secrets: true
+approvals:
+  mode: manual
+
+# /etc/hermes/.env  (root:root 0644 — world-readable by design)
+#   shared, non-sensitive values only — e.g. an org API base URL, feature defaults
+#   an API key does NOT belong here: every local user can read this file (see the limits below)
+
+# relocatable via HERMES_MANAGED_DIR — but that variable must itself be admin-fixed,
+# otherwise a user can point it anywhere</code></pre>
+
+    <p>Keys you do not pin remain the user's — and that is the elegance of it: IT owns the provider, the endpoint and the redaction policy, while users still shape their own SOUL.md, skills and profiles.</p>
+
+    <p>Read the managed-scope page to the end, though, because v1 carries limits the docs state themselves — and they change what this section means for a laptop fleet. <strong>(1)</strong> <em>"Enforcement is filesystem permissions only"</em>: if a user can write the managed directory, or runs Hermes as root, managed scope is advisory. <strong>(2)</strong> <em>"The managed .env is world-readable (0644), so any local user can read secrets pushed through it"</em> — the docs steer it toward shared, non-sensitive values rather than high-sensitivity secrets. <strong>(3)</strong> <em>"The agent's own tools are not hard-blocked from a managed env value"</em>: a pinned variable is applied at startup, but the agent can set a different one inside its own subprocess shell. And <strong>(4)</strong> what is explicitly <em>"out of scope for v1"</em>: native managed locations on macOS and Windows (<em>"v1 is Linux/POSIX-first"</em>), layered drop-in directories (<code>managed.d/</code>), signed managed files, and remote/MDM delivery.</p>
+
+    <p>Lay point (4) over the platform table above. The Tier-1 desktops are Apple Silicon and Windows — neither has a managed scope. So what IT can pin <strong>today</strong> is <strong>Linux hosts and containers</strong>: the one backend twenty laptops attach to, which in this post's topology is exactly where the execution boundary sits. The laptops themselves, running a Local connection, cannot be pinned at all until a later version — and MDM delivery sits only on the "may come later" list.</p>
+
+    <p>The guide "Running Hermes on a Personal or Work Machine" lays out defaults I wish every CTO would read before worrying: <code>approvals.mode: smart</code> (an auxiliary LLM risk-rates commands), an approval timeout of 300 seconds that <strong>fails closed</strong>, an always-on hardline blocklist with <em>"no override flag"</em>, write guards on <code>~/.ssh ~/.aws ~/.kube /etc/sudoers ~/.netrc auth.json .env</code>, <code>security.redact_secrets</code> on, and <em>"Hermes Agent does not collect telemetry."</em> Its extra recommendations for a work machine:</p>
+
+    <pre><code># ~/.hermes/config.yaml on a staff machine (or, on a Linux host, pinned through /etc/hermes)
+approvals:
+  mode: manual                 # a human approves every risky command
+checkpoints:
+  enabled: true                # shadow-git so /rollback works
+
+# fence the agent's writes
+HERMES_WRITE_SAFE_ROOT=/Users/staff/work
+# and prefer a Docker or SSH backend over local wherever you can</code></pre>
+
+    <p>The guide's declared threat model is <em>"an honest-but-wrong agent"</em>, not a malicious process — for the latter, go back to #4, every line of which still applies.</p>
+
+    <h3>Governing Desktop plugins</h3>
+
+    <p>The Desktop has a plugin system of its own (the Plugin SDK from v0.20.0) that has <strong>nothing to do</strong> with the agent's Python plugins — the docs say the two share <em>"no code, no APIs, and no delivery mechanism."</em> A plugin is a single ESM file at <code>$HERMES_HOME/desktop-plugins/&lt;id&gt;/plugin.js</code>, and the sentence IT should read twice is <em>"A loaded plugin is evaluated as ESM in the renderer realm with full app authority"</em> — the full authority of the app, minus the token bytes that stay in the main process, as noted above.</p>
+
+    <pre><code># plugins are distributed through a deep link that requires confirmation before install
+hermes://plugin/install?repo=your-org/hermes-desktop-theme&amp;enable=1
+
+# my policy: allowlist internal repositories only
+# and disable the home-directory scan behind the Projects sidebar on machines holding sensitive data
+repo_scan_enabled: false</code></pre>
+
+    <p>Three recent features bear directly on governance. v0.20.6 added <strong>consent-gated real-profile browsing</strong> — the agent may use the user's real Chromium profile only with consent (Windows gets a close-with-approval flow) — and from v0.21.0 the in-app browser <em>"stopped being a window the agent could only look at: Hermes now navigates, clicks, and reads it directly."</em> The <strong>Send diagnostics</strong> button <em>"uploads a redacted debug bundle to Nous-internal storage"</em> — opt-in each time, not telemetry. And on macOS, <code>hermes desktop --setup-tcc-identity</code> means <em>"Permission grants survive every update"</em> — no re-granting Accessibility or Screen Recording after each release, which for a twenty-machine fleet is the difference between a silent update and twenty helpdesk tickets.</p>
+
+    <h2 id="en-update">Updating a fleet without breaking it</h2>
+
+    <p>#7 taught <code>hermes update --backup</code> on one box. A fleet makes the same task harder by a multiple — and Nous acknowledged it in writing — then closed it. The tracking issue <a href="https://github.com/NousResearch/hermes-agent/issues/91277">#91277 "[Tracking] Fleet update reliability"</a> (opened 21 August 2026, closed as completed on 27 August — six days) opened with <em>"~30 open issues and ~15 open PRs each patch one corner of the same class"</em>, defined deployment kinds so that each gets its own update path, and landed Phases 0–2 in full: #91283 update receipts plus fleet version verification, #91321 the macOS ps-scan fix and launchd exclusion, #91378 a full launchd fleet restart, and #91439 receipt finalisation. Those receipts and that version check are what the Update all instances button below relies on today. The line that matters most for our topology: <em>"Docker / Hermes Cloud image — NOT updatable in place — pull new image + recreate."</em></p>
+
+    <p>On the Desktop, the <strong>Update all instances</strong> button on the Gateways page <em>"dispatches hermes update to every eligible gateway"</em> in an order the docs spell out: <em>"the connected backend first, then every other eligible registered gateway (Hermes Cloud entries are platform-managed and skipped), and the desktop app itself last"</em> — backend before app, so a new renderer never talks to an old backend. SSH connections gained a <strong>managed SSH remote-update engine</strong> in v0.20.6, and v0.21.0 added <em>"Detached update hand-off on every OS"</em>, which fixes the Windows symptom of parking on "Updating Hermes".</p>
+
+    <pre><code># on the backend (git install) — the discipline from #7 scales to the fleet
+hermes update --check          # is there a new version? do nothing yet
+hermes update --backup         # back up first, then update
+# hermes update rebuilds once per install and syncs skills across all profiles
+
+# on a Docker backend — there is no in-place update
+docker compose pull
+docker compose up -d           # state lives in the volume, so nothing is lost
+
+# Hermes Cloud — the Desktop skips it (platform-managed)
+# or drive it through the Portal MCP server: agent → update container image
+
+# three uninstall levels — pick the one that matches what you actually want gone
+hermes uninstall --gui     # remove only the Desktop app — agent and data stay
+hermes uninstall           # remove the runtime — ~/.hermes stays
+hermes uninstall --full    # remove everything including ~/.hermes  ← a laptop being returned</code></pre>
+
+    <p>The order I use for a fleet: (1) read the release notes — August alone ran from v0.20.0 to v0.21.0; (2) update a staging backend first and let a small group use it for a day; (3) press Update all instances from one ops machine's Desktop; (4) only then let end-user Desktops auto-update — because the loudest regressions (#83683, #89675, and the boot/repair loop in #96282/#96297) all happened "after an update".</p>
+
+    <h2 id="en-cost">Seeing cost and usage across the fleet</h2>
+    <div class="alert info"><strong>What the numbers measure:</strong> this section is about <em>where</em> you see them. What they mean — what they count and what they miss (prompt cache, fallback chains, why Analytics is only a lower-bound estimate) — is in <a href="/blog/hermes-models-cost">#9 Models &amp; Cost</a>, and the jobs that burn no tokens at all are in <a href="/blog/hermes-automation">#8 Automation</a>.</div>
+
+    <p>What v0.21.0 added that speaks directly to a fleet is the <strong>MCP command center</strong>, with <em>"a fleet cost/usage overlay showing schema token estimates and 30-day usage per server, and hermes:// deep links that install an MCP server with explicit confirmation"</em> — you can see which MCP server costs how many schema tokens and how often it was called over 30 days, across the gateways you registered. <strong>Per-delegation cost surfacing</strong> puts a price tag on each subagent that #2 taught you to delegate to.</p>
+
+    <p>The second instrument is the <strong>Context-usage meter</strong>, which breaks the current context's tokens down into system prompt, tool definitions, skills, memory, rules, MCP and subagent definitions — the GUI version of the <code>hermes prompt-size</code> that #7 recommended, and the first place I look when someone says "the agent got slower".</p>
+
+    <p>On billing, v0.19.0 "Quicksilver" (20 July 2026) added <code>/subscription</code> and <code>/topup</code> to the TUI/CLI with a matching <strong>billing tab</strong> in the Desktop, so a user can top up Portal credits without leaving the app (the two commands are not yet in the user guide's slash-command list; I am citing the release notes). The same v0.19.0 added Bitwarden and 1Password as secret sources — the answer to the "secrets never sit naked in .env" item that #7 put on the checklist.</p>
+
+    <h3>Managing Hermes Cloud from the CLI over MCP</h3>
+
+    <p>For organizations with some agents on <strong>Hermes Cloud</strong> (still a preview; the terms are a $10 minimum in credits or an active subscription, scale-to-zero when idle, and channels Telegram, Discord, Slack, Email and CLI — a subset of the platforms #5 walked through), the Desktop has auto-discovered instances through the Portal account since 10 July 2026. Accounts spanning several organizations meet an organization picker (internally an HTTP 409 <code>org_selection_required</code>), and Nous summarised the value in an X post on 14 August as <em>"an agent that keeps working after you close the laptop."</em> The ops side is reachable from the terminal through the Portal's official MCP server:</p>
+
+    <pre><code># add the Portal as an MCP server (OAuth + PKCE — one browser round-trip)
+hermes mcp add --url https://portal.nousresearch.com/mcp --auth oauth hermes-cloud
+hermes mcp test hermes-cloud
+
+# then, inside a session:
+#   agents  (read-only) — list, status, estimate costs
+#   agent   (mutating)  — start / stop / restart / create / destroy
+#                          update env vars / update container image
+# tokens live under ~/.hermes/mcp-tokens/ and "membership is re-checked on each call"</code></pre>
+
+    <p>What I will not write, because no public document supports it: server sizes, prices, per-tier rate limits, and <strong>where the servers are</strong>. The /cloud page carries the FAQ question "Where are the servers located?" but no answer appeared in the content I fetched. For a Thai organization that must answer to the PDPA, that alone is reason enough to keep the backend self-hosted until the documentation exists.</p>
+
+    <h2 id="en-limits">Honest limits and an org checklist</h2>
+
+    <p>I promised at the top not to soften anything. Here is the list as of 1 September 2026.</p>
+
+    <p><strong>1. No tiered RBAC.</strong> Issue <a href="https://github.com/NousResearch/hermes-agent/issues/527">#527</a>, "Gateway Permission Tiers — RBAC (Owner/Admin/User/Guest)", has been open since 6 March 2026 (22 reactions, labelled needs-decision). Authorization today is binary, evaluated in order: per-platform allow-all → DM pairing → per-platform allowlist → global allowlist → global allow-all → default deny. The FAQ confirms multi-user access exists only through allowlists and DM pairing — whoever passes the allowlist can do everything the agent can do.</p>
+
+    <p><strong>2. Secrets leak across profiles under multiplexing.</strong> Issue <a href="https://github.com/NousResearch/hermes-agent/issues/82936">#82936</a> reports that under <code>gateway.multiplex_profiles</code> the default profile's secrets leak into a secondary profile's terminal tool and Kanban worker subprocesses — opened 10 August 2026, labelled type/security, P2, and <strong>still open</strong>. It contradicts the multiplexing doc's claim of per-profile .env isolation. I present it as an unresolved contradiction, not a fixed bug.</p>
+
+    <div class="alert danger"><strong>Consequence for an organization:</strong> keep the default of one process per profile — the docs themselves recommend it <em>"when you want hard process-level isolation"</em> — and do not run <code>hermes config set gateway.multiplex_profiles true</code> on a backend where different profiles hold different credentials until #82936 is closed.</div>
+
+    <p><strong>3. Data isolation in group rooms is still the model's job.</strong> The bednars.me critique (12 July 2026, on the $20 Portal tier) describes the agent disclosing private context after being added to a test group, and concludes that <em>"the model should never be responsible for deciding whether another participant may access data."</em> It is a third-party opinion, but it is consistent with point 1 and with issue <a href="https://github.com/NousResearch/hermes-agent/issues/4281">#4281</a> (gateway sessions on a local backend are not sandboxed), which is still open, as #4 recorded.</p>
+
+    <p><strong>4. No SSO/SAML/RBAC documentation for Portal organizations.</strong> The phrase "granular access controls" from the Hermes Cloud announcement (an X post of 8 July 2026 — the only source, and one I could not re-fetch) remains just a phrase. The documented org mechanics are the org picker, org_id/org_role claims, the per-call membership re-check, and /local-dashboards. The Portal Terms of Service (updated 18 June 2026) contain no organization-account or seat mechanics at all — only non-refundable fees, account deletion within six months of termination, and arbitration in Cupertino.</p>
+
+    <p><strong>5. No public status page</strong> that I could find, and Hermes Cloud still publishes no server sizes, prices or regions.</p>
+
+    <p><strong>6. The egress proxy covers Docker only.</strong> iron-proxy <em>"wires the egress proxy into the Docker backend only. Modal, Daytona, SSH, and Singularity do not receive proxy env vars or CA mounts yet."</em> If your fleet's backend uses SSH mode, egress control has to happen at the network layer.</p>
+
+    <p><strong>7. Bot Mode group rooms stop when the Desktop closes.</strong> The round driver lives in the Desktop renderer (<a href="https://github.com/NousResearch/hermes-agent/issues/95163">#95163</a>, open, P3, needs-decision; <a href="https://github.com/NousResearch/hermes-agent/issues/97681">#97681</a>, open P2 since 29 August 2026 — gateway-owned authority <em>"now on main"</em>, but not yet at parity). A "bot team that works 24/7" therefore means per-profile cron jobs and gateway-to-gateway peers today, not a group room.</p>
+
+    <p>In fairness, the Hermes Atlas report "State of Hermes Agent — July 2026" (a community project unaffiliated with Nous) names scale-to-zero, managed scope, profile multiplexing and drain coordination as the quarter's "hosted/team deployment" signals. The direction is right; the set is not yet complete.</p>
+
+    <h3>Checklist before rolling Hermes Desktop out to the organization</h3>
+
+    <ul>
+      <li>☐ Count the machines: Intel Macs, and pip/brew/AUR install paths, are unsupported</li>
+      <li>☐ The Desktop backend is a dedicated box, not one still serving TUI/gateway users (#40656 is open)</li>
+      <li>☐ The dashboard is never bound outside loopback without OIDC/OAuth — and username/password lives behind a VPN only</li>
+      <li>☐ <code>dashboard-auth.log</code> is shipped to the SIEM</li>
+      <li>☐ One profile per role, one gateway process per profile — multiplexing stays off (#82936)</li>
+      <li>☐ Every role's distribution lives in a branch-protected repo; distribution cron jobs are enabled by hand after review</li>
+      <li>☐ On the Linux backend: <code>/etc/hermes</code> pins provider, base_url and redact_secrets, <code>HERMES_MANAGED_DIR</code> is locked, and no secret sits in the world-readable managed <code>.env</code> — the Mac and Windows laptops have no managed scope yet</li>
+      <li>☐ Desktop plugins install from an allowlist of repos only, because a plugin has full app authority</li>
+      <li>☐ The update order — staging → backend → Update all instances → user Desktops — is written down as a runbook</li>
+      <li>☐ If Hermes Cloud is in scope: legal knows that region and retention are undocumented</li>
+    </ul>
+
+    <p>My closing position for the series: Hermes Desktop as the "twenty-first window" onto a hardened backend is a topology I am ready to pilot with a small team today. What Nous built in three months — the Connections registry, OIDC, distributions, managed scope, fleet update — covers more than half of what an organization needs. The other half — RBAC, tenant isolation that does not rely on the model, and Cloud documentation that answers where the data lives — is the list I will re-check before approving it for the whole organization. The best system is still the most boring one, and a boring fleet is a fleet somebody designed to be boring from day one.</p>
+
+    <div class="key-takeaways">
+      <h3>🎯 Key Takeaways</h3>
+      <ul>
+        <li><strong>#38602</strong> = the most-reacted issue of all time is "Desktop Client-Only Installation" — the community wants a twenty-first window, not a twenty-first agent</li>
+        <li><strong>hermes serve</strong> = the Desktop's headless backend (JSON-RPC/WebSocket), not the port-8642 API server; the Desktop is the fourth box in the architecture from #1</li>
+        <li><strong>Execution boundary</strong> = in remote mode every command, file and credential lives on the remote host — the laptop is a screen; but #40656 is open, so do not share the host with TUI users</li>
+        <li><strong>Auth gate</strong> = bind outside loopback with no provider and an interactive run offers to set one up, while a non-interactive run (service, Docker, CI) fails closed and refuses to start; OIDC with Keycloak/Okta/Auth0 works, with a JSON-lines audit log</li>
+        <li><strong>Profile</strong> = a separate home directory per role, one gateway process each; no sandbox, and never two processes on one profile</li>
+        <li><strong>Profile distribution</strong> = a whole agent as a git repo — SOUL/config/skills/cron are distribution-owned, memories/sessions/workspace/.env are user-owned; unsigned by default, so vet it</li>
+        <li><strong>Managed scope</strong> = root-owned <code>/etc/hermes</code> beats user config for exactly the pinned keys — provider, base_url, redact_secrets; v1 is Linux-only, enforced by filesystem permissions alone, with a world-readable .env — it pins the backend, not the laptops</li>
+        <li><strong>Update all instances</strong> = connected backend first → other gateways → app last; Docker and Cloud are not updatable in place; #91277 is the campaign Nous filed and closed as completed in six days — its update receipts are what the button relies on</li>
+        <li><strong>MCP command center</strong> = a 30-day cost/usage overlay per server across the fleet (v0.21.0) — what the numbers mean is #9's job</li>
+        <li><strong>Still missing</strong> = tiered RBAC (#527 open since March), model-independent tenant isolation, SSO/SAML for Portal orgs, a status page, Hermes Cloud prices/regions, and Bot Mode group rooms that outlive the Desktop (#97681)</li>
+      </ul>
+    </div>
+
+    </div>
+
+    <div class="post-series-footer">
+      <span class="l-th">บทความจากซีรีส์ Hermes Agent in Practice 2026</span><span class="l-en" lang="en">From the Hermes Agent in Practice 2026 series</span>
+    </div>
+
+  </article>
+
+  </main>
+
+  <footer class="blog-footer">
+    <nav class="blog-footer__nav" aria-label="Site">
+      <a href="../index.html">Home</a>
+      <a href="./">Blog</a>
+      <a href="../publications/">Publications</a>
+      <a href="../books/">Books</a>
+      <a href="../projects/">Projects</a>
+      <a href="../news/">News</a>
+      <a href="../index.html#contact">Contact</a>
+    </nav>
+    <a href="./">← Back to Blog</a>
+    <span>© 2026 Anirach Mingkhwan — Associate Professor, KMUTNB</span>
+  </footer>
+
+</body>
+</html>

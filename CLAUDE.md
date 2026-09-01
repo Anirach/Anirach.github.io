@@ -31,7 +31,7 @@ Deploy by pushing to `main` — GitHub Pages auto-deploys. There is no `.nojekyl
 │                       #   <script> that is not application/ld+json. See "Zero JavaScript" below.
 ├── blog/
 │   ├── index.html      # Blog listing — fully static, zero JavaScript, a featured post + 4 series (no category band)
-│   └── *.html          # 53 self-contained posts (own <style>, own :root, own nav markup)
+│   └── *.html          # 56 self-contained posts (own <style>, own :root, own nav markup)
 ├── books/              # Books & writing (nav label "Books") — all self-contained
 │   ├── index.html      #   the section index: the last-lecture book + 1 published novel + 2 complete manuscripts
 │   ├── one-day-of-light.html         # per-book detail page (+ one-day-of-light-{en,th}.pdf — free downloads, served from books/)
@@ -45,9 +45,9 @@ Deploy by pushing to `main` — GitHub Pages auto-deploys. There is no `.nojekyl
 ├── robots.txt          # Allow all + Sitemap: line. VERIFIED 2026-08-26 post-deploy:
 │                       #   the repo file REPLACES Cloudflare's Content Signals block
 │                       #   outright — it is not prepended, as was first assumed
-├── sitemap.xml         # 63 canonical URLs, hand-maintained — 404.html excluded
+├── sitemap.xml         # 66 canonical URLs, hand-maintained — 404.html excluded
 ├── favicon.ico         # + apple-touch-icon.png (180×180) — both probed at the root by default
-├── images/             # 130 files — covers (<slug>-cover.jpg; books/ titles carry both language faces as -cover-en/-th or -cover-front/-back), 59 share cards (og-*.jpg, <slug>-og.jpg — all 1200×630), diagram PNGs, posters, the event QR
+├── images/             # 136 files — covers (<slug>-cover.jpg; books/ titles carry both language faces as -cover-en/-th or -cover-front/-back), 65 share cards (og-*.jpg, <slug>-og.jpg — all 1200×630), diagram PNGs, posters, the event QR
 ├── docs/               # design spec, implementation plan, OpenClaw news runbook + gate
 ├── .claude/skills/     # page-design · blog-post · a11y-perf · site-check
 ├── _config.yml         # Jekyll excludes: docs/, CLAUDE.md (see Development)
@@ -67,9 +67,10 @@ that sat for 16 days with nothing able to expire them.
 `blog/index.html` is therefore, in order: hero → **one featured post** → four `.series-section`
 blocks. No category-filter UI, no client-side JS.
 
-- `#series-hermes` — "Hermes Agent in Practice" (7 cards, all numbered #1–#7; launched 2026-09-01) —
-  bilingual guides to Nous Research's Hermes Agent harness, mirroring the OpenClaw arc; each post
-  carries the Life-style pure-CSS TH ⇄ EN switch, a Deep Blue hero, and its own 7-chip
+- `#series-hermes` — "Hermes Agent in Practice" (10 cards, all numbered #1–#10; launched 2026-09-01 as
+  7 posts mirroring the OpenClaw arc, extended the same day with #8 Automation, #9 Models & Cost,
+  #10 Desktop & Fleet) — bilingual guides to Nous Research's Hermes Agent harness; each post
+  carries the Life-style pure-CSS TH ⇄ EN switch, a Deep Blue hero, and its own 10-chip
   `.series-nav` strip, whose content no SERIES7 check polices
 - `#series-openclaw` — "OpenClaw for Organizations" (13 cards; 7 of them are the numbered series, the rest standalone)
 - `#series-devops` — "DevOps & Vibe Coding" (24 cards)
@@ -79,15 +80,15 @@ blocks. No category-filter UI, no client-side JS.
   (checkbox + sibling selectors, Thai default; INV-38-clean) and its own 9-chip `.series-nav`
   strip, whose content no SERIES7 check polices
 
-The hero `.blog-hero__stats` reads **4 Series · 53 Articles**; there is deliberately no
+The hero `.blog-hero__stats` reads **4 Series · 56 Articles**; there is deliberately no
 "N Categories" stat, though INV-02e still verifies one if it is ever reinstated, and INV-02d still
 fails on any empty `.category` band a future commit adds.
 
 **The featured post is `class="feature"`, never `class="card"`.** Three separate regexes count
 `class="card"` (`check_site.py` RE_CARD, `scripts/gen_feed.py`, blog-post's `verify-wiring.py`), so
 a 38th match would inflate every counter and put a duplicate item in the feed. It spotlights the
-newest post by git first-commit date — today `hermes-101`, the lead of the new Hermes Agent in
-Practice series (same-day rule plus editorial choice: the series launch is the hook). **Card order IS the prev/next chain and must never move.**
+newest post by git first-commit date — today `hermes-automation`, the first of the three posts that
+extended the Hermes series (a same-day tie among #8–#10, broken editorially: the broadest hook). **Card order IS the prev/next chain and must never move.**
 
 The heading ladder is `h1` hero → `h2` series (and the feature) → `h3` card title. It was a level
 deeper until the category band went. `check_site.py` and `verify-wiring.py` read
@@ -100,7 +101,7 @@ Match the pattern to the post's series; do not mix them.
 
 | Pattern | Used by | Markup | Link style |
 |---|---|---|---|
-| `.series-nav` chip strip | the 7 numbered OpenClaw posts, the 9 Life posts (own 9-chip strip) and the 7 Hermes posts (own 7-chip strip, 2026-09-01) | `<div class="series-nav">` + `.series-links` with `<a>` for others and `<span class="current">` for self | absolute, extensionless: `/blog/openclaw-memory` |
+| `.series-nav` chip strip | the 7 numbered OpenClaw posts, the 9 Life posts (own 9-chip strip) and the 10 Hermes posts (own 10-chip strip, 2026-09-01) | `<div class="series-nav">` + `.series-links` with `<a>` for others and `<span class="current">` for self | absolute, extensionless: `/blog/openclaw-memory` |
 | `.post-nav` prev/next pair | the 24 DevOps-chain posts, `git-branching` (the head) included since 2026-08-26 | `<div class="post-nav">` (a `div`, never `<nav>` — INV-04c) holding two `.post-nav__link` with `.post-nav__dir` (`← Previous` / `Next →`) and `.post-nav__title`; both chain ends point at `./` | relative with extension: `openclaw-memory.html` |
 | none | `beyond-plugins`, `claude-code-architecture`, `idle-self-improvement`, `obsidian-ai-jarvis`, `openclaw-memory-architecture`, `openclaw-migration` (`NO_NAV_POSTS` in `check_site.py`; the two `-architecture` posts lost their DevOps-style nav on 2026-08-26) | — | — |
 
@@ -140,7 +141,7 @@ deliberately carries **no** counter: the gate slices only `#published` and `#man
 `#last-lecture` sits above both, outside every slice — the precedent is `#academic`, which is
 also counter-free. Do not "fix" it by adding one.
 
-Current values, re-derive rather than trust: 4 Series · 53 Articles (7 Hermes + 13 OpenClaw + 24 DevOps + 9 Life) ·
+Current values, re-derive rather than trust: 4 Series · 56 Articles (10 Hermes + 13 OpenClaw + 24 DevOps + 9 Life) ·
 7 news updates · 8 chapters (publications) · 1 novel + 2 complete (books).
 
 `books/` detail pages have their own wiring check: `check_site.py` INV-26 fails if a
@@ -165,7 +166,7 @@ Four skills live in `.claude/skills/` — use them; they carry the deep, verifie
 - **page-design** — the house visual system (canonical `:root` tokens, type scale, component vocabulary, approved hero gradients, modern-CSS adoption verdicts). Load before designing or restyling anything.
 - **blog-post** — the end-to-end recipe for adding/editing a post, with a wiring verifier (`assets/verify-wiring.py`). The starter template itself is not here — it was consolidated into **page-design** (`assets/post-template.html`) as the repo's one canonical copy; see `.claude/skills/blog-post/assets/TEMPLATE-MOVED.md`.
 - **a11y-perf** — accessibility and performance standing rules plus the measured remediation backlog (real contrast ratios, image weights, focus states).
-- **site-check** — run `python3 .claude/skills/site-check/scripts/check_site.py` from the repo root before every push. 58 cross-file integrity checks (39 fail / 17 warn / 2 info); exit 0 means no fail-severity violation. The `BASELINE` table is **empty** since 2026-08-26 (`0 new, 0 known` — down from 55, then 29, paid down honestly in seven commits `01332eb`…`21d5cfc` rather than baselined; INV-05b was retired outright, 59 → 58), so every violation the script prints is new. `INV-25` fails the build if a baseline entry is ever added and goes stale, so the net cannot silently rot; `INV-26` ties every section-directory detail page (today: the four `books/*.html`) to its own index; `INV-27` enforces the social/canonical head block on all 63 pages. Added 2026-08-26 by the
+- **site-check** — run `python3 .claude/skills/site-check/scripts/check_site.py` from the repo root before every push. 58 cross-file integrity checks (39 fail / 17 warn / 2 info); exit 0 means no fail-severity violation. The `BASELINE` table is **empty** since 2026-08-26 (`0 new, 0 known` — down from 55, then 29, paid down honestly in seven commits `01332eb`…`21d5cfc` rather than baselined; INV-05b was retired outright, 59 → 58), so every violation the script prints is new. `INV-25` fails the build if a baseline entry is ever added and goes stale, so the net cannot silently rot; `INV-26` ties every section-directory detail page (today: the four `books/*.html`) to its own index; `INV-27` enforces the social/canonical head block on all 66 pages. Added 2026-08-26 by the
 critique work, each fault-injected before being trusted: `INV-28` (every `.post-hero` background is
 Sunrise or Deep Blue — the 2 post families, down from 5 on 2026-08-26), `INV-29` (every post carries a home link and a footer
 destination row, so no post is a dead end), `INV-30` (the skip link and its `id="main"` target
@@ -218,7 +219,7 @@ News and the homepage "Latest updates" strip have a separate gate — `python3 d
 
 ## Social metadata — the `<!-- social -->` block
 
-Added 2026-08-26. Every one of the 63 enumerated pages carries a delimited block in `<head>`:
+Added 2026-08-26. Every one of the 66 enumerated pages carries a delimited block in `<head>`:
 
 ```html
 <!-- social -->
@@ -251,8 +252,8 @@ the canonical tag is what resolves the duplicate.
 ≥1.5:1, otherwise `summary`. 25 of the 37 post covers are square, and a square cover in a large
 card loses ~48% of its height — including the caption band these covers carry along the top.
 
-**All 53 posts and all four books use a dedicated share card** rather than their own cover
-(`images/<slug>-og.jpg`, 1200×630, 57 files): the posts since the 2026-08-26 drawn-cover system
+**All 56 posts and all four books use a dedicated share card** rather than their own cover
+(`images/<slug>-og.jpg`, 1200×630, 60 files): the posts since the 2026-08-26 drawn-cover system
 (`scripts/make_cover.py` draws the 800×800 cover and the share card together — INV-35 checks both;
 before that only three posts had one, the two whose covers were shared and the one with no image),
 and the four books whose portrait covers would lose ~65% of their height —
@@ -262,7 +263,7 @@ left and Thai right, matching how the detail pages render them.
 `404.html` is deliberately excluded from all of this: noindex, no social block, not in
 `sitemap.xml`, not enumerated by `check_site.py`. Do not "fix" it by adding one.
 
-**`sitemap.xml` is hand-maintained** — 63 `<loc>` entries with a per-file `lastmod` taken from
+**`sitemap.xml` is hand-maintained** — 66 `<loc>` entries with a per-file `lastmod` taken from
 git. Nothing computes it; adding a page means adding its entry. This is the same drift profile as
 the article counters, and only this sentence enforces it.
 

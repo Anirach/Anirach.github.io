@@ -51,7 +51,7 @@
     .post-hero__series { font-weight: 600; color: #fff; }
     /* the switch pill and the focus ring both sit on the dark hero: the pill is
        a light chip so its labels keep their light-ground colours, and --focus
-       re-points to gold here (blue collapses on blue — the footer/<pre>
+       re-points to gold here (blue collapses on blue — the footer/pre
        precedent). */
     .post-hero { --focus: var(--gold); }
     .post-hero__cover {
@@ -346,6 +346,9 @@
         <a href="/blog/hermes-integrations">#5 Integrations</a>
         <a href="/blog/hermes-skills">#6 Skills</a>
         <a href="/blog/hermes-production">#7 Production</a>
+        <a href="/blog/hermes-automation">#8 Automation</a>
+        <a href="/blog/hermes-models-cost">#9 Models &amp; Cost</a>
+        <a href="/blog/hermes-desktop-fleet">#10 Desktop &amp; Fleet</a>
     </div>
   </div>
   </nav>
@@ -686,6 +689,7 @@ tail -f ~/.hermes/logs/gateway.log # ดู log — ข้อ 7 ของ checkl
     <p>ฝั่ง supply chain ของ skills ก็มีเกราะที่ตอบบทเรียน marketplace ยุคก่อนตรง ๆ: ทุก skill จากบุคคลที่สามถูกบังคับสแกนตอนติดตั้ง (หา exfiltration, คำสั่ง injection, คำสั่งทำลายล้าง) มี trust tiers ไล่จาก builtin/official ลงมาถึง community และคำตัดสินระดับ &laquo;dangerous&raquo; นั้น<strong>ไม่มีทาง override ได้</strong>แม้จะใส่ <code>--force</code> ส่วน skill ที่ agent เขียนเองระหว่าง session ก็ผ่านประตู <code>skills.write_approval</code> ให้มนุษย์รีวิว diff ก่อนทุกครั้ง (v0.21.0 เพิ่มการสแกนตอนติดตั้ง plugin เข้ามาอีกชั้น) — รายละเอียดชุดนี้ผมจะลงลึกในโพสต์ #6 Skills</p>
 
     <p>แล้วอะไรที่ Hermes ยัง<em>ไม่มี</em>? บทวิเคราะห์ enterprise ของ LensHQ (13 สิงหาคม 2026) ไล่ช่องว่างไว้ชัด: ไม่มี SSO/RBAC ในตัว, ไม่มี audit trail รวมศูนย์แบบแก้ไขไม่ได้, ไม่มี default-deny egress และไม่มีกลไกหมุนเวียน credential — ข้อแนะนำของเขาคือใช้ microVM isolation แทน container ที่ share kernel และบังคับ egress ทั้งหมดผ่าน proxy allowlist เพื่อให้การ exfiltrate จาก prompt injection <em>ล้มเหลวและถูกบันทึก</em>พร้อมกัน ผมเห็นด้วยเกือบทั้งหมด แต่ต้องเติมความเป็นธรรมหนึ่งข้อ: คำวิจารณ์นี้แม่นสำหรับตัว OSS ที่ self-host — ส่วน Nous เองเริ่มขายฝั่งองค์กรผ่าน <strong>Hermes Cloud</strong> (public preview ราวกรกฎาคม 2026) ที่โฆษณา granular access controls และ unified billing ผ่าน Nous Portal ซึ่งเป็นคนละเส้นทางกับการ self-host และผมจะชวนดูใน #7 Production</p>
+    <p>ข้อแรกในรายการนั้นต้องขยายความให้แม่นขึ้น (และผมแก้ในตอนที่เขียนหลังจากนี้แล้ว): dashboard แบบ self-hosted รองรับ OIDC sign-in กับ Keycloak, Okta, Auth0, Authentik, Zitadel, Authelia และ Google พร้อม auth audit log แบบ JSON-lines และ token ของ Nous Portal ก็พก claim <code>org_id</code>/<code>org_role</code> มาด้วย — สิ่งที่ยัง<em>ไม่มี</em>จริงคือ RBAC แบบแบ่งระดับสิทธิ์ (issue #527 เปิดค้างตั้งแต่มีนาคม) และเอกสาร SSO/SAML สำหรับองค์กรบน Portal รายละเอียดทั้งหมดอยู่ในตอน <a href="/blog/hermes-desktop-fleet">#10 Desktop &amp; Fleet</a></p>
 
     <blockquote>💡 Repello AI สรุป threat model ของ agent ถาวรไว้ในประโยคที่ผมยกให้เป็นบทสรุปของทั้งเรื่อง: &laquo;you cannot patch your way to a secure persistent agent&raquo; — ช่องโหว่แก้ได้ทีละตัว แต่สถาปัตยกรรมของความเสี่ยงยังอยู่ครบ ตราบใดที่ agent จำได้ ทำได้ และถือกุญแจ</blockquote>
 
@@ -1011,6 +1015,7 @@ tail -f ~/.hermes/logs/gateway.log # checklist item 7, in practice</code></pre>
     <p>The skills supply chain carries armor that answers the old marketplace scandals directly: every third-party skill undergoes mandatory install-time scanning (for exfiltration, injection directives, and destructive commands), trust tiers run from builtin/official down to community, and a &ldquo;dangerous&rdquo; verdict is <strong>non-overridable</strong> — even with <code>--force</code>. Skills the agent writes for itself during a session pass through the <code>skills.write_approval</code> gate for human diff review, and v0.21.0 extended security scanning to plugin installs as well. I will go deep on all of this in post #6, Skills.</p>
 
     <p>So what does Hermes still <em>not</em> have? LensHQ's enterprise gap analysis (August 13, 2026) lists them plainly: no native SSO/RBAC, no centralized tamper-proof audit trail, no default-deny egress, no credential rotation. Their recommendations: microVM isolation instead of shared-kernel containers, and forcing all egress through a proxy allowlist so that prompt-injection exfiltration both <em>fails and gets logged</em>. I agree with nearly all of it, with one fairness note: that critique is accurate for the self-hosted OSS. Nous itself has begun selling the organizational side through <strong>Hermes Cloud</strong> (public preview since roughly July 2026), which advertises granular access controls and unified billing via Nous Portal — a different path from self-hosting, and one I will examine in #7, Production.</p>
+    <p>The first item on that list needs sharpening (and post #10, written after this one, does): self-hosted dashboards support OIDC sign-in with Keycloak, Okta, Auth0, Authentik, Zitadel, Authelia and Google, with a JSON-lines auth audit log, and Nous Portal tokens carry <code>org_id</code>/<code>org_role</code> claims. What genuinely does <em>not</em> exist is tiered RBAC (issue #527, open since March) and any SSO/SAML documentation for Portal organizations. The full picture is in <a href="/blog/hermes-desktop-fleet">#10 Desktop &amp; Fleet</a>.</p>
 
     <blockquote>💡 Repello AI compressed the persistent-agent threat model into the sentence I would put on the cover of this entire topic: &ldquo;you cannot patch your way to a secure persistent agent.&rdquo; Vulnerabilities get fixed one at a time; the architecture of the risk remains — as long as the agent remembers, acts, and holds keys.</blockquote>
 

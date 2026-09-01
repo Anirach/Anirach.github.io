@@ -1630,6 +1630,116 @@ def hm_alwayson(d, b, c, o):
     circ(d, x1 - w * 0.015, py_, h * 0.028, fill=c["hi"])
 
 
+def hm_railbolt(d, b, c, o):
+    """A schedule rail with tick posts, three of them lit, a bolt striking the
+    rail from above and an envelope leaving to the right -- scheduled work,
+    event-driven work, delivered.  vs dv_cicd's conveyor (stations with
+    tools) and hm_alwayson's pulse: a calendar RAIL, and the page's only
+    bolt."""
+    x0, y0, x1, y1 = b
+    w, h = x1 - x0, y1 - y0
+    ry = y0 + h * 0.66
+    rx0, rx1 = x0 + w * 0.04, x0 + w * 0.7
+    d.line([(rx0, ry), (rx1, ry)], fill=c["ln"], width=8)
+    for i in range(7):
+        tx = rx0 + (rx1 - rx0) * (0.06 + i * 0.147)
+        lit = i in (1, 3, 5)
+        d.line([(tx, ry), (tx, ry - h * (0.16 if lit else 0.09))],
+               fill=c["hi"] if lit else c["ln2"], width=6 if lit else 4)
+        if lit:
+            circ(d, tx, ry - h * 0.2, h * 0.04, fill=c["hi"])
+    # the bolt, striking the rail between the 5th and 6th posts
+    bx = rx0 + (rx1 - rx0) * 0.74
+    d.line([(bx + w * 0.06, y0 + h * 0.02), (bx - w * 0.01, y0 + h * 0.3),
+            (bx + w * 0.03, y0 + h * 0.3), (bx - w * 0.03, ry - h * 0.03)],
+           fill=c["gold"], width=8, joint="curve")
+    circ(d, bx - w * 0.03, ry, h * 0.035, fill=c["gold"])
+    # the envelope, leaving to the right
+    ex, ey = x1 - w * 0.2, ry - h * 0.24
+    ew, eh = w * 0.15, h * 0.2
+    rr(d, (ex, ey, ex + ew, ey + eh), h * 0.015, fill=c["fill"], outline=c["ln"], w=6)
+    d.line([(ex, ey), (ex + ew / 2, ey + eh * 0.55), (ex + ew, ey)], fill=c["ln"], width=5,
+           joint="curve")
+    d.line([(rx1, ry), (ex - w * 0.02, ry)], fill=c["hi"], width=7)
+    d.polygon([(ex - w * 0.015, ry), (ex - w * 0.045, ry - h * 0.04),
+               (ex - w * 0.045, ry + h * 0.04)], fill=c["hi"])
+
+
+def hm_ladder(d, b, c, o):
+    """A five-rung ladder climbing from a small cloud at its foot to a chip
+    (a square with pins) at its top -- the model ladder from a hosted portal
+    to your own GPUs.  vs dv_pyramid's pyramid and dv_iac's braces: the
+    page's only ladder."""
+    x0, y0, x1, y1 = b
+    w, h = x1 - x0, y1 - y0
+    lx0 = x0 + w * 0.3
+    lx1 = x0 + w * 0.58
+    top, bot = y0 + h * 0.06, y1 - h * 0.04
+    d.line([(lx0, bot), (lx0 + w * 0.05, top)], fill=c["ln"], width=8)
+    d.line([(lx1, bot), (lx1 - w * 0.05, top)], fill=c["ln"], width=8)
+    for i in range(5):
+        t = 0.1 + i * 0.2
+        y = bot - (bot - top) * t
+        xa = lx0 + w * 0.05 * t
+        xb = lx1 - w * 0.05 * t
+        lit = i >= 3
+        d.line([(xa, y), (xb, y)], fill=c["hi"] if lit else c["ln2"], width=7 if lit else 5)
+    # the cloud at the foot, left
+    cx_, cy_ = x0 + w * 0.13, bot - h * 0.16
+    for dx, r in ((-0.045, 0.09), (0.0, 0.13), (0.05, 0.1)):
+        circ(d, cx_ + w * dx, cy_ - (r - 0.09) * h, h * r, fill=c["dimf"], outline=None)
+    d.line([(cx_ - w * 0.08, cy_ + h * 0.08), (cx_ + w * 0.085, cy_ + h * 0.08)],
+           fill=c["ln2"], width=5)
+    d.arc([cx_ - w * 0.085, cy_ - h * 0.06, cx_ + w * 0.005, cy_ + h * 0.08], 180, 360,
+          fill=c["ln2"], width=5)
+    d.arc([cx_ - w * 0.03, cy_ - h * 0.14, cx_ + w * 0.06, cy_ + h * 0.08], 180, 360,
+          fill=c["ln2"], width=5)
+    # the chip at the top, right
+    chx, chy = x1 - w * 0.22, top + h * 0.2
+    s_ = h * 0.15
+    rr(d, (chx - s_, chy - s_, chx + s_, chy + s_), h * 0.02, fill=c["hif"], outline=c["hi"], w=7)
+    rr(d, (chx - s_ * 0.45, chy - s_ * 0.45, chx + s_ * 0.45, chy + s_ * 0.45), h * 0.01,
+       fill=None, outline=c["hi"], w=4)
+    for k in (-0.6, -0.2, 0.2, 0.6):
+        d.line([(chx + s_ * k, chy - s_), (chx + s_ * k, chy - s_ * 1.35)], fill=c["hi"], width=5)
+        d.line([(chx + s_ * k, chy + s_), (chx + s_ * k, chy + s_ * 1.35)], fill=c["hi"], width=5)
+        d.line([(chx - s_, chy + s_ * k), (chx - s_ * 1.35, chy + s_ * k)], fill=c["hi"], width=5)
+        d.line([(chx + s_, chy + s_ * k), (chx + s_ * 1.35, chy + s_ * k)], fill=c["hi"], width=5)
+
+
+def hm_fleet(d, b, c, o):
+    """One backend box at left fanning OUT to four laptops on the right --
+    one hardened backend, every laptop in the organization.  vs hm_gateway
+    (channels converging INTO one bar) and oc_team's org chart: this fans
+    outward, and draws the page's only laptops."""
+    x0, y0, x1, y1 = b
+    w, h = x1 - x0, y1 - y0
+    cy = (y0 + y1) / 2
+    bw_, bh_ = w * 0.14, h * 0.62
+    bx_ = x0 + w * 0.08
+    rr(d, (bx_, cy - bh_ / 2, bx_ + bw_, cy + bh_ / 2), h * 0.03,
+       fill=c["hif"], outline=c["hi"], w=8)
+    for i in range(3):
+        yy = cy - bh_ / 2 + bh_ * (0.22 + i * 0.26)
+        d.line([(bx_ + bw_ * 0.18, yy), (bx_ + bw_ * 0.66, yy)], fill=c["hi"], width=5)
+        circ(d, bx_ + bw_ * 0.82, yy, h * 0.014, fill=c["hi"])
+    hub = (bx_ + bw_ + w * 0.06, cy)
+    d.line([(bx_ + bw_, cy), hub], fill=c["ln"], width=6)
+    circ(d, hub[0], hub[1], h * 0.03, fill=c["ln"])
+    # four laptops: a screen rect over a wider base trapezoid
+    for i in range(4):
+        ly = y0 + h * (0.14 + i * 0.24)
+        lx = x0 + w * (0.5 + (i % 2) * 0.22)
+        sw, sh = w * 0.12, h * 0.14
+        d.line([hub, (lx - w * 0.02, ly + sh * 0.6)], fill=c["ln2"], width=4)
+        rr(d, (lx, ly, lx + sw, ly + sh), h * 0.012,
+           fill=c["fill"], outline=c["ln"], w=5)
+        d.polygon([(lx - sw * 0.1, ly + sh + h * 0.035), (lx + sw * 1.1, ly + sh + h * 0.035),
+                   (lx + sw, ly + sh), (lx, ly + sh)], fill=c["ln2"])
+        d.line([(lx + sw * 0.2, ly + sh * 0.5), (lx + sw * 0.8, ly + sh * 0.5)],
+               fill=c["hi"] if i == 1 else c["ln2"], width=4)
+
+
 MOTIFS = {
     "oc_os": oc_os, "oc_team": oc_team, "oc_memory": oc_memory,
     "oc_security": oc_security, "oc_integrations": oc_integrations,
@@ -1650,6 +1760,7 @@ MOTIFS = {
     "hm_growth": hm_growth, "hm_kanban": hm_kanban, "hm_bounded": hm_bounded,
     "hm_isolation": hm_isolation, "hm_gateway": hm_gateway,
     "hm_loop": hm_loop, "hm_alwayson": hm_alwayson,
+    "hm_railbolt": hm_railbolt, "hm_ladder": hm_ladder, "hm_fleet": hm_fleet,
 }
 
 
