@@ -1,0 +1,1174 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Agent Teams — Subagents, Kanban และสังคมของ Bots | Anirach Mingkhwan</title>
+  <meta name="description" content="เจาะลึกสี่ชั้น multi-agent ของ Hermes Agent — จาก delegate_task ที่แตกงานให้ subagent context สดใหม่, บอร์ด Kanban บน SQLite ที่ทำงานให้จบจริง, ถึง Bot Mode สังคมของ bots พร้อมวิธีเลือกชั้นให้ถูกงานสำหรับองค์กร">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=Sarabun:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      color-scheme: light;
+      /* ink */
+      --navy: #11304b; --slate: #334155; --slate-light: #526174; --gray: #94a3b8;
+      /* ground */
+      --bg: #faf7f0; --white: #ffffff; --code-bg: #1e293b;
+      /* accent */
+      --blue: #226299; --blue-dark: #1a4d7a; --blue-light: #4992b9;
+      /* brand — sampled from the book covers. --gold is decorative on light grounds (2.2:1); --gold-dark is its text form. */
+      --gold: #c4a46c; --gold-dark: #7a5f22; --cloud: #dee7e6; --parchment: #e9e1c4; --focus: #226299;
+      /* status — use only these six, never invent a seventh */
+      --green: #22c55e; --red: #ef4444; --amber: #f59e0b;
+      --cyan: #06b6d4; --purple: #226299; --purple-dark: #1a4d7a;
+      /* type */
+      --font: 'Inter', 'Sarabun', -apple-system, BlinkMacSystemFont, sans-serif;
+      --mono: 'JetBrains Mono', 'Fira Code', 'Sarabun', monospace;
+      /* form */
+      --radius: 12px; --radius-sm: 8px; --radius-lg: 16px;
+      --measure: 720px; --wide: 860px;
+      --transition: 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+    html { scroll-behavior: smooth; }
+    body { font-family: var(--font); font-size: 17px; line-height: 1.8; color: var(--slate); background: var(--bg); -webkit-font-smoothing: antialiased; }
+    .blog-nav { position: fixed; top: 0; left: 0; right: 0; z-index: 100; background: rgba(248,250,252,0.85); backdrop-filter: blur(20px); border-bottom: 1px solid rgba(0,0,0,0.05); }
+    .blog-nav__inner { max-width: 860px; margin: 0 auto; padding: 0 2rem; height: 56px; display: flex; align-items: center; justify-content: space-between; }
+    .blog-nav__back { font-size: 0.85rem; font-weight: 500; color: var(--blue); text-decoration: none; }
+    .blog-nav__back:hover { color: #1a4d7a; }
+    .blog-nav__title { font-size: 0.85rem; font-weight: 600; color: var(--navy); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 50%; }
+    /* ── HERO ── house .post-hero on the approved Deep Blue gradient (page-design
+       §5 / INV-28). Ink is inverted for the dark ground: white title/meta, tag
+       pills white on 18% white — the openclaw-production treatment. The
+       background value must stay byte-identical to the approved string. */
+    .post-hero { padding: 8rem 2rem 3rem; background: linear-gradient(135deg, #11304b 0%, #1a4d7a 45%, #226299 100%); color: #fff; text-align: center; }
+    .post-hero__tags { display: flex; gap: 0.5rem; justify-content: center; margin-bottom: 1.25rem; flex-wrap: wrap; }
+    .post-hero__tag { display: inline-block; font-size: 0.72rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.1em; color: #fff; background: rgba(255,255,255,0.18); padding: 0.35rem 0.9rem; border-radius: 20px; }
+    .post-hero__title { font-size: clamp(1.8rem, 5vw, 3rem); font-weight: 800; color: #fff; line-height: 1.2; margin-bottom: 1rem; max-width: 720px; margin-left: auto; margin-right: auto; }
+    .post-hero__sub { font-size: 1.05rem; max-width: 640px; margin: 0 auto 1.5rem; line-height: 1.7; color: #fff; }
+    .post-hero__meta { font-size: 0.85rem; color: #fff; display: flex; align-items: center; justify-content: center; gap: 1.5rem; flex-wrap: wrap; }
+    .post-hero__series { font-weight: 600; color: #fff; }
+    /* the switch pill and the focus ring both sit on the dark hero: the pill is
+       a light chip so its labels keep their light-ground colours, and --focus
+       re-points to gold here (blue collapses on blue — the footer/<pre>
+       precedent). */
+    .post-hero { --focus: var(--gold); }
+    .post-hero__cover {
+      aspect-ratio: 1 / 1;
+      max-width: 380px;
+      margin: 2.5rem auto 0;
+      border-radius: var(--radius-lg, 16px);
+      overflow: hidden;
+      box-shadow: 0 20px 60px rgba(17,48,75,0.14);
+    }
+    .post-hero__cover img { width: 100%; height: 100%; object-fit: cover; display: block; }
+    .post-body { max-width: 720px; margin: 0 auto; padding: 3rem 2rem 6rem; }
+    .post-body h2 { font-size: 1.6rem; font-weight: 800; color: var(--navy); margin: 3rem 0 1rem; padding-bottom: 0.5rem; border-bottom: 2px solid rgba(34,98,153,0.15); }
+    .post-body h3 { font-size: 1.25rem; font-weight: 700; color: var(--navy); margin: 2.25rem 0 0.75rem; }
+    .post-body p { margin-bottom: 1.25rem; }
+    .post-body strong { font-weight: 700; color: var(--navy); }
+    .post-body a { color: var(--blue); text-decoration: underline; text-decoration-thickness: 1px; text-underline-offset: 2px; }
+    .post-body ul, .post-body ol { margin: 0.5rem 0 1.25rem 1.5rem; }
+    .post-body li { margin-bottom: 0.4rem; }
+    .post-body blockquote { background: rgba(34,98,153,0.06); border-left: 4px solid var(--blue); padding: 1rem 1.25rem; border-radius: 0 10px 10px 0; margin: 1.25rem 0; font-size: 0.95rem; color: var(--navy); }
+    .post-body hr { border: none; height: 1px; background: linear-gradient(90deg, transparent, rgba(34,98,153,0.2), transparent); margin: 3rem 0; }
+    /* ── CODE ── */
+    .post-body pre { background: var(--code-bg); border-radius: 12px; padding: 1.5rem; margin: 1.25rem 0 1.5rem; overflow-x: auto; border: 1px solid rgba(255,255,255,0.05); }
+    .post-body pre code { font-family: var(--mono); font-size: 0.85rem; color: #e2e8f0; line-height: 1.7; background: none; padding: 0; white-space: pre-wrap; }
+    .post-body code { font-family: var(--mono); font-size: 0.88em; background: rgba(34,98,153,0.08); color: var(--blue-dark); padding: 0.15em 0.45em; border-radius: 5px; }
+    /* ── TABLES ── */
+    .table-wrapper { overflow-x: auto; margin: 1.5rem 0; border-radius: 0.5rem; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1); }
+    table { width: 100%; border-collapse: collapse; background: white; }
+    th { background: #226299; color: white; padding: 1rem; text-align: left; font-weight: 600; }
+    td { padding: 1rem; border-bottom: 1px solid #e5e7eb; }
+    .post-body table { display: block; width: 100%; overflow-x: auto; }
+    /* ── ALERTS ── */
+    .alert { background: #fef3cd; border: 1px solid #facc15; border-radius: 0.5rem; padding: 1rem; margin: 1.5rem 0; }
+    .alert.danger { background: #fee2e2; border-color: #ef4444; }
+    .alert.info { background: #e0f2fe; border-color: #06b6d4; }
+    .alert.success { background: #d1fae5; border-color: #10b981; }
+    /* ── KEY TAKEAWAYS ── */
+    .key-takeaways { background: linear-gradient(135deg, #f3f4f6 0%, #e5e7eb 100%); border-radius: 1rem; padding: 2rem; margin: 3rem 0; }
+    .key-takeaways h3 { color: #226299; margin-bottom: 1.5rem; }
+    .post-series-footer { text-align: center; font-size: 0.85rem; color: var(--slate-light); font-style: italic; margin-top: 2rem; padding-top: 2rem; border-top: 1px solid #e2e8f0; }
+    .blog-footer { background: var(--navy); padding: 2rem 0; text-align: center; }
+    .blog-footer a { color: var(--gold); text-decoration: none; font-weight: 600; font-size: 0.9rem; }
+    .blog-footer span { color: var(--gray); font-size: 0.8rem; display: block; margin-top: 0.4rem; }
+    @media (max-width: 600px) {
+      .post-hero { padding: 7rem 1.25rem 2.5rem; }
+      .post-body { padding: 2rem 1.25rem 4rem; }
+      .post-hero__meta { flex-direction: column; gap: 0.4rem; }
+      .post-body h2 { font-size: 1.4rem; }
+      .post-body h3 { font-size: 1.15rem; }
+      .post-body pre { padding: 1rem; border-radius: 8px; }
+    }
+
+    :focus-visible { outline: 2px solid var(--focus); outline-offset: 3px; border-radius: 2px; }
+    /* the ring sits on the page ground (3px offset). Inside the navy footers
+       and code blocks var(--blue) collapses to 2.12:1, so those scopes
+       re-point --focus to gold (5.73:1 on navy). */
+    .footer, .blog-footer, pre { --focus: var(--gold); }
+    :focus:not(:focus-visible) { outline: none; }
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after {
+        animation-duration: .01ms !important; animation-iteration-count: 1 !important;
+        transition-duration: .01ms !important; scroll-behavior: auto !important;
+      }
+    }
+    h1, h2, h3, .post-hero__title, .card__title { text-wrap: balance; }
+
+    .post-body img, .post-body svg { max-width: 100%; height: auto; }
+
+    /* ── SKIP LINK ── a11y-perf R5: the link and the landmark it targets are a
+       pair — useless without both halves. Off-screen until focused, then the
+       first tab stop on every page. */
+    .skip-link { position: absolute; left: -9999px; }
+    .skip-link:focus {
+      left: 1rem; top: 1rem; z-index: 999;
+      background: var(--navy); color: #fff;
+      padding: 0.75rem 1.25rem; border-radius: var(--radius-sm);
+      font-weight: 600; text-decoration: none;
+    }
+
+    /* ── POST WAYFINDING ── the wordmark is the home link; the footer carries
+       the full destination row. */
+    .blog-nav__home {
+      font-size: 0.9rem; font-weight: 800; color: var(--navy);
+      text-decoration: none; margin-right: 1rem;
+    }
+    .blog-nav__home:hover { color: var(--blue); }
+    .blog-nav__inner > .blog-nav__back { margin-right: auto; }
+    .blog-footer__nav {
+      display: flex; flex-wrap: wrap; justify-content: center; gap: 0.35rem 1.25rem;
+      max-width: 860px; margin: 0 auto 1.25rem; padding: 0 2rem 1.25rem;
+      border-bottom: 1px solid rgba(255,255,255,0.12);
+    }
+    .blog-footer__nav a { color: var(--gold); font-size: 0.85rem; font-weight: 600; text-decoration: none; }
+    .blog-footer__nav a:hover { color: #fff; text-decoration: underline; }
+
+    html { scroll-padding-top: 5rem; }
+    [id] { scroll-margin-top: 5rem; }
+
+    /* Thai needs more room than Latin at the same nominal size. */
+    .post-body:lang(th) { font-size: 18px; line-height: 1.85; }
+    .post-body p, .post-body li, .post-body blockquote { text-wrap: pretty; }
+
+    /* ---- side-scroll affordance ----
+       pre blocks and tables can exceed 720px. These layers paint a shadow ONLY
+       where there is more content in that direction; when fully scrolled the
+       cover slides over the shadow and hides it. No JavaScript, no wrapper. */
+    .post-body pre, .post-body table {
+      overflow-x: auto;
+      background-image:
+        linear-gradient(to right, var(--code-bg, #0f172a) 30%, rgba(15,23,42,0)),
+        linear-gradient(to left, var(--code-bg, #0f172a) 30%, rgba(15,23,42,0)),
+        radial-gradient(farthest-side at 0 50%, rgba(0,0,0,.28), rgba(0,0,0,0)),
+        radial-gradient(farthest-side at 100% 50%, rgba(0,0,0,.28), rgba(0,0,0,0));
+      background-position: 0 0, 100% 0, 0 0, 100% 0;
+      background-repeat: no-repeat;
+      background-size: 40px 100%, 40px 100%, 14px 100%, 14px 100%;
+      background-attachment: local, local, scroll, scroll;
+    }
+    .post-body table {
+      background-image:
+        linear-gradient(to right, var(--white, #fff) 30%, rgba(255,255,255,0)),
+        linear-gradient(to left, var(--white, #fff) 30%, rgba(255,255,255,0)),
+        radial-gradient(farthest-side at 0 50%, rgba(17,48,75,.16), rgba(17,48,75,0)),
+        radial-gradient(farthest-side at 100% 50%, rgba(17,48,75,.16), rgba(17,48,75,0));
+      background-position: 0 0, 100% 0, 0 0, 100% 0;
+      background-repeat: no-repeat;
+      background-size: 40px 100%, 40px 100%, 14px 100%, 14px 100%;
+      background-attachment: local, local, scroll, scroll;
+    }
+
+    /* ---- table of contents ---- */
+    .post-toc {
+      max-width: 720px;
+      margin: 2rem auto 0;
+      padding: 1rem 1.25rem;
+      background: rgba(34,98,153,0.05);
+      border: 1px solid rgba(34,98,153,0.14);
+      border-left: 3px solid var(--gold, #c4a46c);
+      border-radius: 10px;
+      font-size: 0.92rem;
+    }
+    .post-toc > summary {
+      cursor: pointer;
+      font-weight: 700;
+      color: var(--navy);
+      list-style: none;
+    }
+    .post-toc > summary::-webkit-details-marker { display: none; }
+    .post-toc > summary::before {
+      content: "\25B8";
+      display: inline-block;
+      margin-right: 0.5rem;
+      transition: transform 0.2s ease;
+      color: var(--gold-dark, #7a5f22);
+    }
+    .post-toc[open] > summary::before { transform: rotate(90deg); }
+    .post-toc > summary:focus-visible { outline: 3px solid var(--focus, #226299); outline-offset: 3px; }
+    .post-toc ol { margin: 0.85rem 0 0.25rem; padding-left: 1.4rem; }
+    .post-toc li { margin-bottom: 0.4rem; line-height: 1.5; }
+    .post-toc a { color: var(--slate); text-decoration: none; }
+    .post-toc a:hover, .post-toc a:focus-visible { color: var(--blue-dark, #1a4d7a); text-decoration: underline; }
+    @media (max-width: 600px) { .post-toc { margin: 1.25rem 1rem 0; } }
+
+    /* ---- cross-document view transitions ---- */
+    @view-transition { navigation: auto; }
+    .nav, .blog-nav { view-transition-name: site-nav; }
+    .footer, .blog-footer { view-transition-name: site-footer; }
+    @media (prefers-reduced-motion: reduce) {
+      ::view-transition-group(*),
+      ::view-transition-old(*),
+      ::view-transition-new(*) { animation: none !important; }
+    }
+
+    /* ── SERIES STRIP — Hermes Agent in Practice ──
+       Same class and inner-wrapper shape as the OpenClaw strip because the
+       linter's RE_SNAV recognises exactly `series-nav` + a nested div; a
+       renamed strip would read as "no nav" and fail INV-08. All content
+       checks (INV-03 family) iterate the SERIES7 list only, so this strip's
+       labels are convention, not contract. House-styled, not the island CSS. */
+    .series-nav {
+      max-width: 720px; margin: 2rem auto 0; padding: 1.1rem 1.4rem;
+      background: rgba(255,255,255,0.75); border: 1px solid rgba(34,98,153,0.15);
+      border-left: 3px solid var(--gold); border-radius: 12px;
+    }
+    .series-nav h3 {
+      font-size: 0.78rem; font-weight: 700; text-transform: uppercase;
+      letter-spacing: 0.08em; color: var(--gold-dark); margin-bottom: 0.6rem;
+    }
+    .series-links { display: flex; flex-wrap: wrap; gap: 0.5rem; }
+    .series-links a, .series-links .current {
+      font-size: 0.82rem; font-weight: 600; padding: 0.35rem 0.8rem;
+      border-radius: 50px; text-decoration: none;
+    }
+    .series-links a { color: var(--blue-dark); background: rgba(34,98,153,0.08); }
+    .series-links a:hover { background: rgba(34,98,153,0.16); }
+    .series-links .current { color: #fff; background: var(--blue-dark); }
+    @media (max-width: 600px) { .series-nav { margin: 1.5rem 1rem 0; } }
+
+    /* ── LANGUAGE SWITCH — pure CSS, zero JavaScript (INV-38) ──
+       One visually-hidden checkbox as a direct child of body, BEFORE the main landmark,
+       so `#langSwitch:checked ~ main …` reaches every content block. The two
+       tracks are paired blocks: .l-th (default) and .l-en (hidden until
+       checked; display:revert restores block for divs, inline for spans).
+       Naming stays clear of INV-12's menu-token regex (hamburger|burger|
+       nav__toggle|nav-toggle|navtoggle|menu-toggle|menu__toggle) — verified.
+       No JS also means no persistence across posts; each post opens in Thai. */
+    .lang-switch-box { position: absolute; left: -9999px; }
+    .l-en { display: none; }
+    #langSwitch:checked ~ main .l-en { display: revert; }
+    #langSwitch:checked ~ main .l-th { display: none; }
+    .lang-switch {
+      display: inline-flex; align-items: center; gap: 0.55rem;
+      margin-top: 1.4rem; padding: 0.4rem 1.1rem; border-radius: 50px;
+      background: rgba(255,255,255,0.85); border: 1px solid rgba(255,255,255,0.4);
+      cursor: pointer; font-size: 0.85rem; user-select: none;
+    }
+    .lang-switch span { color: var(--slate-light); font-weight: 600; transition: color 0.2s; }
+    .lang-switch .lang-sep { color: var(--gray); font-weight: 400; }
+    .lang-switch .lang-th { color: var(--navy); font-weight: 800; }
+    #langSwitch:checked ~ main .lang-switch .lang-th { color: var(--slate-light); font-weight: 600; }
+    #langSwitch:checked ~ main .lang-switch .lang-en { color: var(--navy); font-weight: 800; }
+    .lang-switch:hover { border-color: #fff; }
+    #langSwitch:focus-visible ~ main .lang-switch {
+      outline: 2px solid var(--focus); outline-offset: 3px;
+    }
+  </style>
+  <!-- social -->
+  <link rel="canonical" href="https://anirach.com/blog/hermes-agent-teams.html">
+  <meta property="og:type" content="article">
+  <meta property="og:url" content="https://anirach.com/blog/hermes-agent-teams.html">
+  <meta property="og:site_name" content="Anirach Mingkhwan">
+  <meta property="og:locale" content="th_TH">
+  <meta property="article:published_time" content="2026-09-01">
+  <meta property="article:author" content="https://anirach.com/">
+  <meta property="og:title" content="Agent Teams — Subagents, Kanban และสังคมของ Bots">
+  <meta property="og:description" content="เจาะลึกสี่ชั้น multi-agent ของ Hermes Agent — จาก delegate_task ที่แตกงานให้ subagent context สดใหม่, บอร์ด Kanban บน SQLite ที่ทำงานให้จบจริง, ถึง Bot Mode สังคมของ bots พร้อมวิธีเลือกชั้นให้ถูกงานสำหรับองค์กร">
+  <meta itemprop="image" property="og:image" content="https://anirach.com/images/hermes-agent-teams-og.jpg">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
+  <meta property="og:image:alt" content="Agent Teams — Subagents, Kanban และสังคมของ Bots">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:image" content="https://anirach.com/images/hermes-agent-teams-og.jpg">
+  <meta name="twitter:image:alt" content="Agent Teams — Subagents, Kanban และสังคมของ Bots">
+  <meta name="robots" content="max-image-preview:large">
+  <meta name="theme-color" content="#11304b">
+  <link rel="icon" href="/favicon.ico" sizes="any">
+  <link rel="apple-touch-icon" href="/apple-touch-icon.png">
+  <!-- /social -->
+</head>
+<body>
+<a href="#main" class="skip-link">Skip to content</a>
+<input type="checkbox" id="langSwitch" class="lang-switch-box" aria-label="Switch language: Thai / English">
+
+  <nav class="blog-nav">
+    <div class="blog-nav__inner">
+      <a href="../index.html" class="blog-nav__home">Anirach</a>
+      <a href="./" class="blog-nav__back">‹ Blog</a>
+      <div class="blog-nav__title">Agent Teams · สังคมของ Bots</div>
+    </div>
+  </nav>
+
+  <main id="main">
+
+  <header class="post-hero">
+    <div class="post-hero__tags">
+      <span class="post-hero__tag">Hermes</span>
+      <span class="post-hero__tag">AI Agents</span>
+      <span class="post-hero__tag">Multi-Agent</span>
+    </div>
+    <h1 class="post-hero__title" itemprop="headline"><span class="l-th">Agent Teams — Subagents, Kanban และสังคมของ Bots</span><span class="l-en" lang="en">Agent Teams — Subagents, Kanban, and a Society of Bots</span></h1>
+    <p class="post-hero__sub"><span class="l-th">สี่ชั้นของ multi-agent — จาก delegate_task ถึง Bot Mode สร้างทีม AI ที่ทำงานให้จบจริง 🤝</span><span class="l-en" lang="en">Four layers of multi-agent Hermes — from fork-join subagents to a durable Kanban board and a society of named bots 🤝</span></p>
+    <div class="post-hero__meta">
+      <span>By <strong>Anirach Mingkhwan</strong></span>
+      <span class="post-hero__series">Hermes Agent in Practice 2026 • Post #2</span>
+      <span><time datetime="2026-09-01" itemprop="datePublished">1 Sep 2026</time></span>
+      <span>18 min read</span>
+    </div>
+    <label for="langSwitch" class="lang-switch" title="สลับภาษา · Switch language"><span class="lang-th">ไทย</span><span class="lang-sep">·</span><span class="lang-en" lang="en">English</span></label>
+    <div class="post-hero__cover">
+      <img src="../images/hermes-agent-teams-cover.jpg" alt="Agent Teams — Subagents, Kanban และสังคมของ Bots" width="800" height="800" loading="eager" fetchpriority="high" decoding="async">
+    </div>
+  </header>
+
+  <nav aria-label="Hermes Agent in Practice">
+  <div class="series-nav">
+    <h3>⚡ Hermes Agent in Practice 2026</h3>
+    <div class="series-links">
+        <a href="/blog/hermes-101">#1 Hermes 101</a>
+        <span class="current" aria-current="page">#2 Agent Teams</span>
+        <a href="/blog/hermes-memory">#3 Memory</a>
+        <a href="/blog/hermes-security">#4 Security</a>
+        <a href="/blog/hermes-integrations">#5 Integrations</a>
+        <a href="/blog/hermes-skills">#6 Skills</a>
+        <a href="/blog/hermes-production">#7 Production</a>
+    </div>
+  </div>
+  </nav>
+
+  <article class="post-body" itemscope itemtype="https://schema.org/BlogPosting">
+    <span itemprop="author" itemscope itemtype="https://schema.org/Person"><meta itemprop="name" content="Anirach Mingkhwan"></span>
+
+    <details class="post-toc l-th" open>
+      <summary>ในบทความนี้</summary>
+      <ol>
+          <li><a href="#th-layers">1. The Four Layers of Multi-Agent Hermes</a></li>
+          <li><a href="#th-delegate">2. delegate_task — Fork-Join Subagents ที่เกิดมาพร้อม Context สดใหม่</a></li>
+          <li><a href="#th-background">3. Background Delegation และ Live Steering</a></li>
+          <li><a href="#th-worktrees">4. Worktree Isolation — ขนานกันโดยไม่ชนกัน</a></li>
+          <li><a href="#th-kanban">5. Hermes Kanban — บอร์ดงานถาวรของทีม Agents</a></li>
+          <li><a href="#th-botmode">6. Bot Mode — สังคมของ Bots, Group Chats และ Peer DMs</a></li>
+          <li><a href="#th-cron">7. Always-On Work — cron Jobs vs Session Heartbeats</a></li>
+          <li><a href="#th-team">8. Serving a Whole Team — Profiles, Gateways และ Allowlists</a></li>
+          <li><a href="#th-choosing">9. Choosing the Right Layer — เลือกชั้นให้ถูกงาน</a></li>
+      </ol>
+    </details>
+    <details class="post-toc l-en" open>
+      <summary>In this post</summary>
+      <ol>
+          <li><a href="#en-layers">1. The Four Layers of Multi-Agent Hermes</a></li>
+          <li><a href="#en-delegate">2. delegate_task: Fork-Join Subagents with Fresh Contexts</a></li>
+          <li><a href="#en-background">3. Background Delegation and Live Steering</a></li>
+          <li><a href="#en-worktrees">4. Worktree Isolation: Parallel Work Without Collisions</a></li>
+          <li><a href="#en-kanban">5. Hermes Kanban: A Durable Task Board Your Agents Share</a></li>
+          <li><a href="#en-botmode">6. Bot Mode: Named Agents, Group Chats, and Peer DMs</a></li>
+          <li><a href="#en-cron">7. Always-On Work: cron Jobs vs Session Heartbeats</a></li>
+          <li><a href="#en-team">8. Serving a Whole Team: Profiles, Gateways, Allowlists</a></li>
+          <li><a href="#en-choosing">9. Choosing the Right Layer</a></li>
+      </ol>
+    </details>
+    <div class="l-th">
+
+    <p>🤔 ลองนึกภาพว่าคุณ clone เพื่อนร่วมงานเก่ง ๆ ได้ไม่จำกัด — แต่ clone แต่ละตัวเกิดมาพร้อมความจำว่างเปล่า ทำงานชิ้นเดียวเสร็จก็หายตัวไปตลอดกาล คำถามคือ คุณจะประกอบ "ทีม" จากสิ่งมีชีวิตแบบนี้อย่างไร ให้งานที่ใหญ่กว่าหนึ่ง context window เดินได้จริง?</p>
+
+    <p>นี่คือคำถามกลางของ multi-agent ทุกระบบ และเป็นคำถามเดียวกับที่ผมเคยชวนคิดไว้ในบทความ <a href="/blog/openclaw-agent-teams">Agent Teams ฝั่ง OpenClaw</a> ของซีรีส์ OpenClaw for Organizations — โลกที่เราประกอบทีมจาก session, subagent และการ route ข้อความผ่าน gateway ด้วย pattern ที่หลายส่วนต้องออกแบบกันเอง ผมรัน OpenClaw ในงานจริงมาพักใหญ่ และตอนนี้กำลังไล่ดู <strong>Hermes Agent</strong> ของ Nous Research อย่างจริงจัง ว่า harness ที่คนให้ดาวบน GitHub เกือบ 240,000 ดวงตอบคำถามข้อนี้ต่างไปอย่างไร</p>
+
+    <p>คำตอบสั้น ๆ คือ Hermes ไม่ได้มี "ฟีเจอร์ multi-agent" หนึ่งอัน แต่มีถึง <strong>สี่ชั้น</strong> ที่แก้ปัญหาคนละแบบ — subagent แบบ fork-join, บอร์ด Kanban ถาวรบน SQLite, สังคมของ bots ที่ DM หากันได้ และการเสิร์ฟหลายคนหลายบทบาทจากเครื่องเดียว ต่อจาก <a href="/blog/hermes-101">Hermes 101</a> บทความนี้คือแผนที่ของทั้งสี่ชั้น ทุกรายละเอียดอ้างอิง official docs และ release notes ณ v0.21.0 (31 สิงหาคม 2026)</p>
+
+    <h2 id="th-layers">1. The Four Layers of Multi-Agent Hermes</h2>
+
+    <p>ก่อนลงรายละเอียด ผมอยากกางแผนที่ให้เห็นก่อน เพราะความสับสนส่วนใหญ่เรื่อง multi-agent ใน Hermes มาจากการเอาชั้นที่ต่างกันมาปนกัน แต่ละชั้นมี tool surface ของตัวเอง มี "อายุงาน" ต่างกัน และเกิดมาแก้ปัญหาคนละข้อ:</p>
+
+    <div class="table-wrapper">
+      <table>
+        <thead>
+          <tr><th>ชั้น</th><th>Tool surface</th><th>ความคงทน</th><th>เหมาะกับ</th></tr>
+        </thead>
+        <tbody>
+          <tr><td><strong>1. In-session subagents</strong></td><td><code>delegate_task</code></td><td>ตายพร้อม session</td><td>fork-join งานขนานที่สรุปกลับเข้าบทสนทนาเดียว</td></tr>
+          <tr><td><strong>2. Kanban board</strong></td><td><code>/kanban</code> + <code>kanban_*</code> verbs</td><td>ถาวร (SQLite, ข้าม restart)</td><td>งานข้ามวัน มี audit trail ให้มนุษย์แทรกได้</td></tr>
+          <tr><td><strong>3. Bot Mode + A2A</strong></td><td><code>message_agent</code>, <code>hermes peer</code>, A2A plugin</td><td>ตามอายุ gateway/relay</td><td>ทีม bots ถาวรที่คุยกันเอง ข้ามเครื่อง ข้าม harness</td></tr>
+          <tr><td><strong>4. Multi-profile serving</strong></td><td>profiles + gateway routes</td><td>ระดับ service (systemd)</td><td>หนึ่งเครื่องเสิร์ฟหลายคน หลายบทบาท</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <p>แกนที่ควรจับไว้คือ <strong>ความคงทน (durability) ไล่ขึ้นตามตาราง</strong> — subagent ในชั้นแรกตายพร้อม session, task บน Kanban อยู่ข้าม restart, ส่วน profile คือตัวตนถาวรระดับ service และสี่ชั้นนี้ไม่ได้แข่งกัน มันซ้อนกันได้: bot หนึ่งตัว (ชั้น 3) อาจแตก subagent (ชั้น 1) เพื่อเคลียร์ card บนบอร์ด Kanban (ชั้น 2) บนเครื่องที่เสิร์ฟทั้งทีม (ชั้น 4)</p>
+
+    <blockquote>💡 ของที่มักถูกเข้าใจผิดว่าเป็นอีกชั้น: <strong>Mixture of Agents (MoA)</strong> ไม่ใช่ delegation — docs จัดมันเป็น "virtual model provider" ที่ให้ reference models หลายตัวทำหน้าที่ advisor ขนานกัน (ไม่มี tool schema) แล้วมี aggregator ตัวเดียวเขียนคำตอบและยิง tool calls ตั้งค่าผ่าน <code>moa.default_preset</code> / <code>moa.presets</code> — MoA คือหลายสมองในหนึ่งเทิร์น ไม่ใช่หลาย agent ทำหลายงาน</blockquote>
+
+    <hr>
+
+    <h2 id="th-delegate">2. delegate_task — Fork-Join Subagents ที่เกิดมาพร้อม Context สดใหม่</h2>
+
+    <p>ชั้นแรกคือเครื่องมือ <strong>delegate_task</strong>: agent แตกงานให้ child ที่มีบทสนทนาสดใหม่ของตัวเอง <a href="https://github.com/NousResearch/hermes-agent/blob/main/website/docs/user-guide/features/delegation.md">เอกสาร delegation</a> เขียนไว้ชัดว่า "Each child gets a fresh conversation and works independently — only its final summary enters the parent's context" — ลูกไม่เห็นประวัติแชทของ parent เลย และสิ่งเดียวที่ไหลกลับเข้า parent คือ summary สุดท้าย</p>
+
+    <pre><code># ภายใน session — agent เรียก tool นี้เพื่อแตกงาน (pseudo-call)
+delegate_task(
+  task="อ่านโค้ดทั้ง src/billing แล้วสรุป edge cases พร้อมชี้ไฟล์อ้างอิง"
+)
+# child เริ่มจากบทสนทนาว่างเปล่า + project context file เท่านั้น
+# สิ่งเดียวที่ย้อนกลับเข้า parent: final summary</code></pre>
+
+    <h3>อะไรไหลเข้า อะไรไหลออก</h3>
+
+    <p>ข้อยกเว้นเดียวของ "ความจำว่างเปล่า" คือ project context: ถ้ามี workspace, Hermes จะฝัง context file ตามลำดับความสำคัญ <code>.hermes.md → AGENTS.md → CLAUDE.md → .cursorrules</code> ลงใน system prompt ของ subagent ทุกตัวโดยอัตโนมัติ</p>
+
+    <div class="alert info">
+      <strong>Interop ที่มีผลกับงบย้ายระบบ:</strong> เพราะ chain นี้อ่าน AGENTS.md และ CLAUDE.md แบบ native — context file ที่องค์กรของคุณเขียนไว้ให้ Claude Code หรือทีม OpenClaw เดิม ใช้กับ subagent ของ Hermes ได้ตั้งแต่วันแรกโดยไม่ต้องแปลงอะไรเลย
+    </div>
+
+    <h3>ค่า default ที่ควรรู้</h3>
+
+    <p>ตัวเลขชุดนี้เคยเปลี่ยนข้ามเวอร์ชันมาแล้ว (release notes บางฉบับพูดถึงเพดาน iteration คนละค่ากับ docs) ค่าด้านล่างคือค่าตามเอกสารทางการ ณ วันที่ 1 กันยายน 2026 — ก่อน tune ควรเช็ค doc ปัจจุบันอีกครั้งเสมอ:</p>
+
+    <pre><code># ~/.hermes/config.yaml — ค่า default ของ delegation (ตาม docs, v0.21.0)
+delegation:
+  max_concurrent_children: 3    # env: DELEGATION_MAX_CONCURRENT_CHILDREN (ขั้นต่ำ 1, ไม่มีเพดาน)
+  max_iterations: 50            # ต่อ child หนึ่งตัว
+  max_spawn_depth: 1            # flat โดย default — เพิ่มเป็น 2+ เพื่อ nested orchestration
+  worktree_isolation: false
+  orchestrator_enabled: true
+  child_timeout_seconds: 0      # 0 = ไม่มี hard timeout (ถ้าเปิดใช้ มี floor 30s)</code></pre>
+
+    <h3>จาก tool เดี่ยวสู่ทีมย่อย</h3>
+
+    <p>สามความสามารถที่ยกระดับชั้นนี้จาก "ผู้ช่วยชั่วคราว" เป็น "ทีมย่อย":</p>
+
+    <ul>
+      <li><strong>Batch dispatch</strong> — ส่ง <code>tasks=[...]</code> หลายงานในครั้งเดียว วิ่งขนานกันสูงสุด <code>max_concurrent_children</code></li>
+      <li><strong>Nested orchestration</strong> — ส่ง <code>role="orchestrator"</code> ให้ลูกแตกลูกต่อได้ (ต้องยก <code>max_spawn_depth</code> เป็น 2+ ก่อน)</li>
+      <li><strong>Worker ถูกกว่า parent</strong> — ตั้ง <code>delegation.model</code> / <code>provider</code> / <code>base_url</code> แยกจาก parent เพื่อให้ลูกใช้โมเดลราคาถูกลง</li>
+    </ul>
+
+    <pre><code># batch dispatch — สามงานอิสระ วิ่งขนาน
+delegate_task(tasks=[
+  "วิเคราะห์ log สัปดาห์นี้ หากลุ่ม error ที่เกิดซ้ำ",
+  "รีวิว PR #42 เฉพาะมุม security",
+  "เทียบ library A กับ B สำหรับงาน ingest"
+])
+
+# nested orchestration — ลูกที่คุมทีมย่อยของตัวเอง
+delegate_task(
+  task="แตกงาน refactor ทั้ง module แล้วคุมทีมย่อยให้จบ",
+  role="orchestrator"
+)</code></pre>
+
+    <p>ขอบเขตของชั้นนี้ก็ชัดพอ ๆ กับความสามารถ — และเป็นความตั้งใจของ design: <strong>subagent คุยกันเองไม่ได้</strong> docs ระบุว่า "No direct messaging between subagents … all coordination flows through parent's reasoning" และ leaf subagent ถูกตัด tools สำคัญออกทั้งชุด: <code>delegate_task</code>, <code>clarify</code>, <code>memory</code>, <code>send_message</code>, <code>cronjob</code> (orchestrator ได้ <code>delegate_task</code> คืนมาหนึ่งอย่าง ข้อห้ามอื่นเหมือนกัน และทั้งสอง role ยังใช้ <code>execute_code</code> ได้)</p>
+
+    <p>ระหว่างลูกวิ่ง คุณส่องได้ตลอด: <code>/agents</code> แสดง tree สดของลูกทุกตัว (จำนวน API calls, tool ที่กำลังใช้, activity ล่าสุด), <code>/stop</code> ยกเลิก background delegation และ transcript สดของแต่ละ task อยู่ที่ <code>~/.hermes/cache/delegation/live/&lt;delegation_id&gt;/task-&lt;n&gt;.log</code></p>
+
+    <h2 id="th-background">3. Background Delegation และ Live Steering</h2>
+
+    <p>เดิมที delegate_task เป็นการรอแบบ synchronous — parent นั่งเฝ้าจนลูกเสร็จ จุดเปลี่ยนแรกคือ <strong>v0.17.0</strong> (19 มิถุนายน 2026) ที่เพิ่ม <code>background=true</code>: dispatch แล้วได้ handle กลับมาทันที ทำงานอื่นต่อได้เลย ตาม <a href="https://github.com/NousResearch/hermes-agent/releases/tag/v2026.6.19">release notes</a> "The full result re-enters the conversation as a new turn the moment it finishes" — ผลฉบับเต็มเด้งกลับเข้าบทสนทนาเองเมื่อเสร็จ</p>
+
+    <p>จุดเปลี่ยนที่สองเพิ่งมาใน <strong>v0.21.0</strong> (31 สิงหาคม 2026) ใต้หัวข้อ "Steer your subagents while they run": delegate_task ได้ live orchestration — ดูรายชื่อลูกที่วิ่งอยู่, ส่งคำสั่งแก้ทิศกลางคัน, หรือหยุดก่อนกำหนดแล้วเก็บผลบางส่วน พร้อมของแถมอีกสองอย่างคือ JSON-schema validation ของ output ลูก และต้นทุนต่อ delegation ที่โผล่ในผลลัพธ์</p>
+
+    <pre><code># v0.17.0+ — ปล่อยงานเป็น background ได้ handle ทันที
+delegate_task(task="crawl เอกสารทั้งชุดแล้วสร้าง index", background=true)
+
+# v0.21.0+ — live orchestration ระหว่างลูกยังวิ่ง
+delegate_task(action="list")                        # ลูกตัวไหนวิ่งอยู่บ้าง
+delegate_task(action="steer", subagent_id="abc123",
+              message="ข้ามเอกสารเวอร์ชันเก่า โฟกัส v2 API เท่านั้น")
+delegate_task(action="stop",  subagent_id="abc123") # หยุดก่อนกำหนด เก็บผลบางส่วน</code></pre>
+
+    <p>สำหรับงาน background ที่แขวนค้าง Hermes มี stall monitor เปิดตลอด: เงียบเกิน 450 วินาที (หรือ 1,200 วินาทีถ้ากำลังค้างอยู่ในการเรียก tool) จะถูกนับเป็น stalled โดยมี grace อีก 120 วินาทีให้คลี่คลายตัวเอง พร้อม metadata บอก phase ของ stall ส่วนเพดานเวลาแบบ hard (<code>child_timeout_seconds</code>) เป็น opt-in และปิดโดย default — และผลของ background delegation ยัง persist ใน state.db ของ profile ข้าม restart ด้วย</p>
+
+    <p>เกร็ดที่สะท้อนจังหวะพัฒนาอันเร็วของโปรเจกต์นี้: บทความ third-party ช่วงกลางมิถุนายน 2026 (MarkTechPost และ kno2gether) บรรยายชุดเครื่องมือ "async_delegation" หกตัวแยกกัน — <code>delegate_task_async</code>, <code>check_task</code>, <code>steer_task</code> ฯลฯ — แต่ docs ปัจจุบันไม่เหลือชื่อเหล่านี้เลย ดูเหมือน surface ทั้งชุดถูกยุบรวมเข้า <code>delegate_task</code> ตัวเดียวระหว่างมิถุนายนถึงกันยายน ใครอ่าน tutorial เก่าแล้วหา tool ไม่เจอ ไม่ต้องตกใจ</p>
+
+    <h2 id="th-worktrees">4. Worktree Isolation — ขนานกันโดยไม่ชนกัน</h2>
+
+    <p>ปัญหาคลาสสิกของ agent หลายตัวในหนึ่ง repo คือแก้ไฟล์ชนกัน Hermes ตอบเรื่องนี้ <strong>สองระดับ</strong> ที่คนมักจำสลับกัน — และข้อมูลบนอินเทอร์เน็ตเองก็สับสนเรื่องนี้อยู่ (เดี๋ยวเล่า)</p>
+
+    <h3>ระดับ CLI session — hermes -w</h3>
+
+    <p>ระดับแรกคือการรัน Hermes หลาย process ขนานกันคนละ terminal: <a href="https://hermes-agent.nousresearch.com/docs/user-guide/git-worktrees">เอกสาร git worktrees</a> ระบุว่า "every invocation gets its own worktree and branch automatically" — ทุกการรัน <code>hermes -w</code> ได้ git worktree ชั่วคราวใต้ <code>.worktrees/</code> พร้อม branch แยกของตัวเอง</p>
+
+    <pre><code># CLI-level parallelism — คนละ terminal คนละ worktree ไม่ชนกัน
+hermes -w                      # ทุก invocation ได้ worktree + branch อัตโนมัติ
+/worktree new my-experiment    # สร้าง .worktrees/my-experiment/ บน branch hermes/my-experiment
+
+# เปิดหลาย terminal รัน hermes หลาย process ขนานกันได้เลย
+# checkpoint history และ /rollback แยก scope ต่อ worktree</code></pre>
+
+    <p>Feature นี้เก่ากว่าที่หลายบทความอ้าง: feature request คือ <a href="https://github.com/NousResearch/hermes-agent/issues/652">issue #652</a> เปิดเมื่อ 8 มีนาคม 2026 และอยู่ในเอกสารตั้งแต่กลางเดือนมีนาคม — ส่วนคำเล่าที่แพร่กันว่ามัน "มากับ v0.8.0" นั้นเช็คกับ primary sources แล้วไม่ตรง (v0.8.0 เมื่อเมษายน 2026 ให้เพียง "aggressive worktree and branch cleanup") คำสั่งกลาง session <code>/worktree</code> ที่ docs ระบุว่า "Inspired by Copilot CLI" ถูกเพิ่มเข้าเอกสารกลางเดือนสิงหาคม 2026</p>
+
+    <h3>ระดับ subagent — delegation.worktree_isolation</h3>
+
+    <p>ระดับที่สองใหม่กว่าและละเอียดกว่า: เปิด <code>delegation.worktree_isolation: true</code> (default คือ false) แล้ว subagent ทุกตัวจากข้อ 2 จะได้ git worktree ของตัวเองที่ <code>&lt;repo&gt;/.worktrees/subagent-&lt;id&gt;</code> บน branch <code>hermes-subagent/subagent-&lt;id&gt;</code> แตกจาก HEAD ปัจจุบัน (docs ให้เครดิตแรงบันดาลใจจาก Muse Code's <code>--subagent-worktree-isolation</code>) worktree ที่สะอาด — ไม่มี commit — จะถูก prune อัตโนมัติ</p>
+
+    <pre><code># ~/.hermes/config.yaml
+delegation:
+  worktree_isolation: true   # default: false
+
+# ผลลัพธ์ของแต่ละ child จะมี field "worktree" เพิ่มมา:
+#   path:    &lt;repo&gt;/.worktrees/subagent-&lt;id&gt;
+#   branch:  hermes-subagent/subagent-&lt;id&gt;
+#   commits ahead of base / dirty / pruned</code></pre>
+
+    <div class="alert">
+      <strong>ระวัง degrade เงียบ:</strong> worktree isolation เป็น git-only และ local-terminal-backend-only — บน directory ที่ไม่ใช่ git หรือ backend แบบ docker/ssh/modal มันจะถอยกลับไปใช้ workspace ร่วมกัน <em>โดยไม่มี error ใด ๆ</em> ถ้า isolation สำคัญกับงานของคุณ ตรวจ field <code>worktree</code> ในผลลัพธ์ของลูกทุกครั้ง
+    </div>
+
+    <hr>
+
+    <h2 id="th-kanban">5. Hermes Kanban — บอร์ดงานถาวรของทีม Agents</h2>
+
+    <p>ทุกอย่างในสองหัวข้อก่อนหน้ามีจุดอ่อนร่วมกันหนึ่งข้อ: มัน <strong>ตายพร้อม session</strong> ปิด process เมื่อไร ทีมย่อยก็ระเหย นี่คือช่องที่ <strong>Hermes Kanban</strong> เข้ามาปิด — ship ครั้งแรกใน <a href="https://github.com/NousResearch/hermes-agent/releases/tag/v2026.5.7">v0.13.0</a> (7 พฤษภาคม 2026) กับ headline ที่ตรงจุดมาก: "Multi-agent Kanban — delegate to an AI team that actually finishes"</p>
+
+    <p>หัวใจคือฐานข้อมูล SQLite หนึ่งไฟล์ที่ <code>~/.hermes/kanban.db</code> — <a href="https://github.com/NousResearch/hermes-agent/blob/main/website/docs/user-guide/features/kanban.md">docs</a> สรุปปรัชญาไว้ว่า "Every task is a row … every handoff is a row anyone can read and write" งานทุกชิ้นคือแถวในตาราง handoff ทุกครั้งคือแถวที่ profile ไหนก็อ่านเขียนได้ ไม่ใช่ state ที่ลอยอยู่ในหัวของ agent ตัวใดตัวหนึ่ง</p>
+
+    <h3>กลไก dispatcher</h3>
+
+    <p>dispatcher ฝังอยู่ใน gateway (<code>kanban.dispatch_in_gateway: true</code>) ตื่นทุก 60 วินาที เพื่อ (1) reclaim งานจาก worker ที่ heartbeat หายเกิน 4 ชั่วโมง (2) เลื่อนงานที่ dependencies ครบแล้วเป็น ready และ (3) claim งานแบบ atomic แล้ว spawn worker เป็น OS process เต็มตัว: <code>hermes -p &lt;assignee&gt; chat -q &lt;prompt&gt;</code> พร้อมฉีด KANBAN_GUIDANCE และ env vars อย่าง <code>HERMES_KANBAN_TASK</code>, <code>HERMES_KANBAN_DB</code>, <code>HERMES_KANBAN_WORKSPACE</code>, <code>HERMES_PROFILE</code>, <code>HERMES_TENANT</code> ให้ worker รู้บริบทของตัวเอง</p>
+
+    <pre><code># ~/.hermes/config.yaml — knobs หลักของ Kanban (ค่า default ตาม docs)
+kanban:
+  dispatch_in_gateway: true
+  dispatch_interval_seconds: 60          # dispatcher tick
+  dispatch_stale_timeout_seconds: 14400  # 4 ชม. — reclaim งานจาก worker ที่เงียบหาย
+  failure_limit: 2                       # circuit breaker ต่อ task
+  max_in_progress: ~                     # default: ไม่จำกัดทั้งบอร์ด
+  max_in_progress_per_profile: ~
+  auto_promote_children: true</code></pre>
+
+    <h3>Protocol ที่ worker ต้องเคารพ</h3>
+
+    <p>ความน่าเชื่อถือของบอร์ดมาจาก protocol ที่เข้มงวด: worker ต้องจบ run ด้วย verb ใด verb หนึ่ง <em>เท่านั้น</em> — <code>kanban_complete</code>, <code>kanban_request_review</code> หรือ <code>kanban_block</code> ถ้าจบโดยไม่เรียกสักตัว งานจะถูกจัดสถานะ crashed / gave_up / timed_out โดยระบบ nudge ซ้ำอัตโนมัติได้สูงสุด 2 ครั้ง และมี retry budget (default: ผิด protocol ติดกัน 3 ครั้งคือหมดสิทธิ์) release notes สรุปชุดกลไกนี้ว่า "Heartbeats, reclaim, zombie detection, retry budgets, and a hallucination gate keep the team honest"</p>
+
+    <p>orchestrator ฝั่ง Kanban ทำงานผ่าน verbs สร้างงานล้วน ๆ — แตก goal เป็น card ลูก ผูก dependency โดยไม่มี implementation tools ในมือ:</p>
+
+    <pre><code># orchestrator แตกงานเป็น card ลูก ผูก dependency ด้วย parents
+kanban_create(title="รวบรวม changelog v0.21.0", assignee="researcher")
+kanban_create(title="ร่างประกาศภายในจาก changelog",
+              assignee="writer",
+              parents=["&lt;task-id-ของงานแรก&gt;"])
+# card ลูกได้ "## Parent task results" (summary + metadata ของ parent)
+# ฉีดเข้า context ของ worker โดยอัตโนมัติ</code></pre>
+
+    <p>แต่ละ card เลือก workspace ได้สามแบบ: <code>worktree</code> (git worktree ที่ <code>.worktrees/&lt;id&gt;/</code> เก็บไว้หลังงานเสร็จ), <code>scratch</code> (ลบทิ้งเมื่อเสร็จ) และ <code>dir:&lt;path&gt;</code> (แชร์ร่วมกัน คงอยู่ตลอด) ส่วน card แบบ goal-mode (<code>--goal</code> / <code>goal_mode=True</code> พร้อม <code>--goal-max-turns</code>) จะรัน loop สไตล์ Ralph ภายใน card เดียว โดยมี judge model ตรวจผลกับ acceptance criteria ทุกเทิร์น — ถ้า budget หมดก่อนผ่าน card จะถูก block ไว้ให้มนุษย์รีวิว ไม่ fail เงียบ</p>
+
+    <h3>Kanban vs delegate_task — ตารางเทียบทางการ</h3>
+
+    <p>docs มีตารางเทียบสองชั้นนี้ตรง ๆ ซึ่งผมถอดใจความมาให้:</p>
+
+    <div class="table-wrapper">
+      <table>
+        <thead>
+          <tr><th></th><th>delegate_task</th><th>Hermes Kanban</th></tr>
+        </thead>
+        <tbody>
+          <tr><td><strong>โมเดล</strong></td><td>fork → join RPC</td><td>durable queue + state machine</td></tr>
+          <tr><td><strong>ตัวตน worker</strong></td><td>anonymous, resume ไม่ได้</td><td>named profile + persistent memory</td></tr>
+          <tr><td><strong>การกู้คืน</strong></td><td>ตายพร้อม session</td><td>block / unblock / re-run ได้</td></tr>
+          <tr><td><strong>มนุษย์แทรก</strong></td><td>—</td><td>comment / unblock ได้ทุกจุด</td></tr>
+          <tr><td><strong>Audit trail</strong></td><td>—</td><td>SQLite บันทึกทุก handoff</td></tr>
+          <tr><td><strong>Coordination</strong></td><td>ผ่าน parent เท่านั้น</td><td>peer — profile ไหนก็อ่าน/เขียน task ได้</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <p>docs ยังรวบรวม collaboration patterns ไว้ 8 แบบ — fan-out, pipeline, voting/quorum, long-running journal, human-in-the-loop, @mention, thread-scoped workspace และ fleet farming (ตัวอย่างในเอกสาร: หนึ่ง profile ดูแล 50 social accounts) และมี soft multi-tenancy ผ่าน <code>--tenant</code>: "One specialist fleet can serve multiple businesses (--tenant business-a) with data isolation" — ฝูง specialist ชุดเดียวเสิร์ฟหลายธุรกิจโดยแยก workspace และ memory key กัน</p>
+
+    <p>ใช้งานจากมือถือก็ได้: verb ทั้งหมดเข้าถึงผ่าน <code>/kanban</code> จากทุก gateway platform (Telegram, Discord, Slack, WhatsApp, Signal, Matrix ฯลฯ) และแชทที่สั่งงานจะ auto-subscribe เหตุการณ์ปลายทางของ task — เลือกโหมดได้ว่าแค่ notify, notify+wake หรือ wake ให้ agent ตื่นขึ้นมาจัดการต่อเมื่องาน completed / blocked / crashed</p>
+
+    <div class="alert info">
+      <strong>ขอบเขตโดย design:</strong> Kanban เป็น single-host — SQLite local, spawn worker บนเครื่องเดียวกัน ไม่มี multi-host coordination และไม่มี cross-board links ถ้าต้องการข้ามเครื่อง นั่นคืองานของชั้นถัดไป (Bot Mode / peers / A2A) ไม่ใช่ของ Kanban
+    </div>
+
+    <h2 id="th-botmode">6. Bot Mode — สังคมของ Bots, Group Chats และ Peer DMs</h2>
+
+    <p>ชั้นที่สามคือชั้นที่ทำให้คำว่า "สังคมของ bots" ในชื่อบทความไม่ใช่คำเปรียบเปรย <strong>Bot Mode</strong> เริ่มชีวิตเป็นปลั๊กอิน public beta ของ Teknium (co-founder ของ Nous) และตามรายงานของ MarkTechPost มันถูก bundle แบบ default-on ใน Hermes Desktop ตั้งแต่ราว v0.20.3 กลางเดือนสิงหาคม ก่อนถูกผนวกอย่างเป็นทางการใน <a href="https://github.com/NousResearch/hermes-agent/releases/tag/v2026.8.31">v0.21.0 "The Pantheon Release"</a> (31 สิงหาคม 2026) ซึ่งบรรยายมันว่า "a society of named agents with their own faces and group chats, where your bots talk to each other — and to you — like a team, not a toolbox"</p>
+
+    <h3>Bot = Profile</h3>
+
+    <p>ประโยคเดียวที่ต้องจำ: <strong>Bot หนึ่งตัวคือ Hermes profile หนึ่งอัน</strong> — config, memory, skills, credentials และประวัติแชทแยกขาดกันใต้ <code>~/.hermes/profiles/&lt;name&gt;/</code> pin โมเดล/provider ต่อ bot ได้ เขียนบุคลิกใน SOUL.md ได้ และเลือกเปิด skills / toolsets / MCP เป็นราย bot ทุกอย่างมี CLI parity: <code>hermes -p &lt;bot&gt; chat</code>, <code>hermes profile create</code>, <code>hermes cron list</code> ส่วน "กิจวัตร" ของ bot ก็คือ cron job ธรรมดาที่ namespace เป็น <code>[bot:&lt;name&gt;] &lt;routine&gt;</code></p>
+
+    <h3>message_agent และ Group Chats</h3>
+
+    <p>bots คุยกันผ่าน tool <code>message_agent</code> (เปิดด้วย <code>agent.bot_mode_protocol: true</code> — ฉีดให้อัตโนมัติใน Bot Chats): ส่งแบบ fire-and-forget แล้วคำตอบวิ่งกลับมาเป็น background notification ถ้าส่งไม่ผ่าน retry ให้ 1 ครั้งพร้อมเหตุผลแบบ typed เช่น <code>provider_auth_or_access</code>, <code>provider_quota_limit</code>, <code>context_overflow</code></p>
+
+    <pre><code># จาก bot หนึ่ง ส่งข้อความหาอีก bot
+message_agent(target="researcher",
+              message="ขอ 5 bullet ล่าสุดเรื่อง A2A adoption")
+# fire-and-forget: reply กลับมาเป็น background completion notification
+# ล้มเหลว retry สูงสุด 1 ครั้ง + typed failure reason</code></pre>
+
+    <p>ใน group chat กติกาถูกออกแบบกันน้ำท่วม: แต่ละการส่งกระตุ้นได้สูงสุด 3 รอบ serial ของสมาชิก รวมไม่เกิน 10 ข้อความ โดย bot "replies only when it has something new to add and passes otherwise" — ตอบเมื่อมีของใหม่ ไม่งั้นผ่าน และ escalate หามนุษย์ด้วย <code>@user</code> ได้เสมอ ห้องแชทข้ามเครื่องได้ผ่าน Desktop relay</p>
+
+    <h3>Peers และ A2A — ข้ามเครื่อง ข้าม harness</h3>
+
+    <p>ไม่ใช้ Desktop ก็ต่อ gateway ถึง gateway ตรง ๆ ได้ ผ่าน platform <code>api_server</code> กับ key ที่แข็งแรง:</p>
+
+    <pre><code># gateway-to-gateway โดยไม่มี Desktop
+hermes peer add spark --url http://spark.lan:8377 --key &lt;API_SERVER_KEY&gt;
+hermes peer dm spark "สรุปสถานะ pipeline ล่าสุดให้หน่อย"
+hermes peer run spark "deploy staging" --idempotency-key deploy-20260901
+
+# key เก็บใน ~/.hermes/.env เป็น HERMES_PEER_&lt;NAME&gt;_KEY
+# URL อยู่ใต้ bot_peers ใน config.yaml</code></pre>
+
+    <p>และสำหรับโลกนอก Hermes: <a href="https://github.com/NousResearch/hermes-agent/releases/tag/v2026.8.3">v0.20.0 "The Herald Release"</a> (3 สิงหาคม 2026) bundle ปลั๊กอิน <strong>A2A v1.0</strong> — ปิด issue #514 ซึ่ง release notes เรียกว่า "one of the oldest open feature requests in the repo" — ทำให้ Hermes "discover, talk to, and be driven by other A2A-compatible agents" ได้ตามมาตรฐานกลาง พร้อม outbound webhooks แบบ signed (HMAC) สำหรับ lifecycle events ระบบ heterogeneous ที่ผสม agent หลายค่ายจึงมี wire protocol กลางให้เกาะ</p>
+
+    <h2 id="th-cron">7. Always-On Work — cron Jobs vs Session Heartbeats</h2>
+
+    <p>ทีมที่ดีไม่ได้ทำงานเฉพาะตอนถูกสั่ง Hermes มีกลไก "ตื่นเอง" สองแบบที่ปรัชญาตรงข้ามกันพอดี — และการเลือกผิดตัวคือ bug คลาสสิกของมือใหม่</p>
+
+    <h3>cronjob — ถาวรแต่ isolated</h3>
+
+    <p>tool <code>cronjob</code> (actions: create / list / update / pause / resume / run / remove) รับ schedule ได้สี่ภาษา และ gateway daemon เดินนาฬิกาให้ทุก 60 วินาที:</p>
+
+    <pre><code># รูปแบบ schedule ที่ cronjob รับ — เลือกอย่างใดอย่างหนึ่ง
+cronjob(action="create", schedule="in 30m",          prompt="...")  # one-shot สัมพัทธ์
+cronjob(action="create", schedule="every 2h",        prompt="...")  # interval
+cronjob(action="create", schedule="weekdays at 9am", prompt="...")  # ภาษาธรรมชาติ
+cronjob(action="create", schedule="0 9 * * *",       prompt="...")  # cron expression</code></pre>
+
+    <p>ทุก run เกิดใน <strong>session สดใหม่ที่ isolated</strong> — ไม่มีประวัติแชทติดไป และเพื่อกัน agent สั่งตัวเองวนไม่รู้จบ cron-management tools ถูกปิดภายใน cron execution (override ได้ที่ <code>cron.allow_agent_scheduling</code>, default false) เพดานงานขนานคุมด้วย <code>cron.max_parallel_jobs</code></p>
+
+    <p>ความ isolated ไม่ได้แปลว่าโง่ซ้ำซาก — สองกลไกต่อความจำข้าม run ให้:</p>
+
+    <ul>
+      <li><strong>continuity=True</strong> — ฉีด output ล่าสุดของ job ตัวเองกลับเข้า run ถัดไป (เหมาะกับ scout ที่ต้อง dedup ของที่รายงานไปแล้ว)</li>
+      <li><strong>context_from="&lt;job_id&gt;"</strong> — chain งาน: เอา output ล่าสุดของ Job A ไปเป็น context ของ Job B</li>
+    </ul>
+
+    <pre><code># scout ประจำที่จำผลรอบก่อนได้ และส่งเข้า Telegram thread ของทีม
+cronjob(action="create",
+        schedule="every 6h",
+        prompt="สแกนหา multi-agent papers ใหม่ ถ้าไม่มีของใหม่ตอบ [SILENT]",
+        continuity=True,                    # จำ output รอบก่อน — ไม่รายงานซ้ำ
+        deliver="telegram:-100123456:42")   # รูปแบบ chat_id:thread_id</code></pre>
+
+    <p>ปลายทางของผลลัพธ์ยืดหยุ่นมาก: <code>deliver</code> รับ origin (default บนแพลตฟอร์มแชท), local, telegram / discord / slack / email / sms, all และ bot-chat โดยตอบ <code>[SILENT]</code> เพื่อกลืนผลเงียบ ๆ ได้ ส่วนงาน script ล้วนใช้ <code>no_agent=True</code> รันโดยไม่เรียก LLM เลย และ v0.21.0 เพิ่งอุดจุดอ่อนเก่าด้วย headline "Cron jobs that remember" — cron agent โหลด/อัปเดต persistent memory ได้แล้ว พร้อม notepad ถาวรของตัวเอง</p>
+
+    <h3>/heartbeat — in-context แต่ต้องมีชีวิต</h3>
+
+    <p>ขั้วตรงข้ามคือ <a href="https://github.com/NousResearch/hermes-agent/blob/main/website/docs/user-guide/features/heartbeat.md">session heartbeat</a>: prompt ที่เด้งกลับเข้า session ปัจจุบันตามรอบเวลา เห็นประวัติสนทนาเต็ม แต่ต้องมี process มีชีวิตรออยู่</p>
+
+    <pre><code>/heartbeat every 10m เช็คบอร์ด Kanban — มี card ไหน blocked ค้างไหม
+# ขั้นต่ำ 60s · ทำงานเฉพาะตอน idle ไม่แทรกงานที่กำลังรัน
+# tick ที่พลาดถูก coalesce เหลือครั้งเดียว
+# state เก็บใน SessionDB.state_meta ใต้ heartbeat:&lt;session_id&gt;</code></pre>
+
+    <div class="table-wrapper">
+      <table>
+        <thead>
+          <tr><th></th><th>cronjob</th><th>/heartbeat</th></tr>
+        </thead>
+        <tbody>
+          <tr><td><strong>Context</strong></td><td>session สดใหม่ ไม่มีประวัติแชท</td><td>ประวัติสนทนาเต็ม</td></tr>
+          <tr><td><strong>ความคงทน</strong></td><td>อยู่ข้าม restart (gateway daemon)</td><td>ต้องมี process มีชีวิต</td></tr>
+          <tr><td><strong>จังหวะ</strong></td><td>ตาม schedule จริงจัง</td><td>idle-only, coalesced</td></tr>
+          <tr><td><strong>เหมาะกับ</strong></td><td>งานประจำระยะยาว</td><td>เตือนตัวเองใน session ที่เปิดอยู่</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <hr>
+
+    <h2 id="th-team">8. Serving a Whole Team — Profiles, Gateways และ Allowlists</h2>
+
+    <p>สามชั้นแรกคือ agent ทำงานร่วมกับ agent ชั้นสุดท้ายคือคำถามที่องค์กรถามผมบ่อยที่สุด: เครื่องเดียวเสิร์ฟ <em>คน</em> หลายคน หลายบทบาท ได้ไหม — คำตอบของ Hermes คือได้ ผ่านการประกอบ profiles + gateways + allowlists</p>
+
+    <h3>หนึ่ง profile ต่อหนึ่งบทบาท</h3>
+
+    <p>ค่า default คือ <strong>หนึ่ง gateway process ต่อหนึ่ง profile</strong> — ตัวอย่างใน <a href="https://github.com/NousResearch/hermes-agent/blob/main/website/docs/user-guide/multi-profile-gateways.md">docs</a>: "A personal assistant on one Telegram bot and a coding agent on another" ข้อดีคือ crash domain แยกขาดกันจริง และติดตั้งเป็น service ถาวรได้ราย profile ด้วย <code>hermes -p &lt;name&gt; gateway install</code> (สร้าง systemd / LaunchAgent ให้)</p>
+
+    <h3>Multiplex — หนึ่ง gateway หลาย profile</h3>
+
+    <p>ถ้าไม่อยากเปลือง process ก็ opt-in รวมได้:</p>
+
+    <pre><code># ~/.hermes/config.yaml — หนึ่ง gateway process เสิร์ฟหลาย profile
+gateway:
+  multiplex_profiles: true
+  profile_routes:
+    - platform: discord
+      guild_id: "111111"
+      profile: research-team     # ทั้ง guild → profile นี้
+    - platform: discord
+      chat_id: "222222"
+      profile: ops               # เจาะจงกว่า guild → ชนะ
+    - platform: telegram
+      thread_id: "333"
+      profile: finance           # เจาะจงสุด: thread ชนะ chat ชนะ guild
+# credentials ไม่ถูก union รวมกัน · session key แยก namespace ต่อ profile
+# bot token ซ้ำข้าม profile = fail ตั้งแต่ startup</code></pre>
+
+    <p>กติกา routing คือ most-specific-first (thread_id ชนะ chat_id ชนะ guild_id) และจุดที่ผมชอบในฐานะคนดู security: docs ยืนยันว่า credentials "are never unioned into a shared environment" — การรวม process ไม่ได้รวมสิทธิ์ และ token ซ้ำถูกดักตั้งแต่ start ไม่ใช่ตอนเกิดเหตุ</p>
+
+    <h3>Multi-user บนแพลตฟอร์มเดียว</h3>
+
+    <p>อีกแกนหนึ่งคือ bot ตัวเดียวเสิร์ฟทั้งทีม — <a href="https://github.com/NousResearch/hermes-agent/blob/main/website/docs/user-guide/guides/team-telegram-assistant.md">คู่มือ team Telegram assistant</a> วางแนวไว้ครบ: แต่ละคนได้ session สนทนาแยกของตัวเอง คุมการเข้าถึงได้สองทาง และมี home channel กลางไว้รับ scheduled output:</p>
+
+    <pre><code># ทางเลือก 1 — static allowlist
+TELEGRAM_ALLOWED_USERS=1001,1002,1003
+
+# ทางเลือก 2 — DM pairing codes (หมดอายุใน 1 ชั่วโมง)
+hermes pairing approve telegram &lt;CODE&gt;
+hermes pairing list
+hermes pairing revoke telegram &lt;USER&gt;
+
+# ช่องกลางของทีมสำหรับผลงานตาม schedule
+TELEGRAM_HOME_CHANNEL=@team-agent-output   # หรือพิมพ์ /sethome ในแชท</code></pre>
+
+    <div class="alert danger">
+      <strong>ไม่มี role system:</strong> docs พูดตรงที่สุดเท่าที่เอกสารจะตรงได้ — "No built-in role system exists; authorization relies solely on allowlists or pairing approval" ทุกคนที่ผ่าน allowlist ได้สิทธิ์เท่ากับ bot ทั้งตัว ถ้าต้องแยกสิทธิ์ ให้แยกที่ระดับ profile (คนละ bot คนละ credentials) และคู่มือแนะนำ <code>TERMINAL_ENV=docker</code> สำหรับ multi-user เพื่อกันงาน execute แตะ host ตรง ๆ
+    </div>
+
+    <h2 id="th-choosing">9. Choosing the Right Layer — เลือกชั้นให้ถูกงาน</h2>
+
+    <p>Nous มี <a href="https://github.com/NousResearch/hermes-agent/blob/main/website/docs/guides/delegation-patterns.md">คู่มือ delegation patterns</a> อย่างเป็นทางการ ตั้งชื่อ pattern ไว้ห้าแบบ: <strong>Parallel Research</strong>, <strong>Code Review</strong> (audit ด้วยสายตาที่ context สดใหม่ — หลักการเดียวกับคำสั่ง <code>/review</code> ที่ spawn subagent รีวิว 10 ข้อความล่าสุดเป็น background), <strong>Compare Alternatives</strong>, <strong>Multi-File Refactoring</strong> ("split a large refactoring task across parallel subagents, each handling a different part of the codebase") และ <strong>Gather Then Analyze</strong></p>
+
+    <p>rules of thumb ของคู่มือเดียวกัน: delegate งานที่ reasoning หนักหรือจะท่วม context ของ parent และงานอิสระที่ขนานกันได้ — แต่งาน mechanical ล้วนใช้ <code>execute_code</code> ตรง ๆ ถูกกว่า และที่สำคัญที่สุด: delegation "tied to the owning session and Hermes process" — งานที่ต้องรอดข้ามการปิด session ให้ไป <code>cronjob</code> หรือ <code>terminal(background=True)</code></p>
+
+    <p>ผมสรุปเป็นบันไดตัดสินใจของตัวเองแบบนี้:</p>
+
+    <ul>
+      <li><strong>จบใน session เดียว ขนานกันได้</strong> → <code>delegate_task</code> (เปิด worktree isolation ถ้าแตะ repo เดียวกัน)</li>
+      <li><strong>ข้ามวัน ต้องมี audit และมนุษย์ตรวจ</strong> → Kanban board</li>
+      <li><strong>ทีมถาวรหลายบทบาท คุยกันเอง ข้ามเครื่อง</strong> → Bot Mode / <code>hermes peer</code> / A2A</li>
+      <li><strong>หลายคนใช้เครื่องเดียว</strong> → profiles + multiplexed gateway + allowlists</li>
+      <li><strong>งานตามเวลา</strong> → <code>cronjob</code> · <strong>เตือนใน session ที่เปิดอยู่</strong> → <code>/heartbeat</code></li>
+    </ul>
+
+    <p>มุมมองส่วนตัวปิดท้าย ในฐานะคนที่ดูแลระบบ OpenClaw อยู่: สิ่งที่ Hermes เพิ่มเข้ามาในภาพ multi-agent ไม่ใช่ "ความฉลาด" ของ agent แต่ละตัว แต่คือ <strong>ความคงทนของโครงสร้างทีม</strong> — Kanban เปลี่ยน subagent ชั่วคราวให้เป็นแถวใน SQLite ที่มนุษย์ comment และ unblock ได้ทุกจุด นี่แหละคือชิ้นที่ pattern ยุคที่ผมเขียนบทความ agent teams ฝั่ง OpenClaw ยังต้องประกอบเอง ส่วนคำถามว่า memory ของทีมพวกนี้ถูกจัดการอย่างไร — บทความ #3 ของซีรีส์ว่าด้วยเรื่องนั้นโดยเฉพาะ</p>
+
+    <div class="key-takeaways">
+      <h3>🎯 สิ่งสำคัญที่ต้องจำ</h3>
+      <ul>
+        <li><strong>delegate_task</strong> = fork-join subagent ที่ context สดใหม่ — มีแต่ summary สุดท้ายกลับเข้า parent (default: 3 children / 50 iterations / depth 1)</li>
+        <li><strong>background=true + steer/stop</strong> = ปล่อยงานแล้วไปต่อ (v0.17.0) และคุมกลางคันได้ (v0.21.0)</li>
+        <li><strong>Worktree isolation</strong> = กันชนกันด้วย git worktree ทั้งระดับ CLI (<code>hermes -w</code>) และระดับ subagent — git-only, local-only, degrade เงียบ</li>
+        <li><strong>Hermes Kanban</strong> = บอร์ด SQLite ถาวร + dispatcher ทุก 60s — named profiles, reclaim 4 ชม., มนุษย์ unblock ได้ทุกจุด, single-host โดย design</li>
+        <li><strong>Bot Mode</strong> = ทุก bot คือ profile — DM ผ่าน <code>message_agent</code>, group chat จำกัด 3 รอบ / 10 ข้อความ, ข้ามเครื่องผ่าน relay หรือ <code>hermes peer</code></li>
+        <li><strong>A2A v1.0</strong> = wire protocol มาตรฐานสำหรับคุยข้าม harness (มากับ v0.20.0)</li>
+        <li><strong>cron vs heartbeat</strong> = ถาวร-แต่-isolated vs in-context-แต่ต้องมี process มีชีวิต</li>
+        <li><strong>ไม่มี role system</strong> = authorization มีแค่ allowlist / pairing — แยกสิทธิ์ด้วย profile และรัน multi-user ใน docker</li>
+      </ul>
+    </div>
+
+    </div>
+    <div class="l-en" lang="en">
+
+    <p>Imagine you could clone a competent colleague at will — except every clone is born with an empty memory, finishes exactly one task, and then vanishes forever. How do you assemble a <em>team</em> out of creatures like that, one capable of work bigger than a single context window?</p>
+
+    <p>That is the central question of every multi-agent system, and it is the same question I explored in the <a href="/blog/openclaw-agent-teams">OpenClaw Agent Teams post</a> of my OpenClaw for Organizations series — a world where you compose teams out of sessions, subagents, and gateway message routing, with many of the patterns hand-built. I run an OpenClaw deployment in real work, and I am now examining <strong>Hermes Agent</strong> from Nous Research seriously — curious how the harness that has collected close to 240,000 GitHub stars answers this question differently.</p>
+
+    <p>The short answer: Hermes does not have <em>a</em> multi-agent feature. It has <strong>four distinct layers</strong>, each solving a different problem — fork-join subagents, a durable SQLite Kanban board, a society of bots that DM each other, and multi-profile serving for a whole team on one machine. Following <a href="/blog/hermes-101">Hermes 101</a>, this post is the map of all four, with every detail drawn from the official docs and release notes as of v0.21.0 (August 31, 2026).</p>
+
+    <h2 id="en-layers">1. The Four Layers of Multi-Agent Hermes</h2>
+
+    <p>Before the tour, the map. Most of the confusion I see around multi-agent Hermes comes from mixing layers that were never the same thing. Each layer has its own tool surface, its own lifespan, and its own problem to solve:</p>
+
+    <div class="table-wrapper">
+      <table>
+        <thead>
+          <tr><th>Layer</th><th>Tool surface</th><th>Durability</th><th>Built for</th></tr>
+        </thead>
+        <tbody>
+          <tr><td><strong>1. In-session subagents</strong></td><td><code>delegate_task</code></td><td>Dies with the session</td><td>Fork-join parallel work summarized back into one conversation</td></tr>
+          <tr><td><strong>2. Kanban board</strong></td><td><code>/kanban</code> + <code>kanban_*</code> verbs</td><td>Durable (SQLite, survives restarts)</td><td>Multi-day work with an audit trail humans can step into</td></tr>
+          <tr><td><strong>3. Bot Mode + A2A</strong></td><td><code>message_agent</code>, <code>hermes peer</code>, A2A plugin</td><td>As long as the gateway/relay</td><td>Persistent named bots talking to each other, across machines and harnesses</td></tr>
+          <tr><td><strong>4. Multi-profile serving</strong></td><td>Profiles + gateway routes</td><td>Service-level (systemd)</td><td>One machine serving many people and roles</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <p>The axis to hold onto is that <strong>durability climbs as you go down the table</strong> — a subagent dies with its session, a Kanban task survives restarts, and a profile is a permanent service-level identity. The layers also compose rather than compete: one bot (layer 3) can spawn subagents (layer 1) to clear a card on the Kanban board (layer 2), on a machine that serves the whole team (layer 4).</p>
+
+    <blockquote>💡 The thing most often mistaken for a fifth layer: <strong>Mixture of Agents (MoA)</strong> is not delegation. The docs classify it as a "virtual model provider" — several reference models act as parallel advisors (no tool schemas) while a single aggregator writes the response and emits the tool calls, configured via <code>moa.default_preset</code> / <code>moa.presets</code>. MoA is many brains in one turn, not many agents doing many jobs.</blockquote>
+
+    <hr>
+
+    <h2 id="en-delegate">2. delegate_task: Fork-Join Subagents with Fresh Contexts</h2>
+
+    <p>The first layer is the <strong>delegate_task</strong> tool: the agent forks work off to a child with a conversation of its own. The <a href="https://github.com/NousResearch/hermes-agent/blob/main/website/docs/user-guide/features/delegation.md">delegation doc</a> is explicit: "Each child gets a fresh conversation and works independently — only its final summary enters the parent's context." The child sees none of the parent's chat history, and the only thing that flows back is the final summary.</p>
+
+    <pre><code># Inside a session — the agent invokes this tool to fork work (pseudo-call)
+delegate_task(
+  task="Read all of src/billing and summarize the edge cases, citing files"
+)
+# The child starts from an empty conversation + the project context file only
+# The single thing that returns to the parent: the final summary</code></pre>
+
+    <h3>What flows in, what flows out</h3>
+
+    <p>The one exception to the empty-memory rule is project context: when a workspace exists, Hermes embeds a context file into every subagent's system prompt, resolved along the priority chain <code>.hermes.md → AGENTS.md → CLAUDE.md → .cursorrules</code>.</p>
+
+    <div class="alert info">
+      <strong>Interop with real migration value:</strong> because that chain reads AGENTS.md and CLAUDE.md natively, the context files your organization already wrote for Claude Code or an existing OpenClaw setup work with Hermes subagents from day one — no conversion step at all.
+    </div>
+
+    <h3>The defaults worth knowing</h3>
+
+    <p>These numbers have shifted across versions before (some release notes quote different iteration ceilings than the docs), so treat the current doc as the authority. As of September 1, 2026, the documented defaults are:</p>
+
+    <pre><code># ~/.hermes/config.yaml — delegation defaults (per the docs, v0.21.0)
+delegation:
+  max_concurrent_children: 3    # env: DELEGATION_MAX_CONCURRENT_CHILDREN (floor 1, no ceiling)
+  max_iterations: 50            # per child
+  max_spawn_depth: 1            # flat by default — raise to 2+ for nested orchestration
+  worktree_isolation: false
+  orchestrator_enabled: true
+  child_timeout_seconds: 0      # 0 = no hard timeout (30s floor if enabled)</code></pre>
+
+    <h3>From single tool to a small team</h3>
+
+    <p>Three capabilities promote this layer from "temp help" to "small team":</p>
+
+    <ul>
+      <li><strong>Batch dispatch</strong> — pass <code>tasks=[...]</code> and several jobs run in parallel, up to <code>max_concurrent_children</code></li>
+      <li><strong>Nested orchestration</strong> — pass <code>role="orchestrator"</code> so a child can spawn its own workers (raise <code>max_spawn_depth</code> to 2+ first)</li>
+      <li><strong>Cheaper workers than the parent</strong> — set <code>delegation.model</code> / <code>provider</code> / <code>base_url</code> separately so children run on a lower-cost model</li>
+    </ul>
+
+    <pre><code># Batch dispatch — three independent jobs, run in parallel
+delegate_task(tasks=[
+  "Analyze this week's logs for recurring error clusters",
+  "Review PR #42 from a security angle only",
+  "Compare library A vs B for the ingest job"
+])
+
+# Nested orchestration — a child that manages its own sub-team
+delegate_task(
+  task="Decompose the module refactor and manage a sub-team to completion",
+  role="orchestrator"
+)</code></pre>
+
+    <p>The boundaries are as deliberate as the powers: <strong>subagents cannot talk to each other</strong>. The doc states "No direct messaging between subagents … all coordination flows through parent's reasoning," and leaf subagents lose a whole set of tools: <code>delegate_task</code>, <code>clarify</code>, <code>memory</code>, <code>send_message</code>, <code>cronjob</code>. An orchestrator gets <code>delegate_task</code> back — bounded by spawn depth — but inherits the other blocks, and both roles keep <code>execute_code</code>.</p>
+
+    <p>While children run, you have full visibility: <code>/agents</code> shows a live tree of every child (API call counts, current tool, last activity), <code>/stop</code> cancels background delegations, and a live transcript per task sits at <code>~/.hermes/cache/delegation/live/&lt;delegation_id&gt;/task-&lt;n&gt;.log</code>.</p>
+
+    <h2 id="en-background">3. Background Delegation and Live Steering</h2>
+
+    <p>Originally delegate_task was purely synchronous — the parent sat and waited. The first turning point was <strong>v0.17.0</strong> (June 19, 2026), which added <code>background=true</code>: dispatch, get a handle back immediately, and keep working. Per the <a href="https://github.com/NousResearch/hermes-agent/releases/tag/v2026.6.19">release notes</a>, "The full result re-enters the conversation as a new turn the moment it finishes."</p>
+
+    <p>The second turning point arrived in <strong>v0.21.0</strong> (August 31, 2026) under the headline "Steer your subagents while they run": delegate_task gained live orchestration — list running children, steer one mid-flight with a course correction, or stop it early and keep the partial result — plus optional JSON-schema validation on child outputs and per-delegation cost surfaced in results.</p>
+
+    <pre><code># v0.17.0+ — dispatch in the background, handle returned immediately
+delegate_task(task="Crawl the whole doc set and build an index", background=true)
+
+# v0.21.0+ — live orchestration while children are still running
+delegate_task(action="list")                        # which children are running?
+delegate_task(action="steer", subagent_id="abc123",
+              message="Skip legacy docs; focus on the v2 API only")
+delegate_task(action="stop",  subagent_id="abc123") # stop early, keep partial result</code></pre>
+
+    <p>For background jobs that hang, an always-on stall monitor watches: quiet for more than 450 seconds (1,200 seconds while inside a tool call) counts as stalled, with a 120-second grace window to unwind, and structured metadata reporting the stall phase. The hard wall-clock cap (<code>child_timeout_seconds</code>) is opt-in and off by default — and background results persist in the profile's state.db across restarts.</p>
+
+    <p>One footnote that captures how fast this project moves: mid-June 2026 third-party writeups (MarkTechPost, kno2gether) described a separate six-tool "async_delegation" surface — <code>delegate_task_async</code>, <code>check_task</code>, <code>steer_task</code>, and friends. None of those names survive in the current official doc; the whole surface appears to have been consolidated into <code>delegate_task</code> itself between June and September. If an older tutorial names tools you cannot find, that is why.</p>
+
+    <h2 id="en-worktrees">4. Worktree Isolation: Parallel Work Without Collisions</h2>
+
+    <p>The classic failure mode of several agents in one repo is editing the same files at once. Hermes answers this at <strong>two distinct levels</strong> that people routinely conflate — and the internet is genuinely confused about their history, so let me untangle both.</p>
+
+    <h3>CLI-session level — hermes -w</h3>
+
+    <p>The first level is running several Hermes processes in parallel terminals: the <a href="https://hermes-agent.nousresearch.com/docs/user-guide/git-worktrees">git worktrees doc</a> promises that "every invocation gets its own worktree and branch automatically" — each <code>hermes -w</code> run gets a temporary git worktree under <code>.worktrees/</code> with an isolated branch.</p>
+
+    <pre><code># CLI-level parallelism — one worktree per terminal, no collisions
+hermes -w                      # every invocation gets its own worktree + branch
+/worktree new my-experiment    # creates .worktrees/my-experiment/ on branch hermes/my-experiment
+
+# Open several terminals, run several Hermes processes in parallel
+# Checkpoint history and /rollback are scoped per worktree</code></pre>
+
+    <p>This feature is older than many articles claim: the request is <a href="https://github.com/NousResearch/hermes-agent/issues/652">issue #652</a>, opened March 8, 2026, and it was documented by mid-March. The oft-repeated claim that it "shipped in v0.8.0" does not hold up against primary sources — v0.8.0 (April 2026) shipped only "aggressive worktree and branch cleanup." The mid-session <code>/worktree</code> command, which the docs describe as "Inspired by Copilot CLI," was added to the docs in mid-August 2026.</p>
+
+    <h3>Subagent level — delegation.worktree_isolation</h3>
+
+    <p>The second level is newer and finer-grained: flip <code>delegation.worktree_isolation: true</code> (default false) and every subagent from section 2 gets its own git worktree at <code>&lt;repo&gt;/.worktrees/subagent-&lt;id&gt;</code> on branch <code>hermes-subagent/subagent-&lt;id&gt;</code>, branched from current HEAD (the doc credits the inspiration to Muse Code's <code>--subagent-worktree-isolation</code>). Clean, commit-less worktrees are pruned automatically.</p>
+
+    <pre><code># ~/.hermes/config.yaml
+delegation:
+  worktree_isolation: true   # default: false
+
+# Each child's result gains a "worktree" field:
+#   path:    &lt;repo&gt;/.worktrees/subagent-&lt;id&gt;
+#   branch:  hermes-subagent/subagent-&lt;id&gt;
+#   commits ahead of base / dirty / pruned</code></pre>
+
+    <div class="alert">
+      <strong>Beware the silent degrade:</strong> worktree isolation is git-only and local-terminal-backend-only — in a non-git directory, or on the docker/ssh/modal backends, it silently falls back to a shared workspace <em>with no error whatsoever</em>. If isolation matters for your job, check the <code>worktree</code> field in every child's result.
+    </div>
+
+    <hr>
+
+    <h2 id="en-kanban">5. Hermes Kanban: A Durable Task Board Your Agents Share</h2>
+
+    <p>Everything in the previous two sections shares one weakness: it <strong>dies with the session</strong>. Close the process and the sub-team evaporates. That is the gap <strong>Hermes Kanban</strong> was built to close — first shipped in <a href="https://github.com/NousResearch/hermes-agent/releases/tag/v2026.5.7">v0.13.0</a> (May 7, 2026) under a headline that names the problem precisely: "Multi-agent Kanban — delegate to an AI team that actually finishes."</p>
+
+    <p>The heart is a single SQLite database at <code>~/.hermes/kanban.db</code>. The <a href="https://github.com/NousResearch/hermes-agent/blob/main/website/docs/user-guide/features/kanban.md">docs</a> compress the philosophy into one line: "Every task is a row … every handoff is a row anyone can read and write." Work is not state floating in some agent's head — it is rows any profile can inspect.</p>
+
+    <h3>The dispatcher mechanics</h3>
+
+    <p>A dispatcher embedded in the gateway (<code>kanban.dispatch_in_gateway: true</code>) wakes every 60 seconds to (1) reclaim tasks whose worker heartbeat has been silent for over 4 hours, (2) promote tasks whose dependencies have cleared, and (3) atomically claim ready tasks and spawn workers as full OS processes: <code>hermes -p &lt;assignee&gt; chat -q &lt;prompt&gt;</code>, with injected KANBAN_GUIDANCE and environment variables like <code>HERMES_KANBAN_TASK</code>, <code>HERMES_KANBAN_DB</code>, <code>HERMES_KANBAN_WORKSPACE</code>, <code>HERMES_PROFILE</code>, and <code>HERMES_TENANT</code> so each worker knows its own context.</p>
+
+    <pre><code># ~/.hermes/config.yaml — the main Kanban knobs (documented defaults)
+kanban:
+  dispatch_in_gateway: true
+  dispatch_interval_seconds: 60          # dispatcher tick
+  dispatch_stale_timeout_seconds: 14400  # 4h — reclaim tasks from silent workers
+  failure_limit: 2                       # per-task circuit breaker
+  max_in_progress: ~                     # default: unlimited board-wide
+  max_in_progress_per_profile: ~
+  auto_promote_children: true</code></pre>
+
+    <h3>The protocol workers must honor</h3>
+
+    <p>The board's reliability comes from a strict protocol: a worker must end its run with exactly one of <code>kanban_complete</code>, <code>kanban_request_review</code>, or <code>kanban_block</code>. Exit without one and the task is classified crashed / gave_up / timed_out, with up to 2 automatic nudges and a bounded retry budget (default: 3 consecutive protocol violations and you are out). The release notes summarize the machinery as "Heartbeats, reclaim, zombie detection, retry budgets, and a hallucination gate keep the team honest."</p>
+
+    <p>Kanban-side orchestrators work purely through creation verbs — decomposing goals into child cards and wiring dependencies, with no implementation tools in hand:</p>
+
+    <pre><code># An orchestrator fans a goal out into child cards, wired with parents
+kanban_create(title="Collect the v0.21.0 changelog", assignee="researcher")
+kanban_create(title="Draft the internal announcement from it",
+              assignee="writer",
+              parents=["&lt;task-id-of-the-first-card&gt;"])
+# Child cards automatically receive "## Parent task results"
+# (the parent's summary + metadata) in their worker context</code></pre>
+
+    <p>Each card picks one of three workspace kinds: <code>worktree</code> (a git worktree at <code>.worktrees/&lt;id&gt;/</code>, preserved on completion), <code>scratch</code> (deleted on completion), or <code>dir:&lt;path&gt;</code> (shared, preserved). And goal-mode cards (<code>--goal</code> / <code>goal_mode=True</code> with <code>--goal-max-turns</code>) run a Ralph-style loop confined to a single card, an auxiliary judge checking output against acceptance criteria every turn — when the budget runs out before the criteria pass, the card blocks for human review instead of failing silently.</p>
+
+    <h3>Kanban vs delegate_task — the official comparison</h3>
+
+    <p>The docs compare the two layers head-on; here is the substance of that table:</p>
+
+    <div class="table-wrapper">
+      <table>
+        <thead>
+          <tr><th></th><th>delegate_task</th><th>Hermes Kanban</th></tr>
+        </thead>
+        <tbody>
+          <tr><td><strong>Model</strong></td><td>fork → join RPC</td><td>durable queue + state machine</td></tr>
+          <tr><td><strong>Worker identity</strong></td><td>anonymous, non-resumable</td><td>named profile + persistent memory</td></tr>
+          <tr><td><strong>Recovery</strong></td><td>dies with the session</td><td>block / unblock / re-run</td></tr>
+          <tr><td><strong>Human in the loop</strong></td><td>—</td><td>comment / unblock at any point</td></tr>
+          <tr><td><strong>Audit trail</strong></td><td>—</td><td>SQLite records every handoff</td></tr>
+          <tr><td><strong>Coordination</strong></td><td>through the parent only</td><td>peer — any profile reads/writes any task</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <p>The docs also codify 8 collaboration patterns — fan-out, pipeline, voting/quorum, long-running journal, human-in-the-loop, @mention, thread-scoped workspace, and fleet farming (the docs' example: one profile running 50 social accounts) — plus soft multi-tenancy via <code>--tenant</code>: "One specialist fleet can serve multiple businesses (--tenant business-a) with data isolation," each tenant getting its own workspace path and memory key prefix.</p>
+
+    <p>You can even run the board from your phone: every verb is reachable as <code>/kanban</code> from any gateway platform (Telegram, Discord, Slack, WhatsApp, Signal, Matrix, and more), and the originating chat auto-subscribes to the task's terminal events — choose plain notify, notify+wake, or wake so the agent rouses itself to act when a task completes, blocks, or crashes.</p>
+
+    <div class="alert info">
+      <strong>A boundary by design:</strong> Kanban is single-host — a local SQLite file, same-machine worker spawns, no multi-host coordination, no cross-board links. Crossing machines is the next layer's job (Bot Mode / peers / A2A), not Kanban's.
+    </div>
+
+    <h2 id="en-botmode">6. Bot Mode: Named Agents, Group Chats, and Peer DMs</h2>
+
+    <p>The third layer is what makes "a society of bots" in this post's title literal rather than a metaphor. <strong>Bot Mode</strong> began life as a one-day public beta plugin by Teknium (a Nous co-founder), was — per MarkTechPost's reporting — bundled default-on in Hermes Desktop around v0.20.3 in mid-August, and was formalized in <a href="https://github.com/NousResearch/hermes-agent/releases/tag/v2026.8.31">v0.21.0 "The Pantheon Release"</a> (August 31, 2026), which describes it as "a society of named agents with their own faces and group chats, where your bots talk to each other — and to you — like a team, not a toolbox."</p>
+
+    <h3>A Bot is a Profile</h3>
+
+    <p>The one sentence to remember: <strong>a Bot IS a Hermes profile</strong> — isolated config, memory, skills, credentials, and chat history under <code>~/.hermes/profiles/&lt;name&gt;/</code>. You can pin a model/provider per bot, write its persona in a SOUL.md, and enable skills, toolsets, and MCP servers per bot. Everything has CLI parity: <code>hermes -p &lt;bot&gt; chat</code>, <code>hermes profile create</code>, <code>hermes cron list</code>. A bot's recurring "routines" are plain Hermes cron jobs namespaced as <code>[bot:&lt;name&gt;] &lt;routine&gt;</code>.</p>
+
+    <h3>message_agent and group chats</h3>
+
+    <p>Bots DM each other through the <code>message_agent</code> tool (gated by <code>agent.bot_mode_protocol: true</code>, injected automatically in canonical Bot Chats): delivery is fire-and-forget, with the reply arriving as a background completion notification. A failed delivery retries at most once, with typed failure reasons such as <code>provider_auth_or_access</code>, <code>provider_quota_limit</code>, and <code>context_overflow</code>.</p>
+
+    <pre><code># One bot messaging another
+message_agent(target="researcher",
+              message="Give me the 5 latest bullets on A2A adoption")
+# Fire-and-forget: the reply arrives as a background completion notification
+# On failure: at most 1 retry, with a typed failure reason</code></pre>
+
+    <p>Group chats are engineered against flooding: each send triggers at most 3 serial rounds of member turns, capped at 10 messages, and a bot "replies only when it has something new to add and passes otherwise" — with <code>@user</code> always available to escalate to a human. Rooms can span machines via the Desktop relay.</p>
+
+    <h3>Peers and A2A — across machines, across harnesses</h3>
+
+    <p>No Desktop? Gateways can talk to each other directly over the <code>api_server</code> platform with a strong key:</p>
+
+    <pre><code># Gateway-to-gateway, no Desktop required
+hermes peer add spark --url http://spark.lan:8377 --key &lt;API_SERVER_KEY&gt;
+hermes peer dm spark "Summarize the latest pipeline status for me"
+hermes peer run spark "deploy staging" --idempotency-key deploy-20260901
+
+# Peer keys live in ~/.hermes/.env as HERMES_PEER_&lt;NAME&gt;_KEY
+# URLs sit under bot_peers in config.yaml</code></pre>
+
+    <p>And for the world beyond Hermes: <a href="https://github.com/NousResearch/hermes-agent/releases/tag/v2026.8.3">v0.20.0 "The Herald Release"</a> (August 3, 2026) bundled an <strong>A2A v1.0</strong> plugin — closing issue #514, which the release notes call "one of the oldest open feature requests in the repo" — so Hermes can "discover, talk to, and be driven by other A2A-compatible agents," alongside signed (HMAC) outbound lifecycle webhooks. Heterogeneous multi-agent systems that mix harnesses finally get a standard wire protocol to meet on.</p>
+
+    <h2 id="en-cron">7. Always-On Work: cron Jobs vs Session Heartbeats</h2>
+
+    <p>A good team does not only work when commanded. Hermes has two "wake yourself up" mechanisms with exactly opposite philosophies — and picking the wrong one is the classic beginner's bug.</p>
+
+    <h3>cronjob — durable but isolated</h3>
+
+    <p>The <code>cronjob</code> tool (actions: create / list / update / pause / resume / run / remove) accepts schedules in four dialects, and the gateway daemon ticks the scheduler every 60 seconds:</p>
+
+    <pre><code># The schedule forms cronjob accepts — pick one
+cronjob(action="create", schedule="in 30m",          prompt="...")  # relative one-shot
+cronjob(action="create", schedule="every 2h",        prompt="...")  # interval
+cronjob(action="create", schedule="weekdays at 9am", prompt="...")  # natural language
+cronjob(action="create", schedule="0 9 * * *",       prompt="...")  # cron expression</code></pre>
+
+    <p>Every run happens in a <strong>fresh, isolated session</strong> — no chat history comes along. And to stop an agent from scheduling itself into infinity, cron-management tools are disabled inside cron executions (override: <code>cron.allow_agent_scheduling</code>, default false), with concurrency capped by <code>cron.max_parallel_jobs</code>.</p>
+
+    <p>Isolated does not mean amnesiac — two mechanisms carry memory across runs:</p>
+
+    <ul>
+      <li><strong>continuity=True</strong> — injects the job's own most recent output into each subsequent run (ideal for scouts that must deduplicate what they already reported)</li>
+      <li><strong>context_from="&lt;job_id&gt;"</strong> — chains jobs: Job A's latest output becomes context for Job B</li>
+    </ul>
+
+    <pre><code># A recurring scout that remembers its last round and posts to a team thread
+cronjob(action="create",
+        schedule="every 6h",
+        prompt="Scan for new multi-agent papers; reply [SILENT] if nothing new",
+        continuity=True,                    # remembers last output — no repeats
+        deliver="telegram:-100123456:42")   # chat_id:thread_id addressing</code></pre>
+
+    <p>Delivery is flexible: <code>deliver</code> accepts origin (the default on messaging platforms), local, telegram / discord / slack / email / sms, all, and bot-chat — and a final response of <code>[SILENT]</code> suppresses delivery entirely. Pure-script jobs run with <code>no_agent=True</code>, no LLM invoked at all. And v0.21.0 just fixed the layer's oldest weakness under the headline "Cron jobs that remember": cron agents now load and update persistent memory, and get a durable notepad scratchpad of their own.</p>
+
+    <h3>/heartbeat — in-context but mortal</h3>
+
+    <p>The opposite pole is the <a href="https://github.com/NousResearch/hermes-agent/blob/main/website/docs/user-guide/features/heartbeat.md">session heartbeat</a>: a prompt that re-enters the <em>current</em> session on a cadence, with the full conversation history in view — but requiring a live process to come home to.</p>
+
+    <pre><code>/heartbeat every 10m Check the Kanban board — any cards stuck in blocked?
+# Minimum 60s · runs only while idle, never interrupts active processing
+# Missed ticks are coalesced into one
+# State persists in SessionDB.state_meta under heartbeat:&lt;session_id&gt;</code></pre>
+
+    <div class="table-wrapper">
+      <table>
+        <thead>
+          <tr><th></th><th>cronjob</th><th>/heartbeat</th></tr>
+        </thead>
+        <tbody>
+          <tr><td><strong>Context</strong></td><td>fresh session, no chat history</td><td>full conversation history</td></tr>
+          <tr><td><strong>Durability</strong></td><td>survives restarts (gateway daemon)</td><td>needs a live process</td></tr>
+          <tr><td><strong>Cadence</strong></td><td>a real schedule</td><td>idle-only, coalesced</td></tr>
+          <tr><td><strong>Built for</strong></td><td>long-lived recurring work</td><td>self-reminders in an open session</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <hr>
+
+    <h2 id="en-team">8. Serving a Whole Team: Profiles, Gateways, Allowlists</h2>
+
+    <p>The first three layers are agents working with agents. The last layer answers the question organizations ask me most often: can one machine serve many <em>people</em>, in many roles? Hermes' answer is yes — by composing profiles, gateways, and allowlists.</p>
+
+    <h3>One profile per role</h3>
+
+    <p>The default is <strong>one gateway process per profile</strong> — the <a href="https://github.com/NousResearch/hermes-agent/blob/main/website/docs/user-guide/multi-profile-gateways.md">docs'</a> example: "A personal assistant on one Telegram bot and a coding agent on another." The payoff is hard crash-domain isolation, and each profile installs as a permanent service with <code>hermes -p &lt;name&gt; gateway install</code> (generating the systemd unit or LaunchAgent for you).</p>
+
+    <h3>Multiplexing — one gateway, many profiles</h3>
+
+    <p>If you would rather not spend a process per role, opt in to sharing:</p>
+
+    <pre><code># ~/.hermes/config.yaml — one gateway process serving several profiles
+gateway:
+  multiplex_profiles: true
+  profile_routes:
+    - platform: discord
+      guild_id: "111111"
+      profile: research-team     # the whole guild → this profile
+    - platform: discord
+      chat_id: "222222"
+      profile: ops               # more specific than guild → wins
+    - platform: telegram
+      thread_id: "333"
+      profile: finance           # most specific: thread beats chat beats guild
+# Credentials are never unioned · session keys are namespaced per profile
+# A duplicate bot token across profiles fails at startup</code></pre>
+
+    <p>Routing is most-specific-first (thread_id beats chat_id beats guild_id). And the detail I like most with my security hat on: the docs guarantee credentials "are never unioned into a shared environment" — sharing the process does not merge the privileges, and duplicate tokens are caught at startup, not at incident time.</p>
+
+    <h3>Multi-user on a single platform</h3>
+
+    <p>The other axis is one bot serving a whole team. The <a href="https://github.com/NousResearch/hermes-agent/blob/main/website/docs/user-guide/guides/team-telegram-assistant.md">team Telegram assistant guide</a> lays out the pattern: each person gets their own conversation session, access is controlled one of two ways, and a shared home channel receives scheduled output:</p>
+
+    <pre><code># Option 1 — static allowlist
+TELEGRAM_ALLOWED_USERS=1001,1002,1003
+
+# Option 2 — DM pairing codes (expire in 1 hour)
+hermes pairing approve telegram &lt;CODE&gt;
+hermes pairing list
+hermes pairing revoke telegram &lt;USER&gt;
+
+# The team's shared channel for scheduled output
+TELEGRAM_HOME_CHANNEL=@team-agent-output   # or type /sethome in the chat</code></pre>
+
+    <div class="alert danger">
+      <strong>There is no role system:</strong> the docs say it as plainly as documentation can — "No built-in role system exists; authorization relies solely on allowlists or pairing approval." Everyone past the allowlist holds the full bot's privileges. If you need separated privileges, separate at the profile level (different bot, different credentials) — and the guide recommends <code>TERMINAL_ENV=docker</code> for multi-user setups so executed work cannot touch the host directly.
+    </div>
+
+    <h2 id="en-choosing">9. Choosing the Right Layer</h2>
+
+    <p>Nous publishes an official <a href="https://github.com/NousResearch/hermes-agent/blob/main/website/docs/guides/delegation-patterns.md">delegation patterns guide</a> naming five patterns: <strong>Parallel Research</strong>, <strong>Code Review</strong> (an audit with fresh-context eyes — the same principle behind the <code>/review</code> command, which spawns a background subagent over the last 10 messages), <strong>Compare Alternatives</strong>, <strong>Multi-File Refactoring</strong> ("split a large refactoring task across parallel subagents, each handling a different part of the codebase"), and <strong>Gather Then Analyze</strong>.</p>
+
+    <p>The same guide's rules of thumb: delegate reasoning-heavy subtasks and anything that would flood the parent's context, plus independent parallel workstreams — but purely mechanical work is cheaper as a direct <code>execute_code</code> call. Most important of all: delegation is "tied to the owning session and Hermes process" — work that must survive a closed session belongs in <code>cronjob</code> or <code>terminal(background=True)</code>.</p>
+
+    <p>My own decision ladder condenses to this:</p>
+
+    <ul>
+      <li><strong>Fits in one session, parallelizable</strong> → <code>delegate_task</code> (turn on worktree isolation if children touch the same repo)</li>
+      <li><strong>Spans days, needs an audit trail and human review</strong> → the Kanban board</li>
+      <li><strong>A persistent multi-role team that talks to itself, across machines</strong> → Bot Mode / <code>hermes peer</code> / A2A</li>
+      <li><strong>Many people on one machine</strong> → profiles + a multiplexed gateway + allowlists</li>
+      <li><strong>Work on a clock</strong> → <code>cronjob</code> · <strong>self-reminders in an open session</strong> → <code>/heartbeat</code></li>
+    </ul>
+
+    <p>A closing observation, as someone who operates an OpenClaw deployment: what Hermes adds to the multi-agent picture is not smarter individual agents but <strong>durability of team structure</strong>. Kanban turns the ephemeral subagent into a row in SQLite that a human can comment on and unblock at any point — precisely the piece that the patterns I described in my OpenClaw agent-teams post still had to be assembled by hand. As for how these teams manage what they remember — that is the entire subject of post #3 in this series.</p>
+
+    <div class="key-takeaways">
+      <h3>🎯 Key Takeaways</h3>
+      <ul>
+        <li><strong>delegate_task</strong> = fork-join subagents with fresh contexts — only the final summary re-enters the parent (defaults: 3 children / 50 iterations / depth 1)</li>
+        <li><strong>background=true + steer/stop</strong> = dispatch and keep going (v0.17.0), course-correct mid-flight (v0.21.0)</li>
+        <li><strong>Worktree isolation</strong> = collision-proofing via git worktrees at both the CLI level (<code>hermes -w</code>) and the subagent level — git-only, local-only, degrades silently</li>
+        <li><strong>Hermes Kanban</strong> = a durable SQLite board + a 60s dispatcher — named profiles, 4h reclaim, humans can unblock at any point, single-host by design</li>
+        <li><strong>Bot Mode</strong> = every bot is a profile — DMs via <code>message_agent</code>, group chats capped at 3 rounds / 10 messages, cross-machine via the relay or <code>hermes peer</code></li>
+        <li><strong>A2A v1.0</strong> = the standard wire protocol for talking across harnesses (since v0.20.0)</li>
+        <li><strong>cron vs heartbeat</strong> = durable-but-isolated vs in-context-but-mortal</li>
+        <li><strong>No role system</strong> = authorization is allowlists / pairing only — separate privileges with profiles, and run multi-user inside docker</li>
+      </ul>
+    </div>
+
+    </div>
+
+    <div class="post-series-footer">
+      <span class="l-th">บทความจากซีรีส์ Hermes Agent in Practice 2026</span><span class="l-en" lang="en">From the Hermes Agent in Practice 2026 series</span>
+    </div>
+
+  </article>
+
+  </main>
+
+  <footer class="blog-footer">
+    <nav class="blog-footer__nav" aria-label="Site">
+      <a href="../index.html">Home</a>
+      <a href="./">Blog</a>
+      <a href="../publications/">Publications</a>
+      <a href="../books/">Books</a>
+      <a href="../projects/">Projects</a>
+      <a href="../news/">News</a>
+      <a href="../index.html#contact">Contact</a>
+    </nav>
+    <a href="./">← Back to Blog</a>
+    <span>© 2026 Anirach Mingkhwan — Associate Professor, KMUTNB</span>
+  </footer>
+
+</body>
+</html>

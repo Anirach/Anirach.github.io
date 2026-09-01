@@ -1,0 +1,1076 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Production — Cheap, Boring, Always On — ถูก เสถียร ออนไลน์ตลอดเวลา | Anirach Mingkhwan</title>
+  <meta name="description" content="คู่มือรัน Hermes Agent บน production แบบจริงจัง — จาก VPS ราคา $5 ถึง Docker ที่รอดทุก reboot, backup และ rollback, การคุมค่าใช้จ่ายด้วย hermes insights และ Nous Portal ไปจนถึงการย้ายทั้งองค์กรจาก OpenClaw">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=Sarabun:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      color-scheme: light;
+      /* ink */
+      --navy: #11304b; --slate: #334155; --slate-light: #526174; --gray: #94a3b8;
+      /* ground */
+      --bg: #faf7f0; --white: #ffffff; --code-bg: #1e293b;
+      /* accent */
+      --blue: #226299; --blue-dark: #1a4d7a; --blue-light: #4992b9;
+      /* brand — sampled from the book covers. --gold is decorative on light grounds (2.2:1); --gold-dark is its text form. */
+      --gold: #c4a46c; --gold-dark: #7a5f22; --cloud: #dee7e6; --parchment: #e9e1c4; --focus: #226299;
+      /* status — use only these six, never invent a seventh */
+      --green: #22c55e; --red: #ef4444; --amber: #f59e0b;
+      --cyan: #06b6d4; --purple: #226299; --purple-dark: #1a4d7a;
+      /* type */
+      --font: 'Inter', 'Sarabun', -apple-system, BlinkMacSystemFont, sans-serif;
+      --mono: 'JetBrains Mono', 'Fira Code', 'Sarabun', monospace;
+      /* form */
+      --radius: 12px; --radius-sm: 8px; --radius-lg: 16px;
+      --measure: 720px; --wide: 860px;
+      --transition: 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+    html { scroll-behavior: smooth; }
+    body { font-family: var(--font); font-size: 17px; line-height: 1.8; color: var(--slate); background: var(--bg); -webkit-font-smoothing: antialiased; }
+    .blog-nav { position: fixed; top: 0; left: 0; right: 0; z-index: 100; background: rgba(248,250,252,0.85); backdrop-filter: blur(20px); border-bottom: 1px solid rgba(0,0,0,0.05); }
+    .blog-nav__inner { max-width: 860px; margin: 0 auto; padding: 0 2rem; height: 56px; display: flex; align-items: center; justify-content: space-between; }
+    .blog-nav__back { font-size: 0.85rem; font-weight: 500; color: var(--blue); text-decoration: none; }
+    .blog-nav__back:hover { color: #1a4d7a; }
+    .blog-nav__title { font-size: 0.85rem; font-weight: 600; color: var(--navy); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 50%; }
+    /* ── HERO ── house .post-hero on the approved Deep Blue gradient (page-design
+       §5 / INV-28). Ink is inverted for the dark ground: white title/meta, tag
+       pills white on 18% white — the openclaw-production treatment. The
+       background value must stay byte-identical to the approved string. */
+    .post-hero { padding: 8rem 2rem 3rem; background: linear-gradient(135deg, #11304b 0%, #1a4d7a 45%, #226299 100%); color: #fff; text-align: center; }
+    .post-hero__tags { display: flex; gap: 0.5rem; justify-content: center; margin-bottom: 1.25rem; flex-wrap: wrap; }
+    .post-hero__tag { display: inline-block; font-size: 0.72rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.1em; color: #fff; background: rgba(255,255,255,0.18); padding: 0.35rem 0.9rem; border-radius: 20px; }
+    .post-hero__title { font-size: clamp(1.8rem, 5vw, 3rem); font-weight: 800; color: #fff; line-height: 1.2; margin-bottom: 1rem; max-width: 720px; margin-left: auto; margin-right: auto; }
+    .post-hero__sub { font-size: 1.05rem; max-width: 640px; margin: 0 auto 1.5rem; line-height: 1.7; color: #fff; }
+    .post-hero__meta { font-size: 0.85rem; color: #fff; display: flex; align-items: center; justify-content: center; gap: 1.5rem; flex-wrap: wrap; }
+    .post-hero__series { font-weight: 600; color: #fff; }
+    /* the switch pill and the focus ring both sit on the dark hero: the pill is
+       a light chip so its labels keep their light-ground colours, and --focus
+       re-points to gold here (blue collapses on blue — the footer/pre
+       precedent). */
+    .post-hero { --focus: var(--gold); }
+    .post-hero__cover {
+      aspect-ratio: 1 / 1;
+      max-width: 380px;
+      margin: 2.5rem auto 0;
+      border-radius: var(--radius-lg, 16px);
+      overflow: hidden;
+      box-shadow: 0 20px 60px rgba(17,48,75,0.14);
+    }
+    .post-hero__cover img { width: 100%; height: 100%; object-fit: cover; display: block; }
+    .post-body { max-width: 720px; margin: 0 auto; padding: 3rem 2rem 6rem; }
+    .post-body h2 { font-size: 1.6rem; font-weight: 800; color: var(--navy); margin: 3rem 0 1rem; padding-bottom: 0.5rem; border-bottom: 2px solid rgba(34,98,153,0.15); }
+    .post-body h3 { font-size: 1.25rem; font-weight: 700; color: var(--navy); margin: 2.25rem 0 0.75rem; }
+    .post-body p { margin-bottom: 1.25rem; }
+    .post-body strong { font-weight: 700; color: var(--navy); }
+    .post-body a { color: var(--blue); text-decoration: underline; text-decoration-thickness: 1px; text-underline-offset: 2px; }
+    .post-body ul, .post-body ol { margin: 0.5rem 0 1.25rem 1.5rem; }
+    .post-body li { margin-bottom: 0.4rem; }
+    .post-body blockquote { background: rgba(34,98,153,0.06); border-left: 4px solid var(--blue); padding: 1rem 1.25rem; border-radius: 0 10px 10px 0; margin: 1.25rem 0; font-size: 0.95rem; color: var(--navy); }
+    .post-body hr { border: none; height: 1px; background: linear-gradient(90deg, transparent, rgba(34,98,153,0.2), transparent); margin: 3rem 0; }
+    /* ── CODE ── */
+    .post-body pre { background: var(--code-bg); border-radius: 12px; padding: 1.5rem; margin: 1.25rem 0 1.5rem; overflow-x: auto; border: 1px solid rgba(255,255,255,0.05); }
+    .post-body pre code { font-family: var(--mono); font-size: 0.85rem; color: #e2e8f0; line-height: 1.7; background: none; padding: 0; white-space: pre-wrap; }
+    .post-body code { font-family: var(--mono); font-size: 0.88em; background: rgba(34,98,153,0.08); color: var(--blue-dark); padding: 0.15em 0.45em; border-radius: 5px; }
+    /* ── TABLES ── */
+    .table-wrapper { overflow-x: auto; margin: 1.5rem 0; border-radius: 0.5rem; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1); }
+    table { width: 100%; border-collapse: collapse; background: white; }
+    th { background: #226299; color: white; padding: 1rem; text-align: left; font-weight: 600; }
+    td { padding: 1rem; border-bottom: 1px solid #e5e7eb; }
+    .post-body table { display: block; width: 100%; overflow-x: auto; }
+    /* ── ALERTS ── */
+    .alert { background: #fef3cd; border: 1px solid #facc15; border-radius: 0.5rem; padding: 1rem; margin: 1.5rem 0; }
+    .alert.danger { background: #fee2e2; border-color: #ef4444; }
+    .alert.info { background: #e0f2fe; border-color: #06b6d4; }
+    .alert.success { background: #d1fae5; border-color: #10b981; }
+    /* ── KEY TAKEAWAYS ── */
+    .key-takeaways { background: linear-gradient(135deg, #f3f4f6 0%, #e5e7eb 100%); border-radius: 1rem; padding: 2rem; margin: 3rem 0; }
+    .key-takeaways h3 { color: #226299; margin-bottom: 1.5rem; }
+    .post-series-footer { text-align: center; font-size: 0.85rem; color: var(--slate-light); font-style: italic; margin-top: 2rem; padding-top: 2rem; border-top: 1px solid #e2e8f0; }
+    .blog-footer { background: var(--navy); padding: 2rem 0; text-align: center; }
+    .blog-footer a { color: var(--gold); text-decoration: none; font-weight: 600; font-size: 0.9rem; }
+    .blog-footer span { color: var(--gray); font-size: 0.8rem; display: block; margin-top: 0.4rem; }
+    @media (max-width: 600px) {
+      .post-hero { padding: 7rem 1.25rem 2.5rem; }
+      .post-body { padding: 2rem 1.25rem 4rem; }
+      .post-hero__meta { flex-direction: column; gap: 0.4rem; }
+      .post-body h2 { font-size: 1.4rem; }
+      .post-body h3 { font-size: 1.15rem; }
+      .post-body pre { padding: 1rem; border-radius: 8px; }
+    }
+
+    :focus-visible { outline: 2px solid var(--focus); outline-offset: 3px; border-radius: 2px; }
+    /* the ring sits on the page ground (3px offset). Inside the navy footers
+       and code blocks var(--blue) collapses to 2.12:1, so those scopes
+       re-point --focus to gold (5.73:1 on navy). */
+    .footer, .blog-footer, pre { --focus: var(--gold); }
+    :focus:not(:focus-visible) { outline: none; }
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after {
+        animation-duration: .01ms !important; animation-iteration-count: 1 !important;
+        transition-duration: .01ms !important; scroll-behavior: auto !important;
+      }
+    }
+    h1, h2, h3, .post-hero__title, .card__title { text-wrap: balance; }
+
+    .post-body img, .post-body svg { max-width: 100%; height: auto; }
+
+    /* ── SKIP LINK ── a11y-perf R5: the link and the landmark it targets are a
+       pair — useless without both halves. Off-screen until focused, then the
+       first tab stop on every page. */
+    .skip-link { position: absolute; left: -9999px; }
+    .skip-link:focus {
+      left: 1rem; top: 1rem; z-index: 999;
+      background: var(--navy); color: #fff;
+      padding: 0.75rem 1.25rem; border-radius: var(--radius-sm);
+      font-weight: 600; text-decoration: none;
+    }
+
+    /* ── POST WAYFINDING ── the wordmark is the home link; the footer carries
+       the full destination row. */
+    .blog-nav__home {
+      font-size: 0.9rem; font-weight: 800; color: var(--navy);
+      text-decoration: none; margin-right: 1rem;
+    }
+    .blog-nav__home:hover { color: var(--blue); }
+    .blog-nav__inner > .blog-nav__back { margin-right: auto; }
+    .blog-footer__nav {
+      display: flex; flex-wrap: wrap; justify-content: center; gap: 0.35rem 1.25rem;
+      max-width: 860px; margin: 0 auto 1.25rem; padding: 0 2rem 1.25rem;
+      border-bottom: 1px solid rgba(255,255,255,0.12);
+    }
+    .blog-footer__nav a { color: var(--gold); font-size: 0.85rem; font-weight: 600; text-decoration: none; }
+    .blog-footer__nav a:hover { color: #fff; text-decoration: underline; }
+
+    html { scroll-padding-top: 5rem; }
+    [id] { scroll-margin-top: 5rem; }
+
+    /* Thai needs more room than Latin at the same nominal size. */
+    .post-body:lang(th) { font-size: 18px; line-height: 1.85; }
+    .post-body p, .post-body li, .post-body blockquote { text-wrap: pretty; }
+
+    /* ---- side-scroll affordance ----
+       pre blocks and tables can exceed 720px. These layers paint a shadow ONLY
+       where there is more content in that direction; when fully scrolled the
+       cover slides over the shadow and hides it. No JavaScript, no wrapper. */
+    .post-body pre, .post-body table {
+      overflow-x: auto;
+      background-image:
+        linear-gradient(to right, var(--code-bg, #0f172a) 30%, rgba(15,23,42,0)),
+        linear-gradient(to left, var(--code-bg, #0f172a) 30%, rgba(15,23,42,0)),
+        radial-gradient(farthest-side at 0 50%, rgba(0,0,0,.28), rgba(0,0,0,0)),
+        radial-gradient(farthest-side at 100% 50%, rgba(0,0,0,.28), rgba(0,0,0,0));
+      background-position: 0 0, 100% 0, 0 0, 100% 0;
+      background-repeat: no-repeat;
+      background-size: 40px 100%, 40px 100%, 14px 100%, 14px 100%;
+      background-attachment: local, local, scroll, scroll;
+    }
+    .post-body table {
+      background-image:
+        linear-gradient(to right, var(--white, #fff) 30%, rgba(255,255,255,0)),
+        linear-gradient(to left, var(--white, #fff) 30%, rgba(255,255,255,0)),
+        radial-gradient(farthest-side at 0 50%, rgba(17,48,75,.16), rgba(17,48,75,0)),
+        radial-gradient(farthest-side at 100% 50%, rgba(17,48,75,.16), rgba(17,48,75,0));
+      background-position: 0 0, 100% 0, 0 0, 100% 0;
+      background-repeat: no-repeat;
+      background-size: 40px 100%, 40px 100%, 14px 100%, 14px 100%;
+      background-attachment: local, local, scroll, scroll;
+    }
+
+    /* ---- table of contents ---- */
+    .post-toc {
+      max-width: 720px;
+      margin: 2rem auto 0;
+      padding: 1rem 1.25rem;
+      background: rgba(34,98,153,0.05);
+      border: 1px solid rgba(34,98,153,0.14);
+      border-left: 3px solid var(--gold, #c4a46c);
+      border-radius: 10px;
+      font-size: 0.92rem;
+    }
+    .post-toc > summary {
+      cursor: pointer;
+      font-weight: 700;
+      color: var(--navy);
+      list-style: none;
+    }
+    .post-toc > summary::-webkit-details-marker { display: none; }
+    .post-toc > summary::before {
+      content: "\25B8";
+      display: inline-block;
+      margin-right: 0.5rem;
+      transition: transform 0.2s ease;
+      color: var(--gold-dark, #7a5f22);
+    }
+    .post-toc[open] > summary::before { transform: rotate(90deg); }
+    .post-toc > summary:focus-visible { outline: 3px solid var(--focus, #226299); outline-offset: 3px; }
+    .post-toc ol { margin: 0.85rem 0 0.25rem; padding-left: 1.4rem; }
+    .post-toc li { margin-bottom: 0.4rem; line-height: 1.5; }
+    .post-toc a { color: var(--slate); text-decoration: none; }
+    .post-toc a:hover, .post-toc a:focus-visible { color: var(--blue-dark, #1a4d7a); text-decoration: underline; }
+    @media (max-width: 600px) { .post-toc { margin: 1.25rem 1rem 0; } }
+
+    /* ---- cross-document view transitions ---- */
+    @view-transition { navigation: auto; }
+    .nav, .blog-nav { view-transition-name: site-nav; }
+    .footer, .blog-footer { view-transition-name: site-footer; }
+    @media (prefers-reduced-motion: reduce) {
+      ::view-transition-group(*),
+      ::view-transition-old(*),
+      ::view-transition-new(*) { animation: none !important; }
+    }
+
+    /* ── SERIES STRIP — Hermes Agent in Practice ──
+       Same class and inner-wrapper shape as the OpenClaw strip because the
+       linter's RE_SNAV recognises exactly `series-nav` + a nested div; a
+       renamed strip would read as "no nav" and fail INV-08. All content
+       checks (INV-03 family) iterate the SERIES7 list only, so this strip's
+       labels are convention, not contract. House-styled, not the island CSS. */
+    .series-nav {
+      max-width: 720px; margin: 2rem auto 0; padding: 1.1rem 1.4rem;
+      background: rgba(255,255,255,0.75); border: 1px solid rgba(34,98,153,0.15);
+      border-left: 3px solid var(--gold); border-radius: 12px;
+    }
+    .series-nav h3 {
+      font-size: 0.78rem; font-weight: 700; text-transform: uppercase;
+      letter-spacing: 0.08em; color: var(--gold-dark); margin-bottom: 0.6rem;
+    }
+    .series-links { display: flex; flex-wrap: wrap; gap: 0.5rem; }
+    .series-links a, .series-links .current {
+      font-size: 0.82rem; font-weight: 600; padding: 0.35rem 0.8rem;
+      border-radius: 50px; text-decoration: none;
+    }
+    .series-links a { color: var(--blue-dark); background: rgba(34,98,153,0.08); }
+    .series-links a:hover { background: rgba(34,98,153,0.16); }
+    .series-links .current { color: #fff; background: var(--blue-dark); }
+    @media (max-width: 600px) { .series-nav { margin: 1.5rem 1rem 0; } }
+
+    /* ── LANGUAGE SWITCH — pure CSS, zero JavaScript (INV-38) ──
+       One visually-hidden checkbox as a direct child of body, BEFORE the main landmark,
+       so `#langSwitch:checked ~ main …` reaches every content block. The two
+       tracks are paired blocks: .l-th (default) and .l-en (hidden until
+       checked; display:revert restores block for divs, inline for spans).
+       Naming stays clear of INV-12's menu-token regex (hamburger|burger|
+       nav__toggle|nav-toggle|navtoggle|menu-toggle|menu__toggle) — verified.
+       No JS also means no persistence across posts; each post opens in Thai. */
+    .lang-switch-box { position: absolute; left: -9999px; }
+    .l-en { display: none; }
+    #langSwitch:checked ~ main .l-en { display: revert; }
+    #langSwitch:checked ~ main .l-th { display: none; }
+    .lang-switch {
+      display: inline-flex; align-items: center; gap: 0.55rem;
+      margin-top: 1.4rem; padding: 0.4rem 1.1rem; border-radius: 50px;
+      background: rgba(255,255,255,0.85); border: 1px solid rgba(255,255,255,0.4);
+      cursor: pointer; font-size: 0.85rem; user-select: none;
+    }
+    .lang-switch span { color: var(--slate-light); font-weight: 600; transition: color 0.2s; }
+    .lang-switch .lang-sep { color: var(--gray); font-weight: 400; }
+    .lang-switch .lang-th { color: var(--navy); font-weight: 800; }
+    #langSwitch:checked ~ main .lang-switch .lang-th { color: var(--slate-light); font-weight: 600; }
+    #langSwitch:checked ~ main .lang-switch .lang-en { color: var(--navy); font-weight: 800; }
+    .lang-switch:hover { border-color: #fff; }
+    #langSwitch:focus-visible ~ main .lang-switch {
+      outline: 2px solid var(--focus); outline-offset: 3px;
+    }
+  </style>
+  <!-- social -->
+  <link rel="canonical" href="https://anirach.com/blog/hermes-production.html">
+  <meta property="og:type" content="article">
+  <meta property="og:url" content="https://anirach.com/blog/hermes-production.html">
+  <meta property="og:site_name" content="Anirach Mingkhwan">
+  <meta property="og:locale" content="th_TH">
+  <meta property="article:published_time" content="2026-09-01">
+  <meta property="article:author" content="https://anirach.com/">
+  <meta property="og:title" content="Production — ถูก เสถียร และออนไลน์ตลอดเวลา">
+  <meta property="og:description" content="คู่มือรัน Hermes Agent บน production แบบจริงจัง — จาก VPS ราคา $5 ถึง Docker ที่รอดทุก reboot, backup และ rollback, การคุมค่าใช้จ่ายด้วย hermes insights และ Nous Portal ไปจนถึงการย้ายทั้งองค์กรจาก OpenClaw">
+  <meta itemprop="image" property="og:image" content="https://anirach.com/images/hermes-production-og.jpg">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
+  <meta property="og:image:alt" content="Production — ถูก เสถียร และออนไลน์ตลอดเวลา">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:image" content="https://anirach.com/images/hermes-production-og.jpg">
+  <meta name="twitter:image:alt" content="Production — ถูก เสถียร และออนไลน์ตลอดเวลา">
+  <meta name="robots" content="max-image-preview:large">
+  <meta name="theme-color" content="#11304b">
+  <link rel="icon" href="/favicon.ico" sizes="any">
+  <link rel="apple-touch-icon" href="/apple-touch-icon.png">
+  <!-- /social -->
+</head>
+<body>
+<a href="#main" class="skip-link">Skip to content</a>
+<input type="checkbox" id="langSwitch" class="lang-switch-box" aria-label="Switch language: Thai / English">
+
+  <nav class="blog-nav">
+    <div class="blog-nav__inner">
+      <a href="../index.html" class="blog-nav__home">Anirach</a>
+      <a href="./" class="blog-nav__back">‹ Blog</a>
+      <div class="blog-nav__title">Production · รันจริง 24/7</div>
+    </div>
+  </nav>
+
+  <main id="main">
+
+  <header class="post-hero">
+    <div class="post-hero__tags">
+      <span class="post-hero__tag">Hermes</span>
+      <span class="post-hero__tag">AI Agents</span>
+      <span class="post-hero__tag">Production</span>
+    </div>
+    <h1 class="post-hero__title" itemprop="headline"><span class="l-th">Production — ถูก เสถียร และออนไลน์ตลอดเวลา</span><span class="l-en" lang="en">Production — Cheap, Boring, Always On</span></h1>
+    <p class="post-hero__sub"><span class="l-th">จาก VPS ราคา $5 สู่ระบบที่รัน 24/7 — Docker, backup, observability, Nous Portal และการย้ายทั้งองค์กรจาก OpenClaw</span><span class="l-en" lang="en">From a $5 VPS to a system that runs 24/7 — Docker, backups, observability, Nous Portal, and moving a whole organization off OpenClaw</span></p>
+    <div class="post-hero__meta">
+      <span>By <strong>Anirach Mingkhwan</strong></span>
+      <span class="post-hero__series">Hermes Agent in Practice 2026 • Post #7</span>
+      <span><time datetime="2026-09-01" itemprop="datePublished">1 Sep 2026</time></span>
+      <span>14 min read</span>
+    </div>
+    <label for="langSwitch" class="lang-switch" title="สลับภาษา · Switch language"><span class="lang-th">ไทย</span><span class="lang-sep">·</span><span class="lang-en" lang="en">English</span></label>
+    <div class="post-hero__cover">
+      <img src="../images/hermes-production-cover.jpg" alt="Production — ถูก เสถียร และออนไลน์ตลอดเวลา" width="800" height="800" loading="eager" fetchpriority="high" decoding="async">
+    </div>
+  </header>
+
+  <nav aria-label="Hermes Agent in Practice">
+  <div class="series-nav">
+    <h3>⚡ Hermes Agent in Practice 2026</h3>
+    <div class="series-links">
+        <a href="/blog/hermes-101">#1 Hermes 101</a>
+        <a href="/blog/hermes-agent-teams">#2 Agent Teams</a>
+        <a href="/blog/hermes-memory">#3 Memory</a>
+        <a href="/blog/hermes-security">#4 Security</a>
+        <a href="/blog/hermes-integrations">#5 Integrations</a>
+        <a href="/blog/hermes-skills">#6 Skills</a>
+        <span class="current" aria-current="page">#7 Production</span>
+    </div>
+  </div>
+  </nav>
+
+  <article class="post-body" itemscope itemtype="https://schema.org/BlogPosting">
+    <span itemprop="author" itemscope itemtype="https://schema.org/Person"><meta itemprop="name" content="Anirach Mingkhwan"></span>
+
+    <details class="post-toc l-th" open>
+      <summary>ในบทความนี้</summary>
+      <ol>
+          <li><a href="#th-where">Where to Run It — จาก VPS $5 ถึง Serverless ที่หลับได้</a></li>
+          <li><a href="#th-docker">Docker Deployment ที่รอดทุก Reboot</a></li>
+          <li><a href="#th-ops">Update, Backup, Rollback — ชุดเครื่องมือ Ops</a></li>
+          <li><a href="#th-observe">Observability และการคุมค่าใช้จ่าย</a></li>
+          <li><a href="#th-reliability">Reliability Mechanics — WAL, Compression, Fallback</a></li>
+          <li><a href="#th-models">จ่ายค่า Model อย่างไร — BYO Keys vs Nous Portal</a></li>
+          <li><a href="#th-migrate">ย้ายทั้งองค์กรจาก OpenClaw — อะไรย้ายได้ อะไรย้ายไม่ได้</a></li>
+          <li><a href="#th-wild">บทเรียนจากสนามจริง — ตัวเลขการเติบโตและกรณี YOLO</a></li>
+          <li><a href="#th-enterprise">อะไรที่ยังขาดสำหรับ Enterprise — และทำไมไม่มี Roadmap</a></li>
+      </ol>
+    </details>
+    <details class="post-toc l-en" open>
+      <summary>In this post</summary>
+      <ol>
+          <li><a href="#en-where">Where to Run It: From a $5 VPS to Serverless That Sleeps</a></li>
+          <li><a href="#en-docker">Docker Deployment That Survives Reboots</a></li>
+          <li><a href="#en-ops">Update, Backup, Rollback: The Ops Toolkit</a></li>
+          <li><a href="#en-observe">Observability and Cost Control</a></li>
+          <li><a href="#en-reliability">Reliability Mechanics: WAL, Compression Lineage, Fallback Chains</a></li>
+          <li><a href="#en-models">Paying for Models: BYO Keys vs Nous Portal</a></li>
+          <li><a href="#en-migrate">Migrating an Organization from OpenClaw</a></li>
+          <li><a href="#en-wild">Lessons from the Wild: Growth Numbers and the YOLO Tale</a></li>
+          <li><a href="#en-enterprise">What's Still Missing for Enterprise — and Why There's No Roadmap</a></li>
+      </ol>
+    </details>
+    <div class="l-th">
+
+    <p>🤔 ลองถามตัวเองดูครับ — ถ้า AI agent ที่ทีมของคุณใช้อยู่ทุกวัน ดับไปเงียบ ๆ ตอนตีสาม ใครจะรู้เป็นคนแรก? ระบบ monitoring ของคุณ ตัวคุณเอง หรือเพื่อนร่วมงานที่ทักมาถามตอนเก้าโมงเช้าว่า "บอทเงียบไปเลยนะ"?</p>
+
+    <p>คำถามนี้คือเส้นแบ่งระหว่าง "ของเล่นบน laptop" กับ "ระบบ production" และเป็นคำถามเดียวกับที่ผมเคยชวนคิดไว้ในตอนปิดซีรีส์ OpenClaw ของบล็อกนี้ — <a href="/blog/openclaw-production">OpenClaw #7: Production</a> — ที่ผมเล่าประสบการณ์ deploy agent บน infrastructure จริงเอาไว้ค่อนข้างละเอียด วันนี้ถึงคิวของอีกฝั่ง: <strong>Hermes Agent</strong> ของ Nous Research ซึ่งผมกำลังพิจารณาอย่างจริงจังว่าจะเป็นบ้านหลังต่อไปของ deployment ในองค์กรหรือไม่</p>
+
+    <p>สิ่งที่ Hermes ขายในเรื่อง production ไม่ใช่ความหวือหวา แต่คือความ <strong>ถูก เสถียร และน่าเบื่อ</strong> — README ของโปรเจกต์เขียนไว้ตรง ๆ ว่า <em>"Run it on a $5 VPS, a GPU cluster, or serverless infrastructure that costs nearly nothing when idle"</em> ตัว software เป็น MIT license ใช้ฟรี จ่ายเฉพาะค่า LLM API และเครื่องมือ ops ที่ให้มาครบผิดปกติสำหรับโปรเจกต์ที่เพิ่งเปิดตัวสาธารณะเมื่อ 25 กุมภาพันธ์ 2026 (วันที่นี้อ้างอิงจากรายงานที่ตรงกันของหลายสำนัก ไม่ใช่ประกาศทางการของ Nous) บทความปิดซีรีส์นี้จะพาไล่ตั้งแต่การเลือกที่รัน ไปจนถึงคำถามที่แหลมที่สุด — ควรย้ายทั้งองค์กรจาก OpenClaw มาหรือยัง</p>
+
+    <h2 id="th-where">Where to Run It — จาก VPS $5 ถึง Serverless ที่หลับได้</h2>
+
+    <p>Hermes ออกแบบมาให้ <strong>execution backend</strong> เป็นของถอดเปลี่ยนได้ README ระบุไว้ครบเจ็ดตัว: <em>"Seven terminal backends — local, Docker, SSH, Singularity, Modal, Daytona, and Vercel Sandbox"</em> ซึ่งครอบคลุมตั้งแต่เครื่องตัวเองไปจนถึง serverless ที่คิดเงินเฉพาะตอนทำงาน</p>
+
+    <div class="table-wrapper">
+      <table>
+        <thead>
+          <tr><th>Backend</th><th>ลักษณะ</th><th>เหมาะกับ</th></tr>
+        </thead>
+        <tbody>
+          <tr><td><strong>local</strong></td><td>รันบนเครื่องเดียวกับ gateway</td><td>ทดลอง / เครื่องส่วนตัว</td></tr>
+          <tr><td><strong>Docker</strong></td><td>container แยก state อยู่ใน volume เดียว</td><td>Production ส่วนใหญ่ — ทางที่เอกสารทางการปูไว้ดีที่สุด</td></tr>
+          <tr><td><strong>SSH</strong></td><td>สั่งงานเครื่อง remote ผ่าน SSH</td><td>ใช้เครื่องที่มีอยู่แล้วในองค์กร</td></tr>
+          <tr><td><strong>Singularity</strong></td><td>container สาย HPC</td><td>cluster มหาวิทยาลัย / ศูนย์วิจัย</td></tr>
+          <tr><td><strong>Modal</strong></td><td>serverless compute เริ่มเมื่อเรียก</td><td>งาน burst ที่ไม่อยากจ่ายตอน idle</td></tr>
+          <tr><td><strong>Daytona</strong></td><td>dev environment แบบ managed</td><td>sandbox สำหรับทีมพัฒนา</td></tr>
+          <tr><td><strong>Vercel Sandbox</strong></td><td>sandbox แบบ ephemeral</td><td>รันโค้ดชั่วคราวแบบแยกส่วน</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <p>สำหรับคำถามยอดฮิต "ต้องใช้เครื่องแรงแค่ไหน" — เอกสารทางการมีตัวเลขเฉพาะในบริบท Docker (ผมจะยกในหัวข้อถัดไป) ส่วนฝั่ง VPS คู่มือ third-party หลายเจ้าสรุปตรงกันว่า <strong>เครื่องระดับ $5–6 ต่อเดือน</strong> จาก DigitalOcean, Hetzner หรือ Vultr ก็เพียงพอ ตราบใดที่ model รันบน API ฝั่งโน้น ไม่ใช่บนเครื่องเรา และถ้าใช้แค่ Telegram หรือ Discord ก็ยังไม่ต้องมี domain กับ SSL ด้วยซ้ำ — พวกนั้นจำเป็นเมื่อเปิด web UI หรือรับ webhook เท่านั้น</p>
+
+    <p>ตลาด hosting รอบ ๆ Hermes ก็เริ่มก่อตัวแล้ว เช่น Hostinger ขายแพ็กเกจ Managed Hermes Agent ที่ $5.99/เดือนในเทอมแรก (ต่ออายุ $11.99) — ย้ำว่านี่คือสินค้าของ Hostinger เอง ไม่ใช่ partnership ที่ Nous ยืนยัน และเอกสารทางการของ Hermes ไม่เคยแนะนำ hosting เจ้าไหนเลย</p>
+
+    <p>อีกทางที่เพิ่งเปิดคือ <strong>Hermes Cloud</strong> (public preview ราวกลางปี 2026) — Nous โฆษณาผ่านช่องทางทางการว่า <em>"Spin up agents for everyone at your org with granular access controls and unified billing, all from Nous Portal"</em> เงื่อนไขเท่าที่หน้า <a href="https://portal.nousresearch.com/cloud">portal.nousresearch.com/cloud</a> ระบุคือ ต้องมีเครดิตขั้นต่ำ $10 หรือ subscription ที่ active อยู่ คิดเงินเป็นรายชั่วโมงจากเครดิต Portal และ scale to zero เมื่อไม่ทำงาน — อัตราค่าบริการรายชั่วโมงยังไม่มีตัวเลขเผยแพร่ ดังนั้นผมจะไม่เดาให้</p>
+
+    <p>เริ่มจากศูนย์บนเครื่องเปล่า ๆ ก็ง่ายมาก:</p>
+
+    <pre><code># Linux / macOS / WSL2 / Termux — one-liner ทางการ
+curl -fsSL https://hermes-agent.nousresearch.com/install.sh | bash
+
+# Windows (PowerShell)
+iex (irm https://hermes-agent.nousresearch.com/install.ps1)</code></pre>
+
+    <p>ตัว installer ต้องการ Python 3.11 (ผ่าน uv), Git, Node.js v26 (หรือ 22.22+/24.11+), ripgrep และ ffmpeg รองรับ Linux, macOS, WSL2, native Windows และแม้แต่ Android ผ่าน Termux — แต่สำหรับ production จริง ผมแนะนำให้ข้ามไป Docker เลยครับ</p>
+
+    <h2 id="th-docker">Docker Deployment ที่รอดทุก Reboot</h2>
+
+    <p>เส้นทาง production ที่เอกสารทางการปูไว้แน่นที่สุดคือ Docker — image <code>nousresearch/hermes-agent</code> บน Docker Hub มียอดดึงเกิน 5 ล้านครั้ง ขนาดราว 909 MB และหลักคิดสำคัญของมันสรุปได้ประโยคเดียว: <strong>ทุกอย่างที่มีค่าอยู่ใน volume เดียว</strong></p>
+
+    <pre><code># docker-compose.yml — โครงตามเอกสารทางการ
+services:
+  hermes:
+    image: nousresearch/hermes-agent   # 5M+ pulls, ~909 MB
+    restart: unless-stopped            # รอดทุก reboot โดยไม่ต้องทำอะไรเพิ่ม
+    command: gateway run
+    ports:
+      - "8642:8642"                    # Gateway API
+      - "9119:9119"                    # Dashboard
+    environment:
+      - HERMES_DASHBOARD=1             # เปิด dashboard
+    volumes:
+      - ~/.hermes:/opt/data            # ทุกอย่างสำคัญอยู่ที่นี่ที่เดียว
+    shm_size: "1gb"                    # จำเป็นเมื่อใช้ browser automation</code></pre>
+
+    <p>Volume <code>~/.hermes</code> (หรือ <code>$HERMES_HOME</code>) คือหัวใจของ deployment ทั้งหมด ข้างในมี <code>config.yaml</code>, ไฟล์ <code>.env</code> เก็บ credential, ฐานข้อมูล SQLite <code>state.db</code> ที่เก็บทุก session พร้อม FTS5 search, โฟลเดอร์ <code>skills/</code>, ไฟล์ความจำ <code>MEMORY.md</code> + <code>USER.md</code> + <code>SOUL.md</code>, โฟลเดอร์ <code>logs/</code>, <code>backups/</code>, <code>checkpoints/</code> และ <code>profiles/</code> สำหรับติดตั้งแบบหลาย profile — สำรอง directory เดียวนี้ได้ = สำรองทั้งระบบได้</p>
+
+    <div class="alert info">
+      <strong>สเปกทางการ:</strong> เอกสาร Docker ของ Hermes ระบุขั้นต่ำ 1 GB RAM / 1 CPU core / 500 MB disk และแนะนำ 2–4 GB RAM, 2 cores, ดิสก์ 2 GB ขึ้นไปเมื่อ sessions และ skills เริ่มโต — เบากว่าที่ผมเคยตั้งไว้ให้ OpenClaw แบบ multi-user หลายเท่าตัว
+    </div>
+
+    <p>รายละเอียดที่คนมักพลาดสองข้อ ข้อแรก — agent ใน container รันเป็น <strong>UID 10000</strong> ดังนั้นถ้า mount directory จาก host แล้วเจอ permission error ให้เช็ก ownership ของ <code>~/.hermes</code> ก่อน ข้อสอง — dashboard บนพอร์ต 9119 รองรับการยืนยันตัวตนทั้ง basic auth, OAuth และ OIDC ผ่าน environment variables อย่าเปิดพอร์ตนี้สู่โลกภายนอกโดยไม่ตั้งค่าตัวใดตัวหนึ่ง (เรื่องนี้ผมลงลึกไว้ในตอน <a href="/blog/hermes-security">#4 Security</a>)</p>
+
+    <h2 id="th-ops">Update, Backup, Rollback — ชุดเครื่องมือ Ops</h2>
+
+    <p>สิ่งที่ทำให้ผมทึ่งเมื่อไล่อ่าน CLI reference คือ Hermes ให้เครื่องมือ ops มาครบระดับที่โปรเจกต์อายุครึ่งปีไม่ค่อยมีกัน เริ่มจากการอัปเดต:</p>
+
+    <pre><code># เช็กก่อนว่ามีเวอร์ชันใหม่ไหม — ยังไม่ติดตั้ง
+hermes update --check
+
+# อัปเดตพร้อมสำรองข้อมูลอัตโนมัติก่อนลงมือ
+hermes update --backup</code></pre>
+
+    <p>จุดเด่นคือ <code>hermes update</code> <strong>ตรวจจับวิธีติดตั้งเอง</strong> — git installer, Docker หรือ NixOS — แล้วเลือกเส้นทางอัปเกรดให้ตรง พร้อม sync skills ที่อัปเดตไปยังทุก profile อัตโนมัติ สำหรับ Docker การอัปเกรดคือดึง image ใหม่แล้วสร้าง container ใหม่ — state ทั้งหมดอยู่ใน volume จึงไม่หายไปไหน:</p>
+
+    <pre><code># อัปเกรดฝั่ง Docker: pull แล้ว recreate
+docker compose pull
+docker compose up -d</code></pre>
+
+    <p>และคุณจะได้ใช้มันบ่อยจริง ๆ — ช่วง 30 กรกฎาคมถึง 31 สิงหาคม 2026 เดือนเดียว มี release ออกมาถึงเก้าตัว (v0.19.1 ไล่ถึง v0.21.0) ภายใต้ระบบเลขเวอร์ชันคู่ vX.Y.Z (vYYYY.M.D) จังหวะเร็วขนาดนี้แปลว่านโยบายอัปเดตต้องเป็นวินัย ไม่ใช่เหตุการณ์พิเศษ — ผมแนะนำให้กำหนดรอบ เช่น อัปเดตทุกต้นสัปดาห์หลังอ่าน release notes ไม่ใช่ไล่ตามทุก tag</p>
+
+    <p>ฝั่ง backup ครบวงจรในตัว:</p>
+
+    <pre><code># สำรองทั้ง ~/.hermes เป็น zip เดียว — config, skills, sessions, memory
+hermes backup -o ~/backups/hermes-prod.zip
+
+# กู้คืนบนเครื่องไหนก็ได้
+hermes import ~/backups/hermes-prod.zip
+
+# ส่งออกหนึ่ง profile แบบ "ไม่มี credential ติดไป" — เหมาะกับการแจกให้ทีม
+hermes profile export</code></pre>
+
+    <p>ชิ้นสุดท้ายที่ผมชอบเป็นพิเศษคือ <code>hermes checkpoints</code> — ระบบ checkpoint แบบ <strong>shadow git</strong> ใน <code>~/.hermes/checkpoints/</code> ที่อยู่เบื้องหลังคำสั่ง <code>/rollback</code> ใน session ให้ถอยงานที่ agent เพิ่งแก้กลับได้โดยไม่ต้องไปยุ่งกับ git repo จริงของโปรเจกต์ ส่วน backup รายคืนก็ตั้งเวลาได้ผ่านระบบ cron ในตัวของ Hermes เอง — agent สำรองข้อมูลของตัวเองทุกเที่ยงคืน ฟังดูถูกจริตคนสาย ops ดีครับ</p>
+
+    <h2 id="th-observe">Observability และการคุมค่าใช้จ่าย</h2>
+
+    <p>ระบบที่รัน 24/7 โดยไม่มีใครเฝ้า ต้องตอบคำถามสองข้อได้ตลอดเวลา: <strong>ยังทำงานอยู่ไหม</strong> และ <strong>กำลังเผาเงินเท่าไร</strong> Hermes ตอบข้อแรกด้วยชุดคำสั่งนี้:</p>
+
+    <pre><code># ตาม log สด เฉพาะระดับ error
+hermes logs -f --level error
+
+# เจาะดู log ของ session เดียว
+hermes logs --session &lt;SESSION_ID&gt;
+
+# เช็กสุขภาพระบบแบบลึก
+hermes status --deep
+
+# วินิจฉัยปัญหา และซ่อมอัตโนมัติเท่าที่ซ่อมได้
+hermes doctor --fix</code></pre>
+
+    <p>โฟลเดอร์ <code>logs/</code> แยกไฟล์ตามส่วน — agent, gateway, errors, GUI, desktop — และเมื่อเจอปัญหาที่แก้เองไม่ได้ <code>hermes dump</code> สร้างสรุปสำหรับขอความช่วยเหลือ ส่วน <code>hermes debug share --nous</code> อัปโหลด log ที่ redact ข้อมูลอ่อนไหวแล้วไปยัง infrastructure ของ Nous เพื่อให้ทีมช่วยดู — เป็น opt-in ชัดเจน ไม่ใช่ telemetry แอบส่ง</p>
+
+    <p>คำถามข้อสอง — เรื่องเงิน — มีเครื่องมือเฉพาะทางกว่าที่ผมคาด:</p>
+
+    <pre><code># วิเคราะห์ token / ค่าใช้จ่าย / activity ย้อนหลัง 30 วัน
+hermes insights --days 30
+
+# ใน session:
+/usage      # session นี้ใช้ token ไปเท่าไรแล้ว
+/compress   # บีบ context ก่อนที่ context จะบีบกระเป๋าเรา
+
+# นอก session — แจกแจงว่า prompt งบไปกับอะไรบ้าง (ทำงาน offline)
+hermes prompt-size</code></pre>
+
+    <p>เวอร์ชันช่วงหลังยังเติม cost lever อีกหลายตัว: v0.20.5 (19 สิงหาคม 2026) เพิ่ม <strong>keyless web tier</strong> ให้เครื่องติดตั้งใหม่ใช้งานได้โดยยังไม่ต้องกรอก key ใด ๆ และ v0.20.6 (27 สิงหาคม) เพิ่ม TTL caching ให้ web operations ซึ่งลดการยิงซ้ำโดยตรง อีกเทคนิคที่ชุมชนใช้กันแพร่หลายคือกำหนด model ราคาถูกให้กับงานเบื้องหลังอย่าง compression และ summary แทนที่จะให้ model แพงทำทุกอย่าง</p>
+
+    <p>ฝั่ง performance ก็ขยับ: release tracker ภายนอกอย่าง Releasebot บันทึกว่า v0.19.0 (กรกฎาคม 2026) ตัดเวลารอ token แรกของ turn แรกลงราว 80% — จาก cold start ประมาณ 4.3 วินาที เหลือราว 0.9 วินาที — ตัวเลขนี้เป็นการวัดของ third-party ไม่ใช่ benchmark ทางการ แต่สอดคล้องกับทิศทางที่เห็นได้จาก release notes ช่วงเดียวกัน</p>
+
+    <h2 id="th-reliability">Reliability Mechanics — WAL, Compression, Fallback</h2>
+
+    <p>ใต้ฝากระโปรง มีกลไกหลายชั้นที่ทำให้ Hermes ทน "วันแย่ ๆ" ได้ ผมขอสรุปจากเอกสารทางการประกอบกับบทวิเคราะห์สถาปัตยกรรมของ Arize (ย้ำว่าส่วนหลังเป็นการวิเคราะห์ third-party ไม่ใช่คำอธิบายทางการ):</p>
+
+    <ul>
+      <li><strong>SQLite WAL journaling</strong> — ทุก session เขียนลง state.db ด้วย write-ahead log ลดโอกาสข้อมูลพังเมื่อ process ตายกลางคัน และมี fallback สำหรับ filesystem ที่ไม่รองรับ WAL</li>
+      <li><strong>Lineage-based compression</strong> — เมื่อ context ยาวเกิน ระบบปิด session row เดิมแล้วเปิด session ลูกที่ seed จากบทสรุปขนาดราว 20% ของเนื้อหาที่ถูกบีบ โดยมีเพดานล่าง 2,000 token และเพดานบน 12,000 token (ตัวเลขจากการวิเคราะห์ของ Arize) — ผมเทียบกลไกนี้กับฝั่ง OpenClaw ไว้ในตอน <a href="/blog/hermes-memory">#3 Memory</a></li>
+      <li><strong>Fallback chain</strong> — <code>hermes fallback</code> กำหนดลำดับ provider สำรอง ระบบจะไล่ตัวถัดไปอัตโนมัติเมื่อเจอ 429 หรือ connection error</li>
+      <li><strong>Credential pools</strong> — <code>hermes auth</code> จัดการ pool ของ API keys หลายใบพร้อมหมุนเวียน ลดโอกาสชนเพดาน rate limit ของ key เดียว</li>
+    </ul>
+
+    <p>เรื่อง "รันตลอดเวลา" ตัว gateway ติดตั้งเป็น service ของระบบปฏิบัติการได้ตรง ๆ — systemd บน Linux, launchd บน macOS — ส่วน WSL2 ใช้ tmux/nohup หรือ Windows Task Scheduler ได้ตามเอกสาร FAQ:</p>
+
+    <pre><code># รัน gateway เป็น service และเช็กสถานะ
+hermes gateway start
+hermes gateway status
+
+# สำคัญบน Linux: ให้ service ขึ้นเองหลัง reboot แม้ user ยังไม่ login
+sudo loginctl enable-linger $USER
+
+# งานยาวที่ model ตอบช้า: ขยาย read timeout ของ stream (หน่วยวินาที)
+HERMES_STREAM_READ_TIMEOUT=1800</code></pre>
+
+    <p>สุดท้ายคือ secret hygiene ซึ่งขยับเร็วมากช่วงหลัง — v0.20.6 เพิ่มการเข้ารหัส secret ด้วย <strong>OS keychain</strong> และมีทางเลือกไม่เก็บ key ในไฟล์เลย:</p>
+
+    <pre><code># ดึง API keys จาก Bitwarden Secrets Manager ตอน process เริ่ม แทนการฝังใน .env
+hermes secrets bitwarden
+
+# webhook แบบ event-driven — ได้ URL พร้อม HMAC secret ไว้ตรวจลายเซ็นทุก request
+hermes webhook subscribe</code></pre>
+
+    <h2 id="th-models">จ่ายค่า Model อย่างไร — BYO Keys vs Nous Portal</h2>
+
+    <p>Hermes ตัวมันเองฟรี ต้นทุนจริงของ production คือค่า model และมีสองเส้นทางหลัก เส้นทางแรกคือ <strong>BYO keys</strong> — เอา key ของ OpenRouter, OpenAI, Anthropic หรือ endpoint ที่ตั้งเองมาเสียบ README ระบุว่ารองรับ <em>"300+ models — pick any of them with /model &lt;name&gt;"</em> สลับได้ทุกเมื่อโดยไม่ต้องแก้ code:</p>
+
+    <pre><code># สลับ model จาก CLI หรือกลาง session ก็ได้
+hermes model
+/model provider:model</code></pre>
+
+    <p>เส้นทางที่สองคือ <strong>Nous Portal</strong> ซึ่งเอกสารทางการเรียกว่า "the recommended way to run Hermes Agent" — OAuth ครั้งเดียว บิลใบเดียว ครอบคลุม 300+ model และปลดล็อก Tool Gateway (web search/extraction ผ่าน Firecrawl, image generation 9 model, OpenAI TTS, cloud browser ผ่าน Browser Use และ Modal sandbox แบบ optional):</p>
+
+    <pre><code># ผูกบัญชี Portal ครั้งเดียวจบ
+hermes setup --portal</code></pre>
+
+    <div class="table-wrapper">
+      <table>
+        <thead>
+          <tr><th>Tier</th><th>ราคา/เดือน</th><th>เครดิตที่ได้</th><th>Rollover cap</th></tr>
+        </thead>
+        <tbody>
+          <tr><td><strong>Plus</strong></td><td>$20</td><td>$22</td><td>$10</td></tr>
+          <tr><td><strong>Super</strong></td><td>$100</td><td>$110</td><td>$50</td></tr>
+          <tr><td><strong>Ultra</strong></td><td>$200</td><td>$220</td><td>$100</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <p>มี Free tier ($0) อยู่ด้วย แต่รายละเอียดว่า Free ให้อะไรบ้างยังคลุมเครือระหว่างหน้าเอกสารกับหน้า pricing ผมจึงขอไม่ฟันธง — เช็กที่ <a href="https://portal.nousresearch.com/manage-subscription">portal.nousresearch.com</a> ก่อนตัดสินใจ ส่วน tier ที่จ่ายเงินจะได้ส่วนลด usage, hosted tools และ rate limit ที่สูงขึ้นเพิ่มเข้ามา</p>
+
+    <div class="alert info">
+      <strong>หมายเหตุสำหรับสาย Claude:</strong> ตั้งแต่ Anthropic ปิดการใช้ subscription ส่วนตัว (Pro/Max) ผ่าน harness ภายนอกเมื่อเมษายน 2026 — ซึ่งกระทบทั้ง Hermes และ OpenClaw เท่า ๆ กัน — การใช้ Claude ใน Hermes ต้องเป็น pay-as-you-go API key หรือผ่าน Nous Portal เท่านั้น
+    </div>
+
+    <p>แล้วงบรวมต่อเดือนจะออกมาเท่าไร? บทวิเคราะห์ต้นทุนของ Hostinger (สิงหาคม 2026) แจกแจงฝั่ง self-host ไว้อย่างนี้ — ผมยกมาเป็นกรอบคิด ไม่ใช่ใบเสนอราคา:</p>
+
+    <div class="table-wrapper">
+      <table>
+        <thead>
+          <tr><th>รายการ</th><th>ช่วงราคา/เดือน</th><th>หมายเหตุ</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>VPS</td><td>$6.49–8.99</td><td>เครื่องระดับเริ่มต้นถึง KVM 2</td></tr>
+          <tr><td>LLM API</td><td>$2–60</td><td>แล้วแต่ model และปริมาณงาน</td></tr>
+          <tr><td><strong>รวม</strong></td><td><strong>~$6–85+</strong></td><td>ตัวแปรใหญ่สุดคือ model ที่เลือก</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <p>คันโยกที่กดตัวเลขลงได้มากที่สุดคือการเลือก model ให้ตรงงาน — รายงานเดียวกันยกตัวอย่าง budget model อย่าง DeepSeek V4 Flash ที่ $0.14/$0.28 ต่อล้าน token — บวกกับการปิด tool ที่ไม่ใช้ และ prompt caching</p>
+
+    <p>สำหรับองค์กร คำแนะนำของผมตอนนี้: ทีมเล็กที่อยากจบเรื่องบิลให้เร็ว Portal คือคำตอบที่เสียดตัวน้อยที่สุด ส่วนองค์กรที่มีสัญญากับ cloud provider อยู่แล้วหรือควบคุม data path เข้มงวด BYO keys ผ่าน endpoint ที่ควบคุมเองยังเป็นทางที่ยืดหยุ่นกว่า — และสลับไปมาได้เพราะไม่มี lock-in ในสถาปัตยกรรม</p>
+
+    <h2 id="th-migrate">ย้ายทั้งองค์กรจาก OpenClaw — อะไรย้ายได้ อะไรย้ายไม่ได้</h2>
+
+    <p>มาถึงคำถามที่ผู้อ่านซีรีส์ OpenClaw ของผมถามบ่อยที่สุด Nous ทำ exit ramp ไว้เป็นคำสั่งเดียว — <code>hermes claw migrate</code> ตรวจหา <code>~/.openclaw</code> อัตโนมัติแล้วขนของข้ามมาให้ ขั้นตอนที่ถูกต้องคือซ้อมก่อนเสมอ:</p>
+
+    <pre><code># ซ้อมก่อน — รายงานว่าอะไรจะถูกย้าย โดยยังไม่แตะอะไรจริง
+hermes claw migrate --dry-run
+
+# ย้ายจริง: API keys จะตามมาก็ต่อเมื่อใส่ --migrate-secrets เท่านั้น
+hermes claw migrate --preset full --migrate-secrets</code></pre>
+
+    <div class="table-wrapper">
+      <table>
+        <thead>
+          <tr><th>ของ</th><th>ย้ายไหม</th><th>หมายเหตุ</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>Persona (SOUL.md)</td><td>✅</td><td>ย้ายตรง</td></tr>
+          <tr><td>AGENTS.md, MEMORY.md / USER.md</td><td>✅</td><td>daily logs ถูกรวมเข้า MEMORY.md ที่มีขอบเขตไฟล์เดียว</td></tr>
+          <tr><td>Skills</td><td>✅</td><td>ไปลงที่ <code>~/.hermes/skills/openclaw-imports/</code></td></tr>
+          <tr><td>Model / MCP / TTS config</td><td>✅</td><td>ย้ายตรง</td></tr>
+          <tr><td>Messaging tokens</td><td>✅</td><td>Telegram, Discord, Slack, Signal, Matrix, Mattermost — แต่ WhatsApp ต้อง pair QR ใหม่</td></tr>
+          <tr><td>API keys</td><td>⚠️</td><td>เฉพาะเมื่อระบุ <code>--migrate-secrets</code></td></tr>
+          <tr><td>Cron jobs</td><td>❌</td><td>ต้องตั้งใหม่ฝั่ง Hermes</td></tr>
+          <tr><td>Plugins</td><td>❌</td><td>คนละระบบ plugin</td></tr>
+          <tr><td>Hooks / webhooks</td><td>❌</td><td>ต้อง subscribe ใหม่</td></tr>
+          <tr><td>Memory-backend config / channel bindings</td><td>❌</td><td>ตั้งค่าใหม่</td></tr>
+          <tr><td>IDENTITY / TOOLS / HEARTBEAT / BOOTSTRAP.md</td><td>📦</td><td>เก็บเป็น archive ไม่ถูกใช้ต่อ</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="alert">
+      <strong>สองจุดที่ทีมมักสะดุด:</strong> ข้อแรก อย่าลืมว่า cron jobs กับ hooks ไม่ตามมา — งานอัตโนมัติที่ตั้งไว้ในฝั่ง OpenClaw จะเงียบหายไปเฉย ๆ ถ้าไม่มีใครจดรายการไว้ก่อนย้าย ข้อสอง WhatsApp ต้องสแกน QR จับคู่ใหม่ ซึ่งแปลว่าต้องนัดเวลากับเจ้าของเบอร์ ไม่ใช่งานที่ทำตอนตีสองได้
+    </div>
+
+    <p>มีของแถมที่ช่วยลดต้นทุนการย้ายอีกชั้น: Hermes อ่านไฟล์ context เดิมอย่าง <code>CLAUDE.md</code>, <code>AGENTS.md</code> และ <code>.cursorrules</code> ได้ในตัว (เลือกตัวแรกที่เจอตามลำดับความสำคัญ) ดังนั้นไฟล์ context ที่องค์กรลงแรงเขียนไว้ในยุค OpenClaw / Claude Code ใช้ได้ตั้งแต่วันแรก</p>
+
+    <p>เพื่อความแฟร์ต้องบันทึกไว้ด้วยว่าการย้ายนี้ <strong>ไหลสองทาง</strong> — OpenClaw เองก็ตีพิมพ์คู่มือ "Migrating from Hermes" ฝั่งขากลับไว้ในเอกสารทางการเช่นกัน ฐานผู้ใช้นี้จึงเป็นสนามแย่งชิงกันจริง ๆ ไม่ใช่ทางเดินทางเดียว และนั่นเป็นเรื่องดีต่อผู้ใช้: ทั้งสองฝั่งต้องแข่งกันด้วยคุณภาพ ไม่ใช่ด้วยกำแพง</p>
+
+    <h2 id="th-wild">บทเรียนจากสนามจริง — ตัวเลขการเติบโตและกรณี YOLO</h2>
+
+    <p>ทำไมต้องพิจารณา Hermes จริงจังขนาดนี้ ตัวเลขการเติบโตช่วยตอบ: เปิดตัวสาธารณะ 25 กุมภาพันธ์ 2026 — Hermes Atlas (โปรเจกต์ community) บันทึกไว้ว่าแตะ 57,200 stars ในหกสัปดาห์แรก เร็วกว่า OpenClaw ณ ช่วงเดียวกันของการเปิดตัว — ผ่าน ~214,000 กลางกรกฎาคม (ตามรายงานของ TechCrunch) และ ณ วันที่ 1 กันยายน 2026 อยู่ที่ <strong>เกือบ 240,000 stars</strong> กับ fork ราว 48,800 ตาม GitHub API</p>
+
+    <p>ตัวเลขที่ผมให้น้ำหนักกว่า stars คือปริมาณงานจริง: MarkTechPost รายงานว่า Hermes แซง OpenClaw ขึ้นอันดับหนึ่งของ OpenRouter daily app rankings ราววันที่ 10 พฤษภาคม 2026 (224 พันล้าน token/วัน เทียบกับ 186 พันล้านของ OpenClaw) และรายงานของ KuCoin เมื่อปลายสิงหาคมระบุยอดสะสม 33.1 ล้านล้าน token — มากกว่า Claude Code อันดับสอง (8.53 ล้านล้าน) เกือบสี่เท่า ฝั่ง release ก็หนักมือไม่แพ้กัน: v0.20.0 "Herald" (3 สิงหาคม) ราว 3,650 commits และ v0.21.0 "Pantheon" (31 สิงหาคม) ราว 5,800 commits / 2,475 PRs จากผู้ร่วมพัฒนากว่า 760 คน ส่วน desktop app เปิด public preview มาตั้งแต่ 2 มิถุนายน 2026</p>
+
+    <h3>อ่าน Release Notes อย่างคนทำ Production</h3>
+
+    <p>สำหรับคนดูแลระบบ สิ่งที่ควรสกัดจากสอง release ใหญ่ล่าสุดคือฟีเจอร์ที่กระทบงาน ops ตรง ๆ:</p>
+
+    <ul>
+      <li><strong>v0.20.0 "Herald"</strong> — signed outbound webhooks (ตรวจลายเซ็นปลายทางได้), agent-to-agent A2A v1.0 และ grounded research พร้อม citation ที่ตรวจย้อนได้</li>
+      <li><strong>v0.21.0 "Pantheon"</strong> — cron jobs ที่ <em>เก็บ memory ข้ามรอบการรัน</em> (เปลี่ยนเกมสำหรับ scheduled agents), MCP interface กลายเป็น dashboard พร้อม health check และ usage tracking, live steering ของ subagents และ CLI command palette — ส่วน Bot Mode ที่เปิดตัวก่อนหน้านั้นก็ถูกรวมเข้า desktop app อย่างเป็นทางการภายในรุ่นนี้</li>
+    </ul>
+
+    <p>ส่วนความเคลื่อนไหวฝั่งทุนและพันธมิตร: Nous เข้าร่วม NVIDIA Nemotron Coalition และจับมือ Nebius เสิร์ฟ <code>nemotron-3-ultra:free</code> บน Portal ฟรีช่วง 4–18 มิถุนายน (อันนี้เอกสารทางการยืนยัน) ขณะที่ <a href="https://techcrunch.com/2026/07/13/hermes-agent-maker-nous-research-in-talks-for-new-funding-at-1-5b-valuation/">TechCrunch รายงาน</a> ว่า Nous <strong>อยู่ระหว่างเจรจา</strong> ระดมทุนรอบใหม่ที่มูลค่า $1.5B — ย้ำว่า "อยู่ระหว่างเจรจา" ยังไม่มีการยืนยันว่าปิดรอบ</p>
+
+    <p>แต่บทเรียน production ที่สำคัญที่สุดของปีนี้กลับเป็นข่าวร้าย:</p>
+
+    <div class="alert danger">
+      <strong>กรณีศึกษา YOLO mode:</strong> The Hacker News (24 กรกฎาคม 2026) รายงานว่าผู้โจมตีรัน Hermes แบบ unattended ใน YOLO mode — flag ที่ปิด approval prompt ทั้งหมด — เพื่อทำ post-exploitation ในระบบของกระทรวงการคลังของไทย ทั้งสแกนหา root path, รัน LinPEAS, ไล่อ่านข้อมูลบุคลากรย้อนถึงปี 2012 และเข้า Hadoop cluster ที่ใช้ default credentials
+    </div>
+
+    <blockquote>💡 บทความต้นทางเขียนชัดว่า Hermes <em>"not a hacking tool, and nothing here is a flaw in it"</em> — แต่ประโยคที่ควรติดผนังห้อง ops คือประโยคถัดมา: สำหรับ agent แบบ self-host <em>"no vendor was watching, and there was no account to ban"</em></blockquote>
+
+    <p>นี่คือแก่นของการ self-host ที่คนมักมองข้าม: อิสรภาพเต็มร้อยแปลว่า <strong>คุณคือ vendor ของตัวเอง</strong> ไม่มีใครเฝ้า ไม่มีบัญชีให้ใครแบน ระบบ monitoring, กติกา approval และวินัยการใช้ YOLO mode จึงเป็นหน้าที่ของเราเต็ม ๆ (แนวป้องกันเชิงลึกอยู่ในตอน <a href="/blog/hermes-security">#4 Security</a> — อย่ารัน production โดยไม่อ่านตอนนั้นนะครับ) และเท่าที่ผมค้น ยังไม่พบแถลงการณ์ตอบสนองอย่างเป็นทางการจาก Nous ต่อกรณีนี้</p>
+
+    <h2 id="th-enterprise">อะไรที่ยังขาดสำหรับ Enterprise — และทำไมไม่มี Roadmap</h2>
+
+    <p>ข้อเท็จจริงที่ตรงไปตรงมาที่สุดข้อหนึ่ง: <strong>Hermes ไม่มีเอกสาร roadmap ทางการ</strong> ไม่มีหน้า "coming in v1.0" ให้ฝ่ายจัดซื้อเอาไปแนบเอกสาร สิ่งที่มีคือ release จริงที่ออกถี่และหนักมือดังที่เห็นมาทั้งบทความ ใครที่อ้างกำหนดการ v1.0 ได้แม่น ๆ ตอนนี้คือกำลังเดา — รวมถึงผมด้วย ผมจึงไม่เดา</p>
+
+    <p>จากมุมคนที่ดูแล deployment ในองค์กรจริง สิ่งที่ผมยังเห็นว่าขาดในฝั่ง self-hosted open source — และเป็นประเด็นที่ผู้ใช้ยกขึ้นพูดกันใน GitHub issues และชุมชน — มีสามเรื่องใหญ่:</p>
+
+    <ul>
+      <li><strong>Per-tenant memory isolation</strong> — ตอนนี้ความจำและ state ออกแบบรอบผู้ใช้/โปรไฟล์ ยังไม่ใช่ multi-tenant ที่แยกขาดระดับที่ฝ่าย compliance ขององค์กรใหญ่ต้องการ</li>
+      <li><strong>Structured audit logging</strong> — log มีครบสำหรับ debug แต่ audit trail แบบที่ตอบ auditor ได้ว่า "ใครสั่งอะไร เมื่อไร ด้วยสิทธิ์อะไร" ยังต้องประกอบเอง</li>
+      <li><strong>API-stability contract</strong> — จังหวะ release เก้าตัวต่อเดือนคือพลังของชุมชน แต่ก็แปลว่ายังไม่มีสัญญา backward compatibility ที่ระบบอื่นจะยึดเป็นหลักได้</li>
+    </ul>
+
+    <p>ที่น่าสนใจคือ Nous เริ่มตอบโจทย์กลุ่มนี้จากฝั่ง <strong>บริการ</strong> ไม่ใช่ฝั่ง OSS — Hermes Cloud ที่เปิด preview มาพร้อมคำโฆษณาว่าให้ทั้ง granular access controls และ unified billing ระดับองค์กรผ่าน Portal ดังนั้นประโยคเหมารวมว่า "Hermes ไม่มีของสำหรับองค์กร" จึงเริ่มไม่จริงเสียทีเดียว — ที่แม่นกว่าคือ: ฝั่ง self-host ยังต้องสร้างเอง ฝั่ง managed เริ่มมีขาย</p>
+
+    <p>อีกเส้นที่ควรจับตาแต่อย่าเพิ่งฝากความหวังคือ <a href="https://github.com/NousResearch/hermes-agent-self-evolution">hermes-agent-self-evolution</a> — repo วิจัยทางการเรื่อง evolutionary self-improvement ด้วย DSPy + GEPA ซึ่ง Nous ระบุชัดว่าเป็นงานวิจัย ยังไม่ production-ready</p>
+
+    <h3>Production Checklist ก่อนกดปุ่ม</h3>
+
+    <p>ปิดท้ายด้วย checklist ที่ผมกลั่นจากทั้งบทความ — ติ๊กให้ครบก่อนเรียกระบบไหนว่า production:</p>
+
+    <ul>
+      <li>☐ Container ตั้ง <code>restart: unless-stopped</code> และฝั่ง Linux เปิด <code>loginctl enable-linger</code> แล้ว</li>
+      <li>☐ Dashboard พอร์ต 9119 มี auth (basic/OAuth/OIDC) เสมอ — ไม่มีข้อยกเว้น</li>
+      <li>☐ <code>hermes backup</code> ตั้งรอบรายคืน และเคยซ้อม <code>hermes import</code> บนเครื่องเปล่าจริงอย่างน้อยหนึ่งครั้ง — backup ที่ไม่เคย restore คือความหวัง ไม่ใช่ backup</li>
+      <li>☐ กำหนดรอบ <code>hermes update --backup</code> รายสัปดาห์ พร้อมอ่าน release notes ก่อนทุกครั้ง</li>
+      <li>☐ <code>hermes fallback</code> และ credential pool ตั้งไว้ล่วงหน้า — อย่ารอเจอ 429 ตอนงานเร่ง</li>
+      <li>☐ <code>hermes insights</code> เข้าปฏิทินรายสัปดาห์ และทีมรู้จัก <code>/usage</code> กับ <code>/compress</code></li>
+      <li>☐ Secrets อยู่ใน OS keychain หรือ Bitwarden — ไม่นอนเปลือยใน <code>.env</code></li>
+      <li>☐ ไม่มี YOLO mode บนเครื่อง production — จุด ไม่มีเงื่อนไขต่อท้าย</li>
+      <li>☐ ถ้าย้ายจาก OpenClaw: รายการ cron jobs / hooks ถูกจดครบก่อนรัน migrate</li>
+    </ul>
+
+    <p>สรุปจุดยืนของผม ณ วันนี้: สำหรับทีมขนาดเล็กถึงกลางที่รับวินัย ops ตามบทความนี้ได้ Hermes พร้อมใช้งานจริงแล้ว และถูกกว่าที่หลายคนคิดมาก สำหรับองค์กรที่ต้องการ compliance เต็มรูปแบบ ผมแนะนำสูตรเดิมที่ใช้กับ OpenClaw: เริ่มจาก pilot บน VPS แยก ทำ backup ให้เป็นนิสัยตั้งแต่วันแรก เปิดใช้ Portal เพื่อรวมบิล แล้วค่อยตัดสินใจย้ายใหญ่เมื่อ audit ผ่านจริง — ระบบที่ดีที่สุดคือระบบที่น่าเบื่อที่สุด และ Hermes กำลังเก่งขึ้นเรื่อย ๆ ในเกมของความน่าเบื่อนี้</p>
+
+    <div class="key-takeaways">
+      <h3>🎯 สิ่งสำคัญที่ต้องจำ</h3>
+      <ul>
+        <li><strong>$5 VPS</strong> = จุดตั้งต้นทางการของ production — Hermes ฟรี (MIT) จ่ายเฉพาะค่า LLM API และมี backend ให้เลือกเจ็ดแบบถึงระดับ serverless</li>
+        <li><strong>Volume เดียว</strong> = <code>~/.hermes:/opt/data</code> เก็บทุกอย่างที่มีค่า — สำรอง directory เดียวเท่ากับสำรองทั้งระบบ</li>
+        <li><strong>hermes update / backup / import</strong> = ชุด ops ในตัวที่ตรวจจับวิธีติดตั้งเอง พร้อม shadow-git checkpoints หนุนคำสั่ง /rollback</li>
+        <li><strong>hermes insights + /usage</strong> = เครื่องมือคุมค่าใช้จ่ายในตัว — วิเคราะห์ token ย้อนหลังและบีบ context ก่อนบานปลาย</li>
+        <li><strong>Fallback chain + credential pool</strong> = ทางรอดจาก 429 — ระบบไล่ provider สำรองและหมุน key ให้อัตโนมัติ</li>
+        <li><strong>Nous Portal</strong> = OAuth เดียว บิลเดียว 300+ models — เส้นทางที่เอกสารทางการแนะนำ ส่วน BYO keys คือความยืดหยุ่นที่ไม่มี lock-in</li>
+        <li><strong>hermes claw migrate</strong> = ย้ายจาก OpenClaw ได้เกือบหมด ยกเว้น cron jobs, plugins, hooks — และ WhatsApp ต้อง pair ใหม่</li>
+        <li><strong>YOLO mode</strong> = บทเรียนกระทรวงการคลัง: self-host แปลว่าคุณคือ vendor ของตัวเอง — no vendor watching, no account to ban</li>
+      </ul>
+    </div>
+
+    </div>
+    <div class="l-en" lang="en">
+
+    <p>Ask yourself one question. If the AI agent your team leans on every day died quietly at 3 a.m., who would find out first — your monitoring, you, or a colleague messaging at nine to ask why the bot has gone silent?</p>
+
+    <p>That question is the line between a laptop toy and a production system. I drew the same line at the end of this blog's OpenClaw series — <a href="/blog/openclaw-production">OpenClaw #7: Production</a>, where I walked through deploying agents on real infrastructure in some detail. Today the other side gets its turn: <strong>Hermes Agent</strong> from Nous Research, which I am now examining seriously as the possible next home for an organizational deployment.</p>
+
+    <p>Hermes's production pitch is not excitement; it is <strong>cheapness, stability, and boredom</strong>. The README says it plainly: <em>"Run it on a $5 VPS, a GPU cluster, or serverless infrastructure that costs nearly nothing when idle."</em> The software is MIT-licensed and free — you pay only for LLM API usage — and it ships an ops toolkit unusually complete for a project that launched publicly on February 25, 2026 (a date that rests on consistent third-party reporting, not a fetched Nous announcement). This closing post walks from choosing where to run it, all the way to the sharpest question: should you move your whole organization off OpenClaw?</p>
+
+    <h2 id="en-where">Where to Run It: From a $5 VPS to Serverless That Sleeps</h2>
+
+    <p>Hermes treats the <strong>execution backend</strong> as a pluggable part. The README names all seven: <em>"Seven terminal backends — local, Docker, SSH, Singularity, Modal, Daytona, and Vercel Sandbox"</em> — a range that runs from your own laptop to serverless platforms that bill only while working.</p>
+
+    <div class="table-wrapper">
+      <table>
+        <thead>
+          <tr><th>Backend</th><th>What it is</th><th>Best for</th></tr>
+        </thead>
+        <tbody>
+          <tr><td><strong>local</strong></td><td>Runs on the gateway's own machine</td><td>Experiments, personal machines</td></tr>
+          <tr><td><strong>Docker</strong></td><td>Isolated container, one state volume</td><td>Most production — the best-documented official path</td></tr>
+          <tr><td><strong>SSH</strong></td><td>Drives a remote machine over SSH</td><td>Reusing servers you already own</td></tr>
+          <tr><td><strong>Singularity</strong></td><td>HPC-flavoured containers</td><td>University and research clusters</td></tr>
+          <tr><td><strong>Modal</strong></td><td>Serverless compute, spins up on demand</td><td>Bursty work you don't want to pay for at idle</td></tr>
+          <tr><td><strong>Daytona</strong></td><td>Managed dev environments</td><td>Team sandboxes</td></tr>
+          <tr><td><strong>Vercel Sandbox</strong></td><td>Ephemeral sandboxes</td><td>Short-lived, isolated code runs</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <p>On the perennial "how big a machine" question: official numbers exist only in the Docker documentation (next section). On the VPS side, third-party guides converge on the same answer — a <strong>$5–6/month box</strong> from DigitalOcean, Hetzner, or Vultr is enough, as long as the models run on someone else's API rather than your own hardware. If your agent only talks Telegram or Discord, you don't even need a domain or SSL; those matter only once you expose a web UI or receive webhooks.</p>
+
+    <p>A hosting sub-market is already forming around the project. Hostinger, for one, sells a Managed Hermes Agent plan at $5.99/month for the first term ($11.99 on renewal) — but note that this is Hostinger's own product, not a Nous-confirmed partnership, and the official docs deliberately recommend no hosting provider at all.</p>
+
+    <p>The newest option is <strong>Hermes Cloud</strong>, in public preview since around mid-2026. Nous's own announcement pitches it as: <em>"Spin up agents for everyone at your org with granular access controls and unified billing, all from Nous Portal."</em> Per the <a href="https://portal.nousresearch.com/cloud">Cloud page</a>, deploying requires $10 minimum credits or an active subscription; it is billed hourly from Portal credits and scales to zero when idle. The hourly rate itself is unpublished, so I won't guess at one.</p>
+
+    <p>Starting from a bare machine is a one-liner:</p>
+
+    <pre><code># Linux / macOS / WSL2 / Termux — the official installer
+curl -fsSL https://hermes-agent.nousresearch.com/install.sh | bash
+
+# Windows (PowerShell)
+iex (irm https://hermes-agent.nousresearch.com/install.ps1)</code></pre>
+
+    <p>The installer wants Python 3.11 (via uv), Git, Node.js v26 (or 22.22+/24.11+), ripgrep, and ffmpeg, and supports Linux, macOS, WSL2, native Windows, and even Android under Termux. For real production, though, skip straight to Docker.</p>
+
+    <h2 id="en-docker">Docker Deployment That Survives Reboots</h2>
+
+    <p>The best-paved production road is Docker. The <code>nousresearch/hermes-agent</code> image has passed 5 million pulls on Docker Hub at around 909 MB, and its design philosophy fits in one sentence: <strong>everything that matters lives in one volume</strong>.</p>
+
+    <pre><code># docker-compose.yml — shaped after the official doc
+services:
+  hermes:
+    image: nousresearch/hermes-agent   # 5M+ pulls, ~909 MB
+    restart: unless-stopped            # survives every reboot, no extra work
+    command: gateway run
+    ports:
+      - "8642:8642"                    # Gateway API
+      - "9119:9119"                    # Dashboard
+    environment:
+      - HERMES_DASHBOARD=1             # enable the dashboard
+    volumes:
+      - ~/.hermes:/opt/data            # everything important lives here
+    shm_size: "1gb"                    # required for browser automation</code></pre>
+
+    <p>The <code>~/.hermes</code> volume (aka <code>$HERMES_HOME</code>) is the heart of the deployment: <code>config.yaml</code>, the <code>.env</code> credentials file, the SQLite <code>state.db</code> holding every session with FTS5 search, the <code>skills/</code> directory, the memory files <code>MEMORY.md</code> + <code>USER.md</code> + <code>SOUL.md</code>, plus <code>logs/</code>, <code>backups/</code>, <code>checkpoints/</code>, and <code>profiles/</code> for multi-profile installs. Back up this one directory and you have backed up the entire system.</p>
+
+    <div class="alert info">
+      <strong>Official sizing:</strong> the Docker doc specifies a minimum of 1 GB RAM / 1 CPU core / 500 MB disk, recommending 2–4 GB RAM, 2 cores, and 2+ GB of disk as sessions and skills grow — several times lighter than what I used to provision for a multi-user OpenClaw box.
+    </div>
+
+    <p>Two details people trip over. First, the agent inside the container runs as <strong>UID 10000</strong> — if a host-mounted directory throws permission errors, check the ownership of <code>~/.hermes</code> before blaming anything else. Second, the dashboard on port 9119 supports basic auth, OAuth, and OIDC via environment variables; never expose that port to the internet without configuring one of them. (I go deep on this in <a href="/blog/hermes-security">#4 Security</a>.)</p>
+
+    <h2 id="en-ops">Update, Backup, Rollback: The Ops Toolkit</h2>
+
+    <p>What genuinely surprised me while reading the CLI reference is how complete the built-in ops tooling is for a six-month-old public project. Start with updates:</p>
+
+    <pre><code># check whether a new version exists — installs nothing
+hermes update --check
+
+# update, taking an automatic backup first
+hermes update --backup</code></pre>
+
+    <p>The clever part: <code>hermes update</code> <strong>auto-detects how you installed</strong> — git installer, Docker, or NixOS — and applies the matching upgrade path, syncing updated skills to every profile as it goes. On Docker, upgrading is a pull plus a recreate; since all state lives in the volume, nothing is lost:</p>
+
+    <pre><code># Docker upgrade: pull, then recreate
+docker compose pull
+docker compose up -d</code></pre>
+
+    <p>And you will use this often. Between July 30 and August 31, 2026 — a single month — nine releases shipped (v0.19.1 through v0.21.0), under the project's dual versioning scheme of vX.Y.Z tagged as vYYYY.M.D. At that cadence, updating has to be a routine, not an event: my advice is a fixed weekly slot after reading the release notes, not chasing every tag.</p>
+
+    <p>Backups are equally self-contained:</p>
+
+    <pre><code># zip all of ~/.hermes — config, skills, sessions, memory
+hermes backup -o ~/backups/hermes-prod.zip
+
+# restore on any machine
+hermes import ~/backups/hermes-prod.zip
+
+# export one profile with credentials stripped — safe to hand to a teammate
+hermes profile export</code></pre>
+
+    <p>My favourite piece is <code>hermes checkpoints</code> — a <strong>shadow-git</strong> checkpoint store under <code>~/.hermes/checkpoints/</code> that powers the in-session <code>/rollback</code> command, letting you unwind whatever the agent just edited without touching your project's real git history. Nightly backups can be scheduled through Hermes's own cron system — an agent that backs itself up at midnight is exactly the kind of boring I want in production.</p>
+
+    <h2 id="en-observe">Observability and Cost Control</h2>
+
+    <p>A system running 24/7 with nobody watching must be able to answer two questions at any moment: <strong>is it still working</strong>, and <strong>how fast is it burning money</strong>. Hermes answers the first with this set:</p>
+
+    <pre><code># follow live logs, errors only
+hermes logs -f --level error
+
+# drill into a single session's log
+hermes logs --session &lt;SESSION_ID&gt;
+
+# deep health check
+hermes status --deep
+
+# diagnose, and auto-fix what can be fixed
+hermes doctor --fix</code></pre>
+
+    <p>The <code>logs/</code> directory keeps separate files per component — agent, gateway, errors, GUI, desktop. When you hit something you can't solve, <code>hermes dump</code> produces a support summary, and <code>hermes debug share --nous</code> uploads redacted logs to Nous infrastructure for their team to look at — explicitly opt-in, not stealth telemetry.</p>
+
+    <p>The money question has more dedicated tooling than I expected:</p>
+
+    <pre><code># token / cost / activity analytics for the last 30 days
+hermes insights --days 30
+
+# inside a session:
+/usage      # what this session has spent so far
+/compress   # shrink the context before the context shrinks your wallet
+
+# outside a session — offline breakdown of where the prompt budget goes
+hermes prompt-size</code></pre>
+
+    <p>Recent releases added more cost levers: v0.20.5 (August 19, 2026) introduced a <strong>keyless web tier</strong> so fresh installs work before any key is configured, and v0.20.6 (August 27) added TTL caching for web operations, which directly cuts repeat calls. A widely used community pattern is assigning a cheap model to background work — compression and summaries — instead of letting your premium model do everything.</p>
+
+    <p>Performance moved too: third-party release trackers such as Releasebot record v0.19.0 (July 2026) cutting first-turn time-to-first-token by roughly 80% — from a cold start of about 4.3 seconds down to around 0.9. That is a third-party measurement, not an official benchmark, but it matches the direction visible in the release notes of that period.</p>
+
+    <h2 id="en-reliability">Reliability Mechanics: WAL, Compression Lineage, Fallback Chains</h2>
+
+    <p>Under the hood, several layers make Hermes tolerant of bad days. Summarizing from the official docs plus Arize's architecture deep-dive (that second source is third-party analysis, not official documentation):</p>
+
+    <ul>
+      <li><strong>SQLite WAL journaling</strong> — every session is written to state.db under a write-ahead log, minimizing corruption when the process dies mid-write, with a fallback mode for filesystems that can't support WAL.</li>
+      <li><strong>Lineage-based compression</strong> — when context outgrows its budget, the session row is closed and a child session is seeded from a summary sized at roughly 20% of the compressed content, floored at 2,000 tokens and capped at 12,000 (figures per Arize's analysis). I compared this against OpenClaw's approach in <a href="/blog/hermes-memory">#3 Memory</a>.</li>
+      <li><strong>Fallback chains</strong> — <code>hermes fallback</code> configures an ordered provider chain, tried automatically on 429s and connection errors.</li>
+      <li><strong>Credential pools</strong> — <code>hermes auth</code> manages pools of API keys with rotation, so one key's rate limit isn't your whole system's rate limit.</li>
+    </ul>
+
+    <p>For always-on operation, the gateway installs directly as an OS service — systemd on Linux, launchd on macOS — while the FAQ blesses tmux/nohup on WSL2 and Windows Task Scheduler elsewhere:</p>
+
+    <pre><code># run the gateway as a service, and check it
+hermes gateway start
+hermes gateway status
+
+# crucial on Linux: keep the service alive after reboot, before anyone logs in
+sudo loginctl enable-linger $USER
+
+# long tasks on slow models: extend the stream read timeout (seconds)
+HERMES_STREAM_READ_TIMEOUT=1800</code></pre>
+
+    <p>Finally, secret hygiene — an area moving fast lately. v0.20.6 added <strong>OS-keychain encryption</strong> for stored secrets, and there's now an option to keep keys out of files entirely:</p>
+
+    <pre><code># pull API keys from Bitwarden Secrets Manager at startup, instead of .env
+hermes secrets bitwarden
+
+# event-driven webhooks — returns a URL plus an HMAC secret for verification
+hermes webhook subscribe</code></pre>
+
+    <h2 id="en-models">Paying for Models: BYO Keys vs Nous Portal</h2>
+
+    <p>Hermes itself is free; the real production cost is models, and there are two roads. The first is <strong>BYO keys</strong> — plug in OpenRouter, OpenAI, Anthropic, or your own custom endpoints. The README promises <em>"300+ models — pick any of them with /model &lt;name&gt;"</em>, switchable at any time without code changes:</p>
+
+    <pre><code># switch models from the CLI, or mid-session
+hermes model
+/model provider:model</code></pre>
+
+    <p>The second road is <strong>Nous Portal</strong>, which the official docs call "the recommended way to run Hermes Agent" — one OAuth, one bill, the same 300+ models, plus the Tool Gateway: Firecrawl-powered web search and extraction, nine image-generation models, OpenAI TTS, a cloud browser via Browser Use, and an optional Modal cloud sandbox:</p>
+
+    <pre><code># link a Portal account once and be done
+hermes setup --portal</code></pre>
+
+    <div class="table-wrapper">
+      <table>
+        <thead>
+          <tr><th>Tier</th><th>Price/month</th><th>Credits included</th><th>Rollover cap</th></tr>
+        </thead>
+        <tbody>
+          <tr><td><strong>Plus</strong></td><td>$20</td><td>$22</td><td>$10</td></tr>
+          <tr><td><strong>Super</strong></td><td>$100</td><td>$110</td><td>$50</td></tr>
+          <tr><td><strong>Ultra</strong></td><td>$200</td><td>$220</td><td>$100</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <p>A Free tier ($0) exists too, but what exactly it includes is ambiguous between the docs page and the pricing page, so I won't pin it down — check <a href="https://portal.nousresearch.com/manage-subscription">portal.nousresearch.com</a> before deciding. Paid tiers add usage discounts, hosted tools, and higher rate limits.</p>
+
+    <div class="alert info">
+      <strong>A note for Claude users:</strong> since Anthropic blocked third-party subscription (Pro/Max) access through external harnesses in April 2026 — a change that hit Hermes and OpenClaw equally — running Claude inside Hermes requires pay-as-you-go API keys or Nous Portal.
+    </div>
+
+    <p>So what does a total monthly budget look like? Hostinger's cost analysis (August 2026) breaks the self-hosted side down like this — take it as a framing, not a quote:</p>
+
+    <div class="table-wrapper">
+      <table>
+        <thead>
+          <tr><th>Item</th><th>Range/month</th><th>Notes</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>VPS</td><td>$6.49–8.99</td><td>Entry-level up to a KVM 2 class box</td></tr>
+          <tr><td>LLM API</td><td>$2–60</td><td>Depends on model and workload</td></tr>
+          <tr><td><strong>Total</strong></td><td><strong>~$6–85+</strong></td><td>The model choice dominates everything else</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <p>The lever that moves the number most is matching the model to the job — the same report cites budget models like DeepSeek V4 Flash at $0.14/$0.28 per million tokens — combined with disabling unused tools and prompt caching.</p>
+
+    <p>My organizational read: small teams that want billing solved fast should just take Portal — it is the lowest-friction path. Organizations with existing cloud contracts or strict data-path requirements keep more control with BYO keys through endpoints they govern. And because there is no lock-in in the architecture, you can change your mind later.</p>
+
+    <h2 id="en-migrate">Migrating an Organization from OpenClaw</h2>
+
+    <p>Now the question my OpenClaw-series readers ask most. Nous ships the exit ramp as a single command — <code>hermes claw migrate</code> auto-detects <code>~/.openclaw</code> and carries your world across. The correct procedure always starts with a rehearsal:</p>
+
+    <pre><code># rehearse first — reports what would move, touches nothing
+hermes claw migrate --dry-run
+
+# the real thing: API keys only come along with --migrate-secrets
+hermes claw migrate --preset full --migrate-secrets</code></pre>
+
+    <div class="table-wrapper">
+      <table>
+        <thead>
+          <tr><th>Asset</th><th>Moves?</th><th>Notes</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>Persona (SOUL.md)</td><td>✅</td><td>Straight across</td></tr>
+          <tr><td>AGENTS.md, MEMORY.md / USER.md</td><td>✅</td><td>Daily logs get consolidated into the one bounded MEMORY.md</td></tr>
+          <tr><td>Skills</td><td>✅</td><td>Land in <code>~/.hermes/skills/openclaw-imports/</code></td></tr>
+          <tr><td>Model / MCP / TTS config</td><td>✅</td><td>Straight across</td></tr>
+          <tr><td>Messaging tokens</td><td>✅</td><td>Telegram, Discord, Slack, Signal, Matrix, Mattermost — but WhatsApp must re-pair by QR</td></tr>
+          <tr><td>API keys</td><td>⚠️</td><td>Only with <code>--migrate-secrets</code></td></tr>
+          <tr><td>Cron jobs</td><td>❌</td><td>Recreate on the Hermes side</td></tr>
+          <tr><td>Plugins</td><td>❌</td><td>Different plugin system</td></tr>
+          <tr><td>Hooks / webhooks</td><td>❌</td><td>Re-subscribe</td></tr>
+          <tr><td>Memory-backend config / channel bindings</td><td>❌</td><td>Reconfigure</td></tr>
+          <tr><td>IDENTITY / TOOLS / HEARTBEAT / BOOTSTRAP.md</td><td>📦</td><td>Archived, not used</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="alert">
+      <strong>Where teams stumble:</strong> first, cron jobs and hooks do not come along — automations configured on the OpenClaw side simply go silent unless someone inventoried them before the move. Second, WhatsApp requires a fresh QR pairing, which means scheduling time with the phone-number owner; that is not a 2 a.m. job.
+    </div>
+
+    <p>One bonus that quietly lowers migration cost: Hermes natively reads existing context files — <code>CLAUDE.md</code>, <code>AGENTS.md</code>, and <code>.cursorrules</code>, on a first-match priority chain. The context files your organization invested in during the OpenClaw / Claude Code era work on day one.</p>
+
+    <p>In fairness, this migration <strong>flows both ways</strong>: OpenClaw publishes its own official reverse guide, "Migrating from Hermes." This user base is genuinely contested, not a one-way street — which is good news for users, because both sides have to compete on quality rather than on walls.</p>
+
+    <h2 id="en-wild">Lessons from the Wild: Growth Numbers and the YOLO Tale</h2>
+
+    <p>Why take Hermes this seriously? The growth numbers help: publicly launched February 25, 2026; 57,200 stars in the first six weeks per Hermes Atlas (a community project), faster than OpenClaw at the same stage; about 214,000 by mid-July (per TechCrunch's reporting); and as of September 1, 2026, <strong>nearly 240,000 stars</strong> with around 48,800 forks per the GitHub API.</p>
+
+    <p>The number I weight more than stars is actual workload. MarkTechPost reported Hermes overtaking OpenClaw for #1 on OpenRouter's global daily app rankings around May 10, 2026 (224 billion daily tokens versus OpenClaw's 186B), and a late-August KuCoin report put its all-time total at 33.1 trillion tokens — nearly four times second-place Claude Code's 8.53T. The release side is just as heavy: v0.20.0 "Herald" (August 3) landed with roughly 3,650 commits, and v0.21.0 "Pantheon" (August 31) with roughly 5,800 commits and 2,475 merged PRs from more than 760 contributors. The desktop app has been in public preview since June 2, 2026.</p>
+
+    <h3>Reading Release Notes Like an Operator</h3>
+
+    <p>If you run the system, what matters in the last two major releases is the ops-facing material:</p>
+
+    <ul>
+      <li><strong>v0.20.0 "Herald"</strong> — signed outbound webhooks (receivers can verify signatures), agent-to-agent A2A v1.0, and grounded research with verifiable citations.</li>
+      <li><strong>v0.21.0 "Pantheon"</strong> — cron jobs that <em>keep memory between runs</em> (a game-changer for scheduled agents), the MCP interface becoming a dashboard with health checks and usage tracking, live steering of subagents, and a CLI command palette. Bot Mode, which had debuted earlier, was formally bundled into the desktop app by this release.</li>
+    </ul>
+
+    <p>On capital and partners: Nous joined the NVIDIA Nemotron Coalition and, with Nebius, served <code>nemotron-3-ultra:free</code> on Portal from June 4–18 (officially documented), while <a href="https://techcrunch.com/2026/07/13/hermes-agent-maker-nous-research-in-talks-for-new-funding-at-1-5b-valuation/">TechCrunch reports</a> Nous is <strong>in talks</strong> for new funding at a $1.5B valuation — in talks, not closed; no round has been confirmed.</p>
+
+    <p>But this year's most important production lesson came as bad news:</p>
+
+    <div class="alert danger">
+      <strong>The YOLO-mode case study:</strong> The Hacker News (July 24, 2026) reported that an attacker ran Hermes unattended in YOLO mode — the documented flag that disables all approval prompts — for post-exploitation inside Thailand's Ministry of Finance: scanning for root paths, running LinPEAS, crawling personnel records back to 2012, and reaching a Hadoop cluster on default credentials.
+    </div>
+
+    <blockquote>💡 The article is explicit that Hermes is <em>"not a hacking tool, and nothing here is a flaw in it."</em> The sentence that belongs on the ops-room wall is the next one: for self-hosted agents, <em>"no vendor was watching, and there was no account to ban."</em></blockquote>
+
+    <p>That is the essence of self-hosting that people overlook: total freedom means <strong>you are your own vendor</strong>. Nobody is watching for you; there is no account for anyone to ban. Monitoring, approval policy, and YOLO-mode discipline are entirely your job. (The defensive playbook is in <a href="/blog/hermes-security">#4 Security</a> — do not run production without reading it.) And for the record, my searches found no official Nous response to this incident, so I won't imply one.</p>
+
+    <h2 id="en-enterprise">What's Still Missing for Enterprise — and Why There's No Roadmap</h2>
+
+    <p>One of the most honest facts about this project: <strong>Hermes has no official roadmap document</strong>. There is no "coming in v1.0" page for your procurement office to staple to a purchase order. What exists instead is a relentless stream of real releases, as this whole post has shown. Anyone quoting a confident v1.0 date is guessing — myself included — so I won't.</p>
+
+    <p>From the perspective of someone who runs an organizational deployment, three gaps still stand out on the self-hosted open-source side — and they are the same themes users raise in GitHub issues and community discussion:</p>
+
+    <ul>
+      <li><strong>Per-tenant memory isolation</strong> — memory and state are designed around a user/profile, not the hard multi-tenant separation a large organization's compliance team expects.</li>
+      <li><strong>Structured audit logging</strong> — the logs are complete for debugging, but an audit trail that answers "who ordered what, when, under which privilege" still has to be assembled yourself.</li>
+      <li><strong>An API-stability contract</strong> — nine releases in a month is community strength, but it also means no backward-compatibility promise that other systems can build against.</li>
+    </ul>
+
+    <p>Interestingly, Nous has started answering this segment from the <strong>service</strong> side rather than the OSS side: Hermes Cloud's preview explicitly advertises org-level granular access controls and unified billing through Portal. So the blanket claim "Hermes has nothing for enterprises" is no longer quite true — the accurate version is: self-hosters still build it themselves, while a managed alternative is starting to be sold.</p>
+
+    <p>One more thread to watch without betting on it: <a href="https://github.com/NousResearch/hermes-agent-self-evolution">hermes-agent-self-evolution</a>, Nous's official research repo on evolutionary self-improvement using DSPy + GEPA — clearly labeled research, not production-ready.</p>
+
+    <h3>The Pre-Launch Production Checklist</h3>
+
+    <p>To close, the checklist I distilled from this whole post — tick every box before calling anything production:</p>
+
+    <ul>
+      <li>☐ Container set to <code>restart: unless-stopped</code>, and on Linux <code>loginctl enable-linger</code> is enabled</li>
+      <li>☐ The dashboard on port 9119 has auth (basic/OAuth/OIDC) — no exceptions</li>
+      <li>☐ <code>hermes backup</code> runs nightly, and you have rehearsed <code>hermes import</code> on a clean machine at least once — a backup that has never been restored is a hope, not a backup</li>
+      <li>☐ A weekly <code>hermes update --backup</code> slot exists, with release notes read first</li>
+      <li>☐ <code>hermes fallback</code> and a credential pool are configured in advance — don't meet your first 429 on a deadline</li>
+      <li>☐ <code>hermes insights</code> is on the weekly calendar, and the team knows <code>/usage</code> and <code>/compress</code></li>
+      <li>☐ Secrets live in the OS keychain or Bitwarden — never bare in <code>.env</code></li>
+      <li>☐ No YOLO mode on production machines — full stop, no trailing conditions</li>
+      <li>☐ If migrating from OpenClaw: the cron-jobs/hooks inventory is written down before running migrate</li>
+    </ul>
+
+    <p>My position as of today: for small-to-mid teams willing to adopt the ops discipline in this post, Hermes is production-ready right now, and cheaper than most people assume. For organizations needing full compliance, I recommend the same formula I used for OpenClaw: pilot on a separate VPS, make backups a day-one habit, use Portal to unify billing, and only commit to the big migration once a real audit passes. The best production system is the most boring one — and Hermes keeps getting better at being boring.</p>
+
+    <div class="key-takeaways">
+      <h3>🎯 Key Takeaways</h3>
+      <ul>
+        <li><strong>$5 VPS</strong> = the official starting point for production — Hermes is free (MIT), you pay only LLM API usage, with seven execution backends up to serverless</li>
+        <li><strong>One volume</strong> = <code>~/.hermes:/opt/data</code> holds everything that matters — back up one directory and you've backed up the system</li>
+        <li><strong>hermes update / backup / import</strong> = built-in ops that auto-detect your install method, plus shadow-git checkpoints behind /rollback</li>
+        <li><strong>hermes insights + /usage</strong> = native cost control — historical token analytics and context compression before the bill balloons</li>
+        <li><strong>Fallback chains + credential pools</strong> = the answer to 429s — automatic provider failover and key rotation</li>
+        <li><strong>Nous Portal</strong> = one OAuth, one bill, 300+ models — the officially recommended path; BYO keys remain the no-lock-in alternative</li>
+        <li><strong>hermes claw migrate</strong> = moves almost everything from OpenClaw except cron jobs, plugins, and hooks — and WhatsApp must re-pair</li>
+        <li><strong>YOLO mode</strong> = the Ministry of Finance lesson: self-hosting means you are your own vendor — no vendor watching, no account to ban</li>
+      </ul>
+    </div>
+
+    </div>
+
+    <div class="post-series-footer">
+      <span class="l-th">บทความจากซีรีส์ Hermes Agent in Practice 2026</span><span class="l-en" lang="en">From the Hermes Agent in Practice 2026 series</span>
+    </div>
+
+  </article>
+
+  </main>
+
+  <footer class="blog-footer">
+    <nav class="blog-footer__nav" aria-label="Site">
+      <a href="../index.html">Home</a>
+      <a href="./">Blog</a>
+      <a href="../publications/">Publications</a>
+      <a href="../books/">Books</a>
+      <a href="../projects/">Projects</a>
+      <a href="../news/">News</a>
+      <a href="../index.html#contact">Contact</a>
+    </nav>
+    <a href="./">← Back to Blog</a>
+    <span>© 2026 Anirach Mingkhwan — Associate Professor, KMUTNB</span>
+  </footer>
+
+</body>
+</html>

@@ -25,7 +25,7 @@ self-consistent families plus one hybrid**, and every design decision starts by 
 file you are about to touch.
 
 ```
-57 HTML files
+64 HTML files
   = index.html            (landing — the only page with <script> and the only one
                            with no embedded <style>; its CSS is all style.css)
   + 5 LISTING pages       blog/index.html, books/index.html, news/index.html,
@@ -40,12 +40,12 @@ file you are about to touch.
                            — same .nav chrome and type
                            as LISTING, one subject per page, carded from books/index.html
                            (check_site.py INV-26 enforces that link)
-  + 46 posts in blog/     = 35 HOUSE + 11 ISLAND (the 9 bilingual Life posts are HOUSE)
+  + 53 posts in blog/     = 42 HOUSE + 11 ISLAND (the 9 Life + 7 Hermes bilingual posts are HOUSE)
                            (one of the 11, obsidian-ai-jarvis, is a HYBRID)
 ```
 
 ```bash
-find . -name '*.html' -not -path './.git/*' -not -path './.claude/*' | wc -l   # → 57
+find . -name '*.html' -not -path './.git/*' -not -path './.claude/*' | wc -l   # → 64
 for f in blog/*.html; do grep -q 'class="blog-nav"' "$f" || basename "$f"; done # → 12
 ```
 

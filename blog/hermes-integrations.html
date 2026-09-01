@@ -1,0 +1,1120 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Integrations — One Gateway, Every Channel — หนึ่ง Gateway เชื่อมทุกช่องทาง | Anirach Mingkhwan</title>
+  <meta name="description" content="เจาะระบบ integrations ของ Hermes Agent — gateway daemon เดียวเชื่อม Telegram, WhatsApp, Email และแพลตฟอร์มกว่า 27 ช่องทาง พร้อม MCP สองทิศทาง, Browser Use, ระบบเสียง และ Nous Portal ในมุมมองของคนที่ดูแล OpenClaw มาก่อน">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=Sarabun:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      color-scheme: light;
+      /* ink */
+      --navy: #11304b; --slate: #334155; --slate-light: #526174; --gray: #94a3b8;
+      /* ground */
+      --bg: #faf7f0; --white: #ffffff; --code-bg: #1e293b;
+      /* accent */
+      --blue: #226299; --blue-dark: #1a4d7a; --blue-light: #4992b9;
+      /* brand — sampled from the book covers. --gold is decorative on light grounds (2.2:1); --gold-dark is its text form. */
+      --gold: #c4a46c; --gold-dark: #7a5f22; --cloud: #dee7e6; --parchment: #e9e1c4; --focus: #226299;
+      /* status — use only these six, never invent a seventh */
+      --green: #22c55e; --red: #ef4444; --amber: #f59e0b;
+      --cyan: #06b6d4; --purple: #226299; --purple-dark: #1a4d7a;
+      /* type */
+      --font: 'Inter', 'Sarabun', -apple-system, BlinkMacSystemFont, sans-serif;
+      --mono: 'JetBrains Mono', 'Fira Code', 'Sarabun', monospace;
+      /* form */
+      --radius: 12px; --radius-sm: 8px; --radius-lg: 16px;
+      --measure: 720px; --wide: 860px;
+      --transition: 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+    html { scroll-behavior: smooth; }
+    body { font-family: var(--font); font-size: 17px; line-height: 1.8; color: var(--slate); background: var(--bg); -webkit-font-smoothing: antialiased; }
+    .blog-nav { position: fixed; top: 0; left: 0; right: 0; z-index: 100; background: rgba(248,250,252,0.85); backdrop-filter: blur(20px); border-bottom: 1px solid rgba(0,0,0,0.05); }
+    .blog-nav__inner { max-width: 860px; margin: 0 auto; padding: 0 2rem; height: 56px; display: flex; align-items: center; justify-content: space-between; }
+    .blog-nav__back { font-size: 0.85rem; font-weight: 500; color: var(--blue); text-decoration: none; }
+    .blog-nav__back:hover { color: #1a4d7a; }
+    .blog-nav__title { font-size: 0.85rem; font-weight: 600; color: var(--navy); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 50%; }
+    /* ── HERO ── house .post-hero on the approved Deep Blue gradient (page-design
+       §5 / INV-28). Ink is inverted for the dark ground: white title/meta, tag
+       pills white on 18% white — the openclaw-production treatment. The
+       background value must stay byte-identical to the approved string. */
+    .post-hero { padding: 8rem 2rem 3rem; background: linear-gradient(135deg, #11304b 0%, #1a4d7a 45%, #226299 100%); color: #fff; text-align: center; }
+    .post-hero__tags { display: flex; gap: 0.5rem; justify-content: center; margin-bottom: 1.25rem; flex-wrap: wrap; }
+    .post-hero__tag { display: inline-block; font-size: 0.72rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.1em; color: #fff; background: rgba(255,255,255,0.18); padding: 0.35rem 0.9rem; border-radius: 20px; }
+    .post-hero__title { font-size: clamp(1.8rem, 5vw, 3rem); font-weight: 800; color: #fff; line-height: 1.2; margin-bottom: 1rem; max-width: 720px; margin-left: auto; margin-right: auto; }
+    .post-hero__sub { font-size: 1.05rem; max-width: 640px; margin: 0 auto 1.5rem; line-height: 1.7; color: #fff; }
+    .post-hero__meta { font-size: 0.85rem; color: #fff; display: flex; align-items: center; justify-content: center; gap: 1.5rem; flex-wrap: wrap; }
+    .post-hero__series { font-weight: 600; color: #fff; }
+    /* the switch pill and the focus ring both sit on the dark hero: the pill is
+       a light chip so its labels keep their light-ground colours, and --focus
+       re-points to gold here (blue collapses on blue — the footer/pre
+       precedent). */
+    .post-hero { --focus: var(--gold); }
+    .post-hero__cover {
+      aspect-ratio: 1 / 1;
+      max-width: 380px;
+      margin: 2.5rem auto 0;
+      border-radius: var(--radius-lg, 16px);
+      overflow: hidden;
+      box-shadow: 0 20px 60px rgba(17,48,75,0.14);
+    }
+    .post-hero__cover img { width: 100%; height: 100%; object-fit: cover; display: block; }
+    .post-body { max-width: 720px; margin: 0 auto; padding: 3rem 2rem 6rem; }
+    .post-body h2 { font-size: 1.6rem; font-weight: 800; color: var(--navy); margin: 3rem 0 1rem; padding-bottom: 0.5rem; border-bottom: 2px solid rgba(34,98,153,0.15); }
+    .post-body h3 { font-size: 1.25rem; font-weight: 700; color: var(--navy); margin: 2.25rem 0 0.75rem; }
+    .post-body p { margin-bottom: 1.25rem; }
+    .post-body strong { font-weight: 700; color: var(--navy); }
+    .post-body a { color: var(--blue); text-decoration: underline; text-decoration-thickness: 1px; text-underline-offset: 2px; }
+    .post-body ul, .post-body ol { margin: 0.5rem 0 1.25rem 1.5rem; }
+    .post-body li { margin-bottom: 0.4rem; }
+    .post-body blockquote { background: rgba(34,98,153,0.06); border-left: 4px solid var(--blue); padding: 1rem 1.25rem; border-radius: 0 10px 10px 0; margin: 1.25rem 0; font-size: 0.95rem; color: var(--navy); }
+    .post-body hr { border: none; height: 1px; background: linear-gradient(90deg, transparent, rgba(34,98,153,0.2), transparent); margin: 3rem 0; }
+    /* ── CODE ── */
+    .post-body pre { background: var(--code-bg); border-radius: 12px; padding: 1.5rem; margin: 1.25rem 0 1.5rem; overflow-x: auto; border: 1px solid rgba(255,255,255,0.05); }
+    .post-body pre code { font-family: var(--mono); font-size: 0.85rem; color: #e2e8f0; line-height: 1.7; background: none; padding: 0; white-space: pre-wrap; }
+    .post-body code { font-family: var(--mono); font-size: 0.88em; background: rgba(34,98,153,0.08); color: var(--blue-dark); padding: 0.15em 0.45em; border-radius: 5px; }
+    /* ── TABLES ── */
+    .table-wrapper { overflow-x: auto; margin: 1.5rem 0; border-radius: 0.5rem; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1); }
+    table { width: 100%; border-collapse: collapse; background: white; }
+    th { background: #226299; color: white; padding: 1rem; text-align: left; font-weight: 600; }
+    td { padding: 1rem; border-bottom: 1px solid #e5e7eb; }
+    .post-body table { display: block; width: 100%; overflow-x: auto; }
+    /* ── ALERTS ── */
+    .alert { background: #fef3cd; border: 1px solid #facc15; border-radius: 0.5rem; padding: 1rem; margin: 1.5rem 0; }
+    .alert.danger { background: #fee2e2; border-color: #ef4444; }
+    .alert.info { background: #e0f2fe; border-color: #06b6d4; }
+    .alert.success { background: #d1fae5; border-color: #10b981; }
+    /* ── KEY TAKEAWAYS ── */
+    .key-takeaways { background: linear-gradient(135deg, #f3f4f6 0%, #e5e7eb 100%); border-radius: 1rem; padding: 2rem; margin: 3rem 0; }
+    .key-takeaways h3 { color: #226299; margin-bottom: 1.5rem; }
+    .post-series-footer { text-align: center; font-size: 0.85rem; color: var(--slate-light); font-style: italic; margin-top: 2rem; padding-top: 2rem; border-top: 1px solid #e2e8f0; }
+    .blog-footer { background: var(--navy); padding: 2rem 0; text-align: center; }
+    .blog-footer a { color: var(--gold); text-decoration: none; font-weight: 600; font-size: 0.9rem; }
+    .blog-footer span { color: var(--gray); font-size: 0.8rem; display: block; margin-top: 0.4rem; }
+    @media (max-width: 600px) {
+      .post-hero { padding: 7rem 1.25rem 2.5rem; }
+      .post-body { padding: 2rem 1.25rem 4rem; }
+      .post-hero__meta { flex-direction: column; gap: 0.4rem; }
+      .post-body h2 { font-size: 1.4rem; }
+      .post-body h3 { font-size: 1.15rem; }
+      .post-body pre { padding: 1rem; border-radius: 8px; }
+    }
+
+    :focus-visible { outline: 2px solid var(--focus); outline-offset: 3px; border-radius: 2px; }
+    /* the ring sits on the page ground (3px offset). Inside the navy footers
+       and code blocks var(--blue) collapses to 2.12:1, so those scopes
+       re-point --focus to gold (5.73:1 on navy). */
+    .footer, .blog-footer, pre { --focus: var(--gold); }
+    :focus:not(:focus-visible) { outline: none; }
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after {
+        animation-duration: .01ms !important; animation-iteration-count: 1 !important;
+        transition-duration: .01ms !important; scroll-behavior: auto !important;
+      }
+    }
+    h1, h2, h3, .post-hero__title, .card__title { text-wrap: balance; }
+
+    .post-body img, .post-body svg { max-width: 100%; height: auto; }
+
+    /* ── SKIP LINK ── a11y-perf R5: the link and the landmark it targets are a
+       pair — useless without both halves. Off-screen until focused, then the
+       first tab stop on every page. */
+    .skip-link { position: absolute; left: -9999px; }
+    .skip-link:focus {
+      left: 1rem; top: 1rem; z-index: 999;
+      background: var(--navy); color: #fff;
+      padding: 0.75rem 1.25rem; border-radius: var(--radius-sm);
+      font-weight: 600; text-decoration: none;
+    }
+
+    /* ── POST WAYFINDING ── the wordmark is the home link; the footer carries
+       the full destination row. */
+    .blog-nav__home {
+      font-size: 0.9rem; font-weight: 800; color: var(--navy);
+      text-decoration: none; margin-right: 1rem;
+    }
+    .blog-nav__home:hover { color: var(--blue); }
+    .blog-nav__inner > .blog-nav__back { margin-right: auto; }
+    .blog-footer__nav {
+      display: flex; flex-wrap: wrap; justify-content: center; gap: 0.35rem 1.25rem;
+      max-width: 860px; margin: 0 auto 1.25rem; padding: 0 2rem 1.25rem;
+      border-bottom: 1px solid rgba(255,255,255,0.12);
+    }
+    .blog-footer__nav a { color: var(--gold); font-size: 0.85rem; font-weight: 600; text-decoration: none; }
+    .blog-footer__nav a:hover { color: #fff; text-decoration: underline; }
+
+    html { scroll-padding-top: 5rem; }
+    [id] { scroll-margin-top: 5rem; }
+
+    /* Thai needs more room than Latin at the same nominal size. */
+    .post-body:lang(th) { font-size: 18px; line-height: 1.85; }
+    .post-body p, .post-body li, .post-body blockquote { text-wrap: pretty; }
+
+    /* ---- side-scroll affordance ----
+       pre blocks and tables can exceed 720px. These layers paint a shadow ONLY
+       where there is more content in that direction; when fully scrolled the
+       cover slides over the shadow and hides it. No JavaScript, no wrapper. */
+    .post-body pre, .post-body table {
+      overflow-x: auto;
+      background-image:
+        linear-gradient(to right, var(--code-bg, #0f172a) 30%, rgba(15,23,42,0)),
+        linear-gradient(to left, var(--code-bg, #0f172a) 30%, rgba(15,23,42,0)),
+        radial-gradient(farthest-side at 0 50%, rgba(0,0,0,.28), rgba(0,0,0,0)),
+        radial-gradient(farthest-side at 100% 50%, rgba(0,0,0,.28), rgba(0,0,0,0));
+      background-position: 0 0, 100% 0, 0 0, 100% 0;
+      background-repeat: no-repeat;
+      background-size: 40px 100%, 40px 100%, 14px 100%, 14px 100%;
+      background-attachment: local, local, scroll, scroll;
+    }
+    .post-body table {
+      background-image:
+        linear-gradient(to right, var(--white, #fff) 30%, rgba(255,255,255,0)),
+        linear-gradient(to left, var(--white, #fff) 30%, rgba(255,255,255,0)),
+        radial-gradient(farthest-side at 0 50%, rgba(17,48,75,.16), rgba(17,48,75,0)),
+        radial-gradient(farthest-side at 100% 50%, rgba(17,48,75,.16), rgba(17,48,75,0));
+      background-position: 0 0, 100% 0, 0 0, 100% 0;
+      background-repeat: no-repeat;
+      background-size: 40px 100%, 40px 100%, 14px 100%, 14px 100%;
+      background-attachment: local, local, scroll, scroll;
+    }
+
+    /* ---- table of contents ---- */
+    .post-toc {
+      max-width: 720px;
+      margin: 2rem auto 0;
+      padding: 1rem 1.25rem;
+      background: rgba(34,98,153,0.05);
+      border: 1px solid rgba(34,98,153,0.14);
+      border-left: 3px solid var(--gold, #c4a46c);
+      border-radius: 10px;
+      font-size: 0.92rem;
+    }
+    .post-toc > summary {
+      cursor: pointer;
+      font-weight: 700;
+      color: var(--navy);
+      list-style: none;
+    }
+    .post-toc > summary::-webkit-details-marker { display: none; }
+    .post-toc > summary::before {
+      content: "\25B8";
+      display: inline-block;
+      margin-right: 0.5rem;
+      transition: transform 0.2s ease;
+      color: var(--gold-dark, #7a5f22);
+    }
+    .post-toc[open] > summary::before { transform: rotate(90deg); }
+    .post-toc > summary:focus-visible { outline: 3px solid var(--focus, #226299); outline-offset: 3px; }
+    .post-toc ol { margin: 0.85rem 0 0.25rem; padding-left: 1.4rem; }
+    .post-toc li { margin-bottom: 0.4rem; line-height: 1.5; }
+    .post-toc a { color: var(--slate); text-decoration: none; }
+    .post-toc a:hover, .post-toc a:focus-visible { color: var(--blue-dark, #1a4d7a); text-decoration: underline; }
+    @media (max-width: 600px) { .post-toc { margin: 1.25rem 1rem 0; } }
+
+    /* ---- cross-document view transitions ---- */
+    @view-transition { navigation: auto; }
+    .nav, .blog-nav { view-transition-name: site-nav; }
+    .footer, .blog-footer { view-transition-name: site-footer; }
+    @media (prefers-reduced-motion: reduce) {
+      ::view-transition-group(*),
+      ::view-transition-old(*),
+      ::view-transition-new(*) { animation: none !important; }
+    }
+
+    /* ── SERIES STRIP — Hermes Agent in Practice ──
+       Same class and inner-wrapper shape as the OpenClaw strip because the
+       linter's RE_SNAV recognises exactly `series-nav` + a nested div; a
+       renamed strip would read as "no nav" and fail INV-08. All content
+       checks (INV-03 family) iterate the SERIES7 list only, so this strip's
+       labels are convention, not contract. House-styled, not the island CSS. */
+    .series-nav {
+      max-width: 720px; margin: 2rem auto 0; padding: 1.1rem 1.4rem;
+      background: rgba(255,255,255,0.75); border: 1px solid rgba(34,98,153,0.15);
+      border-left: 3px solid var(--gold); border-radius: 12px;
+    }
+    .series-nav h3 {
+      font-size: 0.78rem; font-weight: 700; text-transform: uppercase;
+      letter-spacing: 0.08em; color: var(--gold-dark); margin-bottom: 0.6rem;
+    }
+    .series-links { display: flex; flex-wrap: wrap; gap: 0.5rem; }
+    .series-links a, .series-links .current {
+      font-size: 0.82rem; font-weight: 600; padding: 0.35rem 0.8rem;
+      border-radius: 50px; text-decoration: none;
+    }
+    .series-links a { color: var(--blue-dark); background: rgba(34,98,153,0.08); }
+    .series-links a:hover { background: rgba(34,98,153,0.16); }
+    .series-links .current { color: #fff; background: var(--blue-dark); }
+    @media (max-width: 600px) { .series-nav { margin: 1.5rem 1rem 0; } }
+
+    /* ── LANGUAGE SWITCH — pure CSS, zero JavaScript (INV-38) ──
+       One visually-hidden checkbox as a direct child of body, BEFORE the main landmark,
+       so `#langSwitch:checked ~ main …` reaches every content block. The two
+       tracks are paired blocks: .l-th (default) and .l-en (hidden until
+       checked; display:revert restores block for divs, inline for spans).
+       Naming stays clear of INV-12's menu-token regex (hamburger|burger|
+       nav__toggle|nav-toggle|navtoggle|menu-toggle|menu__toggle) — verified.
+       No JS also means no persistence across posts; each post opens in Thai. */
+    .lang-switch-box { position: absolute; left: -9999px; }
+    .l-en { display: none; }
+    #langSwitch:checked ~ main .l-en { display: revert; }
+    #langSwitch:checked ~ main .l-th { display: none; }
+    .lang-switch {
+      display: inline-flex; align-items: center; gap: 0.55rem;
+      margin-top: 1.4rem; padding: 0.4rem 1.1rem; border-radius: 50px;
+      background: rgba(255,255,255,0.85); border: 1px solid rgba(255,255,255,0.4);
+      cursor: pointer; font-size: 0.85rem; user-select: none;
+    }
+    .lang-switch span { color: var(--slate-light); font-weight: 600; transition: color 0.2s; }
+    .lang-switch .lang-sep { color: var(--gray); font-weight: 400; }
+    .lang-switch .lang-th { color: var(--navy); font-weight: 800; }
+    #langSwitch:checked ~ main .lang-switch .lang-th { color: var(--slate-light); font-weight: 600; }
+    #langSwitch:checked ~ main .lang-switch .lang-en { color: var(--navy); font-weight: 800; }
+    .lang-switch:hover { border-color: #fff; }
+    #langSwitch:focus-visible ~ main .lang-switch {
+      outline: 2px solid var(--focus); outline-offset: 3px;
+    }
+  </style>
+  <!-- social -->
+  <link rel="canonical" href="https://anirach.com/blog/hermes-integrations.html">
+  <meta property="og:type" content="article">
+  <meta property="og:url" content="https://anirach.com/blog/hermes-integrations.html">
+  <meta property="og:site_name" content="Anirach Mingkhwan">
+  <meta property="og:locale" content="th_TH">
+  <meta property="article:published_time" content="2026-09-01">
+  <meta property="article:author" content="https://anirach.com/">
+  <meta property="og:title" content="Integrations — หนึ่ง Gateway เชื่อมทุกช่องทาง">
+  <meta property="og:description" content="เจาะระบบ integrations ของ Hermes Agent — gateway daemon เดียวเชื่อม Telegram, WhatsApp, Email และแพลตฟอร์มกว่า 27 ช่องทาง พร้อม MCP สองทิศทาง, Browser Use, ระบบเสียง และ Nous Portal ในมุมมองของคนที่ดูแล OpenClaw มาก่อน">
+  <meta itemprop="image" property="og:image" content="https://anirach.com/images/hermes-integrations-og.jpg">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
+  <meta property="og:image:alt" content="Integrations — หนึ่ง Gateway เชื่อมทุกช่องทาง">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:image" content="https://anirach.com/images/hermes-integrations-og.jpg">
+  <meta name="twitter:image:alt" content="Integrations — หนึ่ง Gateway เชื่อมทุกช่องทาง">
+  <meta name="robots" content="max-image-preview:large">
+  <meta name="theme-color" content="#11304b">
+  <link rel="icon" href="/favicon.ico" sizes="any">
+  <link rel="apple-touch-icon" href="/apple-touch-icon.png">
+  <!-- /social -->
+</head>
+<body>
+<a href="#main" class="skip-link">Skip to content</a>
+<input type="checkbox" id="langSwitch" class="lang-switch-box" aria-label="Switch language: Thai / English">
+
+  <nav class="blog-nav">
+    <div class="blog-nav__inner">
+      <a href="../index.html" class="blog-nav__home">Anirach</a>
+      <a href="./" class="blog-nav__back">‹ Blog</a>
+      <div class="blog-nav__title">Integrations · หนึ่ง Gateway เชื่อมทุกช่องทาง</div>
+    </div>
+  </nav>
+
+  <main id="main">
+
+  <header class="post-hero">
+    <div class="post-hero__tags">
+      <span class="post-hero__tag">Hermes</span>
+      <span class="post-hero__tag">AI Agents</span>
+      <span class="post-hero__tag">Integrations</span>
+    </div>
+    <h1 class="post-hero__title" itemprop="headline"><span class="l-th">Integrations — หนึ่ง Gateway เชื่อมทุกช่องทาง</span><span class="l-en" lang="en">Integrations — One Gateway, Every Channel</span></h1>
+    <p class="post-hero__sub"><span class="l-th">หนึ่ง daemon เชื่อม 27+ แพลตฟอร์ม — Telegram, WhatsApp, MCP, เสียง และ browser automation ในมุมมองของคนที่รัน OpenClaw มาก่อน</span><span class="l-en" lang="en">One daemon, 27+ platforms — Telegram, WhatsApp, MCP, voice, and browser automation, examined by someone coming from OpenClaw</span></p>
+    <div class="post-hero__meta">
+      <span>By <strong>Anirach Mingkhwan</strong></span>
+      <span class="post-hero__series">Hermes Agent in Practice 2026 • Post #5</span>
+      <span><time datetime="2026-09-01" itemprop="datePublished">1 Sep 2026</time></span>
+      <span>15 min read</span>
+    </div>
+    <label for="langSwitch" class="lang-switch" title="สลับภาษา · Switch language"><span class="lang-th">ไทย</span><span class="lang-sep">·</span><span class="lang-en" lang="en">English</span></label>
+    <div class="post-hero__cover">
+      <img src="../images/hermes-integrations-cover.jpg" alt="Integrations — หนึ่ง Gateway เชื่อมทุกช่องทาง" width="800" height="800" loading="eager" fetchpriority="high" decoding="async">
+    </div>
+  </header>
+
+  <nav aria-label="Hermes Agent in Practice">
+  <div class="series-nav">
+    <h3>⚡ Hermes Agent in Practice 2026</h3>
+    <div class="series-links">
+        <a href="/blog/hermes-101">#1 Hermes 101</a>
+        <a href="/blog/hermes-agent-teams">#2 Agent Teams</a>
+        <a href="/blog/hermes-memory">#3 Memory</a>
+        <a href="/blog/hermes-security">#4 Security</a>
+        <span class="current" aria-current="page">#5 Integrations</span>
+        <a href="/blog/hermes-skills">#6 Skills</a>
+        <a href="/blog/hermes-production">#7 Production</a>
+    </div>
+  </div>
+  </nav>
+
+  <article class="post-body" itemscope itemtype="https://schema.org/BlogPosting">
+    <span itemprop="author" itemscope itemtype="https://schema.org/Person"><meta itemprop="name" content="Anirach Mingkhwan"></span>
+
+    <details class="post-toc l-th" open>
+      <summary>ในบทความนี้</summary>
+      <ol>
+          <li><a href="#th-gateway">The Gateway — daemon เดียวสำหรับ messaging, cron และเสียง</a></li>
+          <li><a href="#th-surface">จากห้าสู่ 27+ — พื้นที่แพลตฟอร์มจริง</a></li>
+          <li><a href="#th-control">Per-Channel Control — allowlists, pairing และ channel_overrides</a></li>
+          <li><a href="#th-setups">ลงมือจริง — Telegram, WhatsApp, Email, WeCom</a></li>
+          <li><a href="#th-mcp">MCP สองทิศทาง — OAuth 2.1 และ hermes mcp serve</a></li>
+          <li><a href="#th-browser">Browser Automation — Browser Use เป็น driver หลัก</a></li>
+          <li><a href="#th-voice-portal">เสียง ปฏิทิน และ Nous Portal Tool Gateway</a></li>
+          <li><a href="#th-beyond">Beyond Chat — A2A, Webhooks, ACP และ API</a></li>
+      </ol>
+    </details>
+    <details class="post-toc l-en" open>
+      <summary>In this post</summary>
+      <ol>
+          <li><a href="#en-gateway">The gateway — one daemon for messaging, cron, and voice</a></li>
+          <li><a href="#en-surface">From five to twenty-seven-plus — the real platform surface</a></li>
+          <li><a href="#en-control">Per-channel control — allowlists, pairing, and channel_overrides</a></li>
+          <li><a href="#en-setups">Concrete setups — Telegram, WhatsApp, Email, WeCom</a></li>
+          <li><a href="#en-mcp">MCP both ways — OAuth 2.1 and hermes mcp serve</a></li>
+          <li><a href="#en-browser">Browser automation — Browser Use as the default driver</a></li>
+          <li><a href="#en-voice-portal">Voice, calendars, and the Nous Portal Tool Gateway</a></li>
+          <li><a href="#en-beyond">Beyond chat — A2A, webhooks, ACP editors, and the API</a></li>
+      </ol>
+    </details>
+    <div class="l-th">
+
+    <p>🤔 หลังจากผมเขียนซีรีส์ <strong>OpenClaw for Organizations</strong> ครบทั้งเจ็ดตอน คำถามที่ได้รับกลับมาบ่อยที่สุดไม่ใช่เรื่อง model ไม่ใช่เรื่อง memory แต่เป็นคำถามพื้น ๆ ที่ตอบยากที่สุด — <em>"จะเอา agent ไปอยู่ในช่องทางที่คนในองค์กรใช้จริงได้อย่างไร"</em> เพราะ agent ที่ฉลาดแค่ไหนก็ตาม ถ้าคุยกับมันได้เฉพาะใน terminal ของคนติดตั้ง มันก็เป็นแค่ของเล่นของ engineer หนึ่งคน ยังไม่ใช่เครื่องมือขององค์กร</p>
+
+    <p>ฝั่ง OpenClaw ผมตอบคำถามนี้ไว้แล้วใน <a href="/blog/openclaw-integrations">OpenClaw Integrations</a> ปีนี้ผมกำลังพิจารณา <strong>Hermes Agent</strong> ของ Nous Research อย่างจริงจัง และบทที่ 5 ของซีรีส์นี้ต้องตอบคำถามเดียวกันในฝั่ง Hermes: มันเชื่อมกับโลกภายนอกอย่างไร ต่างจากสิ่งที่เราคุ้นเคยตรงไหน และจุดไหนที่ต้องระวังก่อนเปิดใช้จริง</p>
+
+    <p>คำตอบแบบย่อที่บทความนี้จะค่อย ๆ ขยาย: ทุกช่องทางวิ่งผ่าน <strong>gateway process</strong> ตัวเดียว หน้า README ชูห้าแพลตฟอร์มหลักบวก CLI แต่เอกสาร integrations จริงรองรับมากกว่า 27 แพลตฟอร์ม ฝั่งเครื่องมือมี <strong>MCP</strong> ที่ทำงานได้ทั้งสองทิศทาง มี browser automation ที่ยก <strong>Browser Use</strong> เป็น driver หลัก และมี <strong>Nous Portal</strong> ที่รวบเครื่องมือหลายตัวไว้หลัง OAuth ครั้งเดียว</p>
+
+    <h2 id="th-gateway">The Gateway — daemon เดียวสำหรับ messaging, cron และเสียง</h2>
+
+    <p>สถาปัตยกรรม integration ของ Hermes เริ่มจากแนวคิดเดียว: <strong>gateway</strong> คือ background process หนึ่งตัวที่ถือ connection ของทุกช่องทางไว้ด้วยกัน และตามเอกสาร messaging อย่างเป็นทางการ gateway ตัวนี้ไม่ได้ทำแค่ messaging — มันรัน <strong>cron scheduler</strong> ที่ตรวจงานทุก 60 วินาที และดูแลการส่งเสียง (voice delivery) ด้วย พูดให้ตรงคือ ถ้า gateway หยุด ทุกช่องทางเงียบพร้อมกัน ถ้า gateway อยู่ ทุกอย่างอยู่ — เป็นทั้งจุดแข็งเชิงการดูแลระบบ และ single point of failure ในตัวเดียวกัน</p>
+
+    <p>ก่อนจะมี gateway ต้องมีตัว Hermes เองก่อน — การติดตั้งเป็น one-liner บน Linux, macOS, WSL2 หรือแม้แต่ Termux บนมือถือ Android:</p>
+
+    <pre><code># ติดตั้ง Hermes Agent (Linux / macOS / WSL2 / Termux)
+curl -fsSL https://hermes-agent.nousresearch.com/install.sh | bash
+
+# ฝั่ง Windows
+iex (irm https://hermes-agent.nousresearch.com/install.ps1)</code></pre>
+
+    <pre><code># วงจรชีวิตของ gateway — จากเอกสาร messaging อย่างเป็นทางการ
+hermes gateway setup      # wizard เลือกช่องทางและกรอก token
+hermes gateway install    # ติดตั้งเป็น background service
+hermes gateway start      # หรือสตาร์ทด้วยมือ
+hermes gateway status     # เช็คสถานะ adapter ทุกตัว
+hermes gateway stop</code></pre>
+
+    <p>คนที่ตามมาจากซีรีส์ OpenClaw จะรู้สึกคุ้น เพราะ OpenClaw ก็รวมทุกช่องทางไว้ใน gateway process เดียวเหมือนกัน — แนวคิดนี้ Hermes ไม่ได้คิดใหม่ แต่รับช่วงต่อแล้วขัดเกลารายละเอียด และสำหรับองค์กรที่มี OpenClaw รันอยู่แล้ว เอกสารของ Hermes ระบุว่าคำสั่งย้ายระบบ <code>hermes claw migrate</code> พก messaging tokens เดิมข้ามมาด้วย ไม่ต้องไล่สมัคร bot ใหม่ทุกแพลตฟอร์ม</p>
+
+    <p>เมื่อ gateway ทำงานแล้ว การควบคุมรายวันเกือบทั้งหมดทำจากในแชตโดยตรง ด้วยชุดคำสั่งเดียวกันบนทุกแพลตฟอร์ม:</p>
+
+    <pre><code>/model             # สลับ model สด ๆ กลางบทสนทนา — ใช้ได้ทุกแพลตฟอร์มตั้งแต่ v0.8.0
+/voice             # โหมดเสียง
+/bg                # ส่งงานยาวไปทำเบื้องหลัง
+/platform pause    # หยุดรับข้อความชั่วคราวเป็นรายแพลตฟอร์ม
+/platform resume
+/reload-mcp        # โหลด MCP servers ใหม่โดยไม่ต้อง restart gateway
+/new /reset /sessions /personality /update</code></pre>
+
+    <blockquote>💡 จุดที่ผมชอบที่สุดในฐานะคนดูแลระบบ: cron กับ messaging อยู่ใน process เดียวกัน งานตั้งเวลาอย่างสรุปข่าวตอนเช้าหรือรายงานประจำสัปดาห์จึงส่งผลลัพธ์กลับเข้าห้องแชตได้เอง โดยไม่ต้องเขียน glue code เพิ่มแม้แต่บรรทัดเดียว</blockquote>
+
+    <h2 id="th-surface">จากห้าสู่ 27+ — พื้นที่แพลตฟอร์มจริง</h2>
+
+    <p>หน้า README ของ Hermes ชูประโยคที่ท่องง่าย: Telegram, Discord, Slack, WhatsApp, Signal และ CLI — "all from a single gateway process" นั่นคือ<strong>ห้าแพลตฟอร์ม messaging บวกหนึ่ง terminal</strong> แต่พอเปิดหน้า integrations index ของเอกสารจริง ตัวเลขเป็นคนละเรื่อง: แพลตฟอร์มที่รองรับมี <strong>มากกว่า 27 ช่องทาง</strong> และหน้าเอกสาร messaging ไล่รายชื่อ adapter ได้ราว ๆ 28 ตัว ครอบคลุมตั้งแต่ protocol เปิดไปจนถึง ecosystem แชตของจีนครบชุด</p>
+
+    <div class="table-wrapper">
+        <table>
+            <thead>
+                <tr>
+                    <th>กลุ่ม</th>
+                    <th>แพลตฟอร์ม</th>
+                    <th>หมายเหตุ</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td><strong>Mainstream</strong></td>
+                    <td>Telegram, Discord, Slack, WhatsApp, Signal, Email, SMS (Twilio), Microsoft Teams, Google Chat, LINE</td>
+                    <td>ครอบคลุมช่องทางที่องค์กรไทยและสากลใช้จริง รวมถึง LINE</td>
+                </tr>
+                <tr>
+                    <td><strong>Open protocol</strong></td>
+                    <td>Matrix, Mattermost, IRC, SimpleX, ntfy</td>
+                    <td>Matrix ได้สถานะ "Tier 1" ตั้งแต่ v0.8.0 — reactions, read receipts, rich formatting</td>
+                </tr>
+                <tr>
+                    <td><strong>Ecosystem จีน</strong></td>
+                    <td>DingTalk, Feishu/Lark, WeCom, Weixin, QQ, Yuanbao</td>
+                    <td>ครบทั้งสายองค์กรและสายผู้บริโภค</td>
+                </tr>
+                <tr>
+                    <td><strong>ผ่าน bridge</strong></td>
+                    <td>iMessage (BlueBubbles หรือ Photon), WhatsApp (Baileys หรือ Meta Cloud API)</td>
+                    <td>iMessage ไม่มีทางตรง — ต้องผ่านสะพานหนึ่งในสองตัวเสมอ</td>
+                </tr>
+                <tr>
+                    <td><strong>Surface อื่น</strong></td>
+                    <td>Home Assistant, Buzz (Nostr), Open WebUI, Webhooks / API server / A2A</td>
+                    <td>Home Assistant เป็นทั้งช่องแชตและ home automation ในตัวเดียว</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <p>สองแถวในตารางนี้ควรอ่านซ้ำอีกรอบ ข้อแรก <strong>WhatsApp มีสองเส้นทาง</strong>: เส้นไม่เป็นทางการผ่าน Baileys bridge ซึ่งเอกสารเตือนเรื่องความเสี่ยงโดนแบนไว้ตรง ๆ กับเส้นทางการผ่าน Meta Cloud API ที่ต้องมี Business account ข้อสอง <strong>iMessage ต้องผ่าน bridge เท่านั้น</strong> — ใครที่หวังว่าจะเสียบ agent เข้า iMessage ตรง ๆ แบบไม่มีเครื่อง Mac คั่นกลาง เอกสารไม่ได้สัญญาแบบนั้นให้</p>
+
+    <p>ผมมองตัวเลข "ห้า vs 27+" นี้เป็นบทเรียนการอ่านเอกสารมากกว่าเรื่องการตลาด: README เลือกโชว์ช่องทางที่เสถียรที่สุด ส่วนหน้า integrations คือ surface จริงที่กว้างกว่ามาก เวลาประเมินเครื่องมือ ให้เชื่อหน้า docs ไม่ใช่หน้าแรกของ repo</p>
+
+    <div class="alert info">
+        <strong>ระวังโดเมนเลียนแบบ:</strong> โดเมนทางการคือ <a href="https://hermes-agent.nousresearch.com">hermes-agent.nousresearch.com</a> (ตรงกับ homepage field ของ repo บน <a href="https://github.com/NousResearch/hermes-agent">GitHub</a>) ส่วน hermes-agent.org, hermesagents.net, hermes-agent.ai และ hermesagent.org.cn เป็นเว็บหน้าตาคล้ายของจริงที่ยังยืนยันเจ้าของไม่ได้ — อย่า copy คำสั่งติดตั้งจากเว็บกลุ่มหลังเด็ดขาด</div>
+
+    <h2 id="th-control">Per-Channel Control — allowlists, pairing และ channel_overrides</h2>
+
+    <p>Surface กว้างขนาดนี้ คำถามแรกของฝ่าย IT ต้องเป็น "แล้วใครคุยกับ agent ได้บ้าง" Hermes ตอบด้วยกลไกเป็นชั้น ๆ ชั้นแรกคือ <strong>allowlist ราย platform</strong> ผ่าน environment variables ตระกูล <code>*_ALLOWED_USERS</code> — ค่าเริ่มต้นคือปฏิเสธคนนอกรายชื่อ:</p>
+
+    <pre><code># ~/.hermes/.env — คุมรายแพลตฟอร์มว่าใครคุยได้
+TELEGRAM_ALLOWED_USERS=123456789,987654321
+DISCORD_ALLOWED_USERS=haruki#1234
+EMAIL_ALLOWED_USERS=team@company.co.th
+
+# สวิตช์เปิดรับทุกคน — มีไว้ แต่คิดให้หนักก่อนใช้
+# GATEWAY_ALLOW_ALL_USERS=true</code></pre>
+
+    <p>ชั้นที่สองสำหรับกรณีที่ไม่อยากไล่จด user ID ล่วงหน้า: <strong>DM pairing</strong> — ผู้ใช้ใหม่ทักเข้ามา ระบบตอบกลับด้วยรหัส แล้วผู้ดูแลอนุมัติจากฝั่ง CLI:</p>
+
+    <pre><code>hermes pairing approve telegram 483920   # อนุมัติรหัสที่ผู้ใช้ได้รับ
+hermes pairing list                      # ดูว่าใครจับคู่ไว้แล้วบ้าง
+hermes pairing revoke telegram &lt;id&gt;      # ถอนสิทธิ์ภายหลังได้</code></pre>
+
+    <p>ถ้าติดตามข่าวฝั่ง OpenClaw มาตลอดปี จะรู้ว่าแผลใหญ่ช่วงต้นปีคือ gateway ที่ถูกเปิดทิ้งไว้บนอินเทอร์เน็ตโดยไม่มีรั้วกั้น Hermes เปิดตัวหลังเหตุการณ์เหล่านั้นและออกแบบสวนทางอย่างจงใจ — ทุกช่องทางเป็น default-deny ตั้งแต่แรก และผู้ใช้หน้าใหม่เข้าได้ทางเดียวคือรหัส pairing ที่มีคนอนุมัติจากฝั่ง CLI</p>
+
+    <p>ชั้นที่สามคือของที่ผมยังไม่เคยได้ง่าย ๆ ขนาดนี้จากเครื่องมือตระกูลเดียวกัน: <strong>channel_overrides</strong> ใน <code>~/.hermes/gateway-config.yaml</code> กำหนด <em>model และ system prompt คนละชุดต่อ channel ID</em> ได้เลย — ห้อง DevOps ใช้ model แพงและ prompt เข้มงวด ห้องถามตอบทั่วไปใช้ model ประหยัด โครงคร่าว ๆ เป็นแบบนี้ (schema เต็มดูในเอกสาร messaging):</p>
+
+    <pre><code># ~/.hermes/gateway-config.yaml — บุคลิกและ model ต่อห้อง
+channel_overrides:
+  "telegram:-1001234567890":     # ห้องทีม DevOps
+    model: กำหนด model เฉพาะห้องนี้
+    system_prompt: prompt เข้มงวดสำหรับงาน infra
+  "discord:555555555":           # ห้องถามตอบรวม
+    model: ตัวประหยัดสำหรับคำถามทั่วไป</code></pre>
+
+    <p>มุมมองของผม: สามชั้นนี้คือรูปธรรมของ default-deny ที่ผมวิเคราะห์ไว้ในบทที่ 4 <a href="/blog/hermes-security">Hermes Security</a> — ช่องทางเยอะไม่น่ากลัวเท่าช่องทางที่เปิดโดยไม่มีรั้ว และ Hermes ให้รั้วมาเป็นค่าเริ่มต้น</p>
+
+    <hr>
+
+    <h2 id="th-setups">ลงมือจริง — Telegram, WhatsApp, Email, WeCom</h2>
+
+    <p>ทฤษฎีพอแล้ว มาดูการต่อช่องทางจริงสี่แบบที่ผมคิดว่าครอบคลุมองค์กรไทยส่วนใหญ่ — ตัวแรกง่ายที่สุด ตัวหลัง ๆ มีเงื่อนไขที่ต้องรู้ก่อนกด enter</p>
+
+    <h3>Telegram — จุดเริ่มที่เจ็บตัวน้อยที่สุด</h3>
+
+    <p>สร้าง bot ผ่าน BotFather ให้ได้ token มาก่อน แล้วรัน <code>hermes gateway setup</code> เลือก Telegram วาง token ตาม wizard จากนั้นใส่ <code>TELEGRAM_ALLOWED_USERS</code> ใน <code>.env</code> ให้เรียบร้อยก่อนสตาร์ท gateway — เท่านี้ agent ก็อยู่ใน Telegram แล้ว ฟีเจอร์ฝั่งนี้ค่อนข้างครบ: ตั้งแต่ v0.8.0 มีปุ่มกดอนุมัติ (approval buttons) ใน Telegram และ Slack ให้ผู้ใช้กดยืนยันงานเสี่ยงจากในแชตได้เลย</p>
+
+    <p>สูตรที่ชุมชนใช้แพร่หลายที่สุดคือคู่นี้บน VPS ราคาถูก — คู่มือของ heyuan110.com (เมษายน 2026 ยุค v0.9.0 ซึ่งเป็นแหล่ง third-party) ไล่ขั้นตอนไว้ครบ: ติดตั้งด้วยสคริปต์ทางการหรือรันผ่าน Docker ด้วย image <code>nousresearch/hermes-agent:latest</code> โดยเมานต์ <code>~/.hermes</code> เป็น volume (config, session และ token ทั้งหมดอยู่ในโฟลเดอร์นั้น) บนเครื่อง VPS ระดับ $4-5 ต่อเดือนจาก Hetzner, DigitalOcean หรือ Vultr ก็เพียงพอ และแนะนำ OpenRouter เป็น provider ตั้งต้นสำหรับคนที่ยังไม่มี API key เจ้าไหนเลย</p>
+
+    <div class="alert info">
+        <strong>หมายเหตุสำหรับคนย้ายจากสาย Claude:</strong> คู่มือเดียวกันบันทึกไว้ว่า Anthropic ปิดการใช้ subscription (Pro/Max) ผ่านเครื่องมือ third-party ตั้งแต่เมษายน 2026 — จะใช้ Claude ใน Hermes จึงต้องเป็น API key แบบจ่ายตามใช้ ประเด็นนี้กระทบทุก harness เท่ากัน รวมถึง setup ฝั่ง OpenClaw ที่ผู้อ่านซีรีส์เดิมหลายคนใช้อยู่</div>
+
+    <h3>WhatsApp — สองเส้นทาง ความเสี่ยงคนละระดับ</h3>
+
+    <p>เส้นทางแรกคือ wizard ในตัว: รัน <code>hermes whatsapp</code> แล้วสแกน QR จากมือถือ (Settings → Linked Devices) — วิธีนี้ใช้ bridge ไม่เป็นทางการสาย Baileys</p>
+
+    <pre><code># ~/.hermes/.env — WhatsApp ผ่านเส้นทาง Baileys
+WHATSAPP_ENABLED=true
+WHATSAPP_MODE=bot              # หรือ self-chat
+WHATSAPP_ALLOWED_USERS=66812345678   # เบอร์พร้อมรหัสประเทศ ไม่ใส่เครื่องหมาย +
+
+# session ถูกเก็บไว้ที่ ~/.hermes/platforms/whatsapp/session</code></pre>
+
+    <div class="alert danger">
+        <strong>ความเสี่ยงโดนแบน:</strong> เอกสารทางการเตือนตรง ๆ ว่าเส้นทาง Baileys เป็นวิธีไม่เป็นทางการ มีความเสี่ยงที่บัญชีจะถูกแบน และแนะนำให้ใช้<em>เบอร์แยกเฉพาะ</em> (เบอร์ prepaid หรือเบอร์เสมือน) ไม่ใช่เบอร์หลักของคุณหรือขององค์กร ส่วนเส้นทางที่ถูกต้องคือ Meta Cloud API ซึ่งต้องมี Business account และ public webhook — เหมาะกับงาน production ที่รับความเสี่ยงแบนไม่ได้</div>
+
+    <h3>Email — เก่าแต่เก๋า และต้องมีวินัย</h3>
+
+    <p>ช่อง Email ไม่มีเวทมนตร์อะไร — IMAP/SMTP ตรง ๆ ผ่าน env vars ระบบ poll กล่อง UNSEEN ทุก 15 วินาทีโดยค่าเริ่มต้น และตอบกลับแบบต่อ thread ด้วย header <code>In-Reply-To</code>/<code>References</code> ให้เอง:</p>
+
+    <pre><code># ~/.hermes/.env — email ผ่าน IMAP/SMTP ธรรมดา
+EMAIL_ADDRESS=agent@company.co.th
+EMAIL_PASSWORD=app-password-here     # ใช้ app password เสมอ
+EMAIL_IMAP_HOST=imap.company.co.th   # port 993
+EMAIL_SMTP_HOST=smtp.company.co.th   # port 587
+EMAIL_POLL_INTERVAL=15               # วินาที — ค่าเริ่มต้น
+EMAIL_ALLOWED_USERS=boss@company.co.th
+EMAIL_HOME_ADDRESS=me@company.co.th  # ปลายทางของงานอัตโนมัติ</code></pre>
+
+    <div class="alert">
+        <strong>ใช้บัญชีแยกเท่านั้น:</strong> เอกสารย้ำแรงเรื่องนี้ — รหัสผ่านอยู่ใน <code>.env</code> เป็น plain text และ agent เห็นทั้ง inbox อย่าเอาอีเมลส่วนตัวหรืออีเมลงานหลักมาเสียบ สร้างบัญชีใหม่เฉพาะกิจให้ agent ใช้</div>
+
+    <h3>WeCom — ตัวอย่างจากฝั่ง Enterprise WeChat</h3>
+
+    <p>สำหรับองค์กรที่ทำงานกับพาร์ตเนอร์จีน คู่มือ techpedia ของ Tencent Cloud (เมษายน 2026) อธิบายขั้นตอนฝั่ง WeCom ไว้ชัดเจน:</p>
+
+    <pre><code># ตามคู่มือ Tencent Cloud techpedia (เมษายน 2026)
+# 1) สร้าง bot ใน Enterprise WeChat แล้วจดค่า Bot ID กับ Secret
+# 2) เติมค่าทั้งสองลง ~/.hermes/.env
+# 3) ติดตั้ง gateway เป็น service
+hermes gateway install</code></pre>
+
+    <p>คู่มือเดียวกันชี้ว่าแพลตฟอร์มอื่น ๆ ตั้งค่าผ่าน wizard <code>hermes setup</code> ได้หมด และ Tencent ถึงขั้นออก template ติดตั้ง Hermes แบบคลิกเดียวบน Lighthouse ตั้งแต่กลางเดือนเมษายน 2026 — สัญญาณว่าตลาดจีนรับเครื่องมือตัวนี้เร็วมาก</p>
+
+    <hr>
+
+    <h2 id="th-mcp">MCP สองทิศทาง — OAuth 2.1 และ hermes mcp serve</h2>
+
+    <p>ช่องทางแชตคือขาเข้า ส่วนขาออกสู่เครื่องมือภายนอก Hermes เดิมพันกับ <strong>MCP</strong> (Model Context Protocol) เต็มตัว การลงทะเบียน server ทำใน <code>~/.hermes/config.yaml</code> ใต้ key <code>mcp_servers</code> รองรับทั้ง transport แบบ stdio และ HTTP/SSE และจุดที่เหนือกว่าที่ผมเคยใช้ในยุค OpenClaw คือ <strong>OAuth 2.1</strong> แบบครบวงจร — ตั้ง <code>auth: oauth</code> แล้วระบบจัดการ PKCE กับ Dynamic Client Registration ให้อัตโนมัติ (ความสามารถชุดนี้เข้ามาตั้งแต่ v0.8.0 เมื่อ 8 เมษายน 2026):</p>
+
+    <pre><code># ~/.hermes/config.yaml — โครงโดยสังเขป (schema เต็มอยู่ในเอกสาร MCP)
+mcp_servers:
+  internal-kb:
+    transport: stdio           # รันเป็น subprocess ในเครื่อง
+  issue-tracker:
+    transport: sse             # ต่อ HTTP/SSE ไปหา server ภายนอก
+    auth: oauth                # OAuth 2.1 — PKCE + Dynamic Client Registration อัตโนมัติ
+    include:
+      - "issue_*"              # กรองให้เหลือเฉพาะ tool ที่ต้องการ ด้วย glob
+    exclude:
+      - "*_delete"             # ตัด tool อันตรายออกทั้งกลุ่ม</code></pre>
+
+    <p>รายละเอียดที่เอกสาร MCP ระบุแล้วผมจดไว้เป็นพิเศษ:</p>
+
+    <ul>
+        <li><strong>ชื่อ tool</strong> ถูกลงทะเบียนเป็น <code>mcp_&lt;server&gt;_&lt;tool&gt;</code> — ไล่ audit ได้ว่า tool ไหนมาจาก server ไหน</li>
+        <li><strong>MCP sampling</strong> เปิดโดยค่าเริ่มต้นที่ 10 requests/นาที และ elicitation มี timeout 300 วินาที</li>
+        <li><strong>กันการ inject:</strong> อักขระ Unicode tag ช่วง U+E0000–U+E007F ถูกถอดออกจากผลลัพธ์ของ tool — ช่องซ่อนคำสั่งแบบล่องหนที่โจมตีกันจริงในปีนี้</li>
+        <li><strong>OSV malware scanning</strong> ตรวจแพ็กเกจ MCP ก่อนติดตั้ง (มาตั้งแต่ v0.8.0) และงานที่ต้องการ mutual TLS ก็ตั้ง <code>client_cert</code>/<code>client_key</code> ได้</li>
+    </ul>
+
+    <p>ฝั่งการจัดการมี CLI ครบชุด และบรรทัดสุดท้ายคือของที่กลับทิศทางทั้งบทความนี้:</p>
+
+    <pre><code>hermes mcp                    # catalog picker แบบ interactive
+hermes mcp install &lt;name&gt;     # ติดตั้งจาก catalog (โฟลเดอร์ optional-mcps/)
+hermes mcp login &lt;name&gt;       # จัดการ OAuth login รายตัว
+/reload-mcp                   # โหลดใหม่กลางวง ไม่ต้อง restart gateway
+
+hermes mcp serve              # กลับทิศ: เปิด Hermes เป็น MCP server เสียเอง</code></pre>
+
+    <blockquote>💡 <code>hermes mcp serve</code> เปิด Hermes ออกมาเป็น MCP server 10 tools (stdio เท่านั้น) ให้ Claude Code, Cursor หรือ Codex ต่อเข้ามาใช้ — แปลว่า agent ในเครื่องมือเขียนโค้ดของคุณสั่งงาน Hermes ได้ ทิศทางนี้เองที่ทำให้ผมเรียกหัวข้อนี้ว่า "MCP สองทิศทาง"</blockquote>
+
+    <p>Catalog ที่คัดมาให้ก็โตเร็ว — release v0.20.6 (27 สิงหาคม 2026) รวบรวม MCP server ของ vendor ไว้มากกว่า 50 ตัว และ v0.21.0 (31 สิงหาคม 2026) เพิ่ม <strong>MCP command center</strong> บน desktop: หน้ารวม server กับ catalog, health check เบื้องหลัง, overlay ต้นทุนย้อนหลัง 30 วัน และ deep link แบบ <code>hermes://</code> ที่มีหน้ายืนยันก่อนทำงานเสมอ</p>
+
+    <h2 id="th-browser">Browser Automation — Browser Use เป็น driver หลัก</h2>
+
+    <p>เรื่องนี้มีไทม์ไลน์ที่ควรเล่าให้ถูก จุดเปลี่ยนแรกคือ v0.8.0 (8 เมษายน 2026) ที่ release notes เขียนตรง ๆ ว่า "Switch managed browser provider from Browserbase to Browser Use" (PR #5750 จาก contributor ในชุมชน) พร้อมเพิ่ม Firecrawl เป็น cloud browser อีกตัวในรีลีสเดียวกัน ส่วน ณ กันยายน 2026 เอกสาร browser ไปไกลกว่านั้น: <strong>Browser Use เป็น driver หลักโดยค่าเริ่มต้น</strong> — เมื่อไม่ได้ตั้ง <code>browser.backend</code> และเครื่องมี browser-use CLI พร้อมใช้ agent จะได้ tool เดียวชื่อ <code>browser_exec</code> ครอบทุกอย่าง (เอกสารอ้างอิง Browser Use CLI 3.0 — ส่วนรีลีสไหนที่เปลี่ยนสถานะเป็น default นั้นเอกสารไม่ได้ระบุ ผมจึงไม่ฟันธง)</p>
+
+    <pre><code># ~/.hermes/config.yaml
+browser:
+  backend: "browser-use"       # ระบุชัด หรือปล่อยว่างให้ auto-detect
+  # use_real_profile: true     # v0.20.6+ — ใช้ snapshot โปรไฟล์จริง มี consent gate
+
+# ~/.hermes/.env
+BROWSER_USE_API_KEY=bu_xxx     # สำหรับ Browser Use Cloud</code></pre>
+
+    <p>ความยืดหยุ่นอยู่ตรงที่ driver ตัวเดียวประกอบร่างกับ backend ได้หลายแบบ:</p>
+
+    <div class="table-wrapper">
+        <table>
+            <thead>
+                <tr>
+                    <th>Backend</th>
+                    <th>ลักษณะ</th>
+                    <th>เหมาะกับ</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td><strong>Browser Use Cloud</strong></td>
+                    <td>Cloud — stealth, residential proxies, แก้ CAPTCHA</td>
+                    <td>งาน scraping/automation ที่เว็บปลายทางกันบอทหนัก</td>
+                </tr>
+                <tr>
+                    <td><strong>Browserbase</strong></td>
+                    <td>Cloud browser เจ้าเดิมก่อนการสลับใน v0.8.0</td>
+                    <td>ทีมที่มีบัญชีและ workflow เดิมอยู่แล้ว</td>
+                </tr>
+                <tr>
+                    <td><strong>Firecrawl</strong></td>
+                    <td>Cloud — เข้ามาพร้อม v0.8.0</td>
+                    <td>งานสาย extraction ที่ใช้ Firecrawl search อยู่แล้ว</td>
+                </tr>
+                <tr>
+                    <td><strong>Camofox / Lightpanda</strong></td>
+                    <td>Browser ทางเลือกน้ำหนักเบา</td>
+                    <td>งานที่ต้องการ footprint เล็ก</td>
+                </tr>
+                <tr>
+                    <td><strong>Local Chromium (CDP)</strong></td>
+                    <td>ต่อ Chrome ในเครื่องผ่าน <code>/browser connect</code></td>
+                    <td>debug และงานที่ต้องเห็นหน้าจอจริง</td>
+                </tr>
+                <tr>
+                    <td><strong>Nous Portal</strong></td>
+                    <td>Cloud browser ผ่านบัญชี Portal</td>
+                    <td>คนที่ไม่อยากถือ API key แยกอีกใบ</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <pre><code>/browser connect     # ต่อ Chromium ในเครื่องผ่าน CDP จากในแชต
+# ข้อจำกัด: Chrome 136 ขึ้นไปต้องแยก user-data-dir เฉพาะ
+# ห้ามชี้ไปที่โปรไฟล์หลักที่ล็อกอินค้างไว้</code></pre>
+
+    <p>ของแถมสองชิ้นท้ายไทม์ไลน์: v0.20.6 เพิ่ม <strong>real-profile browsing</strong> — snapshot โปรไฟล์เบราว์เซอร์จริงพร้อม cookies และ session ล็อกอิน ภายใต้ consent gate ที่ต้องยืนยันเอง และ v0.21.0 ให้ agent ควบคุม browser ในแอป desktop ได้โดยตรง สำหรับผม real-profile คือฟีเจอร์ที่ทรงพลังและน่ากลัวที่สุดในบทนี้ — cookies คือกุญแจบ้านทุกดอกของคุณ เปิดใช้เมื่อเข้าใจราคาของมันแล้วเท่านั้น</p>
+
+    <hr>
+
+    <h2 id="th-voice-portal">เสียง ปฏิทิน และ Nous Portal Tool Gateway</h2>
+
+    <p>เสียงกลายเป็นพระเอกของ v0.20.0 "The Herald Release" (3 สิงหาคม 2026): TTS แบบสตรีมทีละ clause ระหว่างที่คำตอบกำลัง generate, <strong>barge-in</strong> พูดแทรกเพื่อขัดจังหวะได้ และ wake word แบบ on-device ("hey Hermes") ที่ไม่ต้องส่งเสียงขึ้น cloud ตลอดเวลา ฝั่ง provider เลือกได้หลายเจ้า:</p>
+
+    <div class="table-wrapper">
+        <table>
+            <thead>
+                <tr>
+                    <th>ด้าน</th>
+                    <th>Providers</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td><strong>TTS</strong></td>
+                    <td>Edge TTS (ค่าเริ่มต้น ฟรี), ElevenLabs, OpenAI, MiniMax (speech-2.8 — เข้ามาตั้งแต่ v0.8.0), xAI, NeuTTS</td>
+                </tr>
+                <tr>
+                    <td><strong>STT</strong></td>
+                    <td>8 เจ้า เช่น faster-whisper, Groq, OpenAI, Mistral, xAI, ElevenLabs Scribe, DeepInfra</td>
+                </tr>
+                <tr>
+                    <td><strong>Voice notes</strong></td>
+                    <td>ราว 11 แพลตฟอร์มแชต เช่น Telegram, Discord, Slack, Matrix, WeCom — ฝั่ง WhatsApp ระบบถอดเสียงข้อความเสียงให้อัตโนมัติ</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <p>ด้านปฏิทินและอีเมลเชิง productivity ตัวหลักคือ skill ทางการ <strong>Google Workspace</strong> — Gmail, Calendar, Drive, Contacts, Sheets, Docs ผ่าน OAuth2 ที่ refresh token ให้เอง จุดที่น่าสนใจคือขั้นตอน setup เป็นแบบ <em>agent-driven</em>: Hermes พาคุณสร้าง Google Cloud project เปิด API และสร้าง credentials ทีละขั้นในบทสนทนา (เบื้องหลัง skill นี้เลือกใช้ gws CLI เมื่อมีในเครื่อง และถอยไปใช้ Google Python client libraries เมื่อไม่มี) ส่วนคนที่ไม่ได้อยู่ในจักรวาล Google ก็มี plugin ฝั่งชุมชนสาย CalDAV (Yandex, Nextcloud) ใน directory ชุมชน awesome-hermes-agent — ย้ำว่าเป็นของชุมชน ไม่ใช่ของ Nous</p>
+
+    <p>แล้วก็มาถึงชิ้นที่ออกแบบมาเก็บทุกอย่างในกล่องเดียว: <strong>Nous Portal Tool Gateway</strong> — OAuth ครั้งเดียวได้ทั้ง model และชุดเครื่องมือ: web search/extraction (พาร์ตเนอร์กับ Firecrawl), image generation ผ่าน FAL 9 models (รวม FLUX 2 Klein, FLUX 2 Pro, Z-Image Turbo), OpenAI TTS, cloud browser ของ Browser Use และ terminal sandbox บน Modal เป็นตัวเลือก กลไก auth คือ refresh token ที่ <code>~/.hermes/auth.json</code> คอยออก JWT อายุสั้นให้:</p>
+
+    <pre><code>hermes setup --portal    # OAuth ครั้งเดียว ได้ทั้ง model และ tools
+hermes model             # หรือเลือก provider/model จากเมนู
+hermes tools             # เปิด-ปิดเครื่องมือเป็นรายตัว</code></pre>
+
+    <p>อีกความเคลื่อนไหวที่ควรรู้คือ <strong>MiniMax</strong>: ราวต้นเดือนเมษายน 2026 Nous โพสต์บน X ว่ากำลัง "partnering across product and models" กับ MiniMax พร้อมชวนผู้ใช้ลอง MiniMax M2.7 ผ่าน Nous Portal (รายละเอียดเชิงพาณิชย์ไม่มีการเปิดเผย — ผมจึงเล่าได้เท่าที่โพสต์บอก) รูปธรรมที่จับต้องได้คือเอกสารทางการของ MiniMax มีหน้า Hermes Agent โดยเฉพาะ ผูกแผน subscription แบบ Token Plan เข้ากับ Hermes ด้วย Subscription Key ซึ่งเป็นคนละใบกับ API key แบบจ่ายตามใช้ และใน v0.21.0 ก็มี "MiniMax M3 free" โผล่ใน model catalog ด้วย:</p>
+
+    <pre><code>npx -y mmx-cli@latest agent setup
+# หรือ: hermes model → เลือก "MiniMax (global endpoint)" แล้ววาง Subscription Key</code></pre>
+
+    <h2 id="th-beyond">Beyond Chat — A2A, Webhooks, ACP และ API</h2>
+
+    <p>ชั้นสุดท้ายของ surface นี้ไม่ใช่มนุษย์แล้ว แต่เป็น <em>ระบบอื่นและ agent ตัวอื่น</em> v0.20.0 ใส่ <strong>A2A v1.0</strong> (protocol คุยข้าม agent) พร้อม outbound webhooks ที่มีลายเซ็นกำกับ และ v0.21.0 เพิ่ม <code>hermes peer</code> ให้ bot สอง instance ทัก DM หากันตรง ๆ ส่วนห้องแชตกลุ่มแบบหลาย agent ก็มี <strong>Bot Mode</strong> ที่ถูกรวมเข้าแอป desktop ภายใน v0.21.0 พร้อมการเรียกบอตรายตัวด้วย @-mention — เส้นทางทั้งหมดนี้ต่อยอดเรื่อง multi-agent ที่ผมเขียนไว้ในบทที่ 2 ของซีรีส์นี้</p>
+
+    <p>สำหรับนักพัฒนา จุดเชื่อมมีสองแบบ ตัวแรกคือ <strong>ACP</strong> (Agent Client Protocol) ที่พา Hermes เข้าไปอยู่ใน VS Code, Zed และ JetBrains — เห็นบทสนทนา, tool activity, diff ของไฟล์ และคำสั่ง terminal จากใน editor ตัวที่สองคือ <strong>OpenAI-compatible HTTP API server</strong> สำหรับยิงโปรแกรมตรง: ระบบเดิมที่คุยกับ API รูปแบบนี้ได้อยู่แล้ว ชี้ endpoint มาที่ Hermes ได้โดยแทบไม่แก้โค้ด</p>
+
+    <p>รายละเอียดเล็กที่ลดต้นทุนการย้ายค่ายได้จริง: Hermes อ่านไฟล์ context ของค่ายอื่นได้เอง — <code>CLAUDE.md</code>, <code>AGENTS.md</code> และ <code>.cursorrules</code> ตามลำดับความสำคัญแบบเจอไฟล์แรกใช้ไฟล์นั้น ทีมที่ลงแรงเขียน context ให้ OpenClaw หรือ Claude Code ไว้แล้ว จึงใช้ของเดิมต่อได้ตั้งแต่วันแรก</p>
+
+    <p>แม้แต่ชิ้นเล็ก ๆ ก็เป็น pluggable หมด: web search มีให้เลือก 8 เจ้า (Firecrawl เป็นค่าเริ่มต้น ร่วมด้วย SearXNG, Brave, DuckDuckGo, Exa, Parallel, xAI) และฝั่ง memory provider ก็เสียบสลับได้ 8 เจ้าเช่นกัน — เรื่องหลังผมลงลึกไว้แล้วในบทที่ 3 <a href="/blog/hermes-memory">Hermes Memory</a></p>
+
+    <p>ปิดท้ายด้วยสองชื่อที่บอกทิศทางของโครงการได้ดี: <strong>Home Assistant</strong> เป็นทั้งช่องแชตและประตูสู่ home automation ในตัวเดียว และ <strong>Buzz</strong> — workspace แบบ collaboration บน Nostr — ถูกนับเป็นแพลตฟอร์ม gateway ชั้นหนึ่งเทียบเท่า Slack ไม่ใช่ของทดลองข้างกระดาน ทีมนี้มอง "ช่องทาง" กว้างกว่าคำว่าแอปแชตไปแล้ว</p>
+
+    <p>ทิปปิดท้ายสำหรับสาย automation: เอกสารของ Hermes เผยแพร่ index แบบ machine-readable ให้ agent อ่านตรง ๆ ที่ <code>/docs/llms.txt</code> (ฉบับย่อ ราว 17 KB) และ <code>/docs/llms-full.txt</code> (ฉบับเต็ม ราว 1.8 MB) — เวลาอยากให้ผู้ช่วย AI ของคุณตอบคำถามเรื่อง Hermes จากเอกสารจริงแทนการเดา ชี้ไปที่สองไฟล์นี้</p>
+
+    <div class="key-takeaways">
+        <h3>🎯 สิ่งสำคัญที่ต้องจำ</h3>
+        <ul>
+            <li><strong>Gateway</strong> = daemon เดียวถือทุกช่องทาง + cron (tick ทุก 60 วินาที) + voice — จุดแข็งด้านการดูแล และ single point of failure ในตัวเดียวกัน</li>
+            <li><strong>Platform surface</strong> = README ชูห้าแพลตฟอร์มบวก CLI แต่เอกสาร integrations รองรับ 27+ ช่องทาง รวม ecosystem จีนครบชุด</li>
+            <li><strong>Allowlist + Pairing</strong> = default-deny รายแพลตฟอร์มผ่าน <code>*_ALLOWED_USERS</code> หรือรหัส pairing ที่ต้อง approve จากฝั่ง CLI</li>
+            <li><strong>channel_overrides</strong> = model และ system prompt คนละชุดต่อ channel ID ใน gateway-config.yaml — agent คนละบุคลิกในแต่ละห้อง</li>
+            <li><strong>MCP สองทิศทาง</strong> = เป็น client (OAuth 2.1 + PKCE, glob filtering, OSV scanning) และเป็น server ผ่าน <code>hermes mcp serve</code> ให้ Claude Code/Cursor ต่อเข้ามา</li>
+            <li><strong>Browser Use</strong> = driver หลักของ browser automation (สลับจาก Browserbase ใน v0.8.0) ประกอบกับ backend ได้หลายแบบ รวม Chromium ในเครื่องผ่าน CDP</li>
+            <li><strong>Nous Portal</strong> = OAuth ครั้งเดียวได้ search, image generation, TTS, cloud browser และ Modal terminal</li>
+            <li><strong>Beyond chat</strong> = A2A v1.0, signed webhooks, <code>hermes peer</code>, ACP ใน editor และ OpenAI-compatible API</li>
+        </ul>
+    </div>
+
+    </div>
+    <div class="l-en" lang="en">
+
+    <p>After I finished the seven-part <strong>OpenClaw for Organizations</strong> series, the question readers sent back most often was not about models or memory. It was the plainest question and the hardest one: <em>how do I put the agent where my organization actually talks?</em> An agent that can only be reached from its installer's terminal is one engineer's toy, not an organizational tool.</p>
+
+    <p>I answered that question for OpenClaw in <a href="/blog/openclaw-integrations">OpenClaw Integrations</a>. This year I am examining Nous Research's <strong>Hermes Agent</strong> seriously, and post #5 of this series has to answer the same question on the Hermes side: how it connects to the outside world, where it differs from what we know, and which parts deserve caution before you switch them on.</p>
+
+    <p>The short version, which the rest of this post unpacks: everything flows through a single <strong>gateway process</strong>; the README headlines five platforms plus the CLI while the real documented surface is 27+ platforms; the tool side bets on <strong>MCP</strong> in both directions; browser automation now treats <strong>Browser Use</strong> as the default driver; and the <strong>Nous Portal</strong> bundles a stack of tools behind one OAuth.</p>
+
+    <h2 id="en-gateway">The gateway — one daemon for messaging, cron, and voice</h2>
+
+    <p>Hermes's integration architecture starts from a single idea: the <strong>gateway</strong> is one background process that holds every channel's connection at once. And per the official messaging docs it does more than messaging — the same daemon runs the <strong>cron scheduler</strong> (ticking every 60 seconds) and handles voice delivery. Put bluntly: if the gateway dies, every channel goes silent together; if it is up, everything is up. That is an operational strength and a single point of failure in the same breath.</p>
+
+    <p>Before there is a gateway there has to be a Hermes — and installation is a one-liner on Linux, macOS, WSL2, or even Termux on an Android phone:</p>
+
+    <pre><code># Install Hermes Agent (Linux / macOS / WSL2 / Termux)
+curl -fsSL https://hermes-agent.nousresearch.com/install.sh | bash
+
+# On Windows
+iex (irm https://hermes-agent.nousresearch.com/install.ps1)</code></pre>
+
+    <pre><code># Gateway lifecycle — from the official messaging docs
+hermes gateway setup      # wizard: pick channels, paste tokens
+hermes gateway install    # install as a background service
+hermes gateway start      # or start it by hand
+hermes gateway status     # check every adapter
+hermes gateway stop</code></pre>
+
+    <p>Readers coming from the OpenClaw series will find this familiar — OpenClaw also funnels every channel through one gateway process. Hermes did not invent the pattern; it inherited and refined it. And for organizations already running OpenClaw, the docs note that the migration command <code>hermes claw migrate</code> carries your existing messaging tokens across, so you are not re-registering a bot on every platform.</p>
+
+    <p>Once the gateway is running, most day-to-day control happens inside the chat itself, with the same command set on every platform:</p>
+
+    <pre><code>/model             # live model switching mid-conversation — every platform, since v0.8.0
+/voice             # voice mode
+/bg                # push long work to the background
+/platform pause    # pause a single platform's intake
+/platform resume
+/reload-mcp        # reload MCP servers without restarting the gateway
+/new /reset /sessions /personality /update</code></pre>
+
+    <blockquote>💡 My favorite operational detail: cron and messaging live in the same process, so a scheduled job — a morning news digest, a weekly report — delivers its output straight back into a chat channel with zero glue code.</blockquote>
+
+    <h2 id="en-surface">From five to twenty-seven-plus — the real platform surface</h2>
+
+    <p>The Hermes README leads with a memorable sentence: Telegram, Discord, Slack, WhatsApp, Signal, and CLI — "all from a single gateway process." That is <strong>five messaging platforms plus one terminal</strong>. Open the docs' integrations index, though, and the number is a different story: <strong>more than 27 supported platforms</strong>, with the messaging guide enumerating roughly 28 adapters, from open protocols to the complete Chinese chat ecosystem.</p>
+
+    <div class="table-wrapper">
+        <table>
+            <thead>
+                <tr>
+                    <th>Group</th>
+                    <th>Platforms</th>
+                    <th>Notes</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td><strong>Mainstream</strong></td>
+                    <td>Telegram, Discord, Slack, WhatsApp, Signal, Email, SMS (Twilio), Microsoft Teams, Google Chat, LINE</td>
+                    <td>Covers what most Western and Thai organizations actually use, LINE included</td>
+                </tr>
+                <tr>
+                    <td><strong>Open protocol</strong></td>
+                    <td>Matrix, Mattermost, IRC, SimpleX, ntfy</td>
+                    <td>Matrix earned "Tier 1" status back in v0.8.0 — reactions, read receipts, rich formatting</td>
+                </tr>
+                <tr>
+                    <td><strong>Chinese ecosystem</strong></td>
+                    <td>DingTalk, Feishu/Lark, WeCom, Weixin, QQ, Yuanbao</td>
+                    <td>Both the enterprise and the consumer stacks, complete</td>
+                </tr>
+                <tr>
+                    <td><strong>Via bridges</strong></td>
+                    <td>iMessage (BlueBubbles or Photon), WhatsApp (Baileys or Meta Cloud API)</td>
+                    <td>There is no bridge-free iMessage path — one of the two bridges always sits in between</td>
+                </tr>
+                <tr>
+                    <td><strong>Other surfaces</strong></td>
+                    <td>Home Assistant, Buzz (Nostr), Open WebUI, Webhooks / API server / A2A</td>
+                    <td>Home Assistant is both a chat surface and home automation in one adapter</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <p>Two rows deserve a second read. First, <strong>WhatsApp appears twice</strong>: an unofficial route through the Baileys bridge, whose docs warn about account-ban risk in plain words, and the official route through Meta's Cloud API, which needs a Business account. Second, <strong>iMessage is bridge-only</strong> — if you were hoping to plug an agent into iMessage directly with no Mac-shaped machinery in between, the documentation makes no such promise.</p>
+
+    <p>I read the "five vs. 27+" gap less as marketing and more as a lesson in document literacy: the README showcases the most stable channels, while the integrations index is the actual, much wider surface. When evaluating a tool, trust the docs page over the repo's front door.</p>
+
+    <div class="alert info">
+        <strong>Watch for look-alike domains:</strong> the canonical domain is <a href="https://hermes-agent.nousresearch.com">hermes-agent.nousresearch.com</a> (it matches the repo's homepage field on <a href="https://github.com/NousResearch/hermes-agent">GitHub</a>). hermes-agent.org, hermesagents.net, hermes-agent.ai, and hermesagent.org.cn are official-looking sites of unverified ownership — never copy install commands from that second group.</div>
+
+    <h2 id="en-control">Per-channel control — allowlists, pairing, and channel_overrides</h2>
+
+    <p>With a surface this wide, the first IT question has to be "who gets to talk to it?" Hermes answers in layers. Layer one is a <strong>per-platform allowlist</strong> through the <code>*_ALLOWED_USERS</code> family of environment variables — anyone off the list is denied by default:</p>
+
+    <pre><code># ~/.hermes/.env — who may talk, per platform
+TELEGRAM_ALLOWED_USERS=123456789,987654321
+DISCORD_ALLOWED_USERS=haruki#1234
+EMAIL_ALLOWED_USERS=team@company.co.th
+
+# The open-to-everyone switch exists — think hard before using it
+# GATEWAY_ALLOW_ALL_USERS=true</code></pre>
+
+    <p>Layer two, for when you do not want to collect user IDs up front: <strong>DM pairing</strong>. A new user messages the bot, receives a code, and an administrator approves it from the CLI:</p>
+
+    <pre><code>hermes pairing approve telegram 483920   # approve the code the user received
+hermes pairing list                      # who is already paired
+hermes pairing revoke telegram &lt;id&gt;      # revoke later at will</code></pre>
+
+    <p>If you followed the OpenClaw news cycle this year, you know the big early wound was gateways left open on the internet with no fence at all. Hermes launched after those incidents and was deliberately designed against them — every channel is default-deny from the start, and a new user's only way in is a pairing code that a human approves from the CLI.</p>
+
+    <p>Layer three is something I have not had this cheaply from comparable tools: <strong>channel_overrides</strong> in <code>~/.hermes/gateway-config.yaml</code>, which assigns a <em>different model and system prompt per channel ID</em>. The DevOps room gets the expensive model and a strict prompt; the general Q&amp;A room gets the economical one. The rough shape looks like this (the full schema is in the messaging docs):</p>
+
+    <pre><code># ~/.hermes/gateway-config.yaml — a personality and model per room
+channel_overrides:
+  "telegram:-1001234567890":     # the DevOps team room
+    model: a specific model for this room only
+    system_prompt: a strict prompt for infra work
+  "discord:555555555":           # the general Q&amp;A room
+    model: an economical pick for everyday questions</code></pre>
+
+    <p>My reading: these three layers are the concrete face of the default-deny posture I analyzed in post #4, <a href="/blog/hermes-security">Hermes Security</a>. Many channels are not the scary part — unfenced channels are, and Hermes ships the fences as defaults.</p>
+
+    <hr>
+
+    <h2 id="en-setups">Concrete setups — Telegram, WhatsApp, Email, WeCom</h2>
+
+    <p>Enough theory. Here are four real channel hookups that, between them, cover most organizations I meet — the first is the gentlest, the later ones carry conditions you want to know before pressing enter.</p>
+
+    <h3>Telegram — the lowest-pain starting point</h3>
+
+    <p>Create a bot with BotFather to obtain a token, then run <code>hermes gateway setup</code>, choose Telegram, and paste the token into the wizard. Set <code>TELEGRAM_ALLOWED_USERS</code> in <code>.env</code> before starting the gateway, and the agent is live in Telegram. The feature depth here is solid: since v0.8.0, Telegram and Slack render <em>approval buttons</em>, so users confirm risky actions with a tap instead of typing.</p>
+
+    <p>The most popular community recipe is exactly this pair on a cheap VPS. The heyuan110.com guide (April 2026, v0.9.0-era — a third-party source) walks the whole path: install with the official script or run the <code>nousresearch/hermes-agent:latest</code> Docker image with <code>~/.hermes</code> mounted as a volume (config, sessions, and tokens all live in that folder), on a $4-5/month VPS from Hetzner, DigitalOcean, or Vultr, with OpenRouter recommended as the entry provider for anyone who holds no API keys yet.</p>
+
+    <div class="alert info">
+        <strong>A note for readers migrating from Claude-based setups:</strong> the same guide records that Anthropic blocked third-party subscription (Pro/Max) access in April 2026 — using Claude inside Hermes therefore requires pay-as-you-go API keys. This hits every harness equally, including the OpenClaw setups many readers of my earlier series run today.</div>
+
+    <h3>WhatsApp — two routes, two very different risk levels</h3>
+
+    <p>The first route is the built-in wizard: run <code>hermes whatsapp</code> and scan the QR code from your phone (Settings → Linked Devices). This path rides the unofficial Baileys-style bridge.</p>
+
+    <pre><code># ~/.hermes/.env — WhatsApp via the Baileys route
+WHATSAPP_ENABLED=true
+WHATSAPP_MODE=bot              # or self-chat
+WHATSAPP_ALLOWED_USERS=66812345678   # number with country code, no plus sign
+
+# the session lives at ~/.hermes/platforms/whatsapp/session</code></pre>
+
+    <div class="alert danger">
+        <strong>Ban risk:</strong> the official docs warn plainly that the Baileys route is unofficial and carries a real risk of the account being banned, and they recommend a <em>dedicated number</em> (a prepaid SIM or virtual number) — never your personal or your organization's main line. The sanctioned route is Meta's Cloud API, which requires a Business account and a public webhook, and is the right choice for production workloads that cannot absorb a ban.</div>
+
+    <h3>Email — old-fashioned, effective, and demanding of discipline</h3>
+
+    <p>The email channel has no magic in it — plain IMAP/SMTP through env vars. It polls the UNSEEN mailbox every 15 seconds by default and threads its replies properly with <code>In-Reply-To</code>/<code>References</code> headers:</p>
+
+    <pre><code># ~/.hermes/.env — email over plain IMAP/SMTP
+EMAIL_ADDRESS=agent@company.co.th
+EMAIL_PASSWORD=app-password-here     # always an app password
+EMAIL_IMAP_HOST=imap.company.co.th   # port 993
+EMAIL_SMTP_HOST=smtp.company.co.th   # port 587
+EMAIL_POLL_INTERVAL=15               # seconds — the default
+EMAIL_ALLOWED_USERS=boss@company.co.th
+EMAIL_HOME_ADDRESS=me@company.co.th  # where automated jobs deliver</code></pre>
+
+    <div class="alert">
+        <strong>Dedicated account only:</strong> the docs insist on this, and so do I — the password sits in <code>.env</code> as plain text and the agent sees the entire inbox. Do not connect your personal or primary work mailbox. Create a fresh account that exists only for the agent.</div>
+
+    <h3>WeCom — a worked example from Enterprise WeChat</h3>
+
+    <p>For organizations working with Chinese partners, Tencent Cloud's techpedia guide (April 2026) documents the WeCom side clearly:</p>
+
+    <pre><code># Per Tencent Cloud's techpedia guide (April 2026)
+# 1) create a bot in Enterprise WeChat; note the Bot ID and Secret
+# 2) put both values into ~/.hermes/.env
+# 3) install the gateway as a service
+hermes gateway install</code></pre>
+
+    <p>The same guide notes that other platforms configure through the <code>hermes setup</code> wizard, and Tencent went as far as launching a one-click Hermes template on Lighthouse in mid-April 2026 — a signal of how quickly the Chinese market adopted this tool.</p>
+
+    <hr>
+
+    <h2 id="en-mcp">MCP both ways — OAuth 2.1 and hermes mcp serve</h2>
+
+    <p>Chat channels are the inbound side. For the outbound side — external tools — Hermes bets fully on <strong>MCP</strong> (Model Context Protocol). Servers register under <code>mcp_servers</code> in <code>~/.hermes/config.yaml</code>, over stdio or HTTP/SSE transports, and the part that outclasses what I had in the OpenClaw era is end-to-end <strong>OAuth 2.1</strong>: set <code>auth: oauth</code> and the system handles PKCE and Dynamic Client Registration automatically (this landed in v0.8.0 on April 8, 2026):</p>
+
+    <pre><code># ~/.hermes/config.yaml — rough shape (full schema in the MCP docs)
+mcp_servers:
+  internal-kb:
+    transport: stdio           # run as a local subprocess
+  issue-tracker:
+    transport: sse             # connect over HTTP/SSE
+    auth: oauth                # OAuth 2.1 — PKCE + Dynamic Client Registration, automatic
+    include:
+      - "issue_*"              # keep only the tools you want, by glob
+    exclude:
+      - "*_delete"             # cut whole classes of dangerous tools</code></pre>
+
+    <p>Details from the MCP docs that I noted down specifically:</p>
+
+    <ul>
+        <li><strong>Tool names</strong> register as <code>mcp_&lt;server&gt;_&lt;tool&gt;</code> — every tool is auditable back to its server</li>
+        <li><strong>MCP sampling</strong> is on by default at 10 requests/minute, and elicitation carries a 300-second timeout</li>
+        <li><strong>Injection defense:</strong> Unicode tag characters U+E0000–U+E007F are stripped from tool results — the invisible-instruction trick that has been exploited in the wild this year</li>
+        <li><strong>OSV malware scanning</strong> checks MCP packages before install (since v0.8.0), and mutual-TLS setups get <code>client_cert</code>/<code>client_key</code></li>
+    </ul>
+
+    <p>Management gets a complete CLI, and the last line below is the one that flips this whole post's direction:</p>
+
+    <pre><code>hermes mcp                    # interactive catalog picker
+hermes mcp install &lt;name&gt;     # install from the catalog (the optional-mcps/ folder)
+hermes mcp login &lt;name&gt;       # per-server OAuth login
+/reload-mcp                   # hot-reload mid-session, no gateway restart
+
+hermes mcp serve              # reverse the flow: expose Hermes AS an MCP server</code></pre>
+
+    <blockquote>💡 <code>hermes mcp serve</code> turns Hermes itself into an MCP server with 10 tools (stdio only) for Claude Code, Cursor, or Codex to connect to — meaning the agent inside your code editor can drive Hermes. That direction is why I titled this section "MCP both ways."</blockquote>
+
+    <p>The curated side is growing fast too: release v0.20.6 (August 27, 2026) catalogued more than 50 vendor MCP servers, and v0.21.0 (August 31, 2026) added a desktop <strong>MCP command center</strong> — a merged servers-and-catalog page with background health checks, a 30-day cost overlay, and <code>hermes://</code> deep links that always confirm before acting.</p>
+
+    <h2 id="en-browser">Browser automation — Browser Use as the default driver</h2>
+
+    <p>This one deserves an accurate timeline. The first turning point was v0.8.0 (April 8, 2026), whose release notes say it outright: "Switch managed browser provider from Browserbase to Browser Use" (PR #5750, a community contribution), with Firecrawl added as another cloud browser in the same release. By September 2026 the browser docs go further: <strong>Browser Use is the default driver</strong> — when <code>browser.backend</code> is unset and the browser-use CLI is runnable, the agent gets a single tool named <code>browser_exec</code> that covers everything (the docs reference Browser Use CLI 3.0; which release flipped the default is not pinned in the docs, so I will not claim one).</p>
+
+    <pre><code># ~/.hermes/config.yaml
+browser:
+  backend: "browser-use"       # explicit, or leave unset for auto-detect
+  # use_real_profile: true     # v0.20.6+ — consent-gated snapshot of your real profile
+
+# ~/.hermes/.env
+BROWSER_USE_API_KEY=bu_xxx     # for Browser Use Cloud</code></pre>
+
+    <p>The flexibility comes from one driver composing with many backends:</p>
+
+    <div class="table-wrapper">
+        <table>
+            <thead>
+                <tr>
+                    <th>Backend</th>
+                    <th>Nature</th>
+                    <th>Best for</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td><strong>Browser Use Cloud</strong></td>
+                    <td>Cloud — stealth, residential proxies, CAPTCHA solving</td>
+                    <td>Scraping/automation against heavily bot-defended sites</td>
+                </tr>
+                <tr>
+                    <td><strong>Browserbase</strong></td>
+                    <td>The previous managed provider, pre-v0.8.0</td>
+                    <td>Teams with existing accounts and workflows</td>
+                </tr>
+                <tr>
+                    <td><strong>Firecrawl</strong></td>
+                    <td>Cloud — arrived alongside v0.8.0</td>
+                    <td>Extraction-heavy work already using Firecrawl search</td>
+                </tr>
+                <tr>
+                    <td><strong>Camofox / Lightpanda</strong></td>
+                    <td>Lightweight alternative browsers</td>
+                    <td>Jobs that want a small footprint</td>
+                </tr>
+                <tr>
+                    <td><strong>Local Chromium (CDP)</strong></td>
+                    <td>Attach to local Chrome via <code>/browser connect</code></td>
+                    <td>Debugging, and work you want to watch on a real screen</td>
+                </tr>
+                <tr>
+                    <td><strong>Nous Portal</strong></td>
+                    <td>Cloud browser through your Portal account</td>
+                    <td>Anyone who does not want to hold yet another API key</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <pre><code>/browser connect     # attach to local Chromium over CDP, from inside the chat
+# caveat: Chrome 136+ requires a dedicated user-data-dir
+# never point it at your main logged-in profile</code></pre>
+
+    <p>Two late additions close the timeline: v0.20.6 brought <strong>real-profile browsing</strong> — a snapshot of your actual browser profile, cookies and logged-in sessions included, behind an explicit consent gate — and v0.21.0 let the agent drive the desktop app's in-app browser directly. To me, real-profile is both the most powerful and the most dangerous feature in this post: cookies are the keys to every house you own. Enable it only once you understand its price.</p>
+
+    <hr>
+
+    <h2 id="en-voice-portal">Voice, calendars, and the Nous Portal Tool Gateway</h2>
+
+    <p>Voice was the headliner of v0.20.0, "The Herald Release" (August 3, 2026): clause-by-clause streaming TTS while the answer is still generating, <strong>barge-in</strong> — interrupt it by simply speaking — and on-device wake words ("hey Hermes") that do not stream your room's audio to a cloud. The provider roster is broad:</p>
+
+    <div class="table-wrapper">
+        <table>
+            <thead>
+                <tr>
+                    <th>Side</th>
+                    <th>Providers</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td><strong>TTS</strong></td>
+                    <td>Edge TTS (default, free), ElevenLabs, OpenAI, MiniMax (speech-2.8, since v0.8.0), xAI, NeuTTS</td>
+                </tr>
+                <tr>
+                    <td><strong>STT</strong></td>
+                    <td>8 providers, including faster-whisper, Groq, OpenAI, Mistral, xAI, ElevenLabs Scribe, DeepInfra</td>
+                </tr>
+                <tr>
+                    <td><strong>Voice notes</strong></td>
+                    <td>Around 11 chat platforms, including Telegram, Discord, Slack, Matrix, and WeCom — WhatsApp voice messages are transcribed automatically</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <p>For calendars and productivity email, the centerpiece is the first-party <strong>Google Workspace</strong> skill — Gmail, Calendar, Drive, Contacts, Sheets, Docs over OAuth2 with automatic token refresh. The interesting part is that setup is <em>agent-driven</em>: Hermes walks you through creating the Google Cloud project, enabling APIs, and creating credentials, step by step, inside the conversation (under the hood the skill prefers the gws CLI when available and falls back to Google's Python client libraries). Outside the Google universe there are community CalDAV plugins (Yandex, Nextcloud) in the community-run awesome-hermes-agent directory — community-built, not Nous's.</p>
+
+    <p>Then comes the piece designed to put everything in one box: the <strong>Nous Portal Tool Gateway</strong>. One OAuth grants a model plus a tool bundle: web search and extraction (a Firecrawl partnership), image generation through FAL with 9 models (including FLUX 2 Klein, FLUX 2 Pro, and Z-Image Turbo), OpenAI TTS, Browser Use's cloud browser, and an optional Modal cloud terminal. Auth is a refresh token at <code>~/.hermes/auth.json</code> that mints short-lived JWTs:</p>
+
+    <pre><code>hermes setup --portal    # one OAuth: model + tools together
+hermes model             # or pick provider/model from the menu
+hermes tools             # toggle tools individually</code></pre>
+
+    <p>One more development worth knowing: <strong>MiniMax</strong>. Around early April 2026, Nous posted on X that it is "partnering across product and models" with MiniMax, inviting users to try MiniMax M2.7 through the Nous Portal (no commercial terms were disclosed, so I can only relay what the post says). The tangible artifacts: MiniMax's own official platform docs carry a dedicated Hermes Agent page wiring its subscription-style Token Plan into Hermes with a Subscription Key — explicitly distinct from pay-as-you-go API keys — and "MiniMax M3 free" showed up in the v0.21.0 model catalogs:</p>
+
+    <pre><code>npx -y mmx-cli@latest agent setup
+# or: hermes model → choose "MiniMax (global endpoint)" and paste the Subscription Key</code></pre>
+
+    <h2 id="en-beyond">Beyond chat — A2A, webhooks, ACP editors, and the API</h2>
+
+    <p>The last layer of this surface is not human at all — it is <em>other systems and other agents</em>. v0.20.0 shipped <strong>A2A v1.0</strong>, a wire protocol for agent-to-agent conversation, alongside outbound signed webhooks; v0.21.0 added <code>hermes peer</code> for direct bot-to-bot DMs between two instances, and multi-agent group rooms come via <strong>Bot Mode</strong>, bundled into the desktop app by v0.21.0 with per-bot @-mentions. All of this continues the multi-agent story from post #2 of this series.</p>
+
+    <p>For developers there are two attachment points. The first is <strong>ACP</strong> (Agent Client Protocol), which brings Hermes inside VS Code, Zed, and JetBrains — chat, tool activity, file diffs, and terminal commands rendered in the editor itself. The second is an <strong>OpenAI-compatible HTTP API server</strong> for programmatic access: anything that already speaks that API shape can point its endpoint at Hermes with barely a code change.</p>
+
+    <p>One small detail that genuinely lowers switching costs: Hermes reads other ecosystems' context files natively — <code>CLAUDE.md</code>, <code>AGENTS.md</code>, and <code>.cursorrules</code>, on a first-match priority chain. A team that already invested in context files for OpenClaw or Claude Code keeps using them from day one.</p>
+
+    <p>Even the small parts are pluggable: web search offers 8 backends (Firecrawl by default, with SearXNG, Brave, DuckDuckGo, Exa, Parallel, and xAI among them), and memory providers swap the same way, 8 of them — a topic I covered in depth in post #3, <a href="/blog/hermes-memory">Hermes Memory</a>.</p>
+
+    <p>I will close with two names that say a lot about where this project is heading: <strong>Home Assistant</strong> is simultaneously a chat surface and a door into home automation, and <strong>Buzz</strong> — a Nostr-based collaboration workspace — is treated as a first-class gateway platform on par with Slack, not a sideboard experiment. This team already defines "channel" more broadly than "chat app."</p>
+
+    <p>A closing tip for the automation-minded: the Hermes docs publish machine-readable indexes at <code>/docs/llms.txt</code> (a compact ~17 KB) and <code>/docs/llms-full.txt</code> (the full ~1.8 MB) — when you want your own AI assistant answering Hermes questions from the real documentation instead of guessing, point it at those two files.</p>
+
+    <div class="key-takeaways">
+        <h3>🎯 Key Takeaways</h3>
+        <ul>
+            <li><strong>Gateway</strong> = one daemon holding every channel + cron (60-second tick) + voice — an operational strength and a single point of failure in the same process</li>
+            <li><strong>Platform surface</strong> = the README headlines five platforms plus CLI, but the integrations docs support 27+ channels, the full Chinese ecosystem included</li>
+            <li><strong>Allowlist + pairing</strong> = per-platform default-deny via <code>*_ALLOWED_USERS</code>, or pairing codes approved from the CLI</li>
+            <li><strong>channel_overrides</strong> = a different model and system prompt per channel ID in gateway-config.yaml — a different personality per room</li>
+            <li><strong>MCP both ways</strong> = a client (OAuth 2.1 + PKCE, glob filtering, OSV scanning) and a server via <code>hermes mcp serve</code> for Claude Code/Cursor to attach to</li>
+            <li><strong>Browser Use</strong> = the default browser-automation driver (swapped in from Browserbase in v0.8.0), composing with many backends including local Chromium over CDP</li>
+            <li><strong>Nous Portal</strong> = one OAuth granting search, image generation, TTS, a cloud browser, and a Modal terminal</li>
+            <li><strong>Beyond chat</strong> = A2A v1.0, signed webhooks, <code>hermes peer</code>, ACP in your editor, and an OpenAI-compatible API</li>
+        </ul>
+    </div>
+
+    </div>
+
+    <div class="post-series-footer">
+      <span class="l-th">บทความจากซีรีส์ Hermes Agent in Practice 2026</span><span class="l-en" lang="en">From the Hermes Agent in Practice 2026 series</span>
+    </div>
+
+  </article>
+
+  </main>
+
+  <footer class="blog-footer">
+    <nav class="blog-footer__nav" aria-label="Site">
+      <a href="../index.html">Home</a>
+      <a href="./">Blog</a>
+      <a href="../publications/">Publications</a>
+      <a href="../books/">Books</a>
+      <a href="../projects/">Projects</a>
+      <a href="../news/">News</a>
+      <a href="../index.html#contact">Contact</a>
+    </nav>
+    <a href="./">← Back to Blog</a>
+    <span>© 2026 Anirach Mingkhwan — Associate Professor, KMUTNB</span>
+  </footer>
+
+</body>
+</html>

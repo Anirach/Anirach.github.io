@@ -1,0 +1,1031 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Hermes Skills: Procedural Memory That Writes Itself — ทักษะที่เขียนตัวเองได้ | Anirach Mingkhwan</title>
+  <meta name="description" content="Hermes Agent เขียน skill ของตัวเองได้จริงผ่าน skill_manage มี Curator ดูแลวงจรชีวิต และมี write_approval ให้องค์กรคุม — บทความนี้ไล่ระบบ skills ทั้งหมด ตั้งแต่ SKILL.md ตามมาตรฐานเปิด จนถึงการย้าย skills จาก OpenClaw">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=Sarabun:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      color-scheme: light;
+      /* ink */
+      --navy: #11304b; --slate: #334155; --slate-light: #526174; --gray: #94a3b8;
+      /* ground */
+      --bg: #faf7f0; --white: #ffffff; --code-bg: #1e293b;
+      /* accent */
+      --blue: #226299; --blue-dark: #1a4d7a; --blue-light: #4992b9;
+      /* brand — sampled from the book covers. --gold is decorative on light grounds (2.2:1); --gold-dark is its text form. */
+      --gold: #c4a46c; --gold-dark: #7a5f22; --cloud: #dee7e6; --parchment: #e9e1c4; --focus: #226299;
+      /* status — use only these six, never invent a seventh */
+      --green: #22c55e; --red: #ef4444; --amber: #f59e0b;
+      --cyan: #06b6d4; --purple: #226299; --purple-dark: #1a4d7a;
+      /* type */
+      --font: 'Inter', 'Sarabun', -apple-system, BlinkMacSystemFont, sans-serif;
+      --mono: 'JetBrains Mono', 'Fira Code', 'Sarabun', monospace;
+      /* form */
+      --radius: 12px; --radius-sm: 8px; --radius-lg: 16px;
+      --measure: 720px; --wide: 860px;
+      --transition: 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+    html { scroll-behavior: smooth; }
+    body { font-family: var(--font); font-size: 17px; line-height: 1.8; color: var(--slate); background: var(--bg); -webkit-font-smoothing: antialiased; }
+    .blog-nav { position: fixed; top: 0; left: 0; right: 0; z-index: 100; background: rgba(248,250,252,0.85); backdrop-filter: blur(20px); border-bottom: 1px solid rgba(0,0,0,0.05); }
+    .blog-nav__inner { max-width: 860px; margin: 0 auto; padding: 0 2rem; height: 56px; display: flex; align-items: center; justify-content: space-between; }
+    .blog-nav__back { font-size: 0.85rem; font-weight: 500; color: var(--blue); text-decoration: none; }
+    .blog-nav__back:hover { color: #1a4d7a; }
+    .blog-nav__title { font-size: 0.85rem; font-weight: 600; color: var(--navy); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 50%; }
+    /* ── HERO ── house .post-hero on the approved Deep Blue gradient (page-design
+       §5 / INV-28). Ink is inverted for the dark ground: white title/meta, tag
+       pills white on 18% white — the openclaw-production treatment. The
+       background value must stay byte-identical to the approved string. */
+    .post-hero { padding: 8rem 2rem 3rem; background: linear-gradient(135deg, #11304b 0%, #1a4d7a 45%, #226299 100%); color: #fff; text-align: center; }
+    .post-hero__tags { display: flex; gap: 0.5rem; justify-content: center; margin-bottom: 1.25rem; flex-wrap: wrap; }
+    .post-hero__tag { display: inline-block; font-size: 0.72rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.1em; color: #fff; background: rgba(255,255,255,0.18); padding: 0.35rem 0.9rem; border-radius: 20px; }
+    .post-hero__title { font-size: clamp(1.8rem, 5vw, 3rem); font-weight: 800; color: #fff; line-height: 1.2; margin-bottom: 1rem; max-width: 720px; margin-left: auto; margin-right: auto; }
+    .post-hero__sub { font-size: 1.05rem; max-width: 640px; margin: 0 auto 1.5rem; line-height: 1.7; color: #fff; }
+    .post-hero__meta { font-size: 0.85rem; color: #fff; display: flex; align-items: center; justify-content: center; gap: 1.5rem; flex-wrap: wrap; }
+    .post-hero__series { font-weight: 600; color: #fff; }
+    /* the switch pill and the focus ring both sit on the dark hero: the pill is
+       a light chip so its labels keep their light-ground colours, and --focus
+       re-points to gold here (blue collapses on blue — the footer/pre
+       precedent). */
+    .post-hero { --focus: var(--gold); }
+    .post-hero__cover {
+      aspect-ratio: 1 / 1;
+      max-width: 380px;
+      margin: 2.5rem auto 0;
+      border-radius: var(--radius-lg, 16px);
+      overflow: hidden;
+      box-shadow: 0 20px 60px rgba(17,48,75,0.14);
+    }
+    .post-hero__cover img { width: 100%; height: 100%; object-fit: cover; display: block; }
+    .post-body { max-width: 720px; margin: 0 auto; padding: 3rem 2rem 6rem; }
+    .post-body h2 { font-size: 1.6rem; font-weight: 800; color: var(--navy); margin: 3rem 0 1rem; padding-bottom: 0.5rem; border-bottom: 2px solid rgba(34,98,153,0.15); }
+    .post-body h3 { font-size: 1.25rem; font-weight: 700; color: var(--navy); margin: 2.25rem 0 0.75rem; }
+    .post-body p { margin-bottom: 1.25rem; }
+    .post-body strong { font-weight: 700; color: var(--navy); }
+    .post-body a { color: var(--blue); text-decoration: underline; text-decoration-thickness: 1px; text-underline-offset: 2px; }
+    .post-body ul, .post-body ol { margin: 0.5rem 0 1.25rem 1.5rem; }
+    .post-body li { margin-bottom: 0.4rem; }
+    .post-body blockquote { background: rgba(34,98,153,0.06); border-left: 4px solid var(--blue); padding: 1rem 1.25rem; border-radius: 0 10px 10px 0; margin: 1.25rem 0; font-size: 0.95rem; color: var(--navy); }
+    .post-body hr { border: none; height: 1px; background: linear-gradient(90deg, transparent, rgba(34,98,153,0.2), transparent); margin: 3rem 0; }
+    /* ── CODE ── */
+    .post-body pre { background: var(--code-bg); border-radius: 12px; padding: 1.5rem; margin: 1.25rem 0 1.5rem; overflow-x: auto; border: 1px solid rgba(255,255,255,0.05); }
+    .post-body pre code { font-family: var(--mono); font-size: 0.85rem; color: #e2e8f0; line-height: 1.7; background: none; padding: 0; white-space: pre-wrap; }
+    .post-body code { font-family: var(--mono); font-size: 0.88em; background: rgba(34,98,153,0.08); color: var(--blue-dark); padding: 0.15em 0.45em; border-radius: 5px; }
+    /* ── TABLES ── */
+    .table-wrapper { overflow-x: auto; margin: 1.5rem 0; border-radius: 0.5rem; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1); }
+    table { width: 100%; border-collapse: collapse; background: white; }
+    th { background: #226299; color: white; padding: 1rem; text-align: left; font-weight: 600; }
+    td { padding: 1rem; border-bottom: 1px solid #e5e7eb; }
+    .post-body table { display: block; width: 100%; overflow-x: auto; }
+    /* ── ALERTS ── */
+    .alert { background: #fef3cd; border: 1px solid #facc15; border-radius: 0.5rem; padding: 1rem; margin: 1.5rem 0; }
+    .alert.danger { background: #fee2e2; border-color: #ef4444; }
+    .alert.info { background: #e0f2fe; border-color: #06b6d4; }
+    .alert.success { background: #d1fae5; border-color: #10b981; }
+    /* ── KEY TAKEAWAYS ── */
+    .key-takeaways { background: linear-gradient(135deg, #f3f4f6 0%, #e5e7eb 100%); border-radius: 1rem; padding: 2rem; margin: 3rem 0; }
+    .key-takeaways h3 { color: #226299; margin-bottom: 1.5rem; }
+    .post-series-footer { text-align: center; font-size: 0.85rem; color: var(--slate-light); font-style: italic; margin-top: 2rem; padding-top: 2rem; border-top: 1px solid #e2e8f0; }
+    .blog-footer { background: var(--navy); padding: 2rem 0; text-align: center; }
+    .blog-footer a { color: var(--gold); text-decoration: none; font-weight: 600; font-size: 0.9rem; }
+    .blog-footer span { color: var(--gray); font-size: 0.8rem; display: block; margin-top: 0.4rem; }
+    @media (max-width: 600px) {
+      .post-hero { padding: 7rem 1.25rem 2.5rem; }
+      .post-body { padding: 2rem 1.25rem 4rem; }
+      .post-hero__meta { flex-direction: column; gap: 0.4rem; }
+      .post-body h2 { font-size: 1.4rem; }
+      .post-body h3 { font-size: 1.15rem; }
+      .post-body pre { padding: 1rem; border-radius: 8px; }
+    }
+
+    :focus-visible { outline: 2px solid var(--focus); outline-offset: 3px; border-radius: 2px; }
+    /* the ring sits on the page ground (3px offset). Inside the navy footers
+       and code blocks var(--blue) collapses to 2.12:1, so those scopes
+       re-point --focus to gold (5.73:1 on navy). */
+    .footer, .blog-footer, pre { --focus: var(--gold); }
+    :focus:not(:focus-visible) { outline: none; }
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after {
+        animation-duration: .01ms !important; animation-iteration-count: 1 !important;
+        transition-duration: .01ms !important; scroll-behavior: auto !important;
+      }
+    }
+    h1, h2, h3, .post-hero__title, .card__title { text-wrap: balance; }
+
+    .post-body img, .post-body svg { max-width: 100%; height: auto; }
+
+    /* ── SKIP LINK ── a11y-perf R5: the link and the landmark it targets are a
+       pair — useless without both halves. Off-screen until focused, then the
+       first tab stop on every page. */
+    .skip-link { position: absolute; left: -9999px; }
+    .skip-link:focus {
+      left: 1rem; top: 1rem; z-index: 999;
+      background: var(--navy); color: #fff;
+      padding: 0.75rem 1.25rem; border-radius: var(--radius-sm);
+      font-weight: 600; text-decoration: none;
+    }
+
+    /* ── POST WAYFINDING ── the wordmark is the home link; the footer carries
+       the full destination row. */
+    .blog-nav__home {
+      font-size: 0.9rem; font-weight: 800; color: var(--navy);
+      text-decoration: none; margin-right: 1rem;
+    }
+    .blog-nav__home:hover { color: var(--blue); }
+    .blog-nav__inner > .blog-nav__back { margin-right: auto; }
+    .blog-footer__nav {
+      display: flex; flex-wrap: wrap; justify-content: center; gap: 0.35rem 1.25rem;
+      max-width: 860px; margin: 0 auto 1.25rem; padding: 0 2rem 1.25rem;
+      border-bottom: 1px solid rgba(255,255,255,0.12);
+    }
+    .blog-footer__nav a { color: var(--gold); font-size: 0.85rem; font-weight: 600; text-decoration: none; }
+    .blog-footer__nav a:hover { color: #fff; text-decoration: underline; }
+
+    html { scroll-padding-top: 5rem; }
+    [id] { scroll-margin-top: 5rem; }
+
+    /* Thai needs more room than Latin at the same nominal size. */
+    .post-body:lang(th) { font-size: 18px; line-height: 1.85; }
+    .post-body p, .post-body li, .post-body blockquote { text-wrap: pretty; }
+
+    /* ---- side-scroll affordance ----
+       pre blocks and tables can exceed 720px. These layers paint a shadow ONLY
+       where there is more content in that direction; when fully scrolled the
+       cover slides over the shadow and hides it. No JavaScript, no wrapper. */
+    .post-body pre, .post-body table {
+      overflow-x: auto;
+      background-image:
+        linear-gradient(to right, var(--code-bg, #0f172a) 30%, rgba(15,23,42,0)),
+        linear-gradient(to left, var(--code-bg, #0f172a) 30%, rgba(15,23,42,0)),
+        radial-gradient(farthest-side at 0 50%, rgba(0,0,0,.28), rgba(0,0,0,0)),
+        radial-gradient(farthest-side at 100% 50%, rgba(0,0,0,.28), rgba(0,0,0,0));
+      background-position: 0 0, 100% 0, 0 0, 100% 0;
+      background-repeat: no-repeat;
+      background-size: 40px 100%, 40px 100%, 14px 100%, 14px 100%;
+      background-attachment: local, local, scroll, scroll;
+    }
+    .post-body table {
+      background-image:
+        linear-gradient(to right, var(--white, #fff) 30%, rgba(255,255,255,0)),
+        linear-gradient(to left, var(--white, #fff) 30%, rgba(255,255,255,0)),
+        radial-gradient(farthest-side at 0 50%, rgba(17,48,75,.16), rgba(17,48,75,0)),
+        radial-gradient(farthest-side at 100% 50%, rgba(17,48,75,.16), rgba(17,48,75,0));
+      background-position: 0 0, 100% 0, 0 0, 100% 0;
+      background-repeat: no-repeat;
+      background-size: 40px 100%, 40px 100%, 14px 100%, 14px 100%;
+      background-attachment: local, local, scroll, scroll;
+    }
+
+    /* ---- table of contents ---- */
+    .post-toc {
+      max-width: 720px;
+      margin: 2rem auto 0;
+      padding: 1rem 1.25rem;
+      background: rgba(34,98,153,0.05);
+      border: 1px solid rgba(34,98,153,0.14);
+      border-left: 3px solid var(--gold, #c4a46c);
+      border-radius: 10px;
+      font-size: 0.92rem;
+    }
+    .post-toc > summary {
+      cursor: pointer;
+      font-weight: 700;
+      color: var(--navy);
+      list-style: none;
+    }
+    .post-toc > summary::-webkit-details-marker { display: none; }
+    .post-toc > summary::before {
+      content: "\25B8";
+      display: inline-block;
+      margin-right: 0.5rem;
+      transition: transform 0.2s ease;
+      color: var(--gold-dark, #7a5f22);
+    }
+    .post-toc[open] > summary::before { transform: rotate(90deg); }
+    .post-toc > summary:focus-visible { outline: 3px solid var(--focus, #226299); outline-offset: 3px; }
+    .post-toc ol { margin: 0.85rem 0 0.25rem; padding-left: 1.4rem; }
+    .post-toc li { margin-bottom: 0.4rem; line-height: 1.5; }
+    .post-toc a { color: var(--slate); text-decoration: none; }
+    .post-toc a:hover, .post-toc a:focus-visible { color: var(--blue-dark, #1a4d7a); text-decoration: underline; }
+    @media (max-width: 600px) { .post-toc { margin: 1.25rem 1rem 0; } }
+
+    /* ---- cross-document view transitions ---- */
+    @view-transition { navigation: auto; }
+    .nav, .blog-nav { view-transition-name: site-nav; }
+    .footer, .blog-footer { view-transition-name: site-footer; }
+    @media (prefers-reduced-motion: reduce) {
+      ::view-transition-group(*),
+      ::view-transition-old(*),
+      ::view-transition-new(*) { animation: none !important; }
+    }
+
+    /* ── SERIES STRIP — Hermes Agent in Practice ──
+       Same class and inner-wrapper shape as the OpenClaw strip because the
+       linter's RE_SNAV recognises exactly `series-nav` + a nested div; a
+       renamed strip would read as "no nav" and fail INV-08. All content
+       checks (INV-03 family) iterate the SERIES7 list only, so this strip's
+       labels are convention, not contract. House-styled, not the island CSS. */
+    .series-nav {
+      max-width: 720px; margin: 2rem auto 0; padding: 1.1rem 1.4rem;
+      background: rgba(255,255,255,0.75); border: 1px solid rgba(34,98,153,0.15);
+      border-left: 3px solid var(--gold); border-radius: 12px;
+    }
+    .series-nav h3 {
+      font-size: 0.78rem; font-weight: 700; text-transform: uppercase;
+      letter-spacing: 0.08em; color: var(--gold-dark); margin-bottom: 0.6rem;
+    }
+    .series-links { display: flex; flex-wrap: wrap; gap: 0.5rem; }
+    .series-links a, .series-links .current {
+      font-size: 0.82rem; font-weight: 600; padding: 0.35rem 0.8rem;
+      border-radius: 50px; text-decoration: none;
+    }
+    .series-links a { color: var(--blue-dark); background: rgba(34,98,153,0.08); }
+    .series-links a:hover { background: rgba(34,98,153,0.16); }
+    .series-links .current { color: #fff; background: var(--blue-dark); }
+    @media (max-width: 600px) { .series-nav { margin: 1.5rem 1rem 0; } }
+
+    /* ── LANGUAGE SWITCH — pure CSS, zero JavaScript (INV-38) ──
+       One visually-hidden checkbox as a direct child of body, BEFORE the main landmark,
+       so `#langSwitch:checked ~ main …` reaches every content block. The two
+       tracks are paired blocks: .l-th (default) and .l-en (hidden until
+       checked; display:revert restores block for divs, inline for spans).
+       Naming stays clear of INV-12's menu-token regex (hamburger|burger|
+       nav__toggle|nav-toggle|navtoggle|menu-toggle|menu__toggle) — verified.
+       No JS also means no persistence across posts; each post opens in Thai. */
+    .lang-switch-box { position: absolute; left: -9999px; }
+    .l-en { display: none; }
+    #langSwitch:checked ~ main .l-en { display: revert; }
+    #langSwitch:checked ~ main .l-th { display: none; }
+    .lang-switch {
+      display: inline-flex; align-items: center; gap: 0.55rem;
+      margin-top: 1.4rem; padding: 0.4rem 1.1rem; border-radius: 50px;
+      background: rgba(255,255,255,0.85); border: 1px solid rgba(255,255,255,0.4);
+      cursor: pointer; font-size: 0.85rem; user-select: none;
+    }
+    .lang-switch span { color: var(--slate-light); font-weight: 600; transition: color 0.2s; }
+    .lang-switch .lang-sep { color: var(--gray); font-weight: 400; }
+    .lang-switch .lang-th { color: var(--navy); font-weight: 800; }
+    #langSwitch:checked ~ main .lang-switch .lang-th { color: var(--slate-light); font-weight: 600; }
+    #langSwitch:checked ~ main .lang-switch .lang-en { color: var(--navy); font-weight: 800; }
+    .lang-switch:hover { border-color: #fff; }
+    #langSwitch:focus-visible ~ main .lang-switch {
+      outline: 2px solid var(--focus); outline-offset: 3px;
+    }
+  </style>
+  <!-- social -->
+  <link rel="canonical" href="https://anirach.com/blog/hermes-skills.html">
+  <meta property="og:type" content="article">
+  <meta property="og:url" content="https://anirach.com/blog/hermes-skills.html">
+  <meta property="og:site_name" content="Anirach Mingkhwan">
+  <meta property="og:locale" content="th_TH">
+  <meta property="article:published_time" content="2026-09-01">
+  <meta property="article:author" content="https://anirach.com/">
+  <meta property="og:title" content="Skills — ทักษะที่เขียนตัวเองได้">
+  <meta property="og:description" content="Hermes Agent เขียน skill ของตัวเองได้จริงผ่าน skill_manage มี Curator ดูแลวงจรชีวิต และมี write_approval ให้องค์กรคุม — บทความนี้ไล่ระบบ skills ทั้งหมด ตั้งแต่ SKILL.md ตามมาตรฐานเปิด จนถึงการย้าย skills จาก OpenClaw">
+  <meta itemprop="image" property="og:image" content="https://anirach.com/images/hermes-skills-og.jpg">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
+  <meta property="og:image:alt" content="Skills — ทักษะที่เขียนตัวเองได้">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:image" content="https://anirach.com/images/hermes-skills-og.jpg">
+  <meta name="twitter:image:alt" content="Skills — ทักษะที่เขียนตัวเองได้">
+  <meta name="robots" content="max-image-preview:large">
+  <meta name="theme-color" content="#11304b">
+  <link rel="icon" href="/favicon.ico" sizes="any">
+  <link rel="apple-touch-icon" href="/apple-touch-icon.png">
+  <!-- /social -->
+</head>
+<body>
+<a href="#main" class="skip-link">Skip to content</a>
+<input type="checkbox" id="langSwitch" class="lang-switch-box" aria-label="Switch language: Thai / English">
+
+  <nav class="blog-nav">
+    <div class="blog-nav__inner">
+      <a href="../index.html" class="blog-nav__home">Anirach</a>
+      <a href="./" class="blog-nav__back">‹ Blog</a>
+      <div class="blog-nav__title">Skills · ทักษะที่เขียนตัวเองได้</div>
+    </div>
+  </nav>
+
+  <main id="main">
+
+  <header class="post-hero">
+    <div class="post-hero__tags">
+      <span class="post-hero__tag">Hermes</span>
+      <span class="post-hero__tag">AI Agents</span>
+      <span class="post-hero__tag">Skills</span>
+    </div>
+    <h1 class="post-hero__title" itemprop="headline"><span class="l-th">Skills — ทักษะที่เขียนตัวเองได้</span><span class="l-en" lang="en">Skills — Procedural Memory That Writes Itself</span></h1>
+    <p class="post-hero__sub"><span class="l-th">Hermes เรียก skills ว่า procedural memory ของ agent — มันเขียน SKILL.md เองได้ ปรับปรุงระหว่างใช้งานได้ และมี Curator คอยเก็บกวาดหลังบ้าน บทความนี้ไล่ทั้งวงจร ตั้งแต่กายวิภาคของ skill จนถึง governance ที่องค์กรต้องตั้งก่อนไว้ใจ loop นี้</span><span class="l-en" lang="en">Hermes treats skills as the agent's procedural memory — it writes its own SKILL.md, patches it in use, and a background Curator manages the lifecycle. A full tour, from the anatomy of one skill to the governance an organization needs before trusting the loop.</span></p>
+    <div class="post-hero__meta">
+      <span>By <strong>Anirach Mingkhwan</strong></span>
+      <span class="post-hero__series">Hermes Agent in Practice 2026 • Post #6</span>
+      <span><time datetime="2026-09-01" itemprop="datePublished">1 Sep 2026</time></span>
+      <span>16 min read</span>
+    </div>
+    <label for="langSwitch" class="lang-switch" title="สลับภาษา · Switch language"><span class="lang-th">ไทย</span><span class="lang-sep">·</span><span class="lang-en" lang="en">English</span></label>
+    <div class="post-hero__cover">
+      <img src="../images/hermes-skills-cover.jpg" alt="Skills — ทักษะที่เขียนตัวเองได้" width="800" height="800" loading="eager" fetchpriority="high" decoding="async">
+    </div>
+  </header>
+
+  <nav aria-label="Hermes Agent in Practice">
+  <div class="series-nav">
+    <h3>⚡ Hermes Agent in Practice 2026</h3>
+    <div class="series-links">
+        <a href="/blog/hermes-101">#1 Hermes 101</a>
+        <a href="/blog/hermes-agent-teams">#2 Agent Teams</a>
+        <a href="/blog/hermes-memory">#3 Memory</a>
+        <a href="/blog/hermes-security">#4 Security</a>
+        <a href="/blog/hermes-integrations">#5 Integrations</a>
+        <span class="current" aria-current="page">#6 Skills</span>
+        <a href="/blog/hermes-production">#7 Production</a>
+    </div>
+  </div>
+  </nav>
+
+  <article class="post-body" itemscope itemtype="https://schema.org/BlogPosting">
+    <span itemprop="author" itemscope itemtype="https://schema.org/Person"><meta itemprop="name" content="Anirach Mingkhwan"></span>
+
+    <details class="post-toc l-th" open>
+      <summary>ในบทความนี้</summary>
+      <ol>
+          <li><a href="#th-anatomy">1. Anatomy of a Skill — SKILL.md และมาตรฐานเปิด agentskills.io</a></li>
+          <li><a href="#th-loading">2. Skills อยู่ที่ไหน โหลดอย่างไร — Progressive Disclosure</a></li>
+          <li><a href="#th-loop">3. Learning Loop — skill_manage, Triggers และ Telemetry</a></li>
+          <li><a href="#th-curator">4. The Curator — วงจรชีวิตของ skill ที่ agent เขียนเอง</a></li>
+          <li><a href="#th-learn">5. /learn และ Offline Evolution — กลั่นความรู้เป็น skill</a></li>
+          <li><a href="#th-governance">6. Governance — write_approval, Security Scanning และ Trust Tiers</a></li>
+          <li><a href="#th-authoring">7. เขียนเองและแบ่งปัน — Templates, Taps และ Skills Hub</a></li>
+          <li><a href="#th-portability">8. Portability — ย้ายจาก OpenClaw และช่องว่างฝั่ง Claude Code</a></li>
+      </ol>
+    </details>
+    <details class="post-toc l-en" open>
+      <summary>In this post</summary>
+      <ol>
+          <li><a href="#en-anatomy">1. Anatomy of a Skill: SKILL.md and the agentskills.io Standard</a></li>
+          <li><a href="#en-loading">2. Where Skills Live and How They Load: Progressive Disclosure</a></li>
+          <li><a href="#en-loop">3. The Learning Loop: skill_manage, Triggers, and Telemetry</a></li>
+          <li><a href="#en-curator">4. The Curator: A Lifecycle for Skills the Agent Wrote</a></li>
+          <li><a href="#en-learn">5. /learn and Offline Evolution: Distilling Knowledge into Skills</a></li>
+          <li><a href="#en-governance">6. Governance: write_approval, Security Scanning, and Trust Tiers</a></li>
+          <li><a href="#en-authoring">7. Hand-Authoring and Sharing: Templates, Taps, and the Skills Hub</a></li>
+          <li><a href="#en-portability">8. Portability: From OpenClaw In — and the Claude Code Gap</a></li>
+      </ol>
+    </details>
+    <div class="l-th">
+
+    <p>🤔 ลองนึกภาพดู: AI agent ของคุณเพิ่งงมทางอยู่ครึ่งชั่วโมงกับงาน deploy ที่มีขั้นตอนซ่อนอยู่เป็นสิบขั้น ลองผิดไปสองรอบ เจอ error หนึ่งชุด แล้วในที่สุดก็เจอเส้นทางที่ใช้ได้จริง — คำถามคือ พรุ่งนี้เมื่องานแบบเดียวกันวนกลับมา มันควรเริ่มงมใหม่จากศูนย์ หรือควร<strong>จดวิธีที่พิสูจน์แล้วเก็บไว้เป็นทักษะ</strong> แล้วหยิบมาใช้ได้เลย?</p>
+
+    <p>ผู้อ่านซีรีส์ OpenClaw for Organizations ของผมจะคุ้นกับครึ่งแรกของคำตอบดี — ในบทความ <a href="/blog/openclaw-skills">OpenClaw Skills</a> ผมเล่าไว้ว่า skill คือโฟลเดอร์ที่มีไฟล์ SKILL.md บอก agent ว่า "งานแบบนี้ ทำแบบนี้" ซึ่งยกระดับความสม่ำเสมอของงานได้มาก แต่โมเดลฝั่งนั้นมีสมมติฐานเงียบ ๆ อยู่ข้อหนึ่ง: <strong>คนเป็นคนเขียน skill — agent เป็นเพียงผู้ใช้</strong></p>
+
+    <p>Hermes Agent ของ Nous Research (เปิดตัวสาธารณะเมื่อ 25 กุมภาพันธ์ 2026 และวันนี้มีดาวบน GitHub เกือบ 240,000 ดวง) เดินต่ออีกก้าวที่ผมเห็นว่าน่าสนใจที่สุดในสถาปัตยกรรมทั้งหมดของมัน: agent <strong>เขียน skill ของตัวเองได้</strong> ผ่าน tool ชื่อ <code>skill_manage</code> ปรับปรุงมันระหว่างใช้งาน และมี process หลังบ้านชื่อ <strong>Curator</strong> คอยดูแลวงจรชีวิตของสิ่งที่มันเขียน เอกสารของ Hermes เรียกระบบนี้ตรง ๆ ว่า procedural memory — ความจำเชิงกระบวนการ — และ README ก็ย่อปรัชญาทั้งหมดไว้ในประโยคเดียวว่า "The agent that grows with you" บทความ #6 ของซีรีส์จะไล่ทั้งระบบ ตั้งแต่กายวิภาคของ skill หนึ่งตัว ไปจนถึงคำถามที่องค์กรต้องตอบก่อนปล่อยให้ loop นี้หมุนเอง: <em>ใครตรวจงานของ agent ที่เขียนตำราสอนตัวเอง?</em></p>
+
+    <h2 id="th-anatomy">1. Anatomy of a Skill — SKILL.md และมาตรฐานเปิด agentskills.io</h2>
+
+    <p>skill ของ Hermes คือโฟลเดอร์หนึ่งโฟลเดอร์ที่มีไฟล์ <strong>SKILL.md</strong> เป็นหัวใจ — ไฟล์ Markdown ที่มี YAML frontmatter อยู่ด้านบน ตามมาตรฐานเปิด <strong>Agent Skills</strong> ของ agentskills.io ซึ่งมีจุดกำเนิดจาก Anthropic ก่อนถูกปล่อยเป็นมาตรฐานเปิด เว็บไซต์ของมาตรฐานระบุผู้ adopt ไว้ราว 40 client — รวมทั้ง Claude Code, Claude, OpenClaw, Codex, Gemini CLI และ Hermes เอง นั่นแปลว่ารูปแบบไฟล์ที่คุณกำลังจะเห็น ไม่ใช่ของเฉพาะค่ายใดค่ายหนึ่งอีกต่อไป</p>
+
+    <p>ข้อกำหนดขั้นต่ำเบามาก: frontmatter บังคับแค่ <code>name</code> กับ <code>description</code> ส่วนของที่เป็น Hermes โดยเฉพาะถูกจัดระเบียบไว้ใต้ namespace <code>metadata.hermes</code> ทั้งหมด — tags, category, related_skills, การผูกกับ toolsets ไปจนถึง <code>blueprint</code> ที่เปลี่ยน skill ให้เป็นงานตามตาราง cron:</p>
+
+    <pre><code>---
+name: server-health-report
+description: สรุปสถานะ server ประจำวันจาก log และ metrics
+  Use when the user asks for a daily health report.
+version: 1.0.0
+platforms: [linux, macos]        # ซ่อน skill ตาม OS
+metadata:
+  hermes:
+    tags: [ops, monitoring]
+    category: operations
+    requires_toolsets: [shell]   # โผล่เมื่อ toolset พร้อมเท่านั้น
+    blueprint:                   # เปลี่ยน skill เป็นงาน cron
+      schedule: "0 7 * * 1-5"
+      prompt: รันรายงานสถานะ server แล้วส่งเข้า Slack ห้อง ops
+---
+
+# Server Health Report
+
+## When to Use
+## Quick Reference
+## Procedure
+## Pitfalls
+## Verification</code></pre>
+
+    <p>สังเกตโครงของ body: <strong>When to Use → Quick Reference → Procedure → Pitfalls → Verification</strong> คือลำดับ "ทรงบ้าน" ที่ <a href="https://hermes-agent.nousresearch.com/docs/developer-guide/creating-skills">developer guide ของ Hermes</a> วางไว้ — ให้เกณฑ์ตัดสินใจมาก่อน สูตรลัดตามมา ขั้นตอนละเอียดอยู่กลาง และปิดด้วยวิธีตรวจว่างานสำเร็จจริง ใครที่เคยเขียน runbook ให้คนอ่านจะรู้สึกคุ้นทันที เพราะมันคือ runbook ดี ๆ นี่เอง เพียงแต่ผู้อ่านเป้าหมายเป็น LLM</p>
+
+    <p>frontmatter ยังทำ conditional activation ได้ละเอียดกว่าที่เห็น: <code>fallback_for_toolsets</code> ทำให้ skill ปรากฏเฉพาะเมื่อ toolset บางตัว<em>หายไป</em> (ตัวอย่างในเอกสารคือ skill duckduckgo-search ที่โผล่มาเฉพาะเครื่องที่ไม่มี web toolset — เป็น plan B ที่ประกาศตัวเองอัตโนมัติ) ส่วน <code>required_environment_variables</code> และ <code>required_credential_files</code> ประกาศ dependency ให้ตรวจได้ก่อนรัน ด้านเพดานขนาด Hermes Atlas ซึ่งเป็น community project (ไม่ใช่เอกสารทางการ) ระบุไว้ราวหนึ่งแสนตัวอักษรต่อ skill — ตัวเลขนี้ควรอ่านเป็นค่าประมาณจากบุคคลที่สาม</p>
+
+    <h2 id="th-loading">2. Skills อยู่ที่ไหน โหลดอย่างไร — Progressive Disclosure</h2>
+
+    <p>บ้านหลักของ skills คือ <code>~/.hermes/skills/</code> ซึ่งเอกสารเรียกว่า "the primary directory and source of truth" จัดกลุ่มเป็นหมวดหมู่ และแต่ละ skill มีโฟลเดอร์ประกอบได้ครบชุด:</p>
+
+    <pre><code>~/.hermes/skills/
+└── operations/
+    └── server-health-report/
+        ├── SKILL.md          # หัวใจ — โหลดเมื่อถูกเรียกเท่านั้น
+        ├── references/       # เอกสารอ้างอิง โหลดทีละไฟล์
+        ├── scripts/          # helper logic แยกออกจากตัวคู่มือ
+        ├── templates/
+        ├── examples/
+        └── assets/</code></pre>
+
+    <p>นอกจากบ้านหลัก ยังมี skill ระดับโปรเจกต์ (<code>.hermes/skills/</code> หรือ <code>.agents/skills/</code> ใน repo — ถูก gate ด้วยระบบ trust ก่อนโหลด) และ directory ภายนอกที่ประกาศเพิ่มได้ใน config โดยลำดับความสำคัญคือ project → local → external:</p>
+
+    <pre><code># ~/.hermes/config.yaml
+skills:
+  external_dirs:
+    - /srv/shared-skills      # คลัง skills กลางของทีม</code></pre>
+
+    <p>คำถามที่วิศวกรจะถามทันที: ถ้ามี skill เป็นร้อยตัว context window ไม่ระเบิดหรือ? คำตอบของ Hermes คือ <strong>progressive disclosure</strong> สามชั้น:</p>
+
+    <ul>
+      <li><strong>ชั้นที่ 1 — <code>skills_list()</code>:</strong> agent เห็นเฉพาะ metadata (ชื่อ + description) ของทุก skill รวมประมาณ 3,000 tokens ไม่ว่าคลังจะใหญ่แค่ไหน</li>
+      <li><strong>ชั้นที่ 2 — <code>skill_view(name)</code>:</strong> โหลด SKILL.md ฉบับเต็มเฉพาะตัวที่เกี่ยวกับงานตรงหน้า</li>
+      <li><strong>ชั้นที่ 3 — <code>skill_view(name, path)</code>:</strong> เจาะไฟล์ใน references/ เป็นรายชิ้น เมื่อขั้นตอนไหนต้องการรายละเอียดจริง</li>
+    </ul>
+
+    <p>ฝั่งผู้ใช้ ทุก skill เรียกตรงได้เป็น slash command (<code>/server-health-report</code>) ซ้อนหลาย skill ในคำสั่งเดียวก็ได้ และจัดกลุ่มเป็น bundle เก็บไว้ที่ <code>~/.hermes/skill-bundles/&lt;slug&gt;.yaml</code> ผ่านคำสั่ง <code>hermes bundles create</code></p>
+
+    <div class="alert info">
+      <strong>Skills ไม่ใช่ Memory:</strong> เอกสารทางการขีดเส้นแบ่งไว้ชัดเจน — "Memory stores small durable facts that should always be in context, while skills store longer procedures that should load only when relevant" ความจำคือข้อเท็จจริงสั้น ๆ ที่ต้องอยู่ใน context เสมอ ส่วน skill คือกระบวนการยาว ๆ ที่โหลดเมื่อจำเป็น — ฝั่งความจำผมแยกไว้ในบทความ <a href="/blog/hermes-memory">#3 Memory</a> ของซีรีส์นี้
+    </div>
+
+    <h2 id="th-loop">3. Learning Loop — skill_manage, Triggers และ Telemetry</h2>
+
+    <p>มาถึงหัวใจของบทความ สิ่งที่ทำให้ระบบ skills ของ Hermes ต่างจากทุกตัวที่ผมเคยเขียนถึง: agent ถือ tool ชื่อ <code>skill_manage</code> — ชุดปฏิบัติการหกแบบสำหรับเขียนและแก้คลังทักษะของตัวเอง:</p>
+
+    <div class="table-wrapper">
+      <table>
+        <thead>
+          <tr><th>Action</th><th>ใช้ทำอะไร</th><th>หมายเหตุ</th></tr>
+        </thead>
+        <tbody>
+          <tr><td><code>create</code></td><td>สร้าง skill ใหม่ทั้งโฟลเดอร์</td><td>trigger หลักหลังทำงานซับซ้อนสำเร็จ</td></tr>
+          <tr><td><code>patch</code></td><td>แก้เฉพาะจุดแบบเจาะจง</td><td><strong>ทางที่เอกสารแนะนำ</strong> สำหรับ self-improvement ระหว่างใช้งาน</td></tr>
+          <tr><td><code>edit</code></td><td>เขียนใหม่ครั้งใหญ่</td><td>เมื่อโครงเดิมไปต่อไม่ไหว</td></tr>
+          <tr><td><code>delete</code></td><td>ลบ skill ทิ้ง</td><td>—</td></tr>
+          <tr><td><code>write_file</code></td><td>เพิ่ม/แก้ไฟล์ประกอบใน references/ scripts/</td><td>—</td></tr>
+          <tr><td><code>remove_file</code></td><td>ลบไฟล์ประกอบ</td><td>—</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <p>trigger ที่เอกสารระบุมีสามแบบ: (1) ทำงานซับซ้อนสำเร็จ — เกณฑ์ที่เขียนไว้คืองานที่ใช้ tool call ตั้งแต่ 5 ครั้งขึ้นไป (ผมยังไม่พบเอกสารที่บอกว่าเกณฑ์นี้ปรับค่าได้) (2) เจอ error หรือทางตัน แล้วในที่สุดก็หาทางที่ใช้ได้เจอ — ตัวเส้นทางที่รอดนั่นแหละคือของมีค่า (3) ถูกผู้ใช้แก้ให้ หลังงาน multi-step ใหญ่ ๆ Hermes มักจะ<em>เสนอ</em>เองว่า "อยากให้บันทึกวิธีนี้เป็น skill ไหม" — จุดตัดสินใจอยู่ที่มนุษย์ในจังหวะนั้น</p>
+
+    <p>ทุกการใช้งานถูกจดเป็น telemetry ในไฟล์ <code>~/.hermes/skills/.usage.json</code> — โครงฟิลด์ตามเอกสาร (ค่าในตัวอย่างนี้ผมสมมติขึ้นเพื่อให้เห็นรูปร่าง):</p>
+
+    <pre><code>{
+  "operations/server-health-report": {
+    "use_count": 14,          // ครั้งที่ถูกโหลดเข้า prompt
+    "view_count": 3,          // ครั้งที่ agent เรียก skill_view
+    "patch_count": 2,         // ครั้งที่ถูก skill_manage แก้
+    "last_used_at": "2026-08-30T07:02:11Z",
+    "created_at": "2026-06-14T09:41:00Z",
+    "created_by": "agent"     // ป้ายบอกที่มา — สำคัญต่อ Curator
+  }
+}</code></pre>
+
+    <p>ป้าย <code>created_by: agent</code> ไม่ได้ถูกตั้งโดย skill_manage ตรง ๆ แต่โดย background self-improvement review fork — process แยกที่ทบทวนงานย้อนหลัง และป้ายนี้คือเส้นแบ่งสำคัญของทั้งระบบ: <strong>Curator ในหัวข้อถัดไปจัดการเฉพาะ skill ที่ติดป้ายนี้เท่านั้น</strong> skill ที่คุณเขียนเองด้วยมือจะไม่ถูกระบบอัตโนมัติแตะเลย</p>
+
+    <div class="alert">
+      <strong>เรื่องที่ต้องพูดตรง ๆ:</strong> จนถึงวันที่เขียน (1 กันยายน 2026) ผมยังไม่พบตัวอย่างสาธารณะที่ตรวจสอบได้ของ skill ที่ agent เขียนให้ตัวเองแล้วถูกเปิดเผยเป็นชิ้นเป็นอัน — เอกสารทางการและ tutorial รายใหญ่ล้วนอธิบาย "กลไก" โดยไม่มีชื่อ skill จริงสักตัว และบทความ "8 Self-Evolving Skills" ที่แชร์กันมาก (ต้นทาง SSOJet เผยแพร่ต่อโดย Security Boulevard) แท้จริงคือการจัดหมวดกลไก 8 ประเภท ไม่ใช่ skill จริง 8 ตัว ถ้าจะประเมิน loop นี้ ให้ทดสอบกับงานของคุณเองแล้วเปิด diff ดูของจริง
+    </div>
+
+    <h2 id="th-curator">4. The Curator — วงจรชีวิตของ skill ที่ agent เขียนเอง</h2>
+
+    <p>ปล่อยให้ agent สะสม skill ไปเรื่อย ๆ โดยไม่มีใครเก็บกวาด ปลายทางคือกองไฟล์ที่ไม่มีใครกล้าลบ — โรคเดียวกับ daily log ฝั่ง memory ที่ผมเคยวิจารณ์ไว้ในซีรีส์ OpenClaw Hermes ตอบโจทย์นี้ด้วย <strong>Curator</strong>: งานบำรุงรักษาหลังบ้านที่รันเมื่อเครื่องว่าง (ค่า default: ตรวจทุก 168 ชั่วโมง และรอให้ idle อย่างน้อย 2 ชั่วโมงก่อน) และแตะเฉพาะ skill ที่มีป้าย <code>created_by: agent</code></p>
+
+    <div class="table-wrapper">
+      <table>
+        <thead>
+          <tr><th>สถานะ</th><th>เงื่อนไข (ค่า default)</th><th>ผลลัพธ์</th></tr>
+        </thead>
+        <tbody>
+          <tr><td><strong>active</strong></td><td>ยังถูกใช้งานอยู่</td><td>พร้อมโหลดตามปกติ</td></tr>
+          <tr><td><strong>stale</strong></td><td>ไม่ถูกใช้ 30 วัน</td><td>ถูกทำเครื่องหมายรอพิจารณา</td></tr>
+          <tr><td><strong>archived</strong></td><td>ไม่ถูกใช้ 90 วัน</td><td>ย้ายเข้า <code>~/.hermes/skills/.archive/</code> — กู้คืนได้ <strong>ไม่มีการลบถาวรอัตโนมัติ</strong></td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <p>skill ที่ถูก pin ไว้ และ skill ที่ blueprint/cron อ้างถึง จะถูกข้ามเสมอ ส่วนขั้นที่ไปไกลกว่านั้น — ให้ LLM ควบรวม skill ที่ซ้ำเกือบเหมือนกัน (consolidation) — เป็น opt-in และ<strong>ปิดโดย default</strong> โดยใช้ model slot แยกชื่อ auxiliary.curator:</p>
+
+    <pre><code># ~/.hermes/config.yaml
+curator:
+  interval_hours: 168      # ตรวจสัปดาห์ละครั้ง
+  min_idle_hours: 2        # รันเฉพาะตอนเครื่องว่างจริง
+  stale_after_days: 30
+  archive_after_days: 90
+  consolidate: false       # ให้ LLM ควบรวม — ปิดไว้ก่อนจนกว่าจะไว้ใจ</code></pre>
+
+    <p>ตาข่ายนิรภัยของ Curator ครบกว่าที่ผมคาดไว้: ก่อนรันทุกครั้งมัน snapshot ทั้ง directory เก็บไว้ที่ <code>~/.hermes/skills/.curator_backups/&lt;utc-iso&gt;/skills.tar.gz</code> (เก็บ 5 ชุดล่าสุด) ทุกความเปลี่ยนแปลงถูกจดลง ledger แบบ append-only (<code>.curator_ledger.jsonl</code>) และมีคำสั่งคุมมือครบมือ:</p>
+
+    <pre><code>hermes curator status            # สถานะรอบล่าสุด
+hermes curator run --dry-run     # ซ้อมรัน — ดูว่าจะแตะอะไรบ้าง
+hermes curator pin my-skill      # ห้ามแตะตัวนี้เด็ดขาด
+hermes curator restore my-skill  # กู้จาก archive
+hermes curator rollback          # ถอยกลับ snapshot ก่อนหน้า
+hermes curator ledger            # อ่านประวัติการแตะต้องทั้งหมด</code></pre>
+
+    <blockquote>💡 มุมมองของผม: ชุดออกแบบ "ไม่ลบถาวร + ledger + dry-run + rollback" บอกว่า Nous เข้าใจความกลัวที่ถูกต้องของผู้ใช้ — ระบบอัตโนมัติที่แตะคลังความรู้ขององค์กรต้อง audit ได้และถอยหลังได้เสมอ นี่คือเกณฑ์เดียวกับที่เราใช้ตัดสินระบบ backup และผมอยากเห็นทุก agent framework ถือมาตรฐานนี้</blockquote>
+
+    <h2 id="th-learn">5. /learn และ Offline Evolution — กลั่นความรู้เป็น skill</h2>
+
+    <p>loop ที่เล่ามาทั้งหมดเกิดจาก "ประสบการณ์" ของ agent เอง แต่ความรู้ส่วนใหญ่ขององค์กรไม่ได้อยู่ในประสบการณ์ของ agent — มันอยู่ในเอกสาร ใน repo และในบทสนทนา Hermes เติมช่องนี้ด้วยคำสั่ง <code>/learn</code> (MarkTechPost รายงานเมื่อ 24 มิถุนายน 2026): ให้ agent ที่กำลังคุยอยู่กลั่นแหล่งความรู้ให้เป็น SKILL.md ที่ตรงมาตรฐานทันที แหล่งที่รองรับมีสี่แบบ — directory ในเครื่อง, URL, ประวัติบทสนทนา และโน้ตที่ paste เข้ามา:</p>
+
+    <pre><code>/learn ./docs/deploy-runbook     # กลั่นจาก directory ในเครื่อง
+/learn https://example.com/guide # กลั่นจากหน้าเว็บ
+/learn                           # กลั่นจากบทสนทนาที่กำลังคุย
+# หรือ paste โน้ตยาว ๆ แล้วสั่ง /learn ต่อท้าย</code></pre>
+
+    <p>เบื้องหลัง /learn ใช้ tools ปกติของ agent (read_file, search_files, web_extract) และเมื่อแหล่งใหญ่เกินกว่าจะยัดลง SKILL.md เดียว มันจะสร้าง <strong>knowledge-base skill</strong>: SKILL.md บาง ๆ ทำหน้าที่สารบัญ + ไฟล์อ้างอิงที่ index ไว้ใน references/ ให้ progressive disclosure โหลดทีละชิ้นตามจังหวะที่ใช้จริง</p>
+
+    <p>อีกกลไกอยู่คนละจังหวะเวลาโดยสิ้นเชิง: repo ทางการแยกชื่อ <strong><a href="https://github.com/NousResearch/hermes-agent-self-evolution">hermes-agent-self-evolution</a></strong> ทำ evolutionary optimization แบบ offline ด้วย DSPy + GEPA — อ่าน execution traces เพื่อเข้าใจว่างานพังเพราะอะไร สร้าง eval dataset แล้ววิวัฒน์ skill รุ่นทดลองผ่านด่านบังคับหลายชั้น: test suite เต็มรูป, ขนาดไม่เกิน 15KB, รักษาความหมายเดิม และ<strong>ต้องผ่าน human review เป็น pull request เสมอ</strong> ค่าใช้จ่ายราว $2–10 ต่อรอบ ไม่ต้องใช้ GPU (Phase 1 ปัจจุบัน optimize เฉพาะไฟล์ skill)</p>
+
+    <p>สองกลไกนี้ต่างกันเชิงปรัชญา และความต่างนั้นสำคัญกับองค์กร: /learn คือ agent สด ๆ เขียนทันทีในบทสนทนา ส่วน self-evolution คือ pipeline ช้า ๆ ที่จบด้วยมนุษย์กด merge — สำหรับสภาพแวดล้อมที่ต้อง audit ได้ ผมมองว่าทรงหลังคือทรงที่ governance รับได้ง่ายกว่ามาก</p>
+
+    <hr>
+
+    <h2 id="th-governance">6. Governance — write_approval, Security Scanning และ Trust Tiers</h2>
+
+    <p>ค่า default ของ Hermes คือ <strong>agent เขียน skill ได้อิสระโดยไม่ต้องขออนุญาต</strong> — และนี่คือจุดที่เสียงบ่นของ community ดังที่สุด: มีผู้ใช้บน Reddit และ X รายงานทำนองว่า agent "อนุมัติความผิดพลาดของตัวเอง" จดวิธีที่ผิดลงเป็นทักษะถาวร หรือ patch ทับ skill ที่คนจูนมือไว้อย่างดี (ทั้งหมดเป็นรายงานจากผู้ใช้ ไม่ใช่สถิติทางการ — แต่สอดคล้องกับการที่ Nous ใส่กลไกป้องกันมาให้ครบชุด)</p>
+
+    <div class="alert danger">
+      <strong>สวิตช์แรกที่องค์กรควรเปิด:</strong> <code>skills.write_approval: true</code> — เปลี่ยนทุกการเขียนของ agent จาก "ลงถาวรทันที" เป็น "ค้างรอมนุษย์ review" ใน <code>~/.hermes/pending/skills/</code> ถ้าจะจำอะไรจากบทความนี้เพียงข้อเดียว จำข้อนี้
+    </div>
+
+    <pre><code># ~/.hermes/config.yaml
+skills:
+  write_approval: true     # ทุกการเขียนของ agent ต้องผ่านคน</code></pre>
+
+    <p>เมื่อเปิดแล้ว งานเขียนของ agent จะเข้าคิวเหมือน pull request ย่อม ๆ ที่คุณไล่ตรวจด้วยสี่คำสั่ง:</p>
+
+    <pre><code>/skills pending          # ดูคิวรอตรวจ
+/skills diff a1b2        # เปิด diff รายตัว — เหมือน review PR
+/skills approve a1b2     # รับเข้าคลัง
+/skills reject a1b2      # ตีกลับ</code></pre>
+
+    <p>สำหรับองค์กรที่จะเอาระบบนี้ไปใช้จริง ผมเสนอลำดับการเปิดแบบขั้นบันได — อย่าเปิดทุกอย่างพร้อมกันวันแรก:</p>
+
+    <ol>
+      <li><strong>ขั้นสังเกต:</strong> เปิด write_approval ตั้งแต่วันแรก แล้วปล่อยให้ agent เสนอ skill เข้าคิวโดยยังไม่ approve อะไรเลย — คุณจะเห็นชัดว่ามัน "อยากจด" อะไร และคุณภาพงานเขียนของมันเป็นอย่างไร</li>
+      <li><strong>ขั้น review เป็นกิจวัตร:</strong> ตั้งรอบไล่ตรวจ <code>/skills pending</code> ให้เป็นวินัยเดียวกับรอบ review pull request ปกติของทีม</li>
+      <li><strong>ขั้นเปิด Curator:</strong> ปล่อยวงจร stale → archive ทำงาน โดยยังปิด consolidate ไว้ตามค่า default</li>
+      <li><strong>ขั้นสุดท้ายจึงพิจารณา consolidation:</strong> เปิดเมื่อคุณมี ledger ให้ audit ย้อนหลังจนไว้ใจพฤติกรรมของระบบแล้วเท่านั้น</li>
+    </ol>
+
+    <p>ฝั่ง skill ที่มาจากภายนอก ทุกการติดตั้งผ่าน Skills Hub ต้องผ่าน <strong>security scan</strong> ภาคบังคับ — ตรวจ prompt injection การ exfiltrate ข้อมูล และคำสั่งทำลายล้าง verdict ระดับ dangerous ถูก block เด็ดขาดโดย<strong>ไม่มี --force ให้ override</strong> ส่วน skill ระดับโปรเจกต์ที่มากับ repo ก็ถูกสแกนและ quarantine ตอนโหลดเช่นกัน ระบบแบ่งความเชื่อถือเป็นสี่ชั้น — builtin / official / trusted / community — และเสริมชั้นตรวจ optional ด้วย SkillEvaluator v0.1.0 ของ NVIDIA ได้อีกหนึ่งชั้น</p>
+
+    <p>ผมอ่านทั้งชุดนี้เป็นบทเรียนที่ถอดมาจากยุค marketplace ของ OpenClaw — ผู้อ่านซีรีส์เดิมคงจำข่าว skill อันตรายในระบบนิเวศฝั่งนั้นได้ Hermes ออกแบบขาเข้าให้ fail-closed ตั้งแต่แรก (threat model ฉบับเต็มผมแยกไว้ใน <a href="/blog/hermes-security">#4 Security</a>)</p>
+
+    <p>ประเด็น governance สุดท้ายที่คนมักมองข้าม: bundled skills ที่มากับตัวโปรแกรมจะเป็นอย่างไรตอน update? Hermes ใช้ origin-hash tracking ในไฟล์ <code>~/.hermes/skills/.bundled_manifest</code> — ถ้าคุณแก้ skill ที่ bundle มา มือของคุณชนะเสมอ: ตัว update จะข้ามไฟล์ที่ผู้ใช้แก้แล้ว ไม่เขียนทับเงียบ ๆ และมีคำสั่งจัดการเมื่ออยากกลับไปตามต้นทางหรือเลิกใช้ทั้งชุด:</p>
+
+    <pre><code>hermes skills reset my-skill --restore   # กลับไปตามฉบับต้นทาง
+hermes skills opt-out --remove           # เลิกใช้ bundled skills ทั้งหมด</code></pre>
+
+    <h2 id="th-authoring">7. เขียนเองและแบ่งปัน — Templates, Taps และ Skills Hub</h2>
+
+    <p>แม้ loop อัตโนมัติจะเป็นพระเอกของเรื่อง งานจริงในองค์กรส่วนใหญ่ยังเริ่มจาก skill ที่คนเขียน — และ Hermes ทำให้เส้นทางนี้เป็นงานช่างที่มีแบบแผน ตาม developer guide:</p>
+
+    <ol>
+      <li>ตั้งโครง body ตามทรงบ้าน — When to Use → Quick Reference → Procedure → Pitfalls → Verification — และเอา workflow ที่ใช้บ่อยที่สุดขึ้นก่อน</li>
+      <li>เลือกเครื่องมือที่หนักน้อยที่สุด: stdlib Python, curl หรือ tool ที่ Hermes มีอยู่แล้ว — logic ยาว ๆ แยกออกไปไว้ใน scripts/</li>
+      <li>ใช้ template token ที่ระบบแทนค่าให้: <code>${HERMES_SKILL_DIR}</code> ชี้โฟลเดอร์ของ skill ตัวเอง และ <code>${HERMES_SESSION_ID}</code> ระบุ session ปัจจุบัน</li>
+      <li>ทดสอบแบบแยกส่วนก่อนปล่อยใช้จริง:</li>
+    </ol>
+
+    <pre><code>hermes chat --toolsets skills -q "ใช้ skill server-health-report ตรวจเครื่องนี้"</code></pre>
+
+    <p>เพื่อให้เห็นภาพว่างานเขียนที่ดีหน้าตาเป็นอย่างไร นี่คือส่วน Quick Reference และ Pitfalls แบบที่ผมอยากเห็นในทุก skill — สั้น ตรง และ copy ไปรันได้ทันที:</p>
+
+    <pre><code>## Quick Reference
+# ตรวจสุขภาพครบทุกระบบรอบเดียว
+./scripts/health.sh --all
+
+# ตรวจเฉพาะ service เดียว
+./scripts/health.sh --service nginx
+
+## Pitfalls
+# - log ที่ rotate แล้วย้ายไปอยู่ใต้ /var/log/archive — อย่าลืมกวาดด้วย
+# - อย่ารัน --all ช่วง backup window เพราะตัวเลข I/O จะหลอกตา</code></pre>
+
+    <p>การแบ่งปันภายในทีมมีสองทางหลัก — เผยแพร่ขึ้น repo ตรง ๆ หรือระบบ "tap" สไตล์ Homebrew ที่ชี้ tap ครั้งเดียวแล้วติดตั้งได้ทั้ง repo:</p>
+
+    <pre><code># ฝั่งคนเขียน: เผยแพร่ skill ขึ้น GitHub
+hermes skills publish skills/my-skill --to github --repo myorg/hermes-skills
+
+# ฝั่งเพื่อนร่วมทีม: เพิ่ม tap แล้ว skills ใน repo นั้นติดตั้งได้ทันที
+hermes skills tap add myorg/hermes-skills</code></pre>
+
+    <p>ขาเข้า Skills Hub รวมแหล่งติดตั้งหลายประเภทไว้ใต้ชุดคำสั่งเดียว (<code>hermes skills browse / search / inspect / install / check / update</code>):</p>
+
+    <div class="table-wrapper">
+      <table>
+        <thead>
+          <tr><th>แหล่ง</th><th>คืออะไร</th></tr>
+        </thead>
+        <tbody>
+          <tr><td><strong>official</strong></td><td>catalog เสริมที่ Nous ดูแล มาพร้อมตัวติดตั้ง</td></tr>
+          <tr><td><strong>skills-sh</strong></td><td>directory ของ skills.sh (Vercel)</td></tr>
+          <tr><td><strong>well-known</strong></td><td>เว็บไซต์ที่ประกาศ skill ผ่าน <code>.well-known/skills/index.json</code></td></tr>
+          <tr><td><strong>URL / GitHub repo</strong></td><td>ติดตั้งตรงจากลิงก์หรือ repo ใดก็ได้ (ผ่าน security scan เสมอ)</td></tr>
+          <tr><td><strong>community hubs</strong></td><td>clawhub, lobehub, browse-sh</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <p>workflow ที่ผมแนะนำสำหรับของจากภายนอก: <em>inspect ก่อน install เสมอ</em> — อ่านรายละเอียดและผล scan ก่อนตัดสินใจรับเข้าเครื่อง:</p>
+
+    <pre><code>hermes skills browse              # เปิดดู catalog
+hermes skills search &lt;keyword&gt;    # ค้นหา
+hermes skills inspect &lt;name&gt;      # อ่านรายละเอียด + ผล scan ก่อนติดตั้ง
+hermes skills install &lt;name&gt;
+hermes skills check               # ตรวจว่ามีอัปเดตไหม
+hermes skills update</code></pre>
+
+    <p>ขนาดของระบบนิเวศ: Hermes มาพร้อม skill ในตัวและ catalog เสริมรวมกันหลักร้อยตัว (ตัวเลขละเอียดขยับทุก release — ผมจงใจไม่พิมพ์เลขตายตัว) และ directory ฝั่ง community ก็ track ไว้อีกจำนวนมาก รวมถึง meta-tooling รอบ ๆ loop เช่น hermes-skill-factory (meta-skill ที่สร้าง skill จาก workflow), SkillClaw (ระบบวิวัฒน์คลัง skill จาก session data — ดาวราว 2.5 พันดวง ตาม directory ของ community) และ oh-my-hermes — ทั้งหมดเป็นของ community ต้องผ่านการ scan และวิจารณญาณเหมือน skill ภายนอกทุกตัว</p>
+
+    <blockquote>💡 ข้อสังเกตจากมุมคนสอนหนังสือ: SKILL.md ที่เขียนดีคือเอกสาร onboarding ชั้นเยี่ยมสำหรับ "คน" ด้วย — โครง When to Use / Pitfalls / Verification บังคับให้เราถอดความรู้ในหัวของทีมออกมาเป็นลายลักษณ์อักษร ต่อให้ไม่มี agent มาอ่าน องค์กรก็ได้ runbook ดี ๆ ไปหนึ่งชุด</blockquote>
+
+    <hr>
+
+    <h2 id="th-portability">8. Portability — ย้ายจาก OpenClaw และช่องว่างฝั่ง Claude Code</h2>
+
+    <p>คำถามที่ผมถูกถามบ่อยที่สุดตั้งแต่เปิดซีรีส์นี้: "skill ที่ลงแรงเขียนไว้ฝั่ง OpenClaw เอามาใช้ต่อได้ไหม?" ข่าวดีคือเส้นทางนี้เป็น<strong>ทางการ</strong> — optional skill ชื่อ openclaw-migration ให้คำสั่งสำเร็จรูป:</p>
+
+    <pre><code>hermes claw migrate --dry-run               # ดูก่อนว่าจะย้ายอะไรบ้าง
+hermes claw migrate --execute --preset user-data
+# skills ถูก copy ไปไว้ที่ ~/.hermes/skills/openclaw-imports/
+# พร้อมแปลง SOUL.md, memory files, allowlists, messaging settings</code></pre>
+
+    <p>สังเกตคำว่า <em>copy</em> — ของเดิมฝั่ง OpenClaw ไม่ถูกแตะ จึงเหมาะกับการทดลองคู่ขนานระหว่างที่ยังไม่ตัดสินใจปักหลัก (ฝั่ง OpenClaw เองก็มีคู่มือย้ายย้อนทางในเอกสารของเขาเช่นกัน — ฐานผู้ใช้กลุ่มนี้ถูกช่วงชิงกันจริง ๆ ทั้งสองทิศ)</p>
+
+    <p>ฝั่ง Claude Code ตรงกันข้าม: <strong>ยังไม่มีเส้นทาง import ทางการ</strong> มี issue #35587 เปิดค้างอยู่ (ยื่นเมื่อ 30 พฤษภาคม 2026 ติด priority P3 และยังไม่มีการตอบจาก maintainer ณ วันที่ผมเขียน) ขอ migration skill ทำนองเดียวกัน ตัว issue ตั้งข้อสังเกตว่า SKILL.md "mostly portable" แต่ hooks, commands และจุดต่อระดับ plugin ของสองฝั่งต่างกัน</p>
+
+    <p>หลักใหญ่ที่ควรถือไว้: มาตรฐาน agentskills.io ทำให้<strong>แกนกลาง</strong>ของ SKILL.md — name, description, body และไฟล์ประกอบ — ย้ายข้าม host ได้ แต่ namespace ส่วนขยายของแต่ละเจ้าไม่ตามไปด้วย: frontmatter ควบคุมการรันของ Claude Code, metadata.openclaw ของ OpenClaw และ metadata.hermes ของ Hermes ต่างเป็นของใครของมัน (host ปลายทางจะ ignore ส่วนที่ไม่รู้จัก ไม่ error) สรุปเป็นกติกาปฏิบัติ: ย้ายได้ แต่ต้องทดสอบและเติม metadata ฝั่งปลายทางใหม่เสมอ — อย่าเชื่อคำว่า "ใช้ได้เลย" จนกว่าจะเห็นกับตา</p>
+
+    <div class="alert info">
+      <strong>สำหรับผู้อ่านซีรีส์ OpenClaw:</strong> ถ้าองค์กรของคุณมีคลัง skill ฝั่ง OpenClaw อยู่แล้ว การรัน <code>hermes claw migrate --dry-run</code> บนเครื่องทดสอบคือวิธีประเมิน Hermes ที่ถูกที่สุด — เห็นทันทีว่าทรัพย์สินทางความรู้ที่มีอยู่เดินทางข้ามมาได้แค่ไหน โดยไม่ต้องแตะระบบจริงเลย
+    </div>
+
+    <p>บทต่อไปของซีรีส์ — <a href="/blog/hermes-production">#7 Production</a> — จะพาทุกชิ้นที่คุยกันมาขึ้นเครื่องจริง: hosting, upgrade, monitoring และบทเรียนด้านปฏิบัติการทั้งหมด</p>
+
+    <div class="key-takeaways">
+      <h3>🎯 สิ่งสำคัญที่ต้องจำ</h3>
+      <ul>
+        <li><strong>SKILL.md</strong> = โฟลเดอร์ + YAML frontmatter ตามมาตรฐานเปิด agentskills.io — บังคับแค่ name กับ description ส่วนของ Hermes อยู่ใต้ metadata.hermes</li>
+        <li><strong>Progressive disclosure</strong> = โหลดสามชั้น: metadata ราว 3,000 tokens → SKILL.md เต็มรายตัว → ไฟล์อ้างอิงรายชิ้น</li>
+        <li><strong>skill_manage</strong> = tool ที่ agent ใช้ create/patch skill ของตัวเอง — procedural memory ที่เขียนตัวเองได้จริง</li>
+        <li><strong>Curator</strong> = คนเก็บกวาดหลังบ้าน: active → stale (30 วัน) → archived (90 วัน) ไม่ลบถาวร มี snapshot + ledger + rollback ครบ</li>
+        <li><strong>/learn</strong> = กลั่น directory, URL หรือบทสนทนาให้เป็น skill ตรงมาตรฐานในคำสั่งเดียว; ฝั่ง offline มี self-evolution ที่จบด้วย human PR review</li>
+        <li><strong>write_approval</strong> = สวิตช์ governance ตัวแรกที่องค์กรควรเปิด — เปลี่ยน "agent เขียนอิสระ" เป็น "มนุษย์ตรวจก่อน merge"</li>
+        <li><strong>Trust tiers + security scan</strong> = ทุก skill จาก hub ถูกสแกนบังคับ verdict อันตราย block เด็ดขาดไม่มี override</li>
+        <li><strong>Portability</strong> = แกน SKILL.md ย้ายข้าม host ได้; จาก OpenClaw มีทางการ (hermes claw migrate) จาก Claude Code ยังไม่มี — ทดสอบก่อนเชื่อเสมอ</li>
+      </ul>
+    </div>
+
+    </div>
+    <div class="l-en" lang="en">
+
+    <p>Here is a question I have been circling since this series began: when an AI agent spends half an hour fighting through a deployment with a dozen hidden steps — two false starts, one error cascade, and finally a path that actually works — what should happen tomorrow, when the same job comes around again? Should it rediscover everything from zero, or should it <strong>write the proven procedure down as a skill</strong> and simply load it?</p>
+
+    <p>Readers of my OpenClaw for Organizations series already know the first half of the answer. In <a href="/blog/openclaw-skills">OpenClaw Skills</a> I described skills as folders with a SKILL.md that tells the agent "this is how we do this kind of task" — a large win for consistency. But that model carries one quiet assumption: <strong>humans write the skills; the agent merely consumes them.</strong></p>
+
+    <p>Hermes Agent from Nous Research — publicly launched on February 25, 2026, and sitting near 240,000 GitHub stars as I write — takes the step I find most interesting in its entire architecture: the agent <strong>writes its own skills</strong> through a tool called <code>skill_manage</code>, improves them while using them, and a background process called the <strong>Curator</strong> manages the lifecycle of what it wrote. The docs call this the agent's procedural memory, and the README compresses the philosophy into a single line: "The agent that grows with you." This sixth post in the series walks the whole system, from the anatomy of one skill to the governance question every organization must answer before letting the loop spin: <em>who reviews the work of an agent that writes its own textbook?</em></p>
+
+    <h2 id="en-anatomy">1. Anatomy of a Skill: SKILL.md and the agentskills.io Standard</h2>
+
+    <p>A Hermes skill is a folder whose heart is a <strong>SKILL.md</strong> file — Markdown with a YAML frontmatter block, following the open <strong>Agent Skills</strong> standard published at agentskills.io. The standard originated at Anthropic before being released openly, and the standard's site lists roughly forty adopting clients, including Claude Code, Claude, OpenClaw, Codex, Gemini CLI, and Hermes itself. The file format you are about to see is no longer any one vendor's private convention.</p>
+
+    <p>The minimum contract is deliberately light: only <code>name</code> and <code>description</code> are required. Everything Hermes-specific is namespaced under <code>metadata.hermes</code> — tags, category, related skills, toolset bindings, all the way up to a <code>blueprint</code> block that turns a skill into a cron-scheduled job:</p>
+
+    <pre><code>---
+name: server-health-report
+description: Summarize daily server health from logs and metrics.
+  Use when the user asks for a daily health report.
+version: 1.0.0
+platforms: [linux, macos]        # hide the skill per-OS
+metadata:
+  hermes:
+    tags: [ops, monitoring]
+    category: operations
+    requires_toolsets: [shell]   # appear only when the toolset exists
+    blueprint:                   # turn the skill into a cron job
+      schedule: "0 7 * * 1-5"
+      prompt: Run the daily health report and post it to the ops channel
+---
+
+# Server Health Report
+
+## When to Use
+## Quick Reference
+## Procedure
+## Pitfalls
+## Verification</code></pre>
+
+    <p>Note the body skeleton: <strong>When to Use → Quick Reference → Procedure → Pitfalls → Verification</strong> is the house order the <a href="https://hermes-agent.nousresearch.com/docs/developer-guide/creating-skills">Hermes developer guide</a> prescribes — decision criteria first, the short path next, the detailed procedure in the middle, and a closing check that the work actually succeeded. Anyone who has written a runbook for human operators will feel at home immediately, because that is exactly what this is; only the target reader is an LLM.</p>
+
+    <p>The frontmatter does finer-grained conditional activation than it first appears. <code>fallback_for_toolsets</code> surfaces a skill only when a toolset is <em>missing</em> — the documented example is a duckduckgo-search skill that appears only on machines without the web toolset, a plan B that announces itself automatically. <code>required_environment_variables</code> and <code>required_credential_files</code> declare dependencies that can be checked before a run. On size limits, Hermes Atlas — a community project, not official documentation — puts the ceiling around one hundred thousand characters per skill; treat that as a third-party approximation.</p>
+
+    <h2 id="en-loading">2. Where Skills Live and How They Load: Progressive Disclosure</h2>
+
+    <p>The home directory for skills is <code>~/.hermes/skills/</code>, which the docs call "the primary directory and source of truth." It is organized by category, and each skill folder can carry a full supporting cast:</p>
+
+    <pre><code>~/.hermes/skills/
+└── operations/
+    └── server-health-report/
+        ├── SKILL.md          # the core — loaded only on demand
+        ├── references/       # deep docs, loaded file by file
+        ├── scripts/          # helper logic kept out of the manual
+        ├── templates/
+        ├── examples/
+        └── assets/</code></pre>
+
+    <p>Beyond the home directory there are project-local skills (<code>.hermes/skills/</code> or <code>.agents/skills/</code> inside a repo — trust-gated before loading) plus any external directories you declare in config, with precedence running project → local → external:</p>
+
+    <pre><code># ~/.hermes/config.yaml
+skills:
+  external_dirs:
+    - /srv/shared-skills      # the team's shared skill library</code></pre>
+
+    <p>The question every engineer asks next: with a library of hundreds of skills, why doesn't the context window explode? Hermes answers with three-level <strong>progressive disclosure</strong>:</p>
+
+    <ul>
+      <li><strong>Level 1 — <code>skills_list()</code>:</strong> the agent sees only metadata (name plus description) for every skill, around 3,000 tokens total regardless of library size</li>
+      <li><strong>Level 2 — <code>skill_view(name)</code>:</strong> the full SKILL.md loads for just the skill relevant to the task at hand</li>
+      <li><strong>Level 3 — <code>skill_view(name, path)</code>:</strong> individual files under references/ load one at a time, exactly when a step needs the detail</li>
+    </ul>
+
+    <p>On the human side, every skill is directly invocable as a slash command (<code>/server-health-report</code>), several skills can be stacked in one instruction, and skills group into bundles stored at <code>~/.hermes/skill-bundles/&lt;slug&gt;.yaml</code> via <code>hermes bundles create</code>.</p>
+
+    <div class="alert info">
+      <strong>Skills are not memory:</strong> the official docs draw the line cleanly — "Memory stores small durable facts that should always be in context, while skills store longer procedures that should load only when relevant." Facts always in context; procedures loaded on demand. I cover the memory side of that line in <a href="/blog/hermes-memory">#3 Memory</a> of this series.
+    </div>
+
+    <h2 id="en-loop">3. The Learning Loop: skill_manage, Triggers, and Telemetry</h2>
+
+    <p>Now the heart of the post — the thing that separates Hermes's skills from every other system I have written about. The agent holds a tool called <code>skill_manage</code>: six operations for writing and revising its own skill library:</p>
+
+    <div class="table-wrapper">
+      <table>
+        <thead>
+          <tr><th>Action</th><th>What it does</th><th>Notes</th></tr>
+        </thead>
+        <tbody>
+          <tr><td><code>create</code></td><td>Create a whole new skill folder</td><td>The main trigger fires after a complex task succeeds</td></tr>
+          <tr><td><code>patch</code></td><td>Targeted, surgical fixes</td><td><strong>The documented preference</strong> for in-use self-improvement</td></tr>
+          <tr><td><code>edit</code></td><td>Major rewrites</td><td>When the original structure no longer holds</td></tr>
+          <tr><td><code>delete</code></td><td>Remove a skill</td><td>—</td></tr>
+          <tr><td><code>write_file</code></td><td>Add or modify files under references/ scripts/</td><td>—</td></tr>
+          <tr><td><code>remove_file</code></td><td>Remove supporting files</td><td>—</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <p>The docs name three triggers: (1) completing a complex task — the written threshold is a task involving five or more tool calls (I have found no documentation saying that threshold is configurable); (2) hitting errors or dead ends and eventually finding the path that works — the surviving path being the valuable artifact; and (3) being corrected by the user. After a large multi-step task, Hermes will often <em>offer</em> to save the approach as a skill — putting a human decision point exactly where it belongs.</p>
+
+    <p>Every use is logged as telemetry in <code>~/.hermes/skills/.usage.json</code> — the field names below follow the docs; the values are illustrative:</p>
+
+    <pre><code>{
+  "operations/server-health-report": {
+    "use_count": 14,          // times loaded into the prompt
+    "view_count": 3,          // times the agent called skill_view
+    "patch_count": 2,         // times modified via skill_manage
+    "last_used_at": "2026-08-30T07:02:11Z",
+    "created_at": "2026-06-14T09:41:00Z",
+    "created_by": "agent"     // provenance marker — the Curator's key
+  }
+}</code></pre>
+
+    <p>The <code>created_by: agent</code> marker is not set by skill_manage directly but by a background self-improvement review fork — a separate process that reviews work after the fact. That marker is the system's most important boundary: <strong>the Curator in the next section manages only skills carrying it.</strong> Skills you wrote by hand are never touched by the automation.</p>
+
+    <div class="alert">
+      <strong>An honest caveat:</strong> as of this writing (September 1, 2026) I have found no verifiable public example of a named skill an agent wrote for itself. The official docs and every major tutorial describe the mechanism without naming a single real instance, and the widely shared "8 Self-Evolving Skills" article (originally by SSOJet, syndicated by Security Boulevard) is in fact eight mechanism categories, not eight real skills. If you want to evaluate this loop, run it against your own work and read the diffs yourself.
+    </div>
+
+    <h2 id="en-curator">4. The Curator: A Lifecycle for Skills the Agent Wrote</h2>
+
+    <p>Let an agent accumulate skills with nobody sweeping up and the endgame is a pile of files nobody dares delete — the same disease as the append-forever daily logs I criticized on the memory side of my OpenClaw series. Hermes's answer is the <strong>Curator</strong>: background maintenance that runs when the machine is quiet (defaults: check every 168 hours, after at least 2 hours of idle) and touches only skills marked <code>created_by: agent</code>.</p>
+
+    <div class="table-wrapper">
+      <table>
+        <thead>
+          <tr><th>State</th><th>Condition (defaults)</th><th>Outcome</th></tr>
+        </thead>
+        <tbody>
+          <tr><td><strong>active</strong></td><td>Still in use</td><td>Loads normally</td></tr>
+          <tr><td><strong>stale</strong></td><td>Unused for 30 days</td><td>Flagged for review</td></tr>
+          <tr><td><strong>archived</strong></td><td>Unused for 90 days</td><td>Moved to <code>~/.hermes/skills/.archive/</code> — recoverable, <strong>never auto-deleted</strong></td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <p>Pinned skills and skills referenced by a blueprint/cron schedule are always skipped. The step beyond housekeeping — having an LLM consolidate near-duplicate skills — is opt-in and <strong>off by default</strong>, running on a separate model slot named auxiliary.curator:</p>
+
+    <pre><code># ~/.hermes/config.yaml
+curator:
+  interval_hours: 168      # weekly check
+  min_idle_hours: 2        # only when the machine is truly quiet
+  stale_after_days: 30
+  archive_after_days: 90
+  consolidate: false       # LLM merging — leave off until you trust it</code></pre>
+
+    <p>The Curator's safety net is more complete than I expected. Before every run it snapshots the whole directory to <code>~/.hermes/skills/.curator_backups/&lt;utc-iso&gt;/skills.tar.gz</code> (keeping the latest five), every mutation is recorded in an append-only ledger (<code>.curator_ledger.jsonl</code>), and a full set of manual controls exists:</p>
+
+    <pre><code>hermes curator status            # last run's state
+hermes curator run --dry-run     # rehearse — see what it would touch
+hermes curator pin my-skill      # hands off this one, always
+hermes curator restore my-skill  # bring back from the archive
+hermes curator rollback          # revert to a prior snapshot
+hermes curator ledger            # read the full mutation history</code></pre>
+
+    <blockquote>💡 My reading: the "never delete + ledger + dry-run + rollback" design says Nous understands its users' entirely legitimate fear — automation that touches an organization's knowledge store must always be auditable and reversible. That is the same bar we hold backup systems to, and I would like every agent framework to meet it.</blockquote>
+
+    <h2 id="en-learn">5. /learn and Offline Evolution: Distilling Knowledge into Skills</h2>
+
+    <p>Everything so far grows from the agent's own experience — but most organizational knowledge does not live in an agent's experience. It lives in documents, repositories, and conversations. Hermes fills that gap with <code>/learn</code> (covered by MarkTechPost on June 24, 2026): the live agent distills a knowledge source into a standards-compliant SKILL.md on the spot. Four source types are supported — a local directory, a URL, the conversation history, and pasted notes:</p>
+
+    <pre><code>/learn ./docs/deploy-runbook     # distill a local directory
+/learn https://example.com/guide # distill a web page
+/learn                           # distill the current conversation
+# or paste long notes, then issue /learn</code></pre>
+
+    <p>Under the hood, /learn uses the agent's ordinary tools (read_file, search_files, web_extract), and when a source is too large for one SKILL.md it produces a <strong>knowledge-base skill</strong>: a lean SKILL.md acting as an index, plus reference files catalogued under references/ for progressive disclosure to load piece by piece as they are actually needed.</p>
+
+    <p>A second mechanism operates on an entirely different clock. The separate official repo <strong><a href="https://github.com/NousResearch/hermes-agent-self-evolution">hermes-agent-self-evolution</a></strong> does offline evolutionary optimization with DSPy + GEPA — reading execution traces to understand why tasks fail, generating eval datasets, then evolving candidate skill variants through mandatory gates: full test suites, a 15KB size cap, semantic preservation, and <strong>human review as a pull request, always</strong>. A run costs roughly $2–10 and needs no GPU (Phase 1, the current one, optimizes skill files only).</p>
+
+    <p>The two mechanisms differ philosophically, and the difference matters to organizations: /learn is the live agent writing immediately inside a conversation; self-evolution is a slow pipeline that ends with a human clicking merge. For any environment that must survive an audit, I consider the latter shape far easier for governance to accept.</p>
+
+    <hr>
+
+    <h2 id="en-governance">6. Governance: write_approval, Security Scanning, and Trust Tiers</h2>
+
+    <p>Hermes's default is that <strong>the agent writes skills freely, with no approval step</strong> — and this is where the community complains loudest. Users on Reddit and X report the agent effectively "approving its own errors," committing a wrong approach as a permanent skill, or patching over skills a human had carefully hand-tuned. (These are user reports, not official statistics — but they are consistent with the fact that Nous ships a complete set of countermeasures.)</p>
+
+    <div class="alert danger">
+      <strong>The first switch an organization should flip:</strong> <code>skills.write_approval: true</code> — it converts every agent write from "committed immediately" into "staged for human review" under <code>~/.hermes/pending/skills/</code>. If you remember one thing from this post, make it this one.
+    </div>
+
+    <pre><code># ~/.hermes/config.yaml
+skills:
+  write_approval: true     # every agent write goes through a person</code></pre>
+
+    <p>With approval on, the agent's writes queue up like small pull requests you work through with four commands:</p>
+
+    <pre><code>/skills pending          # the review queue
+/skills diff a1b2        # open one diff — exactly like reviewing a PR
+/skills approve a1b2     # accept into the library
+/skills reject a1b2      # send it back</code></pre>
+
+    <p>For an organization adopting this for real, I recommend a staircase rollout — do not switch everything on at once:</p>
+
+    <ol>
+      <li><strong>Observe:</strong> enable write_approval from day one, then let the agent propose skills into the queue without approving anything — you will see clearly what it "wants to write down," and how good its writing actually is</li>
+      <li><strong>Review as routine:</strong> make working through <code>/skills pending</code> the same team discipline as your ordinary pull-request review rounds</li>
+      <li><strong>Turn on the Curator:</strong> let the stale → archive cycle run, keeping consolidate off at its default</li>
+      <li><strong>Only then consider consolidation:</strong> switch it on once you have enough ledger history to audit — and trust — the system's behavior</li>
+    </ol>
+
+    <p>On the inbound side, every install through the Skills Hub passes a mandatory <strong>security scan</strong> — checking for prompt injection, data exfiltration, and destructive commands. A dangerous verdict is hard-blocked with <strong>no --force override</strong>. Project-local skills arriving with a repo are likewise scanned and quarantined at load time. Trust is tiered four ways — builtin / official / trusted / community — and NVIDIA's SkillEvaluator v0.1.0 can be layered on as an optional extra check.</p>
+
+    <p>I read this whole package as lessons extracted from OpenClaw's marketplace era — readers of that series will remember the malicious-skill headlines from that ecosystem. Hermes designed its inbound path fail-closed from the start (the full threat model gets its own treatment in <a href="/blog/hermes-security">#4 Security</a>).</p>
+
+    <p>One last governance point that is easy to overlook: what happens to bundled skills at upgrade time? Hermes tracks origin hashes in <code>~/.hermes/skills/.bundled_manifest</code> — if you have edited a bundled skill, your hand wins: updates skip user-edited files rather than silently overwriting them, and dedicated commands manage divergence or opting out entirely:</p>
+
+    <pre><code>hermes skills reset my-skill --restore   # return to the upstream version
+hermes skills opt-out --remove           # stop using bundled skills at all</code></pre>
+
+    <h2 id="en-authoring">7. Hand-Authoring and Sharing: Templates, Taps, and the Skills Hub</h2>
+
+    <p>The autonomous loop may be the headline, but most real organizational work still starts with skills a person writes — and Hermes makes that path a disciplined craft. Per the developer guide:</p>
+
+    <ol>
+      <li>Structure the body in the house order — When to Use → Quick Reference → Procedure → Pitfalls → Verification — with the most common workflow first</li>
+      <li>Reach for the lightest tool available: stdlib Python, curl, or tools Hermes already has — long helper logic goes into scripts/</li>
+      <li>Use the template tokens the system substitutes for you: <code>${HERMES_SKILL_DIR}</code> resolves to the skill's own folder, <code>${HERMES_SESSION_ID}</code> to the current session</li>
+      <li>Test in isolation before shipping it to real work:</li>
+    </ol>
+
+    <pre><code>hermes chat --toolsets skills -q "Use the server-health-report skill on this machine"</code></pre>
+
+    <p>To make "good writing" concrete, here are the Quick Reference and Pitfalls sections I want to see in every skill — short, direct, and runnable as-is:</p>
+
+    <pre><code>## Quick Reference
+# full health sweep in one pass
+./scripts/health.sh --all
+
+# check a single service
+./scripts/health.sh --service nginx
+
+## Pitfalls
+# - rotated logs move under /var/log/archive — sweep those too
+# - never run --all during the backup window; the I/O numbers will lie</code></pre>
+
+    <p>Sharing within a team runs two main ways — publishing straight to a repo, or a Homebrew-style "tap" that a teammate points at once and can install from ever after:</p>
+
+    <pre><code># author's side: publish the skill to GitHub
+hermes skills publish skills/my-skill --to github --repo myorg/hermes-skills
+
+# teammate's side: add the tap, install anything in that repo
+hermes skills tap add myorg/hermes-skills</code></pre>
+
+    <p>Inbound, the Skills Hub gathers several install source types under one command set (<code>hermes skills browse / search / inspect / install / check / update</code>):</p>
+
+    <div class="table-wrapper">
+      <table>
+        <thead>
+          <tr><th>Source</th><th>What it is</th></tr>
+        </thead>
+        <tbody>
+          <tr><td><strong>official</strong></td><td>The Nous-maintained optional catalog shipped alongside the installer</td></tr>
+          <tr><td><strong>skills-sh</strong></td><td>Vercel's skills.sh directory</td></tr>
+          <tr><td><strong>well-known</strong></td><td>Sites publishing skills via <code>.well-known/skills/index.json</code></td></tr>
+          <tr><td><strong>URL / GitHub repo</strong></td><td>Direct installs from any link or repository (always scanned)</td></tr>
+          <tr><td><strong>community hubs</strong></td><td>clawhub, lobehub, browse-sh</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <p>My recommended workflow for anything external: <em>inspect before install, always</em> — read the details and the scan verdict before letting it onto the machine:</p>
+
+    <pre><code>hermes skills browse              # explore the catalog
+hermes skills search &lt;keyword&gt;    # find candidates
+hermes skills inspect &lt;name&gt;      # read details + scan verdict first
+hermes skills install &lt;name&gt;
+hermes skills check               # any updates pending?
+hermes skills update</code></pre>
+
+    <p>On ecosystem scale: Hermes ships with well over a hundred built-in and optional catalog skills combined (the precise numbers shift with every release — I am deliberately not printing fixed counts), and community directories track many more, including meta-tooling built around the loop itself: hermes-skill-factory (a meta-skill that generates skills from workflows), SkillClaw (which evolves skill libraries from session data — around 2.5 thousand stars, per the community directory), and oh-my-hermes. All of it is community work, subject to the same scanning and the same judgment as any external skill.</p>
+
+    <blockquote>💡 An observation from a teacher's chair: a well-written SKILL.md is excellent onboarding documentation for <em>people</em> too — the When to Use / Pitfalls / Verification skeleton forces a team's tacit knowledge onto the page. Even if no agent ever reads it, the organization walks away with a good runbook.</blockquote>
+
+    <hr>
+
+    <h2 id="en-portability">8. Portability: From OpenClaw In — and the Claude Code Gap</h2>
+
+    <p>The question I have been asked most since this series opened: "can the skills we invested in on OpenClaw come along?" The good news is that this path is <strong>official</strong> — an optional skill named openclaw-migration provides a ready-made command:</p>
+
+    <pre><code>hermes claw migrate --dry-run               # preview what would move
+hermes claw migrate --execute --preset user-data
+# skills are copied into ~/.hermes/skills/openclaw-imports/
+# alongside conversion of SOUL.md, memory files, allowlists,
+# and messaging settings</code></pre>
+
+    <p>Note the word <em>copied</em> — the OpenClaw originals are untouched, which makes this ideal for a parallel trial while you are still deciding where to settle. (OpenClaw, for its part, publishes a reverse-migration guide in its own docs — this user base is genuinely being contested in both directions.)</p>
+
+    <p>Claude Code is the opposite story: <strong>there is no official import path.</strong> Open issue #35587 (filed May 30, 2026, priority P3, with no maintainer response as of this writing) requests a similar migration skill. The issue itself observes that SKILL.md is "mostly portable" but that hooks, commands, and plugin-level integration points differ between the two hosts.</p>
+
+    <p>The principle worth keeping: the agentskills.io standard makes the SKILL.md <strong>core</strong> — name, description, body, bundled files — portable across hosts, but each vendor's private extension namespace does not travel: Claude Code's execution-control frontmatter, OpenClaw's metadata.openclaw, and Hermes's metadata.hermes each stay home (a receiving host ignores metadata it does not recognize rather than erroring). The practical rule: skills move, but always test and re-add the destination's metadata — never believe "it just works" until you have watched it work.</p>
+
+    <div class="alert info">
+      <strong>For OpenClaw series readers:</strong> if your organization already holds an OpenClaw skill library, running <code>hermes claw migrate --dry-run</code> on a test machine is the cheapest possible evaluation of Hermes — you see immediately how much of your existing knowledge asset crosses over, without touching the production system at all.
+    </div>
+
+    <p>The next post in the series — <a href="/blog/hermes-production">#7 Production</a> — takes everything we have discussed onto real machines: hosting, upgrades, monitoring, and the operational lessons in between.</p>
+
+    <div class="key-takeaways">
+      <h3>🎯 Key Takeaways</h3>
+      <ul>
+        <li><strong>SKILL.md</strong> = a folder plus YAML frontmatter under the open agentskills.io standard — only name and description are required; Hermes extras live under metadata.hermes</li>
+        <li><strong>Progressive disclosure</strong> = three loading levels: ~3,000 tokens of metadata → one full SKILL.md → individual reference files</li>
+        <li><strong>skill_manage</strong> = the tool the agent uses to create and patch its own skills — procedural memory that genuinely writes itself</li>
+        <li><strong>Curator</strong> = background housekeeping: active → stale (30 days) → archived (90 days), never auto-deleted, with snapshots, an append-only ledger, and rollback</li>
+        <li><strong>/learn</strong> = distill a directory, URL, or conversation into a standards-compliant skill in one command; offline, self-evolution ends in a human-reviewed PR</li>
+        <li><strong>write_approval</strong> = the first governance switch to flip — it turns "agent writes freely" into "human reviews before merge"</li>
+        <li><strong>Trust tiers + scanning</strong> = every hub install is scanned; dangerous verdicts are blocked with no override</li>
+        <li><strong>Portability</strong> = the SKILL.md core travels across hosts; OpenClaw has an official path in (hermes claw migrate), Claude Code does not yet — test before trusting</li>
+      </ul>
+    </div>
+
+    </div>
+
+    <div class="post-series-footer">
+      <span class="l-th">บทความจากซีรีส์ Hermes Agent in Practice 2026</span><span class="l-en" lang="en">From the Hermes Agent in Practice 2026 series</span>
+    </div>
+
+  </article>
+
+  </main>
+
+  <footer class="blog-footer">
+    <nav class="blog-footer__nav" aria-label="Site">
+      <a href="../index.html">Home</a>
+      <a href="./">Blog</a>
+      <a href="../publications/">Publications</a>
+      <a href="../books/">Books</a>
+      <a href="../projects/">Projects</a>
+      <a href="../news/">News</a>
+      <a href="../index.html#contact">Contact</a>
+    </nav>
+    <a href="./">← Back to Blog</a>
+    <span>© 2026 Anirach Mingkhwan — Associate Professor, KMUTNB</span>
+  </footer>
+
+</body>
+</html>

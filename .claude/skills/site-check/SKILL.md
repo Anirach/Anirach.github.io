@@ -65,7 +65,7 @@ change the exit code, so read the per-check status lines, not just the exit stat
 ## Expected `[known]` on today's tree — none
 
 A clean checkout **exits 0 with 0 violations**: `checks run 58 / clean 58 / known baseline 0 /
-violations 0 new, 0 known`. Verified 2026-08-26 at `21d5cfc` — 47 HTML files, 37 posts, `books/`
+violations 0 new, 0 known`. Verified 2026-08-26 at `21d5cfc` (2026-09-01: now 63 enumerated files, 53 posts, 4 series after the Life + Hermes launches) — then 47 HTML files, 37 posts, `books/`
 holding four detail pages; 58 checks, 39 fail / 17 warn / 2 info. `BASELINE = {}` holds only
 retirement comments. There is no table of expected debt to compare against any more: **any
 violation the script prints is new**, and any fail-severity one blocks the push.

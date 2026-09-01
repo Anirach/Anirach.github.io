@@ -1,6 +1,6 @@
 ---
 name: a11y-perf
-description: Accessibility and performance rules for the anirach.com static site (47 hand-written HTML files, no build step, per-file embedded CSS). Use this whenever you touch any .html file in this repo, add or edit a blog post under blog/, add or swap an image in images/, edit a :root palette or a .post-hero gradient, change nav markup, or are asked about contrast, alt text, focus states, keyboard access, page weight, image size, fonts, or Lighthouse/Core Web Vitals — even if the user does not mention accessibility or performance at all, and even for a "just add a card to blog/index.html" request. It carries this site's real measured numbers (blog/index.html is 2.23 MB referenced and fully lazy-loaded (2026-09-01: cover redesign + the 9-post Life series); the palette was re-keyed to the book covers 2026-08-26 so --blue #226299 now PASSES as text, while --blue-light is borders-only and the focus ring is scoped; the :focus-visible/reduced-motion/color-scheme baseline is landed in 47/47 pages; .post-hero__meta and .post-series-footer contrast are both DONE as of 2026-08-26) plus verified drop-in fixes, so use it instead of deriving generic WCAG advice.
+description: Accessibility and performance rules for the anirach.com static site (63 hand-written HTML files, no build step, per-file embedded CSS). Use this whenever you touch any .html file in this repo, add or edit a blog post under blog/, add or swap an image in images/, edit a :root palette or a .post-hero gradient, change nav markup, or are asked about contrast, alt text, focus states, keyboard access, page weight, image size, fonts, or Lighthouse/Core Web Vitals — even if the user does not mention accessibility or performance at all, and even for a "just add a card to blog/index.html" request. It carries this site's real measured numbers (blog/index.html is 2.36 MB referenced and fully lazy-loaded (2026-09-01: cover redesign + the 9-post Life series + the 7-post Hermes series); the palette was re-keyed to the book covers 2026-08-26 so --blue #226299 now PASSES as text, while --blue-light is borders-only and the focus ring is scoped; the :focus-visible/reduced-motion/color-scheme baseline is landed in 63/63 pages; .post-hero__meta and .post-series-footer contrast are both DONE as of 2026-08-26) plus verified drop-in fixes, so use it instead of deriving generic WCAG advice.
 ---
 
 # Accessibility & performance for anirach.com
@@ -315,7 +315,7 @@ These are right; flagging them wastes the user's time:
 
 ### 10. State the file count before starting, and script the edit.
 
-There are no partials. **The site is 48 HTML files** — 47 enumerated by `check_site.py` plus `404.html`, which it deliberately skips. Before proposing a sitewide change,
+There are no partials. **The site is 64 HTML files** — 63 enumerated by `check_site.py` plus `404.html`, which it deliberately skips. Before proposing a sitewide change,
 count and say the number out loud so the user can judge scope:
 
 ```bash
@@ -351,7 +351,7 @@ not.** Loops and verification commands: `references/n-file-edits.md`.
 
 ### R1. `blog/index.html` page weight — **[DONE]**
 
-Was 18.41 MB, then 4.07 MB. Now **2.23 MB of referenced bytes, all of it lazy** —
+Was 18.41 MB, then 4.07 MB. Now **2.36 MB of referenced bytes, all of it lazy** —
 the drawn covers (2026-08-26) took the image half from 4.27 MB to 1.59 MB, and the
 2026-09-01 per-post redesign added 0.21 MB of real drawing back.
 
@@ -376,12 +376,12 @@ Three numbers matter and they are not the same number — quote the right one:
 
 | Figure | Value | Meaning |
 |---|---|---|
-| referenced total | **2.23 MB** | every byte the page can eventually pull. Was 18.41 MB, then 4.07 MB, then 1.59 MB. |
+| referenced total | **2.36 MB** | every byte the page can eventually pull. Was 18.41 MB, then 4.07 MB, then 1.59 MB. |
 | eager payload | **67 KB** | the HTML. **All 74 `<img>` tags are `loading="lazy"`**, so nothing else is fetched up front. |
 | realistic first viewport | **≈0.5 MB** | HTML + the first ~10 cards' covers, which a browser fetches because lazy images near the viewport still load. |
 
 Saying "the blog index is 1.6 MB" overstates what a visitor downloads by ~3×; saying
-"74 KB" understates it. Say 2.23 MB referenced / ≈0.5 MB first viewport.
+"74 KB" understates it. Say 2.36 MB referenced / ≈0.5 MB first viewport.
 
 `ec2827b` + `21c8a55` did the cover re-encode; `e8da9da` added the attributes. Heaviest
 posts now: `blog/idle-self-improvement.html`, `openclaw-migration.html`,

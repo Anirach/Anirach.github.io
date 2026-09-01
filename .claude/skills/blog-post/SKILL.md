@@ -16,10 +16,12 @@ description: End-to-end recipe for adding, editing, or removing a post in blog/ 
 > `<h2 class="card__title">` against 37 cards that had been `h4` since `635eb94`, silently
 > reporting CLEAN while `check_site.py` independently found 8 stale nav titles.
 >
-> **Last full re-measure: 2026-08-26 against `21d5cfc`.**
+> **Last full re-measure: 2026-08-26 against `21d5cfc`.** Headline counts re-measured
+> 2026-09-01 after the Life (9 posts) and Hermes (7 posts) launches: **53 posts, 4 series**;
+> granular tables below that still say 37 reflect the 2026-08-26 census — re-derive before acting.
 
-This site has **no build step, no templating, no partials**. Each of the 38 files in
-`blog/` — 37 posts plus `index.html` — embeds its own `<style>`, its own copy of the nav
+This site has **no build step, no templating, no partials**. Each of the 54 files in
+`blog/` — 53 posts plus `index.html` — embeds its own `<style>`, its own copy of the nav
 markup, and its own footer. (The wider site is 47 HTML files: these 38 plus `index.html`,
 the five section indexes `books/`, `news/`, `projects/`, `publications/`, and the four
 `books/*.html` per-book detail pages.)
@@ -44,7 +46,7 @@ was caused by your change.
 Baseline on a clean `main` (2026-08-26, `21d5cfc`):
 
 ```
-posts=37  cards=37  series-nav=7  post-nav=24  no-nav=6
+posts=53  cards=53  series-nav=23  post-nav=24  no-nav=6
 
 CLEAN — no new wiring breakage (0 warn).
 ```
@@ -172,11 +174,11 @@ Then fill every `{{PLACEHOLDER}}`. The skeleton, in order, is:
 
 Non-negotiables, each because something on disk got them wrong:
 
-- **`lang="th"`.** All 37 posts are `th`; `index.html` and `blog/index.html` are `en`.
+- **`lang="th"`.** All 53 posts are `th`; `index.html` and `blog/index.html` are `en`.
 - **Exactly one `<h1>`**, the `.post-hero__title`. Do not repeat the title in the body —
   `deployment-hosting.html` did, and the duplicate was removed on 2026-08-26; every post
   has exactly one now, and INV-11 carries no baseline entry, so a regression will fail.
-- **`<meta name="description">` in Thai.** All 47 pages carry one since the 2026-08-26
+- **`<meta name="description">` in Thai.** All 63 pages carry one since the 2026-08-26
   metadata sweep (the 6 that did not are fixed). `check_site.py` **INV-27** now fails the
   build on a missing or empty one — this is no longer a warning you can defer.
 - **The `<!-- social -->` block.** Every page has one: canonical, `og:*`, `twitter:card`,

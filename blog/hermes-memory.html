@@ -1,0 +1,1054 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Hermes Memory — ความจำที่มีขอบเขตโดยตั้งใจ | Anirach Mingkhwan</title>
+  <meta name="description" content="เจาะระบบความจำสามชั้นของ Hermes Agent — MEMORY.md และ USER.md ที่ถูกจำกัดใต้ 3,600 ตัวอักษรโดยตั้งใจ, FTS5 session search, context compression, memory providers ทั้งแปดตัว และวิธีย้ายความจำจาก OpenClaw มาเป็นไฟล์เดียวที่มีขอบเขต">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=Sarabun:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      color-scheme: light;
+      /* ink */
+      --navy: #11304b; --slate: #334155; --slate-light: #526174; --gray: #94a3b8;
+      /* ground */
+      --bg: #faf7f0; --white: #ffffff; --code-bg: #1e293b;
+      /* accent */
+      --blue: #226299; --blue-dark: #1a4d7a; --blue-light: #4992b9;
+      /* brand — sampled from the book covers. --gold is decorative on light grounds (2.2:1); --gold-dark is its text form. */
+      --gold: #c4a46c; --gold-dark: #7a5f22; --cloud: #dee7e6; --parchment: #e9e1c4; --focus: #226299;
+      /* status — use only these six, never invent a seventh */
+      --green: #22c55e; --red: #ef4444; --amber: #f59e0b;
+      --cyan: #06b6d4; --purple: #226299; --purple-dark: #1a4d7a;
+      /* type */
+      --font: 'Inter', 'Sarabun', -apple-system, BlinkMacSystemFont, sans-serif;
+      --mono: 'JetBrains Mono', 'Fira Code', 'Sarabun', monospace;
+      /* form */
+      --radius: 12px; --radius-sm: 8px; --radius-lg: 16px;
+      --measure: 720px; --wide: 860px;
+      --transition: 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+    html { scroll-behavior: smooth; }
+    body { font-family: var(--font); font-size: 17px; line-height: 1.8; color: var(--slate); background: var(--bg); -webkit-font-smoothing: antialiased; }
+    .blog-nav { position: fixed; top: 0; left: 0; right: 0; z-index: 100; background: rgba(248,250,252,0.85); backdrop-filter: blur(20px); border-bottom: 1px solid rgba(0,0,0,0.05); }
+    .blog-nav__inner { max-width: 860px; margin: 0 auto; padding: 0 2rem; height: 56px; display: flex; align-items: center; justify-content: space-between; }
+    .blog-nav__back { font-size: 0.85rem; font-weight: 500; color: var(--blue); text-decoration: none; }
+    .blog-nav__back:hover { color: #1a4d7a; }
+    .blog-nav__title { font-size: 0.85rem; font-weight: 600; color: var(--navy); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 50%; }
+    /* ── HERO ── house .post-hero on the approved Deep Blue gradient (page-design
+       §5 / INV-28). Ink is inverted for the dark ground: white title/meta, tag
+       pills white on 18% white — the openclaw-production treatment. The
+       background value must stay byte-identical to the approved string. */
+    .post-hero { padding: 8rem 2rem 3rem; background: linear-gradient(135deg, #11304b 0%, #1a4d7a 45%, #226299 100%); color: #fff; text-align: center; }
+    .post-hero__tags { display: flex; gap: 0.5rem; justify-content: center; margin-bottom: 1.25rem; flex-wrap: wrap; }
+    .post-hero__tag { display: inline-block; font-size: 0.72rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.1em; color: #fff; background: rgba(255,255,255,0.18); padding: 0.35rem 0.9rem; border-radius: 20px; }
+    .post-hero__title { font-size: clamp(1.8rem, 5vw, 3rem); font-weight: 800; color: #fff; line-height: 1.2; margin-bottom: 1rem; max-width: 720px; margin-left: auto; margin-right: auto; }
+    .post-hero__sub { font-size: 1.05rem; max-width: 640px; margin: 0 auto 1.5rem; line-height: 1.7; color: #fff; }
+    .post-hero__meta { font-size: 0.85rem; color: #fff; display: flex; align-items: center; justify-content: center; gap: 1.5rem; flex-wrap: wrap; }
+    .post-hero__series { font-weight: 600; color: #fff; }
+    /* the switch pill and the focus ring both sit on the dark hero: the pill is
+       a light chip so its labels keep their light-ground colours, and --focus
+       re-points to gold here (blue collapses on blue — the footer/pre
+       precedent). */
+    .post-hero { --focus: var(--gold); }
+    .post-hero__cover {
+      aspect-ratio: 1 / 1;
+      max-width: 380px;
+      margin: 2.5rem auto 0;
+      border-radius: var(--radius-lg, 16px);
+      overflow: hidden;
+      box-shadow: 0 20px 60px rgba(17,48,75,0.14);
+    }
+    .post-hero__cover img { width: 100%; height: 100%; object-fit: cover; display: block; }
+    .post-body { max-width: 720px; margin: 0 auto; padding: 3rem 2rem 6rem; }
+    .post-body h2 { font-size: 1.6rem; font-weight: 800; color: var(--navy); margin: 3rem 0 1rem; padding-bottom: 0.5rem; border-bottom: 2px solid rgba(34,98,153,0.15); }
+    .post-body h3 { font-size: 1.25rem; font-weight: 700; color: var(--navy); margin: 2.25rem 0 0.75rem; }
+    .post-body p { margin-bottom: 1.25rem; }
+    .post-body strong { font-weight: 700; color: var(--navy); }
+    .post-body a { color: var(--blue); text-decoration: underline; text-decoration-thickness: 1px; text-underline-offset: 2px; }
+    .post-body ul, .post-body ol { margin: 0.5rem 0 1.25rem 1.5rem; }
+    .post-body li { margin-bottom: 0.4rem; }
+    .post-body blockquote { background: rgba(34,98,153,0.06); border-left: 4px solid var(--blue); padding: 1rem 1.25rem; border-radius: 0 10px 10px 0; margin: 1.25rem 0; font-size: 0.95rem; color: var(--navy); }
+    .post-body hr { border: none; height: 1px; background: linear-gradient(90deg, transparent, rgba(34,98,153,0.2), transparent); margin: 3rem 0; }
+    /* ── CODE ── */
+    .post-body pre { background: var(--code-bg); border-radius: 12px; padding: 1.5rem; margin: 1.25rem 0 1.5rem; overflow-x: auto; border: 1px solid rgba(255,255,255,0.05); }
+    .post-body pre code { font-family: var(--mono); font-size: 0.85rem; color: #e2e8f0; line-height: 1.7; background: none; padding: 0; white-space: pre-wrap; }
+    .post-body code { font-family: var(--mono); font-size: 0.88em; background: rgba(34,98,153,0.08); color: var(--blue-dark); padding: 0.15em 0.45em; border-radius: 5px; }
+    /* ── TABLES ── */
+    .table-wrapper { overflow-x: auto; margin: 1.5rem 0; border-radius: 0.5rem; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1); }
+    table { width: 100%; border-collapse: collapse; background: white; }
+    th { background: #226299; color: white; padding: 1rem; text-align: left; font-weight: 600; }
+    td { padding: 1rem; border-bottom: 1px solid #e5e7eb; }
+    .post-body table { display: block; width: 100%; overflow-x: auto; }
+    /* ── ALERTS ── */
+    .alert { background: #fef3cd; border: 1px solid #facc15; border-radius: 0.5rem; padding: 1rem; margin: 1.5rem 0; }
+    .alert.danger { background: #fee2e2; border-color: #ef4444; }
+    .alert.info { background: #e0f2fe; border-color: #06b6d4; }
+    .alert.success { background: #d1fae5; border-color: #10b981; }
+    /* ── KEY TAKEAWAYS ── */
+    .key-takeaways { background: linear-gradient(135deg, #f3f4f6 0%, #e5e7eb 100%); border-radius: 1rem; padding: 2rem; margin: 3rem 0; }
+    .key-takeaways h3 { color: #226299; margin-bottom: 1.5rem; }
+    .post-series-footer { text-align: center; font-size: 0.85rem; color: var(--slate-light); font-style: italic; margin-top: 2rem; padding-top: 2rem; border-top: 1px solid #e2e8f0; }
+    .blog-footer { background: var(--navy); padding: 2rem 0; text-align: center; }
+    .blog-footer a { color: var(--gold); text-decoration: none; font-weight: 600; font-size: 0.9rem; }
+    .blog-footer span { color: var(--gray); font-size: 0.8rem; display: block; margin-top: 0.4rem; }
+    @media (max-width: 600px) {
+      .post-hero { padding: 7rem 1.25rem 2.5rem; }
+      .post-body { padding: 2rem 1.25rem 4rem; }
+      .post-hero__meta { flex-direction: column; gap: 0.4rem; }
+      .post-body h2 { font-size: 1.4rem; }
+      .post-body h3 { font-size: 1.15rem; }
+      .post-body pre { padding: 1rem; border-radius: 8px; }
+    }
+
+    :focus-visible { outline: 2px solid var(--focus); outline-offset: 3px; border-radius: 2px; }
+    /* the ring sits on the page ground (3px offset). Inside the navy footers
+       and code blocks var(--blue) collapses to 2.12:1, so those scopes
+       re-point --focus to gold (5.73:1 on navy). */
+    .footer, .blog-footer, pre { --focus: var(--gold); }
+    :focus:not(:focus-visible) { outline: none; }
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after {
+        animation-duration: .01ms !important; animation-iteration-count: 1 !important;
+        transition-duration: .01ms !important; scroll-behavior: auto !important;
+      }
+    }
+    h1, h2, h3, .post-hero__title, .card__title { text-wrap: balance; }
+
+    .post-body img, .post-body svg { max-width: 100%; height: auto; }
+
+    /* ── SKIP LINK ── a11y-perf R5: the link and the landmark it targets are a
+       pair — useless without both halves. Off-screen until focused, then the
+       first tab stop on every page. */
+    .skip-link { position: absolute; left: -9999px; }
+    .skip-link:focus {
+      left: 1rem; top: 1rem; z-index: 999;
+      background: var(--navy); color: #fff;
+      padding: 0.75rem 1.25rem; border-radius: var(--radius-sm);
+      font-weight: 600; text-decoration: none;
+    }
+
+    /* ── POST WAYFINDING ── the wordmark is the home link; the footer carries
+       the full destination row. */
+    .blog-nav__home {
+      font-size: 0.9rem; font-weight: 800; color: var(--navy);
+      text-decoration: none; margin-right: 1rem;
+    }
+    .blog-nav__home:hover { color: var(--blue); }
+    .blog-nav__inner > .blog-nav__back { margin-right: auto; }
+    .blog-footer__nav {
+      display: flex; flex-wrap: wrap; justify-content: center; gap: 0.35rem 1.25rem;
+      max-width: 860px; margin: 0 auto 1.25rem; padding: 0 2rem 1.25rem;
+      border-bottom: 1px solid rgba(255,255,255,0.12);
+    }
+    .blog-footer__nav a { color: var(--gold); font-size: 0.85rem; font-weight: 600; text-decoration: none; }
+    .blog-footer__nav a:hover { color: #fff; text-decoration: underline; }
+
+    html { scroll-padding-top: 5rem; }
+    [id] { scroll-margin-top: 5rem; }
+
+    /* Thai needs more room than Latin at the same nominal size. */
+    .post-body:lang(th) { font-size: 18px; line-height: 1.85; }
+    .post-body p, .post-body li, .post-body blockquote { text-wrap: pretty; }
+
+    /* ---- side-scroll affordance ----
+       pre blocks and tables can exceed 720px. These layers paint a shadow ONLY
+       where there is more content in that direction; when fully scrolled the
+       cover slides over the shadow and hides it. No JavaScript, no wrapper. */
+    .post-body pre, .post-body table {
+      overflow-x: auto;
+      background-image:
+        linear-gradient(to right, var(--code-bg, #0f172a) 30%, rgba(15,23,42,0)),
+        linear-gradient(to left, var(--code-bg, #0f172a) 30%, rgba(15,23,42,0)),
+        radial-gradient(farthest-side at 0 50%, rgba(0,0,0,.28), rgba(0,0,0,0)),
+        radial-gradient(farthest-side at 100% 50%, rgba(0,0,0,.28), rgba(0,0,0,0));
+      background-position: 0 0, 100% 0, 0 0, 100% 0;
+      background-repeat: no-repeat;
+      background-size: 40px 100%, 40px 100%, 14px 100%, 14px 100%;
+      background-attachment: local, local, scroll, scroll;
+    }
+    .post-body table {
+      background-image:
+        linear-gradient(to right, var(--white, #fff) 30%, rgba(255,255,255,0)),
+        linear-gradient(to left, var(--white, #fff) 30%, rgba(255,255,255,0)),
+        radial-gradient(farthest-side at 0 50%, rgba(17,48,75,.16), rgba(17,48,75,0)),
+        radial-gradient(farthest-side at 100% 50%, rgba(17,48,75,.16), rgba(17,48,75,0));
+      background-position: 0 0, 100% 0, 0 0, 100% 0;
+      background-repeat: no-repeat;
+      background-size: 40px 100%, 40px 100%, 14px 100%, 14px 100%;
+      background-attachment: local, local, scroll, scroll;
+    }
+
+    /* ---- table of contents ---- */
+    .post-toc {
+      max-width: 720px;
+      margin: 2rem auto 0;
+      padding: 1rem 1.25rem;
+      background: rgba(34,98,153,0.05);
+      border: 1px solid rgba(34,98,153,0.14);
+      border-left: 3px solid var(--gold, #c4a46c);
+      border-radius: 10px;
+      font-size: 0.92rem;
+    }
+    .post-toc > summary {
+      cursor: pointer;
+      font-weight: 700;
+      color: var(--navy);
+      list-style: none;
+    }
+    .post-toc > summary::-webkit-details-marker { display: none; }
+    .post-toc > summary::before {
+      content: "\25B8";
+      display: inline-block;
+      margin-right: 0.5rem;
+      transition: transform 0.2s ease;
+      color: var(--gold-dark, #7a5f22);
+    }
+    .post-toc[open] > summary::before { transform: rotate(90deg); }
+    .post-toc > summary:focus-visible { outline: 3px solid var(--focus, #226299); outline-offset: 3px; }
+    .post-toc ol { margin: 0.85rem 0 0.25rem; padding-left: 1.4rem; }
+    .post-toc li { margin-bottom: 0.4rem; line-height: 1.5; }
+    .post-toc a { color: var(--slate); text-decoration: none; }
+    .post-toc a:hover, .post-toc a:focus-visible { color: var(--blue-dark, #1a4d7a); text-decoration: underline; }
+    @media (max-width: 600px) { .post-toc { margin: 1.25rem 1rem 0; } }
+
+    /* ---- cross-document view transitions ---- */
+    @view-transition { navigation: auto; }
+    .nav, .blog-nav { view-transition-name: site-nav; }
+    .footer, .blog-footer { view-transition-name: site-footer; }
+    @media (prefers-reduced-motion: reduce) {
+      ::view-transition-group(*),
+      ::view-transition-old(*),
+      ::view-transition-new(*) { animation: none !important; }
+    }
+
+    /* ── SERIES STRIP — Hermes Agent in Practice ──
+       Same class and inner-wrapper shape as the OpenClaw strip because the
+       linter's RE_SNAV recognises exactly `series-nav` + a nested div; a
+       renamed strip would read as "no nav" and fail INV-08. All content
+       checks (INV-03 family) iterate the SERIES7 list only, so this strip's
+       labels are convention, not contract. House-styled, not the island CSS. */
+    .series-nav {
+      max-width: 720px; margin: 2rem auto 0; padding: 1.1rem 1.4rem;
+      background: rgba(255,255,255,0.75); border: 1px solid rgba(34,98,153,0.15);
+      border-left: 3px solid var(--gold); border-radius: 12px;
+    }
+    .series-nav h3 {
+      font-size: 0.78rem; font-weight: 700; text-transform: uppercase;
+      letter-spacing: 0.08em; color: var(--gold-dark); margin-bottom: 0.6rem;
+    }
+    .series-links { display: flex; flex-wrap: wrap; gap: 0.5rem; }
+    .series-links a, .series-links .current {
+      font-size: 0.82rem; font-weight: 600; padding: 0.35rem 0.8rem;
+      border-radius: 50px; text-decoration: none;
+    }
+    .series-links a { color: var(--blue-dark); background: rgba(34,98,153,0.08); }
+    .series-links a:hover { background: rgba(34,98,153,0.16); }
+    .series-links .current { color: #fff; background: var(--blue-dark); }
+    @media (max-width: 600px) { .series-nav { margin: 1.5rem 1rem 0; } }
+
+    /* ── LANGUAGE SWITCH — pure CSS, zero JavaScript (INV-38) ──
+       One visually-hidden checkbox as a direct child of body, BEFORE the main landmark,
+       so `#langSwitch:checked ~ main …` reaches every content block. The two
+       tracks are paired blocks: .l-th (default) and .l-en (hidden until
+       checked; display:revert restores block for divs, inline for spans).
+       Naming stays clear of INV-12's menu-token regex (hamburger|burger|
+       nav__toggle|nav-toggle|navtoggle|menu-toggle|menu__toggle) — verified.
+       No JS also means no persistence across posts; each post opens in Thai. */
+    .lang-switch-box { position: absolute; left: -9999px; }
+    .l-en { display: none; }
+    #langSwitch:checked ~ main .l-en { display: revert; }
+    #langSwitch:checked ~ main .l-th { display: none; }
+    .lang-switch {
+      display: inline-flex; align-items: center; gap: 0.55rem;
+      margin-top: 1.4rem; padding: 0.4rem 1.1rem; border-radius: 50px;
+      background: rgba(255,255,255,0.85); border: 1px solid rgba(255,255,255,0.4);
+      cursor: pointer; font-size: 0.85rem; user-select: none;
+    }
+    .lang-switch span { color: var(--slate-light); font-weight: 600; transition: color 0.2s; }
+    .lang-switch .lang-sep { color: var(--gray); font-weight: 400; }
+    .lang-switch .lang-th { color: var(--navy); font-weight: 800; }
+    #langSwitch:checked ~ main .lang-switch .lang-th { color: var(--slate-light); font-weight: 600; }
+    #langSwitch:checked ~ main .lang-switch .lang-en { color: var(--navy); font-weight: 800; }
+    .lang-switch:hover { border-color: #fff; }
+    #langSwitch:focus-visible ~ main .lang-switch {
+      outline: 2px solid var(--focus); outline-offset: 3px;
+    }
+  </style>
+  <!-- social -->
+  <link rel="canonical" href="https://anirach.com/blog/hermes-memory.html">
+  <meta property="og:type" content="article">
+  <meta property="og:url" content="https://anirach.com/blog/hermes-memory.html">
+  <meta property="og:site_name" content="Anirach Mingkhwan">
+  <meta property="og:locale" content="th_TH">
+  <meta property="article:published_time" content="2026-09-01">
+  <meta property="article:author" content="https://anirach.com/">
+  <meta property="og:title" content="Memory — ความจำที่มีขอบเขตโดยตั้งใจ">
+  <meta property="og:description" content="เจาะระบบความจำสามชั้นของ Hermes Agent — MEMORY.md และ USER.md ที่ถูกจำกัดใต้ 3,600 ตัวอักษรโดยตั้งใจ, FTS5 session search, context compression, memory providers ทั้งแปดตัว และวิธีย้ายความจำจาก OpenClaw มาเป็นไฟล์เดียวที่มีขอบเขต">
+  <meta itemprop="image" property="og:image" content="https://anirach.com/images/hermes-memory-og.jpg">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
+  <meta property="og:image:alt" content="Memory — ความจำที่มีขอบเขตโดยตั้งใจ">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:image" content="https://anirach.com/images/hermes-memory-og.jpg">
+  <meta name="twitter:image:alt" content="Memory — ความจำที่มีขอบเขตโดยตั้งใจ">
+  <meta name="robots" content="max-image-preview:large">
+  <meta name="theme-color" content="#11304b">
+  <link rel="icon" href="/favicon.ico" sizes="any">
+  <link rel="apple-touch-icon" href="/apple-touch-icon.png">
+  <!-- /social -->
+</head>
+<body>
+<a href="#main" class="skip-link">Skip to content</a>
+<input type="checkbox" id="langSwitch" class="lang-switch-box" aria-label="Switch language: Thai / English">
+
+  <nav class="blog-nav">
+    <div class="blog-nav__inner">
+      <a href="../index.html" class="blog-nav__home">Anirach</a>
+      <a href="./" class="blog-nav__back">‹ Blog</a>
+      <div class="blog-nav__title">Memory · ความจำที่มีขอบเขต</div>
+    </div>
+  </nav>
+
+  <main id="main">
+
+  <header class="post-hero">
+    <div class="post-hero__tags">
+      <span class="post-hero__tag">Hermes</span>
+      <span class="post-hero__tag">AI Agents</span>
+      <span class="post-hero__tag">Memory</span>
+    </div>
+    <h1 class="post-hero__title" itemprop="headline"><span class="l-th">Memory — ความจำที่มีขอบเขตโดยตั้งใจ</span><span class="l-en" lang="en">Memory — Bounded by Design</span></h1>
+    <p class="post-hero__sub"><span class="l-th">ความจำถาวรแค่ 3,600 ตัวอักษร — ข้อจำกัดที่ออกแบบไว้ตั้งแต่ต้น เพื่อบังคับให้ agent เลือกจำเฉพาะสิ่งที่สำคัญจริง แล้วพึ่ง FTS5 ค้นทุกอย่างที่เหลือ</span><span class="l-en" lang="en">Under 3,600 characters of always-on memory — a limit chosen on purpose, so the agent must decide what deserves remembering, and search for everything else.</span></p>
+    <div class="post-hero__meta">
+      <span>By <strong>Anirach Mingkhwan</strong></span>
+      <span class="post-hero__series">Hermes Agent in Practice 2026 • Post #3</span>
+      <span><time datetime="2026-09-01" itemprop="datePublished">1 Sep 2026</time></span>
+      <span>16 min read</span>
+    </div>
+    <label for="langSwitch" class="lang-switch" title="สลับภาษา · Switch language"><span class="lang-th">ไทย</span><span class="lang-sep">·</span><span class="lang-en" lang="en">English</span></label>
+    <div class="post-hero__cover">
+      <img src="../images/hermes-memory-cover.jpg" alt="Memory — ความจำที่มีขอบเขตโดยตั้งใจ" width="800" height="800" loading="eager" fetchpriority="high" decoding="async">
+    </div>
+  </header>
+
+  <nav aria-label="Hermes Agent in Practice">
+  <div class="series-nav">
+    <h3>⚡ Hermes Agent in Practice 2026</h3>
+    <div class="series-links">
+        <a href="/blog/hermes-101">#1 Hermes 101</a>
+        <a href="/blog/hermes-agent-teams">#2 Agent Teams</a>
+        <span class="current" aria-current="page">#3 Memory</span>
+        <a href="/blog/hermes-security">#4 Security</a>
+        <a href="/blog/hermes-integrations">#5 Integrations</a>
+        <a href="/blog/hermes-skills">#6 Skills</a>
+        <a href="/blog/hermes-production">#7 Production</a>
+    </div>
+  </div>
+  </nav>
+
+  <article class="post-body" itemscope itemtype="https://schema.org/BlogPosting">
+    <span itemprop="author" itemscope itemtype="https://schema.org/Person"><meta itemprop="name" content="Anirach Mingkhwan"></span>
+
+    <details class="post-toc l-th" open>
+      <summary>ในบทความนี้</summary>
+      <ol>
+          <li><a href="#th-philosophy">ปรัชญา: ความจำ 3,600 ตัวอักษรที่อยู่กับ agent ตลอดเวลา</a></li>
+          <li><a href="#th-files">MEMORY.md และ USER.md — เพดาน, ตัวคั่น §, และ snapshot ที่แช่แข็ง</a></li>
+          <li><a href="#th-tool">memory tool: add / replace / remove และวินัย error-on-overflow</a></li>
+          <li><a href="#th-autosave">อะไรถูกจำอัตโนมัติ — และอะไรตั้งใจไม่จำ</a></li>
+          <li><a href="#th-search">เลเยอร์สอง: FTS5 session search ค้นบทสนทนาทั้งหมด</a></li>
+          <li><a href="#th-compression">เลเยอร์สาม: context compression และ session lineage</a></li>
+          <li><a href="#th-guardrails">Guardrails: injection scanning, write approval, /journey</a></li>
+          <li><a href="#th-providers">External memory providers — เลเยอร์เสริมที่เสียบได้แปดตัว</a></li>
+          <li><a href="#th-migrate">ย้ายความจำจาก OpenClaw: daily logs รวมเป็นไฟล์เดียวที่มีขอบเขต</a></li>
+      </ol>
+    </details>
+    <details class="post-toc l-en" open>
+      <summary>In this post</summary>
+      <ol>
+          <li><a href="#en-philosophy">The philosophy: 3,600 characters of always-on memory</a></li>
+          <li><a href="#en-files">MEMORY.md and USER.md — caps, § delimiters, the frozen snapshot</a></li>
+          <li><a href="#en-tool">The memory tool: add / replace / remove, and error-on-overflow</a></li>
+          <li><a href="#en-autosave">What gets remembered automatically — and what deliberately doesn't</a></li>
+          <li><a href="#en-search">Recall layer two: FTS5 session search over full transcripts</a></li>
+          <li><a href="#en-compression">Recall layer three: context compression and session lineage</a></li>
+          <li><a href="#en-guardrails">Guardrails: injection scanning, write approval, /journey</a></li>
+          <li><a href="#en-providers">External memory providers — the pluggable layer of eight</a></li>
+          <li><a href="#en-migrate">Migrating from OpenClaw: daily logs become one bounded file</a></li>
+      </ol>
+    </details>
+    <div class="l-th">
+
+    <p>🤔 เคยเปิดโฟลเดอร์ <code>workspace/memory/</code> ของ OpenClaw แล้วพบ daily log เป็นสิบเป็นร้อยไฟล์ ที่ไม่มีใคร — แม้แต่ตัว agent เอง — กลับไปอ่านครบทุกไฟล์อีกเลยไหมครับ?</p>
+
+    <p>ใครที่ตามซีรีส์ OpenClaw for Organizations ของผมมา คงจำตอน <a href="/blog/openclaw-memory">Memory</a> ได้ — OpenClaw ใช้โมเดลสองไฟล์ <code>MEMORY.md</code> + <code>USER.md</code> บวก daily log ที่เขียนต่อท้ายไปเรื่อย ๆ ไม่มีเพดาน ความจำจึง "โต" ได้ไม่จำกัด แต่ก็ต้องอาศัยวินัย (และการ prune เป็นระยะ) ไม่ให้กลายเป็นกองเอกสารที่ไม่มีใครแตะ Hermes Agent ของ Nous Research — โปรเจกต์ MIT ที่เปิดตัวสาธารณะปลายเดือนกุมภาพันธ์ 2026 และวันนี้มีดาวบน GitHub เกือบ 240,000 ดวง — เดินหมากกลับด้านทั้งกระดาน: <strong>ความจำถาวรทั้งหมดถูกจำกัดไว้ใต้ 3,600 ตัวอักษร</strong> แล้วชดเชยด้วยเครื่องมือค้นย้อนหลังที่เร็วระดับมิลลิวินาที</p>
+
+    <p>บทความนี้เป็นตอนที่ 3 ของซีรีส์ Hermes Agent in Practice ผมจะพาไล่ตั้งแต่ปรัชญาเบื้องหลังเพดานตัวเลขนี้ กลไกสองไฟล์ + snapshot แช่แข็ง, ชั้นค้นหา FTS5, ชั้นบีบอัดบริบท, ระบบป้องกันการฉีดคำสั่งผ่านความจำ, ปลั๊กอิน memory provider ทั้งแปดตัว และปิดท้ายด้วยคำสั่งเดียวที่รวบ daily log ทั้งหมดของ OpenClaw เข้ามาเป็นไฟล์เดียวที่มีขอบเขต — ในฐานะคนที่ดูแล OpenClaw deployment ของตัวเองอยู่ ผมอ่านดีไซน์นี้ด้วยความรู้สึกสองอย่างพร้อมกัน: ทึ่ง และอยากเถียง</p>
+
+    <h2 id="th-philosophy">1. ปรัชญา: ความจำ 3,600 ตัวอักษรที่อยู่กับ agent ตลอดเวลา</h2>
+
+    <p>ตัวเลขก่อน: ความจำถาวร built-in ของ Hermes คือไฟล์ Markdown สองไฟล์ใน <code>~/.hermes/memories/</code> — <strong>MEMORY.md</strong> เพดาน 2,200 ตัวอักษร (ประมาณ 800 tokens) เป็น "โน้ตส่วนตัวของ agent" เก็บข้อเท็จจริงของ environment, convention, สิ่งที่เรียนรู้มา และ <strong>USER.md</strong> เพดาน 1,375 ตัวอักษร (ประมาณ 500 tokens) เป็นโปรไฟล์ผู้ใช้ — ความชอบ สไตล์การสื่อสาร ความคาดหวัง รวมกันไม่เกิน 3,600 ตัวอักษร หรือราว ๆ 1,300 tokens เท่านั้น</p>
+
+    <p>ฟังดูน้อยจนน่าตกใจใช่ไหมครับ ระบบ agent สมัยนี้แข่งกันโฆษณา vector database, embedding pipeline, ความจำ "ไม่จำกัด" — แล้ว Hermes กลับตีกรอบความจำถาวรไว้เล็กกว่าอีเมลหนึ่งฉบับ แต่พอไล่อ่านเอกสารจบ ผมคิดว่านี่ไม่ใช่ข้อจำกัดทางเทคนิค มันคือ<strong>จุดยืนทางออกแบบ</strong>: อะไรก็ตามที่อยู่ในความจำถาวร จะถูกฉีดเข้า system prompt ของ<em>ทุก session ทุก turn</em> — ไม่ต้อง retrieve ไม่ต้องลุ้นว่า similarity search จะดึงถูกก้อนหรือเปล่า</p>
+
+    <blockquote>💡 บทวิเคราะห์ของ glukhov.org สรุปปรัชญานี้ไว้คมมาก: "Memory isn't something the agent retrieves when needed. It's something the agent <em>is</em> at all times." — ความจำไม่ใช่ของที่หยิบมาใช้เป็นครั้งคราว แต่เป็นส่วนหนึ่งของตัวตน agent ตลอดเวลา และการมีขอบเขตนั่นแหละที่บังคับให้ต้องเลือก</blockquote>
+
+    <p>แน่นอนว่า 3,600 ตัวอักษรจำทุกอย่างไม่ได้ Hermes จึงไม่ได้มีความจำชั้นเดียว แต่มี<strong>สามชั้น</strong>ที่แบ่งงานกันชัดเจน:</p>
+
+    <div class="table-wrapper">
+      <table>
+        <thead>
+          <tr><th>เลเยอร์</th><th>ทำหน้าที่</th><th>ที่เก็บ</th><th>ต้นทุนตอนใช้</th></tr>
+        </thead>
+        <tbody>
+          <tr><td><strong>1. Curated memory</strong></td><td>ข้อเท็จจริงคัดแล้ว ใต้ 3,600 ตัวอักษร อยู่ใน system prompt เสมอ</td><td><code>~/.hermes/memories/</code></td><td>ศูนย์ — จ่ายรวมใน prompt ทุก turn อยู่แล้ว</td></tr>
+          <tr><td><strong>2. Session search</strong></td><td>ค้น "ข้อความจริง" จากทุกบทสนทนาที่เคยมี</td><td><code>~/.hermes/state.db</code> (SQLite + FTS5)</td><td>~20ms ต่อ query — ไม่เรียก LLM ในชั้นค้น</td></tr>
+          <tr><td><strong>3. Context compression</strong></td><td>สรุปแบบ lossy เมื่อบริบทของ session ล้น</td><td>ใน session store พร้อม lineage แม่-ลูก</td><td>เรียก LLM เมื่อบีบอัด (auxiliary model ได้)</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <p>สังเกตการแบ่งงาน: ชั้นแรกแพงที่สุดต่อ token (เพราะติดไปทุก turn) เลยถูกบีบให้เล็กที่สุด ชั้นสองถูกที่สุด (SQLite ล้วน ๆ) เลยเก็บทุกอย่างแบบไม่ตัดทอน ส่วนชั้นสามเป็นกันชนของ context window ภายใน session เดียว — สามชั้นนี้คือโครงของบทความทั้งบทครับ</p>
+
+    <h2 id="th-files">2. MEMORY.md และ USER.md — เพดาน, ตัวคั่น §, และ snapshot ที่แช่แข็ง</h2>
+
+    <p>เริ่มจากของจริงบนดิสก์:</p>
+
+    <pre><code># ความจำถาวรทั้งหมดของ Hermes อยู่ในสองไฟล์นี้
+ls ~/.hermes/memories/
+# MEMORY.md  — โน้ตส่วนตัวของ agent (เพดาน 2,200 ตัวอักษร ≈ 800 tokens)
+# USER.md    — โปรไฟล์ผู้ใช้     (เพดาน 1,375 ตัวอักษร ≈ 500 tokens)</code></pre>
+
+    <p>ข้างในไฟล์ แต่ละ entry คั่นด้วยเครื่องหมาย <strong>§</strong> (section sign) และตอนถูกฉีดเข้า system prompt จะมี header บอกปริมาณการใช้กำกับเสมอ ตัวอย่างจาก<a href="https://hermes-agent.nousresearch.com/docs/user-guide/features/memory">เอกสารทางการ</a>:</p>
+
+    <pre><code>MEMORY (your personal notes) [67% — 1,474/2,200 chars]
+§ โปรเจกต์ pm25-dashboard: deploy ผ่าน GitHub Actions ไป staging ก่อนเสมอ
+§ เครื่องหลักเป็น macOS + zsh, จัดการ Python ด้วย uv
+§ ผู้ใช้ต้องการ commit message ภาษาอังกฤษ สั้น และบอกเหตุผลของการแก้</code></pre>
+
+    <p>ตัวเลขเปอร์เซ็นต์ตรง header ไม่ใช่ของประดับ — agent เห็นมันทุก turn จึง "รู้ตัว" ตลอดว่าความจำใกล้เต็มแค่ไหน และควรเริ่มรวบเมื่อไร (เดี๋ยวมาถึงเรื่องนี้ในหัวข้อถัดไป)</p>
+
+    <h3>Snapshot ที่แช่แข็ง — และเหตุผลเรื่อง cache</h3>
+
+    <p>รายละเอียดที่ผมชอบที่สุดของดีไซน์นี้: ทั้งสองไฟล์ถูกอ่านเข้า system prompt เป็น <strong>frozen snapshot</strong> ครั้งเดียวตอนเปิด session แล้ว<em>ไม่ถูกแก้กลางคันเด็ดขาด</em> — ถ้า agent เขียนความจำระหว่าง session ข้อมูลลงดิสก์ทันที แต่จะไปโผล่ใน prompt ก็ตอน session ถัดไป</p>
+
+    <div class="alert info">
+      <strong>ทำไมต้องแช่แข็ง:</strong> เพราะ Hermes มาพร้อม cross-session prefix cache อายุ 1 ชั่วโมงสำหรับ Claude (ทั้ง Anthropic ตรง, OpenRouter และ Nous Portal) แบบเปิดตลอดโดยไม่ต้องตั้งค่า — ถ้า system prompt ขยับแม้ตัวอักษรเดียวกลางคัน cache ทั้งก้อนแตกทันที การตรึง snapshot ไว้ทั้ง session จึงเป็นการเลือก "จ่ายค่า token ถูกลงทุก turn" แลกกับ "ความจำใหม่มีผลช้าไปหนึ่ง session" ซึ่งสำหรับงานส่วนใหญ่เป็นการแลกที่คุ้ม
+    </div>
+
+    <p>ในสถาปัตยกรรมการประกอบ prompt (ตามบทวิเคราะห์สถาปัตยกรรมของ Arize) บล็อกความจำ, โปรไฟล์ผู้ใช้ และ timestamp ถูกจัดเป็นชั้น "volatile" ที่วางไว้<em>หลัง</em>ส่วนที่เสถียร (tool guidance และ context files) — ของที่เปลี่ยนบ่อยอยู่ท้าย prompt เพื่อให้ prefix ยาว ๆ ข้างหน้า cache ได้ต่อเนื่อง เป็นดีเทลเล็ก ๆ ที่บอกว่าคนออกแบบคิดเรื่องต้นทุนจริงจัง</p>
+
+    <h3>Memory ไม่ใช่ Context Files</h3>
+
+    <p>จุดที่คนมาจากสาย Claude Code / OpenClaw สับสนบ่อย: <strong>context files เป็นคนละระบบกับ memory</strong> — ไฟล์อย่าง AGENTS.md หรือ CLAUDE.md คือคำสั่งประจำโปรเจกต์ที่<em>มนุษย์</em>เขียน ส่วน memory คือสิ่งที่ <em>agent</em> สะสมเอง Hermes โหลด context file แบบ first-match-wins ตามลำดับนี้ (<a href="https://hermes-agent.nousresearch.com/docs/user-guide/features/context-files">เอกสารฉบับเต็ม</a>):</p>
+
+    <pre><code># context files — ระบบแยกจาก memory, โหลดตัวแรกที่เจอเท่านั้น
+.hermes.md / HERMES.md   # ชนะทุกไฟล์
+AGENTS.override.md
+AGENTS.md
+CLAUDE.md                # Hermes อ่านไฟล์ของ Claude Code ได้ตรง ๆ
+.cursorrules
+
+# SOUL.md โหลดเสมอจาก $HERMES_HOME/SOUL.md — identity slot #1
+# เพดานสเกลตามโมเดล: floor 20,000 → ceiling 500,000 ตัวอักษร
+# (คีย์ context_file_max_chars; AGENTS.md ใน subdirectory จำกัด 8,000)</code></pre>
+
+    <p>ผลพลอยได้เชิงปฏิบัติ: CLAUDE.md และ AGENTS.md ที่องค์กรคุณลงทุนเขียนไว้แล้ว ใช้กับ Hermes ได้ตั้งแต่วันแรกโดยไม่ต้องแปลงอะไร — และเกณฑ์การจำอัตโนมัติของ Hermes ยังระบุชัดว่า "อะไรที่อยู่ใน context files แล้ว ไม่ต้องจำซ้ำ" ความจำ 3,600 ตัวอักษรเลยไม่ถูกผลาญไปกับของที่มีไฟล์ดูแลอยู่แล้ว</p>
+
+    <h2 id="th-tool">3. memory tool: add / replace / remove และวินัย error-on-overflow</h2>
+
+    <p>agent แก้ความจำของตัวเองผ่าน tool ชื่อ <code>memory</code> ซึ่งมีสามแอ็กชันเท่านั้น — และที่จงใจไม่มีคือ <code>read</code> เพราะเนื้อหาอยู่ใน system prompt อยู่แล้ว จะอ่านซ้ำทำไม:</p>
+
+    <pre><code># รูปแบบเชิงแนวคิดของ memory tool — สามแอ็กชัน ไม่มี read
+memory(action="add",
+       content="CI ของทีมรันบน self-hosted runner — อย่าสั่ง job ที่ต้องใช้ GPU")
+
+memory(action="replace",
+       old_text="Postgres 15",          # จับคู่แบบ substring
+       content="อัปเกรดเป็น Postgres 16 แล้ว (ส.ค. 2026)")
+
+memory(action="remove", old_text="โปรเจกต์ legacy-api")</code></pre>
+
+    <p>ต่อมามี <code>operations</code> array ให้ยื่นหลายคำสั่งเป็นชุดเดียว โดยระบบตรวจทุกรายการกับ<strong>งบตัวอักษรสุดท้าย</strong>แบบ atomic — จะผ่านก็ผ่านทั้งชุด (ฟีเจอร์นี้เข้ามาในช่วง v0.16.0–v0.18.0 ราวมิถุนายน–กรกฎาคม 2026 — release notes ไม่ได้ปักเวอร์ชันชัด ผมจึงไม่ปักแทน):</p>
+
+    <pre><code># batch edit — ตรวจกับงบตัวอักษรสุดท้ายพร้อมกันทั้งชุด
+memory(operations=[
+  {"action": "remove",  "old_text": "รายละเอียด sprint ที่ปิดไปแล้ว"},
+  {"action": "replace", "old_text": "staging บน DO", "content": "staging ย้ายไป Hetzner"},
+  {"action": "add",     "content": "ทีมตกลงใช้ conventional commits ตั้งแต่ ก.ย. 2026"}
+])</code></pre>
+
+    <h3>เต็มแล้วไม่ทิ้งเงียบ ๆ — คืน error</h3>
+
+    <p>นี่คือหัวใจของ "ขอบเขตโดยตั้งใจ": เมื่อความจำเต็ม Hermes <strong>ไม่</strong> silent-drop entry เก่าแบบ FIFO และ<strong>ไม่</strong>สรุปทับให้อัตโนมัติ — tool คืน error ตรง ๆ:</p>
+
+    <pre><code>Memory at 2,100/2,200 chars. Adding this entry (250 chars)
+would exceed the limit.
+
+# → agent ต้อง consolidate หรือ remove ก่อน จึงจะ add ใหม่ได้
+# แนวปฏิบัติในเอกสาร: เริ่มรวบความจำตั้งแต่ใช้เกิน 80%</code></pre>
+
+    <p>ผมมองว่านี่คือการย้ายภาระ "ตัดสินใจว่าอะไรสำคัญ" กลับไปให้ตัว agent ในจังหวะที่มันมีบริบทครบที่สุด แทนที่จะให้กลไกอัตโนมัติเดาแทน — เหมือนบังคับให้จดสรุปลงสมุดเล่มเล็กแทนที่จะถ่ายเอกสารทั้งตู้ คนที่เคยเจอ MEMORY.md ของ OpenClaw บวมจนต้องมานั่งไล่ลบเองน่าจะเข้าใจว่าทำไมดีไซน์นี้ถึงน่าสนใจ</p>
+
+    <p>คีย์ config ฝั่งความจำทั้งหมด เปิดมาพร้อมค่า default ตามนี้:</p>
+
+    <pre><code># คีย์ config ของระบบความจำ — ค่า default ตามเอกสาร
+memory_enabled: true          # เปิดระบบความจำ
+user_profile_enabled: true    # เปิด USER.md
+memory_char_limit: 2200       # เพดาน MEMORY.md
+user_char_limit: 1375         # เพดาน USER.md
+write_approval: false         # true = ทุกการเขียนต้องรออนุมัติ (หัวข้อ 7)
+
+# แจ้งเตือนเมื่อมีการเขียนความจำ: off / on (default) / verbose
+# on = ขึ้นบรรทัดสั้น ๆ "💾 Memory updated", verbose = แถม preview สิ่งที่เปลี่ยน
+display.memory_notifications: on</code></pre>
+
+    <h2 id="th-autosave">4. อะไรถูกจำอัตโนมัติ — และอะไรตั้งใจไม่จำ</h2>
+
+    <p>ผู้ใช้ไม่ต้องสั่ง "จำไว้นะ" ทุกครั้ง — README ของโปรเจกต์เรียกกลไกนี้ว่า "agent-curated memory with periodic nudges": ตัว agent จะสะกิดตัวเองเป็นระยะให้ทบทวนว่าบทสนทนาที่ผ่านมามีอะไรข้ามเส้น "ข้อเท็จจริงถาวร" หรือยัง เกณฑ์ในเอกสารชัดเจนพอจะทำเป็นตารางได้เลย:</p>
+
+    <div class="table-wrapper">
+      <table>
+        <thead>
+          <tr><th>จำอัตโนมัติ ✅</th><th>ตั้งใจไม่จำ ❌</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>preferences ของผู้ใช้</td><td>เรื่องจิ๊บจ๊อย (trivia)</td></tr>
+          <tr><td>ข้อเท็จจริงของ environment</td><td>สิ่งที่ค้นซ้ำได้ง่ายอยู่แล้ว</td></tr>
+          <tr><td>การแก้ไข/correction จากผู้ใช้</td><td>raw data dump ก้อนโต</td></tr>
+          <tr><td>convention ของทีมหรือโปรเจกต์</td><td>ephemera เฉพาะ session นั้น</td></tr>
+          <tr><td>งานที่ทำเสร็จแล้ว</td><td>สิ่งที่อยู่ใน context files แล้ว</td></tr>
+          <tr><td>คำขอ "จำไว้" ตรง ๆ</td><td>—</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <p>คอลัมน์ขวาสำคัญกว่าคอลัมน์ซ้ายนะครับ — ระบบความจำส่วนใหญ่พังเพราะจำ<em>มากไป</em> ไม่ใช่จำน้อยไป การประกาศชัดว่า "อะไรไม่คู่ควรกับ 3,600 ตัวอักษร" คือครึ่งหนึ่งของดีไซน์ทั้งหมด</p>
+
+    <p>งาน review เบื้องหลังนี้ยังส่งไปรันบน<strong>โมเดลรอง</strong>ที่ถูกกว่าได้ — เอกสารระบุว่าประหยัดต้นทุน token ราว 3–5 เท่าใน benchmark:</p>
+
+    <pre><code># ให้ background memory review รันบนโมเดลรองราคาประหยัด
+auxiliary.background_review.provider: &lt;provider&gt;
+auxiliary.background_review.model: &lt;cheap-model&gt;
+# เอกสารระบุ: ลด token cost ราว 3–5 เท่าใน benchmark</code></pre>
+
+    <p>ส่วนจังหวะการสะกิด — โค้ดวอล์กทรูของ MMNTM (บุคคลที่สาม, กรกฎาคม 2026) รายงานว่า nudge ทำงานราว ๆ ทุก 300 วินาที บวก background review หลังจบ turn ที่อ่านซ้ำบทสนทนาจาก prefix cache ที่ยังอุ่นอยู่ — ตัวเลข 300 วินาทีนี้<em>ไม่มี</em>ในเอกสารทางการ ผมจึงขอวางไว้ในฐานะรายงานจากการอ่านโค้ด ไม่ใช่สเปก</p>
+
+    <hr>
+
+    <h2 id="th-search">5. เลเยอร์สอง: FTS5 session search ค้นบทสนทนาทั้งหมด</h2>
+
+    <p>คำถามที่ค้างจากหัวข้อแรก: ถ้าความจำถาวรจุแค่ 3,600 ตัวอักษร แล้วเรื่องที่เหลือทั้งหมดหายไปไหน? คำตอบคือ<strong>ไม่หายไปไหนเลย</strong> — ทุก session ไม่ว่าจะคุยผ่าน CLI หรือ messaging channel ไหน ถูกเก็บครบทุกข้อความใน SQLite ไฟล์เดียว พร้อม full-text index:</p>
+
+    <pre><code># ทุก session (CLI + ทุก messaging channel) อยู่ใน SQLite เดียว
+~/.hermes/state.db          # มี FTS5 full-text index ในตัว
+
+# agent ค้นเองด้วย tool — ได้ "ข้อความจริง" กลับมา ไม่ใช่บทสรุป
+session_search("docker compose postgres password rotation")
+# ~20ms ต่อ query, ~1ms ต่อการ scroll
+# แล้ว scroll เดินหน้า-ถอยหลังใน session ที่เจอได้ทันที</code></pre>
+
+    <p>เอกสาร memory ย้ำว่า ชั้นค้นหานี้คืน "actual messages" — ไม่มี LLM summarization ไม่มี truncation ไม่มี embedding ไม่มี vector database ให้ดูแล แค่ FTS5 ของ SQLite ตรง ๆ ซึ่งเร็วพอ (~20ms) และที่สำคัญคือ<strong>ไม่มีค่า LLM ต่อการค้นหนึ่งครั้ง</strong> agent จึงค้นได้ถี่ ๆ โดยไม่ต้องเสียดายเงิน</p>
+
+    <p>มีจุดหนึ่งที่ต้องพูดให้ครบ: README ของโปรเจกต์โฆษณาฟีเจอร์นี้ว่า "FTS5 session search <em>with LLM summarization</em> for cross-session recall" ซึ่งฟังดูขัดกับ "no LLM summarization" ในเอกสาร memory — อ่านประกอบกับ release notes ที่ทำให้ session search เป็นงานหนึ่งของระบบ auxiliary model เคียงกับ compression และ vision ผมตีความว่าเป็นสองขั้นในเส้นทางเดียว: <em>ตัวค้น</em>เป็น FTS5 ล้วนคืนข้อความดิบ ส่วน<em>การย่อยผลลัพธ์</em>ให้กลายเป็นคำตอบ อาจผ่านโมเดลรองอีกชั้น — ทั้งสองประโยคจริงพร้อมกันได้ แต่ผมเลือกเล่าแบบแยกชั้นแทนที่จะฟันธงกลไกเดียว</p>
+
+    <blockquote>💡 มุมคิดเชิงสถาปัตยกรรม: นี่คือการเทรด recall แบบ semantic (vector DB อาจเจอ "เรื่องคล้ายกัน" ที่ใช้คนละคำ) แลกกับความเร็ว ต้นทุนศูนย์ และความโปร่งใส — ผลค้นเป็นข้อความจริงที่ตรวจย้อนได้ ไม่ใช่ก้อน embedding ที่อธิบายไม่ได้ว่าทำไมถูกดึงมา สำหรับ agent ที่คุยกับเราเป็นภาษาเดิม ๆ ทุกวัน คำเดิม ๆ นั่นแหละคือ key ที่ดีอยู่แล้ว</blockquote>
+
+    <h2 id="th-compression">6. เลเยอร์สาม: context compression และ session lineage</h2>
+
+    <p>ชั้นที่สามไม่เกี่ยวกับ "ข้าม session" แต่แก้ปัญหาภายใน session เดียว: บริบทยาวเกิน window ตามการไล่โค้ดของ Arize เมื่อถึงเกณฑ์ <code>agent/context_compressor.py</code> จะสรุปบทสนทนาแบบ lossy แล้วเปิด session ลูกต่อ โดย session store (ผ่าน <code>hermes_state.py</code> และ SessionStore ของ gateway) เก็บ <strong>lineage แม่-ลูก</strong> ไว้ครบ — บีบกี่ทอดก็ไล่กลับไปอ่านต้นฉบับได้เสมอ พร้อม isolation แยกตาม platform และ atomic writes</p>
+
+    <p>เวอร์ชันหลัง ๆ ขัดเกลาชั้นนี้หนักมาก โดยเฉพาะ <strong>v0.20.0</strong> (3 สิงหาคม 2026) ที่ยกเครื่องทั้งชุด:</p>
+
+    <ul>
+      <li><strong>Proactive tool-result pruning</strong> — ตัดผลลัพธ์ tool เก่า ๆ ทิ้งก่อนที่บริบทจะตึง (สำคัญกับโมเดล window ใหญ่ที่ค่า input แพง)</li>
+      <li><strong>Per-turn micro-compaction</strong> — เก็บกวาดเล็ก ๆ ทุก turn แทนที่จะรอบีบใหญ่ทีเดียว</li>
+      <li><strong>Guaranteed N-user-message tail</strong> — การันตีว่าข้อความล่าสุดของผู้ใช้ N ข้อความจะรอดจากการบีบอัดเสมอ — ใครเคยเจอ agent "ลืมสิ่งที่เพิ่งสั่งไปเมื่อกี้" หลัง compaction จะรู้ว่าข้อนี้แก้ pain point ตรงจุดที่สุด</li>
+    </ul>
+
+    <p>รุ่นก่อนหน้าก็ทยอยเพิ่มคำเตือน degradation, การกันงบ token ให้ส่วนท้ายบทสนทนา และคำสั่งบีบอัดแบบชี้เป้า:</p>
+
+    <pre><code># บีบอัดแบบชี้เป้า — บอกได้ว่าอยากให้บทสรุปถนอมประเด็นไหน
+/compress &lt;focus&gt;</code></pre>
+
+    <h3>Cron agents เลิกเป็นปลาทอง</h3>
+
+    <p>ช่องโหว่สุดท้ายของภาพนี้เพิ่งถูกปิดเดือนที่แล้ว: งาน cron ที่รันซ้ำ ๆ เคยเริ่มจากศูนย์ทุกรอบ v0.20.5 (tag 19 สิงหาคม 2026) ให้ cron jobs มีความจำถาวร และ v0.21.0 (31 สิงหาคม 2026) ปิดจ็อบด้วยประโยคใน <a href="https://github.com/NousResearch/hermes-agent/releases">release notes</a> ที่ผมขอยกมาทั้งดุ้น: <em>"Cron jobs stopped being goldfish. Cron agents now load and update persistent memory like every other agent."</em> — บวกออปชัน <code>continuity=true</code> ที่ส่งผลลัพธ์ของรอบก่อนเข้ารอบถัดไป ให้ monitor agent รู้ว่าอะไรรายงานไปแล้ว ไม่แจ้งเตือนซ้ำ</p>
+
+    <hr>
+
+    <h2 id="th-guardrails">7. Guardrails: injection scanning, write approval, /journey</h2>
+
+    <p>คิดตามนี้นะครับ: ความจำของ Hermes ลงเอยใน system prompt — ตำแหน่งที่มีอำนาจสูงสุดของทั้งบทสนทนา ถ้าผู้ไม่หวังดีหลอกให้ agent "จำ" ประโยคที่จริง ๆ เป็นคำสั่งฝัง ได้เท่ากับเขียน system prompt ของทุก session ในอนาคต ดังนั้น<strong>ทุกการเขียนความจำถูกสแกนก่อนรับ</strong>: แพตเทิร์น prompt injection, การพยายามขโมย credential, แพตเทิร์น SSH backdoor และตัวอักษร Unicode ล่องหนถูกบล็อกทั้งหมด</p>
+
+    <div class="alert danger">
+      <strong>แต่กำแพงก็มีรอยร้าว:</strong> NVD ยืนยัน CVE-2026-10223 — ช่องโหว่ injection ในตัว <code>_scan_memory_content</code> (ใน tools/memory_tool.py) ซึ่งก็คือ<em>ตัวสแกนความจำเอง</em>กลายเป็นช่องทางโจมตีเสียเอง กระทบรุ่น 2026.4.0–2026.4.30 ระดับ Medium (CVSS 6.3) และมี exploit เผยแพร่สาธารณะแล้ว (SentinelOne จัดประเภทแรงกว่านั้นเป็น RCE) บทเรียนเชิงหลักการชัดเจน: โค้ดที่ตรวจ input ที่ไม่น่าเชื่อถือ ตัวมันเองคือ attack surface ชั้นดี เราจะกลับมาเรื่องนี้แบบเต็ม ๆ ในตอน #4 Security
+    </div>
+
+    <p>สำหรับ deployment ที่มีผู้ใช้หลายคนหรือรับข้อความจากภายนอก ผมแนะนำให้เปิดชั้นอนุมัติ: ตั้ง <code>write_approval: true</code> แล้วการเขียนความจำจาก session เบื้องหน้าใน CLI จะถามทันที ส่วนการเขียนจากช่องทางอื่นถูกพักไว้รอตรวจ:</p>
+
+    <pre><code>/memory pending             # ดูรายการเขียนที่ค้างอนุมัติ
+/memory approve &lt;id&gt;        # อนุมัติรายการ
+/memory reject &lt;id&gt;         # ปัดตก</code></pre>
+
+    <p>และตั้งแต่ v0.18.0 (1 กรกฎาคม 2026) มนุษย์มีหน้าต่างมองเข้าไปในหัว agent ตรง ๆ: คำสั่ง <code>/journey</code> เปิดไทม์ไลน์เล่นย้อนได้ของทุกอย่างที่ Hermes เรียนรู้ (ฝั่ง desktop มี memory graph แบบ radial ให้ดูด้วย) — ดู แก้ หรือลบความจำเป็นราย chunk ได้:</p>
+
+    <pre><code>/journey                                   # ไทม์ไลน์ทุกสิ่งที่ agent เรียนรู้
+hermes journey delete memory:&lt;source&gt;:&lt;index&gt;   # ลบ chunk ตาม node id
+hermes journey edit memory:&lt;source&gt;:&lt;index&gt;     # เปิด $EDITOR แก้ตรง ๆ</code></pre>
+
+    <p>ปิดท้ายด้วย isolation: แต่ละ profile ของ Hermes ได้ <code>HERMES_HOME</code>, config, memory, sessions และ gateway ของตัวเองแยกขาดกัน — ความจำของ profile งานทดลองไม่มีทางรั่วเข้า profile งานจริง ซึ่งเข้าคู่กับแนวทางแยก agent ต่อบริบทที่ผมเชียร์ไว้ในซีรีส์ OpenClaw พอดี</p>
+
+    <hr>
+
+    <h2 id="th-providers">8. External memory providers — เลเยอร์เสริมที่เสียบได้แปดตัว</h2>
+
+    <p>ถ้า 3,600 ตัวอักษร + FTS5 ยังไม่พอกับงานของคุณ — เช่น อยากได้ user modeling เชิงลึก หรือ semantic recall จริง ๆ — Hermes มีชั้นปลั๊กอิน: <a href="https://hermes-agent.nousresearch.com/docs/user-guide/features/memory-providers"><strong>memory provider ภายนอก 8 ตัว</strong></a> ได้แก่ Honcho, OpenViking, Mem0, Hindsight, Holographic, RetainDB, ByteRover และ Supermemory (เอกสารยังมีปลั๊กอิน Memori แยกอีกตัว) กติกาสำคัญสองข้อ: เปิดได้<strong>ทีละหนึ่งตัวเท่านั้น</strong> และเป็น <strong>additive</strong> เสมอ — built-in memory ไม่เคยถูกปิดแทนที่</p>
+
+    <p>เมื่อ provider ทำงาน Hermes จะฉีดบริบทจาก provider เข้า system prompt, prefetch ความจำที่เกี่ยวข้องก่อนแต่ละ turn (แบบ non-blocking), sync บทสนทนาหลังแต่ละคำตอบ, สกัดความจำตอนจบ session, mirror การเขียน built-in memory ไปที่ provider และเพิ่ม tool เฉพาะของ provider นั้นให้ agent:</p>
+
+    <pre><code># เปิด external provider — active ได้ทีละหนึ่งตัวเท่านั้น
+hermes memory setup         # wizard เลือก provider + ใส่ credential
+hermes memory status        # ตรวจว่าตัวไหน active อยู่
+hermes memory off           # ปิด (built-in memory ยังทำงานเสมอ)
+
+# หรือกำหนดตรง ๆ ใน config
+memory.provider: &lt;provider&gt;</code></pre>
+
+    <p>สองตัวที่เอกสารให้รายละเอียดมากพอจะเล่า:</p>
+
+    <ul>
+      <li><strong>Holographic</strong> — โลคัลล้วน: fact store บน SQLite (default <code>$HERMES_HOME/memory_store.db</code>) มี FTS5, trust scoring (ค่าเริ่มต้น 0.5) และเทคนิค holographic reduced representations ฟรี ไม่มี dependency ภายนอก มาพร้อม tool <code>fact_store</code> (add, search, probe, related, reason, contradict, update, remove, list) และ <code>fact_feedback</code> — เหมาะเป็นตัวแรกสำหรับลองชั้นนี้โดยไม่ต้องส่งข้อมูลออกเครื่อง</li>
+      <li><strong>Honcho</strong> — "AI-native cross-session user modeling with dialectic reasoning": จำลองโมเดลของผู้ใช้ข้าม session ผ่านการ reasoning ปรับแต่งได้ละเอียด (เช่น <code>dialecticMaxChars 600</code>, <code>recallMode hybrid</code>, <code>writeFrequency async</code>, <code>sessionStrategy per-directory</code>) พร้อม tool 5 ตัวตระกูล <code>honcho_*</code></li>
+    </ul>
+
+    <p>ค่าใช้จ่ายทั้งกลุ่มไล่ตั้งแต่ฟรี/โลคัล (Holographic) ไปจนถึงราว $20 ต่อเดือนแบบ cloud (RetainDB) และมีข้อกำหนดจุกจิกบ้าง เช่น Hindsight ต้องการ <code>hindsight-client &gt;= 0.4.22</code> — ใครอยากเขียน provider เอง interface ก็เปิดอยู่ (โมดูลหลัก: <code>agent/memory_manager.py</code>, <code>agent/memory_provider.py</code>, <code>plugins/memory/</code>):</p>
+
+    <pre><code># plugin interface ของ memory provider — hook ทั้งหมดเป็น optional
+prefetch(query, session_id)       # ก่อน API call แต่ละครั้ง
+queue_prefetch()                  # หลังจบแต่ละ turn
+sync_turn(user, assistant, ...)   # หลังแต่ละ turn — ต้อง non-blocking
+on_session_end(messages)          # สกัดความจำตอนปิด session
+on_pre_compress(messages)         # ก่อน context compression
+on_memory_write(action, target, content)  # mirror การเขียน built-in
+system_prompt_block()             # บล็อกที่ถูกฉีดเข้า prompt
+shutdown()                        # ปิดตัวอย่างสะอาด</code></pre>
+
+    <div class="alert">
+      <strong>ข้อสังเกตของผม:</strong> ลำดับความสำคัญที่ถูกต้องคือ รีดชั้น built-in + FTS5 ให้สุดก่อน แล้วค่อยพิจารณา provider เมื่อเจอโจทย์ที่สองชั้นแรกตอบไม่ได้จริง ๆ — provider เพิ่มทั้ง latency (แม้ hook หลักจะ non-blocking), จุดเสียหายใหม่ และในกรณี cloud คือข้อมูลบทสนทนาที่ออกนอกเครื่อง ซึ่งต้องผ่านการประเมินเรื่อง governance ขององค์กรก่อนเสมอ
+    </div>
+
+    <h2 id="th-migrate">9. ย้ายความจำจาก OpenClaw: daily logs รวมเป็นไฟล์เดียวที่มีขอบเขต</h2>
+
+    <p>มาถึงหัวข้อที่คนอ่านซีรีส์ OpenClaw ของผมรออยู่ วางสองโมเดลเทียบกันก่อน:</p>
+
+    <div class="table-wrapper">
+      <table>
+        <thead>
+          <tr><th>&nbsp;</th><th>OpenClaw</th><th>Hermes</th></tr>
+        </thead>
+        <tbody>
+          <tr><td><strong>ไฟล์หลัก</strong></td><td>workspace/MEMORY.md + USER.md</td><td>~/.hermes/memories/MEMORY.md + USER.md</td></tr>
+          <tr><td><strong>Daily logs</strong></td><td>workspace/memory/*.md — โตไม่จำกัด</td><td>ไม่มี — ใช้ FTS5 ค้น transcript เต็มแทน</td></tr>
+          <tr><td><strong>ขนาด</strong></td><td>ไม่มีเพดาน</td><td>2,200 + 1,375 ตัวอักษร (hard cap)</td></tr>
+          <tr><td><strong>เมื่อเต็ม</strong></td><td>ไม่มีแนวคิด "เต็ม"</td><td>tool คืน error → บังคับ consolidate</td></tr>
+          <tr><td><strong>การเขียน</strong></td><td>agent เขียนอิสระ</td><td>ผ่าน security scan ทุกครั้ง + write approval (ออปชัน)</td></tr>
+          <tr><td><strong>ค้นย้อนหลัง</strong></td><td>ไล่เปิดไฟล์ log อ่าน</td><td>session_search บน SQLite FTS5 (~20ms)</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <p>ข่าวดีคือแนวคิดสองไฟล์ MEMORY.md/USER.md ตรงกันเป๊ะ (ไม่บังเอิญ — คู่มือย้ายฝั่งกลับของ OpenClaw เองก็ append ไฟล์คู่นี้เข้าหากันตรง ๆ) การย้ายจึงเป็นคำสั่งเดียวตาม<a href="https://github.com/NousResearch/hermes-agent/blob/main/website/docs/guides/migrate-from-openclaw.md">คู่มือ migration อย่างเป็นทางการ</a> และจุดที่น่าทึ่งที่สุดคือวิธีจัดการ daily log:</p>
+
+    <pre><code>hermes claw migrate
+# workspace/SOUL.md       → ~/.hermes/SOUL.md
+# workspace/AGENTS.md     → AGENTS.md (workspace ปลายทาง)
+# workspace/MEMORY.md     → ~/.hermes/memories/MEMORY.md
+# workspace/USER.md       → ~/.hermes/memories/USER.md
+# workspace/memory/*.md   → รวบเข้า MEMORY.md ไฟล์เดียว
+#                           (parse → merge → dedupe ด้วยตัวคั่น §)
+# ความจำที่มีอยู่แล้วฝั่ง Hermes จะถูกข้าม ไม่เขียนทับ
+
+hermes claw cleanup
+# เก็บโฟลเดอร์ OpenClaw ที่เหลือเข้า .pre-migration/ (เปลี่ยนชื่อ ไม่ลบ)</code></pre>
+
+    <p>อ่านบรรทัดที่สี่จากท้ายอีกครั้งครับ: daily log ทั้งโฟลเดอร์ — สำหรับบางเครื่องคือหลายเดือนของการจดรายวัน — ถูก<strong>รวบเข้าไฟล์เดียวที่มีเพดาน 2,200 ตัวอักษร</strong> นี่ไม่ใช่แค่ขั้นตอนทางเทคนิค แต่เป็นการบังคับกลั่นครั้งใหญ่: ปรัชญาทั้งบทความนี้ถูกอัดอยู่ในคำสั่ง migrate คำสั่งเดียว ใครสนใจว่าฝั่ง OpenClaw ประกอบภาพความจำนี้อย่างไรในเชิงลึก ผมเคยแกะไว้ใน <a href="/blog/openclaw-memory-architecture">OpenClaw Memory Architecture</a></p>
+
+    <p>ขั้นตอนที่ผมแนะนำสำหรับคนย้ายจริง:</p>
+
+    <ol>
+      <li>ก่อน migrate — เปิด <code>workspace/memory/</code> ไล่ลบ log ที่รู้ว่าหมดอายุแล้วด้วยตัวเอง เพื่อให้ตัว consolidate ทำงานกับของที่ยังมีค่า</li>
+      <li>รัน <code>hermes claw migrate</code> แล้วเปิด <code>~/.hermes/memories/MEMORY.md</code> อ่านผลด้วยตาตัวเองหนึ่งรอบ — การกลั่นแบบนี้ lossy โดยธรรมชาติ อะไรที่หายแต่สำคัญ เพิ่มกลับเองได้</li>
+      <li>จำไว้ว่า import มีผลเฉพาะ <strong>session ใหม่</strong> — session เดิมที่ค้างอยู่ยังเห็น snapshot เก่า (พฤติกรรมแช่แข็งจากหัวข้อ 2 ทำงานตรงนี้ด้วย)</li>
+      <li>ปิดท้ายด้วย <code>/journey</code> เพื่อดูว่าความจำที่ตกทอดมาหน้าตาเป็นระเบียบไหม แล้วค่อยรัน <code>hermes claw cleanup</code></li>
+    </ol>
+
+    <p>ผมยังไม่ประกาศว่าโมเดลไหน "ชนะ" ระหว่างจำแบบไม่จำกัดของ OpenClaw กับจำแบบมีขอบเขตของ Hermes — แต่หลังจากใช้เวลากับเอกสารทั้งสองฝั่ง ผมยอมรับว่าคำถามที่ Hermes บังคับให้ตอบทุกครั้งที่ความจำใกล้เต็ม — <em>"อันไหนสำคัญพอจะเก็บ?"</em> — เป็นคำถามที่ระบบความจำแบบโตไม่จำกัดไม่เคยบังคับให้ใครตอบเลย และนั่นอาจเป็นเหตุผลที่มันมักจบลงเป็นกองเอกสารที่ไม่มีใครอ่าน</p>
+
+    <div class="key-takeaways">
+      <h3>🎯 สิ่งสำคัญที่ต้องจำ</h3>
+      <ul>
+        <li><strong>Bounded memory</strong> = MEMORY.md 2,200 + USER.md 1,375 ตัวอักษร (รวมใต้ 3,600) — เพดานที่ตั้งใจ เพื่อบังคับให้เลือกจำ</li>
+        <li><strong>Frozen snapshot</strong> = ความจำถูกอ่านครั้งเดียวตอนเปิด session เพื่อถนอม prefix cache (1 ชม. ข้าม session สำหรับ Claude) — เขียนกลางคันมีผล session ถัดไป</li>
+        <li><strong>Error-on-overflow</strong> = เต็มแล้ว tool คืน error ไม่ silent-drop — agent ต้อง consolidate เอง (เริ่มที่ 80%)</li>
+        <li><strong>FTS5 session search</strong> = ทุกบทสนทนาอยู่ใน ~/.hermes/state.db ค้นได้ ~20ms ต่อครั้ง ได้ข้อความจริง ไม่มีค่า LLM ในชั้นค้น</li>
+        <li><strong>Context compression</strong> = ชั้นสามภายใน session — v0.20.0 เพิ่ม tool-result pruning, micro-compaction และการันตี tail ข้อความผู้ใช้</li>
+        <li><strong>Guardrails</strong> = ทุกการเขียนถูกสแกน injection/exfiltration + write approval (ออปชัน) + ตรวจสอบย้อนด้วย /journey</li>
+        <li><strong>Memory providers</strong> = ปลั๊กอิน 8 ตัว เปิดได้ทีละหนึ่ง เป็นส่วนเสริมเสมอ — เริ่มจาก Holographic (ฟรี/โลคัล) ถ้าจะลอง</li>
+        <li><strong>hermes claw migrate</strong> = รวบ daily logs ทั้งหมดของ OpenClaw เป็น MEMORY.md เดียวที่มีขอบเขต — ปรัชญาทั้งระบบในคำสั่งเดียว</li>
+      </ul>
+    </div>
+
+    </div>
+    <div class="l-en" lang="en">
+
+    <p>Have you ever opened an OpenClaw <code>workspace/memory/</code> folder and found dozens — sometimes hundreds — of daily log files that nobody, not even the agent itself, ever reads end-to-end again?</p>
+
+    <p>Readers of my OpenClaw for Organizations series will remember the <a href="/blog/openclaw-memory">Memory</a> post: OpenClaw pairs a two-file <code>MEMORY.md</code> + <code>USER.md</code> core with append-forever daily logs, so memory can grow without limit — powerful, but it takes discipline (and periodic pruning) to keep it from becoming an archive nobody consults. Hermes Agent from Nous Research — the MIT-licensed project that launched publicly in late February 2026 and now sits near 240,000 GitHub stars — makes the opposite bet on the whole board: <strong>all persistent memory is capped under 3,600 characters</strong>, and everything else is recovered by search that runs in milliseconds.</p>
+
+    <p>This is post #3 of the Hermes Agent in Practice series. We will walk the philosophy behind that number, the two-file mechanism and its frozen snapshot, the FTS5 search layer, the compression layer, the guardrails that keep memory from becoming an injection vector, the eight pluggable external providers — and close with the single command that consolidates an entire OpenClaw daily-log folder into one bounded file. As someone who runs his own OpenClaw deployment, I read this design with two feelings at once: admiration, and the urge to argue.</p>
+
+    <h2 id="en-philosophy">1. The philosophy: 3,600 characters of always-on memory</h2>
+
+    <p>Numbers first. Hermes's built-in persistent memory is two Markdown files in <code>~/.hermes/memories/</code>: <strong>MEMORY.md</strong>, capped at 2,200 characters (roughly 800 tokens) — the agent's personal notes: environment facts, conventions, things learned — and <strong>USER.md</strong>, capped at 1,375 characters (roughly 500 tokens) — the user profile: preferences, communication style, expectations. Under 3,600 characters total, around 1,300 tokens.</p>
+
+    <p>That sounds alarmingly small. The agent ecosystem competes on vector databases, embedding pipelines, "unlimited" recall — and Hermes fences its permanent memory into less text than one email. But read the docs to the end and this is clearly not a technical limitation; it is a <strong>design position</strong>. Whatever lives in persistent memory is injected into the system prompt of <em>every session, every turn</em> — no retrieval step, no gambling on whether similarity search surfaces the right chunk.</p>
+
+    <blockquote>💡 The glukhov.org analysis puts the philosophy in one sharp line: "Memory isn't something the agent retrieves when needed. It's something the agent <em>is</em> at all times." The bound is what forces selection.</blockquote>
+
+    <p>Of course, 3,600 characters cannot hold everything — which is why Hermes doesn't have one memory layer but <strong>three</strong>, with a clean division of labor:</p>
+
+    <div class="table-wrapper">
+      <table>
+        <thead>
+          <tr><th>Layer</th><th>Job</th><th>Storage</th><th>Cost at use</th></tr>
+        </thead>
+        <tbody>
+          <tr><td><strong>1. Curated memory</strong></td><td>Distilled facts, under 3,600 chars, always in the system prompt</td><td><code>~/.hermes/memories/</code></td><td>Zero — already paid in every turn's prompt</td></tr>
+          <tr><td><strong>2. Session search</strong></td><td>Full-text search over every conversation ever held</td><td><code>~/.hermes/state.db</code> (SQLite + FTS5)</td><td>~20ms per query — no LLM call in the search layer</td></tr>
+          <tr><td><strong>3. Context compression</strong></td><td>Lossy summarization when a session's context overflows</td><td>In the session store, with parent/child lineage</td><td>LLM call at compression time (auxiliary model allowed)</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <p>Notice the economics: the first layer is the most expensive per token (it rides along on every turn), so it is squeezed smallest. The second is the cheapest (pure SQLite), so it keeps everything untruncated. The third is the pressure valve for a single session's context window. Those three layers are the skeleton of this whole post.</p>
+
+    <h2 id="en-files">2. MEMORY.md and USER.md — caps, § delimiters, the frozen snapshot</h2>
+
+    <p>Start with what is actually on disk:</p>
+
+    <pre><code># All of Hermes's persistent memory lives in these two files
+ls ~/.hermes/memories/
+# MEMORY.md  — the agent's personal notes (cap 2,200 chars ≈ 800 tokens)
+# USER.md    — the user profile          (cap 1,375 chars ≈ 500 tokens)</code></pre>
+
+    <p>Inside, entries are delimited by the <strong>§</strong> section sign, and when injected into the system prompt the block carries a usage header. An example in the shape the <a href="https://hermes-agent.nousresearch.com/docs/user-guide/features/memory">official docs</a> show:</p>
+
+    <pre><code>MEMORY (your personal notes) [67% — 1,474/2,200 chars]
+§ pm25-dashboard deploys via GitHub Actions — staging before production, always
+§ Primary machine is macOS + zsh; Python managed with uv
+§ User wants commit messages in English, short, stating the why</code></pre>
+
+    <p>That percentage header is not decoration. The agent sees it every turn, so it always knows how close memory is to full — and when it is time to start consolidating (next section).</p>
+
+    <h3>The frozen snapshot — and the caching reason behind it</h3>
+
+    <p>My favorite detail of the design: both files are read into the system prompt as a <strong>frozen snapshot</strong>, captured once at session start and <em>never mutated mid-session</em>. If the agent writes memory during a session, the write hits disk immediately — but appears in the prompt only from the next session onward.</p>
+
+    <div class="alert info">
+      <strong>Why freeze it:</strong> Hermes ships an always-on, cross-session, 1-hour prefix cache for Claude (native Anthropic, OpenRouter, and Nous Portal) with zero configuration. Shift the system prompt by a single character mid-session and the whole cache breaks. Pinning the snapshot for the session's lifetime trades "new memories take effect one session late" for "cheaper tokens on every turn" — for most workloads, a very good trade.
+    </div>
+
+    <p>In prompt assembly (per Arize's architecture deep-dive), the memory, user-profile, and timestamp blocks form the "volatile" tier, placed <em>after</em> the stable parts — tool guidance and context files. Frequently-changing content sits at the tail so the long prefix ahead of it stays cacheable. It is a small detail that tells you the designers were thinking about real bills.</p>
+
+    <h3>Memory is not context files</h3>
+
+    <p>A common confusion for people arriving from Claude Code or OpenClaw: <strong>context files are a separate system from memory</strong>. Files like AGENTS.md or CLAUDE.md are project instructions written by <em>humans</em>; memory is what the <em>agent</em> accumulates on its own. Hermes loads a project context file first-match-wins, in this order (see the <a href="https://hermes-agent.nousresearch.com/docs/user-guide/features/context-files">context-files doc</a>):</p>
+
+    <pre><code># Context files — a separate system from memory; only the first match loads
+.hermes.md / HERMES.md   # beats everything
+AGENTS.override.md
+AGENTS.md
+CLAUDE.md                # Hermes reads Claude Code's file natively
+.cursorrules
+
+# SOUL.md always loads from $HERMES_HOME/SOUL.md — identity slot #1
+# The size cap scales with the model: floor 20,000 → ceiling 500,000 chars
+# (config key context_file_max_chars; subdirectory AGENTS.md capped at 8,000)</code></pre>
+
+    <p>The practical payoff: the CLAUDE.md and AGENTS.md your organization already invested in work with Hermes on day one, unconverted. And the auto-save criteria explicitly skip "anything already in context files" — so the 3,600 characters never get burned on facts a file already covers.</p>
+
+    <h2 id="en-tool">3. The memory tool: add / replace / remove, and error-on-overflow</h2>
+
+    <p>The agent edits its own memory through a tool called <code>memory</code>, which has exactly three actions — and deliberately no <code>read</code>, because the content is already sitting in the system prompt:</p>
+
+    <pre><code># The memory tool's conceptual shape — three actions, no read
+memory(action="add",
+       content="Team CI runs on a self-hosted runner — never schedule GPU jobs")
+
+memory(action="replace",
+       old_text="Postgres 15",          # substring matching
+       content="Upgraded to Postgres 16 (Aug 2026)")
+
+memory(action="remove", old_text="legacy-api project")</code></pre>
+
+    <p>A later addition is the <code>operations</code> array: a batch of edits validated atomically against the <strong>final character budget</strong> — the whole batch passes or none of it does. (Release-note summaries place it somewhere in the v0.16.0–v0.18.0 window, June–July 2026; the exact release is unpinned, so I won't pin it either.)</p>
+
+    <pre><code># Batch edit — validated against the final budget as one unit
+memory(operations=[
+  {"action": "remove",  "old_text": "details of the closed sprint"},
+  {"action": "replace", "old_text": "staging on DO", "content": "staging moved to Hetzner"},
+  {"action": "add",     "content": "Team adopted conventional commits from Sep 2026"}
+])</code></pre>
+
+    <h3>Full means an error, not a silent drop</h3>
+
+    <p>Here is the heart of "bounded by design." When memory is full, Hermes does <strong>not</strong> silently evict the oldest entry, and does <strong>not</strong> auto-summarize over your notes. The tool returns a plain error:</p>
+
+    <pre><code>Memory at 2,100/2,200 chars. Adding this entry (250 chars)
+would exceed the limit.
+
+# → the agent must consolidate or remove before it can add
+# documented best practice: start consolidating above 80% capacity</code></pre>
+
+    <p>I read this as moving the "what actually matters?" decision back to the agent at the moment it has the most context — instead of letting an automatic policy guess. It is the difference between forcing a summary into a small notebook and photocopying the whole filing cabinet. Anyone who has watched an OpenClaw MEMORY.md bloat until a human had to prune it by hand will understand the appeal.</p>
+
+    <p>The full set of memory config keys, with their documented defaults:</p>
+
+    <pre><code># Memory config keys — documented defaults
+memory_enabled: true          # the memory system itself
+user_profile_enabled: true    # USER.md
+memory_char_limit: 2200       # MEMORY.md cap
+user_char_limit: 1375         # USER.md cap
+write_approval: false         # true = every write awaits approval (section 7)
+
+# Write notifications: off / on (default) / verbose
+# on = a generic "💾 Memory updated" line; verbose adds a compact diff preview
+display.memory_notifications: on</code></pre>
+
+    <h2 id="en-autosave">4. What gets remembered automatically — and what deliberately doesn't</h2>
+
+    <p>You don't have to say "remember this" every time. The project README calls the mechanism "agent-curated memory with periodic nudges": the agent nudges itself, at intervals, to review whether anything in the recent conversation crossed the durable-fact threshold. The documented criteria are crisp enough to tabulate:</p>
+
+    <div class="table-wrapper">
+      <table>
+        <thead>
+          <tr><th>Saved automatically ✅</th><th>Deliberately skipped ❌</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>User preferences</td><td>Trivia</td></tr>
+          <tr><td>Environment facts</td><td>Easily re-discovered facts</td></tr>
+          <tr><td>Corrections from the user</td><td>Raw data dumps</td></tr>
+          <tr><td>Team or project conventions</td><td>Session-specific ephemera</td></tr>
+          <tr><td>Completed work</td><td>Anything already in context files</td></tr>
+          <tr><td>Explicit "remember this" requests</td><td>—</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <p>The right column matters more than the left. Memory systems mostly fail by remembering <em>too much</em>, not too little; declaring what is unworthy of the 3,600 characters is half the design.</p>
+
+    <p>The background review can also be routed to a cheaper <strong>auxiliary model</strong> — the docs report roughly a 3–5x reduction in token cost in benchmarks:</p>
+
+    <pre><code># Run the background memory review on a cheaper auxiliary model
+auxiliary.background_review.provider: &lt;provider&gt;
+auxiliary.background_review.model: &lt;cheap-model&gt;
+# documented: ~3–5x lower token cost in benchmarks</code></pre>
+
+    <p>As for the cadence: MMNTM's third-party code walkthrough (July 2026) reports a nudge roughly every 300 seconds, plus a post-turn background review that re-reads the conversation off the still-warm prefix cache. That 300-second figure appears in <em>no</em> primary doc, so treat it as a code-reading report, not a spec.</p>
+
+    <hr>
+
+    <h2 id="en-search">5. Recall layer two: FTS5 session search over full transcripts</h2>
+
+    <p>The question left hanging since section one: if permanent memory holds 3,600 characters, where does everything else go? The answer is: <strong>nowhere</strong>. Every session — CLI or any messaging channel — is stored, complete, in a single SQLite database with a full-text index:</p>
+
+    <pre><code># Every session (CLI + every messaging channel) lives in one SQLite DB
+~/.hermes/state.db          # with a built-in FTS5 full-text index
+
+# The agent searches it with a tool — and gets ACTUAL messages back
+session_search("docker compose postgres password rotation")
+# ~20ms per query, ~1ms per scroll
+# then scroll forward/backward inside any session it finds</code></pre>
+
+    <p>The memory doc is emphatic that this layer returns "actual messages" — no LLM summarization, no truncation, no embeddings, no vector database to operate. Just SQLite's FTS5, fast enough (~20ms) and, crucially, <strong>free of LLM cost per query</strong> — so the agent can search liberally without burning budget.</p>
+
+    <p>One tension worth naming honestly: the README markets this feature as "FTS5 session search <em>with LLM summarization</em> for cross-session recall," which reads as contradicting the memory doc's "no LLM summarization." Read alongside release notes that made session search one of the per-task auxiliary-model overrides, next to compression and vision, I interpret it as two stages of one path: the <em>search</em> is pure FTS5 returning raw messages, while <em>digesting</em> the results into an answer may pass through an auxiliary model. Both sentences can be true at once; I'm describing the layers rather than ruling on a single mechanism.</p>
+
+    <blockquote>💡 The architectural trade here: you give up semantic recall (a vector DB might find "the same topic in different words") and get speed, zero marginal cost, and transparency — search results are real, auditable messages, not embedding neighbors you can't explain. For an agent you talk to in the same vocabulary every day, that vocabulary already is a good key.</blockquote>
+
+    <h2 id="en-compression">6. Recall layer three: context compression and session lineage</h2>
+
+    <p>The third layer is not about crossing sessions — it solves overflow <em>within</em> one. Per Arize's read of the codebase, when context exceeds its thresholds, <code>agent/context_compressor.py</code> summarizes the conversation lossily and continues in a child session, while the session store (via <code>hermes_state.py</code> and the gateway's SessionStore) keeps full <strong>parent/child lineage</strong> — however many compressions deep, the original transcript remains reachable — with per-platform isolation and atomic writes.</p>
+
+    <p>Recent releases have polished this layer hard, above all <strong>v0.20.0</strong> (August 3, 2026), which overhauled it end to end:</p>
+
+    <ul>
+      <li><strong>Proactive tool-result pruning</strong> — old tool outputs are dropped before context gets tight (it matters most on large-window models where input tokens are expensive)</li>
+      <li><strong>Per-turn micro-compaction</strong> — small cleanups every turn instead of one big squeeze at the cliff edge</li>
+      <li><strong>A guaranteed N-user-message tail</strong> — the user's most recent N messages always survive compression. If you have ever watched an agent forget the instruction you gave two minutes ago because compaction ate it, this is the fix aimed straight at that wound</li>
+    </ul>
+
+    <p>Earlier releases had already added degradation warnings, token-budget tail protection, and targeted compression:</p>
+
+    <pre><code># Guided compression — tell the summary which thread to preserve
+/compress &lt;focus&gt;</code></pre>
+
+    <h3>Cron agents stop being goldfish</h3>
+
+    <p>The last gap in this picture closed only weeks ago. Recurring cron jobs used to start from zero every run. v0.20.5 (tagged August 19, 2026) gave cron jobs persistent memory, and v0.21.0 (August 31, 2026) finished the job with a <a href="https://github.com/NousResearch/hermes-agent/releases">release-notes</a> line I'll quote whole: <em>"Cron jobs stopped being goldfish. Cron agents now load and update persistent memory like every other agent."</em> Plus <code>continuity=true</code>, which carries each run's output into the next — so a monitoring agent knows what it already reported and doesn't alert twice.</p>
+
+    <hr>
+
+    <h2 id="en-guardrails">7. Guardrails: injection scanning, write approval, /journey</h2>
+
+    <p>Follow the logic: Hermes memory ends up in the system prompt — the most authoritative position in the entire conversation. If an attacker tricks the agent into "remembering" a sentence that is really an embedded instruction, they have effectively written the system prompt of every future session. So <strong>every memory write is security-scanned before acceptance</strong>: prompt-injection patterns, credential-exfiltration attempts, SSH-backdoor patterns, and invisible Unicode characters are all blocked.</p>
+
+    <div class="alert danger">
+      <strong>The wall has a crack, though:</strong> NVD confirms CVE-2026-10223 — an injection flaw in <code>_scan_memory_content</code> (tools/memory_tool.py), i.e. the memory scanner <em>itself</em> becoming the attack vector. It affects versions 2026.4.0–2026.4.30, is rated Medium (CVSS 6.3), and a public exploit exists (SentinelOne classifies it more severely, as RCE). The principle is already clear: code that inspects untrusted input is itself prime attack surface. We return to this properly in post #4, Security.
+    </div>
+
+    <p>For deployments with multiple users, or agents receiving messages from the outside world, I recommend the approval layer: set <code>write_approval: true</code> and foreground CLI writes prompt inline, while writes from every other channel are staged for review:</p>
+
+    <pre><code>/memory pending             # list writes awaiting approval
+/memory approve &lt;id&gt;        # accept one
+/memory reject &lt;id&gt;         # decline one</code></pre>
+
+    <p>And since v0.18.0 (July 1, 2026), humans get a direct window into the agent's head: <code>/journey</code> opens a playable timeline of everything Hermes has learned (the desktop app adds a radial memory graph), where memories can be viewed, edited, or deleted chunk by chunk:</p>
+
+    <pre><code>/journey                                        # timeline of everything learned
+hermes journey delete memory:&lt;source&gt;:&lt;index&gt;   # remove a chunk by node id
+hermes journey edit memory:&lt;source&gt;:&lt;index&gt;     # open it in $EDITOR</code></pre>
+
+    <p>Finally, isolation: every Hermes profile gets its own <code>HERMES_HOME</code>, config, memory, sessions, and gateway process, fully separated — an experiment profile's memories cannot leak into your production profile. It pairs neatly with the one-agent-per-context discipline I argued for in the OpenClaw series.</p>
+
+    <hr>
+
+    <h2 id="en-providers">8. External memory providers — the pluggable layer of eight</h2>
+
+    <p>If 3,600 characters plus FTS5 still isn't enough — say you want deep user modeling, or genuinely semantic recall — Hermes has a plugin layer: <a href="https://hermes-agent.nousresearch.com/docs/user-guide/features/memory-providers"><strong>eight external memory providers</strong></a>: Honcho, OpenViking, Mem0, Hindsight, Holographic, RetainDB, ByteRover, and Supermemory (the docs describe a separate Memori plugin as well). Two rules govern it: only <strong>one</strong> provider can be active at a time, and it is always <strong>additive</strong> — built-in memory never gets replaced or turned off.</p>
+
+    <p>With a provider active, Hermes injects provider context into the system prompt, prefetches relevant memories before each turn (non-blocking), syncs turns after each response, extracts memories at session end, mirrors built-in memory writes to the provider, and exposes the provider's own tools to the agent:</p>
+
+    <pre><code># Activate an external provider — one at a time, ever
+hermes memory setup         # wizard: pick a provider + credentials
+hermes memory status        # which one is active
+hermes memory off           # deactivate (built-in memory keeps running)
+
+# or set it directly in config
+memory.provider: &lt;provider&gt;</code></pre>
+
+    <p>Two providers the docs describe in enough detail to summarize:</p>
+
+    <ul>
+      <li><strong>Holographic</strong> — fully local: a SQLite fact store (default <code>$HERMES_HOME/memory_store.db</code>) with FTS5, trust scoring (default 0.5), and holographic reduced representations. Free, no external dependencies, with a <code>fact_store</code> tool (add, search, probe, related, reason, contradict, update, remove, list) and <code>fact_feedback</code>. The natural first pick for trying this layer without data leaving the machine.</li>
+      <li><strong>Honcho</strong> — "AI-native cross-session user modeling with dialectic reasoning": builds a model of the user across sessions, with fine-grained config (<code>dialecticMaxChars 600</code>, <code>recallMode hybrid</code>, <code>writeFrequency async</code>, <code>sessionStrategy per-directory</code>) and five <code>honcho_*</code> tools.</li>
+    </ul>
+
+    <p>Costs across the group run from free/local (Holographic) to around $20/month for cloud (RetainDB), with the occasional dependency pin — Hindsight requires <code>hindsight-client &gt;= 0.4.22</code>. And if you want to write your own, the interface is open (core modules: <code>agent/memory_manager.py</code>, <code>agent/memory_provider.py</code>, <code>plugins/memory/</code>):</p>
+
+    <pre><code># The memory-provider plugin interface — every hook optional
+prefetch(query, session_id)       # before each API call
+queue_prefetch()                  # after each turn
+sync_turn(user, assistant, ...)   # after each turn — MUST be non-blocking
+on_session_end(messages)          # extract memories at session close
+on_pre_compress(messages)         # before context compression
+on_memory_write(action, target, content)  # mirror of built-in writes
+system_prompt_block()             # the block injected into the prompt
+shutdown()                        # clean shutdown</code></pre>
+
+    <div class="alert">
+      <strong>My take:</strong> get the most out of built-in memory plus FTS5 first, and reach for a provider only when you hit a problem those two layers genuinely cannot answer. A provider adds latency (even with non-blocking hooks), a new failure mode, and — for cloud providers — conversation data leaving the machine, which needs a governance review in any organization before it needs a config key.
+    </div>
+
+    <h2 id="en-migrate">9. Migrating from OpenClaw: daily logs become one bounded file</h2>
+
+    <p>Now the section my OpenClaw readers have been waiting for. Put the two models side by side first:</p>
+
+    <div class="table-wrapper">
+      <table>
+        <thead>
+          <tr><th>&nbsp;</th><th>OpenClaw</th><th>Hermes</th></tr>
+        </thead>
+        <tbody>
+          <tr><td><strong>Core files</strong></td><td>workspace/MEMORY.md + USER.md</td><td>~/.hermes/memories/MEMORY.md + USER.md</td></tr>
+          <tr><td><strong>Daily logs</strong></td><td>workspace/memory/*.md — unbounded growth</td><td>None — FTS5 search over full transcripts instead</td></tr>
+          <tr><td><strong>Size</strong></td><td>No ceiling</td><td>2,200 + 1,375 chars (hard caps)</td></tr>
+          <tr><td><strong>When full</strong></td><td>No concept of "full"</td><td>Tool returns an error → forced consolidation</td></tr>
+          <tr><td><strong>Writes</strong></td><td>Agent writes freely</td><td>Security-scanned every time + optional write approval</td></tr>
+          <tr><td><strong>Looking back</strong></td><td>Open and read log files</td><td>session_search on SQLite FTS5 (~20ms)</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <p>The good news: the two-file MEMORY.md/USER.md concept matches exactly (not by accident — OpenClaw's own reverse-migration guide appends these same file pairs into each other). So the move is one command, per the official <a href="https://github.com/NousResearch/hermes-agent/blob/main/website/docs/guides/migrate-from-openclaw.md">migration guide</a> — and the most interesting part is what happens to the daily logs:</p>
+
+    <pre><code>hermes claw migrate
+# workspace/SOUL.md       → ~/.hermes/SOUL.md
+# workspace/AGENTS.md     → AGENTS.md (in the target workspace)
+# workspace/MEMORY.md     → ~/.hermes/memories/MEMORY.md
+# workspace/USER.md       → ~/.hermes/memories/USER.md
+# workspace/memory/*.md   → CONSOLIDATED into the single MEMORY.md
+#                           (parsed → merged → deduped on the § delimiter)
+# existing Hermes memories are skipped, never overwritten
+
+hermes claw cleanup
+# renames leftover OpenClaw dirs into .pre-migration/ (rename, not delete)</code></pre>
+
+    <p>Read that fourth-from-last comment again: an entire daily-log folder — on some machines, months of daily notes — is <strong>consolidated into one file with a 2,200-character ceiling</strong>. That is not merely a technical step; it is a forced distillation, the whole philosophy of this post compressed into one migrate command. If you want the deep view of how OpenClaw assembles its side of this picture, I took it apart in <a href="/blog/openclaw-memory-architecture">OpenClaw Memory Architecture</a>.</p>
+
+    <p>My recommended sequence for a real migration:</p>
+
+    <ol>
+      <li>Before migrating, open <code>workspace/memory/</code> and hand-delete the logs you know are expired — let the consolidator work on material that still has value.</li>
+      <li>Run <code>hermes claw migrate</code>, then open <code>~/.hermes/memories/MEMORY.md</code> and read the result with your own eyes. Distillation this aggressive is lossy by nature; anything important that got dropped, add back yourself.</li>
+      <li>Remember that imports take effect only in <strong>new sessions</strong> — anything still running sees the old snapshot (the freezing behavior from section 2 applies here too).</li>
+      <li>Finish with <code>/journey</code> to sanity-check the inherited memories, then run <code>hermes claw cleanup</code>.</li>
+    </ol>
+
+    <p>I am not declaring a winner between OpenClaw's unbounded memory and Hermes's bounded one — but after enough time in both sets of docs, I will concede this: the question Hermes forces every time memory approaches full — <em>"which of these is actually worth keeping?"</em> — is a question unbounded memory systems never force anyone to answer. Which may be exactly why they so often end up as archives nobody reads.</p>
+
+    <div class="key-takeaways">
+      <h3>🎯 Key Takeaways</h3>
+      <ul>
+        <li><strong>Bounded memory</strong> = MEMORY.md 2,200 + USER.md 1,375 chars (under 3,600 total) — a deliberate cap that forces selection</li>
+        <li><strong>Frozen snapshot</strong> = memory is read once at session start to protect the prefix cache (1-hour, cross-session, for Claude); mid-session writes land next session</li>
+        <li><strong>Error-on-overflow</strong> = a full memory returns an error, never a silent drop — the agent must consolidate (start above 80%)</li>
+        <li><strong>FTS5 session search</strong> = every conversation lives in ~/.hermes/state.db, searchable in ~20ms, returning real messages with no LLM cost in the search layer</li>
+        <li><strong>Context compression</strong> = the third layer, within a session — v0.20.0 added tool-result pruning, micro-compaction, and a guaranteed user-message tail</li>
+        <li><strong>Guardrails</strong> = every write is scanned for injection/exfiltration + optional write approval + human audit via /journey</li>
+        <li><strong>Memory providers</strong> = eight plugins, one active at a time, always additive — start with Holographic (free, local) if you want to try the layer</li>
+        <li><strong>hermes claw migrate</strong> = consolidates all OpenClaw daily logs into one bounded MEMORY.md — the whole philosophy in a single command</li>
+      </ul>
+    </div>
+
+    </div>
+
+    <div class="post-series-footer">
+      <span class="l-th">บทความจากซีรีส์ Hermes Agent in Practice 2026</span><span class="l-en" lang="en">From the Hermes Agent in Practice 2026 series</span>
+    </div>
+
+  </article>
+
+  </main>
+
+  <footer class="blog-footer">
+    <nav class="blog-footer__nav" aria-label="Site">
+      <a href="../index.html">Home</a>
+      <a href="./">Blog</a>
+      <a href="../publications/">Publications</a>
+      <a href="../books/">Books</a>
+      <a href="../projects/">Projects</a>
+      <a href="../news/">News</a>
+      <a href="../index.html#contact">Contact</a>
+    </nav>
+    <a href="./">← Back to Blog</a>
+    <span>© 2026 Anirach Mingkhwan — Associate Professor, KMUTNB</span>
+  </footer>
+
+</body>
+</html>

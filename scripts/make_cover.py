@@ -1401,6 +1401,235 @@ def lp_beforedark(d, b, c, o):
     circ(d, sx, sy, h * 0.035, fill=c["hi"])
 
 
+# --- Hermes Agent in Practice (hm_*) --------------------------------------
+
+def hm_growth(d, b, c, o):
+    """A terminal window growing a sprout from its top edge -- the agent that
+    grows with you.  vs dv_linux's prompt (a command pipeline) and oc_claude's
+    cutaway (a loop): this terminal grows the page's only plant."""
+    x0, y0, x1, y1 = b
+    w, h = x1 - x0, y1 - y0
+    tw, th = w * 0.4, h * 0.68
+    tx, ty = x0 + w * 0.12, y1 - th
+    rr(d, (tx, ty, tx + tw, ty + th), h * 0.05, fill=c["fill"], outline=c["ln"], w=7)
+    d.line([(tx, ty + th * 0.22), (tx + tw, ty + th * 0.22)], fill=c["ln2"], width=5)
+    for i in range(3):
+        circ(d, tx + tw * (0.09 + i * 0.08), ty + th * 0.11, h * 0.018, fill=c["ln2"])
+    px_, py_ = tx + tw * 0.12, ty + th * 0.6
+    d.line([(px_, py_ - h * 0.05), (px_ + w * 0.03, py_), (px_, py_ + h * 0.05)],
+           fill=c["hi"], width=7, joint="curve")
+    d.rectangle([px_ + w * 0.05, py_ - h * 0.045, px_ + w * 0.075, py_ + h * 0.045],
+                fill=c["hi"])
+    # the vine, rising from the window's top edge and arcing right
+    vx0 = tx + tw * 0.82
+    vpts = [(vx0, ty), (vx0 + w * 0.005, ty - h * 0.16),
+            (vx0 + w * 0.06, ty - h * 0.3), (vx0 + w * 0.17, ty - h * 0.37)]
+    d.line(vpts, fill=c["hi"], width=8, joint="curve")
+    for (lx, ly), sgn in ((vpts[1], -1), (vpts[2], -1)):
+        d.polygon([(lx, ly), (lx + sgn * w * 0.075, ly - h * 0.015),
+                   (lx + sgn * w * 0.038, ly - h * 0.12)],
+                  fill=c["hif"], outline=c["hi"], width=5)
+    circ(d, vpts[3][0], vpts[3][1], h * 0.045, fill=c["gold"])
+    # ascending growth bars on a baseline, right of the window
+    base = y1 - h * 0.02
+    d.line([(tx + tw + w * 0.08, base), (x1 - w * 0.03, base)], fill=c["ln"], width=6)
+    for i in range(3):
+        gx_ = tx + tw + w * (0.12 + i * 0.12)
+        gh_ = h * (0.16 + i * 0.14)
+        lit = i == 2
+        rr(d, (gx_, base - gh_, gx_ + w * 0.07, base), h * 0.012,
+           fill=c["hif"] if lit else c["dimf"],
+           outline=c["hi"] if lit else c["ln2"], w=5)
+
+
+def hm_kanban(d, b, c, o):
+    """A three-column task board with one lit card mid-column, three agent
+    rings pulling from the right -- durable work a team of agents shares.  vs
+    oc_team's top-down org chart: no hierarchy, a BOARD; the page's only
+    column board."""
+    x0, y0, x1, y1 = b
+    w, h = x1 - x0, y1 - y0
+    bw, bh = w * 0.56, h * 0.88
+    bx, by = x0 + w * 0.06, (y0 + y1) / 2 - bh / 2
+    rr(d, (bx, by, bx + bw, by + bh), h * 0.04, fill=c["fill"], outline=c["ln"], w=7)
+    d.line([(bx, by + bh * 0.16), (bx + bw, by + bh * 0.16)], fill=c["ln"], width=5)
+    colw = bw / 3
+    for i in (1, 2):
+        d.line([(bx + colw * i, by + bh * 0.16), (bx + colw * i, by + bh - bh * 0.05)],
+               fill=c["ln2"], width=4)
+    for col, nrows in enumerate([3, 2, 2]):
+        for r_ in range(nrows):
+            cx0 = bx + colw * col + colw * 0.14
+            cy0 = by + bh * (0.24 + r_ * 0.22)
+            lit = (col == 1 and r_ == 0)
+            rr(d, (cx0, cy0, cx0 + colw * 0.72, cy0 + bh * 0.14), h * 0.015,
+               fill=c["hif"] if lit else c["dimf"],
+               outline=c["hi"] if lit else c["ln2"], w=4)
+    for i in range(3):
+        ax = x0 + w * 0.82
+        ay = by + bh * (0.24 + i * 0.28)
+        circ(d, ax, ay, h * 0.055, fill=None,
+             outline=c["hi"] if i == 1 else c["ln"], w=6)
+        circ(d, ax, ay, h * 0.016, fill=c["hi"] if i == 1 else c["ln2"])
+        d.line([(bx + bw + w * 0.015, ay), (ax - h * 0.055 - w * 0.008, ay)],
+               fill=c["ln2"], width=4)
+
+
+def hm_bounded(d, b, c, o):
+    """An open-top vessel with a hard dashed fill-line, cards stored below it,
+    and one card refused at the rim -- memory bounded by design.  vs
+    oc_memory's layer stack (strata + magnifier): one container, and the
+    page's only fill-line."""
+    x0, y0, x1, y1 = b
+    w, h = x1 - x0, y1 - y0
+    vx, vy = x0 + w * 0.24, y0 + h * 0.06
+    vw, vh = w * 0.3, h * 0.88
+    d.line([(vx, vy), (vx, vy + vh)], fill=c["ln"], width=8)
+    d.line([(vx, vy + vh), (vx + vw, vy + vh)], fill=c["ln"], width=8)
+    d.line([(vx + vw, vy + vh), (vx + vw, vy)], fill=c["ln"], width=8)
+    my = vy + vh * 0.3
+    xx = vx
+    while xx < vx + vw - w * 0.01:
+        d.line([(xx, my), (min(xx + w * 0.022, vx + vw), my)], fill=c["hi"], width=6)
+        xx += w * 0.04
+    for i in range(3):
+        cy0 = vy + vh * (0.4 + i * 0.19)
+        lit = i == 0
+        rr(d, (vx + vw * 0.12, cy0, vx + vw * 0.88, cy0 + vh * 0.13), h * 0.012,
+           fill=c["hif"] if lit else c["dimf"],
+           outline=c["hi"] if lit else c["ln2"], w=4)
+    # the refused card, hovering outside the rim, with a struck circle
+    rx, ry = vx + vw * 1.28, vy + vh * 0.1
+    rr(d, (rx, ry, rx + vw * 0.62, ry + vh * 0.13), h * 0.012,
+       fill=None, outline=c["ln2"], w=5)
+    ncx, ncy = rx + vw * 0.31, ry + vh * 0.33
+    circ(d, ncx, ncy, h * 0.055, fill=None, outline=c["hi"], w=6)
+    d.line([(ncx - h * 0.038, ncy + h * 0.038), (ncx + h * 0.038, ncy - h * 0.038)],
+           fill=c["hi"], width=6)
+
+
+def hm_isolation(d, b, c, o):
+    """An agent hex inside two nested walls with a hatched moat between them,
+    one inbound arrow stopped at the outer wall -- OS-level isolation as the
+    only real boundary.  vs oc_security's shield-in-brackets and dv_auth's
+    door: no shield, only concentric containment."""
+    x0, y0, x1, y1 = b
+    w, h = x1 - x0, y1 - y0
+    cx, cy = (x0 + x1) / 2 + w * 0.04, (y0 + y1) / 2
+    ro, ri = h * 0.47, h * 0.29
+    rr(d, (cx - ro * 1.3, cy - ro, cx + ro * 1.3, cy + ro), h * 0.05,
+       fill=None, outline=c["ln"], w=8)
+    rr(d, (cx - ri * 1.3, cy - ri, cx + ri * 1.3, cy + ri), h * 0.04,
+       fill=c["fill"], outline=c["ln"], w=6)
+    d.polygon(poly(cx, cy, h * 0.15, 6, rot=math.pi / 6),
+              fill=c["hif"], outline=c["hi"], width=7)
+    circ(d, cx, cy, h * 0.035, fill=c["hi"])
+    mid = (ri * 1.3 + ro * 1.3) / 2
+    midy = (ri + ro) / 2
+    for sx_, sy_ in ((-mid, 0), (mid, 0), (0, -midy), (0, midy)):
+        hx, hy = cx + sx_, cy + sy_
+        d.line([(hx - w * 0.014, hy + h * 0.024), (hx + w * 0.014, hy - h * 0.024)],
+               fill=c["ln2"], width=4)
+    ay = cy
+    d.line([(x0 + w * 0.01, ay), (cx - ro * 1.3 - w * 0.025, ay)], fill=c["hi"], width=7)
+    d.line([(cx - ro * 1.3 - w * 0.02, ay - h * 0.06),
+            (cx - ro * 1.3 - w * 0.02, ay + h * 0.06)], fill=c["hi"], width=9)
+
+
+def hm_gateway(d, b, c, o):
+    """Five channel tiles converging into one tall daemon bar, one heavy line
+    out to a single session pane -- one gateway, every channel.  vs
+    oc_integrations' radial hub-and-spokes: a FUNNEL, not a star."""
+    x0, y0, x1, y1 = b
+    w, h = x1 - x0, y1 - y0
+    cy = (y0 + y1) / 2
+    gx, gw, gh = x0 + w * 0.47, w * 0.06, h * 0.9
+    for i in range(5):
+        sy = y0 + h * (0.02 + i * 0.2)
+        sx = x0 + w * 0.05
+        rr(d, (sx, sy, sx + w * 0.08, sy + h * 0.13), h * 0.015,
+           fill=c["dimf"], outline=c["ln2"], w=4)
+        d.line([(sx + w * 0.08, sy + h * 0.065),
+                (gx, cy + (sy + h * 0.065 - cy) * 0.22)], fill=c["ln2"], width=4)
+    rr(d, (gx, cy - gh / 2, gx + gw, cy + gh / 2), h * 0.03,
+       fill=c["hif"], outline=c["hi"], w=8)
+    d.line([(gx + gw, cy), (x1 - w * 0.24, cy)], fill=c["hi"], width=9)
+    d.polygon([(x1 - w * 0.24, cy), (x1 - w * 0.27, cy - h * 0.045),
+               (x1 - w * 0.27, cy + h * 0.045)], fill=c["hi"])
+    px_, pw_, ph_ = x1 - w * 0.23, w * 0.19, h * 0.52
+    rr(d, (px_, cy - ph_ / 2, px_ + pw_, cy + ph_ / 2), h * 0.03,
+       fill=c["fill"], outline=c["ln"], w=7)
+    for i in range(3):
+        yy = cy - ph_ / 2 + ph_ * (0.24 + i * 0.26)
+        d.line([(px_ + pw_ * 0.15, yy), (px_ + pw_ * 0.85, yy)], fill=c["ln2"], width=5)
+
+
+def hm_loop(d, b, c, o):
+    """A circular arrow closing around a written page, a small gold spark
+    where the lap completes -- the agent solves, writes the skill, comes back
+    better.  vs dv_gitops' sync loop (into a cluster) and oc_skills' tile
+    grid: this loop closes around a PAGE."""
+    x0, y0, x1, y1 = b
+    w, h = x1 - x0, y1 - y0
+    cx, cy = (x0 + x1) / 2, (y0 + y1) / 2
+    r = h * 0.42
+    pw, ph = w * 0.15, h * 0.52
+    rr(d, (cx - pw / 2, cy - ph / 2, cx + pw / 2, cy + ph / 2), h * 0.02,
+       fill=c["fill"], outline=c["ln"], w=6)
+    d.polygon([(cx + pw / 2 - w * 0.03, cy - ph / 2), (cx + pw / 2, cy - ph / 2 + h * 0.06),
+               (cx + pw / 2, cy - ph / 2)], fill=c["hif"])
+    for i in range(4):
+        yy = cy - ph / 2 + ph * (0.26 + i * 0.17)
+        d.line([(cx - pw * 0.3, yy), (cx + pw * 0.3, yy)], fill=c["ln2"], width=4)
+    bb = [cx - r * 1.35, cy - r, cx + r * 1.35, cy + r]
+    d.arc(bb, 300, 55, fill=c["hi"], width=8)
+    d.arc(bb, 120, 235, fill=c["hi"], width=8)
+    for ang, flip in ((55, 1), (235, -1)):
+        arad = math.radians(ang)
+        hx = cx + r * 1.35 * math.cos(arad)
+        hy = cy + r * math.sin(arad)
+        tx_, ty_ = -math.sin(arad) * flip, math.cos(arad) * flip
+        d.polygon([(hx + tx_ * w * 0.04, hy + ty_ * h * 0.05),
+                   (hx - ty_ * h * 0.035, hy + tx_ * h * 0.035),
+                   (hx + ty_ * h * 0.035, hy - tx_ * h * 0.035)], fill=c["hi"])
+    sx_, sy_ = cx + r * 1.22, cy - r * 0.78
+    d.line([(sx_ - h * 0.045, sy_), (sx_ + h * 0.045, sy_)], fill=c["gold"], width=6)
+    d.line([(sx_, sy_ - h * 0.045), (sx_, sy_ + h * 0.045)], fill=c["gold"], width=6)
+
+
+def hm_alwayson(d, b, c, o):
+    """One small server box on a shelf with an unbroken pulse line running
+    through it end to end -- cheap, boring, always on.  vs oc_production's
+    rocket and dv_sre's dial: nothing launches, nothing is gauged; the line
+    simply never stops."""
+    x0, y0, x1, y1 = b
+    w, h = x1 - x0, y1 - y0
+    cy = (y0 + y1) / 2
+    bw_, bh_ = w * 0.2, h * 0.46
+    bx_ = (x0 + x1) / 2 - bw_ / 2
+    rr(d, (bx_, cy - bh_ / 2, bx_ + bw_, cy + bh_ / 2), h * 0.03,
+       fill=c["fill"], outline=c["ln"], w=7)
+    circ(d, bx_ + bw_ * 0.84, cy - bh_ * 0.26, h * 0.022, fill=c["hi"])
+    d.line([(bx_ + bw_ * 0.12, cy + bh_ * 0.08), (bx_ + bw_ * 0.64, cy + bh_ * 0.08)],
+           fill=c["ln2"], width=5)
+    d.line([(bx_ + bw_ * 0.12, cy + bh_ * 0.26), (bx_ + bw_ * 0.5, cy + bh_ * 0.26)],
+           fill=c["ln2"], width=5)
+    d.line([(bx_ - w * 0.06, cy + bh_ / 2 + h * 0.05),
+            (bx_ + bw_ + w * 0.06, cy + bh_ / 2 + h * 0.05)], fill=c["ln"], width=7)
+    py_ = cy - bh_ * 0.1
+    d.line([(x0 + w * 0.015, py_ - h * 0.05), (x0 + w * 0.015, py_ + h * 0.05)],
+           fill=c["hi"], width=8)
+    d.line([(x0 + w * 0.015, py_), (bx_ - w * 0.1, py_),
+            (bx_ - w * 0.07, py_ - h * 0.18), (bx_ - w * 0.04, py_ + h * 0.13),
+            (bx_ - w * 0.015, py_), (bx_ + bw_ + w * 0.015, py_)],
+           fill=c["hi"], width=7, joint="curve")
+    d.line([(bx_ + bw_ + w * 0.015, py_), (bx_ + bw_ + w * 0.06, py_),
+            (bx_ + bw_ + w * 0.09, py_ - h * 0.18), (bx_ + bw_ + w * 0.12, py_ + h * 0.13),
+            (bx_ + bw_ + w * 0.15, py_), (x1 - w * 0.015, py_)],
+           fill=c["hi"], width=7, joint="curve")
+    circ(d, x1 - w * 0.015, py_, h * 0.028, fill=c["hi"])
+
+
 MOTIFS = {
     "oc_os": oc_os, "oc_team": oc_team, "oc_memory": oc_memory,
     "oc_security": oc_security, "oc_integrations": oc_integrations,
@@ -1418,6 +1647,9 @@ MOTIFS = {
     "lp_firstfire": lp_firstfire, "lp_highheat": lp_highheat,
     "lp_longlight": lp_longlight, "lp_truenorth": lp_truenorth,
     "lp_openhand": lp_openhand, "lp_beforedark": lp_beforedark,
+    "hm_growth": hm_growth, "hm_kanban": hm_kanban, "hm_bounded": hm_bounded,
+    "hm_isolation": hm_isolation, "hm_gateway": hm_gateway,
+    "hm_loop": hm_loop, "hm_alwayson": hm_alwayson,
 }
 
 

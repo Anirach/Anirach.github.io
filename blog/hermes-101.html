@@ -1,0 +1,1126 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Hermes 101 — Agent ที่เติบโตไปกับเรา | Anirach Mingkhwan</title>
+  <meta name="description" content="รู้จัก Hermes Agent จาก Nous Research — agent harness แบบ MIT ที่ติดตั้งได้ในบรรทัดเดียว รองรับโมเดลกว่า 300 ตัว เชื่อมทุกช่องทางผ่าน gateway เดียว และย้ายจาก OpenClaw ได้ด้วยคำสั่งเดียว">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=Sarabun:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      color-scheme: light;
+      /* ink */
+      --navy: #11304b; --slate: #334155; --slate-light: #526174; --gray: #94a3b8;
+      /* ground */
+      --bg: #faf7f0; --white: #ffffff; --code-bg: #1e293b;
+      /* accent */
+      --blue: #226299; --blue-dark: #1a4d7a; --blue-light: #4992b9;
+      /* brand — sampled from the book covers. --gold is decorative on light grounds (2.2:1); --gold-dark is its text form. */
+      --gold: #c4a46c; --gold-dark: #7a5f22; --cloud: #dee7e6; --parchment: #e9e1c4; --focus: #226299;
+      /* status — use only these six, never invent a seventh */
+      --green: #22c55e; --red: #ef4444; --amber: #f59e0b;
+      --cyan: #06b6d4; --purple: #226299; --purple-dark: #1a4d7a;
+      /* type */
+      --font: 'Inter', 'Sarabun', -apple-system, BlinkMacSystemFont, sans-serif;
+      --mono: 'JetBrains Mono', 'Fira Code', 'Sarabun', monospace;
+      /* form */
+      --radius: 12px; --radius-sm: 8px; --radius-lg: 16px;
+      --measure: 720px; --wide: 860px;
+      --transition: 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+    html { scroll-behavior: smooth; }
+    body { font-family: var(--font); font-size: 17px; line-height: 1.8; color: var(--slate); background: var(--bg); -webkit-font-smoothing: antialiased; }
+    .blog-nav { position: fixed; top: 0; left: 0; right: 0; z-index: 100; background: rgba(248,250,252,0.85); backdrop-filter: blur(20px); border-bottom: 1px solid rgba(0,0,0,0.05); }
+    .blog-nav__inner { max-width: 860px; margin: 0 auto; padding: 0 2rem; height: 56px; display: flex; align-items: center; justify-content: space-between; }
+    .blog-nav__back { font-size: 0.85rem; font-weight: 500; color: var(--blue); text-decoration: none; }
+    .blog-nav__back:hover { color: #1a4d7a; }
+    .blog-nav__title { font-size: 0.85rem; font-weight: 600; color: var(--navy); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 50%; }
+    /* ── HERO ── house .post-hero on the approved Deep Blue gradient (page-design
+       §5 / INV-28). Ink is inverted for the dark ground: white title/meta, tag
+       pills white on 18% white — the openclaw-production treatment. The
+       background value must stay byte-identical to the approved string. */
+    .post-hero { padding: 8rem 2rem 3rem; background: linear-gradient(135deg, #11304b 0%, #1a4d7a 45%, #226299 100%); color: #fff; text-align: center; }
+    .post-hero__tags { display: flex; gap: 0.5rem; justify-content: center; margin-bottom: 1.25rem; flex-wrap: wrap; }
+    .post-hero__tag { display: inline-block; font-size: 0.72rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.1em; color: #fff; background: rgba(255,255,255,0.18); padding: 0.35rem 0.9rem; border-radius: 20px; }
+    .post-hero__title { font-size: clamp(1.8rem, 5vw, 3rem); font-weight: 800; color: #fff; line-height: 1.2; margin-bottom: 1rem; max-width: 720px; margin-left: auto; margin-right: auto; }
+    .post-hero__sub { font-size: 1.05rem; max-width: 640px; margin: 0 auto 1.5rem; line-height: 1.7; color: #fff; }
+    .post-hero__meta { font-size: 0.85rem; color: #fff; display: flex; align-items: center; justify-content: center; gap: 1.5rem; flex-wrap: wrap; }
+    .post-hero__series { font-weight: 600; color: #fff; }
+    /* the switch pill and the focus ring both sit on the dark hero: the pill is
+       a light chip so its labels keep their light-ground colours, and --focus
+       re-points to gold here (blue collapses on blue — the footer/pre
+       precedent). */
+    .post-hero { --focus: var(--gold); }
+    .post-hero__cover {
+      aspect-ratio: 1 / 1;
+      max-width: 380px;
+      margin: 2.5rem auto 0;
+      border-radius: var(--radius-lg, 16px);
+      overflow: hidden;
+      box-shadow: 0 20px 60px rgba(17,48,75,0.14);
+    }
+    .post-hero__cover img { width: 100%; height: 100%; object-fit: cover; display: block; }
+    .post-body { max-width: 720px; margin: 0 auto; padding: 3rem 2rem 6rem; }
+    .post-body h2 { font-size: 1.6rem; font-weight: 800; color: var(--navy); margin: 3rem 0 1rem; padding-bottom: 0.5rem; border-bottom: 2px solid rgba(34,98,153,0.15); }
+    .post-body h3 { font-size: 1.25rem; font-weight: 700; color: var(--navy); margin: 2.25rem 0 0.75rem; }
+    .post-body p { margin-bottom: 1.25rem; }
+    .post-body strong { font-weight: 700; color: var(--navy); }
+    .post-body a { color: var(--blue); text-decoration: underline; text-decoration-thickness: 1px; text-underline-offset: 2px; }
+    .post-body ul, .post-body ol { margin: 0.5rem 0 1.25rem 1.5rem; }
+    .post-body li { margin-bottom: 0.4rem; }
+    .post-body blockquote { background: rgba(34,98,153,0.06); border-left: 4px solid var(--blue); padding: 1rem 1.25rem; border-radius: 0 10px 10px 0; margin: 1.25rem 0; font-size: 0.95rem; color: var(--navy); }
+    .post-body hr { border: none; height: 1px; background: linear-gradient(90deg, transparent, rgba(34,98,153,0.2), transparent); margin: 3rem 0; }
+    /* ── CODE ── */
+    .post-body pre { background: var(--code-bg); border-radius: 12px; padding: 1.5rem; margin: 1.25rem 0 1.5rem; overflow-x: auto; border: 1px solid rgba(255,255,255,0.05); }
+    .post-body pre code { font-family: var(--mono); font-size: 0.85rem; color: #e2e8f0; line-height: 1.7; background: none; padding: 0; white-space: pre-wrap; }
+    .post-body code { font-family: var(--mono); font-size: 0.88em; background: rgba(34,98,153,0.08); color: var(--blue-dark); padding: 0.15em 0.45em; border-radius: 5px; }
+    /* ── TABLES ── */
+    .table-wrapper { overflow-x: auto; margin: 1.5rem 0; border-radius: 0.5rem; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1); }
+    table { width: 100%; border-collapse: collapse; background: white; }
+    th { background: #226299; color: white; padding: 1rem; text-align: left; font-weight: 600; }
+    td { padding: 1rem; border-bottom: 1px solid #e5e7eb; }
+    .post-body table { display: block; width: 100%; overflow-x: auto; }
+    /* ── ALERTS ── */
+    .alert { background: #fef3cd; border: 1px solid #facc15; border-radius: 0.5rem; padding: 1rem; margin: 1.5rem 0; }
+    .alert.danger { background: #fee2e2; border-color: #ef4444; }
+    .alert.info { background: #e0f2fe; border-color: #06b6d4; }
+    .alert.success { background: #d1fae5; border-color: #10b981; }
+    /* ── KEY TAKEAWAYS ── */
+    .key-takeaways { background: linear-gradient(135deg, #f3f4f6 0%, #e5e7eb 100%); border-radius: 1rem; padding: 2rem; margin: 3rem 0; }
+    .key-takeaways h3 { color: #226299; margin-bottom: 1.5rem; }
+    .post-series-footer { text-align: center; font-size: 0.85rem; color: var(--slate-light); font-style: italic; margin-top: 2rem; padding-top: 2rem; border-top: 1px solid #e2e8f0; }
+    .blog-footer { background: var(--navy); padding: 2rem 0; text-align: center; }
+    .blog-footer a { color: var(--gold); text-decoration: none; font-weight: 600; font-size: 0.9rem; }
+    .blog-footer span { color: var(--gray); font-size: 0.8rem; display: block; margin-top: 0.4rem; }
+    @media (max-width: 600px) {
+      .post-hero { padding: 7rem 1.25rem 2.5rem; }
+      .post-body { padding: 2rem 1.25rem 4rem; }
+      .post-hero__meta { flex-direction: column; gap: 0.4rem; }
+      .post-body h2 { font-size: 1.4rem; }
+      .post-body h3 { font-size: 1.15rem; }
+      .post-body pre { padding: 1rem; border-radius: 8px; }
+    }
+
+    :focus-visible { outline: 2px solid var(--focus); outline-offset: 3px; border-radius: 2px; }
+    /* the ring sits on the page ground (3px offset). Inside the navy footers
+       and code blocks var(--blue) collapses to 2.12:1, so those scopes
+       re-point --focus to gold (5.73:1 on navy). */
+    .footer, .blog-footer, pre { --focus: var(--gold); }
+    :focus:not(:focus-visible) { outline: none; }
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after {
+        animation-duration: .01ms !important; animation-iteration-count: 1 !important;
+        transition-duration: .01ms !important; scroll-behavior: auto !important;
+      }
+    }
+    h1, h2, h3, .post-hero__title, .card__title { text-wrap: balance; }
+
+    .post-body img, .post-body svg { max-width: 100%; height: auto; }
+
+    /* ── SKIP LINK ── a11y-perf R5: the link and the landmark it targets are a
+       pair — useless without both halves. Off-screen until focused, then the
+       first tab stop on every page. */
+    .skip-link { position: absolute; left: -9999px; }
+    .skip-link:focus {
+      left: 1rem; top: 1rem; z-index: 999;
+      background: var(--navy); color: #fff;
+      padding: 0.75rem 1.25rem; border-radius: var(--radius-sm);
+      font-weight: 600; text-decoration: none;
+    }
+
+    /* ── POST WAYFINDING ── the wordmark is the home link; the footer carries
+       the full destination row. */
+    .blog-nav__home {
+      font-size: 0.9rem; font-weight: 800; color: var(--navy);
+      text-decoration: none; margin-right: 1rem;
+    }
+    .blog-nav__home:hover { color: var(--blue); }
+    .blog-nav__inner > .blog-nav__back { margin-right: auto; }
+    .blog-footer__nav {
+      display: flex; flex-wrap: wrap; justify-content: center; gap: 0.35rem 1.25rem;
+      max-width: 860px; margin: 0 auto 1.25rem; padding: 0 2rem 1.25rem;
+      border-bottom: 1px solid rgba(255,255,255,0.12);
+    }
+    .blog-footer__nav a { color: var(--gold); font-size: 0.85rem; font-weight: 600; text-decoration: none; }
+    .blog-footer__nav a:hover { color: #fff; text-decoration: underline; }
+
+    html { scroll-padding-top: 5rem; }
+    [id] { scroll-margin-top: 5rem; }
+
+    /* Thai needs more room than Latin at the same nominal size. */
+    .post-body:lang(th) { font-size: 18px; line-height: 1.85; }
+    .post-body p, .post-body li, .post-body blockquote { text-wrap: pretty; }
+
+    /* ---- side-scroll affordance ----
+       pre blocks and tables can exceed 720px. These layers paint a shadow ONLY
+       where there is more content in that direction; when fully scrolled the
+       cover slides over the shadow and hides it. No JavaScript, no wrapper. */
+    .post-body pre, .post-body table {
+      overflow-x: auto;
+      background-image:
+        linear-gradient(to right, var(--code-bg, #0f172a) 30%, rgba(15,23,42,0)),
+        linear-gradient(to left, var(--code-bg, #0f172a) 30%, rgba(15,23,42,0)),
+        radial-gradient(farthest-side at 0 50%, rgba(0,0,0,.28), rgba(0,0,0,0)),
+        radial-gradient(farthest-side at 100% 50%, rgba(0,0,0,.28), rgba(0,0,0,0));
+      background-position: 0 0, 100% 0, 0 0, 100% 0;
+      background-repeat: no-repeat;
+      background-size: 40px 100%, 40px 100%, 14px 100%, 14px 100%;
+      background-attachment: local, local, scroll, scroll;
+    }
+    .post-body table {
+      background-image:
+        linear-gradient(to right, var(--white, #fff) 30%, rgba(255,255,255,0)),
+        linear-gradient(to left, var(--white, #fff) 30%, rgba(255,255,255,0)),
+        radial-gradient(farthest-side at 0 50%, rgba(17,48,75,.16), rgba(17,48,75,0)),
+        radial-gradient(farthest-side at 100% 50%, rgba(17,48,75,.16), rgba(17,48,75,0));
+      background-position: 0 0, 100% 0, 0 0, 100% 0;
+      background-repeat: no-repeat;
+      background-size: 40px 100%, 40px 100%, 14px 100%, 14px 100%;
+      background-attachment: local, local, scroll, scroll;
+    }
+
+    /* ---- table of contents ---- */
+    .post-toc {
+      max-width: 720px;
+      margin: 2rem auto 0;
+      padding: 1rem 1.25rem;
+      background: rgba(34,98,153,0.05);
+      border: 1px solid rgba(34,98,153,0.14);
+      border-left: 3px solid var(--gold, #c4a46c);
+      border-radius: 10px;
+      font-size: 0.92rem;
+    }
+    .post-toc > summary {
+      cursor: pointer;
+      font-weight: 700;
+      color: var(--navy);
+      list-style: none;
+    }
+    .post-toc > summary::-webkit-details-marker { display: none; }
+    .post-toc > summary::before {
+      content: "\25B8";
+      display: inline-block;
+      margin-right: 0.5rem;
+      transition: transform 0.2s ease;
+      color: var(--gold-dark, #7a5f22);
+    }
+    .post-toc[open] > summary::before { transform: rotate(90deg); }
+    .post-toc > summary:focus-visible { outline: 3px solid var(--focus, #226299); outline-offset: 3px; }
+    .post-toc ol { margin: 0.85rem 0 0.25rem; padding-left: 1.4rem; }
+    .post-toc li { margin-bottom: 0.4rem; line-height: 1.5; }
+    .post-toc a { color: var(--slate); text-decoration: none; }
+    .post-toc a:hover, .post-toc a:focus-visible { color: var(--blue-dark, #1a4d7a); text-decoration: underline; }
+    @media (max-width: 600px) { .post-toc { margin: 1.25rem 1rem 0; } }
+
+    /* ---- cross-document view transitions ---- */
+    @view-transition { navigation: auto; }
+    .nav, .blog-nav { view-transition-name: site-nav; }
+    .footer, .blog-footer { view-transition-name: site-footer; }
+    @media (prefers-reduced-motion: reduce) {
+      ::view-transition-group(*),
+      ::view-transition-old(*),
+      ::view-transition-new(*) { animation: none !important; }
+    }
+
+    /* ── SERIES STRIP — Hermes Agent in Practice ──
+       Same class and inner-wrapper shape as the OpenClaw strip because the
+       linter's RE_SNAV recognises exactly `series-nav` + a nested div; a
+       renamed strip would read as "no nav" and fail INV-08. All content
+       checks (INV-03 family) iterate the SERIES7 list only, so this strip's
+       labels are convention, not contract. House-styled, not the island CSS. */
+    .series-nav {
+      max-width: 720px; margin: 2rem auto 0; padding: 1.1rem 1.4rem;
+      background: rgba(255,255,255,0.75); border: 1px solid rgba(34,98,153,0.15);
+      border-left: 3px solid var(--gold); border-radius: 12px;
+    }
+    .series-nav h3 {
+      font-size: 0.78rem; font-weight: 700; text-transform: uppercase;
+      letter-spacing: 0.08em; color: var(--gold-dark); margin-bottom: 0.6rem;
+    }
+    .series-links { display: flex; flex-wrap: wrap; gap: 0.5rem; }
+    .series-links a, .series-links .current {
+      font-size: 0.82rem; font-weight: 600; padding: 0.35rem 0.8rem;
+      border-radius: 50px; text-decoration: none;
+    }
+    .series-links a { color: var(--blue-dark); background: rgba(34,98,153,0.08); }
+    .series-links a:hover { background: rgba(34,98,153,0.16); }
+    .series-links .current { color: #fff; background: var(--blue-dark); }
+    @media (max-width: 600px) { .series-nav { margin: 1.5rem 1rem 0; } }
+
+    /* ── LANGUAGE SWITCH — pure CSS, zero JavaScript (INV-38) ──
+       One visually-hidden checkbox as a direct child of body, BEFORE the main landmark,
+       so `#langSwitch:checked ~ main …` reaches every content block. The two
+       tracks are paired blocks: .l-th (default) and .l-en (hidden until
+       checked; display:revert restores block for divs, inline for spans).
+       Naming stays clear of INV-12's menu-token regex (hamburger|burger|
+       nav__toggle|nav-toggle|navtoggle|menu-toggle|menu__toggle) — verified.
+       No JS also means no persistence across posts; each post opens in Thai. */
+    .lang-switch-box { position: absolute; left: -9999px; }
+    .l-en { display: none; }
+    #langSwitch:checked ~ main .l-en { display: revert; }
+    #langSwitch:checked ~ main .l-th { display: none; }
+    .lang-switch {
+      display: inline-flex; align-items: center; gap: 0.55rem;
+      margin-top: 1.4rem; padding: 0.4rem 1.1rem; border-radius: 50px;
+      background: rgba(255,255,255,0.85); border: 1px solid rgba(255,255,255,0.4);
+      cursor: pointer; font-size: 0.85rem; user-select: none;
+    }
+    .lang-switch span { color: var(--slate-light); font-weight: 600; transition: color 0.2s; }
+    .lang-switch .lang-sep { color: var(--gray); font-weight: 400; }
+    .lang-switch .lang-th { color: var(--navy); font-weight: 800; }
+    #langSwitch:checked ~ main .lang-switch .lang-th { color: var(--slate-light); font-weight: 600; }
+    #langSwitch:checked ~ main .lang-switch .lang-en { color: var(--navy); font-weight: 800; }
+    .lang-switch:hover { border-color: #fff; }
+    #langSwitch:focus-visible ~ main .lang-switch {
+      outline: 2px solid var(--focus); outline-offset: 3px;
+    }
+  </style>
+  <!-- social -->
+  <link rel="canonical" href="https://anirach.com/blog/hermes-101.html">
+  <meta property="og:type" content="article">
+  <meta property="og:url" content="https://anirach.com/blog/hermes-101.html">
+  <meta property="og:site_name" content="Anirach Mingkhwan">
+  <meta property="og:locale" content="th_TH">
+  <meta property="article:published_time" content="2026-09-01">
+  <meta property="article:author" content="https://anirach.com/">
+  <meta property="og:title" content="Hermes 101 — Agent ที่เติบโตไปกับเรา">
+  <meta property="og:description" content="รู้จัก Hermes Agent จาก Nous Research — agent harness แบบ MIT ที่ติดตั้งได้ในบรรทัดเดียว รองรับโมเดลกว่า 300 ตัว เชื่อมทุกช่องทางผ่าน gateway เดียว และย้ายจาก OpenClaw ได้ด้วยคำสั่งเดียว">
+  <meta itemprop="image" property="og:image" content="https://anirach.com/images/hermes-101-og.jpg">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
+  <meta property="og:image:alt" content="Hermes 101 — Agent ที่เติบโตไปกับเรา">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:image" content="https://anirach.com/images/hermes-101-og.jpg">
+  <meta name="twitter:image:alt" content="Hermes 101 — Agent ที่เติบโตไปกับเรา">
+  <meta name="robots" content="max-image-preview:large">
+  <meta name="theme-color" content="#11304b">
+  <link rel="icon" href="/favicon.ico" sizes="any">
+  <link rel="apple-touch-icon" href="/apple-touch-icon.png">
+  <!-- /social -->
+</head>
+<body>
+<a href="#main" class="skip-link">Skip to content</a>
+<input type="checkbox" id="langSwitch" class="lang-switch-box" aria-label="Switch language: Thai / English">
+
+  <nav class="blog-nav">
+    <div class="blog-nav__inner">
+      <a href="../index.html" class="blog-nav__home">Anirach</a>
+      <a href="./" class="blog-nav__back">‹ Blog</a>
+      <div class="blog-nav__title">Hermes 101 · รู้จัก Hermes Agent</div>
+    </div>
+  </nav>
+
+  <main id="main">
+
+  <header class="post-hero">
+    <div class="post-hero__tags">
+      <span class="post-hero__tag">Hermes</span>
+      <span class="post-hero__tag">AI Agents</span>
+      <span class="post-hero__tag">Getting Started</span>
+    </div>
+    <h1 class="post-hero__title" itemprop="headline"><span class="l-th">Hermes 101 — Agent ที่เติบโตไปกับเรา</span><span class="l-en" lang="en">Hermes 101 — The Agent That Grows With You</span></h1>
+    <p class="post-hero__sub"><span class="l-th">รู้จัก Hermes Agent จาก Nous Research — ติดตั้งใน 60 วินาที เชื่อมทุกช่องทางผ่าน gateway เดียว แล้วปล่อยให้มันเติบโตไปพร้อมกับเรา 🌱</span><span class="l-en" lang="en">Meet Hermes Agent from Nous Research — a 60-second install, one gateway for every channel, and an agent designed to grow with you 🌱</span></p>
+    <div class="post-hero__meta">
+      <span>By <strong>Anirach Mingkhwan</strong></span>
+      <span class="post-hero__series">Hermes Agent in Practice 2026 • Post #1</span>
+      <span><time datetime="2026-09-01" itemprop="datePublished">1 Sep 2026</time></span>
+      <span>15 min read</span>
+    </div>
+    <label for="langSwitch" class="lang-switch" title="สลับภาษา · Switch language"><span class="lang-th">ไทย</span><span class="lang-sep">·</span><span class="lang-en" lang="en">English</span></label>
+    <div class="post-hero__cover">
+      <img src="../images/hermes-101-cover.jpg" alt="Hermes 101 — Agent ที่เติบโตไปกับเรา" width="800" height="800" loading="eager" fetchpriority="high" decoding="async">
+    </div>
+  </header>
+
+  <nav aria-label="Hermes Agent in Practice">
+  <div class="series-nav">
+    <h3>⚡ Hermes Agent in Practice 2026</h3>
+    <div class="series-links">
+        <span class="current" aria-current="page">#1 Hermes 101</span>
+        <a href="/blog/hermes-agent-teams">#2 Agent Teams</a>
+        <a href="/blog/hermes-memory">#3 Memory</a>
+        <a href="/blog/hermes-security">#4 Security</a>
+        <a href="/blog/hermes-integrations">#5 Integrations</a>
+        <a href="/blog/hermes-skills">#6 Skills</a>
+        <a href="/blog/hermes-production">#7 Production</a>
+    </div>
+  </div>
+  </nav>
+
+  <article class="post-body" itemscope itemtype="https://schema.org/BlogPosting">
+    <span itemprop="author" itemscope itemtype="https://schema.org/Person"><meta itemprop="name" content="Anirach Mingkhwan"></span>
+
+    <details class="post-toc l-th" open>
+      <summary>ในบทความนี้</summary>
+      <ol>
+          <li><a href="#th-why">ทำไมต้องมีอีก Agent? — Hermes หลังยุค OpenClaw</a></li>
+          <li><a href="#th-agent-vs-models">Hermes Agent กับ Hermes Models — อย่าสับสนสองสิ่งนี้</a></li>
+          <li><a href="#th-architecture">Architecture at a Glance — CLI, Gateway Daemon, Session เดียว</a></li>
+          <li><a href="#th-install">ติดตั้งใน 60 วินาที — แล้วอะไรลงไปอยู่ในเครื่องบ้าง</a></li>
+          <li><a href="#th-first-run">First Run — setup, model, tools, portal, gateway</a></li>
+          <li><a href="#th-models-money">Models กับเงิน — ซอฟต์แวร์ MIT ฟรี, โมเดล 300+, Nous Portal</a></li>
+          <li><a href="#th-migrate">ย้ายมาจาก OpenClaw — hermes claw migrate</a></li>
+          <li><a href="#th-road-ahead">เส้นทางข้างหน้า — ซีรีส์นี้จะพาไปไหน</a></li>
+      </ol>
+    </details>
+    <details class="post-toc l-en" open>
+      <summary>In this post</summary>
+      <ol>
+          <li><a href="#en-why">Why Another Agent? Hermes After OpenClaw</a></li>
+          <li><a href="#en-agent-vs-models">Hermes Agent vs Hermes Models — Don't Confuse the Two</a></li>
+          <li><a href="#en-architecture">Architecture at a Glance: CLI, Gateway Daemon, One Session Plane</a></li>
+          <li><a href="#en-install">Install in 60 Seconds — and What Lands on Disk</a></li>
+          <li><a href="#en-first-run">First Run: setup, model, tools, portal, gateway</a></li>
+          <li><a href="#en-models-money">Models and Money: MIT-Free Software, 300+ Models, Portal Tiers</a></li>
+          <li><a href="#en-migrate">Coming from OpenClaw: hermes claw migrate</a></li>
+          <li><a href="#en-road-ahead">The Road Ahead: What This Series Covers</a></li>
+      </ol>
+    </details>
+    <div class="l-th">
+
+    <p>🤔 <strong>ถ้ามี AI agent ตัวหนึ่งที่ติดตั้งเสร็จในเวลาไม่ถึงนาที เชื่อม Telegram, Slack และ CLI เข้าหาบทสนทนาเดียวกัน และถูกออกแบบมาให้ "เติบโต" ขึ้นเองทุกครั้งที่เราใช้งาน — เราควรเชื่อคำโฆษณาแบบนี้มากแค่ไหน?</strong></p>
+
+    <p>ผู้อ่านบล็อกนี้น่าจะคุ้นเคยกับโลกของ agent harness ดีอยู่แล้ว — ซีรีส์ <a href="/blog/openclaw-101">OpenClaw for Organizations</a> ทั้ง 7 ตอนของผมพาเดินตั้งแต่การติดตั้งไปจนถึงการรันบน production และผมเองก็ยังรัน OpenClaw deployment ของตัวเองอยู่ทุกวัน แต่ตลอดครึ่งปีที่ผ่านมา ชื่อที่นักศึกษาและเพื่อนร่วมงานถามผมบ่อยที่สุดกลับไม่ใช่ OpenClaw — มันคือ <strong>Hermes Agent</strong> จาก Nous Research โปรเจกต์ open source ที่โตเร็วจนคนทำงานด้านนี้ไม่มีสิทธิ์ทำเป็นมองไม่เห็นอีกต่อไป</p>
+
+    <p>ซีรีส์ใหม่ "Hermes Agent in Practice 2026" คือการนั่งลงตรวจงานชิ้นนี้อย่างจริงจัง ทั้ง 7 ตอน ตอนแรกนี้ปูพื้นฐานทั้งหมด: Hermes คืออะไร (และ<em>ไม่ใช่</em>อะไร) สถาปัตยกรรมข้างในหน้าตาเป็นอย่างไร ติดตั้งอย่างไร เสียเงินตรงไหนบ้าง และถ้าเราใช้ OpenClaw อยู่แล้ว จะย้ายมาลองได้ด้วยแรงแค่ไหน</p>
+
+    <h2 id="th-why">1. ทำไมต้องมีอีก Agent? — Hermes หลังยุค OpenClaw</h2>
+
+    <p><strong>Hermes Agent</strong> เป็น agent harness แบบ open source (สัญญาอนุญาต MIT) เขียนด้วย Python จาก Nous Research เปิดตัวสาธารณะเมื่อ 25 กุมภาพันธ์ 2026 บน <a href="https://github.com/NousResearch/hermes-agent">GitHub</a> พร้อมคำอธิบาย repo ที่กลายเป็นสโลแกนของโปรเจกต์ไปแล้ว: <em>"The agent that grows with you"</em> — agent ที่เติบโตไปกับเรา</p>
+
+    <p>ตัวเลขการเติบโตนั้นไม่ธรรมดา Hermes Atlas (โปรเจกต์ community ที่ไม่เกี่ยวข้องกับ Nous โดยตรง) รายงานว่า repo ไปแตะ 57,200 ดาวภายในหกสัปดาห์แรก — เร็วกว่า OpenClaw ในช่วงอายุเดียวกัน — และตามรายงานของ <a href="https://techcrunch.com/2026/07/13/hermes-agent-maker-nous-research-in-talks-for-new-funding-at-1-5b-valuation/">TechCrunch</a> เดือนกรกฎาคม 2026 ตัวเลขขยับไปราว 214,000 ดาว วันที่ผมเขียนบทความนี้ (1 กันยายน 2026) GitHub แสดงเกือบ 240,000 ดาวกับเกือบ 49,000 forks</p>
+
+    <p>แรงส่งสำคัญลูกหนึ่งมาจากเหตุการณ์เดือนเมษายน 2026 เมื่อ Anthropic ประกาศ block การใช้ subscription ส่วนบุคคล (Pro/Max) ผ่าน harness ภายนอก — เรื่องนี้กระทบทุก harness เท่ากัน แต่ Hermes Atlas บันทึกไว้ว่า traffic การย้ายค่ายเพิ่มขึ้นชัดเจนช่วงต้นเดือนเมษายนหลังประกาศดังกล่าว และหลังจากนั้นตัวเลขการใช้งานบน OpenRouter ก็ไต่ขึ้นต่อเนื่องจนแซง OpenClaw ขึ้นเป็นอันดับหนึ่งด้าน daily tokens ราวกลางเดือนพฤษภาคม 2026</p>
+
+    <p>เบื้องหลังโปรเจกต์คือ <a href="https://nousresearch.com/">Nous Research</a> ก่อตั้งปี 2023 โดย Jeffrey Quesnelle, Karan Malhotra, Ryan Teknium และ Shivani Mitra ระดมทุนไปแล้วราว $70M และตามรายงานของ TechCrunch ณ กรกฎาคม 2026 <em>อยู่ระหว่างเจรจา</em> (ยังไม่ปิดรอบ) เพื่อระดมทุนเพิ่มอย่างน้อย $75M ที่มูลค่าบริษัท $1.5B</p>
+
+    <p>แล้วคำว่า "เติบโตไปกับเรา" หมายถึงอะไรจริง ๆ? สองกลไกหลักคือ <strong>bounded memory</strong> — ไฟล์ความจำที่ agent ดูแลเองภายใต้ขนาดจำกัด บวกการค้นหาย้อนหลังทั้ง transcript — และ <strong>learning loop</strong> ที่ให้ agent สร้างและปรับปรุง skill จากประสบการณ์การใช้งาน ทั้งสองเรื่องมีรายละเอียดพอสำหรับบทความเต็ม ๆ ซึ่งคือตอน #3 Memory และ #6 Skills ของซีรีส์นี้ ในตอน 101 ผมขอปักหมุดไว้แค่ว่า นี่คือจุดขายที่ทำให้ Hermes ต่างจาก harness รุ่นก่อนหน้า — และเป็นจุดที่เราจะตรวจอย่างเข้มที่สุดในตอนหลัง ๆ</p>
+
+    <h3>ระบบนิเวศในตัวเลข</h3>
+
+    <p>ตัวชี้วัดที่ผมให้น้ำหนักมากกว่าจำนวนดาวคือความหนาแน่นของ ecosystem รอบตัวโปรเจกต์ — สแนปช็อตเดือนเมษายน 2026 ของ Hermes Atlas นับ community projects ได้กว่า 80 โปรเจกต์ ไลบรารี skill 17 ชุด และดาวรวมทั้ง ecosystem ราว 90,750 ดวง ขณะที่จำนวน contributors ของ repo หลักโตจาก 242 คนในเดือนมีนาคมเป็นกว่า 274 คนในเวลาหนึ่งเดือน</p>
+
+    <p>ฝั่ง Nous เองก็ลงแรงไม่แพ้ community — บริษัทระบุเองว่า co-founder อย่าง Teknium ลงมือถึง 179 PRs ในรอบพัฒนา v0.8 รอบเดียว และปัจจุบัน Hermes Agent เป็นหนึ่งในผลิตภัณฑ์หลักของบริษัท เคียงข้าง Hermes 4, Nous Portal, Nous Chat และ Simulators</p>
+
+    <blockquote>💡 มุมมองของผม: กระแสดาวบน GitHub ไม่ใช่หลักฐานคุณภาพ แต่มันเป็นหลักฐานของ <em>momentum</em> — และในโลก open source ที่ community คือคนช่วยแก้บั๊กและเขียน integration, momentum เป็นตัวแปรจริงที่ผู้บริหารต้องนับรวมในการเลือกเครื่องมือ</blockquote>
+
+    <h2 id="th-agent-vs-models">2. Hermes Agent กับ Hermes Models — อย่าสับสนสองสิ่งนี้</h2>
+
+    <p>ก่อนไปต่อ ต้องเคลียร์ความสับสนที่พบบ่อยที่สุดก่อน เพราะ Nous Research ใช้ชื่อ "Hermes" กับผลิตภัณฑ์<em>สองสาย</em>ที่คนละชนิดกันเลย</p>
+
+    <p>สายแรกคือ <strong>Hermes 4</strong> — ตระกูล<em>โมเดล</em> open-weight แบบ hybrid-reasoning ที่ออกราวสิงหาคม 2025 มีขนาด 14B / 70B / 405B พารามิเตอร์ สร้างบนฐาน Qwen3 และ Llama 3.1 สายที่สองคือ <strong>Hermes Agent</strong> — ตัว <em>harness</em> หรือโครงซอฟต์แวร์ Python ที่เป็นพระเอกของซีรีส์นี้ ซึ่งไม่ได้ผูกกับโมเดล Hermes แต่อย่างใด: มันรันกับโมเดลอะไรก็ได้ ทั้งเชิงพาณิชย์และ open weight</p>
+
+    <div class="table-wrapper">
+        <table>
+            <thead>
+                <tr>
+                    <th></th>
+                    <th>Hermes Agent</th>
+                    <th>Hermes 4 (Models)</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td><strong>คืออะไร</strong></td>
+                    <td>Agent harness (ซอฟต์แวร์ Python, MIT license)</td>
+                    <td>ตระกูลโมเดล open-weight แบบ hybrid-reasoning</td>
+                </tr>
+                <tr>
+                    <td><strong>เปิดตัว</strong></td>
+                    <td>25 กุมภาพันธ์ 2026 (public launch)</td>
+                    <td>ราวสิงหาคม 2025</td>
+                </tr>
+                <tr>
+                    <td><strong>รูปแบบ</strong></td>
+                    <td>โค้ดที่รันบนเครื่องเรา ใช้กับโมเดลใดก็ได้</td>
+                    <td>น้ำหนักโมเดล 14B / 70B / 405B (ฐาน Qwen3 / Llama 3.1)</td>
+                </tr>
+                <tr>
+                    <td><strong>ความสัมพันธ์</strong></td>
+                    <td>เรียกใช้โมเดล Hermes ได้ผ่าน Nous Portal หรือ OpenRouter — แต่ไม่บังคับ</td>
+                    <td>ใช้กับ harness อื่นก็ได้เช่นกัน</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <div class="alert info">
+        <strong>เวลาอ่านข่าว:</strong> พาดหัวที่เขียนว่า "Hermes" เฉย ๆ อาจหมายถึงโมเดลหรือ agent ก็ได้ ให้ดู context เสมอ — benchmark ตัวเลข MATH หรือ reasoning มักหมายถึงโมเดล Hermes 4 ส่วนข่าวดาว GitHub, gateway, CVE และ integration หมายถึงตัว Agent ที่เรากำลังคุยกันในซีรีส์นี้
+    </div>
+
+    <h2 id="th-architecture">3. Architecture at a Glance — CLI, Gateway Daemon, Session เดียว</h2>
+
+    <p>สถาปัตยกรรมของ Hermes เป็นแบบ <strong>dual-mode</strong>: ด้านหนึ่งคือ CLI/TUI แบบ interactive สำหรับนั่งทำงานหน้าจอ (มี multiline editing, slash-command autocomplete และการ interrupt กลางคันเพื่อเปลี่ยนทิศงาน) อีกด้านคือ <strong>gateway daemon</strong> ตัวเดียวที่รับข้อความจากแพลตฟอร์มแชตทั้งหมด README ของโปรเจกต์เขียนไว้ตรง ๆ ว่า "Telegram, Discord, Slack, WhatsApp, Signal, and CLI — all from a single gateway process" (ยังมีช่องทางอื่นเช่น Email ในเอกสาร docs อีกชั้นหนึ่ง) บวก subsystem สำหรับ cron งานตามตารางเวลา</p>
+
+    <p>จุดออกแบบที่ผมคิดว่าสำคัญที่สุดคือ <strong>session plane เดียว</strong>: ไม่ว่าเราจะพิมพ์จาก CLI, ทักผ่าน Telegram หรือให้ cron ปลุกงานตอนตีสาม ทุกอย่างเกาะอยู่บนระบบ session เดียวกัน agent จึงเห็นบริบทต่อเนื่องข้ามช่องทาง — ต่างจาก setup ที่แชตบอตกับ CLI เป็นคนละตัวคนละความจำ</p>
+
+    <p>ใต้ฝากระโปรง Arize เขียน deep-dive เชิงสถาปัตยกรรมไว้ละเอียด (บทวิเคราะห์ third-party ที่ดีที่สุดชิ้นหนึ่ง ณ ตอนนี้ — Nous เองยังไม่มี first-party deep-dive) สรุปประเด็นสำคัญได้ดังนี้:</p>
+
+    <ul>
+        <li><strong>Sessions เป็น infrastructure:</strong> เก็บใน SQLite พร้อม full-text search (FTS5) และ WAL journaling แต่ละ turn ติดป้ายที่มา (source-tagged) และมี lineage แบบ parent-child เมื่อบทสนทนาถูก compress</li>
+        <li><strong>การจัดการบริบทยาว:</strong> turn เก่าถูกสรุปโดยโมเดลช่วย (auxiliary model) โดยหัวและท้ายบทสนทนาถูกป้องกันด้วย token budget ไม่ให้โดนสรุปทิ้ง</li>
+        <li><strong>Tool registration แยกจาก tool exposure:</strong> เครื่องมือทุกตัวลงทะเบียนใน registry กลางตอน import แต่ชั้น toolset ต่างหากเป็นผู้ตัดสินว่าโมเดล "มองเห็น" อะไรบ้างในแต่ละบริบท — ประเด็นนี้จะสำคัญมากตอนคุยเรื่อง security ในตอน #4</li>
+        <li><strong>System prompt ประกอบสามชั้น</strong> (stable / context / volatile) และอ่านไฟล์ context อย่าง <code>AGENTS.md</code>, <code>CLAUDE.md</code>, <code>.cursorrules</code> จาก working directory โดยอัตโนมัติ</li>
+    </ul>
+
+    <p>ส่วนการรันงานจริง Hermes มี execution backend ให้เลือกเจ็ดแบบ ตามที่ README ระบุคำต่อคำ: "local, Docker, SSH, Singularity, Modal, Daytona, and Vercel Sandbox"</p>
+
+    <ul>
+        <li><strong>local</strong> — รันตรงบนเครื่องเรา เริ่มต้นง่ายที่สุด</li>
+        <li><strong>Docker</strong> — แยกงานของ agent ไว้ใน container</li>
+        <li><strong>SSH</strong> — สั่งงานเครื่อง remote ผ่าน SSH</li>
+        <li><strong>Singularity</strong> — สาย container ที่คุ้นเคยกันในโลก HPC และมหาวิทยาลัย</li>
+        <li><strong>Modal / Daytona</strong> — แบบ serverless: environment จะ hibernate เมื่อไม่ใช้งาน ซึ่ง README วางตำแหน่งว่าแทบไม่มีค่าใช้จ่ายระหว่าง session</li>
+        <li><strong>Vercel Sandbox</strong> — sandbox บนโครงสร้างพื้นฐานของ Vercel</li>
+    </ul>
+
+    <p>สำหรับตอน 101 รู้ว่ามีทางเลือกก็เพียงพอแล้ว — การเลือก backend ให้เหมาะกับงานจริงและการวางระบบแบบ multi-user เป็นหัวข้อเต็ม ๆ ของตอน #7 Production</p>
+
+    <blockquote>💡 ถ้าคุณอ่านซีรีส์ OpenClaw มาก่อน ภาพนี้จะคุ้นตา: แนวคิด gateway กลางที่เชื่อมหลายช่องทางคือสิ่งที่ OpenClaw บุกเบิกให้คนคุ้นเคย สิ่งที่ Hermes ทำเพิ่มคือยกให้ sessions เป็น first-class infrastructure (SQLite + FTS5) และแยกชั้น tool exposure ออกมาอย่างจงใจตั้งแต่ออกแบบ</blockquote>
+
+    <h2 id="th-install">4. ติดตั้งใน 60 วินาที — แล้วอะไรลงไปอยู่ในเครื่องบ้าง</h2>
+
+    <p>เงื่อนไขก่อนติดตั้งมีน้อยจนน่าประหลาดใจ: ต้องมีแค่ <strong>Git</strong> (บน Linux เพิ่ม curl กับ xz-utils) ที่เหลือ installer จัดการเองทั้งหมด — มันติดตั้ง uv, Python 3.11, Node.js v26, ripgrep และ ffmpeg ให้แบบ per-user <em>โดยไม่ต้องใช้ sudo เลย</em> รายละเอียดเต็มอยู่ใน<a href="https://hermes-agent.nousresearch.com/docs/getting-started/installation">เอกสารติดตั้งอย่างเป็นทางการ</a></p>
+
+    <pre><code># Linux / macOS / WSL2 / Termux — บรรทัดเดียวจบ
+curl -fsSL https://hermes-agent.nousresearch.com/install.sh | bash
+
+# โหลด PATH ใหม่ แล้วเรียกใช้งานได้ทันที
+source ~/.bashrc
+hermes</code></pre>
+
+    <pre><code># Windows — PowerShell
+iex (irm https://hermes-agent.nousresearch.com/install.ps1)</code></pre>
+
+    <p>สำหรับคนไม่ถนัด terminal มี native desktop installer ให้ทั้ง macOS 12+ และ Windows 10/11 ด้วย ส่วนคนสาย server: README วางตำแหน่งเรื่องเครื่องไว้กว้างมาก — คำต่อคำคือ "Run it on a $5 VPS, a GPU cluster, or serverless infrastructure that costs nearly nothing when idle" โดยไม่มีสเปกขั้นต่ำอย่างเป็นทางการประกาศไว้ ผมจึงขอสรุปแบบระวังว่า "เครื่องระดับ VPS ราคา $5 ก็เริ่มได้" มากกว่าจะฟันธงตัวเลข RAM/CPU เอง</p>
+
+    <h3>อะไรลงไปอยู่ในเครื่องบ้าง</h3>
+
+    <p>Installer วางทุกอย่างในพื้นที่ผู้ใช้ ไม่แตะระบบ:</p>
+
+    <pre><code># หลังติดตั้ง (Linux / macOS — per-user)
+~/.hermes/                  # config และ state ทั้งหมดของ agent
+~/.hermes/hermes-agent/     # โค้ดของตัว harness
+~/.local/bin/hermes         # binary ที่เราเรียกใช้
+
+# Windows (native install)
+%LOCALAPPDATA%\hermes\      # ทุกอย่างรวมอยู่ใต้โฟลเดอร์นี้
+
+# ติดตั้งแบบ root/system-wide (เช่นบน server)
+/usr/local/lib/hermes-agent/   # โค้ด
+/usr/local/bin/hermes          # binary
+/root/.hermes/                 # state (หรือกำหนดเองผ่าน $HERMES_HOME)</code></pre>
+
+    <p>การที่ state ทั้งหมดรวมอยู่ใน <code>~/.hermes/</code> ทำให้ backup ง่ายมาก (สำเนาโฟลเดอร์เดียวได้ทั้ง config, sessions และ memory) — เราจะกลับมาใช้ประโยชน์จากข้อนี้ในตอน #7 Production</p>
+
+    <p>เกร็ดที่ผมชอบเป็นพิเศษ: รายชื่อแพลตฟอร์มที่ installer รองรับมี <strong>Termux</strong> อยู่ด้วย — แปลว่า one-liner เดียวกันนี้ใช้ติดตั้ง Hermes ลงบนโทรศัพท์ Android ได้เลย ซึ่งเข้ากับปรัชญา "รันที่ไหนก็ได้" ของโปรเจกต์อย่างจงใจ</p>
+
+    <div class="alert">
+        <strong>Windows note:</strong> README ระบุว่า Windows Defender อาจ flag ไฟล์ uv.exe ระหว่างติดตั้ง วิธีที่เอกสารแนะนำคือ whitelist โฟลเดอร์ <code>$env:LOCALAPPDATA\hermes\bin</code> — อาการนี้เป็น false positive ที่พบได้กับเครื่องมือ Python สมัยใหม่หลายตัว
+    </div>
+
+    <h2 id="th-first-run">5. First Run — setup, model, tools, portal, gateway</h2>
+
+    <p>หลังติดตั้ง เส้นทางตั้งค่าครั้งแรกเป็นลำดับคำสั่งสั้น ๆ ที่ README วางไว้ชัดเจน เริ่มจาก wizard:</p>
+
+    <pre><code># 1) เปิด wizard ตั้งค่าครั้งแรก — ถามทีละขั้น
+hermes setup
+
+# 2) เลือก provider และโมเดลที่จะใช้
+hermes model
+
+# 3) ดูรายการเครื่องมือ และเปิด/ปิดเป็นรายตัว
+hermes tools</code></pre>
+
+    <p>ถ้าใช้ <strong>Nous Portal</strong> (บริการฝั่ง cloud ของ Nous — รายละเอียดในหัวข้อถัดไป) มีทางลัดที่เร็วกว่านั้นอีก: OAuth ครั้งเดียวได้ทั้งโมเดลและเครื่องมือฝั่ง Tool Gateway ทุกตัวพร้อมกัน นี่คือเส้นทางที่ทำให้คำว่า "ติดตั้งใน 60 วินาที" ไม่ใช่คำโฆษณาเกินจริงนัก:</p>
+
+    <pre><code># OAuth ครั้งเดียว — ได้ทั้งโมเดลและ Tool Gateway tools ครบชุด
+hermes setup --portal
+
+# ตรวจสถานะบัญชีและเครดิตคงเหลือ
+hermes portal info</code></pre>
+
+    <p>ขั้นสุดท้ายสำหรับคนที่อยากได้ agent ใน messaging app คือ gateway:</p>
+
+    <pre><code># ตั้งค่าช่องทางแชต (Telegram, Discord, Slack, WhatsApp, Signal)
+hermes gateway setup
+
+# สตาร์ท daemon — process เดียวดูแลทุกช่องทาง
+hermes gateway start</code></pre>
+
+    <p>ระหว่างใช้งาน สลับโมเดลกลางบทสนทนาได้เลยด้วย slash command โดยไม่ต้องแก้ config หรือ restart:</p>
+
+    <pre><code># สลับโมเดลสด ๆ กลางบทสนทนา — รูปแบบ provider:model
+/model &lt;provider:model&gt;</code></pre>
+
+    <p>ลำดับที่ผมแนะนำสำหรับชั่วโมงแรก:</p>
+
+    <ol>
+        <li>ติดตั้งด้วย one-liner แล้วรัน <code>hermes setup</code> — ตอบ wizard ให้จบ</li>
+        <li>เลือกโมเดลผ่าน <code>hermes model</code> (หรือ <code>hermes setup --portal</code> ถ้าตัดสินใจใช้ Portal)</li>
+        <li>คุยกับ agent ใน CLI ล้วน ๆ ให้คุ้นสักหนึ่งวัน — ลองงานสรุปเอกสาร งานค้นข้อมูล งานโค้ดเล็ก ๆ</li>
+        <li>เปิดดู <code>hermes tools</code> แล้วปิดเครื่องมือที่ยังไม่จำเป็นต้องใช้</li>
+        <li>ค่อยตั้ง gateway เป็นขั้นสุดท้าย เมื่อเข้าใจพฤติกรรมของ agent แล้ว</li>
+    </ol>
+
+    <p>เหตุผลของข้อ 5: การเอา agent ที่เรายังไม่เข้าใจไปเสียบกับ Telegram ตั้งแต่ชั่วโมงแรกคือสูตรของอุบัติเหตุ — บทเรียนตรงจากยุค OpenClaw ที่ตอน #4 Security จะขยายความพร้อมหลักฐาน</p>
+
+    <h3>Cheat sheet — คำสั่งทั้งหมดในบทความนี้</h3>
+
+    <pre><code>hermes setup             # wizard ตั้งค่าครั้งแรก
+hermes model             # เลือก provider / โมเดล
+hermes tools             # ดูและจัดการเครื่องมือ
+hermes setup --portal    # OAuth ครั้งเดียวผ่าน Nous Portal
+hermes portal info       # สถานะบัญชีและเครดิต
+hermes gateway setup     # ตั้งค่าช่องทางแชต
+hermes gateway start     # สตาร์ท gateway daemon
+hermes claw migrate      # ย้ายจาก OpenClaw
+/model provider:model    # สลับโมเดลกลางบทสนทนา (ภายใน session)</code></pre>
+
+    <h2 id="th-models-money">6. Models กับเงิน — ซอฟต์แวร์ MIT ฟรี, โมเดล 300+, Nous Portal</h2>
+
+    <p>เรื่องเงินของ Hermes ต้องแยกเป็นสามชั้นให้ชัด เพราะเป็นจุดที่บทความตามอินเทอร์เน็ตเขียนปนกันจนมั่ว</p>
+
+    <p><strong>ชั้นที่หนึ่ง — ตัวซอฟต์แวร์: ฟรีจริง</strong> Hermes Agent เป็น MIT license รันบนเครื่องเราเอง ไม่มีค่าใช้จ่ายซอฟต์แวร์ และ README ชูจุดขายว่าโมเดลไม่ผูกกับใคร — "no code changes, no lock-in"</p>
+
+    <p><strong>ชั้นที่สอง — โมเดล: จ่ายตามที่เราเลือก</strong> จุดแข็งคือความกว้าง: README ระบุ "300+ models" ผ่าน Nous Portal บวกทางเลือก OpenRouter, OpenAI, Google AI Studio หรือ endpoint กำหนดเองก็ได้ รวมแล้วรองรับผู้ให้บริการราว 20 กว่าราย สลับได้สดผ่าน <code>/model</code> อย่างที่เห็นในหัวข้อก่อน</p>
+
+    <p><strong>ชั้นที่สาม — Nous Portal: บริการเสริมแบบ subscription</strong> ราคาตามหน้า <a href="https://portal.nousresearch.com/">portal.nousresearch.com</a> ณ วันที่เขียน:</p>
+
+    <div class="table-wrapper">
+        <table>
+            <thead>
+                <tr>
+                    <th>Tier</th>
+                    <th>ราคา/เดือน</th>
+                    <th>เครดิตที่ได้</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td><strong>Free</strong></td>
+                    <td>$0</td>
+                    <td>—</td>
+                </tr>
+                <tr>
+                    <td><strong>Plus</strong></td>
+                    <td>$20</td>
+                    <td>$22</td>
+                </tr>
+                <tr>
+                    <td><strong>Super</strong></td>
+                    <td>$100</td>
+                    <td>$110</td>
+                </tr>
+                <tr>
+                    <td><strong>Ultra</strong></td>
+                    <td>$200</td>
+                    <td>$220</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <p>Subscription มัดรวม hosted tools มาด้วย: web search/scraping (Firecrawl), image generation (FAL, Krea), browser automation บน cloud (Browser Use) และ speech/TTS (OpenAI) — ตัวเลขช่วง $20–$200 ต่อเดือนนี้ TechCrunch รายงานยืนยันตรงกัน นอกจากนี้ยังมี <strong>Hermes Cloud</strong> — instance แบบ always-on ที่ Nous จัดเครื่องให้ คิดเงินรายชั่วโมงหักจากเครดิต Portal และ scale ลงศูนย์เมื่อไม่ใช้งาน (อัตรารายชั่วโมงไม่มีประกาศสาธารณะ ผมจึงไม่ใส่ตัวเลข)</p>
+
+    <p>สำหรับองค์กร: Hermes Cloud เปิดเป็น public preview ราวกรกฎาคม 2026 พร้อมฟีเจอร์ระดับทีม — โพสต์ทางการของ Nous อธิบายว่าเปิดให้ "spin up agents for everyone at your org with granular access controls and unified billing, all from Nous Portal" โดยหน้า Cloud ระบุเงื่อนไขว่าต้องมีเครดิตขั้นต่ำ $10 หรือ subscription ที่ active จึงจะ deploy ได้ ประเด็น access control ระดับองค์กรนี้เราจะกลับมาชั่งน้ำหนักจริงจังในตอน #4 Security และ #7 Production</p>
+
+    <div class="alert danger">
+        <strong>ระวังความเข้าใจผิดเรื่อง "$5/เดือน":</strong> ตัวเลขนี้ที่เห็นแชร์กันคือ<em>ราคา VPS ที่เราเช่าเองเพื่อ self-host</em> ตามประโยคใน README ("Run it on a $5 VPS…") — ไม่ใช่ tier ของ Nous และผู้ให้บริการ hosting เจ้าอื่นที่ขาย "managed Hermes" ราคาใกล้เคียงกันก็เป็น third-party ไม่ใช่บริการของ Nous
+    </div>
+
+    <div class="alert info">
+        <strong>สำหรับคนใช้ Claude:</strong> ตั้งแต่ Anthropic block การใช้ subscription ส่วนบุคคล (Pro/Max) ผ่าน harness ภายนอกเมื่อเมษายน 2026 การเรียกโมเดล Claude จาก Hermes ต้องใช้ API key แบบ pay-as-you-go หรือผ่าน Nous Portal — เงื่อนไขเดียวกันนี้ใช้กับ OpenClaw ด้วย ไม่ใช่ข้อจำกัดเฉพาะของ Hermes
+    </div>
+
+    <h2 id="th-migrate">7. ย้ายมาจาก OpenClaw — hermes claw migrate</h2>
+
+    <p>หัวข้อนี้เขียนให้ผู้อ่านซีรีส์เก่าของผมโดยเฉพาะ Nous รู้ดีว่าผู้ใช้กลุ่มใหญ่ที่สุดที่อยากได้คือคนที่มี OpenClaw setup อยู่แล้ว จึงทำเครื่องมือย้ายค่ายมาให้เป็นคำสั่งเดียว:</p>
+
+    <pre><code># ย้ายจาก OpenClaw — auto-import ทั้ง setup
+hermes claw migrate
+
+# ตรวจผล: skills ที่ import เข้ามาถูกแยกไว้ที่นี่
+ls ~/.hermes/skills/openclaw-imports/</code></pre>
+
+    <p>สิ่งที่คำสั่งนี้จัดการให้:</p>
+
+    <ul>
+        <li><strong>Skills:</strong> ย้ายเข้ามาเก็บใน <code>~/.hermes/skills/openclaw-imports/</code> แยกจาก skill ที่เกิดฝั่ง Hermes เอง — ทั้งสองค่ายใช้มาตรฐาน SKILL.md ร่วมกัน (agentskills.io) แกนกลางจึงพกพาได้</li>
+        <li><strong>Memory:</strong> ไฟล์บันทึกรายวันทั้งหมดของ OpenClaw ถูก parse, merge และ dedupe รวมเข้า MEMORY.md แบบ bounded ของ Hermes</li>
+        <li><strong>Messaging tokens:</strong> credential ของช่องทางแชตถูกนำเข้าด้วย ลดงานตั้งค่า gateway ซ้ำ</li>
+    </ul>
+
+    <p>ข้อ Memory คือความต่างเชิงปรัชญาที่ชัดที่สุดระหว่างสองค่าย ใครอ่านตอน <a href="/blog/openclaw-memory">OpenClaw Memory</a> จะจำได้ว่าโครง MEMORY.md + USER.md บวก daily log แบบเขียนต่อไปเรื่อย ๆ นั้นโตไม่หยุด — Hermes เลือกทางกลับกัน: จำกัดขนาดไฟล์ความจำแบบ hard cap (สแนปช็อตเดือนเมษายนของ Hermes Atlas ระบุราว 2,200 ตัวอักษรสำหรับ MEMORY.md และ 1,375 สำหรับ USER.md) แล้วชดเชยด้วย FTS5 search ค้นย้อน transcript ทั้งหมดได้ ใครถูกใครผิดเป็นคำถามใหญ่พอสำหรับตอน #3 ทั้งตอน</p>
+
+    <p>อีกตัวช่วยลดต้นทุนการย้ายที่คนมองข้าม: Hermes อ่านไฟล์ context ของค่ายอื่น<em>โดยตรง</em> — องค์กรที่ลงแรงเขียน CLAUDE.md หรือ AGENTS.md ไว้แล้วใช้ได้ต่อวันแรกเลย ไม่ต้องแปลงอะไร:</p>
+
+    <pre><code># Hermes อ่านไฟล์เหล่านี้จาก working directory อัตโนมัติ
+AGENTS.md       # มาตรฐานกลางที่หลาย harness ใช้ร่วมกัน
+CLAUDE.md       # ไฟล์เดิมจากยุค Claude Code / OpenClaw
+.cursorrules    # ของ Cursor ก็อ่านได้เช่นกัน</code></pre>
+
+    <div class="table-wrapper">
+        <table>
+            <thead>
+                <tr>
+                    <th>ประเด็น</th>
+                    <th>OpenClaw</th>
+                    <th>Hermes Agent</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td><strong>Runtime</strong></td>
+                    <td>Node.js</td>
+                    <td>Python</td>
+                </tr>
+                <tr>
+                    <td><strong>Memory model</strong></td>
+                    <td>MEMORY.md + USER.md + daily logs ไม่จำกัดขนาด</td>
+                    <td>ไฟล์ bounded ขนาดจำกัด + FTS5 ค้น transcript</td>
+                </tr>
+                <tr>
+                    <td><strong>Skills</strong></td>
+                    <td>มาตรฐาน SKILL.md (agentskills.io)</td>
+                    <td>มาตรฐานเดียวกัน + learning loop สร้าง skill เอง</td>
+                </tr>
+                <tr>
+                    <td><strong>เส้นทางย้าย</strong></td>
+                    <td>มีคู่มือย้าย<em>ออกจาก</em> Hermes ฝั่ง docs.openclaw.ai</td>
+                    <td><code>hermes claw migrate</code> คำสั่งเดียว</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <p>ที่น่าสนใจคือการย้ายมี<em>สองทิศ</em>และทั้งสองฝั่งทำเอกสารรองรับ — OpenClaw เองก็มีคู่มือ official สำหรับคนย้ายจาก Hermes กลับไป นี่คือภาพของฐานผู้ใช้ที่ถูกแย่งชิงกันจริง ๆ และเป็นข่าวดีของผู้ใช้: ต้นทุนการย้ายต่ำลงทั้งสองทาง อำนาจต่อรองอยู่ในมือเรา</p>
+
+    <h2 id="th-road-ahead">8. เส้นทางข้างหน้า — ซีรีส์นี้จะพาไปไหน</h2>
+
+    <p>Hermes พัฒนาเร็วมากจนบทความไหนก็ตกรุ่นได้ในไม่กี่สัปดาห์ — วันเผยแพร่บทความนี้ รุ่นล่าสุดคือ <strong>v0.21.0</strong> (แท็ก v2026.8.31 เผยแพร่ 31 สิงหาคม 2026) เพื่อให้เห็นจังหวะการพัฒนา นี่คือหมุดหมายที่ตรวจสอบได้จากหน้า releases บน GitHub และรายงานของ Hermes Atlas — โดยหมายเหตุว่าประวัติรุ่นช่วงแรกมองเห็นได้ไม่ครบ (release เก่าสุดที่ยังเห็นบน GitHub คือ v0.2.0 แท็ก v2026.3.12 จึงไม่มีใครยืนยันได้ว่าวันเปิดตัวรันเวอร์ชันอะไร):</p>
+
+    <ul>
+        <li><strong>v0.8.0</strong> (8 เม.ย. 2026) — ปิดรอบพัฒนาช่วงแรกที่หนาแน่นที่สุด (รอบเดียวกับที่ Teknium คนเดียว merge 179 PRs) พร้อมงานเก็บกวาดระบบ worktree</li>
+        <li><strong>v0.20.0</strong> (3 ส.ค. 2026) — ชุดใหญ่: streaming voice, Agent-to-Agent protocol, artifacts, webhooks</li>
+        <li><strong>สาย v0.20.x</strong> (ตลอด ส.ค. 2026) — patch ถี่มาก: ย้ายสู่ MCP 2.x, ระบบสแกนความปลอดภัยของ skill, Bot Mode group threads, browser profile แบบขอความยินยอมก่อนใช้</li>
+        <li><strong>v0.21.0</strong> (31 ส.ค. 2026) — <strong>Bot Mode</strong> — สังคมของ agent หลายตัวที่มีชื่อและหน้าตาของตัวเอง คุยกันเป็น group chat — ถูก bundle เข้า desktop app สมบูรณ์ (ฟีเจอร์นี้เริ่มชีวิตเป็น beta plugin สาธารณะมาก่อนหน้านั้น)</li>
+    </ul>
+
+    <p>ช่วงกลางปีก็ไม่ได้ว่างเปล่า — release tracker ภายนอกบันทึกว่ารอบ v0.19.0 ราวกรกฎาคมเน้นเรื่องความเร็วเป็นหลัก โดยรายงานการตัดเวลา cold-start ของ turn แรกลงราว 80% (ตัวเลขฝั่ง third-party ผมยังไม่เห็น Nous ยืนยันเอง จึงบันทึกไว้อย่างมีเงื่อนไข)</p>
+
+    <p>แผนของซีรีส์ทั้ง 7 ตอน — โครงเดียวกับซีรีส์ OpenClaw เพื่อให้เทียบกันได้ตรง ๆ:</p>
+
+    <ul>
+        <li><strong>#2 Agent Teams:</strong> delegate_task, Kanban board แบบ durable และ Bot Mode — Hermes มีชั้น multi-agent หลายระดับที่ต้องแยกให้ออก</li>
+        <li><strong>#3 Memory:</strong> ปรัชญา bounded memory + FTS5 เทียบกับ daily log ของ OpenClaw — และข้อจำกัดของมัน</li>
+        <li><strong>#4 Security:</strong> Hermes ออกแบบโดยเรียนจากอุบัติเหตุยุค OpenClaw แต่ก็สะสม CVE ของตัวเองแล้วเช่นกัน — จะเล่าทั้งสองด้าน</li>
+        <li><strong>#5 Integrations:</strong> ช่องทางแชต, MCP, webhooks และ A2A protocol</li>
+        <li><strong>#6 Skills:</strong> learning loop ที่ให้ agent สร้าง skill เอง — พร้อมทดสอบจริงว่ามันเกิดขึ้นจริงไหม</li>
+        <li><strong>#7 Production:</strong> backends ทั้งเจ็ด, Hermes Cloud, monitoring และ lessons learned</li>
+    </ul>
+
+    <p>ผมตั้งใจให้ซีรีส์นี้เป็นการ<em>ตรวจงาน</em> ไม่ใช่การเชียร์ — ตรงไหนที่หลักฐานยังเป็น third-party หรือยังไม่มีใครพิสูจน์ ผมจะบอกตรง ๆ แบบที่ทำในบทความนี้ และตรงไหนที่ Hermes ทำได้ดีจริง ก็จะชมตามหลักฐานเช่นกัน</p>
+
+    <div class="key-takeaways">
+        <h3>🎯 สิ่งสำคัญที่ต้องจำ</h3>
+        <ul>
+            <li><strong>Hermes Agent</strong> = agent harness แบบ MIT จาก Nous Research เขียนด้วย Python — ซอฟต์แวร์ฟรี รันโมเดลอะไรก็ได้ ไม่ล็อกกับ vendor ใด</li>
+            <li><strong>Hermes 4</strong> = ตระกูล<em>โมเดล</em> open-weight คนละผลิตภัณฑ์กับตัว Agent — อ่านข่าวต้องแยกให้ออกเสมอ</li>
+            <li><strong>Gateway daemon</strong> = process เดียวเชื่อม Telegram, Discord, Slack, WhatsApp, Signal และ CLI เข้า session plane เดียวกัน บวก cron</li>
+            <li><strong>การติดตั้ง</strong> = one-liner เดียว ต้องมีแค่ Git ที่เหลือ installer จัดการเองแบบไม่ใช้ sudo และ state ทั้งหมดอยู่ใน ~/.hermes/</li>
+            <li><strong>hermes setup --portal</strong> = OAuth ครั้งเดียวได้ทั้งโมเดลและ hosted tools ครบชุด — เส้นทาง 60 วินาทีของจริง</li>
+            <li><strong>Nous Portal</strong> = $0 / $20 / $100 / $200 ต่อเดือนพร้อมเครดิต — ส่วน "$5/เดือน" ที่แชร์กันคือค่า VPS self-host ไม่ใช่ tier ของ Nous</li>
+            <li><strong>hermes claw migrate</strong> = คำสั่งเดียวย้าย skills, memory และ messaging tokens จาก OpenClaw — และเส้นทางย้ายกลับก็มีเอกสารรองรับเช่นกัน</li>
+        </ul>
+    </div>
+
+    </div>
+    <div class="l-en" lang="en">
+
+    <p>Readers of this blog already know their way around agent harnesses — my seven-part <a href="/blog/openclaw-101">OpenClaw for Organizations</a> series walked from first install to production, and I still run my own OpenClaw deployment every day. Yet for the past half year, the name students and colleagues ask me about most is not OpenClaw. It is <strong>Hermes Agent</strong> from Nous Research — an open-source project that has grown too fast for anyone working in this field to politely ignore.</p>
+
+    <p>Its pitch is seductive: install in under a minute, wire Telegram, Slack and your terminal into one continuous conversation, and let the agent "grow with you" over time. Seductive pitches are exactly the ones an academic should test hardest.</p>
+
+    <p>This new series, "Hermes Agent in Practice 2026", is that test — seven posts, same skeleton as the OpenClaw series so the two can be compared honestly. This first post lays the foundation: what Hermes is (and is not), how the architecture fits together, how to install it, where the money actually goes, and how much effort a move from OpenClaw really costs.</p>
+
+    <h2 id="en-why">1. Why Another Agent? Hermes After OpenClaw</h2>
+
+    <p><strong>Hermes Agent</strong> is an open-source agent harness — MIT-licensed, written in Python — from Nous Research, publicly launched on 25 February 2026 at <a href="https://github.com/NousResearch/hermes-agent">github.com/NousResearch/hermes-agent</a> under a repo description that became its slogan: <em>"The agent that grows with you."</em></p>
+
+    <p>The growth numbers are remarkable. Hermes Atlas — a community project unaffiliated with Nous — reports the repo reaching 57,200 stars within its first six weeks, faster than OpenClaw at the same stage. By July 2026, <a href="https://techcrunch.com/2026/07/13/hermes-agent-maker-nous-research-in-talks-for-new-funding-at-1-5b-valuation/">TechCrunch</a> put it at roughly 214,000 stars; on the day I write this (1 September 2026), GitHub shows nearly 240,000 stars and close to 49,000 forks.</p>
+
+    <p>One clear tailwind came in April 2026, when Anthropic blocked personal subscription (Pro/Max) access through third-party harnesses — a change that hit every harness equally. Hermes Atlas records a visible rise in migration traffic in early April following that announcement, and through the following weeks Hermes's usage on OpenRouter climbed until it overtook OpenClaw for the top spot in daily tokens around mid-May 2026.</p>
+
+    <p>Behind the project stands <a href="https://nousresearch.com/">Nous Research</a>, founded in 2023 by Jeffrey Quesnelle, Karan Malhotra, Ryan Teknium and Shivani Mitra, with roughly $70M raised to date. Per TechCrunch's July 2026 reporting, the company is <em>in talks</em> — not closed — for at least $75M more at a $1.5B valuation.</p>
+
+    <p>So what does "grows with you" actually mean? Two mechanisms carry the claim: <strong>bounded memory</strong> — agent-curated memory files kept under a hard size budget, backed by full-text search across every past transcript — and a <strong>learning loop</strong> that lets the agent create and refine skills from its own experience. Each deserves a full post, and each gets one (#3 Memory and #6 Skills). For this 101, the pin to place is simply that this is the design bet separating Hermes from the previous generation of harnesses — and the bet this series will scrutinise hardest.</p>
+
+    <h3>The ecosystem in numbers</h3>
+
+    <p>The metric I weight more heavily than stars is the density of the ecosystem around a project. The Hermes Atlas April 2026 snapshot counted over 80 community projects, 17 skill libraries, and roughly 90,750 stars across the wider ecosystem, while the main repo's contributor count grew from 242 in March to over 274 within a single month.</p>
+
+    <p>Nous itself matches the community's pace — the company states that co-founder Teknium personally landed 179 PRs in the v0.8 development cycle alone, and Hermes Agent now sits among the company's headline products alongside Hermes 4, Nous Portal, Nous Chat and Simulators.</p>
+
+    <blockquote>💡 My view: GitHub stars are not evidence of quality, but they are evidence of <em>momentum</em> — and in open source, where the community fixes the bugs and writes the integrations, momentum is a real variable that anyone choosing tooling for an organisation has to price in.</blockquote>
+
+    <h2 id="en-agent-vs-models">2. Hermes Agent vs Hermes Models — Don't Confuse the Two</h2>
+
+    <p>Before going further, we need to clear up the single most common confusion, because Nous Research uses the name "Hermes" for <em>two entirely different product lines</em>.</p>
+
+    <p>The first is <strong>Hermes 4</strong> — a family of open-weight, hybrid-reasoning <em>models</em> released around August 2025 in 14B, 70B and 405B parameter sizes, built on Qwen3 and Llama 3.1 bases. The second is <strong>Hermes Agent</strong> — the Python <em>harness</em> this series is about, which is not tied to Hermes models at all: it runs against any model, commercial or open-weight.</p>
+
+    <div class="table-wrapper">
+        <table>
+            <thead>
+                <tr>
+                    <th></th>
+                    <th>Hermes Agent</th>
+                    <th>Hermes 4 (Models)</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td><strong>What it is</strong></td>
+                    <td>Agent harness (Python software, MIT license)</td>
+                    <td>Family of open-weight hybrid-reasoning models</td>
+                </tr>
+                <tr>
+                    <td><strong>Released</strong></td>
+                    <td>25 February 2026 (public launch)</td>
+                    <td>Around August 2025</td>
+                </tr>
+                <tr>
+                    <td><strong>Form</strong></td>
+                    <td>Code that runs on your machine, with any model</td>
+                    <td>Model weights at 14B / 70B / 405B (Qwen3 / Llama 3.1 bases)</td>
+                </tr>
+                <tr>
+                    <td><strong>Relationship</strong></td>
+                    <td>Can call Hermes models via Nous Portal or OpenRouter — but never has to</td>
+                    <td>Usable from other harnesses just as well</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <div class="alert info">
+        <strong>When reading the news:</strong> a headline that just says "Hermes" could mean either. Benchmark stories about MATH scores or reasoning almost always mean the Hermes 4 models; stories about GitHub stars, gateways, CVEs and integrations mean the Agent — the subject of this series.
+    </div>
+
+    <h2 id="en-architecture">3. Architecture at a Glance: CLI, Gateway Daemon, One Session Plane</h2>
+
+    <p>Hermes runs in <strong>dual mode</strong>. On one side sits an interactive CLI/TUI for desk work — multiline editing, slash-command autocomplete, and the ability to interrupt the agent mid-task and redirect it. On the other side sits a single <strong>gateway daemon</strong> that receives messages from every chat platform. The project README states it plainly: "Telegram, Discord, Slack, WhatsApp, Signal, and CLI — all from a single gateway process" (additional channels such as Email live a layer down in the docs), plus a cron subsystem for scheduled jobs.</p>
+
+    <p>The design decision I consider most important is the <strong>single session plane</strong>: whether you type in the CLI, message the agent on Telegram, or let cron wake a job at 3 a.m., everything attaches to the same session system. The agent carries context across channels — unlike setups where the chat bot and the terminal tool are effectively two strangers with separate memories.</p>
+
+    <p>Under the hood, the best architectural deep-dive so far is a third-party analysis by Arize (Nous has published no first-party equivalent yet). Its key findings:</p>
+
+    <ul>
+        <li><strong>Sessions are infrastructure:</strong> stored in SQLite with full-text search (FTS5) and WAL journaling; each turn is source-tagged, with parent-child lineage preserved when conversations are compressed</li>
+        <li><strong>Long-context handling:</strong> older turns are summarised by an auxiliary model, with the head and tail of the conversation protected by a token budget so they are never summarised away</li>
+        <li><strong>Tool registration is separated from tool exposure:</strong> every tool registers in a central registry at import time, but a distinct toolset layer decides what the model actually sees in a given context — a distinction that will matter greatly when we reach post #4 on security</li>
+        <li><strong>The system prompt assembles in three tiers</strong> (stable / context / volatile) and automatically reads context files such as <code>AGENTS.md</code>, <code>CLAUDE.md</code> and <code>.cursorrules</code> from the working directory</li>
+    </ul>
+
+    <p>For execution, the README lists seven backends, verbatim: "local, Docker, SSH, Singularity, Modal, Daytona, and Vercel Sandbox."</p>
+
+    <ul>
+        <li><strong>local</strong> — runs directly on your machine; the simplest start</li>
+        <li><strong>Docker</strong> — isolates the agent's work in a container</li>
+        <li><strong>SSH</strong> — drives a remote machine over SSH</li>
+        <li><strong>Singularity</strong> — the container flavour familiar to HPC and university clusters</li>
+        <li><strong>Modal / Daytona</strong> — the serverless pair: environments hibernate when idle, which the README positions as costing nearly nothing between sessions</li>
+        <li><strong>Vercel Sandbox</strong> — sandboxed execution on Vercel's infrastructure</li>
+    </ul>
+
+    <p>For a 101, knowing the options exist is enough — choosing the right backend for real workloads and multi-user setups is a full topic for post #7 on production.</p>
+
+    <blockquote>💡 If you read the OpenClaw series, this picture will feel familiar: the central gateway joining many channels is the pattern OpenClaw made mainstream. What Hermes adds is promoting sessions to first-class infrastructure (SQLite + FTS5) and deliberately separating the tool-exposure layer from day one.</blockquote>
+
+    <h2 id="en-install">4. Install in 60 Seconds — and What Lands on Disk</h2>
+
+    <p>The prerequisites are surprisingly thin: you need <strong>Git</strong>, and on Linux additionally curl and xz-utils. Everything else the installer handles itself — it fetches uv, Python 3.11, Node.js v26, ripgrep and ffmpeg per-user, <em>with no sudo at all</em>. The full details are in the <a href="https://hermes-agent.nousresearch.com/docs/getting-started/installation">official installation docs</a>.</p>
+
+    <pre><code># Linux / macOS / WSL2 / Termux — one line
+curl -fsSL https://hermes-agent.nousresearch.com/install.sh | bash
+
+# reload PATH, then run it
+source ~/.bashrc
+hermes</code></pre>
+
+    <pre><code># Windows — PowerShell
+iex (irm https://hermes-agent.nousresearch.com/install.ps1)</code></pre>
+
+    <p>For anyone allergic to terminals, native desktop installers exist for macOS 12+ and Windows 10/11. For server people: the README keeps hardware positioning deliberately broad — verbatim, "Run it on a $5 VPS, a GPU cluster, or serverless infrastructure that costs nearly nothing when idle" — and no official minimum spec is published. So I will say "a $5-VPS-class box is enough to start" and resist inventing RAM/CPU numbers the vendor never printed.</p>
+
+    <h3>What lands on disk</h3>
+
+    <p>The installer keeps everything in user space and touches nothing system-wide:</p>
+
+    <pre><code># after install (Linux / macOS — per-user)
+~/.hermes/                  # all agent config and state
+~/.hermes/hermes-agent/     # the harness code itself
+~/.local/bin/hermes         # the binary you invoke
+
+# Windows (native install)
+%LOCALAPPDATA%\hermes\      # everything lives under this folder
+
+# root/system-wide install (e.g. on a server)
+/usr/local/lib/hermes-agent/   # code
+/usr/local/bin/hermes          # binary
+/root/.hermes/                 # state (or set your own via $HERMES_HOME)</code></pre>
+
+    <p>Having the entire state under <code>~/.hermes/</code> makes backup trivially easy — copy one folder and you have config, sessions and memory. We will lean on that property hard in post #7 on production operations.</p>
+
+    <p>One detail I particularly enjoy: the installer's supported-platform list includes <strong>Termux</strong> — meaning the same one-liner installs Hermes on an Android phone. That fits the project's run-anywhere philosophy quite deliberately.</p>
+
+    <div class="alert">
+        <strong>Windows note:</strong> the README warns that Windows Defender may flag uv.exe during install; the documented fix is whitelisting the <code>$env:LOCALAPPDATA\hermes\bin</code> folder. This is a false positive pattern common to modern Python tooling.
+    </div>
+
+    <h2 id="en-first-run">5. First Run: setup, model, tools, portal, gateway</h2>
+
+    <p>After installation, first-time configuration is a short command sequence the README lays out explicitly, starting with the wizard:</p>
+
+    <pre><code># 1) run the first-time setup wizard
+hermes setup
+
+# 2) choose your provider and model
+hermes model
+
+# 3) list tools, and enable/disable them individually
+hermes tools</code></pre>
+
+    <p>If you use <strong>Nous Portal</strong> (the Nous cloud service — details in the next section), there is an even faster path: a single OAuth grants both a model and every Tool Gateway tool at once. This is the route that keeps "install in 60 seconds" from being pure marketing:</p>
+
+    <pre><code># one OAuth — a model plus the full Tool Gateway toolset
+hermes setup --portal
+
+# check account status and remaining credits
+hermes portal info</code></pre>
+
+    <p>The final step, for anyone who wants the agent living inside a messaging app, is the gateway:</p>
+
+    <pre><code># configure chat channels (Telegram, Discord, Slack, WhatsApp, Signal)
+hermes gateway setup
+
+# start the daemon — one process serves every channel
+hermes gateway start</code></pre>
+
+    <p>During a conversation, you can switch models live with a slash command — no config edits, no restart:</p>
+
+    <pre><code># switch models mid-conversation — provider:model form
+/model &lt;provider:model&gt;</code></pre>
+
+    <p>My recommended order for the first hour:</p>
+
+    <ol>
+        <li>Install with the one-liner, then run <code>hermes setup</code> and answer the wizard to the end</li>
+        <li>Pick a model with <code>hermes model</code> (or <code>hermes setup --portal</code> if you have decided on Portal)</li>
+        <li>Work with the agent CLI-only for a day — try document summaries, research questions, small coding tasks</li>
+        <li>Review <code>hermes tools</code> and disable what you do not yet need</li>
+        <li>Configure the gateway last, once you understand how the agent behaves</li>
+    </ol>
+
+    <p>The reason for step 5: plugging an agent you do not yet understand into Telegram in hour one is a recipe for accidents — a lesson the OpenClaw era taught the hard way, and one post #4 on security will unpack with evidence.</p>
+
+    <h3>Cheat sheet — every command in this post</h3>
+
+    <pre><code>hermes setup             # first-time setup wizard
+hermes model             # choose provider / model
+hermes tools             # list and manage tools
+hermes setup --portal    # one OAuth via Nous Portal
+hermes portal info       # account status and credits
+hermes gateway setup     # configure chat channels
+hermes gateway start     # start the gateway daemon
+hermes claw migrate      # migrate from OpenClaw
+/model provider:model    # switch models mid-conversation (in-session)</code></pre>
+
+    <h2 id="en-models-money">6. Models and Money: MIT-Free Software, 300+ Models, Portal Tiers</h2>
+
+    <p>The money story splits into three layers, and keeping them separate matters because much of the internet writes them into one confused blur.</p>
+
+    <p><strong>Layer one — the software: genuinely free.</strong> Hermes Agent is MIT-licensed and runs on your own machine at zero software cost, and the README leans hard on model independence — "no code changes, no lock-in."</p>
+
+    <p><strong>Layer two — the models: pay whoever you choose.</strong> The strength here is breadth: the README advertises "300+ models" via Nous Portal, alongside OpenRouter, OpenAI, Google AI Studio, or any custom endpoint — roughly twenty-plus providers in total, all switchable live through <code>/model</code> as shown above.</p>
+
+    <p><strong>Layer three — Nous Portal: the optional subscription.</strong> Pricing as listed at <a href="https://portal.nousresearch.com/">portal.nousresearch.com</a> on the day of writing:</p>
+
+    <div class="table-wrapper">
+        <table>
+            <thead>
+                <tr>
+                    <th>Tier</th>
+                    <th>Price/month</th>
+                    <th>Credits included</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td><strong>Free</strong></td>
+                    <td>$0</td>
+                    <td>—</td>
+                </tr>
+                <tr>
+                    <td><strong>Plus</strong></td>
+                    <td>$20</td>
+                    <td>$22</td>
+                </tr>
+                <tr>
+                    <td><strong>Super</strong></td>
+                    <td>$100</td>
+                    <td>$110</td>
+                </tr>
+                <tr>
+                    <td><strong>Ultra</strong></td>
+                    <td>$200</td>
+                    <td>$220</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <p>The subscription bundles hosted tools: web search and scraping (Firecrawl), image generation (FAL, Krea), cloud browser automation (Browser Use) and speech/TTS (OpenAI). TechCrunch independently corroborates the $20–$200 monthly range. There is also <strong>Hermes Cloud</strong> — an always-on instance Nous provisions for you, billed hourly against Portal credits and scaling to zero when idle. Its hourly rate is not published, so I will not print one.</p>
+
+    <p>For organisations: Hermes Cloud entered public preview around July 2026 with team-level features — Nous's official announcement describes it as letting you "spin up agents for everyone at your org with granular access controls and unified billing, all from Nous Portal", and the Cloud page sets the entry condition at a minimum of $10 in credits or an active subscription to deploy. We will weigh those org-level access controls seriously in posts #4 (Security) and #7 (Production).</p>
+
+    <div class="alert danger">
+        <strong>Beware the "$5/month" misconception:</strong> that widely shared figure is the price of <em>a VPS you rent yourself to self-host</em>, straight from the README's positioning ("Run it on a $5 VPS…"). It is not a Nous tier — and the third-party hosts selling "managed Hermes" at similar prices are exactly that: third parties, not Nous services.
+    </div>
+
+    <div class="alert info">
+        <strong>For Claude users:</strong> since Anthropic blocked personal subscription (Pro/Max) access through third-party harnesses in April 2026, calling Claude models from Hermes requires pay-as-you-go API keys or Nous Portal. The same condition applies to OpenClaw — this is not a Hermes-specific limitation.
+    </div>
+
+    <h2 id="en-migrate">7. Coming from OpenClaw: hermes claw migrate</h2>
+
+    <p>This section is written specifically for readers of my earlier series. Nous knows perfectly well that its most valuable prospective users are people with a working OpenClaw setup, so it shipped the defection tool as a single command:</p>
+
+    <pre><code># migrate from OpenClaw — auto-imports the whole setup
+hermes claw migrate
+
+# verify: imported skills are kept separate, here
+ls ~/.hermes/skills/openclaw-imports/</code></pre>
+
+    <p>What the command handles for you:</p>
+
+    <ul>
+        <li><strong>Skills:</strong> imported into <code>~/.hermes/skills/openclaw-imports/</code>, kept apart from skills born on the Hermes side — both ecosystems share the SKILL.md standard (agentskills.io), so the core format is portable</li>
+        <li><strong>Memory:</strong> all of OpenClaw's daily log files are parsed, merged and deduplicated into Hermes's single bounded MEMORY.md</li>
+        <li><strong>Messaging tokens:</strong> chat-channel credentials come across too, sparing you a second round of gateway setup</li>
+    </ul>
+
+    <p>The memory item is the sharpest philosophical difference between the two camps. Readers of my <a href="/blog/openclaw-memory">OpenClaw Memory</a> post will remember the MEMORY.md + USER.md pair plus append-forever daily logs — a structure that grows without limit. Hermes bets the opposite way: hard caps on the curated memory files (the Hermes Atlas April snapshot puts them at roughly 2,200 characters for MEMORY.md and 1,375 for USER.md), compensated by FTS5 search across the full transcript history. Which side is right is a question big enough to fill post #3 entirely.</p>
+
+    <p>One migration-cost reducer people overlook: Hermes reads other ecosystems' context files <em>directly</em>. An organisation that has already invested in a good CLAUDE.md or AGENTS.md keeps using it from day one, unconverted:</p>
+
+    <pre><code># Hermes reads these from the working directory automatically
+AGENTS.md       # the cross-harness convention
+CLAUDE.md       # your existing file from the Claude Code / OpenClaw era
+.cursorrules    # Cursor's file works too</code></pre>
+
+    <div class="table-wrapper">
+        <table>
+            <thead>
+                <tr>
+                    <th>Aspect</th>
+                    <th>OpenClaw</th>
+                    <th>Hermes Agent</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td><strong>Runtime</strong></td>
+                    <td>Node.js</td>
+                    <td>Python</td>
+                </tr>
+                <tr>
+                    <td><strong>Memory model</strong></td>
+                    <td>MEMORY.md + USER.md + unbounded daily logs</td>
+                    <td>Bounded curated files + FTS5 transcript search</td>
+                </tr>
+                <tr>
+                    <td><strong>Skills</strong></td>
+                    <td>SKILL.md standard (agentskills.io)</td>
+                    <td>Same standard + a learning loop that writes its own</td>
+                </tr>
+                <tr>
+                    <td><strong>Migration path</strong></td>
+                    <td>Official guide for moving <em>away from</em> Hermes at docs.openclaw.ai</td>
+                    <td><code>hermes claw migrate</code>, one command</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <p>The interesting part is that migration runs in <em>both directions</em>, and both vendors document their side — OpenClaw maintains an official guide for users coming back from Hermes. That is what a genuinely contested user base looks like, and it is good news for users: switching costs are falling in both directions, and the bargaining power sits with us.</p>
+
+    <h2 id="en-road-ahead">8. The Road Ahead: What This Series Covers</h2>
+
+    <p>Hermes moves fast enough that any article ages in weeks — as this post goes out, the latest release is <strong>v0.21.0</strong> (tag v2026.8.31, published 31 August 2026). To see the cadence, here are the milestones verifiable from the GitHub releases page and from Hermes Atlas's reporting — with the caveat that the early release history is only partly visible (the oldest release still shown on GitHub is v0.2.0, tag v2026.3.12, so nobody can confirm which version launch day ran):</p>
+
+    <ul>
+        <li><strong>v0.8.0</strong> (8 Apr 2026) — closed out the heaviest early cycle (the one where Teknium alone merged 179 PRs), including worktree cleanup work</li>
+        <li><strong>v0.20.0</strong> (3 Aug 2026) — the big one: streaming voice, an Agent-to-Agent protocol, artifacts, webhooks</li>
+        <li><strong>The v0.20.x train</strong> (through Aug 2026) — rapid patches: migration to MCP 2.x, skill security scanning, Bot Mode group threads, consent-gated browser profiles</li>
+        <li><strong>v0.21.0</strong> (31 Aug 2026) — <strong>Bot Mode</strong> — a society of named agents with their own faces and group chats — fully bundled into the desktop app (the feature began life earlier as a public beta plugin)</li>
+    </ul>
+
+    <p>Mid-year was not empty either — external release trackers record the v0.19.0 cycle around July as focused on speed, reporting a roughly 80% cut in first-turn cold-start time (a third-party figure I have not seen Nous confirm itself, so I note it with that condition attached).</p>
+
+    <p>The plan for all seven posts — deliberately the same skeleton as the OpenClaw series, so the two can be compared like for like:</p>
+
+    <ul>
+        <li><strong>#2 Agent Teams:</strong> delegate_task, the durable Kanban board, and Bot Mode — Hermes has several distinct multi-agent layers that must not be conflated</li>
+        <li><strong>#3 Memory:</strong> the bounded-memory-plus-FTS5 philosophy versus OpenClaw's daily logs — and its limits</li>
+        <li><strong>#4 Security:</strong> Hermes was designed with the OpenClaw era's accidents in mind, yet has accumulated CVEs of its own — both halves of that story</li>
+        <li><strong>#5 Integrations:</strong> chat channels, MCP, webhooks and the A2A protocol</li>
+        <li><strong>#6 Skills:</strong> the learning loop that lets the agent write its own skills — tested live, not taken on faith</li>
+        <li><strong>#7 Production:</strong> the seven backends, Hermes Cloud, monitoring, and lessons learned</li>
+    </ul>
+
+    <p>I intend this series as an <em>examination</em>, not a cheer. Where the evidence is third-party or unproven, I will say so plainly — as I have done throughout this post — and where Hermes genuinely delivers, it will get credit on the same standard of evidence.</p>
+
+    <div class="key-takeaways">
+        <h3>🎯 Key Takeaways</h3>
+        <ul>
+            <li><strong>Hermes Agent</strong> = an MIT-licensed agent harness from Nous Research, written in Python — free software that runs any model, locked to no vendor</li>
+            <li><strong>Hermes 4</strong> = a family of open-weight <em>models</em>, a separate product from the Agent — always disambiguate when reading the news</li>
+            <li><strong>Gateway daemon</strong> = one process joining Telegram, Discord, Slack, WhatsApp, Signal and the CLI onto a single session plane, plus cron</li>
+            <li><strong>Installation</strong> = one line, needing only Git; the installer handles the rest without sudo, and all state lives under ~/.hermes/</li>
+            <li><strong>hermes setup --portal</strong> = one OAuth granting a model plus the full hosted toolset — the real 60-second path</li>
+            <li><strong>Nous Portal</strong> = $0 / $20 / $100 / $200 per month with credits included — the shared "$5/month" figure is a self-hosted VPS price, not a Nous tier</li>
+            <li><strong>hermes claw migrate</strong> = one command moving skills, memory and messaging tokens over from OpenClaw — with a documented path back the other way too</li>
+        </ul>
+    </div>
+
+    </div>
+
+    <div class="post-series-footer">
+      <span class="l-th">บทความจากซีรีส์ Hermes Agent in Practice 2026</span><span class="l-en" lang="en">From the Hermes Agent in Practice 2026 series</span>
+    </div>
+
+  </article>
+
+  </main>
+
+  <footer class="blog-footer">
+    <nav class="blog-footer__nav" aria-label="Site">
+      <a href="../index.html">Home</a>
+      <a href="./">Blog</a>
+      <a href="../publications/">Publications</a>
+      <a href="../books/">Books</a>
+      <a href="../projects/">Projects</a>
+      <a href="../news/">News</a>
+      <a href="../index.html#contact">Contact</a>
+    </nav>
+    <a href="./">← Back to Blog</a>
+    <span>© 2026 Anirach Mingkhwan — Associate Professor, KMUTNB</span>
+  </footer>
+
+</body>
+</html>
