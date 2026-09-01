@@ -1143,6 +1143,113 @@ def dv_vibe(d, b, c, o):
         circ(d, px, py, h * 0.07, fill=(13, 27, 42) if i < 3 else WHITE)
 
 
+# --------------------------------------------------------------------------
+# Life Thought & Philosophy motifs -- dark ground, gold accent (lamplight).
+# The series grows from "One Day of Light", so the three covers are three
+# hours of one morning: a flame passed on, a signature made, a sun climbing.
+# --------------------------------------------------------------------------
+def lp_waking(d, b, c, o):
+    """A lit candle passing its flame to an unlit one -- the relay of light,
+    nobody wakes themselves the first time.  vs oc_idle's moon (night) and
+    everything else: the only candles on the page."""
+    x0, y0, x1, y1 = b
+    w, h = x1 - x0, y1 - y0
+    base = y1 - h * 0.06
+    for i, (cx, lit, ch) in enumerate([
+            (x0 + w * 0.22, True, h * 0.72), (x0 + w * 0.62, False, h * 0.56)]):
+        cw = h * 0.11
+        d.rectangle([cx - cw, base - ch, cx + cw, base], outline=c["ln"], width=6,
+                    fill=c["fill"])
+        d.line([(cx, base - ch), (cx, base - ch - h * 0.07)], fill=c["ln2"], width=5)
+        if lit:
+            fy = base - ch - h * 0.13
+            circ(d, cx, fy - h * 0.02, h * 0.15, fill=None, outline=c["hif"], w=8)
+            d.polygon([(cx, fy - h * 0.11), (cx + h * 0.052, fy),
+                       (cx, fy + h * 0.075), (cx - h * 0.052, fy)], fill=c["hi"])
+            circ(d, cx, fy, h * 0.024, fill=WHITE)
+    # the travelling spark, mid-arc between the wicks
+    sx0, sy0 = x0 + w * 0.22, base - h * 0.72 - h * 0.26
+    sx1, sy1 = x0 + w * 0.62, base - h * 0.56 - h * 0.16
+    d.arc([sx0, sy0 - h * 0.16, sx1, sy1 + h * 0.1], 200, 340, fill=c["hi"], width=6)
+    circ(d, (sx0 + sx1) / 2 + w * 0.02, sy0 - h * 0.05, h * 0.045, fill=c["hi"])
+    # dawn window at right: a horizon line and a half-risen glow
+    gx_ = x1 - w * 0.17
+    gy = (y0 + y1) / 2
+    d.chord([gx_ - h * 0.3, gy - h * 0.3, gx_ + h * 0.3, gy + h * 0.3], 180, 360,
+            fill=c["hif"], outline=c["hi"], width=6)
+    d.line([(gx_ - h * 0.44, gy), (gx_ + h * 0.44, gy)], fill=c["ln"], width=6)
+
+
+def lp_working(d, b, c, o):
+    """A fountain pen signing beside a clock face -- consult everyone, sign
+    alone, on time.  vs dv_quality's magnifier and dv_sre's dial: this clock
+    has hands, and the pen is the page's only pen."""
+    x0, y0, x1, y1 = b
+    w, h = x1 - x0, y1 - y0
+    cy = (y0 + y1) / 2
+    # clock, left
+    kx = x0 + w * 0.15
+    r = h * 0.4
+    circ(d, kx, cy, r, fill=c["fill"], outline=c["ln"], w=8)
+    for i in range(12):
+        a = i * math.pi / 6
+        d.line([(kx + r * 0.82 * math.cos(a), cy + r * 0.82 * math.sin(a)),
+                (kx + r * 0.94 * math.cos(a), cy + r * 0.94 * math.sin(a))],
+               fill=c["ln2"], width=4)
+    d.line([(kx, cy), (kx, cy - r * 0.58)], fill=c["hi"], width=7)          # 12:00
+    d.line([(kx, cy), (kx + r * 0.38, cy)], fill=c["hi"], width=7)
+    circ(d, kx, cy, h * 0.035, fill=c["hi"])
+    # signature line + pen, right
+    lx0, lx1 = x0 + w * 0.42, x1 - w * 0.04
+    ly = y1 - h * 0.16
+    d.line([(lx0, ly), (lx1, ly)], fill=c["ln2"], width=5)
+    pts = []
+    for i in range(25):
+        t = i / 24
+        pts.append((lx0 + (lx1 - lx0) * 0.55 * t,
+                    ly - h * 0.06 - math.sin(t * math.pi * 3.2) * h * 0.05 * (1 - t)))
+    d.line(pts, fill=c["hi"], width=6, joint="curve")
+    # the pen: nib at the end of the ink stroke, barrel angled up-right
+    nx, ny = pts[-1]
+    ang = -0.7
+    bx2, by2 = nx + h * 0.62 * math.cos(ang), ny + h * 0.62 * math.sin(ang)
+    d.line([(nx, ny), (bx2, by2)], fill=c["ln"], width=13)
+    d.polygon([(nx - h * 0.028, ny - h * 0.028), (nx + h * 0.045, ny - h * 0.075),
+               (nx + h * 0.075, ny - h * 0.045), (nx + h * 0.028, ny + h * 0.028)],
+              fill=c["hi"])
+
+
+def lp_noon(d, b, c, o):
+    """A sun climbing past rain-hatching toward zenith -- fah lang fon, the sky
+    after the rain; morning turning to noon.  vs dv_obs (eye) and lp_waking's
+    half-glow: this sun is FULL, with rays, above a horizon."""
+    x0, y0, x1, y1 = b
+    w, h = x1 - x0, y1 - y0
+    # rain hatching, upper left, thinning as it goes
+    for i in range(6):
+        rx = x0 + w * 0.04 + i * w * 0.055
+        rl = h * (0.26 - i * 0.033)
+        d.line([(rx, y0 + h * 0.04), (rx - h * 0.09, y0 + h * 0.04 + rl)],
+               fill=c["ln2"], width=5)
+    # horizon
+    hy = y1 - h * 0.14
+    d.line([(x0, hy), (x1, hy)], fill=c["ln"], width=7)
+    # the sun, right of centre, well clear of the horizon
+    sx, sy = x0 + w * 0.62, y0 + h * 0.4
+    r = h * 0.26
+    circ(d, sx, sy, r, fill=c["hi"])
+    for i in range(10):
+        a = i * math.pi / 5 + math.pi / 10
+        d.line([(sx + r * 1.28 * math.cos(a), sy + r * 1.28 * math.sin(a)),
+                (sx + r * 1.66 * math.cos(a), sy + r * 1.66 * math.sin(a))],
+               fill=c["hi"], width=7)
+    # its climb: three dots rising from the horizon toward the sun
+    for i, t in enumerate((0.25, 0.55, 0.85)):
+        px = x0 + w * 0.3 + (sx - r * 1.5 - (x0 + w * 0.3)) * t
+        py = hy - (hy - (sy + r * 0.6)) * t
+        circ(d, px, py, h * 0.028 + i * h * 0.012, fill=c["ln2"])
+
+
 MOTIFS = {
     "oc_os": oc_os, "oc_team": oc_team, "oc_memory": oc_memory,
     "oc_security": oc_security, "oc_integrations": oc_integrations,
@@ -1156,6 +1263,7 @@ MOTIFS = {
     "dv_secpipe": dv_secpipe, "dv_auth": dv_auth, "dv_obs": dv_obs, "dv_sre": dv_sre,
     "dv_iac": dv_iac, "dv_cloud": dv_cloud, "dv_deploy": dv_deploy,
     "dv_webarch": dv_webarch, "dv_frontend": dv_frontend, "dv_vibe": dv_vibe,
+    "lp_waking": lp_waking, "lp_working": lp_working, "lp_noon": lp_noon,
 }
 
 

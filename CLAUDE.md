@@ -30,8 +30,8 @@ Deploy by pushing to `main` — GitHub Pages auto-deploys. There is no `.nojekyl
 │                       #   the site is zero-JavaScript and INV-38 fails the build on any
 │                       #   <script> that is not application/ld+json. See "Zero JavaScript" below.
 ├── blog/
-│   ├── index.html      # Blog listing — fully static, zero JavaScript, a featured post + 2 series (no category band)
-│   └── *.html          # 37 self-contained posts (own <style>, own :root, own nav markup)
+│   ├── index.html      # Blog listing — fully static, zero JavaScript, a featured post + 3 series (no category band)
+│   └── *.html          # 40 self-contained posts (own <style>, own :root, own nav markup)
 ├── books/              # Books & writing (nav label "Books") — all self-contained
 │   ├── index.html      #   the section index: the last-lecture book + 1 published novel + 2 complete manuscripts
 │   ├── one-day-of-light.html         # per-book detail page (+ one-day-of-light-{en,th}.pdf — free downloads, served from books/)
@@ -45,9 +45,9 @@ Deploy by pushing to `main` — GitHub Pages auto-deploys. There is no `.nojekyl
 ├── robots.txt          # Allow all + Sitemap: line. VERIFIED 2026-08-26 post-deploy:
 │                       #   the repo file REPLACES Cloudflare's Content Signals block
 │                       #   outright — it is not prepended, as was first assumed
-├── sitemap.xml         # 47 canonical URLs, hand-maintained — 404.html excluded
+├── sitemap.xml         # 50 canonical URLs, hand-maintained — 404.html excluded
 ├── favicon.ico         # + apple-touch-icon.png (180×180) — both probed at the root by default
-├── images/             # 64 files — covers (<slug>-cover.jpg; books/ titles carry both language faces as -cover-en/-th or -cover-front/-back), 9 share cards (og-*.jpg, <slug>-og.jpg — all 1200×630), diagram PNGs, posters, the event QR
+├── images/             # 104 files — covers (<slug>-cover.jpg; books/ titles carry both language faces as -cover-en/-th or -cover-front/-back), 9 share cards (og-*.jpg, <slug>-og.jpg — all 1200×630), diagram PNGs, posters, the event QR
 ├── docs/               # design spec, implementation plan, OpenClaw news runbook + gate
 ├── .claude/skills/     # page-design · blog-post · a11y-perf · site-check
 ├── _config.yml         # Jekyll excludes: docs/, CLAUDE.md (see Development)
@@ -56,7 +56,7 @@ Deploy by pushing to `main` — GitHub Pages auto-deploys. There is no `.nojekyl
 
 **Every blog page is an island — and so is each of `books/` (its index and all four detail pages), `publications/`, `projects/`, `news/`.** None of them link `style.css`; each embeds its full stylesheet in a `<style>` block and defines its own `:root` variables (copied from the same canonical token set `style.css` also carries). Editing `style.css` affects only the landing page. Editing one post or one of the eight section-directory pages affects only that file — there is no shared partial, so changes that should apply "everywhere" must be repeated per file (this is what commit `4c180c9` "Standardize series navigation across all 7 OpenClaw posts" was doing).
 
-### Content is organized as one featured post and two series
+### Content is organized as one featured post and three series
 
 There are **no `.category` bands left**. The last one, "Technology", held 100% of the posts, so it
 partitioned nothing — a reader met an emoji, the word "Technology" and "37 articles" (the same 37
@@ -64,21 +64,24 @@ the hero had just announced) before reaching any post. It was deleted on 2026-08
 Philosophy and Lifestyle bands had gone earlier, as empty "First posts coming soon" placeholders
 that sat for 16 days with nothing able to expire them.
 
-`blog/index.html` is therefore, in order: hero → **one featured post** → two `.series-section`
+`blog/index.html` is therefore, in order: hero → **one featured post** → three `.series-section`
 blocks. No category-filter UI, no client-side JS.
 
 - `#series-openclaw` — "OpenClaw for Organizations" (13 cards; 7 of them are the numbered series, the rest standalone)
 - `#series-devops` — "DevOps & Vibe Coding" (24 cards)
+- `#series-life` — "Life Thought & Philosophy" (3 cards, added 2026-09-01) — bilingual essays grown
+  from the Morning part of *One Day of Light*; each post carries a pure-CSS TH ⇄ EN switch
+  (checkbox + sibling selectors, Thai default; INV-38-clean) and its own 3-chip `.series-nav`
+  strip, whose content no SERIES7 check polices
 
-The hero `.blog-hero__stats` reads **2 Series · 37 Articles**; there is deliberately no
+The hero `.blog-hero__stats` reads **3 Series · 40 Articles**; there is deliberately no
 "N Categories" stat, though INV-02e still verifies one if it is ever reinstated, and INV-02d still
 fails on any empty `.category` band a future commit adds.
 
 **The featured post is `class="feature"`, never `class="card"`.** Three separate regexes count
 `class="card"` (`check_site.py` RE_CARD, `scripts/gen_feed.py`, blog-post's `verify-wiring.py`), so
 a 38th match would inflate every counter and put a duplicate item in the feed. It spotlights the
-newest post by git first-commit date — today `openclaw-migration`, which is already the first card,
-so nothing is reordered. **Card order IS the prev/next chain and must never move.**
+newest post by git first-commit date — today `morning-waking`, the opener of the Life series. **Card order IS the prev/next chain and must never move.**
 
 The heading ladder is `h1` hero → `h2` series (and the feature) → `h3` card title. It was a level
 deeper until the category band went. `check_site.py` and `verify-wiring.py` read
@@ -91,7 +94,7 @@ Match the pattern to the post's series; do not mix them.
 
 | Pattern | Used by | Markup | Link style |
 |---|---|---|---|
-| `.series-nav` chip strip | the 7 numbered OpenClaw posts | `<div class="series-nav">` + `.series-links` with `<a>` for others and `<span class="current">` for self | absolute, extensionless: `/blog/openclaw-memory` |
+| `.series-nav` chip strip | the 7 numbered OpenClaw posts, and (own 3-chip strip, 2026-09-01) the 3 `morning-*` Life posts | `<div class="series-nav">` + `.series-links` with `<a>` for others and `<span class="current">` for self | absolute, extensionless: `/blog/openclaw-memory` |
 | `.post-nav` prev/next pair | the 24 DevOps-chain posts, `git-branching` (the head) included since 2026-08-26 | `<div class="post-nav">` (a `div`, never `<nav>` — INV-04c) holding two `.post-nav__link` with `.post-nav__dir` (`← Previous` / `Next →`) and `.post-nav__title`; both chain ends point at `./` | relative with extension: `openclaw-memory.html` |
 | none | `beyond-plugins`, `claude-code-architecture`, `idle-self-improvement`, `obsidian-ai-jarvis`, `openclaw-memory-architecture`, `openclaw-migration` (`NO_NAV_POSTS` in `check_site.py`; the two `-architecture` posts lost their DevOps-style nav on 2026-08-26) | — | — |
 
@@ -99,7 +102,7 @@ The numbered OpenClaw series order is fixed: `openclaw-101` → `agent-teams` �
 
 ## Conventions
 
-- **Language**: `<html lang="th">` on posts. All 6 nav-bearing index pages (`index.html`, `blog/index.html`, `books/index.html`, `publications/index.html`, `projects/index.html`, `news/index.html`) and the 4 `books/` detail pages are `lang="en"`. Headings and technical terms in English, body prose in Thai (marked with `<span lang="th">` on the section pages).
+- **Language**: `<html lang="th">` on posts — including the 3 bilingual `morning-*` posts, whose EN track is `lang="en"` wrappers behind the CSS switch. All 6 nav-bearing index pages (`index.html`, `blog/index.html`, `books/index.html`, `publications/index.html`, `projects/index.html`, `news/index.html`) and the 4 `books/` detail pages are `lang="en"`. Headings and technical terms in English, body prose in Thai (marked with `<span lang="th">` on the section pages).
 - **CSS variables**: defined per-file in each blog page's own `:root`. Re-keyed to the book covers on 2026-08-26 (`scripts/retoken.py`, 28 tokens in 49 blocks): `--navy: #11304b`, `--blue: #226299` (a TEXT colour now — 6.4:1 on white), `--blue-dark: #1a4d7a`, `--blue-light: #4992b9` (**borders only**), `--slate: #334155`, `--slate-light: #526174`, `--bg: #faf7f0`, brand `--gold: #c4a46c` / `--gold-dark: #7a5f22` / `--cloud` / `--parchment`, and `--focus` (re-pointed to gold inside footers and `<pre>`, where the blue ring collapses to 2.12:1). `--font` (Inter + Sarabun for Thai), `--mono` (JetBrains Mono + Sarabun). Longer posts add semantic accents (`--green`, `--amber`, `--purple`, `--code-bg`). Copy the `:root` from the nearest sibling post rather than inventing one. `openclaw-101.html` predates this and uses raw hex throughout.
 - **Fonts**: Google Fonts `<link>` per page — Inter 300–900, **Sarabun 400/600/700 for Thai** (looped, the Thai body-prose convention; added 2026-08-26 to 39 pages — the 10 island posts load no webfont at all and are deferred to the island conversion), plus JetBrains Mono 400–600 on posts with code.
 - **Diagrams**: render as PNG in `images/` and `<img>` them in. Inline HTML/CSS and ASCII-art diagrams have repeatedly broken layout and were replaced (`c270892`, `4ae2660`) — do not reintroduce them.
@@ -131,7 +134,7 @@ deliberately carries **no** counter: the gate slices only `#published` and `#man
 `#last-lecture` sits above both, outside every slice — the precedent is `#academic`, which is
 also counter-free. Do not "fix" it by adding one.
 
-Current values, re-derive rather than trust: 2 Series · 37 Articles (13 OpenClaw + 24 DevOps) ·
+Current values, re-derive rather than trust: 3 Series · 40 Articles (13 OpenClaw + 24 DevOps + 3 Life) ·
 7 news updates · 8 chapters (publications) · 1 novel + 2 complete (books).
 
 `books/` detail pages have their own wiring check: `check_site.py` INV-26 fails if a
