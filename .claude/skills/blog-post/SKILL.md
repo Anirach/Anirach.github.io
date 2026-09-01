@@ -317,11 +317,11 @@ immediately.
 |---|---|---|
 | `.blog-hero__stat` "N Categories" | — | the stat was deleted 2026-08-26; re-add it only if a second `.category` band ever ships, and INV-02e will then verify it |
 | `.blog-hero__stat` "N Series" | 3 | only if you add a `.series-section` |
-| `.blog-hero__stat` "N Articles" | 40 | **yes, always** |
+| `.blog-hero__stat` "N Articles" | 46 | **yes, always** |
 | `.category__count` `#cat-technology` | 37 articles | **yes**, for a Technology post |
 | `.series-count` `#series-openclaw` | 13 articles | yes, if the post lands there |
 | `.series-count` `#series-devops` | 24 articles | yes, if the post lands there |
-| `.series-count` `#series-life` | 3 | if the post lands there |
+| `.series-count` `#series-life` | 9 | if the post lands there |
 
 **No line numbers.** They have moved twice (Task 10 and Task 11) and every hardcoded one
 in this skill had rotted. Grep for the class.

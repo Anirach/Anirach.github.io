@@ -1250,6 +1250,157 @@ def lp_noon(d, b, c, o):
         circ(d, px, py, h * 0.028 + i * h * 0.012, fill=c["ln2"])
 
 
+def lp_firstfire(d, b, c, o):
+    """A brazier on a tripod, first fire of the working day, a checkmark spark
+    above it -- the word as checksum, the problem worth lighting.  vs
+    lp_waking's candles and lp_longlight's torches: a BOWL of fire."""
+    x0, y0, x1, y1 = b
+    w, h = x1 - x0, y1 - y0
+    cx = x0 + w * 0.24
+    by = y1 - h * 0.08
+    bw = h * 0.52
+    d.chord([cx - bw, by - bw, cx + bw, by + bw], 180, 360, fill=c["fill"],
+            outline=c["ln"], width=7)
+    for s_ in (-1, 1):
+        d.line([(cx + s_ * bw * 0.5, by), (cx + s_ * bw * 0.85, y1 + h * 0.02)],
+               fill=c["ln"], width=8)
+    d.chord([cx - bw * 0.8, by - bw * 0.8, cx + bw * 0.8, by + bw * 0.8],
+            180, 360, fill=c["hif"])
+    for i, (dx, fh) in enumerate([(-0.28, 0.3), (0.0, 0.46), (0.26, 0.34)]):
+        fx = cx + bw * dx
+        d.polygon([(fx, by - bw * 0.2 - h * fh), (fx + h * 0.07, by - bw * 0.16),
+                   (fx, by - bw * 0.06), (fx - h * 0.07, by - bw * 0.16)],
+                  fill=WHITE if i == 1 else c["hi"])
+    tx, ty = x0 + w * 0.68, (y0 + y1) / 2
+    circ(d, tx, ty, h * 0.3, fill=None, outline=c["ln2"], w=7)
+    d.line([(tx - h * 0.13, ty), (tx - h * 0.03, ty + h * 0.11),
+            (tx + h * 0.16, ty - h * 0.13)], fill=c["hi"], width=10, joint="curve")
+
+
+def lp_highheat(d, b, c, o):
+    """A signpost with THREE tines where the map printed two, a rehearsed storm
+    outlined behind it.  vs dv_gitops/dv_git: a POST, not a graph."""
+    x0, y0, x1, y1 = b
+    w, h = x1 - x0, y1 - y0
+    px = x0 + w * 0.34
+    d.line([(px, y0 + h * 0.1), (px, y1)], fill=c["ln"], width=9)
+    for i, (ang, ln) in enumerate([(-0.32, 0.34), (0.0, 0.4), (0.3, 0.34)]):
+        ay = y0 + h * (0.16 + i * 0.24)
+        ex = px + w * ln
+        ey = ay + math.tan(ang) * w * ln * 0.4
+        d.line([(px, ay), (ex, ey)], fill=c["hi"] if i == 1 else c["ln2"], width=8)
+        d.polygon(poly(ex, ey, h * 0.05, 3, ang), fill=c["hi"] if i == 1 else c["ln2"])
+    sx, sy = x0 + w * 0.1, y0 + h * 0.2
+    for k in range(3):
+        d.arc([sx - h * 0.16 + k * h * 0.12, sy - h * 0.12, sx + h * 0.12 + k * h * 0.12,
+               sy + h * 0.14], 160, 380, fill=c["ln2"], width=5)
+    for k in range(2):
+        d.line([(sx + k * h * 0.14, sy + h * 0.18), (sx - h * 0.05 + k * h * 0.14, sy + h * 0.32)],
+               fill=c["ln2"], width=5)
+
+
+def lp_longlight(d, b, c, o):
+    """Two torches tilted flame-to-flame -- teaching as ignition, the flame
+    passed at the day's long light.  vs lp_waking: TORCHES touching, not
+    candles under an arc."""
+    x0, y0, x1, y1 = b
+    w, h = x1 - x0, y1 - y0
+    mx, my = (x0 + x1) / 2, y0 + h * 0.24
+    for s_, base_x in ((-1, x0 + w * 0.18), (1, x1 - w * 0.18)):
+        tipx, tipy = mx + s_ * w * 0.055, my + h * 0.1
+        d.line([(base_x, y1), (tipx, tipy)], fill=c["ln"], width=11)
+        d.line([(tipx - s_ * h * 0.05, tipy + h * 0.03), (tipx + s_ * h * 0.05, tipy - h * 0.03)],
+               fill=c["ln"], width=13)
+    d.polygon([(mx, my - h * 0.26), (mx + h * 0.1, my - h * 0.02),
+               (mx, my + h * 0.1), (mx - h * 0.1, my - h * 0.02)], fill=c["hi"])
+    circ(d, mx, my - h * 0.04, h * 0.035, fill=WHITE)
+    for i in range(3):
+        a = -math.pi / 2 + (i - 1) * 0.6
+        circ(d, mx + h * 0.4 * math.cos(a), my - h * 0.1 + h * 0.34 * math.sin(a),
+             h * 0.028, fill=c["gold"])
+
+
+def lp_truenorth(d, b, c, o):
+    """A compass rose, needle firm on N -- the one instrument that survived
+    every recalibration.  vs dv_sre's gauge: a rose with cardinal ticks and a
+    two-colour needle, no arc scale."""
+    x0, y0, x1, y1 = b
+    w, h = x1 - x0, y1 - y0
+    cx, cy = x0 + w * 0.3, (y0 + y1) / 2
+    r = h * 0.46
+    circ(d, cx, cy, r, fill=c["fill"], outline=c["ln"], w=8)
+    for i in range(8):
+        a = i * math.pi / 4
+        k = 0.82 if i % 2 else 0.72
+        d.line([(cx + r * k * math.cos(a), cy + r * k * math.sin(a)),
+                (cx + r * 0.94 * math.cos(a), cy + r * 0.94 * math.sin(a))],
+               fill=c["ln2"], width=5)
+    label(d, cx, cy - r * 1.24, "N", c["hi"], h * 0.2)
+    d.polygon([(cx, cy - r * 0.62), (cx + r * 0.14, cy), (cx, cy + r * 0.1),
+               (cx - r * 0.14, cy)], fill=c["hi"])
+    d.polygon([(cx, cy + r * 0.62), (cx + r * 0.14, cy), (cx, cy - r * 0.1),
+               (cx - r * 0.14, cy)], fill=c["fill"], outline=c["ln"], width=4)
+    circ(d, cx, cy, h * 0.045, fill=c["ln"])
+    tx = x1 - w * 0.24
+    d.text((tx, cy - h * 0.08), "พอ", font=thai_font(int(h * 0.5)),
+           fill=c["hi"], anchor="mm")
+    d.line([(tx - h * 0.34, cy + h * 0.3), (tx + h * 0.34, cy + h * 0.3)],
+           fill=c["gold"], width=7)
+
+
+def lp_openhand(d, b, c, o):
+    """An open hand, palm up, a small sphere floating just above it -- held
+    lightly, already given back.  The page's only hand."""
+    x0, y0, x1, y1 = b
+    w, h = x1 - x0, y1 - y0
+    cx, cy = (x0 + x1) / 2, y1 - h * 0.18
+    pw = min(w * 0.3, h * 0.9)
+    d.arc([cx - pw / 2, cy - pw * 0.24, cx + pw / 2, cy + pw * 0.4], 20, 160,
+          fill=c["ln"], width=10)
+    for i in range(4):
+        fx = cx - pw * 0.3 + i * pw * 0.2
+        fl = pw * (0.34 if i in (0, 3) else 0.42)
+        ang = -1.72 + i * 0.16
+        d.line([(fx, cy + pw * 0.04), (fx + fl * math.cos(ang), cy + fl * math.sin(ang))],
+               fill=c["ln"], width=10)
+    tx = cx - pw * 0.62
+    d.line([(tx, cy + pw * 0.1), (tx - pw * 0.16, cy - pw * 0.12)], fill=c["ln"], width=9)
+    circ(d, cx, cy - h * 0.44, h * 0.17, fill=c["hif"], outline=c["hi"], w=7)
+    d.arc([cx - h * 0.09, cy - h * 0.48, cx + h * 0.02, cy - h * 0.38], 120, 260,
+          fill=WHITE, width=4)
+    for s_ in (-1, 1):
+        d.line([(cx + s_ * h * 0.24, cy - h * 0.36), (cx + s_ * h * 0.3, cy - h * 0.3)],
+               fill=c["ln2"], width=4)
+
+
+def lp_beforedark(d, b, c, o):
+    """A door left ajar with light spilling through, one star above -- the
+    graceful goodbye; the light stays on behind you.  The page's only door."""
+    x0, y0, x1, y1 = b
+    w, h = x1 - x0, y1 - y0
+    dx0 = (x0 + x1) / 2 - w * 0.1
+    dw, dh = min(w * 0.2, h * 0.6), h * 0.88
+    dy = y1 - dh
+    rr(d, (dx0 - dw * 0.16, dy - dh * 0.04, dx0 + dw + dw * 0.16, y1), dw * 0.06,
+       fill=None, outline=c["ln"], w=7)
+    d.polygon([(dx0, dy), (dx0 + dw * 0.72, dy + dh * 0.06),
+               (dx0 + dw * 0.72, y1), (dx0, y1)], fill=c["fill"], outline=c["ln"], width=6)
+    circ(d, dx0 + dw * 0.56, dy + dh * 0.5, dw * 0.06, fill=c["gold"])
+    d.polygon([(dx0 + dw * 0.72, dy + dh * 0.06), (dx0 + dw + dw * 0.14, dy + dh * 0.2),
+               (dx0 + dw + dw * 0.14, y1), (dx0 + dw * 0.72, y1)], fill=c["hif"])
+    for i in range(3):
+        yy = y1 - dh * (0.12 + i * 0.1)
+        d.line([(dx0 + dw + dw * 0.2, yy), (dx0 + dw + dw * (0.6 + i * 0.24), yy + dh * 0.05)],
+               fill=c["hi"], width=6)
+    sx, sy = x0 + w * 0.13, y0 + h * 0.16
+    for a0 in range(4):
+        a = a0 * math.pi / 4
+        d.line([(sx - h * 0.11 * math.cos(a), sy - h * 0.11 * math.sin(a)),
+                (sx + h * 0.11 * math.cos(a), sy + h * 0.11 * math.sin(a))],
+               fill=c["hi"], width=6)
+    circ(d, sx, sy, h * 0.035, fill=c["hi"])
+
+
 MOTIFS = {
     "oc_os": oc_os, "oc_team": oc_team, "oc_memory": oc_memory,
     "oc_security": oc_security, "oc_integrations": oc_integrations,
@@ -1264,6 +1415,9 @@ MOTIFS = {
     "dv_iac": dv_iac, "dv_cloud": dv_cloud, "dv_deploy": dv_deploy,
     "dv_webarch": dv_webarch, "dv_frontend": dv_frontend, "dv_vibe": dv_vibe,
     "lp_waking": lp_waking, "lp_working": lp_working, "lp_noon": lp_noon,
+    "lp_firstfire": lp_firstfire, "lp_highheat": lp_highheat,
+    "lp_longlight": lp_longlight, "lp_truenorth": lp_truenorth,
+    "lp_openhand": lp_openhand, "lp_beforedark": lp_beforedark,
 }
 
 

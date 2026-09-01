@@ -25,7 +25,7 @@ self-consistent families plus one hybrid**, and every design decision starts by 
 file you are about to touch.
 
 ```
-51 HTML files
+57 HTML files
   = index.html            (landing — the only page with <script> and the only one
                            with no embedded <style>; its CSS is all style.css)
   + 5 LISTING pages       blog/index.html, books/index.html, news/index.html,
@@ -40,12 +40,12 @@ file you are about to touch.
                            — same .nav chrome and type
                            as LISTING, one subject per page, carded from books/index.html
                            (check_site.py INV-26 enforces that link)
-  + 40 posts in blog/     = 29 HOUSE + 11 ISLAND (the 3 bilingual morning-* posts are HOUSE)
+  + 46 posts in blog/     = 35 HOUSE + 11 ISLAND (the 9 bilingual Life posts are HOUSE)
                            (one of the 11, obsidian-ai-jarvis, is a HYBRID)
 ```
 
 ```bash
-find . -name '*.html' -not -path './.git/*' -not -path './.claude/*' | wc -l   # → 51
+find . -name '*.html' -not -path './.git/*' -not -path './.claude/*' | wc -l   # → 57
 for f in blog/*.html; do grep -q 'class="blog-nav"' "$f" || basename "$f"; done # → 12
 ```
 
@@ -365,7 +365,7 @@ kept here as *the standard to hold*, not as a plan. Re-verify before you act on 
 
 ### DONE — hold the line, do not re-plan
 
-**1. Image loading — LANDED.** `blog/index.html` now references **1.95 MB across 42 unique
+**1. Image loading — LANDED.** `blog/index.html` now references **2.23 MB across 48 unique
 images** over 74 `<img>` tags, and **all 74 carry `loading="lazy"`**, so the HTML-only first byte
 cost is 67 KB and a first desktop viewport (first ~10 cards) fetches ≈1.7 MB, not 18.4 MB.
 Sitewide, **137 of 137 `<img>` tags have all four of `loading`, `decoding`, `width`, `height`**
@@ -509,7 +509,7 @@ Then in a real browser on `index.html`: tab once and confirm a visible focus rin
 
 - **`content-visibility: auto`.** Long posts exist (`web-architecture.html` 91 KB,
   `frontend-performance.html` 69 KB) but `.post-body` has no section children to apply it to. The
-  image bottleneck that used to dwarf it is gone (18.4 MB → 4.07 MB → 1.95 MB referenced, all lazy), so this
+  image bottleneck that used to dwarf it is gone (18.4 MB → 4.07 MB → 2.23 MB referenced, all lazy), so this
   is now merely small rather than irrelevant. Revisit only if posts get sectioned.
 
 ### NEVER — with reasons
