@@ -39,12 +39,16 @@
          .category__count  (#cat-technology) = cards in that category
          .series-count     (#series-openclaw / #series-devops)
        All five are enforced by check_site.py INV-02a..INV-02e.
-    8. Fill the SOCIAL block in <head>: {{SLUG}} in canonical/og:url/og:image,
-       the REAL cover pixel size in og:image:width/height (sips -g pixelWidth
-       -g pixelHeight images/<slug>-cover.jpg), and twitter:card = summary for a
-       square cover or summary_large_image at >=1.5:1. INV-27 fails on a mismatch.
+    8. Fill the SOCIAL block in <head> ({{SLUG}}, {{DATE}}, titles) and the JSON-LD
+       BlogPosting block right after the /social delimiter. og:image/twitter:image is the
+       dedicated 1200x630 share card images/<slug>-og.jpg (scripts/make_cover.py
+       draws it beside the cover — INV-35 checks both), and {{DATE}} must be the
+       same YYYY-MM-DD in article:published_time, JSON-LD datePublished and the
+       hero's <time datetime>. INV-27 fails on a mismatch; so does
+       scripts/check_visibility.py --strict.
     9. python3 .claude/skills/site-check/scripts/check_site.py     -> 0 new FAIL
        python3 .claude/skills/blog-post/assets/verify-wiring.py    -> no FAIL lines
+       python3 scripts/check_visibility.py --strict                -> 0 FAIL
   ══════════════════════════════════════════════════════════════════════════
 -->
 <html lang="th">
@@ -54,35 +58,78 @@
   <title>{{TITLE_EN}} — {{SUBTITLE_TH}} | Anirach Mingkhwan</title>
   <!-- Thai, ~1 sentence. 6 posts still lack this; do not become the 7th. -->
   <meta name="description" content="{{ONE_SENTENCE_THAI_SUMMARY}}">
-  <!-- ── SOCIAL ── enforced by check_site.py INV-27. Every value is derived:
+  <!-- ── SOCIAL ── enforced by check_site.py INV-27. The block below is wrapped in
+       the literal "social" / "/social" comment delimiters so a sweep can replace it
+       idempotently — keep both delimiter lines exactly as they are.
+       Every value is derived:
        canonical/og:url  = https://anirach.com/blog/{{SLUG}}.html  (never extensionless,
                            never /index.html — INV-27 recomputes it from the file path)
        og:title          = the title WITHOUT the " | Anirach Mingkhwan" tail, so the
                            brand does not appear twice on the card
-       og:image          = absolute URL, and the width/height below must be the REAL
-                           pixel size of that file — INV-27 reads the JPEG header and
-                           fails on a mismatch. Facebook needs them to render the very
-                           first share; without them the first sharer gets no image.
-       twitter:card      = summary_large_image only if the cover is >= 1.5:1.
-                           A square cover MUST use "summary" or half of it is cropped.
+       article:published_time = {{DATE}}, YYYY-MM-DD. Must equal the JSON-LD
+                           datePublished below AND every <time datetime> in the page —
+                           scripts/check_visibility.py --strict fails on a mismatch.
+       og:image / twitter:image = the dedicated 1200x630 share card
+                           images/{{SLUG}}-og.jpg (scripts/make_cover.py draws it
+                           beside the square cover; INV-35 checks both). The
+                           width/height below are its REAL pixel size — INV-27 reads
+                           the JPEG header and fails on a mismatch. Facebook needs
+                           them to render the very first share.
+       twitter:card      = summary_large_image, always — every share card is 1200x630
+                           (1.9:1). Only a square image would need "summary".
+       Bilingual posts (the pure-CSS TH/EN switch) add, directly after og:locale:
+                           <meta property="og:locale:alternate" content="en_US">
+       No microdata attributes anywhere — they were removed sitewide on 2026-09-02
+       in favour of the JSON-LD block below; never re-add them.
        Run the sweep instead of hand-typing this:
          python3 .claude/skills/site-check/scripts/check_site.py --check INV-27  -->
+  <!-- social -->
   <link rel="canonical" href="https://anirach.com/blog/{{SLUG}}.html">
   <meta property="og:type" content="article">
   <meta property="og:url" content="https://anirach.com/blog/{{SLUG}}.html">
   <meta property="og:site_name" content="Anirach Mingkhwan">
   <meta property="og:locale" content="th_TH">
+  <meta property="article:published_time" content="{{DATE}}">
+  <meta property="article:author" content="https://anirach.com/">
   <meta property="og:title" content="{{TITLE_EN}} — {{SUBTITLE_TH}}">
   <meta property="og:description" content="{{ONE_SENTENCE_THAI_SUMMARY}}">
-  <meta property="og:image" content="https://anirach.com/images/{{SLUG}}-cover.jpg">
-  <meta property="og:image:width" content="{{COVER_WIDTH_PX}}">
-  <meta property="og:image:height" content="{{COVER_HEIGHT_PX}}">
+  <meta property="og:image" content="https://anirach.com/images/{{SLUG}}-og.jpg">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
   <meta property="og:image:alt" content="{{TITLE_EN}} — {{SUBTITLE_TH}}">
-  <meta name="twitter:card" content="{{summary OR summary_large_image}}">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:image" content="https://anirach.com/images/{{SLUG}}-og.jpg">
+  <meta name="twitter:image:alt" content="{{TITLE_EN}} — {{SUBTITLE_TH}}">
   <meta name="robots" content="max-image-preview:large">
   <meta name="theme-color" content="#11304b">
   <link rel="icon" href="/favicon.ico" sizes="any">
   <link rel="apple-touch-icon" href="/apple-touch-icon.png">
+  <!-- /social -->
+  <!-- JSON-LD BlogPosting — required on every post since the 2026-09-02 visibility
+       overhaul; sits immediately after the /social delimiter. The type attribute is
+       double-quoted "application/ld+json" — the one script type INV-38 allows (the
+       browser parses it as data, never executes it). datePublished == dateModified ==
+       {{DATE}} on first publish; bump dateModified on a substantive edit. Bilingual
+       posts use "inLanguage": ["th", "en"] instead of "th".
+       Validated by: python3 scripts/check_visibility.py --strict -->
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "BlogPosting",
+    "headline": "{{TITLE_EN}} — {{SUBTITLE_TH}}",
+    "author": {
+      "@type": "Person",
+      "@id": "https://anirach.com/#person",
+      "name": "Anirach Mingkhwan",
+      "url": "https://anirach.com/"
+    },
+    "datePublished": "{{DATE}}",
+    "dateModified": "{{DATE}}",
+    "image": "https://anirach.com/images/{{SLUG}}-og.jpg",
+    "inLanguage": "th",
+    "mainEntityOfPage": "https://anirach.com/blog/{{SLUG}}.html"
+  }
+  </script>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=Sarabun:wght@400;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
@@ -324,6 +371,9 @@
     <div class="post-hero__meta">
       <span>By <strong>Anirach Mingkhwan</strong></span>
       <span class="post-hero__series">DevOps &amp; Vibe Coding 2026</span>
+      <!-- {{DATE}} = the same YYYY-MM-DD as article:published_time and the JSON-LD
+           datePublished; {{DATE_DISPLAY}} is its human form, e.g. "1 Sep 2026" -->
+      <span><time datetime="{{DATE}}">{{DATE_DISPLAY}}</time></span>
     </div>
     <div class="post-hero__cover">
       <!-- LCP element: eager + fetchpriority, never loading="lazy".

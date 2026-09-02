@@ -160,6 +160,7 @@ Then fill every `{{PLACEHOLDER}}`. The skeleton, in order, is:
 <head>                                          pages are lang="en"
   <title>{EN title} — {TH subtitle} | Anirach Mingkhwan</title>
   <meta name="description" content="{Thai, ~1 sentence}">
+  <!-- social --> … <!-- /social -->, then the JSON-LD BlogPosting <script>
   Google Fonts: Inter + JetBrains Mono
   <style> :root vars → blog-nav → post-hero → post-body → post-nav → blog-footer
           → optional components → @media (max-width: 600px) </style>
@@ -181,12 +182,17 @@ Non-negotiables, each because something on disk got them wrong:
 - **`<meta name="description">` in Thai.** All 66 pages carry one since the 2026-08-26
   metadata sweep (the 6 that did not are fixed). `check_site.py` **INV-27** now fails the
   build on a missing or empty one — this is no longer a warning you can defer.
-- **The `<!-- social -->` block.** Every page has one: canonical, `og:*`, `twitter:card`,
-  icons, `theme-color`. The template ships it with placeholders; fill them, do not delete
-  them. INV-27 recomputes the canonical from the file path and reads the cover's real
+- **The `<!-- social -->` block.** Every page has one — canonical, `og:*`,
+  `article:published_time` + `article:author`, `twitter:card`/`twitter:image`/
+  `twitter:image:alt`, robots, `theme-color`, icons — wrapped in the literal
+  `<!-- social -->` … `<!-- /social -->` delimiters so a sweep can replace it
+  idempotently. The template ships it with placeholders; fill them, do not delete
+  them. INV-27 recomputes the canonical from the file path and reads the image's real
   pixel size out of the JPEG header, so `og:url` and `og:image:width/height` cannot be
-  guessed. `twitter:card` is `summary` for a square cover — `summary_large_image` crops
-  ~48% off it.
+  guessed. `og:image` and `twitter:image` both point at the dedicated 1200×630 share
+  card `images/<slug>-og.jpg` (drawn by `scripts/make_cover.py`, checked by INV-35),
+  which is why `twitter:card` is always `summary_large_image` — only a square image
+  would need `summary` (the large card crops ~48% off one).
 - **`<nav class="blog-nav">` with `<a href="./" class="blog-nav__back">‹ Blog</a>`.**
   All 26 posts that have this nav use `href="./"` and nothing else. Eleven posts have no
   `<nav class="blog-nav">` back link. Five of them (openclaw-101, -agent-teams,
@@ -202,10 +208,35 @@ Non-negotiables, each because something on disk got them wrong:
   `style.css` is not loaded by any blog page (only `index.html` loads it), so the `:root`
   in the post file is the only place these variables exist. `check_site.py` INV-22 PASSes;
   keep it that way.
-- **No `<script>`, no `data-reveal`.** No page in `blog/` loads JavaScript. `data-reveal`
-  is inert there despite what `CLAUDE.md` suggests (`check_site.py` INV-21b). If you need
-  a mobile menu, use the pure-CSS `.nav__toggle` checkbox pattern from `blog/index.html` —
-  INV-12 enforces that every toggle is actually wired.
+- **No executable `<script>`, no `data-reveal`.** No page in `blog/` loads JavaScript;
+  the one `<script>` type allowed is `application/ld+json` (data, never executed —
+  `check_site.py` INV-38), which the JSON-LD block described below uses. `data-reveal`
+  is inert there despite what `CLAUDE.md` suggests. If you need a mobile menu, use the
+  pure-CSS `.nav__toggle` checkbox pattern from `blog/index.html` — INV-12 enforces
+  that every toggle is actually wired.
+
+### The JSON-LD BlogPosting block (in `<head>`, right after `<!-- /social -->`)
+
+Every post carries a JSON-LD `BlogPosting` block since the 2026-09-02 search-visibility
+overhaul — the old `itemprop`/`itemscope` microdata is gone sitewide; never re-add any.
+The block ships in the template with placeholders; fill them, do not restructure it:
+
+- `headline` = the `<h1>` text (no `" | Anirach Mingkhwan"` tail); `image` = the
+  1200×630 share card; `mainEntityOfPage` = the canonical URL. The `author` is a
+  `Person` object with `"@id": "https://anirach.com/#person"` and the inline name
+  `"Anirach Mingkhwan"` — copy it verbatim.
+- **`datePublished` == `article:published_time` == every `<time datetime>` in the
+  page.** One `{{DATE}}` (YYYY-MM-DD) fills all of them; `dateModified` starts equal
+  to `datePublished` and moves on a substantive edit.
+- Bilingual posts (the pure-CSS TH ⇄ EN switch) use `"inLanguage": ["th", "en"]` and
+  carry `<meta property="og:locale:alternate" content="en_US">` directly after
+  `og:locale`; monolingual posts use `"inLanguage": "th"` and no alternate.
+- The `type` attribute is double-quoted `"application/ld+json"` — the one `<script>`
+  type INV-38 allows, because the browser parses it as data and never executes it.
+
+`python3 scripts/check_visibility.py --strict` validates the required fields and the
+date agreement (plus one `h1`, no skipped heading levels, title 20–60 chars and
+description 70–160 advisory, unique titles) — it is part of the Step 8 checklist.
 
 The palette is the canonical 28-token block, identical in all 49 `:root` blocks —
 do not retype it, copy it from the template or from `style.css:5`. Full table:
@@ -251,6 +282,20 @@ Conventions that hold across the corpus:
   (22 posts use exactly that string).
 - A `🐕` on the last bullet is the running house joke. Keep it if the post is in the
   DevOps series.
+
+## Answer-readiness (editorial, not lint)
+
+These are editorial choices that make sections quotable by AI answer engines. **No
+linter enforces them and none should** — English NLP heuristics are broken on Thai
+prose, so any automated check would be noise. Apply them while writing, not in a sweep:
+
+- Open each `h2` section with the direct answer in its first 40–60 words; elaboration
+  comes after the answer, never before it.
+- Prefer definition-style openers for concept sections: "X คือ… / X is a…".
+- Use one comparison `<table>` where the post genuinely compares things — never
+  decoratively.
+- Use `<ol>` for procedures a reader performs in order; `<ul>` stays for everything
+  else.
 
 ## Step 5 — the card in `blog/index.html`
 
@@ -415,12 +460,14 @@ Adding a DevOps post touches **4 files** (5 with a diagram):
    `.series-count` all **recomputed**.
 4. The old top card's post file — its `next` changes from `"./"` to the new slug
    (plus a second neighbour if you inserted mid-chain).
-5. `sitemap.xml` — add a `<loc>` for `https://anirach.com/blog/<slug>.html` with today's
-   date as `lastmod`. It is hand-maintained; nothing computes it and no gate checks it.
-6. Both linters, from the repo root:
+5. `sitemap.xml` — regenerate, never hand-edit: `python3 scripts/gen_sitemap.py`
+   (it replaced hand-maintaining the file; its `--check` mode and `check_site.py`
+   INV-32 both fail on drift).
+6. All three linters, from the repo root:
    ```bash
    python3 .claude/skills/blog-post/assets/verify-wiring.py     # no FAIL: lines
    python3 .claude/skills/site-check/scripts/check_site.py      # exit 0
+   python3 scripts/check_visibility.py --strict                 # exit 0
    ```
 
 Adding a numbered OpenClaw post touches **11 files**: the above, minus the post-nav
