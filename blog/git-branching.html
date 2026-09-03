@@ -449,6 +449,34 @@
       ::view-transition-old(*),
       ::view-transition-new(*) { animation: none !important; }
     }
+
+    /* ── LANGUAGE SWITCH — pure CSS, zero JavaScript (INV-38) ──
+       One visually-hidden checkbox as a direct child of body, BEFORE the main landmark,
+       so `#langSwitch:checked ~ main …` reaches every content block. The two
+       tracks are paired blocks: .l-th (default) and .l-en (hidden until
+       checked; display:revert restores block for divs, inline for spans).
+       Naming stays clear of INV-12's menu-token regex (hamburger|burger|
+       nav__toggle|nav-toggle|navtoggle|menu-toggle|menu__toggle) — verified.
+       No JS also means no persistence across posts; each post opens in Thai. */
+    .lang-switch-box { position: absolute; left: -9999px; }
+    .l-en { display: none; }
+    #langSwitch:checked ~ main .l-en { display: revert; }
+    #langSwitch:checked ~ main .l-th { display: none; }
+    .lang-switch {
+      display: inline-flex; align-items: center; gap: 0.55rem;
+      margin-top: 1.4rem; padding: 0.4rem 1.1rem; border-radius: 50px;
+      background: rgba(255,255,255,0.7); border: 1px solid rgba(34,98,153,0.25);
+      cursor: pointer; font-size: 0.85rem; user-select: none;
+    }
+    .lang-switch span { color: var(--slate-light); font-weight: 600; transition: color 0.2s; }
+    .lang-switch .lang-sep { color: var(--gray); font-weight: 400; }
+    .lang-switch .lang-th { color: var(--navy); font-weight: 800; }
+    #langSwitch:checked ~ main .lang-switch .lang-th { color: var(--slate-light); font-weight: 600; }
+    #langSwitch:checked ~ main .lang-switch .lang-en { color: var(--navy); font-weight: 800; }
+    .lang-switch:hover { border-color: var(--blue); }
+    #langSwitch:focus-visible ~ main .lang-switch {
+      outline: 2px solid var(--focus); outline-offset: 3px;
+    }
   </style>
   <!-- social -->
   <link rel="canonical" href="https://anirach.com/blog/git-branching.html">
@@ -456,6 +484,7 @@
   <meta property="og:url" content="https://anirach.com/blog/git-branching.html">
   <meta property="og:site_name" content="Anirach Mingkhwan">
   <meta property="og:locale" content="th_TH">
+  <meta property="og:locale:alternate" content="en_US">
   <meta property="article:published_time" content="2026-03-07">
   <meta property="article:author" content="https://anirach.com/">
   <meta property="og:title" content="Git Branching — แตกกิ่งก้านสาขาให้เป็นระบบ">
@@ -486,13 +515,17 @@
     "datePublished": "2026-03-07",
     "dateModified": "2026-08-26",
     "image": "https://anirach.com/images/git-branching-og.jpg",
-    "inLanguage": "th",
+    "inLanguage": [
+      "th",
+      "en"
+    ],
     "mainEntityOfPage": "https://anirach.com/blog/git-branching.html"
   }
   </script>
 </head>
 <body>
 <a href="#main" class="skip-link">Skip to content</a>
+<input type="checkbox" id="langSwitch" class="lang-switch-box" aria-label="Switch language: Thai / English">
 
   <!-- NAV -->
   <nav class="blog-nav">
@@ -511,12 +544,13 @@
       <span class="post-hero__tag">DevOps</span>
       <span class="post-hero__tag">Tutorial</span>
     </div>
-    <h1 class="post-hero__title">Git Branching — แตกกิ่งก้านสาขาให้เป็นระบบ</h1>
+    <h1 class="post-hero__title"><span class="l-th">Git Branching — แตกกิ่งก้านสาขาให้เป็นระบบ</span><span class="l-en" lang="en">Git Branching — Branching Out, With a System</span></h1>
     <div class="post-hero__meta">
       <span>By <strong><span><span>Anirach Mingkhwan</span></span></strong></span>
       <span class="post-hero__series">DevOps & Vibe Coding 2026</span>
     
       <span><time datetime="2026-03-07">7 Mar 2026</time> · 12 min read</span></div>
+    <label for="langSwitch" class="lang-switch" title="สลับภาษา · Switch language"><span class="lang-th">ไทย</span><span class="lang-sep">·</span><span class="lang-en" lang="en">English</span></label>
     <div class="post-hero__cover">
       <img src="../images/git-branching-cover.jpg" alt="Git Branching — แตกกิ่งก้านสาขาให้เป็นระบบ" width="800" height="800" loading="eager" fetchpriority="high" decoding="async">
     </div>
@@ -524,20 +558,35 @@
 
   <!-- ARTICLE -->
   <article class="post-body">
-    <details class="post-toc" open>
-      <summary>In this post &middot; <span lang="th">ในบทความนี้</span></summary>
+    <details class="post-toc l-th" open>
+      <summary>ในบทความนี้</summary>
       <ol>
-          <li><a href="#branch">Branch คืออะไร?</a></li>
-          <li><a href="#why">ทำไมต้อง Branch?</a></li>
-          <li><a href="#s-3">คำสั่งพื้นฐาน</a></li>
-          <li><a href="#merge">Merge — รวม Branch กลับ</a></li>
-          <li><a href="#merge-conflict">Merge Conflict — เมื่อ code ชนกัน</a></li>
-          <li><a href="#branching-strategy">Branching Strategy ยอดนิยม</a></li>
-          <li><a href="#s-7">เปรียบเทียบ Branching Strategy</a></li>
-          <li><a href="#summary">คำสั่งที่ใช้บ่อย — สรุป</a></li>
-          <li><a href="#summary-2">สรุป</a></li>
+          <li><a href="#th-branch">Branch คืออะไร?</a></li>
+          <li><a href="#th-why">ทำไมต้อง Branch?</a></li>
+          <li><a href="#th-s-3">คำสั่งพื้นฐาน</a></li>
+          <li><a href="#th-merge">Merge — รวม Branch กลับ</a></li>
+          <li><a href="#th-merge-conflict">Merge Conflict — เมื่อ code ชนกัน</a></li>
+          <li><a href="#th-branching-strategy">Branching Strategy ยอดนิยม</a></li>
+          <li><a href="#th-s-7">เปรียบเทียบ Branching Strategy</a></li>
+          <li><a href="#th-summary">คำสั่งที่ใช้บ่อย — สรุป</a></li>
+          <li><a href="#th-summary-2">สรุป</a></li>
       </ol>
     </details>
+    <details class="post-toc l-en" open>
+      <summary>In this post</summary>
+      <ol>
+          <li><a href="#en-branch">What Is a Branch?</a></li>
+          <li><a href="#en-why">Why Branch At All?</a></li>
+          <li><a href="#en-s-3">The Basic Commands</a></li>
+          <li><a href="#en-merge">Merge — Bringing a Branch Back</a></li>
+          <li><a href="#en-merge-conflict">Merge Conflict — When Code Collides</a></li>
+          <li><a href="#en-branching-strategy">Popular Branching Strategies</a></li>
+          <li><a href="#en-s-7">Comparing the Branching Strategies</a></li>
+          <li><a href="#en-summary">The Commands You Use Most — A Summary</a></li>
+          <li><a href="#en-summary-2">Summary</a></li>
+      </ol>
+    </details>
+    <div class="l-th">
 
 
     <p>ก่อนหน้านี้เราได้พูดถึงพื้นฐานของ Git ว่ามันคืออะไร ทำไมต้องใช้ แล้วมี commit กับ repository ยังไงบ้าง พอเราใช้ Git เป็นแล้ว คำถามต่อมาคือ <strong>ถ้ามีหลายคนทำงานบนโปรเจกต์เดียวกัน หรือเราอยากลองทำฟีเจอร์ใหม่โดยไม่พัง code หลัก จะทำยังไงดี?</strong></p>
@@ -546,7 +595,7 @@
 
     <hr>
 
-    <h2 id="branch">Branch คืออะไร?</h2>
+    <h2 id="th-branch">Branch คืออะไร?</h2>
 
     <p>Branch ใน Git ก็คือ <strong>ตัวชี้ (pointer) ไปยัง commit ตัวหนึ่ง</strong> เวลาเราสร้าง branch ใหม่ Git ไม่ได้ copy ไฟล์ทั้งหมด แค่สร้าง pointer ตัวใหม่ขึ้นมาชี้ไปที่ commit เดิม ทำให้การสร้าง branch <strong>เร็วมากและแทบไม่เปลืองพื้นที่เลย</strong></p>
 
@@ -574,7 +623,7 @@
 
     <hr>
 
-    <h2 id="why">ทำไมต้อง Branch?</h2>
+    <h2 id="th-why">ทำไมต้อง Branch?</h2>
 
     <h3>1. ทำงานพร้อมกันได้</h3>
     <p>สมมติทีมมี 3 คน:</p>
@@ -593,7 +642,7 @@
 
     <hr>
 
-    <h2 id="s-3">คำสั่งพื้นฐาน</h2>
+    <h2 id="th-s-3">คำสั่งพื้นฐาน</h2>
 
     <p>Git branch commands ง่ายมาก — สร้าง, สลับ, ดู, ลบ แค่ 4 อย่าง เพราะ branch ใน Git เป็นแค่ pointer (ไม่ copy ไฟล์) ทุกอย่างจึงเร็วมาก ไม่ว่าโปรเจกต์จะใหญ่แค่ไหน:</p>
 
@@ -627,7 +676,7 @@ git branch -D feature-login   # ลบบังคับ (ยังไม่ mer
 
     <hr>
 
-    <h2 id="merge">Merge — รวม Branch กลับ</h2>
+    <h2 id="th-merge">Merge — รวม Branch กลับ</h2>
 
     <p>เมื่อทำงานบน feature branch เสร็จแล้ว ต้องรวม code กลับเข้า main — นี่คือ <strong>merge</strong> Git มี 2 วิธี merge: <strong>Fast-Forward</strong> (เลื่อน pointer ไปข้างหน้า — ง่ายสุด) และ <strong>Three-Way Merge</strong> (สร้าง merge commit ใหม่ — เมื่อทั้งสอง branch มี commits ต่างกัน):</p>
 <pre><code>git checkout main
@@ -699,7 +748,7 @@ git merge feature-login</code></pre>
 
     <hr>
 
-    <h2 id="merge-conflict">Merge Conflict — เมื่อ code ชนกัน</h2>
+    <h2 id="th-merge-conflict">Merge Conflict — เมื่อ code ชนกัน</h2>
 
     <p>Conflict เป็นเรื่องปกติ ไม่ต้องกลัว! เกิดเมื่อทั้งสอง branch แก้ไข <strong>ไฟล์เดียวกัน บรรทัดเดียวกัน</strong> — Git ไม่รู้ว่าจะเอาเวอร์ชันไหน จึงบอกให้เรา "เลือกเอง" วิธีหลีกเลี่ยง: merge บ่อยๆ อย่าปล่อยให้ branch ห่างจาก main นานเกินไป แต่ถ้าเจอก็แก้ได้ง่าย:</p>
 
@@ -721,7 +770,7 @@ console.log("version from feature");
 
     <hr>
 
-    <h2 id="branching-strategy">Branching Strategy ยอดนิยม</h2>
+    <h2 id="th-branching-strategy">Branching Strategy ยอดนิยม</h2>
 
     <p>Branching strategy คือ "กฎ" ของทีมว่าจะใช้ branch ยังไง — ไม่มีสูตรตายตัว เลือกตามขนาดทีม, release frequency, และ risk tolerance ส่วนใหญ่ใช้ 1 ใน 3 แบบนี้:</p>
 
@@ -757,7 +806,7 @@ console.log("version from feature");
 
     <hr>
 
-    <h2 id="s-7">เปรียบเทียบ Branching Strategy</h2>
+    <h2 id="th-s-7">เปรียบเทียบ Branching Strategy</h2>
 
     <p>สรุปข้อดีข้อเสียของแต่ละ strategy — เลือกตามทีม ไม่มีถูกผิด ทีมเล็ก deploy บ่อยเลือก GitHub Flow ทีมใหญ่มี release cycle เลือก Git Flow ทีมเก่งมี CI/CD แข็งเลือก Trunk-Based:</p>
 
@@ -775,7 +824,7 @@ console.log("version from feature");
 
     <hr>
 
-    <h2 id="summary">คำสั่งที่ใช้บ่อย — สรุป</h2>
+    <h2 id="th-summary">คำสั่งที่ใช้บ่อย — สรุป</h2>
 
     <p>รวม Git branch commands ที่ใช้บ่อยที่สุด — จำไม่ได้ก็ไม่เป็นไร แค่รู้ว่ามีอะไรบ้าง พิมพ์ <code>git branch --help</code> เมื่อต้องการ หรือใช้ GUI tools อย่าง VS Code, GitKraken, SourceTree ก็สะดวกดี:</p>
 
@@ -802,7 +851,7 @@ git log --oneline --graph --all</code></pre>
 
     <hr>
 
-    <h2 id="summary-2">สรุป</h2>
+    <h2 id="th-summary-2">สรุป</h2>
 
     <p>Git Branching เป็นทักษะพื้นฐานที่ developer ทุกคนต้องเชี่ยวชาญ — ไม่ว่าจะทำงานคนเดียวหรือทีม 100 คน branch ทำให้ทำงานพร้อมกันได้โดยไม่ชนกัน, ลองของใหม่ได้โดยไม่เสี่ยง, และ review code ก่อน merge ได้ เลือก branching strategy ที่เหมาะกับทีม แล้ว CI/CD pipeline จะทำที่เหลือให้:</p>
 
@@ -816,9 +865,289 @@ git log --oneline --graph --all</code></pre>
 
     <p>ในโพสต์หน้าเราจะมาพูดถึง <strong>Rebase</strong> — อีกวิธีในการรวม branch ที่ทำให้ประวัติ commit สะอาดขึ้น แต่มีข้อควรระวังที่สำคัญมาก! 🐕</p>
 
-    <div class="post-series-footer">
-      บทความจากซีรีส์ DevOps & Vibe Coding 2026
+    
     </div>
+    <div class="l-en" lang="en">
+
+        <p>Earlier we talked about the fundamentals of Git — what it is, why we use it, and how commits and repositories fit together. Once you can use Git, the next question arrives: <strong>if several people are working on the same project, or you want to try a new feature without breaking the main code, what do you do?</strong></p>
+
+    <p>The answer is <strong>branching</strong> — growing a branch off the main line of code so you can work separately, then merging it back later.</p>
+
+    <hr>
+
+        <h2 id="en-branch">What Is a Branch?</h2>
+
+    <p>A branch in Git is simply <strong>a pointer to one commit</strong>. When we create a new branch, Git does not copy any files — it just creates a new pointer aimed at the existing commit, which makes creating a branch <strong>extremely fast and almost free in disk space</strong>.</p>
+
+<div class="git-diagram">
+  <div class="branch-line">
+    <span class="label label--main">main:</span>
+    <span class="commit commit--main">A</span><span class="line"></span>
+    <span class="commit commit--main">B</span><span class="line"></span>
+    <span class="commit commit--main">C</span>
+  </div>
+  <div class="line--down"></div>
+  <div class="branch-line">
+    <span class="label label--feature">feature:</span>
+    <span class="commit commit--feature">D</span><span class="line line--feature"></span>
+    <span class="commit commit--feature">E</span>
+  </div>
+</div>
+
+    <p>From the example:</p>
+    <ul>
+      <li><code>main</code> is the primary branch, holding commits A, B and C</li>
+      <li><code>feature</code> branched off C and then grew commits D and E of its own</li>
+      <li>the two branches <strong>do not affect each other</strong> until they are merged</li>
+    </ul>
+
+    <hr>
+
+        <h2 id="en-why">Why Branch At All?</h2>
+
+    <h3>1. Everyone can work at once</h3>
+    <p>Suppose a team of three:</p>
+    <ul>
+      <li>the first person is building the <strong>login page</strong></li>
+      <li>the second is building the <strong>dashboard</strong></li>
+      <li>the third is fixing an <strong>urgent bug</strong></li>
+    </ul>
+    <p>If all three work on the same branch it turns into chaos — code collides, commits land on top of each other, and time disappears into resolving conflicts. But if each person <strong>grows their own branch</strong>, they work independently and merge back when they are done.</p>
+
+    <h3>2. Try new things without risk</h3>
+    <p>Want to attempt a big refactor? Grow a branch and experiment. If it falls apart, just delete the branch — main is untouched.</p>
+
+    <h3>3. Review code before merging</h3>
+    <p>On a real team we never merge straight into main. We open a <strong>Pull Request (PR)</strong> so someone else can review the code first, and that requires a branch.</p>
+
+    <hr>
+
+        <h2 id="en-s-3">The Basic Commands</h2>
+
+    <p>Git's branch commands are simple — create, switch, list, delete, and that is all four of them. Because a branch in Git is only a pointer (no files are copied), everything is fast no matter how large the project is:</p>
+
+    <h3>Create a New Branch</h3>
+<pre><code>git branch feature-login</code></pre>
+    <p>This creates a branch named <code>feature-login</code>, but we are still standing on the branch we started from.</p>
+
+    <h3>Switch to Another Branch</h3>
+
+    <p>Switching branches changes the working directory to that branch's files immediately — as if you had opened a different folder, except that Git swaps the files for you very quickly:</p>
+<pre><code>git checkout feature-login
+
+# or the shorter form (create + switch in one command)
+git checkout -b feature-login</code></pre>
+
+    <p>In newer versions of Git (2.23+) you can use <code>git switch</code> instead:</p>
+<pre><code>git switch feature-login
+git switch -c feature-login  # create + switch</code></pre>
+
+    <h3>List Every Branch</h3>
+
+    <p>See which branches exist right now; the <code>*</code> marks the one you are on. Add <code>-a</code> to see the remote branches too:</p>
+<pre><code>git branch       # local only
+git branch -a    # local + remote</code></pre>
+
+    <h3>Delete a Branch</h3>
+
+    <p>A branch that has been merged should be deleted — otherwise the branch list ends up as long as a horse's tail. Use <code>-d</code> (safe delete — must already be merged) or <code>-D</code> (force delete — removes it even unmerged):</p>
+<pre><code>git branch -d feature-login   # delete (if already merged)
+git branch -D feature-login   # force delete (even if not merged)</code></pre>
+
+    <hr>
+
+        <h2 id="en-merge">Merge — Bringing a Branch Back</h2>
+
+    <p>When the work on a feature branch is finished, the code has to come back into main — that is a <strong>merge</strong>. Git has two ways of doing it: <strong>fast-forward</strong> (move the pointer forward — the simplest case) and a <strong>three-way merge</strong> (create a new merge commit — for when both branches have commits of their own):</p>
+<pre><code>git checkout main
+git merge feature-login</code></pre>
+
+    <h3>Fast-Forward Merge</h3>
+    <p>If main has gained no new commits since the branch was created, Git simply <strong>moves the pointer forward</strong>. That is called a fast-forward:</p>
+<div class="git-diagram">
+  <p style="margin:0 0 0.5rem;font-weight:600;font-size:0.8rem;color:#334155;">Before the merge:</p>
+  <div class="branch-line">
+    <span class="label label--main">main:</span>
+    <span class="commit commit--main">A</span><span class="line"></span>
+    <span class="commit commit--main">B</span><span class="line"></span>
+    <span class="commit commit--main">C</span>
+  </div>
+  <div class="line--down"></div>
+  <div class="branch-line">
+    <span class="label label--feature">feature:</span>
+    <span class="commit commit--feature">D</span><span class="line line--feature"></span>
+    <span class="commit commit--feature">E</span>
+  </div>
+  <hr style="border:none;height:1px;background:rgba(34,98,153,0.15);margin:1rem 0;">
+  <p style="margin:0 0 0.5rem;font-weight:600;font-size:0.8rem;color:#334155;">After the merge (fast-forward):</p>
+  <div class="branch-line">
+    <span class="label label--main">main:</span>
+    <span class="commit commit--main">A</span><span class="line"></span>
+    <span class="commit commit--main">B</span><span class="line"></span>
+    <span class="commit commit--main">C</span><span class="line"></span>
+    <span class="commit commit--main">D</span><span class="line"></span>
+    <span class="commit commit--main">E</span>
+  </div>
+</div>
+
+    <h3>Three-Way Merge</h3>
+    <p>If main has picked up new commits as well, Git creates a <strong>merge commit</strong> to join the two branches:</p>
+<div class="git-diagram">
+  <p style="margin:0 0 0.5rem;font-weight:600;font-size:0.8rem;color:#334155;">Before the merge:</p>
+  <div class="branch-line">
+    <span class="label label--main">main:</span>
+    <span class="commit commit--main">A</span><span class="line"></span>
+    <span class="commit commit--main">B</span><span class="line"></span>
+    <span class="commit commit--main">C</span><span class="line"></span>
+    <span class="commit commit--main">F</span>
+  </div>
+  <div class="line--down"></div>
+  <div class="branch-line">
+    <span class="label label--feature">feature:</span>
+    <span class="commit commit--feature">D</span><span class="line line--feature"></span>
+    <span class="commit commit--feature">E</span>
+  </div>
+  <hr style="border:none;height:1px;background:rgba(34,98,153,0.15);margin:1rem 0;">
+  <p style="margin:0 0 0.5rem;font-weight:600;font-size:0.8rem;color:#334155;">After the merge (three-way):</p>
+  <div class="branch-line">
+    <span class="label label--main">main:</span>
+    <span class="commit commit--main">A</span><span class="line"></span>
+    <span class="commit commit--main">B</span><span class="line"></span>
+    <span class="commit commit--main">C</span><span class="line"></span>
+    <span class="commit commit--main">F</span><span class="line"></span>
+    <span class="commit commit--merge">M</span>
+  </div>
+  <div class="line--down" style="background:#10b981;margin-left:14px;transform:rotate(180deg);"></div>
+  <div class="branch-line">
+    <span class="label label--feature">feature:</span>
+    <span class="commit commit--feature">D</span><span class="line line--feature"></span>
+    <span class="commit commit--feature">E</span>
+  </div>
+</div>
+    <p>Here M is the merge commit that brings the two branches together.</p>
+
+    <hr>
+
+        <h2 id="en-merge-conflict">Merge Conflict — When Code Collides</h2>
+
+    <p>Conflicts are normal — do not be afraid of them! One happens when both branches changed <strong>the same line of the same file</strong>: Git does not know which version to keep, so it asks us to choose. How to avoid them: merge often, and never let a branch drift away from main for too long. And when one does turn up, it is easy to fix:</p>
+
+<pre><code>&lt;&lt;&lt;&lt;&lt;&lt;&lt; HEAD
+console.log("version from main");
+=======
+console.log("version from feature");
+&gt;&gt;&gt;&gt;&gt;&gt;&gt; feature-login</code></pre>
+
+    <p>How to fix it:</p>
+    <ol>
+      <li>open the conflicted file</li>
+      <li>decide which side of the code to keep (or combine both)</li>
+      <li>remove the <code>&lt;&lt;&lt;&lt;&lt;&lt;&lt;</code>, <code>=======</code> and <code>&gt;&gt;&gt;&gt;&gt;&gt;&gt;</code> markers</li>
+      <li><code>git add</code>, then <code>git commit</code></li>
+    </ol>
+
+    <div class="tip"><strong>Tip:</strong> merge often and conflicts stay small. Let branches diverge for a long time and the conflicts pile up.</div>
+
+    <hr>
+
+        <h2 id="en-branching-strategy">Popular Branching Strategies</h2>
+
+    <p>A branching strategy is the team's "rules" for how branches get used — there is no single right formula. Choose by team size, release frequency and risk tolerance. Most teams use one of these three:</p>
+
+    <h3>1. Git Flow</h3>
+    <p>The most structured of the three, with several kinds of branch (main, develop, feature, release, hotfix). It suits projects with a clear release cycle — mobile apps that have to be submitted to an app store, for instance — but it is too complex for a small team or a web app that deploys every day:</p>
+
+    <table>
+      <thead>
+        <tr><th>Branch</th><th>Role</th></tr>
+      </thead>
+      <tbody>
+        <tr><td><code>main</code></td><td>the code currently deployed to production</td></tr>
+        <tr><td><code>develop</code></td><td>the branch that collects finished features</td></tr>
+        <tr><td><code>feature/*</code></td><td>a branch per feature</td></tr>
+        <tr><td><code>release/*</code></td><td>preparing a release (testing + bug fixes)</td></tr>
+        <tr><td><code>hotfix/*</code></td><td>urgent fixes to production</td></tr>
+      </tbody>
+    </table>
+
+    <h3>2. GitHub Flow</h3>
+    <p>Far simpler than Git Flow — just <code>main</code> plus feature branches. Finish the work → open a PR → review → merge → deploy automatically. It suits teams that deploy often through CI/CD, and it is the strategy most teams should start with:</p>
+    <ol>
+      <li>branch off <code>main</code></li>
+      <li>work and commit</li>
+      <li>open a Pull Request</li>
+      <li>review and approve</li>
+      <li>merge into <code>main</code></li>
+      <li>deploy</li>
+    </ol>
+
+    <h3>3. Trunk-Based Development</h3>
+    <p>Simplest of all: everyone commits straight into <code>main</code>, but uses <strong>feature flags</strong> to turn features on and off instead. It suits highly experienced teams with strong CI/CD behind them.</p>
+
+    <hr>
+
+        <h2 id="en-s-7">Comparing the Branching Strategies</h2>
+
+    <p>The strengths and weaknesses of each strategy side by side — pick the one that fits the team; none of them is wrong. A small team that deploys often picks GitHub Flow, a large team with a release cycle picks Git Flow, a strong team with solid CI/CD picks trunk-based:</p>
+
+    <table>
+      <thead>
+        <tr><th></th><th>Git Flow</th><th>GitHub Flow</th><th>Trunk-Based</th></tr>
+      </thead>
+      <tbody>
+        <tr><td><strong>Complexity</strong></td><td>High</td><td>Low</td><td>Very low</td></tr>
+        <tr><td><strong>Best for</strong></td><td>Long release cycles</td><td>Frequent deploys</td><td>Deploying every commit</td></tr>
+        <tr><td><strong>Number of branches</strong></td><td>Many (5+ kinds)</td><td>Few (main + feature)</td><td>Almost none</td></tr>
+        <tr><td><strong>Drawback</strong></td><td>Too complex for a small team</td><td>Poor fit for releases that need planning</td><td>Demands very good CI/CD</td></tr>
+      </tbody>
+    </table>
+
+    <hr>
+
+        <h2 id="en-summary">The Commands You Use Most — A Summary</h2>
+
+    <p>The Git branch commands that come up most often — and it is fine not to memorise them, as long as you know what exists. Type <code>git branch --help</code> when you need it, or reach for a GUI tool such as VS Code, GitKraken or SourceTree:</p>
+
+<pre><code># create + switch branch
+git switch -c feature-name
+
+# push the branch to the remote
+git push -u origin feature-name
+
+# fetch a branch from the remote
+git fetch origin
+git switch feature-name
+
+# merge back into main
+git switch main
+git merge feature-name
+
+# delete the branch (local + remote)
+git branch -d feature-name
+git push origin --delete feature-name
+
+# see a nice branch graph
+git log --oneline --graph --all</code></pre>
+
+    <hr>
+
+        <h2 id="en-summary-2">Summary</h2>
+
+    <p>Git branching is a fundamental skill every developer has to master — whether you work alone or on a team of a hundred. Branches let people work at the same time without colliding, let you try new things without risk, and let code be reviewed before it is merged. Choose the branching strategy that fits your team, and the CI/CD pipeline will take care of the rest:</p>
+
+    <ul>
+      <li>a <strong>branch</strong> = a pointer to a commit → fast to create, cheap in space</li>
+      <li>use branches to <strong>work in parallel, experiment, and review code</strong></li>
+      <li><strong>merging</strong> brings a branch back → you may hit a conflict if the same file was changed</li>
+      <li>choose a <strong>branching strategy</strong> to match your team size and deployment cycle</li>
+      <li><strong>merge often</strong> = fewer conflicts → a better life</li>
+    </ul>
+
+    <p>In the next post we turn to <strong>rebase</strong> — another way of combining branches that leaves a cleaner commit history, but comes with some very important caveats! 🐕</p>
+
+    </div>
+
+<div class="post-series-footer"><span class="l-th">บทความจากซีรีส์ DevOps & Vibe Coding 2026</span><span class="l-en" lang="en">A post from the DevOps & Vibe Coding 2026 series</span></div>
 
   </article>
   </main>

@@ -388,6 +388,34 @@
       ::view-transition-old(*),
       ::view-transition-new(*) { animation: none !important; }
     }
+
+    /* ── LANGUAGE SWITCH — pure CSS, zero JavaScript (INV-38) ──
+       One visually-hidden checkbox as a direct child of body, BEFORE the main landmark,
+       so `#langSwitch:checked ~ main …` reaches every content block. The two
+       tracks are paired blocks: .l-th (default) and .l-en (hidden until
+       checked; display:revert restores block for divs, inline for spans).
+       Naming stays clear of INV-12's menu-token regex (hamburger|burger|
+       nav__toggle|nav-toggle|navtoggle|menu-toggle|menu__toggle) — verified.
+       No JS also means no persistence across posts; each post opens in Thai. */
+    .lang-switch-box { position: absolute; left: -9999px; }
+    .l-en { display: none; }
+    #langSwitch:checked ~ main .l-en { display: revert; }
+    #langSwitch:checked ~ main .l-th { display: none; }
+    .lang-switch {
+      display: inline-flex; align-items: center; gap: 0.55rem;
+      margin-top: 1.4rem; padding: 0.4rem 1.1rem; border-radius: 50px;
+      background: rgba(255,255,255,0.7); border: 1px solid rgba(34,98,153,0.25);
+      cursor: pointer; font-size: 0.85rem; user-select: none;
+    }
+    .lang-switch span { color: var(--slate-light); font-weight: 600; transition: color 0.2s; }
+    .lang-switch .lang-sep { color: var(--gray); font-weight: 400; }
+    .lang-switch .lang-th { color: var(--navy); font-weight: 800; }
+    #langSwitch:checked ~ main .lang-switch .lang-th { color: var(--slate-light); font-weight: 600; }
+    #langSwitch:checked ~ main .lang-switch .lang-en { color: var(--navy); font-weight: 800; }
+    .lang-switch:hover { border-color: var(--blue); }
+    #langSwitch:focus-visible ~ main .lang-switch {
+      outline: 2px solid var(--focus); outline-offset: 3px;
+    }
   </style>
   <!-- social -->
   <link rel="canonical" href="https://anirach.com/blog/networking-fundamentals.html">
@@ -395,6 +423,7 @@
   <meta property="og:url" content="https://anirach.com/blog/networking-fundamentals.html">
   <meta property="og:site_name" content="Anirach Mingkhwan">
   <meta property="og:locale" content="th_TH">
+  <meta property="og:locale:alternate" content="en_US">
   <meta property="article:published_time" content="2026-03-07">
   <meta property="article:author" content="https://anirach.com/">
   <meta property="og:title" content="Networking พื้นฐานสำหรับ DevOps — รู้จักเครือข่ายก่อน Deploy">
@@ -425,13 +454,17 @@
     "datePublished": "2026-03-07",
     "dateModified": "2026-08-26",
     "image": "https://anirach.com/images/networking-fundamentals-og.jpg",
-    "inLanguage": "th",
+    "inLanguage": [
+      "th",
+      "en"
+    ],
     "mainEntityOfPage": "https://anirach.com/blog/networking-fundamentals.html"
   }
   </script>
 </head>
 <body>
 <a href="#main" class="skip-link">Skip to content</a>
+<input type="checkbox" id="langSwitch" class="lang-switch-box" aria-label="Switch language: Thai / English">
 
   <nav class="blog-nav">
     <div class="blog-nav__inner">
@@ -449,34 +482,52 @@
       <span class="post-hero__tag">DevOps</span>
       <span class="post-hero__tag">Infrastructure</span>
     </div>
-    <h1 class="post-hero__title">Networking พื้นฐานสำหรับ DevOps — รู้จักเครือข่ายก่อน Deploy</h1>
+    <h1 class="post-hero__title"><span class="l-th">Networking พื้นฐานสำหรับ DevOps — รู้จักเครือข่ายก่อน Deploy</span><span class="l-en" lang="en">Networking Fundamentals for DevOps — Know the Network Before You Deploy</span></h1>
     <div class="post-hero__meta">
       <span>By <strong><span><span>Anirach Mingkhwan</span></span></strong></span>
       <span class="post-hero__series">DevOps & Vibe Coding 2026</span>
     
       <span><time datetime="2026-03-07">7 Mar 2026</time> · 13 min read</span></div>
+    <label for="langSwitch" class="lang-switch" title="สลับภาษา · Switch language"><span class="lang-th">ไทย</span><span class="lang-sep">·</span><span class="lang-en" lang="en">English</span></label>
     <div class="post-hero__cover">
       <img src="../images/networking-cover.jpg" alt="Networking — รู้จักเครือข่ายก่อน Deploy" width="800" height="800" loading="eager" fetchpriority="high" decoding="async">
     </div>
   </header>
 
   <article class="post-body">
-    <details class="post-toc" open>
-      <summary>In this post &middot; <span lang="th">ในบทความนี้</span></summary>
+    <details class="post-toc l-th" open>
+      <summary>ในบทความนี้</summary>
       <ol>
-          <li><a href="#tcp-ip-model">TCP/IP Model — ภาษากลางของ Internet</a></li>
-          <li><a href="#ip-address">IP Address — ที่อยู่บนโลก Internet</a></li>
-          <li><a href="#ports">Ports — ประตูของ Application</a></li>
-          <li><a href="#dns">DNS — แปลงชื่อเป็น IP</a></li>
-          <li><a href="#firewall">Firewall — กำแพงป้องกัน</a></li>
-          <li><a href="#load-balancer">Load Balancer — กระจาย Traffic</a></li>
-          <li><a href="#reverse-proxy">Reverse Proxy — Nginx ตัวกลาง</a></li>
-          <li><a href="#ssh">SSH — Remote เข้า Server</a></li>
-          <li><a href="#docker-networking">Docker Networking — Container คุยกันยังไง?</a></li>
-          <li><a href="#s-10">เครื่องมือ Networking ที่ DevOps ต้องรู้</a></li>
-          <li><a href="#summary">สรุป</a></li>
+          <li><a href="#th-tcp-ip-model">TCP/IP Model — ภาษากลางของ Internet</a></li>
+          <li><a href="#th-ip-address">IP Address — ที่อยู่บนโลก Internet</a></li>
+          <li><a href="#th-ports">Ports — ประตูของ Application</a></li>
+          <li><a href="#th-dns">DNS — แปลงชื่อเป็น IP</a></li>
+          <li><a href="#th-firewall">Firewall — กำแพงป้องกัน</a></li>
+          <li><a href="#th-load-balancer">Load Balancer — กระจาย Traffic</a></li>
+          <li><a href="#th-reverse-proxy">Reverse Proxy — Nginx ตัวกลาง</a></li>
+          <li><a href="#th-ssh">SSH — Remote เข้า Server</a></li>
+          <li><a href="#th-docker-networking">Docker Networking — Container คุยกันยังไง?</a></li>
+          <li><a href="#th-s-10">เครื่องมือ Networking ที่ DevOps ต้องรู้</a></li>
+          <li><a href="#th-summary">สรุป</a></li>
       </ol>
     </details>
+    <details class="post-toc l-en" open>
+      <summary>In this post</summary>
+      <ol>
+          <li><a href="#en-tcp-ip-model">TCP/IP Model — The Common Language of the Internet</a></li>
+          <li><a href="#en-ip-address">IP Address — Your Address on the Internet</a></li>
+          <li><a href="#en-ports">Ports — The Doors of an Application</a></li>
+          <li><a href="#en-dns">DNS — Turning Names into IPs</a></li>
+          <li><a href="#en-firewall">Firewall — The Wall That Protects You</a></li>
+          <li><a href="#en-load-balancer">Load Balancer — Spreading the Traffic</a></li>
+          <li><a href="#en-reverse-proxy">Reverse Proxy — Nginx in the Middle</a></li>
+          <li><a href="#en-ssh">SSH — Reaching a Server Remotely</a></li>
+          <li><a href="#en-docker-networking">Docker Networking — How Do Containers Talk?</a></li>
+          <li><a href="#en-s-10">The Networking Tools Every DevOps Engineer Needs</a></li>
+          <li><a href="#en-summary">Summary</a></li>
+      </ol>
+    </details>
+    <div class="l-th">
 
 
     <p>จากโพสต์ที่แล้วเราพูดถึง Kubernetes ว่าช่วยจัดการ container ให้ทำงานร่วมกันอย่างเป็นระบบ</p>
@@ -487,7 +538,7 @@
 
     <hr>
 
-    <h2 id="tcp-ip-model">TCP/IP Model — ภาษากลางของ Internet</h2>
+    <h2 id="th-tcp-ip-model">TCP/IP Model — ภาษากลางของ Internet</h2>
 
     <p>ทุกครั้งที่เราเปิดเว็บหรือส่งข้อมูล ข้อมูลจะเดินทางผ่าน <strong>4 ชั้น (layers)</strong> ของ TCP/IP model — แต่ละชั้นมีหน้าที่เฉพาะ: <strong>Application</strong> (HTTP, DNS — ภาษาที่ apps พูด), <strong>Transport</strong> (TCP/UDP — ส่งข้อมูลแบบ reliable หรือ fast), <strong>Internet</strong> (IP — หาเส้นทางไป destination), <strong>Network Access</strong> (Ethernet/WiFi — ส่ง bits จริงๆ) เข้าใจ model นี้แล้วจะ debug network issues ได้เร็วขึ้นมาก:</p>
 
@@ -553,7 +604,7 @@
 
     <hr>
 
-    <h2 id="ip-address">IP Address — ที่อยู่บนโลก Internet</h2>
+    <h2 id="th-ip-address">IP Address — ที่อยู่บนโลก Internet</h2>
 
     <p>ทุกอุปกรณ์บน network ต้องมี <strong>IP Address</strong> เหมือนบ้านต้องมีเลขที่อยู่:</p>
 
@@ -605,7 +656,7 @@ ipconfig           # Windows</code></pre>
 
     <hr>
 
-    <h2 id="ports">Ports — ประตูของ Application</h2>
+    <h2 id="th-ports">Ports — ประตูของ Application</h2>
 
     <p>IP Address บอกว่า "เครื่องไหน" แต่ <strong>Port</strong> บอกว่า "app ไหน" บนเครื่องนั้น — เครื่องเดียวรัน web server (port 80), database (port 5432), SSH (port 22) พร้อมกันได้ ports 0-1023 เป็น "well-known ports" ที่ต้องใช้ root privilege, 1024-65535 ใช้ได้อิสระ DevOps ต้องรู้ว่า service ไหนใช้ port ไหน เพื่อตั้ง firewall ได้ถูกต้อง:</p>
 
@@ -672,7 +723,7 @@ curl -I http://server.com:8080</code></pre>
 
     <hr>
 
-    <h2 id="dns">DNS — แปลงชื่อเป็น IP</h2>
+    <h2 id="th-dns">DNS — แปลงชื่อเป็น IP</h2>
 
     <p>เราจำ <code>google.com</code> ได้ง่ายกว่า <code>142.250.199.46</code> — <strong>DNS</strong> ทำหน้าที่แปลงชื่อ domain เป็น IP address</p>
 
@@ -755,7 +806,7 @@ dig @1.1.1.1 mysite.com A      # ถาม Cloudflare DNS</code></pre>
 
     <hr>
 
-    <h2 id="firewall">Firewall — กำแพงป้องกัน</h2>
+    <h2 id="th-firewall">Firewall — กำแพงป้องกัน</h2>
 
     <p><strong>Firewall</strong> คือตัวกรองที่ตัดสินว่า traffic ไหนเข้า-ออกได้ ไหนบล็อก — หลักการคือ <strong>"default deny"</strong> ปิดทุกอย่างก่อน แล้วเปิดเฉพาะที่จำเป็น เช่น เปิด port 80/443 สำหรับ web, port 22 สำหรับ SSH เฉพาะ IP ที่อนุญาต บน Linux ใช้ <code>ufw</code> (ง่าย) หรือ <code>iptables</code> (powerful) บน cloud ใช้ Security Groups:</p>
 
@@ -778,7 +829,7 @@ sudo iptables -A INPUT -p tcp --dport 3306 -j DROP</code></pre>
 
     <hr>
 
-    <h2 id="load-balancer">Load Balancer — กระจาย Traffic</h2>
+    <h2 id="th-load-balancer">Load Balancer — กระจาย Traffic</h2>
 
     <p>เมื่อ app มี traffic เยอะเกินกว่า server เดียวรับไหว ใช้ <strong>Load Balancer</strong> กระจาย requests ไปยังหลาย servers — ทำให้ scale ได้ (เพิ่ม server เมื่อ traffic เพิ่ม) และ HA (ถ้า server หนึ่งล่ม traffic ไปอีกตัว) Load Balancer มี 2 แบบ: <strong>Layer 4</strong> (TCP level — เร็ว, ง่าย) และ <strong>Layer 7</strong> (HTTP level — route ตาม URL path, headers ได้):</p>
 
@@ -828,7 +879,7 @@ sudo iptables -A INPUT -p tcp --dport 3306 -j DROP</code></pre>
 
     <hr>
 
-    <h2 id="reverse-proxy">Reverse Proxy — Nginx ตัวกลาง</h2>
+    <h2 id="th-reverse-proxy">Reverse Proxy — Nginx ตัวกลาง</h2>
 
     <p><strong>Reverse Proxy</strong> รับ request จากภายนอกแล้วส่งต่อไปยัง app ข้างหลัง — ช่วยเรื่อง security, SSL, caching:</p>
 
@@ -871,7 +922,7 @@ server {
 
     <hr>
 
-    <h2 id="ssh">SSH — Remote เข้า Server</h2>
+    <h2 id="th-ssh">SSH — Remote เข้า Server</h2>
 
     <p>DevOps ต้องใช้ <strong>SSH</strong> เป็นเรื่องปกติ — เข้าจัดการ server จากระยะไกล:</p>
 
@@ -908,7 +959,7 @@ ssh staging</code></pre>
 
     <hr>
 
-    <h2 id="docker-networking">Docker Networking — Container คุยกันยังไง?</h2>
+    <h2 id="th-docker-networking">Docker Networking — Container คุยกันยังไง?</h2>
 
     <p>กลับมาเชื่อมกับ Docker — containers ใช้ virtual network ที่ Docker สร้างให้ มี 3 modes หลัก: <strong>bridge</strong> (default — containers คุยกันผ่าน virtual bridge), <strong>host</strong> (ใช้ network ของ host ตรงๆ — เร็วแต่ไม่ isolate), <strong>overlay</strong> (ข้าม hosts — ใช้กับ Docker Swarm/K8s) containers ในเครือข่ายเดียวกันเรียกหากันด้วย container name:</p>
 
@@ -935,7 +986,7 @@ docker run -d --name db  --network myapp-net postgres
 
     <hr>
 
-    <h2 id="s-10">เครื่องมือ Networking ที่ DevOps ต้องรู้</h2>
+    <h2 id="th-s-10">เครื่องมือ Networking ที่ DevOps ต้องรู้</h2>
 
     <p>สรุป command-line tools สำหรับ debug network issues — จำไม่หมดก็ไม่เป็นไร แค่รู้ว่ามีอะไรบ้าง เมื่อมีปัญหาจะได้เลือกใช้ถูกตัว:</p>
 
@@ -963,7 +1014,7 @@ nmap -sT server.com</code></pre>
 
     <hr>
 
-    <h2 id="summary">สรุป</h2>
+    <h2 id="th-summary">สรุป</h2>
 
     <p>Networking เป็นพื้นฐานที่ทุกอย่างใน DevOps สร้างอยู่บน — Docker networking, Kubernetes services, Load Balancers, VPCs ล้วนใช้ concepts เดียวกัน (TCP/IP, DNS, ports, firewalls) เข้าใจพื้นฐานดี debug ปัญหาได้เร็ว:</p>
 
@@ -978,9 +1029,512 @@ nmap -sT server.com</code></pre>
       <li><strong>Docker Network</strong> = container คุยกันด้วยชื่อ ใน network เดียวกัน 🐕‍🦺</li>
     </ul>
 
-    <div class="post-series-footer">
-      บทความจากซีรีส์ DevOps & Vibe Coding 2026
+    
     </div>
+    <div class="l-en" lang="en">
+
+        <p>In the previous post we talked about Kubernetes, and how it keeps containers working together in an orderly way.</p>
+
+    <p>But have you ever wondered... <strong>how do those containers actually "talk" to each other? How does the site we deploy get its data all the way to a user?</strong> 🌐</p>
+
+    <p>The answer is <strong>Networking</strong> — the groundwork every DevOps engineer has to know before putting anything into production with any confidence. 🐕‍🦺</p>
+
+    <hr>
+
+        <h2 id="en-tcp-ip-model">TCP/IP Model — The Common Language of the Internet</h2>
+
+    <p>Every time we open a web page or send data, that data travels through the <strong>4 layers</strong> of the TCP/IP model — and each layer has one job: <strong>Application</strong> (HTTP, DNS — the language apps speak), <strong>Transport</strong> (TCP/UDP — sending data reliably, or sending it fast), <strong>Internet</strong> (IP — finding the route to the destination), <strong>Network Access</strong> (Ethernet/Wi-Fi — actually pushing the bits). Once this model is clear, debugging network issues gets a great deal faster:</p>
+
+    <div class="stack-diagram">
+      <div class="stack-layer stack-layer--app">
+        🌐 Application Layer <span class="stack-layer__label">HTTP, HTTPS, DNS, SSH, FTP</span>
+      </div>
+      <div class="stack-layer stack-layer--transport">
+        📦 Transport Layer <span class="stack-layer__label">TCP, UDP</span>
+      </div>
+      <div class="stack-layer stack-layer--network">
+        🗺️ Network Layer <span class="stack-layer__label">IP, ICMP, Routing</span>
+      </div>
+      <div class="stack-layer stack-layer--link">
+        🔌 Link Layer <span class="stack-layer__label">Ethernet, Wi-Fi, MAC Address</span>
+      </div>
+    </div>
+
+    <blockquote>
+      <strong>💡 An easy way to remember it:</strong> Application creates the data → Transport breaks it into pieces → Network finds the route → Link sends it over the wire or the air
+    </blockquote>
+
+    <h3>TCP vs UDP — What Is the Difference?</h3>
+
+    <p>The transport layer has 2 main protocols — <strong>TCP</strong> (Transmission Control Protocol) sends data reliably, with a handshake, retransmission and ordering, which suits web, email and file transfer. <strong>UDP</strong> (User Datagram Protocol) is fast but guarantees nothing, which suits video streaming, gaming and DNS, where speed matters more than reliability:</p>
+
+    <table>
+      <thead>
+        <tr>
+          <th>Feature</th>
+          <th>TCP</th>
+          <th>UDP</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>Connection</td>
+          <td>Connection-oriented (3-way handshake)</td>
+          <td>Connectionless</td>
+        </tr>
+        <tr>
+          <td>Reliability</td>
+          <td>✅ Delivery guaranteed</td>
+          <td>❌ No guarantee</td>
+        </tr>
+        <tr>
+          <td>Ordering</td>
+          <td>✅ Arrives in order</td>
+          <td>❌ May arrive shuffled</td>
+        </tr>
+        <tr>
+          <td>Speed</td>
+          <td>Slower (overhead)</td>
+          <td>Faster</td>
+        </tr>
+        <tr>
+          <td>Used for</td>
+          <td>HTTP, SSH, Email, Database</td>
+          <td>DNS, Video streaming, Gaming</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <hr>
+
+        <h2 id="en-ip-address">IP Address — Your Address on the Internet</h2>
+
+    <p>Every device on a network needs an <strong>IP Address</strong>, the same way every house needs a street number:</p>
+
+    <h3>IPv4</h3>
+
+    <p><strong>IPv4</strong> uses a 32-bit address (192.168.1.100, for example) and supports around 4.3 billion addresses — which have already run out! <strong>IPv6</strong> uses 128 bits (2001:db8::1, for example) and supports a practically unlimited number, but IPv4 is still everywhere, kept alive through NAT:</p>
+    <pre><code># Format: 4 groups, each one 0-255
+192.168.1.100      ← Private IP (used inside a network)
+203.0.113.50       ← Public IP (used on the internet)
+
+# See your own machine's IP
+ip addr show       # Linux
+ifconfig           # macOS
+ipconfig           # Windows</code></pre>
+
+    <h3>Private vs Public IP</h3>
+
+    <p><strong>Private IPs</strong> (10.x.x.x, 172.16-31.x.x, 192.168.x.x) are for use inside a network only — they cannot be reached directly from the internet and have to go through NAT or a router. <strong>Public IPs</strong> are the addresses that live on the real internet. DevOps engineers need this distinction because it drives both VPC design and security:</p>
+    <table>
+      <thead>
+        <tr>
+          <th>Type</th>
+          <th>Range</th>
+          <th>Where it is used</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>Private</td>
+          <td><code>10.0.0.0/8</code>, <code>172.16.0.0/12</code>, <code>192.168.0.0/16</code></td>
+          <td>Inside a LAN, Docker networks</td>
+        </tr>
+        <tr>
+          <td>Public</td>
+          <td>Everything else</td>
+          <td>On the Internet</td>
+        </tr>
+        <tr>
+          <td>Loopback</td>
+          <td><code>127.0.0.1</code> (localhost)</td>
+          <td>The machine itself</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <blockquote>
+      <strong>💡 DevOps Tip:</strong> when you deploy an app, binding to <code>127.0.0.1</code> means only that one machine can reach it. Bind to <code>0.0.0.0</code> if it has to be reachable from outside
+    </blockquote>
+
+    <hr>
+
+        <h2 id="en-ports">Ports — The Doors of an Application</h2>
+
+    <p>An IP address says "which machine"; a <strong>Port</strong> says "which app" on that machine — one box can run a web server (port 80), a database (port 5432) and SSH (port 22) at the same time. Ports 0-1023 are the "well-known ports" and need root privileges; 1024-65535 are free to use. DevOps engineers have to know which service sits on which port in order to set the firewall up correctly:</p>
+
+    <table>
+      <thead>
+        <tr>
+          <th>Port</th>
+          <th>Service</th>
+          <th>Description</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><span class="port-badge">22</span></td>
+          <td>SSH</td>
+          <td>Remote login to a machine</td>
+        </tr>
+        <tr>
+          <td><span class="port-badge">80</span></td>
+          <td>HTTP</td>
+          <td>Websites (unencrypted)</td>
+        </tr>
+        <tr>
+          <td><span class="port-badge">443</span></td>
+          <td>HTTPS</td>
+          <td>Websites (SSL/TLS encrypted)</td>
+        </tr>
+        <tr>
+          <td><span class="port-badge">3000</span></td>
+          <td>Dev Server</td>
+          <td>React, Next.js development</td>
+        </tr>
+        <tr>
+          <td><span class="port-badge">3306</span></td>
+          <td>MySQL</td>
+          <td>MySQL/MariaDB database</td>
+        </tr>
+        <tr>
+          <td><span class="port-badge">5432</span></td>
+          <td>PostgreSQL</td>
+          <td>PostgreSQL database</td>
+        </tr>
+        <tr>
+          <td><span class="port-badge">6379</span></td>
+          <td>Redis</td>
+          <td>Cache / Message queue</td>
+        </tr>
+        <tr>
+          <td><span class="port-badge">27017</span></td>
+          <td>MongoDB</td>
+          <td>NoSQL database</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <pre><code># See which ports are in use
+sudo ss -tlnp       # Linux
+sudo lsof -i -P     # macOS
+netstat -an          # Windows
+
+# Check whether a port is open
+nc -zv server.com 443
+curl -I http://server.com:8080</code></pre>
+
+    <hr>
+
+        <h2 id="en-dns">DNS — Turning Names into IPs</h2>
+
+    <p>We remember <code>google.com</code> far more easily than <code>142.250.199.46</code> — and <strong>DNS</strong> is what turns a domain name into an IP address</p>
+
+    <div class="flow-diagram">
+      <div class="flow-step">
+        <div class="flow-step__title">🌐 Browser</div>
+        <div class="flow-step__sub">google.com</div>
+      </div>
+      <span class="flow-arrow">→</span>
+      <div class="flow-step">
+        <div class="flow-step__title">📖 DNS Resolver</div>
+        <div class="flow-step__sub">Asks a DNS server</div>
+      </div>
+      <span class="flow-arrow">→</span>
+      <div class="flow-step">
+        <div class="flow-step__title">🏛️ Root → TLD → Auth</div>
+        <div class="flow-step__sub">Looks up the IP</div>
+      </div>
+      <span class="flow-arrow">→</span>
+      <div class="flow-step">
+        <div class="flow-step__title">✅ 142.250.199.46</div>
+        <div class="flow-step__sub">Got the IP!</div>
+      </div>
+    </div>
+
+    <h3>DNS Record Types</h3>
+
+    <p>DNS is not only "name → IP" — there are several record types, each with its own job. A DevOps engineer needs at least A, AAAA, CNAME, MX and TXT to set a domain up correctly:</p>
+
+    <table>
+      <thead>
+        <tr>
+          <th>Record</th>
+          <th>Job</th>
+          <th>Example</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><strong>A</strong></td>
+          <td>Domain → IPv4</td>
+          <td><code>example.com → 93.184.216.34</code></td>
+        </tr>
+        <tr>
+          <td><strong>AAAA</strong></td>
+          <td>Domain → IPv6</td>
+          <td><code>example.com → 2606:2800:...</code></td>
+        </tr>
+        <tr>
+          <td><strong>CNAME</strong></td>
+          <td>Alias pointing at another domain</td>
+          <td><code>www → example.com</code></td>
+        </tr>
+        <tr>
+          <td><strong>MX</strong></td>
+          <td>Mail server</td>
+          <td><code>example.com → mail.example.com</code></td>
+        </tr>
+        <tr>
+          <td><strong>NS</strong></td>
+          <td>Name server responsible for the domain</td>
+          <td><code>ns1.cloudflare.com</code></td>
+        </tr>
+        <tr>
+          <td><strong>TXT</strong></td>
+          <td>Free text (SPF, verification)</td>
+          <td><code>v=spf1 include:...</code></td>
+        </tr>
+      </tbody>
+    </table>
+
+    <pre><code># Look at a DNS record
+dig example.com A
+dig example.com MX
+nslookup example.com
+
+# Check whether DNS has propagated yet
+dig @8.8.8.8 mysite.com A      # ask Google DNS
+dig @1.1.1.1 mysite.com A      # ask Cloudflare DNS</code></pre>
+
+    <hr>
+
+        <h2 id="en-firewall">Firewall — The Wall That Protects You</h2>
+
+    <p>A <strong>Firewall</strong> is the filter that decides which traffic may come in and go out, and which gets blocked — and the principle is <strong>"default deny"</strong>: close everything first, then open only what is genuinely needed. Open ports 80/443 for the web, for instance, and port 22 for SSH from permitted IPs only. On Linux you use <code>ufw</code> (easy) or <code>iptables</code> (powerful); in the cloud you use Security Groups:</p>
+
+    <pre><code># UFW (Ubuntu) — the easiest of the lot
+sudo ufw enable
+sudo ufw allow 22/tcp       # SSH
+sudo ufw allow 80/tcp       # HTTP
+sudo ufw allow 443/tcp      # HTTPS
+sudo ufw deny 3306/tcp      # block MySQL from outside
+sudo ufw status
+
+# iptables — finer-grained
+sudo iptables -A INPUT -p tcp --dport 80 -j ACCEPT
+sudo iptables -A INPUT -p tcp --dport 3306 -s 10.0.0.0/8 -j ACCEPT
+sudo iptables -A INPUT -p tcp --dport 3306 -j DROP</code></pre>
+
+    <blockquote>
+      <strong>🐕 The iron rule:</strong> open only the ports you actually need! Database ports (3306, 5432, 27017) should never be exposed to the public
+    </blockquote>
+
+    <hr>
+
+        <h2 id="en-load-balancer">Load Balancer — Spreading the Traffic</h2>
+
+    <p>When an app gets more traffic than a single server can carry, a <strong>Load Balancer</strong> spreads the requests across several servers — which gives you scale (add a server as traffic grows) and HA (if one server dies, the traffic goes to another). Load balancers come in 2 kinds: <strong>Layer 4</strong> (TCP level — fast and simple) and <strong>Layer 7</strong> (HTTP level — able to route on URL path or headers):</p>
+
+    <div class="arch-diagram">
+      <div class="arch-box">
+        <div class="arch-label">Load Balancing Architecture</div>
+        <div class="arch-row">
+          <div class="arch-container" style="min-width: 100px;">
+            <div class="arch-name">Users</div>
+            <div class="arch-item">🌐 Client</div>
+          </div>
+        </div>
+        <div style="text-align: center; font-size: 1.2rem; color: var(--blue); font-weight: 700; margin: 0.5rem 0;">↓</div>
+        <div class="arch-row">
+          <div class="arch-container" style="background: rgba(34,98,153,0.12); min-width: 180px;">
+            <div class="arch-name">Load Balancer</div>
+            <div class="arch-item">Nginx / HAProxy / AWS ALB</div>
+          </div>
+        </div>
+        <div style="text-align: center; font-size: 1.2rem; color: var(--blue); font-weight: 700; margin: 0.5rem 0;">↓ ↓ ↓</div>
+        <div class="arch-row">
+          <div class="arch-container">
+            <div class="arch-name">Server 1</div>
+            <div class="arch-item">App Instance</div>
+          </div>
+          <div class="arch-container">
+            <div class="arch-name">Server 2</div>
+            <div class="arch-item">App Instance</div>
+          </div>
+          <div class="arch-container">
+            <div class="arch-name">Server 3</div>
+            <div class="arch-item">App Instance</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <h3>Load Balancing Strategies</h3>
+
+    <p>There are several ways to spread the traffic — pick by use case: <strong>Round Robin</strong> (take turns — the simplest), <strong>Least Connections</strong> (send to whichever server is least busy), <strong>IP Hash</strong> (the same user always lands on the same server — right for session-based apps):</p>
+    <ul>
+      <li><strong>Round Robin</strong> — one after another, in turn (1 → 2 → 3 → 1 → ...)</li>
+      <li><strong>Least Connections</strong> — send to the server with the fewest connections</li>
+      <li><strong>IP Hash</strong> — the same user always goes to the same server (sticky session)</li>
+      <li><strong>Weighted</strong> — the stronger server takes more of the traffic</li>
+    </ul>
+
+    <hr>
+
+        <h2 id="en-reverse-proxy">Reverse Proxy — Nginx in the Middle</h2>
+
+    <p>A <strong>Reverse Proxy</strong> takes requests from outside and forwards them to the app sitting behind it — which helps with security, SSL and caching:</p>
+
+    <pre><code># /etc/nginx/sites-available/myapp
+server {
+    listen 80;
+    server_name myapp.com;
+
+    # Redirect HTTP → HTTPS
+    return 301 https://$host$request_uri;
+}
+
+server {
+    listen 443 ssl;
+    server_name myapp.com;
+
+    ssl_certificate     /etc/letsencrypt/live/myapp.com/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/myapp.com/privkey.pem;
+
+    location / {
+        proxy_pass http://localhost:3000;    # forward to the Node.js app
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+
+    location /api {
+        proxy_pass http://localhost:8080;    # a separate API server
+    }
+}</code></pre>
+
+    <blockquote>
+      <strong>💡 Why use a Reverse Proxy?</strong><br>
+      ✅ SSL termination (handle HTTPS in one place)<br>
+      ✅ Load balancing between app instances<br>
+      ✅ Caching static files<br>
+      ✅ Hiding the app server from the outside (security)
+    </blockquote>
+
+    <hr>
+
+        <h2 id="en-ssh">SSH — Reaching a Server Remotely</h2>
+
+    <p>Using <strong>SSH</strong> is routine for DevOps work — it is how we manage a server from a distance:</p>
+
+    <pre><code># Log into a server
+ssh user@server.com
+
+# Use a key instead of a password (safer!)
+ssh-keygen -t ed25519 -C "your@email.com"
+ssh-copy-id user@server.com
+
+# SSH tunnelling — reach a port that is blocked
+ssh -L 3306:localhost:3306 user@server.com
+# now localhost:3306 = the MySQL on that server
+
+# SCP — copy a file to the server
+scp ./app.tar.gz user@server.com:/home/user/</code></pre>
+
+    <h4>SSH Config — Stop Typing the Same Thing</h4>
+    <pre><code># ~/.ssh/config
+Host prod
+    HostName 203.0.113.50
+    User deploy
+    IdentityFile ~/.ssh/id_ed25519
+    Port 22
+
+Host staging
+    HostName 10.0.1.100
+    User deploy
+    ProxyJump prod      # go in via prod (bastion host)
+
+# then all you type is:
+ssh prod
+ssh staging</code></pre>
+
+    <hr>
+
+        <h2 id="en-docker-networking">Docker Networking — How Do Containers Talk?</h2>
+
+    <p>Back to Docker — containers use a virtual network that Docker builds for them, with 3 main modes: <strong>bridge</strong> (the default — containers talk through a virtual bridge), <strong>host</strong> (use the host's network directly — fast, but no isolation), <strong>overlay</strong> (across hosts — used with Docker Swarm and K8s). Containers on the same network reach each other by container name:</p>
+
+    <pre><code># List the networks you have
+docker network ls
+# NETWORK ID     NAME      DRIVER
+# abc123         bridge    bridge    ← default
+# def456         host      host
+# ghi789         none      null
+
+# Create a custom network (recommended!)
+docker network create myapp-net
+
+# Run containers on the same network
+docker run -d --name api --network myapp-net node-api
+docker run -d --name db  --network myapp-net postgres
+
+# containers on one network can call each other by "name"!
+# inside the api container: postgres://db:5432/mydb  ← the name "db" instead of an IP</code></pre>
+
+    <blockquote>
+      <strong>🐕 Key Insight:</strong> Docker Compose creates the network for you automatically — every service can reach every other by its service name straight away!
+    </blockquote>
+
+    <hr>
+
+        <h2 id="en-s-10">The Networking Tools Every DevOps Engineer Needs</h2>
+
+    <p>A round-up of the command-line tools for debugging network issues — you do not have to memorise them all, only to know what exists, so that when trouble comes you pick the right one:</p>
+
+    <pre><code># ping — test whether a machine is up
+ping google.com
+
+# traceroute — see the route the data takes
+traceroute google.com
+
+# curl — test an HTTP request
+curl -I https://myapp.com        # headers only
+curl -v https://myapp.com        # verbose mode
+
+# dig — check DNS
+dig myapp.com A +short
+
+# ss / netstat — see which ports are open
+ss -tlnp
+
+# tcpdump — capture packets (advanced)
+sudo tcpdump -i eth0 port 80 -n
+
+# nmap — port scanning (careful: only against your own servers!)
+nmap -sT server.com</code></pre>
+
+    <hr>
+
+        <h2 id="en-summary">Summary</h2>
+
+    <p>Networking is the foundation everything else in DevOps is built on — Docker networking, Kubernetes services, load balancers and VPCs all rest on the same concepts (TCP/IP, DNS, ports, firewalls). Know the fundamentals well and you debug problems fast:</p>
+
+    <ul>
+      <li><strong>TCP/IP 4 Layers</strong> = Application → Transport → Network → Link</li>
+      <li><strong>TCP</strong> = reliable (web, APIs) | <strong>UDP</strong> = fast (streaming, gaming)</li>
+      <li><strong>IP Address</strong> = the machine's address | <strong>Port</strong> = the app's door</li>
+      <li><strong>DNS</strong> = domain → IP | know your A, CNAME and MX records</li>
+      <li><strong>Firewall</strong> = open only the ports you need (UFW is the easiest)</li>
+      <li><strong>Load Balancer</strong> = spread the traffic | <strong>Reverse Proxy</strong> = Nginx in the middle</li>
+      <li><strong>SSH</strong> = remote access to a server | use a key plus a config file</li>
+      <li><strong>Docker Network</strong> = containers on one network talk by name 🐕‍🦺</li>
+    </ul>
+
+    </div>
+
+<div class="post-series-footer"><span class="l-th">บทความจากซีรีส์ DevOps & Vibe Coding 2026</span><span class="l-en" lang="en">From the DevOps & Vibe Coding 2026 series</span></div>
 
   </article>
 

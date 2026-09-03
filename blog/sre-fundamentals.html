@@ -320,6 +320,34 @@
       ::view-transition-old(*),
       ::view-transition-new(*) { animation: none !important; }
     }
+
+    /* ── LANGUAGE SWITCH — pure CSS, zero JavaScript (INV-38) ──
+       One visually-hidden checkbox as a direct child of body, BEFORE the main landmark,
+       so `#langSwitch:checked ~ main …` reaches every content block. The two
+       tracks are paired blocks: .l-th (default) and .l-en (hidden until
+       checked; display:revert restores block for divs, inline for spans).
+       Naming stays clear of INV-12's menu-token regex (hamburger|burger|
+       nav__toggle|nav-toggle|navtoggle|menu-toggle|menu__toggle) — verified.
+       No JS also means no persistence across posts; each post opens in Thai. */
+    .lang-switch-box { position: absolute; left: -9999px; }
+    .l-en { display: none; }
+    #langSwitch:checked ~ main .l-en { display: revert; }
+    #langSwitch:checked ~ main .l-th { display: none; }
+    .lang-switch {
+      display: inline-flex; align-items: center; gap: 0.55rem;
+      margin-top: 1.4rem; padding: 0.4rem 1.1rem; border-radius: 50px;
+      background: rgba(255,255,255,0.7); border: 1px solid rgba(34,98,153,0.25);
+      cursor: pointer; font-size: 0.85rem; user-select: none;
+    }
+    .lang-switch span { color: var(--slate-light); font-weight: 600; transition: color 0.2s; }
+    .lang-switch .lang-sep { color: var(--gray); font-weight: 400; }
+    .lang-switch .lang-th { color: var(--navy); font-weight: 800; }
+    #langSwitch:checked ~ main .lang-switch .lang-th { color: var(--slate-light); font-weight: 600; }
+    #langSwitch:checked ~ main .lang-switch .lang-en { color: var(--navy); font-weight: 800; }
+    .lang-switch:hover { border-color: var(--blue); }
+    #langSwitch:focus-visible ~ main .lang-switch {
+      outline: 2px solid var(--focus); outline-offset: 3px;
+    }
   </style>
   <!-- social -->
   <link rel="canonical" href="https://anirach.com/blog/sre-fundamentals.html">
@@ -327,6 +355,7 @@
   <meta property="og:url" content="https://anirach.com/blog/sre-fundamentals.html">
   <meta property="og:site_name" content="Anirach Mingkhwan">
   <meta property="og:locale" content="th_TH">
+  <meta property="og:locale:alternate" content="en_US">
   <meta property="article:published_time" content="2026-03-07">
   <meta property="article:author" content="https://anirach.com/">
   <meta property="og:title" content="SRE — Site Reliability Engineering ที่ DevOps ต้องรู้">
@@ -357,13 +386,17 @@
     "datePublished": "2026-03-07",
     "dateModified": "2026-08-26",
     "image": "https://anirach.com/images/sre-fundamentals-og.jpg",
-    "inLanguage": "th",
+    "inLanguage": [
+      "th",
+      "en"
+    ],
     "mainEntityOfPage": "https://anirach.com/blog/sre-fundamentals.html"
   }
   </script>
 </head>
 <body>
 <a href="#main" class="skip-link">Skip to content</a>
+<input type="checkbox" id="langSwitch" class="lang-switch-box" aria-label="Switch language: Thai / English">
 
   <nav class="blog-nav">
     <div class="blog-nav__inner">
@@ -381,34 +414,52 @@
       <span class="post-hero__tag">Reliability</span>
       <span class="post-hero__tag">DevOps</span>
     </div>
-    <h1 class="post-hero__title">SRE — Site Reliability Engineering ที่ DevOps ต้องรู้ 🚒</h1>
+    <h1 class="post-hero__title"><span class="l-th">SRE — Site Reliability Engineering ที่ DevOps ต้องรู้ 🚒</span><span class="l-en" lang="en">SRE — The Site Reliability Engineering Every DevOps Team Needs 🚒</span></h1>
     <div class="post-hero__meta">
       <span>By <strong>Anirach Mingkhwan</strong></span>
       <span class="post-hero__series">DevOps & Vibe Coding 2026</span>
     
       <span><time datetime="2026-03-07">7 Mar 2026</time> · 26 min read</span></div>
+    <label for="langSwitch" class="lang-switch" title="สลับภาษา · Switch language"><span class="lang-th">ไทย</span><span class="lang-sep">·</span><span class="lang-en" lang="en">English</span></label>
     <div class="post-hero__cover">
       <img src="../images/sre-cover.jpg" alt="SRE — วัดความน่าเชื่อถือของระบบด้วยตัวเลข" width="800" height="800" loading="eager" fetchpriority="high" decoding="async">
     </div>
   </header>
 
   <article class="post-body">
-    <details class="post-toc" open>
-      <summary>In this post &middot; <span lang="th">ในบทความนี้</span></summary>
+    <details class="post-toc l-th" open>
+      <summary>ในบทความนี้</summary>
       <ol>
-          <li><a href="#sre">🤔 SRE คืออะไร? ต่างจาก DevOps ยังไง?</a></li>
-          <li><a href="#sli-slo-sla">📊 SLI / SLO / SLA — วัด Reliability ยังไง?</a></li>
-          <li><a href="#error-budget">💰 Error Budget — งบสำหรับ "พลาด"</a></li>
-          <li><a href="#incident-management">🚨 Incident Management — เมื่อระบบล่ม</a></li>
-          <li><a href="#blameless-postmortem">📝 Blameless Postmortem — เรียนรู้จากความผิดพลาด</a></li>
-          <li><a href="#toil-reduction">🔧 Toil Reduction — ลดงาน manual</a></li>
-          <li><a href="#on-call-best-practices">📟 On-Call Best Practices</a></li>
-          <li><a href="#capacity-planning">📈 Capacity Planning</a></li>
-          <li><a href="#chaos-engineering">🛡️ Chaos Engineering — ทดสอบความแข็งแกร่ง</a></li>
-          <li><a href="#sre-checklist">📋 SRE Checklist — เริ่มต้นยังไง?</a></li>
-          <li><a href="#summary">สรุป</a></li>
+          <li><a href="#th-sre">🤔 SRE คืออะไร? ต่างจาก DevOps ยังไง?</a></li>
+          <li><a href="#th-sli-slo-sla">📊 SLI / SLO / SLA — วัด Reliability ยังไง?</a></li>
+          <li><a href="#th-error-budget">💰 Error Budget — งบสำหรับ "พลาด"</a></li>
+          <li><a href="#th-incident-management">🚨 Incident Management — เมื่อระบบล่ม</a></li>
+          <li><a href="#th-blameless-postmortem">📝 Blameless Postmortem — เรียนรู้จากความผิดพลาด</a></li>
+          <li><a href="#th-toil-reduction">🔧 Toil Reduction — ลดงาน manual</a></li>
+          <li><a href="#th-on-call-best-practices">📟 On-Call Best Practices</a></li>
+          <li><a href="#th-capacity-planning">📈 Capacity Planning</a></li>
+          <li><a href="#th-chaos-engineering">🛡️ Chaos Engineering — ทดสอบความแข็งแกร่ง</a></li>
+          <li><a href="#th-sre-checklist">📋 SRE Checklist — เริ่มต้นยังไง?</a></li>
+          <li><a href="#th-summary">สรุป</a></li>
       </ol>
     </details>
+    <details class="post-toc l-en" open>
+      <summary>In this post</summary>
+      <ol>
+          <li><a href="#en-sre">🤔 What Is SRE? How Is It Different from DevOps?</a></li>
+          <li><a href="#en-sli-slo-sla">📊 SLI / SLO / SLA — How Do You Measure Reliability?</a></li>
+          <li><a href="#en-error-budget">💰 Error Budget — A Budget for Getting It Wrong</a></li>
+          <li><a href="#en-incident-management">🚨 Incident Management — When the System Goes Down</a></li>
+          <li><a href="#en-blameless-postmortem">📝 Blameless Postmortem — Learning from Failure</a></li>
+          <li><a href="#en-toil-reduction">🔧 Toil Reduction — Cutting Manual Work</a></li>
+          <li><a href="#en-on-call-best-practices">📟 On-Call Best Practices</a></li>
+          <li><a href="#en-capacity-planning">📈 Capacity Planning</a></li>
+          <li><a href="#en-chaos-engineering">🛡️ Chaos Engineering — Testing for Resilience</a></li>
+          <li><a href="#en-sre-checklist">📋 SRE Checklist — Where Do You Start?</a></li>
+          <li><a href="#en-summary">Summary</a></li>
+      </ol>
+    </details>
+    <div class="l-th">
 
 
     <p>จากโพสต์ที่แล้วเราเรียน Cloud Architecture — ออกแบบระบบบน Cloud ให้แข็งแกร่ง แต่สร้างเสร็จแล้ว... <strong>ใครจะดูแลให้มันทำงานต่อเนื่อง 24/7?</strong></p>
@@ -421,7 +472,7 @@
 
     <hr>
 
-    <h2 id="sre">🤔 SRE คืออะไร? ต่างจาก DevOps ยังไง?</h2>
+    <h2 id="th-sre">🤔 SRE คืออะไร? ต่างจาก DevOps ยังไง?</h2>
 
     <p><strong>SRE (Site Reliability Engineering)</strong> คือ discipline ที่ใช้ software engineering approach มาแก้ปัญหา operations:</p>
 
@@ -447,7 +498,7 @@
 
     <hr>
 
-    <h2 id="sli-slo-sla">📊 SLI / SLO / SLA — วัด Reliability ยังไง?</h2>
+    <h2 id="th-sli-slo-sla">📊 SLI / SLO / SLA — วัด Reliability ยังไง?</h2>
 
     <p>หัวใจของ SRE คือการ <strong>วัด reliability ด้วยตัวเลข</strong> ไม่ใช่ความรู้สึก:</p>
 
@@ -537,7 +588,7 @@ sum(rate(http_requests_total[5m]))
 
     <hr>
 
-    <h2 id="error-budget">💰 Error Budget — งบสำหรับ "พลาด"</h2>
+    <h2 id="th-error-budget">💰 Error Budget — งบสำหรับ "พลาด"</h2>
 
     <p><strong>Error Budget</strong> คือ "งบ" ที่ระบบ "ผิดพลาดได้" — คำนวณจาก SLO:</p>
 
@@ -601,7 +652,7 @@ budget_remaining = (budget_total - budget_used) / budget_total * 100
 
     <hr>
 
-    <h2 id="incident-management">🚨 Incident Management — เมื่อระบบล่ม</h2>
+    <h2 id="th-incident-management">🚨 Incident Management — เมื่อระบบล่ม</h2>
 
     <h3>Severity Levels</h3>
 
@@ -708,7 +759,7 @@ budget_remaining = (budget_total - budget_used) / budget_total * 100
 
     <hr>
 
-    <h2 id="blameless-postmortem">📝 Blameless Postmortem — เรียนรู้จากความผิดพลาด</h2>
+    <h2 id="th-blameless-postmortem">📝 Blameless Postmortem — เรียนรู้จากความผิดพลาด</h2>
 
     <p><strong>Postmortem</strong> คือ document ที่เขียนหลังเกิด incident — เน้น <strong>"เรียนรู้" ไม่ใช่ "โทษคน"</strong> (blameless!):</p>
 
@@ -772,7 +823,7 @@ circular reference. Under 500 req/s, memory grew ~1GB/min.
 
     <hr>
 
-    <h2 id="toil-reduction">🔧 Toil Reduction — ลดงาน manual</h2>
+    <h2 id="th-toil-reduction">🔧 Toil Reduction — ลดงาน manual</h2>
 
     <p><strong>Toil</strong> = งานที่ manual, ซ้ำๆ, automate ได้, ไม่มี lasting value — Google กำหนดว่า SRE ต้องใช้เวลาทำ toil <strong>ไม่เกิน 50%</strong>:</p>
 
@@ -809,7 +860,7 @@ circular reference. Under 500 req/s, memory grew ~1GB/min.
 
     <hr>
 
-    <h2 id="on-call-best-practices">📟 On-Call Best Practices</h2>
+    <h2 id="th-on-call-best-practices">📟 On-Call Best Practices</h2>
 
     <h3>On-Call Rotation</h3>
 
@@ -883,7 +934,7 @@ groups:
 
     <hr>
 
-    <h2 id="capacity-planning">📈 Capacity Planning</h2>
+    <h2 id="th-capacity-planning">📈 Capacity Planning</h2>
 
     <p>Capacity Planning คือการ "เดาอนาคต" อย่างมีหลักการ แทนที่จะรอให้ระบบ overload แล้วค่อย panic buying การทำ forecasting ด้วย data จะช่วยให้วางแผนและจัดซื้อ infrastructure ได้ทันเวลา โดยเฉพาะในยุคที่ hardware procurement ใช้เวลานาน</p>
 
@@ -909,7 +960,7 @@ rate(http_requests_total[30d])
 
     <hr>
 
-    <h2 id="chaos-engineering">🛡️ Chaos Engineering — ทดสอบความแข็งแกร่ง</h2>
+    <h2 id="th-chaos-engineering">🛡️ Chaos Engineering — ทดสอบความแข็งแกร่ง</h2>
 
     <p>Chaos Engineering = <strong>ทำลายระบบตัวเองก่อนที่ระบบจริงจะพัง</strong> เพื่อหาจุดอ่อน:</p>
 
@@ -954,7 +1005,7 @@ spec:
 
     <hr>
 
-    <h2 id="sre-checklist">📋 SRE Checklist — เริ่มต้นยังไง?</h2>
+    <h2 id="th-sre-checklist">📋 SRE Checklist — เริ่มต้นยังไง?</h2>
 
     <p>การเริ่มต้น SRE ในองค์กรต้องทำทีละขั้น ไม่ใช่กระโดดไปทำทั้งหมดพร้อมกัน เพราะ SRE ต้องอาศัยทั้ง technical implementation และ culture change ที่ใช้เวลา checklist ด้านล่างเรียงตามลำดับความสำคัญ โดย foundation (ข้อ 1-3) ต้องแข็งแกร่งก่อนไปขั้นตอนถัดไป</p>
 
@@ -975,7 +1026,7 @@ spec:
 
     <hr>
 
-    <h2 id="summary">สรุป</h2>
+    <h2 id="th-summary">สรุป</h2>
 
     <ul>
       <li><strong>SRE</strong> = Software engineering approach to operations — "SRE implements DevOps"</li>
@@ -988,9 +1039,590 @@ spec:
       <li><strong>Chaos Engineering</strong> = ทดสอบความแข็งแกร่งก่อนจะพังจริง 🚒🐕</li>
     </ul>
 
-    <div class="post-series-footer">
-      บทความจากซีรีส์ DevOps & Vibe Coding 2026
+    
     </div>
+    <div class="l-en" lang="en">
+
+        <p>In the previous post we covered Cloud Architecture — designing a resilient system on the cloud. But once it is built... <strong>who keeps it running 24/7?</strong></p>
+
+    <p>The answer is <strong>SRE — Site Reliability Engineering</strong> — the idea from Google that turns "the system doesn't go down" into a matter of engineering rather than luck 🚒🐕</p>
+
+    <blockquote>
+      <strong>"SRE is what happens when you ask a software engineer to design an operations team."</strong> — Ben Treynor, VP Engineering @ Google (the founder of SRE)
+    </blockquote>
+
+    <hr>
+
+        <h2 id="en-sre">🤔 What Is SRE? How Is It Different from DevOps?</h2>
+
+    <p><strong>SRE (Site Reliability Engineering)</strong> is the discipline of applying a software engineering approach to operations problems:</p>
+
+    <p>Plenty of people are unsure how SRE differs from DevOps. The table below makes the difference clear — in particular, SRE carries a much more explicit notion of "measure it with numbers" and "cap the toil work" than DevOps, which is mostly about culture and process.</p>
+
+    <table>
+      <thead><tr><th>Feature</th><th>Traditional Ops</th><th>DevOps</th><th>SRE</th></tr></thead>
+      <tbody>
+        <tr><td><strong>Focus</strong></td><td>Keeping the system alive</td><td>Culture + CI/CD</td><td>Reliability engineering</td></tr>
+        <tr><td><strong>Approach</strong></td><td>Manual, ticket-based</td><td>Automate everything</td><td>Error budgets + engineering</td></tr>
+        <tr><td><strong>Goal</strong></td><td>The system runs</td><td>Deploy fast</td><td>Reliable + deploy fast</td></tr>
+        <tr><td><strong>Toil</strong></td><td>Accepted</td><td>Chipped away at</td><td>Capped at &lt; 50% of the time</td></tr>
+        <tr><td><strong>Risk</strong></td><td>Avoided</td><td>Accepted</td><td>Calculated with an error budget</td></tr>
+        <tr><td><strong>On-call</strong></td><td>Every problem</td><td>Shared</td><td>Governed by an explicit policy</td></tr>
+      </tbody>
+    </table>
+
+    <p>The table shows that SRE is "DevOps made concrete" through clearly defined metrics. Instead of saying "the system must be stable", SRE says "the system must have 99.9% uptime" and specifies exactly how that is measured. The error budget idea turns the balance between stability and shipping new features into a question of data rather than of feelings.</p>
+
+    <blockquote>
+      <strong>💡 An easy way to remember it:</strong> DevOps = "the culture" (philosophy) | SRE = "how it is actually done" (implementation) — SRE implements DevOps
+    </blockquote>
+
+    <hr>
+
+        <h2 id="en-sli-slo-sla">📊 SLI / SLO / SLA — How Do You Measure Reliability?</h2>
+
+    <p>The heart of SRE is <strong>measuring reliability with numbers</strong>, not with feelings:</p>
+
+    <p>SLI, SLO and SLA are the core of SRE: they turn "stability" into numbers rather than a feeling or a vague phrase. Understanding how the three differ helps us design systems and measure them effectively.</p>
+
+    <div class="slo-grid">
+      <div class="slo-card">
+        <div class="slo-card__icon">📏</div>
+        <div class="slo-card__name">SLI</div>
+        <div class="slo-card__desc">Service Level Indicator<br>the measurement (metric)</div>
+        <div class="slo-card__example">latency p99 = 200ms</div>
+      </div>
+      <div class="slo-card">
+        <div class="slo-card__icon">🎯</div>
+        <div class="slo-card__name">SLO</div>
+        <div class="slo-card__desc">Service Level Objective<br>the target</div>
+        <div class="slo-card__example">p99 &lt; 300ms 99.9%</div>
+      </div>
+      <div class="slo-card">
+        <div class="slo-card__icon">📜</div>
+        <div class="slo-card__name">SLA</div>
+        <div class="slo-card__desc">Service Level Agreement<br>the contract</div>
+        <div class="slo-card__example">99.9% uptime or refund</div>
+      </div>
+    </div>
+
+    <p>The diagram shows that the SLI is the measurement collected from the real system, the SLO is the target we set based on that SLI, and the SLA is the agreement with the customer that carries a real consequence (a refund, for instance). The key rule is that the SLO must be <em>stricter</em> than the SLA, because you need a buffer to absorb risk.</p>
+
+    <h3>The SLIs that matter — "The Four Golden Signals"</h3>
+
+    <p>Google recommends starting with the "four golden signals", which together cover both the user experience and the health of the system. Having all four gives you a full picture and lets you catch problems quickly.</p>
+
+    <table>
+      <thead><tr><th>Signal</th><th>What it measures</th><th>Example SLI</th></tr></thead>
+      <tbody>
+        <tr><td><strong>🕐 Latency</strong></td><td>Response time</td><td>p50 = 50ms, p99 = 200ms</td></tr>
+        <tr><td><strong>📊 Traffic</strong></td><td>Request volume</td><td>1,500 req/sec</td></tr>
+        <tr><td><strong>❌ Errors</strong></td><td>Error rate</td><td>0.1% of requests = 5xx</td></tr>
+        <tr><td><strong>💾 Saturation</strong></td><td>How much resource is in use</td><td>CPU 70%, Memory 80%</td></tr>
+      </tbody>
+    </table>
+
+    <p>The important detail is that latency must separate successful requests from failed ones, because errors are usually faster (fail fast) and can hide the real problem. Traffic tells you the demand, errors tell you the quality, and saturation tells you the system's limit. All four together give the complete picture.</p>
+
+    <pre><code># Prometheus — measuring SLIs
+# Latency (p99)
+histogram_quantile(0.99,
+  rate(http_request_duration_seconds_bucket[5m])
+)
+
+# Error Rate
+sum(rate(http_requests_total{status=~"5.."}[5m]))
+/
+sum(rate(http_requests_total[5m]))
+
+# Availability (over 30 days)
+1 - (
+  sum(rate(http_requests_total{status=~"5.."}[30d]))
+  /
+  sum(rate(http_requests_total[30d]))
+)</code></pre>
+
+    <p>The Prometheus code above shows how to compute the basic SLIs. Using a histogram for latency gives you the flexibility to compute any percentile later. For the error rate, watch out for division by zero and provide a fallback value. Computing availability over a 30-day window gives a longer-term view that is far steadier than looking at a short interval.</p>
+
+    <h3>An example SLO document</h3>
+
+    <pre><code># SLO: User API Service
+# ──────────────────────
+# SLI: Availability
+#   Definition: % of non-5xx responses
+#   SLO: 99.9% over 30-day rolling window
+#   Error Budget: 0.1% = ~43 minutes/month
+#
+# SLI: Latency
+#   Definition: p99 response time
+#   SLO: p99 < 300ms for 99% of requests
+#
+# SLI: Freshness
+#   Definition: data staleness
+#   SLO: 95% of reads return data < 1 min old
+#
+# Consequences:
+#   If error budget exhausted:
+#   → Freeze feature deployments
+#   → Focus on reliability improvements
+#   → Require SRE approval for any change</code></pre>
+
+    <hr>
+
+        <h2 id="en-error-budget">💰 Error Budget — A Budget for Getting It Wrong</h2>
+
+    <p>An <strong>error budget</strong> is the "budget" a system has for failing — computed from the SLO:</p>
+
+    <p>The error budget is a revolutionary idea: it turns the balance between stability and new feature work into arithmetic rather than a fight between Dev and Ops. The table below shows that a higher SLO (99.99%) leaves a very small error budget, which means far more care is needed on every deploy.</p>
+
+    <table>
+      <thead><tr><th>SLO</th><th>Error budget/month</th><th>Error budget/year</th></tr></thead>
+      <tbody>
+        <tr><td><strong>99%</strong></td><td>7.3 hours</td><td>3.65 days</td></tr>
+        <tr><td><strong>99.9%</strong></td><td>43.8 minutes</td><td>8.76 hours</td></tr>
+        <tr><td><strong>99.95%</strong></td><td>21.9 minutes</td><td>4.38 hours</td></tr>
+        <tr><td><strong>99.99%</strong></td><td>4.38 minutes</td><td>52.6 minutes</td></tr>
+      </tbody>
+    </table>
+
+    <p>The table shows that the 0.09% gap between 99.9% and 99.99% makes the error budget ten times smaller. This is exactly why an SLO has to be set to match a business requirement rather than chasing "more nines is always better". The bars below show what tracking an error budget looks like in practice, so the team can see where it stands and decide in time.</p>
+
+    <div class="budget-bar">
+      <div class="budget-bar__label"><span>Error Budget (99.9% SLO) — this month</span><span>65% left</span></div>
+      <div class="budget-bar__track">
+        <div class="budget-bar__fill budget-bar__fill--good" style="width:65%;">28 min remaining</div>
+      </div>
+    </div>
+
+    <div class="budget-bar">
+      <div class="budget-bar__label"><span>Error Budget (99.9% SLO) — next month</span><span>⚠️ 15% left</span></div>
+      <div class="budget-bar__track">
+        <div class="budget-bar__fill budget-bar__fill--warn" style="width:15%;">6.5 min left!</div>
+      </div>
+    </div>
+
+    <div class="budget-bar">
+      <div class="budget-bar__label"><span>Error Budget (99.9% SLO) — gone!</span><span>🔴 0% — FREEZE</span></div>
+      <div class="budget-bar__track">
+        <div class="budget-bar__fill budget-bar__fill--danger" style="width:100%;">BUDGET EXHAUSTED — Feature freeze!</div>
+      </div>
+    </div>
+
+    <p>The error budget bars above show the situations you are likely to meet. At 65% left (green) you can keep deploying as usual. At 15% left (amber) you need to start being careful and may have to hold back some features. When it is gone (red) you freeze new feature deploys immediately and focus on fixing reliability. This policy gives the team a clear incentive to build a stable system.</p>
+
+    <blockquote>
+      <strong>💡 The principle:</strong> Plenty of error budget left → deploy features fast | Error budget running low → slow down, focus on reliability | Error budget exhausted → <strong>feature freeze!</strong>
+    </blockquote>
+
+    <pre><code># Grafana Dashboard — Error Budget Tracker
+# ─────────────────────────────────────────
+# Total requests (30d)
+total = sum(increase(http_requests_total[30d]))
+
+# Failed requests (30d)
+failed = sum(increase(http_requests_total{status=~"5.."}[30d]))
+
+# Error budget (SLO 99.9%)
+budget_total = total * 0.001        # 0.1% allowed failures
+budget_used  = failed
+budget_remaining = (budget_total - budget_used) / budget_total * 100
+
+# Alert when budget < 20%
+# → Slack notification to team
+# → Require SRE review for deploys</code></pre>
+
+    <hr>
+
+        <h2 id="en-incident-management">🚨 Incident Management — When the System Goes Down</h2>
+
+    <h3>Severity levels</h3>
+
+    <p>Clearly defined severity levels let the team prioritize and respond appropriately — not every problem is an "emergency". Having different response times for different levels lets the team spend its energy well and avoid burnout.</p>
+
+    <table>
+      <thead><tr><th>Level</th><th>Impact</th><th>Response Time</th><th>Example</th></tr></thead>
+      <tbody>
+        <tr><td><span class="sev-badge sev-badge--p1">P1 Critical</span></td><td>Service completely down</td><td>&lt; 5 minutes</td><td>Production database down</td></tr>
+        <tr><td><span class="sev-badge sev-badge--p2">P2 High</span></td><td>Major feature broken</td><td>&lt; 30 minutes</td><td>Payments not working</td></tr>
+        <tr><td><span class="sev-badge sev-badge--p3">P3 Medium</span></td><td>Minor feature broken</td><td>&lt; 4 hours</td><td>Search slower than usual</td></tr>
+        <tr><td><span class="sev-badge sev-badge--p4">P4 Low</span></td><td>Cosmetic / minor</td><td>Next business day</td><td>Typo on the error page</td></tr>
+      </tbody>
+    </table>
+
+    <p>The table shows that P1 is serious business (5 minutes) because it affects every user, while P4 can wait because it does not touch functionality. The guiding principle is "impact on the user", not which server broke — a monitoring server going down may only be a P3 if it does not directly affect the user experience.</p>
+
+    <h3>Incident response flow</h3>
+
+    <p>The incident response process needs clear steps that are rehearsed regularly, rather than waiting for a real outage and then working out what to do. The flow below puts "mitigation before investigation", because stopping the damage matters more than finding the root cause in those first minutes.</p>
+
+    <div class="flow-diagram">
+      <div class="flow-step" style="border-color:rgba(239,68,68,0.3);background:rgba(239,68,68,0.04);">
+        <div class="flow-step__title">🚨 Detect</div>
+        <div class="flow-step__sub">Alert fired</div>
+      </div>
+      <span class="flow-arrow">→</span>
+      <div class="flow-step" style="border-color:rgba(249,115,22,0.3);background:rgba(249,115,22,0.04);">
+        <div class="flow-step__title">📞 Triage</div>
+        <div class="flow-step__sub">Assess severity</div>
+      </div>
+      <span class="flow-arrow">→</span>
+      <div class="flow-step" style="border-color:rgba(245,158,11,0.3);background:rgba(245,158,11,0.04);">
+        <div class="flow-step__title">🔧 Mitigate</div>
+        <div class="flow-step__sub">Stop bleeding</div>
+      </div>
+      <span class="flow-arrow">→</span>
+      <div class="flow-step" style="border-color:rgba(34,197,94,0.3);background:rgba(34,197,94,0.04);">
+        <div class="flow-step__title">✅ Resolve</div>
+        <div class="flow-step__sub">Fix root cause</div>
+      </div>
+      <span class="flow-arrow">→</span>
+      <div class="flow-step">
+        <div class="flow-step__title">📝 Postmortem</div>
+        <div class="flow-step__sub">Learn & prevent</div>
+      </div>
+    </div>
+
+    <p>This flow shows how much detecting quickly matters, and that mitigating does not have to be a permanent fix — a rollback or a workaround will do. The important point is that the postmortem is not "optional": it is part of the incident response, and it is what stops the same problem happening again.</p>
+
+    <h3>An example incident timeline</h3>
+
+    <p>A good timeline shows the decision-making process and the lessons learned. Recording accurate times makes the postmortem credible, and tracking the action items makes the response to the next incident better. The example below is an incident resolved in 12 minutes, which is very fast.</p>
+
+    <div class="timeline">
+      <div class="timeline__item">
+        <div class="timeline__time">14:23 UTC — Alert Fired</div>
+        <div class="timeline__text">PagerDuty: "Error rate > 5%" — On-call SRE notified</div>
+      </div>
+      <div class="timeline__item">
+        <div class="timeline__time">14:25 UTC — Acknowledged</div>
+        <div class="timeline__text">SRE Somchai joined the war room, opened incident channel #inc-2026-042</div>
+      </div>
+      <div class="timeline__item">
+        <div class="timeline__time">14:30 UTC — Root Cause Found</div>
+        <div class="timeline__text">Deploy v2.4.1 had a memory leak → pods OOMKilled → cascading failure</div>
+      </div>
+      <div class="timeline__item">
+        <div class="timeline__time">14:32 UTC — Mitigated</div>
+        <div class="timeline__text">Rollback to v2.4.0 via <code>argocd app rollback</code></div>
+      </div>
+      <div class="timeline__item">
+        <div class="timeline__time">14:35 UTC — Resolved</div>
+        <div class="timeline__text">Error rate back to normal, all pods healthy</div>
+      </div>
+      <div class="timeline__item">
+        <div class="timeline__time">14:40 UTC — Comms</div>
+        <div class="timeline__text">Status page updated, customer notification sent</div>
+      </div>
+    </div>
+
+    <p>The timeline shows that having a good deployment tool (ArgoCD) makes the rollback fast — two minutes. Communication with customers happens after the system is stable, not while the team is still firefighting. A timeline recorded like this becomes a key input to the postmortem, where you work out what went well and what needs improving.</p>
+
+    <h3>Incident commander — the roles</h3>
+
+    <pre><code># Incident Roles (P1/P2)
+# ──────────────────────
+# 🎖️ Incident Commander (IC)
+#    - Decides, coordinates, gives direction
+#    - Does not debug personally
+#
+# 🔧 Technical Lead
+#    - Analyses the root cause
+#    - Executes the mitigation
+#
+# 📢 Communications Lead
+#    - Updates the status page
+#    - Informs stakeholders
+#    - Writes the customer comms
+#
+# 📝 Scribe
+#    - Records every step of the timeline
+#    - Records decisions & actions</code></pre>
+
+    <hr>
+
+        <h2 id="en-blameless-postmortem">📝 Blameless Postmortem — Learning from Failure</h2>
+
+    <p>A <strong>postmortem</strong> is the document written after an incident — focused on <strong>"learning", not "blaming people"</strong> (blameless!):</p>
+
+    <p>The blameless postmortem is central to SRE culture, because if people fear blame nobody will want to report a problem or write an honest postmortem. Building a culture that learns from failure is what makes a system stronger over the long run. The template below shows the full structure of a good postmortem.</p>
+
+    <pre><code># Postmortem Template
+# ═══════════════════
+
+## Incident: Production API Outage
+## Date: 2026-03-07 14:23-14:35 UTC
+## Duration: 12 minutes
+## Severity: P1
+## Impact: 100% of API requests failed for 12 minutes
+##         ~18,000 failed requests, ~2,400 users affected
+
+## Summary
+Deploy v2.4.1 contained a memory leak in the user session
+handler. Under load, pods exceeded memory limits and were
+OOMKilled. The auto-scaler created new pods that also crashed,
+causing a cascading failure.
+
+## Root Cause
+Memory leak in UserSessionMiddleware — each request allocated
+a new 2MB buffer that was never garbage collected due to a
+circular reference. Under 500 req/s, memory grew ~1GB/min.
+
+## Timeline
+- 14:20 — Deploy v2.4.1 rolled out (3/6 pods)
+- 14:23 — Alert: Error rate > 5%
+- 14:25 — IC assigned, war room opened
+- 14:30 — Identified memory leak in v2.4.1
+- 14:32 — Rollback to v2.4.0
+- 14:35 — Service restored
+
+## What Went Well
+- Alert fired within 3 minutes of impact
+- Quick rollback via ArgoCD (2 minutes)
+- Clear incident response process followed
+
+## What Went Wrong
+- No memory profiling in CI pipeline
+- Load test only ran at 100 req/s (prod = 500 req/s)
+- Canary deployment was skipped for "small change"
+
+## Action Items
+1. [P1] Add memory leak detection to CI — @somchai — Due: Mar 14
+2. [P1] Load test at 2x production traffic — @somying — Due: Mar 14
+3. [P2] Enforce canary deployment for all changes — @team — Due: Mar 21
+4. [P3] Add OOMKill alert (before cascade) — @ops — Due: Mar 28
+
+## Lessons Learned
+- "Small changes" can have big impacts — always canary
+- Memory profiling should be part of CI, not manual
+- Rollback capability (ArgoCD) saved us — invest in it</code></pre>
+
+    <p>The template shows how separating "What Went Well" from "What Went Wrong" produces a balanced view instead of focusing only on the failures. Action items need an owner and a due date — not a vague "we will improve". Tracking those action items through to completion is the part that most often gets overlooked.</p>
+
+    <blockquote>
+      <strong>🐕 Blameless culture:</strong> "Somchai deployed buggy code" → ❌ | "The system has no memory check in the CI pipeline that would have caught this bug" → ✅
+    </blockquote>
+
+    <hr>
+
+        <h2 id="en-toil-reduction">🔧 Toil Reduction — Cutting Manual Work</h2>
+
+    <p><strong>Toil</strong> = work that is manual, repetitive, automatable, and has no lasting value — Google's rule is that an SRE should spend <strong>no more than 50%</strong> of their time on toil:</p>
+
+    <table>
+      <thead><tr><th>Toil (reduce this)</th><th>Engineering (increase this)</th></tr></thead>
+      <tbody>
+        <tr><td>Restarting services by hand</td><td>Build auto-restart + self-healing</td></tr>
+        <tr><td>Manually scale servers</td><td>Auto-scaling policies</td></tr>
+        <tr><td>Copy-paste deployment steps</td><td>CI/CD pipeline automation</td></tr>
+        <tr><td>Answering "reset password" tickets</td><td>Self-service password reset</td></tr>
+        <tr><td>Reading logs by eye</td><td>Automated anomaly detection</td></tr>
+        <tr><td>Manual certificate renewal</td><td>cert-manager auto-renew</td></tr>
+      </tbody>
+    </table>
+
+    <p>The comparison shows that toil tends to be repetitive, predictable and without lasting value, while engineering work creates leverage — you invest once and keep benefiting. Turning a manual task into automation is not just writing a script: it also means designing the monitoring, the error handling and the long-term maintenance.</p>
+
+    <pre><code># Measuring toil — track where the time goes
+# ──────────────────────────────────────────
+# Week 1: SRE Team Time Breakdown
+#
+# Engineering work:  25 hours (50%)  ← target: > 50%
+# Toil:              15 hours (30%)  ← target: < 50%
+# On-call:            5 hours (10%)
+# Training/misc:      5 hours (10%)
+#
+# Top Toil Items:
+# 1. Manual DB backups         — 4h/week → AUTOMATE
+# 2. Certificate renewals      — 3h/week → cert-manager
+# 3. Capacity request tickets  — 3h/week → self-service
+# 4. Log investigation         — 5h/week → better alerting</code></pre>
+
+    <p>Tracking time like this gives a clear picture of where the team's hours actually go. The 50% engineering target is not a magic number, but a guideline that stops the team drowning in manual work with no time left to improve the system. Naming the "Top Toil Items" lets you prioritize what to automate by impact.</p>
+
+    <hr>
+
+        <h2 id="en-on-call-best-practices">📟 On-Call Best Practices</h2>
+
+    <h3>On-call rotation</h3>
+
+    <pre><code># PagerDuty Schedule Example
+# ──────────────────────────
+# Primary:   Somchai → Somying → Somsak (rotate weekly)
+# Secondary: Somsak → Somchai → Somying (backup)
+#
+# Rules:
+# - Primary responds within 5 min (P1) / 30 min (P2)
+# - If no response in 10 min → escalate to Secondary
+# - If no response in 20 min → escalate to Engineering Manager
+#
+# Compensation:
+# - On-call allowance per week
+# - Time off after high-severity incidents
+# - No more than 25% of time on-call per quarter</code></pre>
+
+    <p>The on-call structure above balances coverage against fairness. A secondary backup takes pressure off the primary and creates a safety net, and capping on-call at 25% of the quarter guards against burnout. Most important is a clear escalation path, so the on-call engineer is never left carrying more than they can handle.</p>
+
+    <h3>Alerting — a good alert vs a bad one</h3>
+
+    <p>Designing good alerting is an art of balancing "catch every problem" against "don't interrupt people for nothing". Alert fatigue is the great enemy of SRE: when there are too many alerts, people start ignoring even the real ones. The rule is that an alert must always be actionable.</p>
+
+    <table>
+      <thead><tr><th>✅ A good alert</th><th>❌ A bad alert</th></tr></thead>
+      <tbody>
+        <tr><td>Actionable — something has to be done</td><td>Informational — just so you know</td></tr>
+        <tr><td>User-facing impact</td><td>Internal metric spike</td></tr>
+        <tr><td>"Error rate > 1% for 5 min"</td><td>"CPU > 80% for 1 min"</td></tr>
+        <tr><td>Has a runbook link</td><td>Says nothing about what to do</td></tr>
+        <tr><td>Low alert fatigue</td><td>Alerts every 5 minutes (noise!)</td></tr>
+      </tbody>
+    </table>
+
+    <p>The table shows that a good alert is about "impact on the user", not "server metrics" — high CPU does not always mean users are affected. A runbook link lets the on-call engineer respond quickly, especially in the middle of the night or when they are new and do not yet know the system.</p>
+
+    <pre><code># Prometheus Alert Rules
+groups:
+  - name: sre-alerts
+    rules:
+      # ✅ Good: user-facing, actionable
+      - alert: HighErrorRate
+        expr: |
+          sum(rate(http_requests_total{status=~"5.."}[5m]))
+          / sum(rate(http_requests_total[5m])) > 0.01
+        for: 5m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Error rate > 1% for 5 minutes"
+          runbook: "https://wiki.example.com/runbooks/high-error-rate"
+          dashboard: "https://grafana.example.com/d/api-overview"
+
+      # ✅ Good: SLO-based alert
+      - alert: ErrorBudgetBurnRate
+        expr: |
+          error_budget_remaining < 0.2
+        labels:
+          severity: warning
+        annotations:
+          summary: "Error budget < 20% remaining this month"
+          action: "Consider slowing deployments"
+
+      # ❌ Bad: CPU alert (not user-facing)
+      # - alert: HighCPU
+      #   expr: cpu_usage > 80
+      #   → High CPU does not mean users are affected!</code></pre>
+
+    <p>The Prometheus alert rules above show the difference between a good alert and a bad one. HighErrorRate is about user impact and carries full context (runbook, dashboard). The error budget alert is a proactive warning that heads off a problem before it happens. The CPU alert is commented out because it does not relate directly to the user experience. And note that `for: 5m` is what filters out transient spikes.</p>
+
+    <hr>
+
+        <h2 id="en-capacity-planning">📈 Capacity Planning</h2>
+
+    <p>Capacity planning is "guessing the future" in a principled way, instead of waiting for the system to overload and then panic-buying. Forecasting from data lets you plan and procure infrastructure in time — which matters especially in an era when hardware procurement is slow.</p>
+
+    <pre><code># Capacity Planning Questions
+# ──────────────────────────
+# 1. How much resource are we using now? (baseline)
+# 2. What is the growth rate? (trend)
+# 3. When do we hit the limit? (forecast)
+# 4. What do we add, and when? (plan)
+
+# PromQL — Forecast disk full
+predict_linear(
+  node_filesystem_avail_bytes{mountpoint="/"}[7d],
+  30 * 24 * 3600    # predict 30 days ahead
+) < 0
+# → Alert: "Disk will be full in < 30 days"
+
+# PromQL — Traffic growth trend
+rate(http_requests_total[30d])
+# → if it grows 20%/month → plan capacity 3 months ahead</code></pre>
+
+    <p>The PromQL above shows how to use predict_linear() to forecast disk usage and traffic growth. Predicting 30 days out gives you enough time to procure new resources — but be careful, because a linear prediction may not suit seasonal traffic or a sudden spike. An alert that fires in advance is what saves you from firefighting late at night.</p>
+
+    <hr>
+
+        <h2 id="en-chaos-engineering">🛡️ Chaos Engineering — Testing for Resilience</h2>
+
+    <p>Chaos engineering = <strong>break your own system before the real one breaks</strong>, to find the weak points:</p>
+
+    <p>Chaos engineering means breaking your own system deliberately, to find the weak points before they fail at the worst possible moment. Controlled failure teaches us how the system behaves in abnormal conditions and gets the recovery process ready.</p>
+
+    <pre><code># Chaos experiments worth running
+# ──────────────────────────
+# 1. Kill random pod       → will K8s create a new one?
+# 2. Increase latency      → does the app handle timeouts well?
+# 3. Fill disk 100%        → does the alert fire in time? does the app crash?
+# 4. Kill database primary → does failover work?
+# 5. DNS failure           → does the retry logic work?
+# 6. Network partition     → do we get split-brain?
+
+# LitmusChaos — K8s Chaos Engineering
+apiVersion: litmuschaos.io/v1alpha1
+kind: ChaosEngine
+metadata:
+  name: pod-kill-test
+spec:
+  appinfo:
+    appns: production
+    applabel: app=myapp
+  chaosServiceAccount: litmus-admin
+  experiments:
+    - name: pod-delete
+      spec:
+        components:
+          env:
+            - name: TOTAL_CHAOS_DURATION
+              value: '30'          # 30 seconds of chaos
+            - name: CHAOS_INTERVAL
+              value: '10'          # kill pod every 10 sec
+            - name: FORCE
+              value: 'true'</code></pre>
+
+    <p>The list of chaos experiments above starts simple (kill a pod) and works up to the complex (network partition). The LitmusChaos configuration tests pod resilience by killing a pod every 10 seconds for 30 seconds. Setting FORCE=true makes it an immediate kill rather than a graceful shutdown, to simulate the real-world failures that are usually unexpected.</p>
+
+    <blockquote>
+      <strong>💡 The chaos rules:</strong> start in staging, then move to production | run it during working hours (with people watching) | always have a rollback plan
+    </blockquote>
+
+    <hr>
+
+        <h2 id="en-sre-checklist">📋 SRE Checklist — Where Do You Start?</h2>
+
+    <p>Adopting SRE in an organization has to happen one step at a time, not all at once, because SRE needs both technical implementation and a culture change that takes time. The checklist below is ordered by priority: the foundation (items 1–3) has to be solid before you move on.</p>
+
+    <ol>
+      <li><strong>Define your SLIs</strong> — measure latency, error rate, availability</li>
+      <li><strong>Set your SLOs</strong> — reasonable targets (they do not have to be 100%!)</li>
+      <li><strong>Track the error budget</strong> — a dashboard showing the budget remaining</li>
+      <li><strong>Set up alerting</strong> — SLO-based alerts, not CPU/memory alerts</li>
+      <li><strong>Incident process</strong> — severity levels, response playbooks, war room</li>
+      <li><strong>Blameless postmortems</strong> — write one for every P1/P2, track the action items</li>
+      <li><strong>Reduce toil</strong> — measure → automate → measure again</li>
+      <li><strong>On-call policy</strong> — rotation, compensation, escalation</li>
+      <li><strong>Capacity planning</strong> — forecast growth, plan ahead</li>
+      <li><strong>Chaos engineering</strong> — break it before it breaks itself</li>
+    </ol>
+
+    <p>Starting with SLI/SLO is not because it is easy, but because it is the shared language that lets the team talk to each other. Once the SLO exists, the error budget follows naturally, and alerting gains a clear direction. Blameless postmortems gradually shift the culture, and the final steps optimize the system into something genuinely resilient.</p>
+
+    <hr>
+
+        <h2 id="en-summary">Summary</h2>
+
+    <ul>
+      <li><strong>SRE</strong> = Software engineering approach to operations — "SRE implements DevOps"</li>
+      <li><strong>SLI/SLO/SLA</strong> = measuring reliability with numbers (Indicator → Objective → Agreement)</li>
+      <li><strong>Four Golden Signals</strong> = Latency, Traffic, Errors, Saturation</li>
+      <li><strong>Error Budget</strong> = "a budget for getting it wrong" — exhausted = feature freeze!</li>
+      <li><strong>Incident Management</strong> = Detect → Triage → Mitigate → Resolve → Postmortem</li>
+      <li><strong>Blameless Postmortem</strong> = blame the system, not the person → build a culture that learns</li>
+      <li><strong>Toil &lt; 50%</strong> = measure the manual work, then automate it away</li>
+      <li><strong>Chaos Engineering</strong> = test resilience before it breaks for real 🚒🐕</li>
+    </ul>
+
+    </div>
+
+<div class="post-series-footer"><span class="l-th">บทความจากซีรีส์ DevOps & Vibe Coding 2026</span><span class="l-en" lang="en">From the DevOps & Vibe Coding 2026 series</span></div>
 
   </article>
 

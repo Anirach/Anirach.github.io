@@ -350,6 +350,34 @@
       ::view-transition-old(*),
       ::view-transition-new(*) { animation: none !important; }
     }
+
+    /* ── LANGUAGE SWITCH — pure CSS, zero JavaScript (INV-38) ──
+       One visually-hidden checkbox as a direct child of body, BEFORE the main landmark,
+       so `#langSwitch:checked ~ main …` reaches every content block. The two
+       tracks are paired blocks: .l-th (default) and .l-en (hidden until
+       checked; display:revert restores block for divs, inline for spans).
+       Naming stays clear of INV-12's menu-token regex (hamburger|burger|
+       nav__toggle|nav-toggle|navtoggle|menu-toggle|menu__toggle) — verified.
+       No JS also means no persistence across posts; each post opens in Thai. */
+    .lang-switch-box { position: absolute; left: -9999px; }
+    .l-en { display: none; }
+    #langSwitch:checked ~ main .l-en { display: revert; }
+    #langSwitch:checked ~ main .l-th { display: none; }
+    .lang-switch {
+      display: inline-flex; align-items: center; gap: 0.55rem;
+      margin-top: 1.4rem; padding: 0.4rem 1.1rem; border-radius: 50px;
+      background: rgba(255,255,255,0.7); border: 1px solid rgba(34,98,153,0.25);
+      cursor: pointer; font-size: 0.85rem; user-select: none;
+    }
+    .lang-switch span { color: var(--slate-light); font-weight: 600; transition: color 0.2s; }
+    .lang-switch .lang-sep { color: var(--gray); font-weight: 400; }
+    .lang-switch .lang-th { color: var(--navy); font-weight: 800; }
+    #langSwitch:checked ~ main .lang-switch .lang-th { color: var(--slate-light); font-weight: 600; }
+    #langSwitch:checked ~ main .lang-switch .lang-en { color: var(--navy); font-weight: 800; }
+    .lang-switch:hover { border-color: var(--blue); }
+    #langSwitch:focus-visible ~ main .lang-switch {
+      outline: 2px solid var(--focus); outline-offset: 3px;
+    }
   </style>
   <!-- social -->
   <link rel="canonical" href="https://anirach.com/blog/cicd-pipeline.html">
@@ -357,6 +385,7 @@
   <meta property="og:url" content="https://anirach.com/blog/cicd-pipeline.html">
   <meta property="og:site_name" content="Anirach Mingkhwan">
   <meta property="og:locale" content="th_TH">
+  <meta property="og:locale:alternate" content="en_US">
   <meta property="article:published_time" content="2026-03-07">
   <meta property="article:author" content="https://anirach.com/">
   <meta property="og:title" content="CI/CD Pipeline — ส่ง Code ขึ้น Production แบบอัตโนมัติ">
@@ -387,13 +416,17 @@
     "datePublished": "2026-03-07",
     "dateModified": "2026-08-26",
     "image": "https://anirach.com/images/cicd-pipeline-og.jpg",
-    "inLanguage": "th",
+    "inLanguage": [
+      "th",
+      "en"
+    ],
     "mainEntityOfPage": "https://anirach.com/blog/cicd-pipeline.html"
   }
   </script>
 </head>
 <body>
 <a href="#main" class="skip-link">Skip to content</a>
+<input type="checkbox" id="langSwitch" class="lang-switch-box" aria-label="Switch language: Thai / English">
 
   <nav class="blog-nav">
     <div class="blog-nav__inner">
@@ -411,31 +444,46 @@
       <span class="post-hero__tag">DevOps</span>
       <span class="post-hero__tag">Automation</span>
     </div>
-    <h1 class="post-hero__title">CI/CD Pipeline — ส่ง Code ขึ้น Production แบบอัตโนมัติ</h1>
+    <h1 class="post-hero__title"><span class="l-th">CI/CD Pipeline — ส่ง Code ขึ้น Production แบบอัตโนมัติ</span><span class="l-en" lang="en">CI/CD Pipeline — Shipping Code to Production Automatically</span></h1>
     <div class="post-hero__meta">
       <span>By <strong><span><span>Anirach Mingkhwan</span></span></strong></span>
       <span class="post-hero__series">DevOps & Vibe Coding 2026</span>
     
       <span><time datetime="2026-03-07">7 Mar 2026</time> · 15 min read</span></div>
+    <label for="langSwitch" class="lang-switch" title="สลับภาษา · Switch language"><span class="lang-th">ไทย</span><span class="lang-sep">·</span><span class="lang-en" lang="en">English</span></label>
     <div class="post-hero__cover">
       <img src="../images/cicd-cover.jpg" alt="CI/CD Pipeline — ส่ง Code ขึ้น Production แบบอัตโนมัติ" width="800" height="800" loading="eager" fetchpriority="high" decoding="async">
     </div>
   </header>
 
   <article class="post-body">
-    <details class="post-toc" open>
-      <summary>In this post &middot; <span lang="th">ในบทความนี้</span></summary>
+    <details class="post-toc l-th" open>
+      <summary>ในบทความนี้</summary>
       <ol>
-          <li><a href="#ci-cd">CI/CD คืออะไร?</a></li>
-          <li><a href="#pipeline">Pipeline คืออะไร?</a></li>
-          <li><a href="#s-3">แต่ละขั้นตอนทำอะไรบ้าง?</a></li>
-          <li><a href="#example">ตัวอย่าง Pipeline จริงด้วย GitHub Actions</a></li>
-          <li><a href="#s-5">เครื่องมือ CI/CD ยอดนิยม</a></li>
-          <li><a href="#best-practices">Best Practices</a></li>
-          <li><a href="#s-7">เปรียบเทียบ: ก่อน vs หลังใช้ CI/CD</a></li>
-          <li><a href="#summary">สรุป</a></li>
+          <li><a href="#th-ci-cd">CI/CD คืออะไร?</a></li>
+          <li><a href="#th-pipeline">Pipeline คืออะไร?</a></li>
+          <li><a href="#th-s-3">แต่ละขั้นตอนทำอะไรบ้าง?</a></li>
+          <li><a href="#th-example">ตัวอย่าง Pipeline จริงด้วย GitHub Actions</a></li>
+          <li><a href="#th-s-5">เครื่องมือ CI/CD ยอดนิยม</a></li>
+          <li><a href="#th-best-practices">Best Practices</a></li>
+          <li><a href="#th-s-7">เปรียบเทียบ: ก่อน vs หลังใช้ CI/CD</a></li>
+          <li><a href="#th-summary">สรุป</a></li>
       </ol>
     </details>
+    <details class="post-toc l-en" open>
+      <summary>In this post</summary>
+      <ol>
+          <li><a href="#en-ci-cd">What is CI/CD?</a></li>
+          <li><a href="#en-pipeline">What is a Pipeline?</a></li>
+          <li><a href="#en-s-3">What Does Each Stage Do?</a></li>
+          <li><a href="#en-example">A Real Pipeline with GitHub Actions</a></li>
+          <li><a href="#en-s-5">Popular CI/CD Tools</a></li>
+          <li><a href="#en-best-practices">Best Practices</a></li>
+          <li><a href="#en-s-7">Compared: Before vs After CI/CD</a></li>
+          <li><a href="#en-summary">Summary</a></li>
+      </ol>
+    </details>
+    <div class="l-th">
 
 
     <p>จากโพสต์ที่แล้วเราได้พูดถึง Git Branching ว่าแตก branch ยังไง merge กลับยังไง แล้วก็มี branching strategy แบบไหนบ้าง แต่พอ merge เสร็จแล้ว... <strong>แล้วยังไงต่อ?</strong></p>
@@ -446,7 +494,7 @@
 
     <hr>
 
-    <h2 id="ci-cd">CI/CD คืออะไร?</h2>
+    <h2 id="th-ci-cd">CI/CD คืออะไร?</h2>
 
     <p>CI/CD ย่อมาจาก 2 คำที่ทำงานเสริมกัน — <strong>CI</strong> ทำให้ทีม integrate code ได้ถี่ขึ้นโดยไม่ "ตีกัน" ส่วน <strong>CD</strong> ทำให้ code ที่ผ่าน test แล้วถึงมือ user ได้เร็วที่สุด ทั้งสองรวมกันเปลี่ยน deployment จาก "เหตุการณ์ใหญ่น่ากลัว" เป็น "กิจวัตรธรรมดา":</p>
 
@@ -484,7 +532,7 @@
 
     <hr>
 
-    <h2 id="pipeline">Pipeline คืออะไร?</h2>
+    <h2 id="th-pipeline">Pipeline คืออะไร?</h2>
 
     <p><strong>Pipeline</strong> คือลำดับขั้นตอนที่ทำงานต่อเนื่องกันอัตโนมัติ ตั้งแต่ code เข้า repo จนถึง deploy ขึ้น production ลองนึกภาพโรงงานผลิตรถยนต์: วัตถุดิบเข้า → ประกอบชิ้นส่วน → ตรวจสอบคุณภาพ → ทาสี → ส่งมอบ ถ้าชิ้นส่วนไม่ผ่านตรวจ สายพานหยุดทันที — ไม่ส่งของเสียถึงลูกค้า CI/CD pipeline ทำเหมือนกัน:</p>
 
@@ -519,7 +567,7 @@
 
     <hr>
 
-    <h2 id="s-3">แต่ละขั้นตอนทำอะไรบ้าง?</h2>
+    <h2 id="th-s-3">แต่ละขั้นตอนทำอะไรบ้าง?</h2>
 
     <p>Pipeline ทั่วไปมี 5 ขั้นตอน — แต่ละขั้นตอนทำหน้าที่เฉพาะและเป็น "quality gate" ที่ต้องผ่านก่อนไปขั้นถัดไป ยิ่ง pipeline มี gate เยอะ ยิ่งมั่นใจว่า code ที่ถึง production มีคุณภาพ:</p>
 
@@ -692,7 +740,7 @@ on:
 
     <hr>
 
-    <h2 id="example">ตัวอย่าง Pipeline จริงด้วย GitHub Actions</h2>
+    <h2 id="th-example">ตัวอย่าง Pipeline จริงด้วย GitHub Actions</h2>
 
     <p>มาดู pipeline จริงที่ใช้ <strong>GitHub Actions</strong> — CI/CD tool ที่ built-in มากับ GitHub ฟรี แค่สร้างไฟล์ YAML ใน <code>.github/workflows/</code> ก็ได้ pipeline อัตโนมัติ ตัวอย่างด้านล่างครอบคลุมทั้ง build, test, deploy:</p>
 
@@ -754,7 +802,7 @@ jobs:
 
     <hr>
 
-    <h2 id="s-5">เครื่องมือ CI/CD ยอดนิยม</h2>
+    <h2 id="th-s-5">เครื่องมือ CI/CD ยอดนิยม</h2>
 
     <p>มี CI/CD tools หลายตัว — แต่ละตัวเด่นคนละด้าน <strong>GitHub Actions</strong> (ง่าย, ฟรีสำหรับ public repos), <strong>GitLab CI</strong> (ครบจบในที่เดียว), <strong>Jenkins</strong> (flexible สุด แต่ต้อง maintain เอง), <strong>CircleCI</strong> (เร็ว, cloud-native) เลือกตามทีมและ ecosystem:</p>
 
@@ -773,7 +821,7 @@ jobs:
 
     <hr>
 
-    <h2 id="best-practices">Best Practices</h2>
+    <h2 id="th-best-practices">Best Practices</h2>
 
     <p>มี pipeline ดีไม่พอ — ต้อง "ดูแล" pipeline ด้วย เหมือนรถยนต์ที่ต้อง service ประจำ ถ้าปล่อยให้ pipeline ช้า, test ไม่ครอบคลุม, หรือ secrets hardcode สุดท้าย pipeline จะกลายเป็นภาระแทนที่จะช่วย:</p>
 
@@ -817,7 +865,7 @@ jobs:
 
     <hr>
 
-    <h2 id="s-7">เปรียบเทียบ: ก่อน vs หลังใช้ CI/CD</h2>
+    <h2 id="th-s-7">เปรียบเทียบ: ก่อน vs หลังใช้ CI/CD</h2>
 
     <p>ตารางด้านล่างแสดงความแตกต่างที่ชัดเจนระหว่าง manual deployment กับ CI/CD — จะเห็นว่า CI/CD ลดทั้ง risk, เวลา, และ human error ได้มหาศาล:</p>
 
@@ -837,7 +885,7 @@ jobs:
 
     <hr>
 
-    <h2 id="summary">สรุป</h2>
+    <h2 id="th-summary">สรุป</h2>
 
     <ul>
       <li><strong>CI (Continuous Integration)</strong> = build + test อัตโนมัติทุกครั้งที่ push code</li>
@@ -850,9 +898,425 @@ jobs:
 
     <p>ในโพสต์หน้าเราจะมาพูดถึง <strong>Docker</strong> — เครื่องมือที่ทำให้ "It works on my machine" กลายเป็นเรื่องในอดีต! 🐳🐕</p>
 
-    <div class="post-series-footer">
-      บทความจากซีรีส์ DevOps & Vibe Coding 2026
+    
     </div>
+    <div class="l-en" lang="en">
+
+        <p>In the previous post we talked about Git Branching — how to cut a branch, how to merge it back, and what branching strategies are out there. But once the merge is done... <strong>what happens next?</strong></p>
+
+    <p>If you have to build it yourself, test it yourself and deploy it yourself every time new code lands, the work is exhausting and easy to get wrong. The bigger the team and the more often you deploy, the messier it gets.</p>
+
+    <p>This is where the <strong>CI/CD Pipeline</strong> comes in — a system that handles everything automatically, from the moment code enters the repo to the moment it goes live on production.</p>
+
+    <hr>
+
+        <h2 id="en-ci-cd">What is CI/CD?</h2>
+
+    <p>CI/CD is short for two ideas that reinforce each other — <strong>CI</strong> lets a team integrate code more often without stepping on each other's toes, while <strong>CD</strong> gets tested code into users' hands as fast as possible. Together they turn deployment from "a big scary event" into "an ordinary routine":</p>
+
+    <h3>CI — Continuous Integration</h3>
+    <p><strong>"Merge often, test automatically every time"</strong></p>
+    <p>The principle is that every developer should merge into the main branch at least once a day — the more often you integrate, the smaller each conflict is and the easier it is to fix. Let a branch drift for a week and then merge it all at once, and the conflict will be enormous. Every time you push, the system will:</p>
+    <ol>
+      <li>Pull the code and build it automatically</li>
+      <li>Run the whole test suite</li>
+      <li>Report the result: ✅ passed or ❌ failed</li>
+    </ol>
+    <p>Without CI → a developer pushes code → nobody finds out it is broken until the real deploy 💀</p>
+
+    <h3>CD — Continuous Delivery / Continuous Deployment</h3>
+    <p><strong>Continuous Delivery:</strong> code that has passed its tests is <strong>ready to deploy immediately</strong>, but someone still has to press the deploy button. This suits teams that need a compliance review or want manual approval before a release.</p>
+    <p><strong>Continuous Deployment:</strong> code that has passed its tests <strong>goes straight to production automatically</strong> — nobody presses anything, and every commit that clears the pipeline reaches users at once! Netflix, Facebook and Google work this way, but it takes very high test coverage before you can be that confident.</p>
+    <p>Both have their merits — <strong>Delivery</strong> is safer (there is a human gate) while <strong>Deployment</strong> is faster (a very short feedback loop). Choose according to the risk tolerance of your team and your business.</p>
+
+    <div class="flow-diagram">
+      <div class="flow-step">
+        <div class="flow-step__title">Continuous Integration</div>
+        <div class="flow-step__sub">automatic build + test</div>
+      </div>
+      <span class="flow-arrow">→</span>
+      <div class="flow-step">
+        <div class="flow-step__title">Continuous Delivery</div>
+        <div class="flow-step__sub">ready to deploy, but you press it</div>
+      </div>
+      <span class="flow-arrow">→</span>
+      <div class="flow-step">
+        <div class="flow-step__title">Continuous Deployment</div>
+        <div class="flow-step__sub">deploys itself, nothing to do</div>
+      </div>
+    </div>
+
+    <hr>
+
+        <h2 id="en-pipeline">What is a Pipeline?</h2>
+
+    <p>A <strong>pipeline</strong> is a sequence of steps that run automatically one after another, from the moment code enters the repo to the moment it is deployed to production. Picture a car factory: raw materials arrive → parts are assembled → quality is inspected → paint is applied → the car is delivered. If a part fails inspection, the line stops immediately — no defective goods reach the customer. A CI/CD pipeline does exactly the same:</p>
+
+    <div class="flow-diagram">
+      <div class="flow-step">
+        <div class="flow-step__title">Source</div>
+        <div class="flow-step__sub">code</div>
+      </div>
+      <span class="flow-arrow">→</span>
+      <div class="flow-step">
+        <div class="flow-step__title">Build</div>
+        <div class="flow-step__sub">compile</div>
+      </div>
+      <span class="flow-arrow">→</span>
+      <div class="flow-step">
+        <div class="flow-step__title">Test</div>
+        <div class="flow-step__sub">verify</div>
+      </div>
+      <span class="flow-arrow">→</span>
+      <div class="flow-step">
+        <div class="flow-step__title">Stage</div>
+        <div class="flow-step__sub">preview</div>
+      </div>
+      <span class="flow-arrow">→</span>
+      <div class="flow-step">
+        <div class="flow-step__title">Deploy</div>
+        <div class="flow-step__sub">prod</div>
+      </div>
+    </div>
+
+    <p>If any step <strong>fails</strong> → the pipeline stops immediately → the developer is notified → no broken code slips through to production.</p>
+
+    <hr>
+
+        <h2 id="en-s-3">What Does Each Stage Do?</h2>
+
+    <p>A typical pipeline has 5 stages — each with its own job, and each a "quality gate" that must be cleared before the next one begins. The more gates a pipeline has, the more confident you can be that the code reaching production is sound:</p>
+
+    <h3>1. Source — Taking the Code In</h3>
+    <p>The pipeline starts when a <strong>trigger event</strong> fires — usually a git push, but you can configure several kinds. The more that triggers automatically, the less a developer has to remember about "what to do before deploying":</p>
+    <ul>
+      <li>Pushing code to a branch</li>
+      <li>Opening a Pull Request</li>
+      <li>Merging into main</li>
+      <li>A schedule (cron)</li>
+    </ul>
+
+<pre><code># GitHub Actions trigger example
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main]</code></pre>
+
+    <h3>2. Build — Assembling the Project</h3>
+    <p>The Build stage is where you <strong>compile the code, install dependencies and produce artifacts</strong> (a Docker image, a JAR file, a JS bundle) that are ready to deploy. If the build fails, the code has a fundamental problem (a syntax error, a missing dependency) that must be fixed first. Here is what typically happens:</p>
+    <ul>
+      <li><code>npm install</code> → install packages</li>
+      <li><code>npm run build</code> → compile TypeScript, bundle React, etc.</li>
+      <li>Build the Docker image</li>
+      <li>Produce the artifact (.jar, .whl, binary)</li>
+    </ul>
+
+<pre><code>jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - run: npm ci
+      - run: npm run build</code></pre>
+
+    <p>When a build fails, it is usually because of:</p>
+    <ul>
+      <li>A syntax error</li>
+      <li>A missing dependency</li>
+      <li>A version conflict</li>
+    </ul>
+
+    <h3>3. Test — Verification</h3>
+    <p><strong>The most important stage of all</strong> — without tests, deploying is no different from rolling the dice 🎲. Automated tests run on every push without leaning on any developer's "diligence". If a test fails → the pipeline stops → the code never reaches production.</p>
+
+    <p>The levels of testing:</p>
+
+    <table>
+      <thead>
+        <tr><th>Level</th><th>What it tests</th><th>Speed</th><th>Example</th></tr>
+      </thead>
+      <tbody>
+        <tr><td><strong>Unit Test</strong></td><td>A single function</td><td>Very fast (seconds)</td><td><code>calculate(2,3)</code> must return <code>5</code></td></tr>
+        <tr><td><strong>Integration Test</strong></td><td>Several parts working together</td><td>Moderate</td><td>API + Database</td></tr>
+        <tr><td><strong>E2E Test</strong></td><td>The whole system from the user's side</td><td>Slow (minutes)</td><td>Click Login → see the Dashboard</td></tr>
+      </tbody>
+    </table>
+
+<pre><code>- run: npm test          # Unit tests
+- run: npm run test:e2e  # E2E tests
+- run: npm run lint      # Code style check
+- run: npm audit         # Security check</code></pre>
+
+    <p><strong>Testing Pyramid:</strong></p>
+    <div class="pyramid">
+      <div class="pyramid__level pyramid__level--e2e" style="width:40%;margin:0 auto;">E2E Tests <span class="pyramid__label">few, but broad</span></div>
+      <div class="pyramid__level pyramid__level--integration" style="width:70%;margin:0 auto;">Integration Tests <span class="pyramid__label">a moderate number</span></div>
+      <div class="pyramid__level pyramid__level--unit" style="width:100%;margin:0 auto;">Unit Tests <span class="pyramid__label">the most, and the fastest</span></div>
+    </div>
+
+    <h3>4. Stage — A Preview Before the Real Deploy</h3>
+    <p><strong>Staging</strong> is an environment identical to production in every respect (same config, same data structure, same infrastructure) but not yet the real thing — a dress rehearsal before opening night. It catches the problems automated tests cannot, such as performance issues, UI bugs and integration problems:</p>
+    <p>What it gives you:</p>
+    <ul>
+      <li>Testing against realistic data</li>
+      <li>A place for the QA team or the PM to review</li>
+      <li>Catching problems that automated tests miss</li>
+    </ul>
+
+    <h3>5. Deploy — Going to Production</h3>
+    <p>The final stage — the code reaches real users at last! There are several ways to deploy, each with its own trade-off between risk, speed and complexity. Which one fits depends on your business requirements:</p>
+    <p>The popular deployment strategies:</p>
+
+    <h4>Rolling Update</h4>
+    <div class="deploy-section">
+      <div class="deploy-section__title">Rolling Update</div>
+      <div class="deploy-row">
+        <span class="deploy-label">Server 1:</span>
+        <div class="deploy-bar deploy-bar--v1" style="width:80px;">v1</div>
+        <span class="flow-arrow">→</span>
+        <div class="deploy-bar deploy-bar--v2" style="width:80px;">v2</div>
+        <span class="deploy-check">✅</span>
+      </div>
+      <div class="deploy-row">
+        <span class="deploy-label">Server 2:</span>
+        <div class="deploy-bar deploy-bar--v1" style="width:80px;">v1</div>
+        <span class="flow-arrow">→</span>
+        <div class="deploy-bar deploy-bar--v2" style="width:80px;">v2</div>
+        <span class="deploy-check">✅</span>
+        <span style="font-size:0.72rem;color:#94a3b8;">(one machine at a time)</span>
+      </div>
+      <div class="deploy-row">
+        <span class="deploy-label">Server 3:</span>
+        <div class="deploy-bar deploy-bar--v1" style="width:80px;">v1</div>
+        <span class="flow-arrow">→</span>
+        <div class="deploy-bar deploy-bar--v2" style="width:80px;">v2</div>
+        <span class="deploy-check">✅</span>
+      </div>
+    </div>
+
+    <h4>Blue-Green Deployment</h4>
+    <div class="deploy-section">
+      <div class="deploy-section__title">Before Switch</div>
+      <div class="deploy-row">
+        <span class="deploy-label">Blue (v1):</span>
+        <div class="deploy-bar deploy-bar--v1" style="width:200px;">← traffic lives here</div>
+      </div>
+      <div class="deploy-row">
+        <span class="deploy-label">Green (v2):</span>
+        <div class="deploy-bar deploy-bar--inactive" style="width:200px;">deploy the new build here</div>
+      </div>
+    </div>
+    <div class="deploy-section">
+      <div class="deploy-section__title">After Switch</div>
+      <div class="deploy-row">
+        <span class="deploy-label">Blue (v1):</span>
+        <div class="deploy-bar deploy-bar--inactive" style="width:200px;">standby</div>
+      </div>
+      <div class="deploy-row">
+        <span class="deploy-label">Green (v2):</span>
+        <div class="deploy-bar deploy-bar--v2" style="width:200px;">← traffic has moved here ✅</div>
+      </div>
+    </div>
+
+    <h4>Canary Deployment</h4>
+    <div class="deploy-section">
+      <div class="deploy-section__title">Phase 1 — Trial</div>
+      <div class="deploy-row">
+        <span class="deploy-label">v1 (90%):</span>
+        <div class="deploy-bar deploy-bar--v1" style="width:90%;">90%</div>
+      </div>
+      <div class="deploy-row">
+        <span class="deploy-label">v2 (10%):</span>
+        <div class="deploy-bar deploy-bar--v2" style="width:10%;">10%</div>
+        <span style="font-size:0.72rem;color:#94a3b8;">← tried on a small slice of real users</span>
+      </div>
+    </div>
+    <div class="deploy-section">
+      <div class="deploy-section__title">Phase 2 — Ramping Up</div>
+      <div class="deploy-row">
+        <span class="deploy-label">v1 (50%):</span>
+        <div class="deploy-bar deploy-bar--v1" style="width:50%;">50%</div>
+      </div>
+      <div class="deploy-row">
+        <span class="deploy-label">v2 (50%):</span>
+        <div class="deploy-bar deploy-bar--v2" style="width:50%;">50%</div>
+      </div>
+    </div>
+    <div class="deploy-section">
+      <div class="deploy-section__title">Phase 3 — Complete</div>
+      <div class="deploy-row">
+        <span class="deploy-label">v2 (100%):</span>
+        <div class="deploy-bar deploy-bar--v2" style="width:100%;">100% ✅</div>
+      </div>
+    </div>
+
+    <hr>
+
+        <h2 id="en-example">A Real Pipeline with GitHub Actions</h2>
+
+    <p>Let us look at a real pipeline built on <strong>GitHub Actions</strong> — the CI/CD tool built into GitHub, free of charge. Create one YAML file in <code>.github/workflows/</code> and you have an automated pipeline. The example below covers build, test and deploy:</p>
+
+<pre><code>name: CI/CD Pipeline
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  # ===== CI =====
+  build-and-test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Build
+        run: npm run build
+
+      - name: Unit Tests
+        run: npm test -- --coverage
+
+      - name: Upload coverage
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage
+          path: coverage/
+
+  # ===== CD =====
+  deploy:
+    needs: build-and-test    # wait for CI to pass first
+    if: github.ref == 'refs/heads/main'  # deploy main only
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Deploy to production
+        run: |
+          echo "Deploying to production..."
+          # the real deploy command, for example:
+          # ssh user@server 'cd /app && git pull && npm ci && pm2 restart all'
+          # or docker push + kubectl apply</code></pre>
+
+    <hr>
+
+        <h2 id="en-s-5">Popular CI/CD Tools</h2>
+
+    <p>There are many CI/CD tools, and each is strong in a different direction — <strong>GitHub Actions</strong> (simple, free for public repos), <strong>GitLab CI</strong> (everything in one place), <strong>Jenkins</strong> (the most flexible, but you maintain it yourself), <strong>CircleCI</strong> (fast, cloud-native). Choose to fit your team and your ecosystem:</p>
+
+    <table>
+      <thead>
+        <tr><th>Tool</th><th>Type</th><th>Strength</th><th>Best for</th></tr>
+      </thead>
+      <tbody>
+        <tr><td><strong>GitHub Actions</strong></td><td>Cloud</td><td>Easy to use, free for public repos</td><td>Projects already on GitHub</td></tr>
+        <tr><td><strong>GitLab CI/CD</strong></td><td>Cloud/Self-hosted</td><td>Strong pipelines, built-in container registry</td><td>Organizations on GitLab</td></tr>
+        <tr><td><strong>Jenkins</strong></td><td>Self-hosted</td><td>Huge plugin ecosystem, highly customizable</td><td>Large organizations</td></tr>
+        <tr><td><strong>CircleCI</strong></td><td>Cloud</td><td>Fast, simple config</td><td>Startups / small teams</td></tr>
+        <tr><td><strong>ArgoCD</strong></td><td>Self-hosted</td><td>GitOps for Kubernetes</td><td>Teams running K8s</td></tr>
+      </tbody>
+    </table>
+
+    <hr>
+
+        <h2 id="en-best-practices">Best Practices</h2>
+
+    <p>Having a good pipeline is not enough — you have to look after it, the way a car needs regular servicing. Let the pipeline get slow, let the tests go thin, let secrets be hardcoded, and eventually the pipeline becomes a burden instead of a help:</p>
+
+    <h3>1. Keep Pipeline Fast ⚡</h3>
+    <p>If the pipeline is too slow, developers will not want to wait → they start skipping CI → they gradually stop using it → and the whole benefit is lost. Make it fast with parallel jobs, cached dependencies, running only the relevant tests, and incremental builds.</p>
+    <p>Targets:</p>
+    <ul>
+      <li><strong>Build + Unit Test:</strong> &lt; 5 minutes</li>
+      <li><strong>The whole pipeline:</strong> &lt; 15 minutes</li>
+    </ul>
+    <div class="tip"><strong>Tip:</strong> cache dependencies, run tests in parallel, split the slow tests out</div>
+
+    <h3>2. Test Thoroughly 🧪</h3>
+    <p>Low test coverage gives you a pipeline that offers false confidence — the code clears the pipeline and then breaks in production. Aim for 80%+ coverage and write your tests along the Testing Pyramid:</p>
+    <ul>
+      <li>Aim for code coverage &gt; 80%</li>
+      <li>Have unit tests for the business logic that matters</li>
+      <li>Do not forget edge cases and error handling</li>
+    </ul>
+
+    <h3>3. Fail Fast, Fix Fast 🔴</h3>
+    <p>Order the pipeline from fast to slow (lint → unit test → integration → E2E) so that failures surface as early as possible. A lint failure after 10 seconds beats waiting 15 minutes for an E2E test to fail. And once something fails, fix it immediately — never leave the pipeline sitting red:</p>
+    <ul>
+      <li>If the pipeline fails → fix it first, before anything else</li>
+      <li>Never leave the pipeline red → the team gets used to "red is just how it looks"</li>
+    </ul>
+
+    <h3>4. Use Environment Variables for Secrets 🔐</h3>
+    <p>Never hardcode passwords, API keys or tokens in your code or your pipeline YAML — use <strong>GitHub Secrets</strong>, <strong>Vault</strong>, or environment variables instead. A secret that reaches Git stays in the history forever:</p>
+<pre><code># ❌ Don't
+- run: mysql -u root -p mypassword123
+
+# ✅ Do this
+- run: mysql -u $DB_USER -p $DB_PASSWORD
+  env:
+    DB_USER: ${{ secrets.DB_USER }}
+    DB_PASSWORD: ${{ secrets.DB_PASSWORD }}</code></pre>
+
+    <h3>5. Keep the Pipeline Identical Across Environments 🔄</h3>
+    <p>Development → Staging → Production should all run the same pipeline, differing only in config (database URL, API keys, feature flags). If each environment uses a different pipeline, you will meet the classic "it passed in staging but production broke" — use Docker plus environment variables so that the environments differ only in configuration, not in infrastructure.</p>
+
+    <hr>
+
+        <h2 id="en-s-7">Compared: Before vs After CI/CD</h2>
+
+    <p>The table below sets the two side by side — manual deployment against CI/CD — and shows how enormously CI/CD cuts risk, time and human error:</p>
+
+    <table>
+      <thead>
+        <tr><th></th><th>Before CI/CD</th><th>After CI/CD</th></tr>
+      </thead>
+      <tbody>
+        <tr><td><strong>Build</strong></td><td>By hand, and "oops, forgot to build"</td><td>Automatic on every push</td></tr>
+        <tr><td><strong>Test</strong></td><td>"I'll test it later"</td><td>Tested every time; a failure stops everything</td></tr>
+        <tr><td><strong>Deploy</strong></td><td>SSH into the server and drag files across by hand</td><td>One button, or fully automatic</td></tr>
+        <tr><td><strong>When bugs turn up</strong></td><td>When a user phones in to yell at you</td><td>When the pipeline fails (before the deploy)</td></tr>
+        <tr><td><strong>Confidence</strong></td><td>"I hope it doesn't break" 🤞</td><td>"The tests passed — I'm confident" ✅</td></tr>
+        <tr><td><strong>Deploy frequency</strong></td><td>Once a month (too afraid it will break)</td><td>Several times a day</td></tr>
+      </tbody>
+    </table>
+
+    <hr>
+
+        <h2 id="en-summary">Summary</h2>
+
+    <ul>
+      <li><strong>CI (Continuous Integration)</strong> = automatic build + test on every code push</li>
+      <li><strong>CD (Continuous Delivery/Deployment)</strong> = automatic (or semi-automatic) deployment to production</li>
+      <li><strong>Pipeline</strong> = the sequence of stages: Source → Build → Test → Stage → Deploy</li>
+      <li>If any stage fails → the pipeline stops → <strong>no broken code slips through to production</strong></li>
+      <li>Choose the tool that fits your team and project: <strong>GitHub Actions</strong> is a good place to start</li>
+      <li><strong>A fast pipeline + thorough tests + fixing fast</strong> = good DevOps</li>
+    </ul>
+
+    <p>In the next post we will talk about <strong>Docker</strong> — the tool that turned "it works on my machine" into a thing of the past! 🐳🐕</p>
+
+    </div>
+
+<div class="post-series-footer"><span class="l-th">บทความจากซีรีส์ DevOps & Vibe Coding 2026</span><span class="l-en" lang="en">A post from the DevOps & Vibe Coding 2026 series</span></div>
 
   </article>
 

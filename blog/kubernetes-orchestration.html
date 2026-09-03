@@ -394,6 +394,34 @@
       ::view-transition-old(*),
       ::view-transition-new(*) { animation: none !important; }
     }
+
+    /* ── LANGUAGE SWITCH — pure CSS, zero JavaScript (INV-38) ──
+       One visually-hidden checkbox as a direct child of body, BEFORE the main landmark,
+       so `#langSwitch:checked ~ main …` reaches every content block. The two
+       tracks are paired blocks: .l-th (default) and .l-en (hidden until
+       checked; display:revert restores block for divs, inline for spans).
+       Naming stays clear of INV-12's menu-token regex (hamburger|burger|
+       nav__toggle|nav-toggle|navtoggle|menu-toggle|menu__toggle) — verified.
+       No JS also means no persistence across posts; each post opens in Thai. */
+    .lang-switch-box { position: absolute; left: -9999px; }
+    .l-en { display: none; }
+    #langSwitch:checked ~ main .l-en { display: revert; }
+    #langSwitch:checked ~ main .l-th { display: none; }
+    .lang-switch {
+      display: inline-flex; align-items: center; gap: 0.55rem;
+      margin-top: 1.4rem; padding: 0.4rem 1.1rem; border-radius: 50px;
+      background: rgba(255,255,255,0.7); border: 1px solid rgba(34,98,153,0.25);
+      cursor: pointer; font-size: 0.85rem; user-select: none;
+    }
+    .lang-switch span { color: var(--slate-light); font-weight: 600; transition: color 0.2s; }
+    .lang-switch .lang-sep { color: var(--gray); font-weight: 400; }
+    .lang-switch .lang-th { color: var(--navy); font-weight: 800; }
+    #langSwitch:checked ~ main .lang-switch .lang-th { color: var(--slate-light); font-weight: 600; }
+    #langSwitch:checked ~ main .lang-switch .lang-en { color: var(--navy); font-weight: 800; }
+    .lang-switch:hover { border-color: var(--blue); }
+    #langSwitch:focus-visible ~ main .lang-switch {
+      outline: 2px solid var(--focus); outline-offset: 3px;
+    }
   </style>
   <!-- social -->
   <link rel="canonical" href="https://anirach.com/blog/kubernetes-orchestration.html">
@@ -401,6 +429,7 @@
   <meta property="og:url" content="https://anirach.com/blog/kubernetes-orchestration.html">
   <meta property="og:site_name" content="Anirach Mingkhwan">
   <meta property="og:locale" content="th_TH">
+  <meta property="og:locale:alternate" content="en_US">
   <meta property="article:published_time" content="2026-03-07">
   <meta property="article:author" content="https://anirach.com/">
   <meta property="og:title" content="Kubernetes — จัดการ Container ให้เป็นระบบด้วย K8s">
@@ -431,13 +460,17 @@
     "datePublished": "2026-03-07",
     "dateModified": "2026-08-26",
     "image": "https://anirach.com/images/kubernetes-orchestration-og.jpg",
-    "inLanguage": "th",
+    "inLanguage": [
+      "th",
+      "en"
+    ],
     "mainEntityOfPage": "https://anirach.com/blog/kubernetes-orchestration.html"
   }
   </script>
 </head>
 <body>
 <a href="#main" class="skip-link">Skip to content</a>
+<input type="checkbox" id="langSwitch" class="lang-switch-box" aria-label="Switch language: Thai / English">
 
   <nav class="blog-nav">
     <div class="blog-nav__inner">
@@ -455,32 +488,48 @@
       <span class="post-hero__tag">DevOps</span>
       <span class="post-hero__tag">Container Orchestration</span>
     </div>
-    <h1 class="post-hero__title">Kubernetes — จัดการ Container ให้เป็นระบบด้วย K8s</h1>
+    <h1 class="post-hero__title"><span class="l-th">Kubernetes — จัดการ Container ให้เป็นระบบด้วย K8s</span><span class="l-en" lang="en">Kubernetes — Running Containers as a System with K8s</span></h1>
     <div class="post-hero__meta">
       <span>By <strong><span><span>Anirach Mingkhwan</span></span></strong></span>
       <span class="post-hero__series">DevOps & Vibe Coding 2026</span>
     
       <span><time datetime="2026-03-07">7 Mar 2026</time> · 12 min read</span></div>
+    <label for="langSwitch" class="lang-switch" title="สลับภาษา · Switch language"><span class="lang-th">ไทย</span><span class="lang-sep">·</span><span class="lang-en" lang="en">English</span></label>
     <div class="post-hero__cover">
       <img src="../images/kubernetes-cover.jpg" alt="Kubernetes — จัดการ Container ให้เป็นระบบ" width="800" height="800" loading="eager" fetchpriority="high" decoding="async">
     </div>
   </header>
 
   <article class="post-body">
-    <details class="post-toc" open>
-      <summary>In this post &middot; <span lang="th">ในบทความนี้</span></summary>
+    <details class="post-toc l-th" open>
+      <summary>ในบทความนี้</summary>
       <ol>
-          <li><a href="#kubernetes">Kubernetes คืออะไร?</a></li>
-          <li><a href="#why">ทำไมต้อง Kubernetes?</a></li>
-          <li><a href="#k8s-architecture">K8s Architecture — มีอะไรอยู่ข้างใน?</a></li>
-          <li><a href="#k8s-core-concepts">K8s Core Concepts — คำศัพท์ที่ต้องรู้</a></li>
-          <li><a href="#hands-on">Hands-on — Deploy แอปแรกด้วย K8s</a></li>
-          <li><a href="#self-healing">Self-healing — K8s ซ่อมตัวเอง</a></li>
-          <li><a href="#docker-compose-vs-kubernetes">Docker Compose vs Kubernetes</a></li>
-          <li><a href="#getting-started">เริ่มต้นลองเล่น K8s</a></li>
-          <li><a href="#summary">สรุป</a></li>
+          <li><a href="#th-kubernetes">Kubernetes คืออะไร?</a></li>
+          <li><a href="#th-why">ทำไมต้อง Kubernetes?</a></li>
+          <li><a href="#th-k8s-architecture">K8s Architecture — มีอะไรอยู่ข้างใน?</a></li>
+          <li><a href="#th-k8s-core-concepts">K8s Core Concepts — คำศัพท์ที่ต้องรู้</a></li>
+          <li><a href="#th-hands-on">Hands-on — Deploy แอปแรกด้วย K8s</a></li>
+          <li><a href="#th-self-healing">Self-healing — K8s ซ่อมตัวเอง</a></li>
+          <li><a href="#th-docker-compose-vs-kubernetes">Docker Compose vs Kubernetes</a></li>
+          <li><a href="#th-getting-started">เริ่มต้นลองเล่น K8s</a></li>
+          <li><a href="#th-summary">สรุป</a></li>
       </ol>
     </details>
+    <details class="post-toc l-en" open>
+      <summary>In this post</summary>
+      <ol>
+          <li><a href="#en-kubernetes">What Is Kubernetes?</a></li>
+          <li><a href="#en-why">Why Kubernetes?</a></li>
+          <li><a href="#en-k8s-architecture">K8s Architecture — What Is Inside?</a></li>
+          <li><a href="#en-k8s-core-concepts">K8s Core Concepts — The Vocabulary You Need</a></li>
+          <li><a href="#en-hands-on">Hands-on — Deploy Your First App with K8s</a></li>
+          <li><a href="#en-self-healing">Self-healing — K8s Repairs Itself</a></li>
+          <li><a href="#en-docker-compose-vs-kubernetes">Docker Compose vs Kubernetes</a></li>
+          <li><a href="#en-getting-started">Getting Started with K8s</a></li>
+          <li><a href="#en-summary">Summary</a></li>
+      </ol>
+    </details>
+    <div class="l-th">
 
 
     <p>จากโพสต์ที่แล้วเราเรียนรู้ Docker ว่ามันช่วยให้เรา pack app + dependencies ไว้ใน Container เดียว ทำให้ deploy ได้ทุกที่</p>
@@ -491,7 +540,7 @@
 
     <hr>
 
-    <h2 id="kubernetes">Kubernetes คืออะไร?</h2>
+    <h2 id="th-kubernetes">Kubernetes คืออะไร?</h2>
 
     <p><strong>Kubernetes</strong> (อ่านว่า คู-เบอร์-เน-ทิส, ย่อว่า K8s) คือ open-source container orchestration platform ที่พัฒนาโดย Google ปัจจุบันดูแลโดย <a href="https://www.cncf.io/" target="_blank" rel="noopener">CNCF</a></p>
 
@@ -510,7 +559,7 @@
 
     <hr>
 
-    <h2 id="why">ทำไมต้อง Kubernetes?</h2>
+    <h2 id="th-why">ทำไมต้อง Kubernetes?</h2>
 
     <p>Docker Compose ก็จัดการหลาย containers ได้ แล้วทำไมต้อง K8s? คำตอบคือ Compose ทำงานบน <strong>เครื่องเดียว</strong> แต่ K8s ทำงานบน <strong>หลายเครื่อง (cluster)</strong> — auto-scaling, self-healing, rolling updates, service discovery ทั้งหมดอัตโนมัติ ลองนึกภาพว่าเรามี web app ที่ใช้ 3 services:</p>
 
@@ -543,7 +592,7 @@
 
     <hr>
 
-    <h2 id="k8s-architecture">K8s Architecture — มีอะไรอยู่ข้างใน?</h2>
+    <h2 id="th-k8s-architecture">K8s Architecture — มีอะไรอยู่ข้างใน?</h2>
 
     <p>Kubernetes cluster แบ่งเป็น 2 ส่วนหลัก — <strong>Control Plane</strong> (สมอง — ตัดสินใจว่า Pod ไหนรันที่ไหน, ดูแล desired state) กับ <strong>Worker Nodes</strong> (แรงงาน — รัน containers จริง) Control Plane มักมี 3 เครื่องเพื่อ HA ส่วน Worker Nodes มีได้ไม่จำกัด เพิ่ม nodes = เพิ่ม capacity:</p>
 
@@ -597,7 +646,7 @@
 
     <hr>
 
-    <h2 id="k8s-core-concepts">K8s Core Concepts — คำศัพท์ที่ต้องรู้</h2>
+    <h2 id="th-k8s-core-concepts">K8s Core Concepts — คำศัพท์ที่ต้องรู้</h2>
 
     <p>K8s มีศัพท์เฉพาะเยอะ แต่ core concepts ที่ต้องเข้าใจมีไม่กี่ตัว — <strong>Pod</strong> (หน่วยเล็กที่สุดใน K8s ห่อ 1+ containers), <strong>Deployment</strong> (จัดการ Pods — scaling, rolling updates), <strong>Service</strong> (ทำให้ Pods มี stable endpoint), <strong>Ingress</strong> (route traffic จาก internet เข้า Services) เข้าใจ 4 ตัวนี้ก็เริ่มใช้ K8s ได้แล้ว:</p>
 
@@ -655,7 +704,7 @@
 
     <hr>
 
-    <h2 id="hands-on">Hands-on — Deploy แอปแรกด้วย K8s</h2>
+    <h2 id="th-hands-on">Hands-on — Deploy แอปแรกด้วย K8s</h2>
 
     <p>มาลองใช้จริง! ขั้นตอนหลักคือ: สร้าง <strong>Deployment</strong> (บอกว่ารัน image อะไร กี่ replicas) → สร้าง <strong>Service</strong> (expose ให้เข้าถึงได้) → <strong>Scale</strong> (เพิ่ม/ลด replicas) → <strong>Update</strong> (เปลี่ยน version โดยไม่ downtime)</p>
 
@@ -754,7 +803,7 @@ kubectl rollout undo deployment/my-web-app</code></pre>
 
     <hr>
 
-    <h2 id="self-healing">Self-healing — K8s ซ่อมตัวเอง</h2>
+    <h2 id="th-self-healing">Self-healing — K8s ซ่อมตัวเอง</h2>
 
     <p><strong>Self-healing</strong> คือฟีเจอร์ที่ทำให้ K8s แตกต่างจาก Docker Compose — ถ้า Pod crash, Node ล่ม, หรือ health check fail K8s จะ detect และสร้าง Pod ใหม่อัตโนมัติ ไม่ต้องมีคนมานั่ง monitor แล้ว restart เอง ทำงาน 24/7 ไม่มีวันหยุด:</p>
 
@@ -773,7 +822,7 @@ kubectl get pods
 
     <hr>
 
-    <h2 id="docker-compose-vs-kubernetes">Docker Compose vs Kubernetes</h2>
+    <h2 id="th-docker-compose-vs-kubernetes">Docker Compose vs Kubernetes</h2>
 
     <p>คำถามที่พบบ่อย — "ควรใช้ Compose หรือ K8s?" ไม่ใช่เรื่องของ "ตัวไหนดีกว่า" แต่เป็น "ต้องการอะไร" — Compose เหมาะกับ single server, dev environment, small apps ส่วน K8s เหมาะกับ production ที่ต้อง scale, HA, multi-team:</p>
 
@@ -830,7 +879,7 @@ kubectl get pods
 
     <hr>
 
-    <h2 id="getting-started">เริ่มต้นลองเล่น K8s</h2>
+    <h2 id="th-getting-started">เริ่มต้นลองเล่น K8s</h2>
 
     <p>ไม่ต้องมี cluster จริงก็ลองได้! มี tools สำหรับรัน K8s บนเครื่องตัวเอง — เหมาะกับการเรียนรู้และ development แนะนำเริ่มจาก <strong>minikube</strong> (ง่ายที่สุด) หรือ <strong>kind</strong> (K8s ใน Docker — เร็วมาก):</p>
 
@@ -853,7 +902,7 @@ minikube service hello</code></pre>
 
     <hr>
 
-    <h2 id="summary">สรุป</h2>
+    <h2 id="th-summary">สรุป</h2>
 
     <p>Kubernetes คือ industry standard สำหรับ container orchestration — ทุก cloud provider รองรับ (EKS, AKS, GKE) และเป็นทักษะที่ DevOps engineers ต้องมี เรียนรู้ curve สูง แต่เมื่อเข้าใจแล้วจะเห็นว่ามันแก้ปัญหาจริงๆ ที่ Docker เดี่ยวๆ ทำไม่ได้:</p>
 
@@ -866,9 +915,396 @@ minikube service hello</code></pre>
       <li>เริ่มเล่นง่ายๆ ด้วย <strong>Minikube</strong> หรือ <strong>Docker Desktop</strong> ⚓🐕</li>
     </ul>
 
-    <div class="post-series-footer">
-      บทความจากซีรีส์ DevOps & Vibe Coding 2026
+    
     </div>
+    <div class="l-en" lang="en">
+
+        <p>In the previous post we learned Docker — how it lets us pack an app plus its dependencies into a single Container so we can deploy it anywhere.</p>
+
+    <p>But what if we have <strong>tens... hundreds... thousands</strong> of Containers? Who is going to sit there running <code>docker run</code> one at a time? 😵</p>
+
+    <p>This is the problem <strong>Kubernetes (K8s)</strong> came to solve — it is a <strong>Container Orchestrator</strong> that keeps your containers working together as a system, like a ship's captain in command of every cargo container on board ⚓🐕</p>
+
+    <hr>
+
+        <h2 id="en-kubernetes">What Is Kubernetes?</h2>
+
+    <p><strong>Kubernetes</strong> (pronounced koo-ber-NET-eez, abbreviated K8s) is an open-source container orchestration platform developed by Google and now stewarded by the <a href="https://www.cncf.io/" target="_blank" rel="noopener">CNCF</a></p>
+
+    <p>Its main jobs are:</p>
+    <ul>
+      <li><strong>Placing Containers</strong> — deciding which container runs on which machine (Scheduling)</li>
+      <li><strong>Scaling</strong> — adding and removing containers automatically as traffic changes</li>
+      <li><strong>Self-healing</strong> — a container died? K8s creates a new one immediately</li>
+      <li><strong>Load Balancing</strong> — spreading traffic evenly</li>
+      <li><strong>Rolling Updates</strong> — updating the app with no downtime</li>
+    </ul>
+
+    <blockquote>
+      <strong>💡 An easy way to remember it:</strong> Docker = build Containers | Kubernetes = manage Containers
+    </blockquote>
+
+    <hr>
+
+        <h2 id="en-why">Why Kubernetes?</h2>
+
+    <p>Docker Compose can manage several containers too, so why K8s? Because Compose runs on <strong>one machine</strong>, while K8s runs across <strong>many machines (a cluster)</strong> — auto-scaling, self-healing, rolling updates and service discovery, all automatic. Picture a web app made of 3 services:</p>
+
+    <div class="flow-diagram">
+      <div class="flow-step">
+        <div class="flow-step__title">🌐 Frontend</div>
+        <div class="flow-step__sub">React App × 3</div>
+      </div>
+      <span class="flow-arrow">→</span>
+      <div class="flow-step">
+        <div class="flow-step__title">⚙️ Backend</div>
+        <div class="flow-step__sub">Node.js API × 5</div>
+      </div>
+      <span class="flow-arrow">→</span>
+      <div class="flow-step">
+        <div class="flow-step__title">🗄️ Database</div>
+        <div class="flow-step__sub">PostgreSQL × 2</div>
+      </div>
+    </div>
+
+    <p>That is 10 containers — and managing them by hand would mean:</p>
+    <ul>
+      <li>Running <code>docker run</code> once per container</li>
+      <li>Restarting a container yourself whenever one dies</li>
+      <li>Traffic up? Scaling by hand</li>
+      <li>Deploying a new version? Stopping each container one at a time</li>
+    </ul>
+
+    <p><strong>Kubernetes does all of this automatically!</strong> 🚀</p>
+
+    <hr>
+
+        <h2 id="en-k8s-architecture">K8s Architecture — What Is Inside?</h2>
+
+    <p>A Kubernetes cluster has 2 main halves — the <strong>Control Plane</strong> (the brain — it decides which Pod runs where and maintains the desired state) and the <strong>Worker Nodes</strong> (the labour — they run the actual containers). The Control Plane usually has 3 machines for HA, while the number of Worker Nodes is unlimited: more nodes = more capacity:</p>
+
+    <div class="arch-diagram">
+      <div class="arch-box">
+        <div class="arch-label">Kubernetes Cluster</div>
+        <div class="arch-row">
+          <div class="arch-container" style="min-width: 200px;">
+            <div class="arch-name">Control Plane (Master)</div>
+            <div class="arch-item">API Server</div>
+            <div class="arch-item">Scheduler</div>
+            <div class="arch-item">Controller Manager</div>
+            <div class="arch-item">etcd (Database)</div>
+          </div>
+          <div class="arch-container" style="min-width: 140px;">
+            <div class="arch-name">Worker Node 1</div>
+            <div class="arch-item">kubelet</div>
+            <div class="arch-item">kube-proxy</div>
+            <div class="arch-item">Pod (App A)</div>
+            <div class="arch-item">Pod (App B)</div>
+          </div>
+          <div class="arch-container" style="min-width: 140px;">
+            <div class="arch-name">Worker Node 2</div>
+            <div class="arch-item">kubelet</div>
+            <div class="arch-item">kube-proxy</div>
+            <div class="arch-item">Pod (App A)</div>
+            <div class="arch-item">Pod (App C)</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <h3>Control Plane (the brain)</h3>
+
+    <p>The Control Plane has 4 main components: the <strong>API Server</strong> (the single front door — kubectl, the dashboard, everything goes through it), <strong>etcd</strong> (the key-value store holding the cluster's entire state), the <strong>Scheduler</strong> (which decides which Node a new Pod runs on) and the <strong>Controller Manager</strong> (which keeps the actual state equal to the desired state):</p>
+    <ul>
+      <li><strong>API Server</strong> — the front door; every command has to pass through here</li>
+      <li><strong>Scheduler</strong> — picks which Pod runs on which Node</li>
+      <li><strong>Controller Manager</strong> — keeps the state matching what we declared</li>
+      <li><strong>etcd</strong> — the database holding the cluster's entire configuration</li>
+    </ul>
+
+    <h3>Worker Node (the labour)</h3>
+
+    <p>Each Worker Node has 3 components: <strong>kubelet</strong> (the agent that takes orders from the Control Plane and manages the Pods), <strong>kube-proxy</strong> (which handles networking inside the cluster) and the <strong>Container Runtime</strong> (containerd/CRI-O — what actually runs the containers):</p>
+    <ul>
+      <li><strong>kubelet</strong> — the agent that runs on every Node and looks after its Pods</li>
+      <li><strong>kube-proxy</strong> — handles the networking that lets Pods talk to each other</li>
+      <li><strong>Pod</strong> — the smallest unit in K8s (with containers inside it)</li>
+    </ul>
+
+    <hr>
+
+        <h2 id="en-k8s-core-concepts">K8s Core Concepts — The Vocabulary You Need</h2>
+
+    <p>K8s has a lot of its own vocabulary, but the core concepts you have to understand are only a handful — <strong>Pod</strong> (the smallest unit in K8s, wrapping 1+ containers), <strong>Deployment</strong> (which manages Pods — scaling, rolling updates), <strong>Service</strong> (which gives Pods a stable endpoint) and <strong>Ingress</strong> (which routes traffic from the internet into Services). Understand those 4 and you can start using K8s:</p>
+
+    <table>
+      <thead>
+        <tr>
+          <th>Concept</th>
+          <th>What it is</th>
+          <th>Think of it as</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><strong>Pod</strong></td>
+          <td>The smallest unit (1+ containers)</td>
+          <td>A single guest room</td>
+        </tr>
+        <tr>
+          <td><strong>Deployment</strong></td>
+          <td>Keeps the Pod count at the number you declared</td>
+          <td>The hotel manager</td>
+        </tr>
+        <tr>
+          <td><strong>Service</strong></td>
+          <td>Opens a way to reach the Pods</td>
+          <td>The entrance door</td>
+        </tr>
+        <tr>
+          <td><strong>Node</strong></td>
+          <td>The machine (physical/VM) that runs the Pods</td>
+          <td>The building</td>
+        </tr>
+        <tr>
+          <td><strong>Namespace</strong></td>
+          <td>Partitions resources into groups</td>
+          <td>A floor of the building</td>
+        </tr>
+        <tr>
+          <td><strong>ConfigMap</strong></td>
+          <td>Holds config (key-value)</td>
+          <td>The sign on the door</td>
+        </tr>
+        <tr>
+          <td><strong>Secret</strong></td>
+          <td>Holds sensitive data (encoded)</td>
+          <td>The safe</td>
+        </tr>
+        <tr>
+          <td><strong>Ingress</strong></td>
+          <td>Handles HTTP routing from outside</td>
+          <td>The hotel lobby</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <hr>
+
+        <h2 id="en-hands-on">Hands-on — Deploy Your First App with K8s</h2>
+
+    <p>Let's try this for real! The main steps are: create a <strong>Deployment</strong> (say which image to run, and how many replicas) → create a <strong>Service</strong> (expose it so it can be reached) → <strong>Scale</strong> (add or remove replicas) → <strong>Update</strong> (change version with no downtime)</p>
+
+    <h3>1. Create a Deployment</h3>
+
+    <p>The Deployment YAML declares: <code>replicas</code> (how many Pods), <code>image</code> (which Docker image), <code>resources</code> (CPU/Memory limits) and <code>readinessProbe</code> (checking that a Pod is ready before traffic is routed to it). Notice that it is declarative — it says "what we want", not "what to do":</p>
+
+    <pre><code>apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: my-web-app
+  labels:
+    app: web
+spec:
+  replicas: 3          # run 3 pods
+  selector:
+    matchLabels:
+      app: web
+  template:
+    metadata:
+      labels:
+        app: web
+    spec:
+      containers:
+      - name: web
+        image: nginx:alpine
+        ports:
+        - containerPort: 80
+        resources:
+          requests:
+            memory: "64Mi"
+            cpu: "100m"
+          limits:
+            memory: "128Mi"
+            cpu: "250m"</code></pre>
+
+    <pre><code># create the deployment
+kubectl apply -f deployment.yaml
+
+# check the status
+kubectl get pods
+# NAME                          READY   STATUS    RESTARTS   AGE
+# my-web-app-6d8f7b4c5-abc12   1/1     Running   0          10s
+# my-web-app-6d8f7b4c5-def34   1/1     Running   0          10s
+# my-web-app-6d8f7b4c5-ghi56   1/1     Running   0          10s</code></pre>
+
+    <h3>2. Create a Service</h3>
+
+    <p>A <strong>Service</strong> gives Pods a stable IP/DNS name — because Pods come and go (scaling, crashes, updates) while the Service address never changes. There are 3 types: <strong>ClusterIP</strong> (inside the cluster), <strong>NodePort</strong> (exposes a port on the Node) and <strong>LoadBalancer</strong> (creates a cloud LB automatically):</p>
+
+    <pre><code>apiVersion: v1
+kind: Service
+metadata:
+  name: web-service
+spec:
+  type: LoadBalancer
+  selector:
+    app: web         # connects to Pods labelled app=web
+  ports:
+  - port: 80         # the port exposed to the outside
+    targetPort: 80   # the container's port</code></pre>
+
+    <pre><code># create the service
+kubectl apply -f service.yaml
+
+# view the service
+kubectl get svc
+# NAME          TYPE           CLUSTER-IP     EXTERNAL-IP     PORT(S)
+# web-service   LoadBalancer   10.96.45.123   203.0.113.50    80:31234/TCP</code></pre>
+
+    <h3>3. Scaling — Adding and Removing Pods</h3>
+
+    <p>Scaling is very easy — just change the replicas and K8s creates or deletes Pods for you. Or use an <strong>HPA (Horizontal Pod Autoscaler)</strong> to scale automatically with CPU/Memory usage:</p>
+
+    <pre><code># scale to 5 pods
+kubectl scale deployment my-web-app --replicas=5
+
+# see the result
+kubectl get pods
+# you will see 5 pods running!</code></pre>
+
+    <h3>4. Rolling Update — Updating with No Downtime</h3>
+
+    <p>The <strong>Rolling Update</strong> is the feature that makes K8s stand out — when you update the image version, K8s gradually creates the new Pods (the new version) and deletes the old ones one at a time. If a new Pod fails it rolls back automatically — <strong>zero downtime deployment</strong>:</p>
+
+    <pre><code># change the image to the new version
+kubectl set image deployment/my-web-app web=nginx:1.25
+
+# watch the update status
+kubectl rollout status deployment/my-web-app
+# Waiting for deployment "my-web-app" rollout to finish...
+# deployment "my-web-app" successfully rolled out
+
+# something went wrong? Rollback!
+kubectl rollout undo deployment/my-web-app</code></pre>
+
+    <hr>
+
+        <h2 id="en-self-healing">Self-healing — K8s Repairs Itself</h2>
+
+    <p><strong>Self-healing</strong> is the feature that separates K8s from Docker Compose — if a Pod crashes, a Node goes down or a health check fails, K8s detects it and creates a new Pod automatically. Nobody has to sit watching it and restart things by hand; it works 24/7 without a day off:</p>
+
+    <pre><code># try killing a pod
+kubectl delete pod my-web-app-6d8f7b4c5-abc12
+
+# look again — K8s has already made a replacement!
+kubectl get pods
+# my-web-app-6d8f7b4c5-xyz99   1/1     Running   0          3s  ← the new one!
+# my-web-app-6d8f7b4c5-def34   1/1     Running   0          5m
+# my-web-app-6d8f7b4c5-ghi56   1/1     Running   0          5m</code></pre>
+
+    <blockquote>
+      <strong>🐕 K8s always remembers the "desired state":</strong> we said we want 3 pods → if only 2 are left, it creates more until there are 3 again!
+    </blockquote>
+
+    <hr>
+
+        <h2 id="en-docker-compose-vs-kubernetes">Docker Compose vs Kubernetes</h2>
+
+    <p>A common question — "should I use Compose or K8s?" It is not a matter of "which is better" but of "what do you need" — Compose suits a single server, a dev environment, small apps, while K8s suits production that has to scale, stay highly available and serve multiple teams:</p>
+
+    <table>
+      <thead>
+        <tr>
+          <th>Feature</th>
+          <th>Docker Compose</th>
+          <th>Kubernetes</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>Best for</td>
+          <td>Development, one machine</td>
+          <td>Production, many machines</td>
+        </tr>
+        <tr>
+          <td>Scaling</td>
+          <td>Manual</td>
+          <td>Auto-scaling available</td>
+        </tr>
+        <tr>
+          <td>Self-healing</td>
+          <td>❌ None</td>
+          <td>✅ Automatic</td>
+        </tr>
+        <tr>
+          <td>Load Balancing</td>
+          <td>Set it up yourself</td>
+          <td>Built-in</td>
+        </tr>
+        <tr>
+          <td>Rolling Update</td>
+          <td>❌ Needs downtime</td>
+          <td>✅ Zero-downtime</td>
+        </tr>
+        <tr>
+          <td>Complexity</td>
+          <td>Simple</td>
+          <td>More complex</td>
+        </tr>
+        <tr>
+          <td>Config file</td>
+          <td><code>docker-compose.yml</code></td>
+          <td>YAML manifests</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <blockquote>
+      <strong>💡 A simple rule:</strong> Docker Compose for dev, Kubernetes for production
+    </blockquote>
+
+    <hr>
+
+        <h2 id="en-getting-started">Getting Started with K8s</h2>
+
+    <p>You do not need a real cluster to try it! There are tools for running K8s on your own machine — good for learning and for development. I would start with <strong>minikube</strong> (the easiest) or <strong>kind</strong> (K8s inside Docker — very fast):</p>
+
+    <ul>
+      <li><strong><a href="https://minikube.sigs.k8s.io/" target="_blank" rel="noopener">Minikube</a></strong> — K8s on your own machine (recommended for beginners)</li>
+      <li><strong><a href="https://kind.sigs.k8s.io/" target="_blank" rel="noopener">Kind</a></strong> — K8s inside a Docker container</li>
+      <li><strong><a href="https://k3s.io/" target="_blank" rel="noopener">K3s</a></strong> — a lightweight K8s for Raspberry Pi / Edge</li>
+      <li><strong>Docker Desktop</strong> — has K8s built in (Settings → Kubernetes → Enable)</li>
+    </ul>
+
+    <pre><code># install minikube, then start the cluster
+minikube start
+
+# try a deploy
+kubectl create deployment hello --image=nginx
+kubectl expose deployment hello --port=80 --type=NodePort
+
+# open it in the browser
+minikube service hello</code></pre>
+
+    <hr>
+
+        <h2 id="en-summary">Summary</h2>
+
+    <p>Kubernetes is the industry standard for container orchestration — every cloud provider supports it (EKS, AKS, GKE) and it is a skill DevOps engineers are expected to have. The learning curve is steep, but once it clicks you see that it solves real problems Docker on its own cannot:</p>
+
+    <ul>
+      <li><strong>Kubernetes</strong> = the Container Orchestrator that deploys, scales and heals automatically</li>
+      <li><strong>Pod</strong> = the smallest unit | <strong>Deployment</strong> = manages Pods | <strong>Service</strong> = opens the way in</li>
+      <li><strong>Control Plane</strong> = the brain (API Server, Scheduler, etcd) | <strong>Worker Node</strong> = the labour (kubelet, pods)</li>
+      <li><strong>Self-healing + Auto-scaling + Rolling Updates</strong> = the core features that make K8s necessary in Production</li>
+      <li><strong>Docker Compose</strong> for dev, <strong>Kubernetes</strong> for production</li>
+      <li>Getting started is easy — <strong>Minikube</strong> or <strong>Docker Desktop</strong> ⚓🐕</li>
+    </ul>
+
+    </div>
+
+<div class="post-series-footer"><span class="l-th">บทความจากซีรีส์ DevOps & Vibe Coding 2026</span><span class="l-en" lang="en">From the DevOps & Vibe Coding 2026 series</span></div>
 
   </article>
 

@@ -368,6 +368,34 @@
       ::view-transition-old(*),
       ::view-transition-new(*) { animation: none !important; }
     }
+
+    /* ── LANGUAGE SWITCH — pure CSS, zero JavaScript (INV-38) ──
+       One visually-hidden checkbox as a direct child of body, BEFORE the main landmark,
+       so `#langSwitch:checked ~ main …` reaches every content block. The two
+       tracks are paired blocks: .l-th (default) and .l-en (hidden until
+       checked; display:revert restores block for divs, inline for spans).
+       Naming stays clear of INV-12's menu-token regex (hamburger|burger|
+       nav__toggle|nav-toggle|navtoggle|menu-toggle|menu__toggle) — verified.
+       No JS also means no persistence across posts; each post opens in Thai. */
+    .lang-switch-box { position: absolute; left: -9999px; }
+    .l-en { display: none; }
+    #langSwitch:checked ~ main .l-en { display: revert; }
+    #langSwitch:checked ~ main .l-th { display: none; }
+    .lang-switch {
+      display: inline-flex; align-items: center; gap: 0.55rem;
+      margin-top: 1.4rem; padding: 0.4rem 1.1rem; border-radius: 50px;
+      background: rgba(255,255,255,0.7); border: 1px solid rgba(34,98,153,0.25);
+      cursor: pointer; font-size: 0.85rem; user-select: none;
+    }
+    .lang-switch span { color: var(--slate-light); font-weight: 600; transition: color 0.2s; }
+    .lang-switch .lang-sep { color: var(--gray); font-weight: 400; }
+    .lang-switch .lang-th { color: var(--navy); font-weight: 800; }
+    #langSwitch:checked ~ main .lang-switch .lang-th { color: var(--slate-light); font-weight: 600; }
+    #langSwitch:checked ~ main .lang-switch .lang-en { color: var(--navy); font-weight: 800; }
+    .lang-switch:hover { border-color: var(--blue); }
+    #langSwitch:focus-visible ~ main .lang-switch {
+      outline: 2px solid var(--focus); outline-offset: 3px;
+    }
   </style>
   <!-- social -->
   <link rel="canonical" href="https://anirach.com/blog/api-request-lifecycle.html">
@@ -375,6 +403,7 @@
   <meta property="og:url" content="https://anirach.com/blog/api-request-lifecycle.html">
   <meta property="og:site_name" content="Anirach Mingkhwan">
   <meta property="og:locale" content="th_TH">
+  <meta property="og:locale:alternate" content="en_US">
   <meta property="article:published_time" content="2026-03-07">
   <meta property="article:author" content="https://anirach.com/">
   <meta property="og:title" content="API Request Lifecycle — เมื่อกด Send เกิดอะไรขึ้นบ้าง?">
@@ -405,13 +434,17 @@
     "datePublished": "2026-03-07",
     "dateModified": "2026-08-26",
     "image": "https://anirach.com/images/api-request-lifecycle-og.jpg",
-    "inLanguage": "th",
+    "inLanguage": [
+      "th",
+      "en"
+    ],
     "mainEntityOfPage": "https://anirach.com/blog/api-request-lifecycle.html"
   }
   </script>
 </head>
 <body>
 <a href="#main" class="skip-link">Skip to content</a>
+<input type="checkbox" id="langSwitch" class="lang-switch-box" aria-label="Switch language: Thai / English">
 
   <nav class="blog-nav">
     <div class="blog-nav__inner">
@@ -429,31 +462,45 @@
       <span class="post-hero__tag">HTTP</span>
       <span class="post-hero__tag">Backend</span>
     </div>
-    <h1 class="post-hero__title">API Request Lifecycle — เมื่อกด Send เกิดอะไรขึ้นบ้าง?</h1>
+    <h1 class="post-hero__title"><span class="l-th">API Request Lifecycle — เมื่อกด Send เกิดอะไรขึ้นบ้าง?</span><span class="l-en" lang="en">API Request Lifecycle — What Actually Happens When You Hit Send?</span></h1>
     <div class="post-hero__meta">
       <span>By <strong><span><span>Anirach Mingkhwan</span></span></strong></span>
       <span class="post-hero__series">DevOps & Vibe Coding 2026</span>
     
         <span><time datetime="2026-03-07">7 Mar 2026</time></span>
       </div>
+    <label for="langSwitch" class="lang-switch" title="สลับภาษา · Switch language"><span class="lang-th">ไทย</span><span class="lang-sep">·</span><span class="lang-en" lang="en">English</span></label>
     <div class="post-hero__cover">
       <img src="../images/api-lifecycle-cover.jpg" alt="API Lifecycle — เมื่อกด Send เกิดอะไรขึ้นบ้าง" width="800" height="800" loading="eager" fetchpriority="high" decoding="async">
     </div>
   </header>
 
   <article class="post-body">
-    <details class="post-toc" open>
-      <summary>In this post &middot; <span lang="th">ในบทความนี้</span></summary>
+    <details class="post-toc l-th" open>
+      <summary>ในบทความนี้</summary>
       <ol>
-          <li><a href="#api">API คืออะไร?</a></li>
-          <li><a href="#api-request-lifecycle">API Request Lifecycle ทำงานยังไง?</a></li>
-          <li><a href="#http-methods">HTTP Methods — ทำอะไรได้บ้าง?</a></li>
-          <li><a href="#http-status-codes">HTTP Status Codes — Server ตอบกลับอะไร?</a></li>
-          <li><a href="#example">ตัวอย่างจริง — สร้าง User ด้วย POST</a></li>
-          <li><a href="#s-6">ลองเล่นด้วย cURL</a></li>
-          <li><a href="#summary">สรุป</a></li>
+          <li><a href="#th-api">API คืออะไร?</a></li>
+          <li><a href="#th-api-request-lifecycle">API Request Lifecycle ทำงานยังไง?</a></li>
+          <li><a href="#th-http-methods">HTTP Methods — ทำอะไรได้บ้าง?</a></li>
+          <li><a href="#th-http-status-codes">HTTP Status Codes — Server ตอบกลับอะไร?</a></li>
+          <li><a href="#th-example">ตัวอย่างจริง — สร้าง User ด้วย POST</a></li>
+          <li><a href="#th-s-6">ลองเล่นด้วย cURL</a></li>
+          <li><a href="#th-summary">สรุป</a></li>
       </ol>
     </details>
+    <details class="post-toc l-en" open>
+      <summary>In this post</summary>
+      <ol>
+          <li><a href="#en-api">What Is an API?</a></li>
+          <li><a href="#en-api-request-lifecycle">How Does the API Request Lifecycle Work?</a></li>
+          <li><a href="#en-http-methods">HTTP Methods — What Can They Do?</a></li>
+          <li><a href="#en-http-status-codes">HTTP Status Codes — What Is the Server Telling You?</a></li>
+          <li><a href="#en-example">A Real Example — Creating a User with POST</a></li>
+          <li><a href="#en-s-6">Try It Yourself with cURL</a></li>
+          <li><a href="#en-summary">Summary</a></li>
+      </ol>
+    </details>
+    <div class="l-th">
 
 
     <p>จากโพสต์ที่แล้วเราพูดถึง Docker ว่ามันช่วยให้เรา pack environment ให้เหมือนกันทุกที่</p>
@@ -464,7 +511,7 @@
 
     <hr>
 
-    <h2 id="api">API คืออะไร?</h2>
+    <h2 id="th-api">API คืออะไร?</h2>
 
     <p><strong>API (Application Programming Interface)</strong> คือ "ช่องทางสื่อสาร" ระหว่าง software สองตัว เหมือนบริกรในร้านอาหาร — คุณ (Client) สั่งอาหาร ผ่านบริกร (API) ไปยังครัว (Server) แล้วบริกรก็เอาอาหารกลับมาให้คุณ</p>
 
@@ -474,7 +521,7 @@
 
     <hr>
 
-    <h2 id="api-request-lifecycle">API Request Lifecycle ทำงานยังไง?</h2>
+    <h2 id="th-api-request-lifecycle">API Request Lifecycle ทำงานยังไง?</h2>
 
     <p>เมื่อ Client ต้องการข้อมูลจาก Server จะเกิดขั้นตอน 5 ขั้น — ตั้งแต่ Client ส่ง request ไปจนถึงแสดงผลให้ user เห็น ทั้งหมดเกิดขึ้นในเวลาไม่กี่มิลลิวินาที! เข้าใจ lifecycle นี้จะช่วยให้ debug API issues ได้เร็วขึ้น — "ปัญหาเกิดที่ขั้นตอนไหน?":</p>
 
@@ -579,7 +626,7 @@ Content-Type: application/json
 
     <hr>
 
-    <h2 id="http-methods">HTTP Methods — ทำอะไรได้บ้าง?</h2>
+    <h2 id="th-http-methods">HTTP Methods — ทำอะไรได้บ้าง?</h2>
 
     <p>HTTP มี methods หลายตัว แต่ที่ใช้บ่อยมี 5 ตัว — ตาม CRUD operations: <strong>GET</strong> (อ่าน), <strong>POST</strong> (สร้าง), <strong>PUT</strong> (แก้ทั้งหมด), <strong>PATCH</strong> (แก้บางส่วน), <strong>DELETE</strong> (ลบ) การเลือกใช้ method ถูกต้องเป็น RESTful best practice — ไม่ใช่แค่ใช้ POST ทุกอย่าง!</p>
 
@@ -626,7 +673,7 @@ Content-Type: application/json
 
     <hr>
 
-    <h2 id="http-status-codes">HTTP Status Codes — Server ตอบกลับอะไร?</h2>
+    <h2 id="th-http-status-codes">HTTP Status Codes — Server ตอบกลับอะไร?</h2>
 
     <p><strong>Status codes</strong> เป็นตัวเลข 3 หลักที่บอก "ผลลัพธ์" ของ request — แบ่งเป็น 5 กลุ่มตามหลักร้อย: 1xx (informational), 2xx (success), 3xx (redirect), 4xx (client error — ผิดที่ client), 5xx (server error — ผิดที่ server) DevOps ต้องรู้ codes สำคัญเพื่อ debug API issues:</p>
 
@@ -665,7 +712,7 @@ Content-Type: application/json
 
     <hr>
 
-    <h2 id="example">ตัวอย่างจริง — สร้าง User ด้วย POST</h2>
+    <h2 id="th-example">ตัวอย่างจริง — สร้าง User ด้วย POST</h2>
 
     <p>มาดู lifecycle ทั้งหมดในตัวอย่างจริง — Client ส่ง POST request สร้าง user ใหม่ Server validate ข้อมูล, hash password, บันทึกลง database, แล้วส่ง response กลับพร้อม user ID ที่สร้างได้:</p>
 
@@ -707,7 +754,7 @@ Content-Type: application/json
 
     <hr>
 
-    <h2 id="s-6">ลองเล่นด้วย cURL</h2>
+    <h2 id="th-s-6">ลองเล่นด้วย cURL</h2>
 
     <p><strong>cURL</strong> เป็น command-line tool สำหรับส่ง HTTP requests — DevOps ใช้ตลอดเวลาสำหรับ debug APIs, health checks, automation scripts ทางเลือกอื่นที่ใช้ง่ายกว่า: <strong>Postman</strong> (GUI), <strong>HTTPie</strong> (CLI ที่ syntax สวยกว่า cURL) ลองเล่นกับ APIs สาธารณะได้เลย:</p>
 
@@ -728,7 +775,7 @@ curl -X DELETE https://jsonplaceholder.typicode.com/posts/1</code></pre>
 
     <hr>
 
-    <h2 id="summary">สรุป</h2>
+    <h2 id="th-summary">สรุป</h2>
 
     <p>API Request Lifecycle เป็นพื้นฐานที่ทุก developer ต้องเข้าใจ — ไม่ว่าจะเป็น frontend, backend, หรือ DevOps ทุก web app, mobile app, microservice สื่อสารกันผ่าน APIs ทั้งนั้น เข้าใจ lifecycle ดี = debug เร็ว + ออกแบบ API ดี:</p>
 
@@ -740,9 +787,297 @@ curl -X DELETE https://jsonplaceholder.typicode.com/posts/1</code></pre>
       <li><strong>REST API</strong> คือรูปแบบที่นิยมที่สุดในการออกแบบ API ปัจจุบัน</li>
     </ul>
 
-    <div class="post-series-footer">
-      บทความจากซีรีส์ DevOps & Vibe Coding 2026
+    
     </div>
+    <div class="l-en" lang="en">
+
+        <p>In the last post we talked about Docker, and how it lets us pack an environment so it behaves the same everywhere.</p>
+
+    <p>But when you open an app and press a button... <strong>have you ever wondered what happens between "pressing the button" and "getting the data back"?</strong> 🤔</p>
+
+    <p>That, right there, is the <strong>API Request Lifecycle</strong> — the process by which a Client (a website, an app) talks to a Server through an API.</p>
+
+    <hr>
+
+        <h2 id="en-api">What Is an API?</h2>
+
+    <p>An <strong>API (Application Programming Interface)</strong> is a "channel of communication" between two pieces of software — like a waiter in a restaurant. You (the Client) order food through the waiter (the API), the order goes to the kitchen (the Server), and the waiter brings the food back to you.</p>
+
+    <blockquote>
+      <strong>💡 Easy way to remember:</strong> API = the waiter | Client = the customer | Server = the kitchen
+    </blockquote>
+
+    <hr>
+
+        <h2 id="en-api-request-lifecycle">How Does the API Request Lifecycle Work?</h2>
+
+    <p>When a Client wants data from a Server, five steps take place — from the moment the Client sends the request to the moment the result appears in front of the user. All of it happens in a matter of milliseconds! Understanding this lifecycle makes debugging API issues far faster — "which step did the problem happen in?":</p>
+
+    <!-- Flow Diagram -->
+    <div class="flow-diagram">
+      <div class="flow-step">
+        <div class="flow-step__title">1. Client Request</div>
+        <div class="flow-step__sub">sends an HTTP request</div>
+      </div>
+      <span class="flow-arrow">→</span>
+      <div class="flow-step">
+        <div class="flow-step__title">2. Server Receives</div>
+        <div class="flow-step__sub">takes the request in</div>
+      </div>
+      <span class="flow-arrow">→</span>
+      <div class="flow-step">
+        <div class="flow-step__title">3. Server Processes</div>
+        <div class="flow-step__sub">processes + queries the DB</div>
+      </div>
+      <span class="flow-arrow">→</span>
+      <div class="flow-step">
+        <div class="flow-step__title">4. Server Responds</div>
+        <div class="flow-step__sub">sends the response back</div>
+      </div>
+      <span class="flow-arrow">→</span>
+      <div class="flow-step">
+        <div class="flow-step__title">5. Client Renders</div>
+        <div class="flow-step__sub">shows the result to the user</div>
+      </div>
+    </div>
+
+    <h3>Step 1: The Client Sends a Request</h3>
+
+    <p>The Client (a website, a mobile app, Postman) sends an <strong>HTTP Request</strong> to the Server, specifying:</p>
+
+    <ul>
+      <li><strong>URL</strong> — the destination you want, e.g. <code>https://api.example.com/users</code></li>
+      <li><strong>HTTP Method</strong> — what you intend to do (GET, POST, PUT, DELETE)</li>
+      <li><strong>Headers</strong> — extra information, such as an Authorization token</li>
+      <li><strong>Body</strong> — the data you attach (for POST and PUT)</li>
+    </ul>
+
+    <pre><code>GET /api/users/42 HTTP/1.1
+Host: api.example.com
+Authorization: Bearer eyJhbGciOiJIUzI1NiIs...
+Accept: application/json</code></pre>
+
+    <h3>Step 2: The Server Receives the Request</h3>
+
+    <p>The Server receives the request but does not start working on it immediately — it passes through several "layers" first, like checkpoints: <strong>Middleware</strong> (auth checks, logging, rate limiting), <strong>Router</strong> (which handler does this URL belong to?), <strong>Validation</strong> (is the data correct?). Only if it clears all of them does it reach the handler function:</p>
+
+    <ol>
+      <li><strong>DNS Resolution</strong> — turns the domain name into an IP address</li>
+      <li><strong>Load Balancer</strong> — spreads requests across whichever servers are free</li>
+      <li><strong>Middleware</strong> — checks authentication, logging, rate limiting</li>
+      <li><strong>Router</strong> — matches URL + Method to the correct handler</li>
+    </ol>
+
+    <h3>Step 3: The Server Processes</h3>
+
+    <p>The <strong>handler function</strong> does the real work the request asked for — it may be as simple as pulling a record out of a database, or as involved as calculating prices, calling external APIs, sending email, or queuing background jobs. This step is where the "business logic" lives:</p>
+
+    <ul>
+      <li>Query data from the database</li>
+      <li>Compute the business logic</li>
+      <li>Call further external APIs (microservices)</li>
+      <li>Validate the data</li>
+    </ul>
+
+    <pre><code>// Express.js example
+app.get('/api/users/:id', async (req, res) => {
+  const user = await db.users.findById(req.params.id);
+  if (!user) {
+    return res.status(404).json({ error: 'User not found' });
+  }
+  res.status(200).json(user);
+});</code></pre>
+
+    <h3>Step 4: The Server Sends a Response Back</h3>
+
+    <p>Once the processing is done, the Server builds an <strong>HTTP Response</strong> and sends it back to the Client — made up of a Status Code (success/failure), Headers (content type, cache, cookies), and a Body (the actual data, usually JSON):</p>
+
+    <ul>
+      <li><strong>Status Code</strong> — reports the outcome (200, 404, 500, and so on)</li>
+      <li><strong>Headers</strong> — such as Content-Type, Cache-Control</li>
+      <li><strong>Body</strong> — the data being returned (usually JSON)</li>
+    </ul>
+
+    <pre><code>HTTP/1.1 200 OK
+Content-Type: application/json
+
+{
+  "id": 42,
+  "name": "Somchai",
+  "email": "somchai@example.com",
+  "role": "developer"
+}</code></pre>
+
+    <h3>Step 5: The Client Renders</h3>
+
+    <p>The Client receives the response, parses the data, and shows the result to the user — whether that is a web page, a mobile app, or a terminal.</p>
+
+    <hr>
+
+        <h2 id="en-http-methods">HTTP Methods — What Can They Do?</h2>
+
+    <p>HTTP has a number of methods, but five are used most of the time — matching the CRUD operations: <strong>GET</strong> (read), <strong>POST</strong> (create), <strong>PUT</strong> (replace everything), <strong>PATCH</strong> (change part of it), <strong>DELETE</strong> (remove). Choosing the right method is a RESTful best practice — not just using POST for everything!</p>
+
+    <table>
+      <thead>
+        <tr>
+          <th>Method</th>
+          <th>What it is for</th>
+          <th>Example</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><span class="method-badge method-badge--get">GET</span></td>
+          <td>Fetch data (read only)</td>
+          <td><code>GET /api/users</code></td>
+        </tr>
+        <tr>
+          <td><span class="method-badge method-badge--post">POST</span></td>
+          <td>Create new data</td>
+          <td><code>POST /api/users</code></td>
+        </tr>
+        <tr>
+          <td><span class="method-badge method-badge--put">PUT</span></td>
+          <td>Replace the whole record</td>
+          <td><code>PUT /api/users/42</code></td>
+        </tr>
+        <tr>
+          <td><span class="method-badge method-badge--patch">PATCH</span></td>
+          <td>Change some fields</td>
+          <td><code>PATCH /api/users/42</code></td>
+        </tr>
+        <tr>
+          <td><span class="method-badge method-badge--delete">DELETE</span></td>
+          <td>Delete data</td>
+          <td><code>DELETE /api/users/42</code></td>
+        </tr>
+      </tbody>
+    </table>
+
+    <blockquote>
+      <strong>💡 CRUD Mapping:</strong> Create = POST, Read = GET, Update = PUT/PATCH, Delete = DELETE
+    </blockquote>
+
+    <hr>
+
+        <h2 id="en-http-status-codes">HTTP Status Codes — What Is the Server Telling You?</h2>
+
+    <p><strong>Status codes</strong> are three-digit numbers that report the "outcome" of a request — grouped into five families by their leading digit: 1xx (informational), 2xx (success), 3xx (redirect), 4xx (client error — the fault is at the client), 5xx (server error — the fault is at the server). In DevOps you need the important ones by heart, because they are the first clue when an API misbehaves:</p>
+
+    <h3>2xx — Success ✅</h3>
+    <ul>
+      <li><span class="status-badge status-badge--2xx">200</span> <strong>OK</strong> — it worked</li>
+      <li><span class="status-badge status-badge--2xx">201</span> <strong>Created</strong> — the new record was created successfully</li>
+      <li><span class="status-badge status-badge--2xx">204</span> <strong>No Content</strong> — it worked, but there is nothing to send back</li>
+    </ul>
+
+    <h3>3xx — Redirect 🔄</h3>
+    <ul>
+      <li><span class="status-badge status-badge--3xx">301</span> <strong>Moved Permanently</strong> — moved for good</li>
+      <li><span class="status-badge status-badge--3xx">304</span> <strong>Not Modified</strong> — go ahead and use your cache</li>
+    </ul>
+
+    <h3>4xx — Client Error ⚠️</h3>
+    <ul>
+      <li><span class="status-badge status-badge--4xx">400</span> <strong>Bad Request</strong> — the request is malformed</li>
+      <li><span class="status-badge status-badge--4xx">401</span> <strong>Unauthorized</strong> — not logged in yet</li>
+      <li><span class="status-badge status-badge--4xx">403</span> <strong>Forbidden</strong> — no permission</li>
+      <li><span class="status-badge status-badge--4xx">404</span> <strong>Not Found</strong> — nothing there</li>
+      <li><span class="status-badge status-badge--4xx">429</span> <strong>Too Many Requests</strong> — sending too often (rate limited)</li>
+    </ul>
+
+    <h3>5xx — Server Error 🔥</h3>
+    <ul>
+      <li><span class="status-badge status-badge--5xx">500</span> <strong>Internal Server Error</strong> — the server broke</li>
+      <li><span class="status-badge status-badge--5xx">502</span> <strong>Bad Gateway</strong> — a proxy or intermediate server has a problem</li>
+      <li><span class="status-badge status-badge--5xx">503</span> <strong>Service Unavailable</strong> — the server is overloaded or under maintenance</li>
+    </ul>
+
+    <blockquote>
+      <strong>💡 Easy way to remember:</strong> 2xx = success | 4xx = the client's fault | 5xx = the server's fault
+    </blockquote>
+
+    <hr>
+
+        <h2 id="en-example">A Real Example — Creating a User with POST</h2>
+
+    <p>Let's walk the whole lifecycle through a real example — the Client sends a POST request to create a new user; the Server validates the data, hashes the password, writes it to the database, and sends back a response carrying the user ID it created:</p>
+
+    <h4>Request:</h4>
+    <pre><code>POST /api/users HTTP/1.1
+Host: api.example.com
+Content-Type: application/json
+Authorization: Bearer eyJhbGci...
+
+{
+  "name": "Somying",
+  "email": "somying@example.com",
+  "role": "student"
+}</code></pre>
+
+    <h4>Response (success):</h4>
+    <pre><code>HTTP/1.1 201 Created
+Content-Type: application/json
+Location: /api/users/99
+
+{
+  "id": 99,
+  "name": "Somying",
+  "email": "somying@example.com",
+  "role": "student",
+  "createdAt": "2026-03-07T08:00:00Z"
+}</code></pre>
+
+    <h4>Response (error):</h4>
+    <pre><code>HTTP/1.1 400 Bad Request
+Content-Type: application/json
+
+{
+  "error": "Validation failed",
+  "details": [
+    { "field": "email", "message": "Invalid email format" }
+  ]
+}</code></pre>
+
+    <hr>
+
+        <h2 id="en-s-6">Try It Yourself with cURL</h2>
+
+    <p><strong>cURL</strong> is a command-line tool for sending HTTP requests — in DevOps you reach for it constantly, to debug APIs, run health checks and write automation scripts. There are friendlier alternatives: <strong>Postman</strong> (GUI) and <strong>HTTPie</strong> (a CLI with nicer syntax than cURL). Go ahead and experiment against a public API:</p>
+
+    <pre><code># GET — fetch data
+curl -X GET https://jsonplaceholder.typicode.com/users/1
+
+# POST — create new data
+curl -X POST https://jsonplaceholder.typicode.com/posts \
+  -H "Content-Type: application/json" \
+  -d '{"title": "Hello API", "body": "Testing!", "userId": 1}'
+
+# DELETE — remove data
+curl -X DELETE https://jsonplaceholder.typicode.com/posts/1</code></pre>
+
+    <blockquote>
+      <strong>🐕 Tip:</strong> Try <a href="https://httpie.io" target="_blank" rel="noopener">HTTPie</a> or <a href="https://www.postman.com" target="_blank" rel="noopener">Postman</a> for API testing that is more convenient than cURL
+    </blockquote>
+
+    <hr>
+
+        <h2 id="en-summary">Summary</h2>
+
+    <p>The API Request Lifecycle is a foundation every developer has to understand — frontend, backend or DevOps alike. Every web app, mobile app and microservice communicates through APIs. Understand the lifecycle well = debug faster + design better APIs:</p>
+
+    <ul>
+      <li><strong>API</strong> = the channel of communication between Client and Server</li>
+      <li><strong>Request Lifecycle</strong> = Client Request → Server Receives → Processes → Responds → Client Renders</li>
+      <li><strong>HTTP Methods</strong> = GET (read), POST (create), PUT/PATCH (update), DELETE (remove)</li>
+      <li><strong>Status Codes</strong> = 2xx success, 4xx the client's fault, 5xx the server's fault</li>
+      <li><strong>REST API</strong> is the most widely used style for designing APIs today</li>
+    </ul>
+
+    </div>
+
+<div class="post-series-footer"><span class="l-th">บทความจากซีรีส์ DevOps & Vibe Coding 2026</span><span class="l-en" lang="en">From the DevOps & Vibe Coding 2026 series</span></div>
 
   </article>
 

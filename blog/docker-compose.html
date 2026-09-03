@@ -280,6 +280,34 @@
       ::view-transition-old(*),
       ::view-transition-new(*) { animation: none !important; }
     }
+
+    /* ── LANGUAGE SWITCH — pure CSS, zero JavaScript (INV-38) ──
+       One visually-hidden checkbox as a direct child of body, BEFORE the main landmark,
+       so `#langSwitch:checked ~ main …` reaches every content block. The two
+       tracks are paired blocks: .l-th (default) and .l-en (hidden until
+       checked; display:revert restores block for divs, inline for spans).
+       Naming stays clear of INV-12's menu-token regex (hamburger|burger|
+       nav__toggle|nav-toggle|navtoggle|menu-toggle|menu__toggle) — verified.
+       No JS also means no persistence across posts; each post opens in Thai. */
+    .lang-switch-box { position: absolute; left: -9999px; }
+    .l-en { display: none; }
+    #langSwitch:checked ~ main .l-en { display: revert; }
+    #langSwitch:checked ~ main .l-th { display: none; }
+    .lang-switch {
+      display: inline-flex; align-items: center; gap: 0.55rem;
+      margin-top: 1.4rem; padding: 0.4rem 1.1rem; border-radius: 50px;
+      background: rgba(255,255,255,0.7); border: 1px solid rgba(34,98,153,0.25);
+      cursor: pointer; font-size: 0.85rem; user-select: none;
+    }
+    .lang-switch span { color: var(--slate-light); font-weight: 600; transition: color 0.2s; }
+    .lang-switch .lang-sep { color: var(--gray); font-weight: 400; }
+    .lang-switch .lang-th { color: var(--navy); font-weight: 800; }
+    #langSwitch:checked ~ main .lang-switch .lang-th { color: var(--slate-light); font-weight: 600; }
+    #langSwitch:checked ~ main .lang-switch .lang-en { color: var(--navy); font-weight: 800; }
+    .lang-switch:hover { border-color: var(--blue); }
+    #langSwitch:focus-visible ~ main .lang-switch {
+      outline: 2px solid var(--focus); outline-offset: 3px;
+    }
   </style>
   <!-- social -->
   <link rel="canonical" href="https://anirach.com/blog/docker-compose.html">
@@ -287,6 +315,7 @@
   <meta property="og:url" content="https://anirach.com/blog/docker-compose.html">
   <meta property="og:site_name" content="Anirach Mingkhwan">
   <meta property="og:locale" content="th_TH">
+  <meta property="og:locale:alternate" content="en_US">
   <meta property="article:published_time" content="2026-03-07">
   <meta property="article:author" content="https://anirach.com/">
   <meta property="og:title" content="Docker Compose — จัดการหลาย Containers ด้วยไฟล์เดียว">
@@ -317,13 +346,17 @@
     "datePublished": "2026-03-07",
     "dateModified": "2026-08-26",
     "image": "https://anirach.com/images/docker-compose-og.jpg",
-    "inLanguage": "th",
+    "inLanguage": [
+      "th",
+      "en"
+    ],
     "mainEntityOfPage": "https://anirach.com/blog/docker-compose.html"
   }
   </script>
 </head>
 <body>
 <a href="#main" class="skip-link">Skip to content</a>
+<input type="checkbox" id="langSwitch" class="lang-switch-box" aria-label="Switch language: Thai / English">
 
   <nav class="blog-nav">
     <div class="blog-nav__inner">
@@ -341,35 +374,53 @@
       <span class="post-hero__tag">DevOps</span>
       <span class="post-hero__tag">Containers</span>
     </div>
-    <h1 class="post-hero__title">Docker Compose — จัดการหลาย Containers ด้วยไฟล์เดียว 🐳</h1>
+    <h1 class="post-hero__title"><span class="l-th">Docker Compose — จัดการหลาย Containers ด้วยไฟล์เดียว 🐳</span><span class="l-en" lang="en">Docker Compose — Run Many Containers From One File 🐳</span></h1>
     <div class="post-hero__meta">
       <span>By <strong>Anirach Mingkhwan</strong></span>
       <span class="post-hero__series">DevOps & Vibe Coding 2026</span>
     
         <span><time datetime="2026-03-07">7 Mar 2026</time></span>
       </div>
+    <label for="langSwitch" class="lang-switch" title="สลับภาษา · Switch language"><span class="lang-th">ไทย</span><span class="lang-sep">·</span><span class="lang-en" lang="en">English</span></label>
     <div class="post-hero__cover">
       <img src="../images/docker-compose-cover.jpg" alt="Docker Compose — จัดการหลาย Containers ด้วยไฟล์เดียว" width="800" height="800" loading="eager" fetchpriority="high" decoding="async">
     </div>
   </header>
 
   <article class="post-body">
-    <details class="post-toc" open>
-      <summary>In this post &middot; <span lang="th">ในบทความนี้</span></summary>
+    <details class="post-toc l-th" open>
+      <summary>ในบทความนี้</summary>
       <ol>
-          <li><a href="#docker-compose">Docker Compose คืออะไร?</a></li>
-          <li><a href="#example">ตัวอย่างแรก — Web App + Database</a></li>
-          <li><a href="#full-stack">Full Stack — React + API + DB + Redis + Nginx</a></li>
-          <li><a href="#docker-compose-2">🔧 Docker Compose คำสั่งสำคัญ</a></li>
-          <li><a href="#env-file">📁 .env File — แยก Config ออกจาก YAML</a></li>
-          <li><a href="#multi-environment">🔀 Multi-Environment — Dev vs Production</a></li>
-          <li><a href="#volumes">💾 Volumes — เก็บข้อมูลถาวร</a></li>
-          <li><a href="#networks">🌐 Networks — Container คุยกันยังไง</a></li>
-          <li><a href="#health-checks">❤️ Health Checks — ตรวจสุขภาพ</a></li>
-          <li><a href="#production-tips">🚀 Production Tips</a></li>
-          <li><a href="#summary">สรุป</a></li>
+          <li><a href="#th-docker-compose">Docker Compose คืออะไร?</a></li>
+          <li><a href="#th-example">ตัวอย่างแรก — Web App + Database</a></li>
+          <li><a href="#th-full-stack">Full Stack — React + API + DB + Redis + Nginx</a></li>
+          <li><a href="#th-docker-compose-2">🔧 Docker Compose คำสั่งสำคัญ</a></li>
+          <li><a href="#th-env-file">📁 .env File — แยก Config ออกจาก YAML</a></li>
+          <li><a href="#th-multi-environment">🔀 Multi-Environment — Dev vs Production</a></li>
+          <li><a href="#th-volumes">💾 Volumes — เก็บข้อมูลถาวร</a></li>
+          <li><a href="#th-networks">🌐 Networks — Container คุยกันยังไง</a></li>
+          <li><a href="#th-health-checks">❤️ Health Checks — ตรวจสุขภาพ</a></li>
+          <li><a href="#th-production-tips">🚀 Production Tips</a></li>
+          <li><a href="#th-summary">สรุป</a></li>
       </ol>
     </details>
+    <details class="post-toc l-en" open>
+      <summary>In this post</summary>
+      <ol>
+          <li><a href="#en-docker-compose">What Is Docker Compose?</a></li>
+          <li><a href="#en-example">A First Example — Web App + Database</a></li>
+          <li><a href="#en-full-stack">Full Stack — React + API + DB + Redis + Nginx</a></li>
+          <li><a href="#en-docker-compose-2">🔧 The Docker Compose Commands That Matter</a></li>
+          <li><a href="#en-env-file">📁 .env Files — Config Out of the YAML</a></li>
+          <li><a href="#en-multi-environment">🔀 Multi-Environment — Dev vs Production</a></li>
+          <li><a href="#en-volumes">💾 Volumes — Data That Persists</a></li>
+          <li><a href="#en-networks">🌐 Networks — How Containers Talk</a></li>
+          <li><a href="#en-health-checks">❤️ Health Checks — Taking the Pulse</a></li>
+          <li><a href="#en-production-tips">🚀 Production Tips</a></li>
+          <li><a href="#en-summary">Summary</a></li>
+      </ol>
+    </details>
+    <div class="l-th">
 
 
     <p>ในโพสต์ Docker vs VMs เราเรียนรู้ว่า Docker สร้าง container ได้ง่าย แต่ <strong>app จริงมักใช้หลาย services</strong> — web server, API, database, cache, queue...</p>
@@ -380,7 +431,7 @@
 
     <hr>
 
-    <h2 id="docker-compose">Docker Compose คืออะไร?</h2>
+    <h2 id="th-docker-compose">Docker Compose คืออะไร?</h2>
 
     <p>Docker Compose คือเครื่องมือที่ช่วย <strong>กำหนด + รันหลาย containers พร้อมกัน</strong> ด้วยไฟล์ <code>docker-compose.yml</code> (หรือ <code>compose.yml</code>)</p>
 
@@ -407,7 +458,7 @@
 
     <hr>
 
-    <h2 id="example">ตัวอย่างแรก — Web App + Database</h2>
+    <h2 id="th-example">ตัวอย่างแรก — Web App + Database</h2>
 
     <p>มาเริ่มจากตัวอย่างง่ายที่สุด — <strong>web app + PostgreSQL database</strong> แค่ 2 services แต่ถ้าไม่มี Compose ต้อง: สร้าง network เอง, รัน postgres container ตั้ง password + volume, รัน app container ตั้ง env vars + เชื่อม network... รวม 5-6 คำสั่ง! Docker Compose ทำให้เหลือแค่ <code>docker compose up</code>:</p>
 
@@ -471,7 +522,7 @@ docker compose down -v           # + ลบ volumes ด้วย (⚠️ data �
 
     <hr>
 
-    <h2 id="full-stack">Full Stack — React + API + DB + Redis + Nginx</h2>
+    <h2 id="th-full-stack">Full Stack — React + API + DB + Redis + Nginx</h2>
 
     <p>ตัวอย่างจริงที่ใกล้ production — <strong>5 services ทำงานร่วมกัน:</strong> React frontend, Node.js API, PostgreSQL database, Redis cache, และ Nginx reverse proxy สังเกตการใช้ <code>depends_on</code> กำหนดลำดับการ start, <code>healthcheck</code> ตรวจว่า service พร้อมจริงก่อน start ตัวที่พึ่ง, <code>volumes</code> สำหรับ persistent data, และ <code>networks</code> แยก frontend/backend traffic:</p>
 
@@ -620,7 +671,7 @@ server {
 
     <hr>
 
-    <h2 id="docker-compose-2">🔧 Docker Compose คำสั่งสำคัญ</h2>
+    <h2 id="th-docker-compose-2">🔧 Docker Compose คำสั่งสำคัญ</h2>
 
     <p>คำสั่ง Docker Compose ที่ใช้บ่อยในชีวิตประจำวัน — ตั้งแต่ start/stop services, ดู logs, exec เข้าไปใน container, ไปจนถึง rebuild images หลังแก้ Dockerfile สังเกตว่า <code>docker compose</code> (ไม่มี hyphen) เป็น v2 ที่แนะนำ แทน <code>docker-compose</code> v1:</p>
 
@@ -654,7 +705,7 @@ docker compose up -d --scale backend=3   # รัน backend 3 ตัว!</code>
 
     <hr>
 
-    <h2 id="env-file">📁 .env File — แยก Config ออกจาก YAML</h2>
+    <h2 id="th-env-file">📁 .env File — แยก Config ออกจาก YAML</h2>
 
     <p><strong>.env file</strong> ช่วยแยก sensitive config (passwords, API keys) ออกจาก <code>docker-compose.yml</code> — ทำให้สามารถ commit compose file เข้า Git ได้โดยไม่ leak secrets เพราะ <code>.env</code> อยู่ใน <code>.gitignore</code> Docker Compose อ่าน <code>.env</code> อัตโนมัติ:</p>
 
@@ -691,7 +742,7 @@ services:
 
     <hr>
 
-    <h2 id="multi-environment">🔀 Multi-Environment — Dev vs Production</h2>
+    <h2 id="th-multi-environment">🔀 Multi-Environment — Dev vs Production</h2>
 
     <p>Dev environment ต้องการ hot-reload, debug tools, volume mounts สำหรับ live coding ส่วน production ต้อง optimize image size, set resource limits, ปิด debug mode จะจัดการ config ต่างๆ ยังไงให้ไม่ต้อง maintain 2 ไฟล์ที่ซ้ำกัน? Docker Compose มี 2 วิธีหลัก:</p>
 
@@ -788,7 +839,7 @@ docker compose --profile dev --profile monitoring up -d</code></pre>
 
     <hr>
 
-    <h2 id="volumes">💾 Volumes — เก็บข้อมูลถาวร</h2>
+    <h2 id="th-volumes">💾 Volumes — เก็บข้อมูลถาวร</h2>
 
     <p>โดย default เมื่อ container หยุด ข้อมูลข้างในหายหมด! <strong>Volumes</strong> แก้ปัญหานี้โดยเก็บข้อมูลไว้นอก container — database data, uploaded files, logs จะไม่หายแม้ <code>docker compose down</code> มี 2 แบบ: <strong>named volumes</strong> (Docker จัดการ path ให้ เหมาะกับ data) และ <strong>bind mounts</strong> (mount directory จาก host เข้า container เหมาะกับ development):</p>
 
@@ -829,7 +880,7 @@ cat backup.sql | docker compose exec -T db psql -U app mydb</code></pre>
 
     <hr>
 
-    <h2 id="networks">🌐 Networks — Container คุยกันยังไง</h2>
+    <h2 id="th-networks">🌐 Networks — Container คุยกันยังไง</h2>
 
     <p>Docker Compose สร้าง <strong>default network</strong> ให้ทุก service อัตโนมัติ — containers สื่อสารกันโดยใช้ <strong>service name เป็น hostname</strong> เช่น API container เรียก database ด้วย <code>postgres://db:5432</code> ไม่ต้องใช้ IP address สำหรับ security ที่ดีขึ้น ควรสร้าง networks แยก — frontend network เฉพาะ web+nginx, backend network เฉพาะ API+DB ทำให้ frontend เข้าถึง DB โดยตรงไม่ได้:</p>
 
@@ -858,7 +909,7 @@ networks:
 
     <hr>
 
-    <h2 id="health-checks">❤️ Health Checks — ตรวจสุขภาพ</h2>
+    <h2 id="th-health-checks">❤️ Health Checks — ตรวจสุขภาพ</h2>
 
     <p><strong>Health checks</strong> ตรวจว่า service ทำงานจริง ไม่ใช่แค่ "process ยังรันอยู่" — เช่น PostgreSQL container อาจ start แล้วแต่ยังรับ connection ไม่ได้ ถ้า API start ก่อน DB พร้อม จะ crash! <code>depends_on</code> + <code>condition: service_healthy</code> แก้ปัญหานี้โดย wait จน health check ผ่านก่อนค่อย start service ที่พึ่ง:</p>
 
@@ -891,7 +942,7 @@ networks:
 
     <hr>
 
-    <h2 id="production-tips">🚀 Production Tips</h2>
+    <h2 id="th-production-tips">🚀 Production Tips</h2>
 
     <p>Docker Compose ใช้ใน production ได้สำหรับ small-medium apps (ถ้ายังไม่ต้องการ Kubernetes) แต่ต้องตั้งค่าให้ production-ready — restart policies, resource limits, logging, security hardening เคล็ดลับสำคัญ:</p>
 
@@ -941,7 +992,7 @@ services:
 
     <hr>
 
-    <h2 id="summary">สรุป</h2>
+    <h2 id="th-summary">สรุป</h2>
 
     <p>Docker Compose เป็นเครื่องมือที่ทุก developer ควรรู้ — ทำให้การ setup development environment เหลือแค่ <code>docker compose up</code> ไม่ต้อง install dependencies บนเครื่อง ทุกคนในทีมได้ environment เดียวกัน "works on my machine" หมดไป:</p>
 
@@ -956,9 +1007,597 @@ services:
       <li><strong>Production</strong> = resource limits, logging, read-only filesystem 🐳🐕</li>
     </ul>
 
-    <div class="post-series-footer">
-      บทความจากซีรีส์ DevOps & Vibe Coding 2026
+    
     </div>
+    <div class="l-en" lang="en">
+
+        <p>In the Docker vs VMs post we learned that Docker makes a container easy to build — but <strong>a real app usually runs several services</strong>: web server, API, database, cache, queue...</p>
+
+    <p>Running <code>docker run</code> one at a time, wiring the network yourself, setting up the volumes yourself... <strong>you would lose your mind!</strong> 😵</p>
+
+    <p><strong>Docker Compose</strong> solves exactly this — declare every service in a single YAML file, then start them all with one command! 🐳🐕</p>
+
+    <hr>
+
+        <h2 id="en-docker-compose">What Is Docker Compose?</h2>
+
+    <p>Docker Compose is the tool that lets you <strong>declare and run many containers together</strong> from one <code>docker-compose.yml</code> file (or <code>compose.yml</code>).</p>
+
+    <div class="flow-diagram">
+      <div class="flow-step">
+        <div class="flow-step__title">📝 Write the YAML</div>
+        <div class="flow-step__sub">declare the services</div>
+      </div>
+      <span class="flow-arrow">→</span>
+      <div class="flow-step">
+        <div class="flow-step__title">🚀 docker compose up</div>
+        <div class="flow-step__sub">run every service</div>
+      </div>
+      <span class="flow-arrow">→</span>
+      <div class="flow-step">
+        <div class="flow-step__title">✅ They work together!</div>
+        <div class="flow-step__sub">network + volumes ready</div>
+      </div>
+    </div>
+
+    <blockquote>
+      <strong>💡 An easy way to remember it:</strong> a Dockerfile is the recipe for 1 container | Docker Compose is the recipe for the whole restaurant (many containers)
+    </blockquote>
+
+    <hr>
+
+        <h2 id="en-example">A First Example — Web App + Database</h2>
+
+    <p>Let's start with the simplest possible example — a <strong>web app + a PostgreSQL database</strong>. Only 2 services, but without Compose you would have to: create the network yourself, run the postgres container with its password and volume, run the app container with its env vars and attach it to the network... 5-6 commands in all! Docker Compose reduces that to <code>docker compose up</code>:</p>
+
+    <pre><code># docker-compose.yml
+services:
+  # Web Application
+  app:
+    build: .                     # build from the Dockerfile in this directory
+    ports:
+      - "3000:3000"              # host:container
+    environment:
+      - DATABASE_URL=postgres://myuser:mypass@db:5432/mydb
+      - NODE_ENV=development
+    volumes:
+      - .:/app                   # mount the code in (dev mode)
+      - /app/node_modules        # do not mount node_modules
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: unless-stopped
+
+  # PostgreSQL Database
+  db:
+    image: postgres:16-alpine
+    environment:
+      - POSTGRES_USER=myuser
+      - POSTGRES_PASSWORD=mypass
+      - POSTGRES_DB=mydb
+    volumes:
+      - pgdata:/var/lib/postgresql/data    # persist data
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: pg_isready -U myuser
+      interval: 10s
+      retries: 5
+
+volumes:
+  pgdata:                        # named volume for the DB data</code></pre>
+
+    <pre><code># run every service
+docker compose up -d
+# [+] Running 3/3
+#  ✔ Network myapp_default  Created
+#  ✔ Container myapp-db-1   Started
+#  ✔ Container myapp-app-1  Started
+
+# check the status
+docker compose ps
+# NAME           SERVICE   STATUS    PORTS
+# myapp-app-1    app       running   0.0.0.0:3000->3000/tcp
+# myapp-db-1     db        running   0.0.0.0:5432->5432/tcp
+
+# read the logs
+docker compose logs -f app      # follow the app's logs
+docker compose logs              # logs from every service
+
+# stop every service
+docker compose down              # stop + remove the containers
+docker compose down -v           # + remove the volumes too (⚠️ data gone!)</code></pre>
+
+    <hr>
+
+        <h2 id="en-full-stack">Full Stack — React + API + DB + Redis + Nginx</h2>
+
+    <p>A realistic example, close to production — <strong>5 services working together:</strong> a React frontend, a Node.js API, a PostgreSQL database, a Redis cache, and an Nginx reverse proxy. Notice how <code>depends_on</code> sets the start order, <code>healthcheck</code> proves a service is genuinely ready before anything that depends on it starts, <code>volumes</code> hold the persistent data, and <code>networks</code> separate frontend from backend traffic:</p>
+
+    <div class="arch-diagram">
+      <div class="arch-box">
+        <div class="arch-label">Docker Compose Stack</div>
+        <div class="arch-row">
+          <div class="arch-container" style="background: rgba(59,130,246,0.1);">
+            <div class="arch-name">Nginx</div>
+            <div class="arch-item">:80 → frontend</div>
+            <div class="arch-item">/api → backend</div>
+          </div>
+        </div>
+        <div style="text-align: center; font-size: 1rem; color: var(--blue); font-weight: 700; margin: 0.5rem 0;">↓ reverse proxy ↓</div>
+        <div class="arch-row">
+          <div class="arch-container">
+            <div class="arch-name">Frontend</div>
+            <div class="arch-item">React :3000</div>
+          </div>
+          <div class="arch-container">
+            <div class="arch-name">Backend</div>
+            <div class="arch-item">Node.js :8080</div>
+          </div>
+        </div>
+        <div style="text-align: center; font-size: 1rem; color: var(--blue); font-weight: 700; margin: 0.5rem 0;">↓</div>
+        <div class="arch-row">
+          <div class="arch-container" style="background: rgba(34,197,94,0.08);">
+            <div class="arch-name">PostgreSQL</div>
+            <div class="arch-item">:5432</div>
+          </div>
+          <div class="arch-container" style="background: rgba(239,68,68,0.06);">
+            <div class="arch-name">Redis</div>
+            <div class="arch-item">:6379</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <pre><code># docker-compose.yml — Full Stack
+services:
+  # ─── Nginx Reverse Proxy ───
+  nginx:
+    image: nginx:alpine
+    ports:
+      - "80:80"
+    volumes:
+      - ./nginx/default.conf:/etc/nginx/conf.d/default.conf
+    depends_on:
+      - frontend
+      - backend
+    restart: always
+
+  # ─── React Frontend ───
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    environment:
+      - REACT_APP_API_URL=/api
+    expose:
+      - "3000"                   # expose it to nginx (not published to the host)
+
+  # ─── Node.js Backend ───
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    environment:
+      - DATABASE_URL=postgres://app:secret@db:5432/appdb
+      - REDIS_URL=redis://redis:6379
+      - JWT_SECRET=${JWT_SECRET}  # read from the .env file
+    expose:
+      - "8080"
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_started
+    restart: unless-stopped
+
+  # ─── PostgreSQL ───
+  db:
+    image: postgres:16-alpine
+    environment:
+      - POSTGRES_USER=app
+      - POSTGRES_PASSWORD=secret
+      - POSTGRES_DB=appdb
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ./db/init.sql:/docker-entrypoint-initdb.d/init.sql
+    healthcheck:
+      test: pg_isready -U app
+      interval: 10s
+      retries: 5
+    restart: unless-stopped
+
+  # ─── Redis Cache ───
+  redis:
+    image: redis:7-alpine
+    command: redis-server --appendonly yes
+    volumes:
+      - redisdata:/data
+    restart: unless-stopped
+
+volumes:
+  pgdata:
+  redisdata:</code></pre>
+
+    <h3>Nginx Config</h3>
+
+    <p>Nginx acts as the <strong>reverse proxy</strong> — it takes all the traffic and forwards it to the frontend or the API according to the URL path. The benefit is that you expose a single port (80) instead of opening several, and you get caching, gzip and load balancing along the way:</p>
+
+    <pre><code># nginx/default.conf
+upstream frontend {
+    server frontend:3000;
+}
+
+upstream backend {
+    server backend:8080;
+}
+
+server {
+    listen 80;
+
+    # Frontend
+    location / {
+        proxy_pass http://frontend;
+        proxy_set_header Host $host;
+    }
+
+    # API → Backend
+    location /api/ {
+        proxy_pass http://backend/;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+    }
+
+    # WebSocket support
+    location /ws {
+        proxy_pass http://backend;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection "upgrade";
+    }
+}</code></pre>
+
+    <hr>
+
+        <h2 id="en-docker-compose-2">🔧 The Docker Compose Commands That Matter</h2>
+
+    <p>The Docker Compose commands you reach for every day — starting and stopping services, reading logs, exec-ing into a container, rebuilding images after a Dockerfile change. Note that <code>docker compose</code> (no hyphen) is v2, the recommended form, in place of <code>docker-compose</code> v1:</p>
+
+    <pre><code># ─── Lifecycle ───
+docker compose up                # run (foreground)
+docker compose up -d             # run (background) ⭐
+docker compose down              # stop + remove the containers
+docker compose down -v           # + remove the volumes
+docker compose restart           # restart every service
+docker compose stop              # stop (without removing)
+docker compose start             # start again from stopped
+
+# ─── Build ───
+docker compose build             # build every service
+docker compose build --no-cache  # rebuild, ignoring the cache
+docker compose up --build        # build, then run ⭐
+
+# ─── Status & Logs ───
+docker compose ps                # status
+docker compose logs              # all the logs
+docker compose logs -f backend   # follow the backend's logs
+docker compose top               # processes inside each container
+
+# ─── Execute ───
+docker compose exec backend sh   # get a shell in the container ⭐
+docker compose exec db psql -U app appdb   # into PostgreSQL
+docker compose run --rm backend npm test   # run, then remove the container
+
+# ─── Scale ───
+docker compose up -d --scale backend=3   # run 3 backends!</code></pre>
+
+    <hr>
+
+        <h2 id="en-env-file">📁 .env Files — Config Out of the YAML</h2>
+
+    <p>An <strong>.env file</strong> keeps the sensitive config (passwords, API keys) out of <code>docker-compose.yml</code> — which is what makes the compose file safe to commit to Git without leaking secrets, because <code>.env</code> lives in <code>.gitignore</code>. Docker Compose reads <code>.env</code> automatically:</p>
+
+    <pre><code># .env (sits next to docker-compose.yml)
+POSTGRES_USER=app
+POSTGRES_PASSWORD=supersecret
+POSTGRES_DB=myapp
+JWT_SECRET=my-jwt-secret-key
+NODE_ENV=development
+APP_PORT=3000</code></pre>
+
+    <pre><code># docker-compose.yml — using the variables from .env
+services:
+  backend:
+    build: ./backend
+    ports:
+      - "${APP_PORT}:${APP_PORT}"
+    environment:
+      - DATABASE_URL=postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}
+      - JWT_SECRET=${JWT_SECRET}
+      - NODE_ENV=${NODE_ENV}
+      - PORT=${APP_PORT}
+
+  db:
+    image: postgres:16-alpine
+    environment:
+      - POSTGRES_USER=${POSTGRES_USER}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+      - POSTGRES_DB=${POSTGRES_DB}</code></pre>
+
+    <blockquote>
+      <strong>🐕 Important!</strong> Do not forget to put <code>.env</code> in <code>.gitignore</code> — never commit secrets to Git!
+    </blockquote>
+
+    <hr>
+
+        <h2 id="en-multi-environment">🔀 Multi-Environment — Dev vs Production</h2>
+
+    <p>A dev environment wants hot reload, debug tools and volume mounts for live coding. Production wants an optimized image size, resource limits and debug mode off. So how do you manage the differing config without maintaining two files that mostly repeat each other? Docker Compose offers two main approaches:</p>
+
+    <h3>Approach 1: Override Files</h3>
+
+    <p><strong>Override files</strong> split the base config (<code>docker-compose.yml</code>) from the environment-specific config (<code>docker-compose.override.yml</code> or <code>docker-compose.prod.yml</code>). Docker Compose merges the two files — the base declares all the services, the override adds or changes only the values that differ:</p>
+
+    <pre><code># docker-compose.yml (base — shared config)
+services:
+  backend:
+    build: ./backend
+    environment:
+      - DATABASE_URL=postgres://app:pass@db:5432/mydb
+    depends_on:
+      - db
+  db:
+    image: postgres:16-alpine
+
+# docker-compose.override.yml (dev — auto-loaded!)
+services:
+  backend:
+    volumes:
+      - ./backend:/app           # hot reload
+    ports:
+      - "8080:8080"
+      - "9229:9229"              # debug port
+    environment:
+      - NODE_ENV=development
+    command: npm run dev
+
+# docker-compose.prod.yml (production)
+services:
+  backend:
+    restart: always
+    environment:
+      - NODE_ENV=production
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+          cpus: '1.0'</code></pre>
+
+    <pre><code># Development (auto-loads the override)
+docker compose up
+
+# Production (explicit files)
+docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d</code></pre>
+
+    <h3>Approach 2: Profiles</h3>
+
+    <p><strong>Profiles</strong> (Docker Compose v2) let you group services by use case — debug tools, a monitoring stack, seeding scripts, anything that need not run every time. A plain <code>docker compose --profile debug up</code> starts only the services tagged with the "debug" profile:</p>
+
+    <pre><code>services:
+  backend:
+    build: ./backend
+    # no profile = always runs
+
+  db:
+    image: postgres:16-alpine
+    # no profile = always runs
+
+  # Dev tools — dev only
+  adminer:
+    image: adminer
+    ports:
+      - "8888:8080"
+    profiles:
+      - dev                      # runs with --profile dev
+
+  mailhog:
+    image: mailhog/mailhog
+    ports:
+      - "8025:8025"
+    profiles:
+      - dev
+
+  # Monitoring — monitoring only
+  prometheus:
+    image: prom/prometheus
+    profiles:
+      - monitoring</code></pre>
+
+    <pre><code># just the base services
+docker compose up -d
+
+# base + dev tools
+docker compose --profile dev up -d
+
+# base + monitoring
+docker compose --profile monitoring up -d
+
+# everything
+docker compose --profile dev --profile monitoring up -d</code></pre>
+
+    <hr>
+
+        <h2 id="en-volumes">💾 Volumes — Data That Persists</h2>
+
+    <p>By default, when a container stops everything inside it is gone! <strong>Volumes</strong> solve this by keeping the data outside the container — database data, uploaded files and logs all survive even a <code>docker compose down</code>. There are two kinds: <strong>named volumes</strong> (Docker manages the path for you, the right choice for data) and <strong>bind mounts</strong> (mount a directory from the host into the container, the right choice for development):</p>
+
+    <pre><code>services:
+  db:
+    image: postgres:16-alpine
+    volumes:
+      # Named volume — Docker manages it (production)
+      - pgdata:/var/lib/postgresql/data
+
+      # Bind mount — map a folder from the host (dev)
+      - ./db/init.sql:/docker-entrypoint-initdb.d/init.sql
+
+  backend:
+    build: ./backend
+    volumes:
+      # Bind mount — hot reload for dev
+      - ./backend/src:/app/src
+
+      # Anonymous volume — keeps it from being overwritten
+      - /app/node_modules
+
+volumes:
+  pgdata:                        # declare the named volume
+    driver: local</code></pre>
+
+    <pre><code># list the volumes
+docker volume ls
+
+# remove the unused volumes
+docker volume prune
+
+# Backup database
+docker compose exec db pg_dump -U app mydb > backup.sql
+
+# Restore database
+cat backup.sql | docker compose exec -T db psql -U app mydb</code></pre>
+
+    <hr>
+
+        <h2 id="en-networks">🌐 Networks — How Containers Talk</h2>
+
+    <p>Docker Compose creates a <strong>default network</strong> for every service automatically — containers reach each other by using the <strong>service name as the hostname</strong>. The API container talks to the database at <code>postgres://db:5432</code>, no IP address needed. For better security, create separate networks — a frontend network for web+nginx, a backend network for API+DB — so the frontend cannot reach the DB directly at all:</p>
+
+    <pre><code>services:
+  frontend:
+    networks:
+      - frontend-net             # reachable from nginx
+
+  backend:
+    networks:
+      - frontend-net             # nginx can reach it
+      - backend-net              # it can reach db
+
+  db:
+    networks:
+      - backend-net              # backend only ✅
+                                 # frontend cannot ✅ (security!)
+
+networks:
+  frontend-net:
+  backend-net:</code></pre>
+
+    <blockquote>
+      <strong>💡 Security Tip:</strong> split the networks to <strong>limit what can reach what</strong> — the frontend has no business touching the DB directly!
+    </blockquote>
+
+    <hr>
+
+        <h2 id="en-health-checks">❤️ Health Checks — Taking the Pulse</h2>
+
+    <p><strong>Health checks</strong> prove that a service is genuinely working, not merely that "the process is still running" — a PostgreSQL container may have started and still not be accepting connections. If the API starts before the DB is ready, it crashes! <code>depends_on</code> plus <code>condition: service_healthy</code> fixes this by waiting for the health check to pass before starting anything that depends on it:</p>
+
+    <pre><code>services:
+  backend:
+    build: ./backend
+    healthcheck:
+      test: curl -f http://localhost:8080/health || exit 1
+      interval: 30s              # check every 30 seconds
+      timeout: 10s               # 10-second timeout
+      retries: 3                 # retry 3 times
+      start_period: 40s          # wait 40 seconds before checking at all
+    depends_on:
+      db:
+        condition: service_healthy   # wait until db is healthy first!
+
+  db:
+    image: postgres:16-alpine
+    healthcheck:
+      test: pg_isready -U app
+      interval: 10s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    healthcheck:
+      test: redis-cli ping
+      interval: 10s
+      retries: 3</code></pre>
+
+    <hr>
+
+        <h2 id="en-production-tips">🚀 Production Tips</h2>
+
+    <p>Docker Compose is usable in production for small and medium apps (when you do not yet need Kubernetes) — but it has to be configured production-ready: restart policies, resource limits, logging, security hardening. The tips that matter:</p>
+
+    <pre><code># docker-compose.prod.yml
+services:
+  backend:
+    image: myregistry.com/myapp:v2.1.0   # use the image from the registry (no build)
+    restart: always
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+          cpus: '1.0'
+        reservations:
+          memory: 256M
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"          # cap the log file size
+        max-file: "3"            # keep only 3 files
+    read_only: true              # read-only filesystem (security)
+    tmpfs:
+      - /tmp                     # writable at /tmp only
+    security_opt:
+      - no-new-privileges:true</code></pre>
+
+    <h3>Docker Compose vs Kubernetes</h3>
+
+    <p>The question that comes up constantly — "should I use Docker Compose or Kubernetes?" The simple answer: <strong>Compose is for a single host</strong> (1 server, dev environments, small apps), <strong>Kubernetes is for many hosts</strong> (several servers, auto-scaling, high availability, large teams). Start with Compose and move to K8s when the scale actually demands it:</p>
+
+    <table>
+      <thead><tr><th>Feature</th><th>Docker Compose</th><th>Kubernetes</th></tr></thead>
+      <tbody>
+        <tr><td>Best for</td><td>Dev, small production</td><td>Large-scale production</td></tr>
+        <tr><td>Machines</td><td>A single machine</td><td>Many machines (cluster)</td></tr>
+        <tr><td>Auto-scaling</td><td>❌ Manual scale</td><td>✅ HPA auto-scale</td></tr>
+        <tr><td>Self-healing</td><td>⚠️ restart policy</td><td>✅ Full self-healing</td></tr>
+        <tr><td>Rolling update</td><td>⚠️ Basic</td><td>✅ Zero-downtime</td></tr>
+        <tr><td>Complexity</td><td>Simple (1 YAML file)</td><td>Complex (many manifests)</td></tr>
+        <tr><td>Learning curve</td><td>30 minutes</td><td>30 days+</td></tr>
+      </tbody>
+    </table>
+
+    <blockquote>
+      <strong>💡 The simple rule:</strong> one machine + a small team = Docker Compose | many machines + scale = Kubernetes
+    </blockquote>
+
+    <hr>
+
+        <h2 id="en-summary">Summary</h2>
+
+    <p>Docker Compose is a tool every developer should know — it reduces setting up a development environment to <code>docker compose up</code>, with no dependencies installed on the machine, everyone on the team on an identical environment, and "works on my machine" gone for good:</p>
+
+    <ul>
+      <li><strong>Docker Compose</strong> = run many containers from one <code>docker-compose.yml</code> file</li>
+      <li><strong>The core commands</strong> = <code>up -d</code> (run), <code>down</code> (stop), <code>logs -f</code> (read the logs), <code>exec</code> (get into a container)</li>
+      <li><strong>.env files</strong> = keep secrets and config out of the YAML (do not commit them!)</li>
+      <li><strong>Multi-env</strong> = override files or profiles to separate dev from prod</li>
+      <li><strong>Volumes</strong> = named volumes for data, bind mounts for dev</li>
+      <li><strong>Networks</strong> = split the networks for security (frontend ≠ database)</li>
+      <li><strong>Health checks</strong> = take the pulse, plus <code>depends_on condition: service_healthy</code></li>
+      <li><strong>Production</strong> = resource limits, logging, a read-only filesystem 🐳🐕</li>
+    </ul>
+
+    </div>
+
+<div class="post-series-footer"><span class="l-th">บทความจากซีรีส์ DevOps & Vibe Coding 2026</span><span class="l-en" lang="en">An article from the DevOps & Vibe Coding 2026 series</span></div>
 
   </article>
 

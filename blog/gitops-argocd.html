@@ -323,6 +323,34 @@
       ::view-transition-old(*),
       ::view-transition-new(*) { animation: none !important; }
     }
+
+    /* ── LANGUAGE SWITCH — pure CSS, zero JavaScript (INV-38) ──
+       One visually-hidden checkbox as a direct child of body, BEFORE the main landmark,
+       so `#langSwitch:checked ~ main …` reaches every content block. The two
+       tracks are paired blocks: .l-th (default) and .l-en (hidden until
+       checked; display:revert restores block for divs, inline for spans).
+       Naming stays clear of INV-12's menu-token regex (hamburger|burger|
+       nav__toggle|nav-toggle|navtoggle|menu-toggle|menu__toggle) — verified.
+       No JS also means no persistence across posts; each post opens in Thai. */
+    .lang-switch-box { position: absolute; left: -9999px; }
+    .l-en { display: none; }
+    #langSwitch:checked ~ main .l-en { display: revert; }
+    #langSwitch:checked ~ main .l-th { display: none; }
+    .lang-switch {
+      display: inline-flex; align-items: center; gap: 0.55rem;
+      margin-top: 1.4rem; padding: 0.4rem 1.1rem; border-radius: 50px;
+      background: rgba(255,255,255,0.7); border: 1px solid rgba(34,98,153,0.25);
+      cursor: pointer; font-size: 0.85rem; user-select: none;
+    }
+    .lang-switch span { color: var(--slate-light); font-weight: 600; transition: color 0.2s; }
+    .lang-switch .lang-sep { color: var(--gray); font-weight: 400; }
+    .lang-switch .lang-th { color: var(--navy); font-weight: 800; }
+    #langSwitch:checked ~ main .lang-switch .lang-th { color: var(--slate-light); font-weight: 600; }
+    #langSwitch:checked ~ main .lang-switch .lang-en { color: var(--navy); font-weight: 800; }
+    .lang-switch:hover { border-color: var(--blue); }
+    #langSwitch:focus-visible ~ main .lang-switch {
+      outline: 2px solid var(--focus); outline-offset: 3px;
+    }
   </style>
   <!-- social -->
   <link rel="canonical" href="https://anirach.com/blog/gitops-argocd.html">
@@ -330,6 +358,7 @@
   <meta property="og:url" content="https://anirach.com/blog/gitops-argocd.html">
   <meta property="og:site_name" content="Anirach Mingkhwan">
   <meta property="og:locale" content="th_TH">
+  <meta property="og:locale:alternate" content="en_US">
   <meta property="article:published_time" content="2026-03-07">
   <meta property="article:author" content="https://anirach.com/">
   <meta property="og:title" content="GitOps &amp; ArgoCD — Git-driven Deployments ที่ทุกคนต้องรู้">
@@ -360,13 +389,17 @@
     "datePublished": "2026-03-07",
     "dateModified": "2026-08-26",
     "image": "https://anirach.com/images/gitops-argocd-og.jpg",
-    "inLanguage": "th",
+    "inLanguage": [
+      "th",
+      "en"
+    ],
     "mainEntityOfPage": "https://anirach.com/blog/gitops-argocd.html"
   }
   </script>
 </head>
 <body>
 <a href="#main" class="skip-link">Skip to content</a>
+<input type="checkbox" id="langSwitch" class="lang-switch-box" aria-label="Switch language: Thai / English">
 
   <nav class="blog-nav">
     <div class="blog-nav__inner">
@@ -384,34 +417,52 @@
       <span class="post-hero__tag">ArgoCD</span>
       <span class="post-hero__tag">DevOps</span>
     </div>
-    <h1 class="post-hero__title">GitOps & ArgoCD — Git-driven Deployments ที่ทุกคนต้องรู้ 🔄</h1>
+    <h1 class="post-hero__title"><span class="l-th">GitOps & ArgoCD — Git-driven Deployments ที่ทุกคนต้องรู้ 🔄</span><span class="l-en" lang="en">GitOps & ArgoCD — Git-driven Deployments Everyone Should Know 🔄</span></h1>
     <div class="post-hero__meta">
       <span>By <strong>Anirach Mingkhwan</strong></span>
       <span class="post-hero__series">DevOps & Vibe Coding 2026</span>
     
       <span><time datetime="2026-03-07">7 Mar 2026</time> · 20 min read</span></div>
+    <label for="langSwitch" class="lang-switch" title="สลับภาษา · Switch language"><span class="lang-th">ไทย</span><span class="lang-sep">·</span><span class="lang-en" lang="en">English</span></label>
     <div class="post-hero__cover">
       <img src="../images/gitops-cover.jpg" alt="GitOps — ให้ Git เป็นแหล่งความจริงของการ Deploy" width="800" height="800" loading="eager" fetchpriority="high" decoding="async">
     </div>
   </header>
 
   <article class="post-body">
-    <details class="post-toc" open>
-      <summary>In this post &middot; <span lang="th">ในบทความนี้</span></summary>
+    <details class="post-toc l-th" open>
+      <summary>ในบทความนี้</summary>
       <ol>
-          <li><a href="#gitops">🐕 GitOps คืออะไร? ทำไมต้อง Git เป็นศูนย์กลาง?</a></li>
-          <li><a href="#gitops-principles">📜 GitOps Principles — 4 หลักการสำคัญ</a></li>
-          <li><a href="#argocd">🔶 ArgoCD — GitOps Controller ยอดนิยม</a></li>
-          <li><a href="#git-repository-structure">📁 Git Repository Structure</a></li>
-          <li><a href="#helm-charts">📦 Helm Charts — Package Manager สำหรับ K8s</a></li>
-          <li><a href="#kustomize">🎨 Kustomize — Template-free Configuration</a></li>
-          <li><a href="#argocd-vs-flux">🔄 ArgoCD vs Flux — เลือกอะไรดี?</a></li>
-          <li><a href="#multi-environment-gitops">🌍 Multi-Environment GitOps</a></li>
-          <li><a href="#gitops-security">🛡️ GitOps Security</a></li>
-          <li><a href="#gitops-cheat-sheet">📋 GitOps Cheat Sheet</a></li>
-          <li><a href="#key-takeaways">🔑 Key Takeaways</a></li>
+          <li><a href="#th-gitops">🐕 GitOps คืออะไร? ทำไมต้อง Git เป็นศูนย์กลาง?</a></li>
+          <li><a href="#th-gitops-principles">📜 GitOps Principles — 4 หลักการสำคัญ</a></li>
+          <li><a href="#th-argocd">🔶 ArgoCD — GitOps Controller ยอดนิยม</a></li>
+          <li><a href="#th-git-repository-structure">📁 Git Repository Structure</a></li>
+          <li><a href="#th-helm-charts">📦 Helm Charts — Package Manager สำหรับ K8s</a></li>
+          <li><a href="#th-kustomize">🎨 Kustomize — Template-free Configuration</a></li>
+          <li><a href="#th-argocd-vs-flux">🔄 ArgoCD vs Flux — เลือกอะไรดี?</a></li>
+          <li><a href="#th-multi-environment-gitops">🌍 Multi-Environment GitOps</a></li>
+          <li><a href="#th-gitops-security">🛡️ GitOps Security</a></li>
+          <li><a href="#th-gitops-cheat-sheet">📋 GitOps Cheat Sheet</a></li>
+          <li><a href="#th-key-takeaways">🔑 Key Takeaways</a></li>
       </ol>
     </details>
+    <details class="post-toc l-en" open>
+      <summary>In this post</summary>
+      <ol>
+          <li><a href="#en-gitops">🐕 What Is GitOps? Why Put Git at the Centre?</a></li>
+          <li><a href="#en-gitops-principles">📜 GitOps Principles — The Four That Matter</a></li>
+          <li><a href="#en-argocd">🔶 ArgoCD — The Popular GitOps Controller</a></li>
+          <li><a href="#en-git-repository-structure">📁 Git Repository Structure</a></li>
+          <li><a href="#en-helm-charts">📦 Helm Charts — The Package Manager for K8s</a></li>
+          <li><a href="#en-kustomize">🎨 Kustomize — Template-free Configuration</a></li>
+          <li><a href="#en-argocd-vs-flux">🔄 ArgoCD vs Flux — Which One?</a></li>
+          <li><a href="#en-multi-environment-gitops">🌍 Multi-Environment GitOps</a></li>
+          <li><a href="#en-gitops-security">🛡️ GitOps Security</a></li>
+          <li><a href="#en-gitops-cheat-sheet">📋 GitOps Cheat Sheet</a></li>
+          <li><a href="#en-key-takeaways">🔑 Key Takeaways</a></li>
+      </ol>
+    </details>
+    <div class="l-th">
 
 
     <p>จากซีรีส์ที่ผ่านมา เราเรียน CI/CD, Docker, Kubernetes, Monitoring, Testing... แต่คำถามสำคัญคือ <strong>ใครเป็นคน deploy? แล้วถ้า production drift จาก config ที่ตั้งไว้ จะรู้ได้ยังไง?</strong></p>
@@ -420,7 +471,7 @@
 
     <hr>
 
-    <h2 id="gitops">🐕 GitOps คืออะไร? ทำไมต้อง Git เป็นศูนย์กลาง?</h2>
+    <h2 id="th-gitops">🐕 GitOps คืออะไร? ทำไมต้อง Git เป็นศูนย์กลาง?</h2>
 
     <p><strong>GitOps</strong> คือแนวคิดที่ใช้ Git repository เป็น "ความจริงเดียว" (single source of truth) สำหรับทุกอย่างที่รันอยู่บน production — ตั้งแต่ Kubernetes manifests, Helm values, config maps ไปจนถึง infrastructure ทั้งหมด ถ้าอยากรู้ว่า production มีอะไรรันอยู่ ดูที่ Git ไม่ใช่ <code>kubectl get pods</code> ถ้าใครแก้ production โดยไม่ผ่าน Git → ระบบจะ detect drift และ revert กลับอัตโนมัติ!</p>
 
@@ -475,7 +526,7 @@
 
     <hr>
 
-    <h2 id="gitops-principles">📜 GitOps Principles — 4 หลักการสำคัญ</h2>
+    <h2 id="th-gitops-principles">📜 GitOps Principles — 4 หลักการสำคัญ</h2>
 
     <p>GitOps มี 4 หลักการที่ต้องทำตามทั้งหมด — ขาดอันใดอันหนึ่งก็ไม่ใช่ GitOps จริง: <strong>Declarative</strong> (อธิบาย desired state ใน YAML), <strong>Versioned & Immutable</strong> (ทุก change ผ่าน Git commit), <strong>Pulled Automatically</strong> (agent ดึง config มา apply เอง ไม่ใช่ push จาก CI), <strong>Continuously Reconciled</strong> (agent ตรวจสอบตลอดว่า actual state = desired state):</p>
 
@@ -506,7 +557,7 @@
 
     <hr>
 
-    <h2 id="argocd">🔶 ArgoCD — GitOps Controller ยอดนิยม</h2>
+    <h2 id="th-argocd">🔶 ArgoCD — GitOps Controller ยอดนิยม</h2>
 
     <p><strong>ArgoCD</strong> เป็น GitOps controller ที่ได้รับความนิยมมากที่สุด — เป็น CNCF graduated project มี Web UI ที่สวยงามแสดง resource tree ทั้งหมด real-time, รองรับ Helm, Kustomize, plain YAML, Jsonnet, และ custom config management plugins หลักการทำงานคือ ArgoCD จะ watch Git repo ของคุณ ถ้ามี commit ใหม่หรือ actual state drift จาก desired state → sync อัตโนมัติ:</p>
 
@@ -650,7 +701,7 @@ argocd app wait myapp --health</code></pre>
 
     <hr>
 
-    <h2 id="git-repository-structure">📁 Git Repository Structure</h2>
+    <h2 id="th-git-repository-structure">📁 Git Repository Structure</h2>
 
     <p>หนึ่งในคำถามแรกของ GitOps คือ "จัดโครงสร้าง Git repo ยังไง?" — Best practice คือ <strong>แยก app code กับ K8s manifests เป็นคนละ repo</strong> เพราะ app code มี commit บ่อย (feature dev) แต่ manifests เปลี่ยนไม่บ่อย (config changes) การแยกทำให้ CI/CD pipeline ชัดเจนและ permissions จัดการง่ายกว่า:</p>
 
@@ -777,7 +828,7 @@ jobs:
 
     <hr>
 
-    <h2 id="helm-charts">📦 Helm Charts — Package Manager สำหรับ K8s</h2>
+    <h2 id="th-helm-charts">📦 Helm Charts — Package Manager สำหรับ K8s</h2>
 
     <p><strong>Helm</strong> คือ "apt/brew สำหรับ Kubernetes" — แทนที่จะ copy-paste YAML manifests สำหรับแต่ละ environment Helm ใช้ <strong>templates + values</strong> ทำให้เขียน manifest ครั้งเดียวแล้วใส่ค่าต่างกันตาม environment ได้ เช่น dev ใช้ 1 replica, prod ใช้ 3 replicas แค่เปลี่ยน <code>values.yaml</code>:</p>
 
@@ -900,7 +951,7 @@ spec:
 
     <hr>
 
-    <h2 id="kustomize">🎨 Kustomize — Template-free Configuration</h2>
+    <h2 id="th-kustomize">🎨 Kustomize — Template-free Configuration</h2>
 
     <p><strong>Kustomize</strong> เป็นทางเลือกของ Helm ที่ไม่ใช้ templates — เขียน YAML ธรรมดาใน <code>base/</code> แล้วใช้ "patches" ใน <code>overlays/</code> เพื่อ override เฉพาะค่าที่ต่างกัน ข้อดีคือ YAML ที่เขียนเป็น valid K8s manifests อ่านง่ายกว่า Helm templates, built-in มากับ <code>kubectl</code> ไม่ต้องติดตั้งเพิ่ม ข้อเสียคือ logic (if/else, loops) ทำไม่ได้เหมือน Helm:</p>
 
@@ -982,7 +1033,7 @@ kustomize edit set image ghcr.io/myorg/myapp:v2.2.0</code></pre>
 
     <hr>
 
-    <h2 id="argocd-vs-flux">🔄 ArgoCD vs Flux — เลือกอะไรดี?</h2>
+    <h2 id="th-argocd-vs-flux">🔄 ArgoCD vs Flux — เลือกอะไรดี?</h2>
 
     <p>นอกจาก ArgoCD แล้ว <strong>Flux</strong> (โดย Weaveworks) เป็น GitOps controller อีกตัวที่เป็น CNCF graduated project เช่นกัน ทั้งสองทำงานเหมือนกันในแก่นแท้ แต่ ArgoCD เด่นเรื่อง UI และ multi-cluster management ส่วน Flux เด่นเรื่อง lightweight และ composable architecture:</p>
 
@@ -1007,7 +1058,7 @@ kustomize edit set image ghcr.io/myorg/myapp:v2.2.0</code></pre>
 
     <hr>
 
-    <h2 id="multi-environment-gitops">🌍 Multi-Environment GitOps</h2>
+    <h2 id="th-multi-environment-gitops">🌍 Multi-Environment GitOps</h2>
 
     <p>ในองค์กรจริงมีหลาย environments (dev, staging, prod) และหลาย applications — จะจัดการ ArgoCD Applications ยังไงให้ scale ได้? คำตอบคือ <strong>App-of-Apps Pattern</strong> — สร้าง "parent" application ที่ manage "child" applications ทั้งหมด ทำให้เพิ่ม/ลบ apps แค่แก้ Git:</p>
 
@@ -1068,7 +1119,7 @@ apps/
 
     <hr>
 
-    <h2 id="gitops-security">🛡️ GitOps Security</h2>
+    <h2 id="th-gitops-security">🛡️ GitOps Security</h2>
 
     <p>ถ้าทุกอย่างอยู่ใน Git แล้ว secrets ล่ะ? Kubernetes Secrets เป็นแค่ base64 (decode ได้ทันที) ถ้า commit เข้า Git ทุกคนที่มี repo access จะเห็น passwords, API keys ทั้งหมด! ต้องใช้เครื่องมือเข้ารหัส secrets ก่อนเก็บใน Git:</p>
 
@@ -1132,7 +1183,7 @@ data:
 
     <hr>
 
-    <h2 id="gitops-cheat-sheet">📋 GitOps Cheat Sheet</h2>
+    <h2 id="th-gitops-cheat-sheet">📋 GitOps Cheat Sheet</h2>
 
     <p>สรุปเครื่องมือและคำสั่งที่ใช้บ่อยในการทำ GitOps — เก็บไว้เป็น quick reference:</p>
 
@@ -1193,7 +1244,7 @@ helm rollback myapp 1            # rollback</code></pre>
 
     <hr>
 
-    <h2 id="key-takeaways">🔑 Key Takeaways</h2>
+    <h2 id="th-key-takeaways">🔑 Key Takeaways</h2>
 
     <p>GitOps เปลี่ยนวิธีคิดเรื่อง deployment จาก "กด deploy" เป็น "commit to Git" — ทุก change มี history, review process, และ rollback ได้ทันที ArgoCD ทำให้ GitOps เข้าถึงง่ายด้วย UI ที่สวยงามและ ecosystem ที่ครบครัน:</p>
 
@@ -1208,9 +1259,807 @@ helm rollback myapp 1            # rollback</code></pre>
       <li><strong>Rollback = <code>git revert</code></strong> — ง่ายที่สุดเท่าที่จะง่ายได้ 🔄🐕</li>
     </ol>
 
-    <div class="post-series-footer">
-      บทความจากซีรีส์ DevOps & Vibe Coding 2026
+    
     </div>
+    <div class="l-en" lang="en">
+
+        <p>Across this series we have covered CI/CD, Docker, Kubernetes, Monitoring and Testing. But the important question is still open: <strong>who actually does the deploying? And if production drifts away from the config you set, how would you ever know?</strong></p>
+
+    <p>The answer is <strong>GitOps</strong> — using Git as the single source of truth for all of your infrastructure and application deployment 🔄🐕</p>
+
+    <hr>
+
+        <h2 id="en-gitops">🐕 What Is GitOps? Why Put Git at the Center?</h2>
+
+    <p><strong>GitOps</strong> is the idea of using a Git repository as the "one truth" (the single source of truth) for everything running in production — Kubernetes manifests, Helm values, config maps, right through to the whole of your infrastructure. If you want to know what is running in production, look at Git, not at <code>kubectl get pods</code>. And if someone changes production without going through Git, the system detects the drift and reverts it automatically!</p>
+
+    <div class="compare-grid">
+      <div class="compare-box compare-box--old">
+        <div class="compare-box__title">❌ The old way: Push-based</div>
+        <ul class="compare-box__list">
+          <li>Dev → CI → <code>kubectl apply</code> → Cluster</li>
+          <li>CI needs kubeconfig credentials</li>
+          <li>CI goes down = you cannot deploy</li>
+          <li>No idea what is actually running in the cluster</li>
+          <li>Someone edits by hand → drift from desired state</li>
+        </ul>
+      </div>
+      <div class="compare-box compare-box--new">
+        <div class="compare-box__title">✅ The new way: GitOps (Pull-based)</div>
+        <ul class="compare-box__list">
+          <li>Dev → git push → Git Repo ← ArgoCD</li>
+          <li>Git = single source of truth</li>
+          <li>Every change goes through a PR</li>
+          <li>An audit trail for free (git log)</li>
+          <li>Rollback = <code>git revert</code></li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="flow-diagram">
+      <div class="flow-step">
+        <div class="flow-step__title">👨‍💻 Dev</div>
+        <div class="flow-step__sub">git push</div>
+      </div>
+      <span class="flow-arrow">→</span>
+      <div class="flow-step" style="border-color: rgba(34,197,94,0.3); background: rgba(34,197,94,0.04);">
+        <div class="flow-step__title">📦 Git Repo</div>
+        <div class="flow-step__sub">Source of Truth</div>
+      </div>
+      <span class="flow-arrow">←</span>
+      <div class="flow-step" style="border-color: rgba(249,115,22,0.3); background: rgba(249,115,22,0.04);">
+        <div class="flow-step__title">🔄 ArgoCD</div>
+        <div class="flow-step__sub">Auto-sync (pull)</div>
+      </div>
+      <span class="flow-arrow">→</span>
+      <div class="flow-step" style="border-color: rgba(34,98,153,0.3); background: rgba(34,98,153,0.04);">
+        <div class="flow-step__title">☸️ Cluster</div>
+        <div class="flow-step__sub">Deploy</div>
+      </div>
+    </div>
+
+    <blockquote>
+      <strong>GitOps</strong> = using Git as the single source of truth for all of your infrastructure and application deployment
+    </blockquote>
+
+    <hr>
+
+        <h2 id="en-gitops-principles">📜 GitOps Principles — The Four That Matter</h2>
+
+    <p>GitOps has four principles and you have to follow all of them — miss one and it is not really GitOps: <strong>Declarative</strong> (describe the desired state in YAML), <strong>Versioned &amp; Immutable</strong> (every change goes through a Git commit), <strong>Pulled Automatically</strong> (an agent pulls the config and applies it itself, rather than CI pushing), <strong>Continuously Reconciled</strong> (the agent keeps checking that actual state = desired state):</p>
+
+    <ol>
+      <li><strong>Declarative</strong> — describe "what you want", not "how to do it" → YAML manifests, Helm charts, Kustomize</li>
+      <li><strong>Versioned &amp; Immutable</strong> — everything lives in Git → every change has a history (<code>git log</code>, <code>git diff</code>, <code>git blame</code>)</li>
+      <li><strong>Pulled Automatically</strong> — an agent inside the cluster pulls from Git itself → CI never has to push into the cluster</li>
+      <li><strong>Continuously Reconciled</strong> — if actual state ≠ desired state → it is fixed automatically (self-healing, drift detection)</li>
+    </ol>
+
+    <h3>GitOps vs Traditional CI/CD</h3>
+
+    <p>Traditional CI/CD uses a "push model" — the CI pipeline builds, then pushes the deployment straight into the cluster. The problem is that CI needs credentials for the production cluster (a security risk), and if anyone edits config directly in the cluster it drifts with nobody the wiser. GitOps uses a "pull model" — an agent in the cluster (ArgoCD/Flux) pulls the config from Git and applies it itself. Safer, and self-healing:</p>
+
+    <table>
+      <thead><tr><th>Feature</th><th>Traditional CI/CD</th><th>GitOps</th></tr></thead>
+      <tbody>
+        <tr><td><strong>Deployment</strong></td><td>CI push → cluster</td><td>Agent pull ← Git</td></tr>
+        <tr><td><strong>Source of Truth</strong></td><td>CI pipeline</td><td>Git repo</td></tr>
+        <tr><td><strong>Credentials</strong></td><td>CI needs a kubeconfig</td><td>The in-cluster agent already has the rights</td></tr>
+        <tr><td><strong>Drift</strong></td><td>Invisible — you have to check yourself</td><td>Auto-detect &amp; fix</td></tr>
+        <tr><td><strong>Rollback</strong></td><td>Re-run pipeline</td><td><code>git revert</code></td></tr>
+        <tr><td><strong>Audit</strong></td><td>CI logs</td><td><code>git log</code> (100% complete)</td></tr>
+        <tr><td><strong>Multi-cluster</strong></td><td>Complicated</td><td>1 repo = N clusters</td></tr>
+        <tr><td><strong>Who changed what</strong></td><td>Read the CI logs</td><td><code>git blame</code></td></tr>
+      </tbody>
+    </table>
+
+    <hr>
+
+        <h2 id="en-argocd">🔶 ArgoCD — The Popular GitOps Controller</h2>
+
+    <p><strong>ArgoCD</strong> is the most widely adopted GitOps controller — a CNCF graduated project with a handsome Web UI that shows the entire resource tree in real time, and support for Helm, Kustomize, plain YAML, Jsonnet and custom config management plugins. The principle is simple: ArgoCD watches your Git repo, and when there is a new commit — or when actual state drifts from desired state — it syncs automatically:</p>
+
+    <div class="arch-diagram">
+      <div class="arch-box">
+        <div class="arch-label">ArgoCD Architecture</div>
+        <div class="arch-row">
+          <div class="arch-container">
+            <div class="arch-name">📦 Git Repo</div>
+            <div class="arch-item">manifests/</div>
+            <div class="arch-item">helm/</div>
+            <div class="arch-item">kustomize/</div>
+          </div>
+          <div style="display:flex;align-items:center;font-size:1.2rem;color:var(--blue);font-weight:700;">← poll 3 min →</div>
+          <div class="arch-container" style="background: rgba(249,115,22,0.08); border-color: rgba(249,115,22,0.25);">
+            <div class="arch-name" style="color:#ea580c;">☸️ Kubernetes Cluster</div>
+            <div class="arch-item">ArgoCD Server</div>
+            <div class="arch-item">Repo Server</div>
+            <div class="arch-item">App Controller</div>
+          </div>
+        </div>
+        <div class="arch-row" style="margin-top: 0.5rem;">
+          <div class="arch-container" style="background: rgba(34,98,153,0.06);">
+            <div class="arch-name">🖥️ ArgoCD UI</div>
+            <div class="arch-item">Web Dashboard 📊</div>
+          </div>
+          <div class="arch-container" style="background: rgba(34,98,153,0.06);">
+            <div class="arch-name">💻 argocd CLI</div>
+            <div class="arch-item">Terminal commands</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <h3>Installing ArgoCD</h3>
+
+    <p>Installing ArgoCD is very easy — just <code>kubectl apply</code> the manifest from GitHub, then reach the Web UI over a port-forward. The initial admin password is kept in a Kubernetes Secret:</p>
+
+    <pre><code># 1. Create the namespace
+kubectl create namespace argocd
+
+# 2. Install ArgoCD
+kubectl apply -n argocd -f \
+  https://raw.githubusercontent.com/argoproj/argo-cd/stable/manifests/install.yaml
+
+# 3. Wait for the pods to be ready
+kubectl wait --for=condition=Ready pods --all -n argocd --timeout=300s
+
+# 4. Reach the ArgoCD UI (port forward)
+kubectl port-forward svc/argocd-server -n argocd 8080:443
+# → https://localhost:8080
+
+# 5. Pull the initial admin password
+kubectl -n argocd get secret argocd-initial-admin-secret \
+  -o jsonpath="{.data.password}" | base64 -d
+
+# 6. Log in with the CLI
+argocd login localhost:8080 --username admin --password &lt;password&gt;
+
+# 7. Change the password
+argocd account update-password</code></pre>
+
+    <h3>Creating Your First Application</h3>
+
+    <p>An ArgoCD Application is the resource that says "pull the config from this Git repo, at this path, and deploy it to this cluster/namespace" — once created, ArgoCD syncs automatically on every new commit and repairs anything that is edited out from under it:</p>
+
+    <pre><code># argocd-app.yaml
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: myapp
+  namespace: argocd
+spec:
+  project: default
+
+  # Source — where to pull from
+  source:
+    repoURL: https://github.com/myorg/myapp-manifests.git
+    targetRevision: main
+    path: overlays/production
+
+  # Destination — where to deploy
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: production
+
+  # Sync Policy
+  syncPolicy:
+    automated:
+      prune: true          # delete resources not in Git
+      selfHeal: true       # fix drift automatically
+      allowEmpty: false     # do not deploy if the manifests are empty
+    syncOptions:
+      - CreateNamespace=true
+      - PrunePropagationPolicy=foreground
+    retry:
+      limit: 5
+      backoff:
+        duration: 5s
+        factor: 2
+        maxDuration: 3m</code></pre>
+
+    <pre><code># Apply it with kubectl
+kubectl apply -f argocd-app.yaml
+
+# Or use the CLI
+argocd app create myapp \
+  --repo https://github.com/myorg/myapp-manifests.git \
+  --path overlays/production \
+  --dest-server https://kubernetes.default.svc \
+  --dest-namespace production \
+  --sync-policy automated \
+  --auto-prune \
+  --self-heal</code></pre>
+
+    <h3>ArgoCD CLI — The Commands You Will Use Most</h3>
+
+    <p>Beyond the Web UI, ArgoCD has a CLI for managing applications, syncing, rolling back and checking status from the terminal — which is what you want for automation and scripting:</p>
+
+    <pre><code># List apps
+argocd app list
+argocd app get myapp
+
+# Sync (deploy)
+argocd app sync myapp                 # sync right now
+argocd app sync myapp --prune         # + delete unwanted resources
+
+# See the diff (what is about to change)
+argocd app diff myapp
+
+# History &amp; Rollback
+argocd app history myapp
+argocd app rollback myapp &lt;revision&gt;
+
+# Inspect resources &amp; logs
+argocd app resources myapp
+argocd app logs myapp
+
+# Health check
+argocd app wait myapp --health</code></pre>
+
+    <hr>
+
+        <h2 id="en-git-repository-structure">📁 Git Repository Structure</h2>
+
+    <p>One of the first questions in GitOps is "how do I structure the Git repo?" — and the best practice is to <strong>keep app code and K8s manifests in separate repos</strong>, because app code commits often (feature development) while manifests change rarely (config changes). Separating them makes the CI/CD pipeline clearer and permissions far easier to manage:</p>
+
+    <h3>Separate App Code from Manifests (recommended!)</h3>
+
+    <div class="compare-grid">
+      <div class="compare-box compare-box--old">
+        <div class="compare-box__title">❌ Mono-repo (all together)</div>
+        <ul class="compare-box__list">
+          <li><code>myapp/src/</code></li>
+          <li><code>myapp/Dockerfile</code></li>
+          <li><code>myapp/k8s/deployment.yaml</code></li>
+          <li style="color:#dc2626;font-weight:600;margin-top:0.5rem">⚠️ Every code commit triggers a deploy!</li>
+        </ul>
+      </div>
+      <div class="compare-box compare-box--new">
+        <div class="compare-box__title">✅ Separate repos (recommended)</div>
+        <ul class="compare-box__list">
+          <li><strong>Repo 1:</strong> myapp (code)</li>
+          <li>→ CI: build + test + push image</li>
+          <li><strong>Repo 2:</strong> myapp-manifests</li>
+          <li>→ ArgoCD watches this repo</li>
+          <li style="color:#16a34a;font-weight:600;margin-top:0.5rem">✅ Deploy only when the config changes</li>
+        </ul>
+      </div>
+    </div>
+
+    <h3>Manifests Repo Structure (Kustomize)</h3>
+
+    <p>In the manifests repo, use <strong>Kustomize</strong> to manage environment-specific config — a shared <code>base/</code> as the common template, then <code>overlays/</code> for each environment (dev/staging/prod) overriding only the values that differ, such as replicas, resource limits and image tags:</p>
+
+    <pre><code>myapp-manifests/
+├── base/                      # shared base
+│   ├── deployment.yaml
+│   ├── service.yaml
+│   └── kustomization.yaml
+├── overlays/
+│   ├── dev/                   # dev overrides
+│   │   ├── kustomization.yaml
+│   │   ├── replicas-patch.yaml
+│   │   └── env-patch.yaml
+│   ├── staging/
+│   │   ├── kustomization.yaml
+│   │   └── replicas-patch.yaml
+│   └── production/            # prod overrides
+│       ├── kustomization.yaml
+│       ├── replicas-patch.yaml
+│       ├── resources-patch.yaml
+│       └── hpa.yaml</code></pre>
+
+    <h3>The CI/CD Flow, GitOps Style</h3>
+
+    <p>A GitOps flow differs from traditional CI/CD — the CI pipeline only builds and pushes the Docker image, then <strong>updates the image tag in the manifests repo</strong> (rather than deploying directly). ArgoCD, watching that manifests repo, detects the change and syncs it to the cluster for you:</p>
+
+    <div class="arch-diagram">
+      <div class="arch-box">
+        <div class="arch-label">GitOps CI/CD Flow</div>
+        <div class="arch-row">
+          <div class="arch-container">
+            <div class="arch-name">App Repo</div>
+            <div class="arch-item">git push (code)</div>
+          </div>
+          <div style="display:flex;align-items:center;font-size:1.2rem;color:var(--blue);font-weight:700;">→</div>
+          <div class="arch-container" style="background: rgba(249,115,22,0.08);">
+            <div class="arch-name" style="color:#ea580c;">CI/CD</div>
+            <div class="arch-item">1. Test</div>
+            <div class="arch-item">2. Build image</div>
+            <div class="arch-item">3. Push to registry</div>
+          </div>
+          <div style="display:flex;align-items:center;font-size:0.8rem;color:var(--blue);font-weight:600;">update tag →</div>
+          <div class="arch-container" style="background: rgba(34,197,94,0.08);">
+            <div class="arch-name" style="color:#16a34a;">Manifests Repo</div>
+            <div class="arch-item">image: myapp:v3</div>
+          </div>
+        </div>
+        <div class="arch-arrow-down">↓ ArgoCD detects change</div>
+        <div class="arch-row">
+          <div class="arch-container" style="background: rgba(34,98,153,0.08); min-width: 200px;">
+            <div class="arch-name">☸️ Kubernetes</div>
+            <div class="arch-item">Deploy new image 🚀</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <h3>CI Pipeline — Auto-update Manifests</h3>
+
+    <p>Here is an example GitHub Actions pipeline that builds a Docker image and then auto-updates the image tag in the manifests repo — notice that CI never deploys at all. It only edits YAML in Git and commits; ArgoCD handles the deployment:</p>
+
+    <pre><code># .github/workflows/ci.yml (App Repo)
+name: CI/CD
+on:
+  push:
+    branches: [main]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set version
+        id: version
+        run: echo "tag=$(git rev-parse --short HEAD)" >> $GITHUB_OUTPUT
+
+      - name: Build &amp; Push Docker Image
+        run: |
+          docker build -t ghcr.io/myorg/myapp:${{ steps.version.outputs.tag }} .
+          docker push ghcr.io/myorg/myapp:${{ steps.version.outputs.tag }}
+
+      # 🔑 Update the manifests repo automatically
+      - name: Update manifests repo
+        run: |
+          git clone https://x-access-token:${{ secrets.MANIFESTS_TOKEN }}@github.com/myorg/myapp-manifests.git
+          cd myapp-manifests/overlays/production
+          kustomize edit set image ghcr.io/myorg/myapp:${{ steps.version.outputs.tag }}
+
+          git config user.name "CI Bot"
+          git config user.email "ci@myorg.com"
+          git add .
+          git commit -m "chore: update image to ${{ steps.version.outputs.tag }}"
+          git push
+          # → ArgoCD will detect the change and deploy automatically</code></pre>
+
+    <hr>
+
+        <h2 id="en-helm-charts">📦 Helm Charts — The Package Manager for K8s</h2>
+
+    <p><strong>Helm</strong> is "apt/brew for Kubernetes" — instead of copy-pasting YAML manifests for every environment, Helm uses <strong>templates + values</strong>, so you write the manifest once and feed it different values per environment. Dev runs 1 replica, prod runs 3, and all you change is <code>values.yaml</code>:</p>
+
+    <pre><code># Create a new chart
+helm create myapp
+
+# The structure
+myapp/
+├── Chart.yaml          # metadata (name, version)
+├── values.yaml         # default values
+├── templates/
+│   ├── deployment.yaml
+│   ├── service.yaml
+│   ├── ingress.yaml
+│   ├── hpa.yaml
+│   ├── _helpers.tpl    # template helpers
+│   └── NOTES.txt       # post-install message
+└── charts/             # dependencies</code></pre>
+
+    <pre><code># values.yaml — the defaults
+replicaCount: 2
+
+image:
+  repository: ghcr.io/myorg/myapp
+  tag: "latest"
+  pullPolicy: IfNotPresent
+
+service:
+  type: ClusterIP
+  port: 80
+
+ingress:
+  enabled: true
+  host: myapp.example.com
+
+resources:
+  limits:
+    cpu: 500m
+    memory: 256Mi
+  requests:
+    cpu: 100m
+    memory: 128Mi
+
+autoscaling:
+  enabled: true
+  minReplicas: 2
+  maxReplicas: 10
+  targetCPUUtilizationPercentage: 80</code></pre>
+
+    <pre><code># templates/deployment.yaml — using a Go template
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "myapp.fullname" . }}
+  labels:
+    {{- include "myapp.labels" . | nindent 4 }}
+spec:
+  replicas: {{ .Values.replicaCount }}
+  selector:
+    matchLabels:
+      {{- include "myapp.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "myapp.selectorLabels" . | nindent 8 }}
+    spec:
+      containers:
+        - name: {{ .Chart.Name }}
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+          ports:
+            - containerPort: 8080
+          resources:
+            {{- toYaml .Values.resources | nindent 12 }}
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 8080
+          readinessProbe:
+            httpGet:
+              path: /ready
+              port: 8080</code></pre>
+
+    <pre><code># Using Helm
+helm install myapp ./myapp                     # install
+helm install myapp ./myapp -f prod-values.yaml  # custom values
+helm upgrade myapp ./myapp                      # upgrade
+helm rollback myapp 1                           # rollback to revision 1
+helm uninstall myapp                            # remove
+helm list                                       # list installed releases
+helm template myapp ./myapp                     # inspect the rendered manifests</code></pre>
+
+    <h3>ArgoCD + Helm</h3>
+
+    <p>ArgoCD supports Helm charts natively — just declare <code>source.helm</code> in the Application spec and ArgoCD renders the templates with the values you give it. You can override values per environment:</p>
+
+    <pre><code># An ArgoCD Application using Helm
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: myapp
+  namespace: argocd
+spec:
+  source:
+    repoURL: https://github.com/myorg/myapp-manifests.git
+    targetRevision: main
+    path: charts/myapp
+    helm:
+      valueFiles:
+        - values-production.yaml
+      parameters:
+        - name: image.tag
+          value: "abc1234"
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: production
+  syncPolicy:
+    automated:
+      selfHeal: true
+      prune: true</code></pre>
+
+    <hr>
+
+        <h2 id="en-kustomize">🎨 Kustomize — Template-free Configuration</h2>
+
+    <p><strong>Kustomize</strong> is the alternative to Helm that uses no templates — you write plain YAML in <code>base/</code>, then use "patches" in <code>overlays/</code> to override only what differs. The upside is that the YAML you write is a valid K8s manifest, easier to read than a Helm template, and it is built into <code>kubectl</code> with nothing extra to install. The downside is that logic (if/else, loops) is not available the way it is in Helm:</p>
+
+    <table>
+      <thead><tr><th>Feature</th><th>Helm</th><th>Kustomize</th></tr></thead>
+      <tbody>
+        <tr><td><strong>Concept</strong></td><td>Template engine (Go templates)</td><td>Overlay patches (pure YAML)</td></tr>
+        <tr><td><strong>Syntax</strong></td><td><code>{{ .Values.x }}</code></td><td>Ordinary YAML patches</td></tr>
+        <tr><td><strong>Best for</strong></td><td>Distributing a chart to others, complex config</td><td>Internal teams, simple overlays</td></tr>
+        <tr><td><strong>Built-in</strong></td><td>Needs installing</td><td>Built into <code>kubectl</code></td></tr>
+      </tbody>
+    </table>
+
+    <pre><code># base/deployment.yaml — the real thing, no templating
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: myapp
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: myapp
+  template:
+    metadata:
+      labels:
+        app: myapp
+    spec:
+      containers:
+        - name: myapp
+          image: ghcr.io/myorg/myapp:latest
+          ports:
+            - containerPort: 8080
+          resources:
+            requests:
+              cpu: 100m
+              memory: 128Mi</code></pre>
+
+    <pre><code># overlays/production/kustomization.yaml
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+resources:
+  - ../../base
+  - hpa.yaml
+
+namespace: production
+
+# change the image tag
+images:
+  - name: ghcr.io/myorg/myapp
+    newTag: v2.1.0
+
+# add labels
+commonLabels:
+  env: production
+
+# add a prefix
+namePrefix: prod-
+
+# Patch replicas
+patches:
+  - target:
+      kind: Deployment
+      name: myapp
+    patch: |
+      - op: replace
+        path: /spec/replicas
+        value: 5
+  - path: resources-patch.yaml</code></pre>
+
+    <pre><code># Using Kustomize
+kubectl kustomize overlays/production      # inspect the rendered output
+kubectl apply -k overlays/production       # apply
+kubectl diff -k overlays/production        # see the diff before applying
+
+# Update the image tag (used in CI)
+cd overlays/production
+kustomize edit set image ghcr.io/myorg/myapp:v2.2.0</code></pre>
+
+    <hr>
+
+        <h2 id="en-argocd-vs-flux">🔄 ArgoCD vs Flux — Which One?</h2>
+
+    <p>Besides ArgoCD there is <strong>Flux</strong> (from Weaveworks), another GitOps controller and likewise a CNCF graduated project. At heart the two do the same job, but ArgoCD stands out for its UI and multi-cluster management, while Flux stands out for being lightweight and composable:</p>
+
+    <table>
+      <thead><tr><th>Feature</th><th>ArgoCD</th><th>Flux</th></tr></thead>
+      <tbody>
+        <tr><td><strong>UI</strong></td><td>✅ A beautiful Web UI</td><td>❌ None (CLI only)</td></tr>
+        <tr><td><strong>Setup</strong></td><td>Easy (install.yaml)</td><td>Easy (flux bootstrap)</td></tr>
+        <tr><td><strong>Multi-cluster</strong></td><td>✅ Excellent</td><td>✅ Supported (different approach)</td></tr>
+        <tr><td><strong>Helm</strong></td><td>✅ native</td><td>✅ HelmRelease CRD</td></tr>
+        <tr><td><strong>Kustomize</strong></td><td>✅ native</td><td>✅ Kustomization CRD</td></tr>
+        <tr><td><strong>SSO</strong></td><td>✅ OIDC, SAML</td><td>❌</td></tr>
+        <tr><td><strong>Image Update</strong></td><td>Argo Image Updater</td><td>✅ built-in</td></tr>
+        <tr><td><strong>Community</strong></td><td>⭐⭐⭐ CNCF Graduated</td><td>⭐⭐⭐ CNCF Graduated</td></tr>
+        <tr><td><strong>Best for</strong></td><td>Large teams that want a UI</td><td>Small teams, CLI-first</td></tr>
+      </tbody>
+    </table>
+
+    <blockquote>
+      <strong>💡</strong> Most people pick ArgoCD because the UI is so good — and both are CNCF Graduated, which means production-ready
+    </blockquote>
+
+    <hr>
+
+        <h2 id="en-multi-environment-gitops">🌍 Multi-Environment GitOps</h2>
+
+    <p>A real organization has several environments (dev, staging, prod) and many applications — so how do you manage ArgoCD Applications in a way that scales? The answer is the <strong>App-of-Apps Pattern</strong> — a "parent" application that manages all the "child" applications, so adding or removing an app is just a Git edit:</p>
+
+    <h3>App-of-Apps Pattern</h3>
+
+    <p>App-of-Apps works like a bootstrapper — one ArgoCD Application watches a directory holding the Application manifests of every app. To add a new app, commit a new Application YAML into it and ArgoCD creates it for you:</p>
+
+    <pre><code># apps/root-app.yaml — "the App that creates other Apps"
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: root
+  namespace: argocd
+spec:
+  source:
+    repoURL: https://github.com/myorg/myapp-manifests.git
+    targetRevision: main
+    path: apps          # ← the folder holding the Application manifests
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: argocd
+  syncPolicy:
+    automated:
+      selfHeal: true
+      prune: true</code></pre>
+
+    <pre><code># the apps/ folder — add a file = deploy a new service, delete a file = remove it
+apps/
+├── myapp-dev.yaml            # → deploy to dev namespace
+├── myapp-staging.yaml        # → deploy to staging namespace
+├── myapp-production.yaml     # → deploy to production namespace
+├── monitoring.yaml           # → deploy Prometheus + Grafana
+├── cert-manager.yaml         # → deploy cert-manager
+└── ingress-nginx.yaml        # → deploy ingress controller</code></pre>
+
+    <h3>Promotion Flow (Dev → Staging → Prod)</h3>
+
+    <p>In GitOps, promoting an application from dev → staging → prod happens through a <strong>Pull Request</strong>, not a deploy button. To promote a new image tag from staging to prod, you open a PR that changes the image tag in the prod overlay; once it is approved and merged, ArgoCD syncs it. Every change leaves an audit trail in Git:</p>
+
+    <div class="promo-pipeline">
+      <div class="promo-step promo-step--dev">🟢 Dev — Auto-deploy (latest)</div>
+      <div class="promo-label">✅ Tests pass</div>
+      <div class="promo-arrow">↓</div>
+      <div class="promo-step promo-step--staging">🟡 Staging — Auto-deploy (tagged)</div>
+      <div class="promo-label">✅ QA approved</div>
+      <div class="promo-arrow">↓</div>
+      <div class="promo-step promo-step--prod">🔴 Production — Manual sync / PR approve</div>
+    </div>
+
+    <ol>
+      <li>CI builds the image → pushes <code>:abc123</code></li>
+      <li>A bot updates <code>dev/kustomization.yaml</code> → auto-deploy</li>
+      <li>Dev tests pass → the bot opens a PR for staging</li>
+      <li>Merge the PR → staging auto-deploys</li>
+      <li>QA approves → the bot opens a PR for production</li>
+      <li>The team lead approves the PR → production deploy ✅</li>
+    </ol>
+
+    <hr>
+
+        <h2 id="en-gitops-security">🛡️ GitOps Security</h2>
+
+    <p>If everything lives in Git, what about secrets? A Kubernetes Secret is only base64 (decodable in an instant), so committing one to Git means everyone with repo access can read every password and API key! You need a tool that encrypts secrets before they are stored in Git:</p>
+
+    <h3>Sealed Secrets — Encrypted Secrets in Git</h3>
+
+    <p><strong>Sealed Secrets</strong> (from Bitnami) solves this by encrypting the Secret with a public key — only the controller in the cluster, which holds the private key, can decrypt it. That makes a SealedSecret safe to commit to Git:</p>
+
+    <pre><code># Install the Sealed Secrets controller
+helm repo add sealed-secrets https://bitnami-labs.github.io/sealed-secrets
+helm install sealed-secrets sealed-secrets/sealed-secrets -n kube-system
+
+# Install the CLI
+brew install kubeseal
+
+# Create a sealed secret
+kubectl create secret generic db-creds \
+  --from-literal=password=super-secret \
+  --dry-run=client -o yaml | \
+  kubeseal --format yaml > sealed-db-creds.yaml
+
+# → sealed-db-creds.yaml is safe to commit!
+# → the controller in the cluster will decrypt it</code></pre>
+
+    <pre><code># sealed-db-creds.yaml (safe to commit!)
+apiVersion: bitnami.com/v1alpha1
+kind: SealedSecret
+metadata:
+  name: db-creds
+  namespace: production
+spec:
+  encryptedData:
+    password: AgBy3i...long-encrypted-string...</code></pre>
+
+    <h3>RBAC — Limiting What ArgoCD Users Can Do</h3>
+
+    <p>ArgoCD has <strong>RBAC (Role-Based Access Control)</strong> built in — you decide who may sync which app, who may read logs, who may edit config. This matters enormously once several teams share one ArgoCD: the dev team should not be able to sync prod apps:</p>
+
+    <pre><code># The ArgoCD RBAC ConfigMap
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: argocd-rbac-cm
+  namespace: argocd
+data:
+  policy.csv: |
+    # role: dev → can view, can sync dev
+    p, role:dev, applications, get, */dev-*, allow
+    p, role:dev, applications, sync, */dev-*, allow
+
+    # role: ops → can do everything
+    p, role:ops, applications, *, */*, allow
+
+    # role: viewer → read-only
+    p, role:viewer, applications, get, */*, allow
+
+    # assign groups
+    g, dev-team, role:dev
+    g, ops-team, role:ops
+    g, management, role:viewer
+  policy.default: role:viewer</code></pre>
+
+    <hr>
+
+        <h2 id="en-gitops-cheat-sheet">📋 GitOps Cheat Sheet</h2>
+
+    <p>A summary of the tools and commands you will reach for most often in GitOps — keep it as a quick reference:</p>
+
+    <div class="level-grid">
+      <div class="level-card level-card--1">
+        <div class="level-card__title">⭐ Getting started</div>
+        <ul class="level-card__list">
+          <li>✅ Split the app repo from the manifests repo</li>
+          <li>✅ Install ArgoCD</li>
+          <li>✅ Create an Application manifest</li>
+          <li>✅ Auto-sync the dev environment</li>
+          <li>✅ Manual sync for production</li>
+        </ul>
+      </div>
+      <div class="level-card level-card--2">
+        <div class="level-card__title">⭐⭐ Growing</div>
+        <ul class="level-card__list">
+          <li>✅ Kustomize overlays (dev/staging/prod)</li>
+          <li>✅ CI auto-update image tags</li>
+          <li>✅ Sealed Secrets</li>
+          <li>✅ App-of-Apps pattern</li>
+          <li>✅ ArgoCD notifications (Slack)</li>
+        </ul>
+      </div>
+      <div class="level-card level-card--3">
+        <div class="level-card__title">⭐⭐⭐ Production</div>
+        <ul class="level-card__list">
+          <li>✅ Helm charts for shared services</li>
+          <li>✅ Multi-cluster deployment</li>
+          <li>✅ PR-based promotion</li>
+          <li>✅ RBAC &amp; SSO integration</li>
+          <li>✅ Image Updater (auto tags)</li>
+          <li>✅ Rollback automation</li>
+        </ul>
+      </div>
+    </div>
+
+    <h3>Quick Commands</h3>
+
+    <pre><code># ─── ArgoCD ───
+argocd app list                  # list every app
+argocd app get myapp             # show the details
+argocd app sync myapp            # sync (deploy)
+argocd app history myapp         # show the history
+argocd app rollback myapp 3      # rollback to rev 3
+argocd app diff myapp            # see the diff before syncing
+
+# ─── Kustomize ───
+kubectl kustomize overlays/prod  # render output
+kustomize edit set image app:v2  # update image tag
+kubectl apply -k overlays/prod   # apply
+
+# ─── Helm ───
+helm template myapp ./chart      # render templates
+helm install myapp ./chart       # install
+helm upgrade myapp ./chart       # upgrade
+helm rollback myapp 1            # rollback</code></pre>
+
+    <hr>
+
+        <h2 id="en-key-takeaways">🔑 Key Takeaways</h2>
+
+    <p>GitOps changes how you think about deployment — from "press deploy" to "commit to Git". Every change has a history, a review process, and an instant rollback. ArgoCD makes GitOps easy to adopt with a handsome UI and a complete ecosystem:</p>
+
+    <ol>
+      <li><strong>GitOps</strong> = Git as the single source of truth → every change goes through a PR</li>
+      <li><strong>Pull-based</strong> is safer than push-based — the agent pulls from Git, so CI never needs cluster credentials</li>
+      <li><strong>ArgoCD</strong> = the popular GitOps controller — good-looking UI, multi-cluster, CNCF Graduated</li>
+      <li><strong>Separate repos</strong> — an app code repo plus a manifests repo stops every commit from deploying</li>
+      <li><strong>Kustomize</strong> for simple overlays, <strong>Helm</strong> for complex or shared charts</li>
+      <li><strong>Sealed Secrets</strong> — encrypt secrets before committing them to Git</li>
+      <li><strong>App-of-Apps</strong> pattern — managing many apps and environments gets much easier</li>
+      <li><strong>Rollback = <code>git revert</code></strong> — about as easy as easy gets 🔄🐕</li>
+    </ol>
+
+    </div>
+
+<div class="post-series-footer"><span class="l-th">บทความจากซีรีส์ DevOps & Vibe Coding 2026</span><span class="l-en" lang="en">From the DevOps & Vibe Coding 2026 series</span></div>
 
   </article>
 

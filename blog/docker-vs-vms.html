@@ -408,6 +408,34 @@
       ::view-transition-old(*),
       ::view-transition-new(*) { animation: none !important; }
     }
+
+    /* ── LANGUAGE SWITCH — pure CSS, zero JavaScript (INV-38) ──
+       One visually-hidden checkbox as a direct child of body, BEFORE the main landmark,
+       so `#langSwitch:checked ~ main …` reaches every content block. The two
+       tracks are paired blocks: .l-th (default) and .l-en (hidden until
+       checked; display:revert restores block for divs, inline for spans).
+       Naming stays clear of INV-12's menu-token regex (hamburger|burger|
+       nav__toggle|nav-toggle|navtoggle|menu-toggle|menu__toggle) — verified.
+       No JS also means no persistence across posts; each post opens in Thai. */
+    .lang-switch-box { position: absolute; left: -9999px; }
+    .l-en { display: none; }
+    #langSwitch:checked ~ main .l-en { display: revert; }
+    #langSwitch:checked ~ main .l-th { display: none; }
+    .lang-switch {
+      display: inline-flex; align-items: center; gap: 0.55rem;
+      margin-top: 1.4rem; padding: 0.4rem 1.1rem; border-radius: 50px;
+      background: rgba(255,255,255,0.7); border: 1px solid rgba(34,98,153,0.25);
+      cursor: pointer; font-size: 0.85rem; user-select: none;
+    }
+    .lang-switch span { color: var(--slate-light); font-weight: 600; transition: color 0.2s; }
+    .lang-switch .lang-sep { color: var(--gray); font-weight: 400; }
+    .lang-switch .lang-th { color: var(--navy); font-weight: 800; }
+    #langSwitch:checked ~ main .lang-switch .lang-th { color: var(--slate-light); font-weight: 600; }
+    #langSwitch:checked ~ main .lang-switch .lang-en { color: var(--navy); font-weight: 800; }
+    .lang-switch:hover { border-color: var(--blue); }
+    #langSwitch:focus-visible ~ main .lang-switch {
+      outline: 2px solid var(--focus); outline-offset: 3px;
+    }
   </style>
   <!-- social -->
   <link rel="canonical" href="https://anirach.com/blog/docker-vs-vms.html">
@@ -415,6 +443,7 @@
   <meta property="og:url" content="https://anirach.com/blog/docker-vs-vms.html">
   <meta property="og:site_name" content="Anirach Mingkhwan">
   <meta property="og:locale" content="th_TH">
+  <meta property="og:locale:alternate" content="en_US">
   <meta property="article:published_time" content="2026-03-07">
   <meta property="article:author" content="https://anirach.com/">
   <meta property="og:title" content="Docker Containers vs VMs — ต่างกันยังไง ใช้ตัวไหนดี?">
@@ -445,13 +474,17 @@
     "datePublished": "2026-03-07",
     "dateModified": "2026-08-26",
     "image": "https://anirach.com/images/docker-vs-vms-og.jpg",
-    "inLanguage": "th",
+    "inLanguage": [
+      "th",
+      "en"
+    ],
     "mainEntityOfPage": "https://anirach.com/blog/docker-vs-vms.html"
   }
   </script>
 </head>
 <body>
 <a href="#main" class="skip-link">Skip to content</a>
+<input type="checkbox" id="langSwitch" class="lang-switch-box" aria-label="Switch language: Thai / English">
 
   <nav class="blog-nav">
     <div class="blog-nav__inner">
@@ -469,32 +502,48 @@
       <span class="post-hero__tag">DevOps</span>
       <span class="post-hero__tag">Infrastructure</span>
     </div>
-    <h1 class="post-hero__title">Docker Containers vs VMs — ต่างกันยังไง ใช้ตัวไหนดี?</h1>
+    <h1 class="post-hero__title"><span class="l-th">Docker Containers vs VMs — ต่างกันยังไง ใช้ตัวไหนดี?</span><span class="l-en" lang="en">Docker Containers vs VMs — What's the Difference, and Which Should You Use?</span></h1>
     <div class="post-hero__meta">
       <span>By <strong><span><span>Anirach Mingkhwan</span></span></strong></span>
       <span class="post-hero__series">DevOps & Vibe Coding 2026</span>
     
       <span><time datetime="2026-03-07">7 Mar 2026</time> · 13 min read</span></div>
+    <label for="langSwitch" class="lang-switch" title="สลับภาษา · Switch language"><span class="lang-th">ไทย</span><span class="lang-sep">·</span><span class="lang-en" lang="en">English</span></label>
     <div class="post-hero__cover">
       <img src="../images/docker-vs-vms-cover.jpg" alt="Docker vs VMs — ต่างกันยังไง ใช้ตัวไหนดี" width="800" height="800" loading="eager" fetchpriority="high" decoding="async">
     </div>
   </header>
 
   <article class="post-body">
-    <details class="post-toc" open>
-      <summary>In this post &middot; <span lang="th">ในบทความนี้</span></summary>
+    <details class="post-toc l-th" open>
+      <summary>ในบทความนี้</summary>
       <ol>
-          <li><a href="#virtual-machine-vm">Virtual Machine (VM) คืออะไร?</a></li>
-          <li><a href="#docker-container">Docker Container คืออะไร?</a></li>
-          <li><a href="#s-3">เปรียบเทียบ VM vs Container</a></li>
-          <li><a href="#docker">Docker ทำงานยังไง?</a></li>
-          <li><a href="#example">ตัวอย่างจริง: Deploy Web App</a></li>
-          <li><a href="#docker-compose">Docker Compose — รันหลาย Container พร้อมกัน</a></li>
-          <li><a href="#s-7">แล้วเมื่อไหร่ควรใช้อะไร?</a></li>
-          <li><a href="#summary">คำสั่ง Docker ที่ใช้บ่อย — สรุป</a></li>
-          <li><a href="#summary-2">สรุป</a></li>
+          <li><a href="#th-virtual-machine-vm">Virtual Machine (VM) คืออะไร?</a></li>
+          <li><a href="#th-docker-container">Docker Container คืออะไร?</a></li>
+          <li><a href="#th-s-3">เปรียบเทียบ VM vs Container</a></li>
+          <li><a href="#th-docker">Docker ทำงานยังไง?</a></li>
+          <li><a href="#th-example">ตัวอย่างจริง: Deploy Web App</a></li>
+          <li><a href="#th-docker-compose">Docker Compose — รันหลาย Container พร้อมกัน</a></li>
+          <li><a href="#th-s-7">แล้วเมื่อไหร่ควรใช้อะไร?</a></li>
+          <li><a href="#th-summary">คำสั่ง Docker ที่ใช้บ่อย — สรุป</a></li>
+          <li><a href="#th-summary-2">สรุป</a></li>
       </ol>
     </details>
+    <details class="post-toc l-en" open>
+      <summary>In this post</summary>
+      <ol>
+          <li><a href="#en-virtual-machine-vm">What Is a Virtual Machine (VM)?</a></li>
+          <li><a href="#en-docker-container">What Is a Docker Container?</a></li>
+          <li><a href="#en-s-3">VM vs Container, Side by Side</a></li>
+          <li><a href="#en-docker">How Does Docker Work?</a></li>
+          <li><a href="#en-example">A Real Example: Deploying a Web App</a></li>
+          <li><a href="#en-docker-compose">Docker Compose — Running Several Containers at Once</a></li>
+          <li><a href="#en-s-7">So When Should You Use Which?</a></li>
+          <li><a href="#en-summary">The Docker Commands You'll Actually Use — A Summary</a></li>
+          <li><a href="#en-summary-2">Summary</a></li>
+      </ol>
+    </details>
+    <div class="l-th">
 
 
     <p>จากโพสต์ที่แล้วเราพูดถึง CI/CD Pipeline ว่ามันช่วยให้เรา build, test, deploy แบบอัตโนมัติ</p>
@@ -513,7 +562,7 @@
 
     <hr>
 
-    <h2 id="virtual-machine-vm">Virtual Machine (VM) คืออะไร?</h2>
+    <h2 id="th-virtual-machine-vm">Virtual Machine (VM) คืออะไร?</h2>
 
     <p><strong>VM (Virtual Machine)</strong> คือการจำลองคอมพิวเตอร์ทั้งเครื่องด้วย software — มี CPU, RAM, Disk, Network เสมือนครบ รันอยู่บนเครื่องจริง (Host) ผ่าน <strong>Hypervisor</strong> ที่จัดสรร resource ให้แต่ละ VM เหมือนแบ่งห้องในอพาร์ทเมนท์ — แต่ละ VM เป็นอิสระจากกัน ติดตั้ง OS ต่างกันได้ แม้ VM หนึ่งพังก็ไม่กระทบ VM อื่น</p>
 
@@ -558,7 +607,7 @@
 
     <hr>
 
-    <h2 id="docker-container">Docker Container คืออะไร?</h2>
+    <h2 id="th-docker-container">Docker Container คืออะไร?</h2>
 
     <p><strong>Container</strong> คือการจำลองแค่ environment ที่ app ต้องการ — ไม่ต้องจำลอง OS ทั้งตัว! Container ใช้ <strong>kernel ร่วมกับ Host OS</strong> แล้วใช้ Linux features (namespaces, cgroups) แยก process, filesystem, network ของแต่ละ container ผลลัพธ์คือ: <strong>เบามาก</strong> (MB แทน GB), <strong>เร็วมาก</strong> (เริ่มในวินาที แทนนาที), และ <strong>portable</strong> (รันได้ทุกที่ที่มี Docker)</p>
 
@@ -599,7 +648,7 @@
 
     <hr>
 
-    <h2 id="s-3">เปรียบเทียบ VM vs Container</h2>
+    <h2 id="th-s-3">เปรียบเทียบ VM vs Container</h2>
 
     <p>ตารางด้านล่างเปรียบเทียบ VM กับ Container ในทุกมิติ — สังเกตว่า Container เร็วกว่า เบากว่า และ scale ง่ายกว่าในเกือบทุกด้าน แต่ VM ยังมีข้อดีด้าน <strong>isolation ที่แข็งแกร่งกว่า</strong> (แยก kernel) และรองรับ <strong>ต่าง OS</strong> ได้ (เช่น รัน Windows บน Linux host):</p>
 
@@ -621,7 +670,7 @@
 
     <hr>
 
-    <h2 id="docker">Docker ทำงานยังไง?</h2>
+    <h2 id="th-docker">Docker ทำงานยังไง?</h2>
 
     <p>Docker ทำงานบน <strong>client-server architecture</strong> — Docker CLI (client) ส่งคำสั่งไปยัง Docker Engine (daemon) ที่จัดการ images และ containers มี 3 concepts หลักที่ต้องเข้าใจ เปรียบเทียบกับ OOP: Dockerfile = source code, Image = class, Container = object:</p>
 
@@ -694,7 +743,7 @@ docker rm my-app</code></pre>
 
     <hr>
 
-    <h2 id="example">ตัวอย่างจริง: Deploy Web App</h2>
+    <h2 id="th-example">ตัวอย่างจริง: Deploy Web App</h2>
 
     <p>มาเปรียบเทียบขั้นตอนจริงในการ deploy web app ทั้งแบบ VM (วิธีเดิม) กับ Docker (วิธีใหม่) — จะเห็นว่า Docker ลดขั้นตอนได้มาก และที่สำคัญคือ <strong>ทุกคนได้ environment เดียวกัน</strong> ไม่มี "แต่ในเครื่องฉันมันรันได้นะ" อีกต่อไป:</p>
 
@@ -735,7 +784,7 @@ docker run -d -p 3000:3000 my-app:v1
 
     <hr>
 
-    <h2 id="docker-compose">Docker Compose — รันหลาย Container พร้อมกัน</h2>
+    <h2 id="th-docker-compose">Docker Compose — รันหลาย Container พร้อมกัน</h2>
 
     <p>App จริงไม่ได้มีแค่ container เดียว — มี web server + database + cache + message queue + ... ถ้าต้อง <code>docker run</code> ทีละตัว ตั้ง network เอง ตั้ง volume เอง จะยุ่งมาก! <strong>Docker Compose</strong> แก้ปัญหานี้โดยกำหนดทุก service ในไฟล์ YAML เดียว แล้วรันทั้งหมดด้วย <code>docker compose up</code> คำสั่งเดียว:</p>
 
@@ -777,7 +826,7 @@ docker compose down</code></pre>
 
     <hr>
 
-    <h2 id="s-7">แล้วเมื่อไหร่ควรใช้อะไร?</h2>
+    <h2 id="th-s-7">แล้วเมื่อไหร่ควรใช้อะไร?</h2>
 
     <p>ส่วนใหญ่คำตอบคือ <strong>Docker</strong> — แต่มีบาง use cases ที่ VM ยังจำเป็น:</p>
 
@@ -816,7 +865,7 @@ docker compose down</code></pre>
 
     <hr>
 
-    <h2 id="summary">คำสั่ง Docker ที่ใช้บ่อย — สรุป</h2>
+    <h2 id="th-summary">คำสั่ง Docker ที่ใช้บ่อย — สรุป</h2>
 
     <p>Docker commands ที่ DevOps ใช้ทุกวัน — ไม่ต้องจำทั้งหมด แค่รู้ว่ามีอะไรบ้าง แล้ว <code>docker --help</code> เมื่อต้องการ คำสั่งที่ใช้บ่อยที่สุดคือ <code>docker build</code>, <code>docker run</code>, <code>docker ps</code>, <code>docker logs</code>:</p>
 
@@ -842,7 +891,7 @@ docker compose logs -f              # ดู logs แบบ realtime</code></pre
 
     <hr>
 
-    <h2 id="summary-2">สรุป</h2>
+    <h2 id="th-summary-2">สรุป</h2>
 
     <p>Docker เปลี่ยนวิธี deploy software ไปตลอดกาล — จาก "ติดตั้งทีละเครื่อง ลุ้นว่าจะรันได้ไหม" เป็น "build once, run anywhere" ทุก cloud provider, CI/CD pipeline, microservice architecture ล้วนใช้ containers เป็นพื้นฐาน เรียนรู้ Docker เป็น skill แรกๆ ที่ DevOps ต้องมี:</p>
 
@@ -857,9 +906,373 @@ docker compose logs -f              # ดู logs แบบ realtime</code></pre
 
     <p>ในโพสต์หน้าเราจะมาพูดถึง <strong>API Request Lifecycle</strong> — เวลากด send request ไป server มันเกิดอะไรขึ้นบ้าง? 🌐🐕</p>
 
-    <div class="post-series-footer">
-      บทความจากซีรีส์ DevOps & Vibe Coding 2026
+    
     </div>
+    <div class="l-en" lang="en">
+
+        <p>In the previous post we talked about the CI/CD pipeline and how it lets us build, test and deploy automatically.</p>
+
+    <p>But have you ever hit this? <strong>"It works on my machine, but it breaks on the server."</strong> 🤦</p>
+
+    <p>The cause is a difference in environment — different OS versions, different libraries, different config — so code that runs happily on your machine falls over on someone else's.</p>
+
+    <p>The fix is to <strong>make every environment the same</strong>, and there are two main ways to do it:</p>
+    <ol>
+      <li><strong>Virtual Machines (VMs)</strong> — simulate an entire computer</li>
+      <li><strong>Docker Containers</strong> — simulate only what the app needs</li>
+    </ol>
+
+    <p>Let's look at what each one is, how they differ, and when to reach for which.</p>
+
+    <hr>
+
+        <h2 id="en-virtual-machine-vm">What Is a Virtual Machine (VM)?</h2>
+
+    <p>A <strong>VM (Virtual Machine)</strong> is an entire computer simulated in software — it has a virtual CPU, RAM, disk and network, and it runs on a real machine (the Host) through a <strong>Hypervisor</strong> that allocates resources to each VM. Think of dividing an apartment building into rooms: every VM is independent, each can run a different OS, and if one VM crashes it does not touch the others.</p>
+
+    <div class="arch-diagram">
+      <div class="arch-box">
+        <div class="arch-label">Host Machine</div>
+        <div class="arch-box" style="margin-bottom:0.75rem;">
+          <div class="arch-label">Hypervisor</div>
+          <div class="arch-row">
+            <div class="arch-vm">
+              <div class="arch-name">VM 1</div>
+              <div class="arch-item">App</div>
+              <div class="arch-item">Libs</div>
+              <div class="arch-item arch-item--os">Guest OS</div>
+            </div>
+            <div class="arch-vm">
+              <div class="arch-name">VM 2</div>
+              <div class="arch-item">App</div>
+              <div class="arch-item">Libs</div>
+              <div class="arch-item arch-item--os">Guest OS</div>
+            </div>
+          </div>
+        </div>
+        <div class="arch-layer arch-layer--os">Host OS</div>
+        <div class="arch-layer arch-layer--hw">Hardware</div>
+      </div>
+    </div>
+
+    <p>Notice that <strong>each VM carries its own Guest OS</strong>, which means:</p>
+    <ul>
+      <li>✅ Complete separation (isolation is very strong)</li>
+      <li>✅ Different operating systems can run side by side (Windows on a Linux host)</li>
+      <li>❌ But it eats a lot of RAM, CPU and disk</li>
+      <li>❌ Slow to start (a whole OS has to boot)</li>
+    </ul>
+
+    <p><strong>Popular hypervisors:</strong></p>
+    <ul>
+      <li><strong>Type 1 (Bare-metal):</strong> VMware ESXi, Hyper-V, Proxmox — run directly on the hardware</li>
+      <li><strong>Type 2 (Hosted):</strong> VirtualBox, VMware Workstation — run on top of an existing OS</li>
+    </ul>
+
+    <hr>
+
+        <h2 id="en-docker-container">What Is a Docker Container?</h2>
+
+    <p>A <strong>container</strong> simulates only the environment the app needs — no whole OS required! A container <strong>shares the kernel with the Host OS</strong> and then uses Linux features (namespaces, cgroups) to separate each container's processes, filesystem and network. The result: <strong>very light</strong> (MB instead of GB), <strong>very fast</strong> (starts in seconds instead of minutes), and <strong>portable</strong> (it runs anywhere Docker runs).</p>
+
+    <div class="arch-diagram">
+      <div class="arch-box">
+        <div class="arch-label">Host Machine</div>
+        <div class="arch-row">
+          <div class="arch-container">
+            <div class="arch-name">Container 1</div>
+            <div class="arch-item">App</div>
+            <div class="arch-item">Libs</div>
+          </div>
+          <div class="arch-container">
+            <div class="arch-name">Container 2</div>
+            <div class="arch-item">App</div>
+            <div class="arch-item">Libs</div>
+          </div>
+          <div class="arch-container">
+            <div class="arch-name">Container 3</div>
+            <div class="arch-item">App</div>
+            <div class="arch-item">Libs</div>
+          </div>
+        </div>
+        <div class="arch-layer arch-layer--engine">Docker Engine</div>
+        <div class="arch-layer arch-layer--os">Host OS</div>
+        <div class="arch-layer arch-layer--hw">Hardware</div>
+      </div>
+    </div>
+
+    <p>Notice that <strong>there is no Guest OS</strong> — containers share the Host OS kernel, which means:</p>
+    <ul>
+      <li>✅ Very light (MB vs GB)</li>
+      <li>✅ Very fast to start (seconds vs minutes)</li>
+      <li>✅ Many containers can run at the same time</li>
+      <li>❌ They must share the same Linux kernel (on Mac/Windows a small VM is hidden underneath)</li>
+      <li>❌ Weaker isolation than a VM</li>
+    </ul>
+
+    <hr>
+
+        <h2 id="en-s-3">VM vs Container, Side by Side</h2>
+
+    <p>The table below compares VMs and containers across every dimension — notice that containers are faster, lighter and easier to scale on almost every count, but VMs still hold two advantages: <strong>stronger isolation</strong> (separate kernels) and support for <strong>a different OS</strong> (running Windows on a Linux host, for instance):</p>
+
+    <table>
+      <thead>
+        <tr><th></th><th>Virtual Machine</th><th>Docker Container</th></tr>
+      </thead>
+      <tbody>
+        <tr><td><strong>Size</strong></td><td>Several GB (a full OS)</td><td>A few MB — a few hundred MB</td></tr>
+        <tr><td><strong>Start-up time</strong></td><td>Minutes (an OS boot)</td><td>Seconds</td></tr>
+        <tr><td><strong>Performance</strong></td><td>Hypervisor overhead</td><td>Close to native</td></tr>
+        <tr><td><strong>Isolation</strong></td><td>Very high (separate OS)</td><td>Moderate (shared kernel)</td></tr>
+        <tr><td><strong>How many you can run</strong></td><td>5-20 per machine</td><td>100+ per machine</td></tr>
+        <tr><td><strong>Different OS possible</strong></td><td>Yes (Windows on Linux)</td><td>No (needs the Linux kernel)</td></tr>
+        <tr><td><strong>RAM usage</strong></td><td>Reserves the whole block</td><td>Uses only what it needs</td></tr>
+        <tr><td><strong>Portability</strong></td><td>Hard to move (huge files)</td><td>Easy to move (small images)</td></tr>
+      </tbody>
+    </table>
+
+    <hr>
+
+        <h2 id="en-docker">How Does Docker Work?</h2>
+
+    <p>Docker runs on a <strong>client-server architecture</strong> — the Docker CLI (the client) sends commands to the Docker Engine (the daemon), which manages images and containers. There are three core concepts to understand, and the OOP analogy is a good one: Dockerfile = source code, Image = class, Container = object:</p>
+
+    <h3>1. Dockerfile — the Recipe for an Image</h3>
+
+    <p>A <strong>Dockerfile</strong> is a text file that says, step by step, how to prepare the environment — start from a base image (Node.js 20, say), copy the source code in, install the dependencies, declare the port, and define the command to run at start-up. It is like a cooking recipe: follow the steps and you get the same result every time:</p>
+
+<pre><code># start from a base image
+FROM node:20-alpine
+
+# set the working directory
+WORKDIR /app
+
+# copy package.json, then install dependencies
+COPY package*.json ./
+RUN npm ci --production
+
+# copy the source code
+COPY . .
+
+# declare which port the app uses
+EXPOSE 3000
+
+# the command that runs the app
+CMD ["node", "server.js"]</code></pre>
+
+    <h3>2. Image — What the Dockerfile Produces</h3>
+
+    <p>An <strong>image</strong> is a snapshot of an environment that is ready to run — the result of a <code>docker build</code> on a Dockerfile. The image holds everything the app needs (OS libs, runtime, code, configs) and can be shared through <strong>Docker Hub</strong> or a private registry. It is like a burned CD — copy it and run it anywhere:</p>
+
+<pre><code># build an image from the Dockerfile
+docker build -t my-app:v1 .
+
+# list all images
+docker images</code></pre>
+
+    <p>An image is <strong>read-only</strong> — just like a class in OOP.</p>
+
+    <h3>3. Container — the Instance Running From an Image</h3>
+
+    <p>A <strong>container</strong> is an image that is actually running — created with <code>docker run</code>. One image can produce many containers, each with its own filesystem, network and process space. It is the object you <code>new</code> from a class in OOP:</p>
+
+<pre><code># run a container from an image
+docker run -d -p 3000:3000 --name my-app my-app:v1
+
+# list the running containers
+docker ps
+
+# stop / remove a container
+docker stop my-app
+docker rm my-app</code></pre>
+
+    <p><strong>The relationship:</strong></p>
+    <div class="flow-diagram">
+      <div class="flow-step">
+        <div class="flow-step__title">Dockerfile</div>
+        <div class="flow-step__sub">the recipe</div>
+      </div>
+      <div class="flow-arrow">→ build →</div>
+      <div class="flow-step">
+        <div class="flow-step__title">Image</div>
+        <div class="flow-step__sub">the CD</div>
+      </div>
+      <div class="flow-arrow">→ run →</div>
+      <div class="flow-step">
+        <div class="flow-step__title">Container</div>
+        <div class="flow-step__sub">the player</div>
+      </div>
+    </div>
+
+    <hr>
+
+        <h2 id="en-example">A Real Example: Deploying a Web App</h2>
+
+    <p>Let's compare the real steps for deploying a web app the VM way (the old way) and the Docker way (the new way) — you will see how much Docker cuts out, and, more importantly, that <strong>everyone gets the same environment</strong>. No more "but it runs on my machine":</p>
+
+    <h3>The VM Way (the Old Way)</h3>
+
+    <p>SSH into the server, install the OS, install the dependencies one by one, configure everything by hand — and if you have 10 servers you repeat it 10 times. Forget a step and it breaks:</p>
+
+<pre><code># 1. create a new VM
+# 2. install Ubuntu
+# 3. install Node.js
+sudo apt update
+sudo apt install nodejs npm
+
+# 4. copy the code to the VM
+scp -r ./my-app user@vm-ip:/home/user/
+
+# 5. install dependencies
+cd /home/user/my-app && npm install
+
+# 6. run the app
+node server.js
+
+# time taken: 15-30 minutes 😩
+# with 3 servers = do it 3 times 😩😩😩</code></pre>
+
+    <h3>The Docker Way</h3>
+
+    <p>Write the Dockerfile once, then <code>docker build</code> + <code>docker run</code> and you are done — dev, staging and production all get exactly the same environment. Deploying to 10 servers is just <code>docker run</code> ten times (or let K8s handle it for you):</p>
+
+<pre><code># 1. build the image (once)
+docker build -t my-app:v1 .
+
+# 2. run it (anywhere)
+docker run -d -p 3000:3000 my-app:v1
+
+# time taken: 1-2 minutes 🎉
+# with 3 servers = docker run 3 times 🎉🎉🎉</code></pre>
+
+    <hr>
+
+        <h2 id="en-docker-compose">Docker Compose — Running Several Containers at Once</h2>
+
+    <p>A real app is never a single container — there is a web server + database + cache + message queue + ... Running <code>docker run</code> one at a time, wiring up the network yourself, setting up the volumes yourself, gets messy fast! <strong>Docker Compose</strong> solves this by declaring every service in one YAML file and starting them all with a single <code>docker compose up</code>:</p>
+
+<pre><code># docker-compose.yml
+version: '3.8'
+
+services:
+  web:
+    build: .
+    ports:
+      - "3000:3000"
+    environment:
+      - DATABASE_URL=postgres://db:5432/myapp
+    depends_on:
+      - db
+      - redis
+
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: myapp
+      POSTGRES_PASSWORD: secret
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+
+  redis:
+    image: redis:7-alpine
+
+volumes:
+  pgdata:</code></pre>
+
+<pre><code># bring every service up together
+docker compose up -d
+
+# take every service down
+docker compose down</code></pre>
+
+    <p>One command, and web + database + cache are all running ✅</p>
+
+    <hr>
+
+        <h2 id="en-s-7">So When Should You Use Which?</h2>
+
+    <p>Most of the time the answer is <strong>Docker</strong> — but there are use cases where a VM is still necessary:</p>
+
+    <h3>Use a Docker container when:</h3>
+    <ul>
+      <li>🐳 You want to deploy an app quickly</li>
+      <li>🐳 You want the same environment everywhere (dev = staging = production)</li>
+      <li>🐳 You need to run several microservices</li>
+      <li>🐳 You are working with a CI/CD pipeline</li>
+      <li>🐳 You need to scale up and down fast (Kubernetes)</li>
+    </ul>
+
+    <h3>Use a VM when:</h3>
+    <ul>
+      <li>🖥️ You need to run a different OS (a Windows app on a Linux host)</li>
+      <li>🖥️ You need very strong security isolation (multi-tenant, compliance)</li>
+      <li>🖥️ You are running a legacy app that requires a specific OS</li>
+      <li>🖥️ You need full control of the OS (kernel tuning, custom drivers)</li>
+    </ul>
+
+    <h3>Use both:</h3>
+    <p>Large organizations usually run both: <strong>VMs as the infrastructure layer</strong> + <strong>containers running on top of the VMs</strong></p>
+    <p>Cloud providers (AWS, GCP, Azure) use VMs as the backend and then let us run containers on those VMs.</p>
+
+    <div class="stack-diagram" style="max-width:400px;">
+      <div class="stack-layer stack-layer--k8s">
+        Kubernetes — Pod · Pod · Pod <span class="stack-layer__label">← Containers</span>
+      </div>
+      <div class="stack-layer stack-layer--vm">
+        VM (EC2) <span class="stack-layer__label">← Virtual Machine</span>
+      </div>
+      <div class="stack-layer stack-layer--hw">
+        Physical Server <span class="stack-layer__label">← Hardware</span>
+      </div>
+    </div>
+
+    <hr>
+
+        <h2 id="en-summary">The Docker Commands You'll Actually Use — A Summary</h2>
+
+    <p>These are the Docker commands DevOps engineers use every day — you don't have to memorise them all, just know they exist and reach for <code>docker --help</code> when you need it. The ones you will use most are <code>docker build</code>, <code>docker run</code>, <code>docker ps</code> and <code>docker logs</code>:</p>
+
+<pre><code># === Images ===
+docker build -t app:v1 .           # build an image
+docker images                       # list all images
+docker pull nginx:latest            # pull an image from Docker Hub
+docker rmi app:v1                   # remove an image
+
+# === Containers ===
+docker run -d -p 8080:80 nginx     # run a container
+docker ps                           # list running containers
+docker ps -a                        # list all of them (including stopped)
+docker stop &lt;container_id&gt;          # stop
+docker rm &lt;container_id&gt;            # remove
+docker logs &lt;container_id&gt;          # view the logs
+docker exec -it &lt;id&gt; /bin/sh        # get a shell inside the container
+
+# === Docker Compose ===
+docker compose up -d                # bring every service up
+docker compose down                 # take every service down
+docker compose logs -f              # follow the logs in real time</code></pre>
+
+    <hr>
+
+        <h2 id="en-summary-2">Summary</h2>
+
+    <p>Docker changed how software is deployed for good — from "install it machine by machine and hope it runs" to "build once, run anywhere". Every cloud provider, every CI/CD pipeline, every microservice architecture rests on containers. Learning Docker is one of the first skills a DevOps engineer needs:</p>
+
+    <ul>
+      <li><strong>VM</strong> = a whole simulated machine (with a Guest OS) → heavy, but high isolation</li>
+      <li><strong>Container</strong> = only the environment is simulated (kernel shared) → light, fast, portable</li>
+      <li><strong>Dockerfile</strong> → <strong>Image</strong> → <strong>Container</strong> (recipe → CD → player)</li>
+      <li><strong>Docker Compose</strong> = several containers running together from a single file</li>
+      <li>In the real world <strong>you use both</strong> — VMs as infrastructure, containers running the app</li>
+      <li>Docker really does solve <strong>"It works on my machine"</strong> 🐳</li>
+    </ul>
+
+    <p>In the next post we will talk about the <strong>API Request Lifecycle</strong> — when you hit send on a request to a server, what actually happens? 🌐🐕</p>
+
+    </div>
+
+<div class="post-series-footer"><span class="l-th">บทความจากซีรีส์ DevOps & Vibe Coding 2026</span><span class="l-en" lang="en">A post from the DevOps & Vibe Coding 2026 series</span></div>
 
   </article>
 
