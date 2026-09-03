@@ -13,8 +13,8 @@ A hand-written static site — six top-level pages, four per-book detail pages, 
 | | |
 |---|---|
 | **Pages** | Home · Blog · Publications · Books · Projects & Apps · News & Updates |
-| **Blog** | **37 posts** in 3 categories (Technology holds 2 series; Academic & Philosophy and Lifestyle are awaiting their first posts) |
-| **Stack** | Plain HTML5 + CSS3 + one 83-line vanilla-JS file. Google Fonts is the only external dependency |
+| **Blog** | **56 posts** in 4 series, every one bilingual Thai/English |
+| **Stack** | Plain HTML5 + CSS3, zero JavaScript. Google Fonts is the only external dependency |
 | **Hosting** | GitHub Pages (classic Jekyll build) on the custom domain `anirach.com`, fronted by Cloudflare |
 | **Build step** | None |
 | **Tests** | `.claude/skills/site-check/scripts/check_site.py` — 58 cross-file integrity checks. This is the test suite |
@@ -24,7 +24,7 @@ A hand-written static site — six top-level pages, four per-book detail pages, 
 | Page | What it holds |
 |---|---|
 | [`index.html`](index.html) | Single-scroll editorial portfolio: hero, about, latest-news strip, six research areas, featured book, curated live apps, contact |
-| [`blog/`](blog/) | 37 posts under three category bands — see below |
+| [`blog/`](blog/) | 56 bilingual posts in four series — see below |
 | [`publications/`](publications/) | The academic record: the Springer book *Libraries in Transformation*, 8 book chapters, and a selected-publications table |
 | [`books/`](books/) | Books & writing (nav label "Books"): four works — *One Day of Light* (the free last-lecture event book, EN/TH editions with free PDF downloads served from `books/`), the published novel *Three Old Men: The Last Conversation*, and two complete bilingual manuscripts — each with its own detail page (`books/one-day-of-light.html`, `books/three-old-men.html`, `books/a-pocketful-of-questions.html`, `books/the-thirteenth-seal.html`) |
 | [`projects/`](projects/) | Live apps (each verified working before it ships) and research-code repositories |
@@ -36,13 +36,14 @@ A hand-written static site — six top-level pages, four per-book detail pages, 
 
 ## The blog
 
-`blog/index.html` is a static, zero-JavaScript listing grouped into three categories. There is no filtering, sorting or search UI.
+`blog/index.html` is a static, zero-JavaScript listing: one featured post and four series. There is no filtering, sorting or search UI.
 
-- **🤖 Technology — 37 posts**, containing two series: *OpenClaw for Organizations* (13, seven of them a numbered series linked by a chip strip) and *DevOps & Vibe Coding* (24, a single prev/next chain).
-- **🎓 Academic & Philosophy** — first posts coming soon.
-- **☕ Lifestyle** — first posts coming soon.
+- **⚡ Hermes Agent in Practice** — 10 posts, all numbered, linked by a chip strip.
+- **🤖 OpenClaw for Organizations** — 13 posts, seven of them a numbered series linked by a chip strip.
+- **🔧 DevOps & Vibe Coding** — 24 posts, a single prev/next chain.
+- **🌅 Life Thought & Philosophy** — 9 essays, linked by a chip strip.
 
-**The site is bilingual.** Headings, technical terms, code and tag labels are in English; explanatory prose is in Thai. All 37 posts declare `<html lang="th">`; the six top-level pages and the four book detail pages declare `lang="en"` and wrap Thai passages in `<span lang="th">`.
+**Every post is bilingual.** All 56 carry a pure-CSS Thai ⇄ English switch: a `ไทย · English` pill in the hero swaps between two complete tracks of the same article. Thai is the default, there is no JavaScript, and the page-level `<html lang="th">` never changes — the English track is `lang="en"` inside it. The six top-level pages and the four book detail pages are `lang="en"` chrome and wrap their Thai passages in `<span lang="th">`.
 
 ## Repository structure
 

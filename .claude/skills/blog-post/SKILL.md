@@ -228,9 +228,12 @@ The block ships in the template with placeholders; fill them, do not restructure
 - **`datePublished` == `article:published_time` == every `<time datetime>` in the
   page.** One `{{DATE}}` (YYYY-MM-DD) fills all of them; `dateModified` starts equal
   to `datePublished` and moves on a substantive edit.
-- Bilingual posts (the pure-CSS TH ⇄ EN switch) use `"inLanguage": ["th", "en"]` and
-  carry `<meta property="og:locale:alternate" content="en_US">` directly after
-  `og:locale`; monolingual posts use `"inLanguage": "th"` and no alternate.
+- **Every post is bilingual since 2026-09-03**, so `"inLanguage"` is the array
+  `["th", "en"]` and `<meta property="og:locale:alternate" content="en_US">` sits
+  directly after `og:locale`. `check_visibility.py` S1 treats the substring
+  `class="l-en"` as the definition of "bilingual" and fails (FAIL severity) when a post
+  carries the markup without the metadata — they must land in the same commit. Scalar
+  `"inLanguage": "th"` and a missing alternate are now the regression, not the default.
 - The `type` attribute is double-quoted `"application/ld+json"` — the one `<script>`
   type INV-38 allows, because the browser parses it as data and never executes it.
 
@@ -296,6 +299,50 @@ prose, so any automated check would be noise. Apply them while writing, not in a
   decoratively.
 - Use `<ol>` for procedures a reader performs in order; `<ul>` stays for everything
   else.
+
+## Step 4b — the English track
+
+**All 56 posts are bilingual, so a new one is not finished until it has an English
+track.** Write the Thai article first and get it right; the English track is a faithful
+mirror of finished prose, not a parallel draft.
+
+Do not hand-build the switch. Run the converter:
+
+```bash
+python3 scripts/bilingualize.py --post <slug>     # all the mechanical edits
+#   → writes .bilingual/<slug>.json, the Thai source of every placeholder
+python3 scripts/bilingualize.py --fill <slug>     # splice .bilingual/<slug>.en.html back in
+python3 scripts/bilingualize.py --verify <slug>   # the per-file checks; drive it to OK
+```
+
+Scaffolding inserts the checkbox, the hero pill, the ~26 lines of CSS (Deep Blue or
+Sunrise, chosen from the post's own `.post-hero` gradient), `og:locale:alternate`, the
+`inLanguage` array, both tables of contents, the `th-`/`en-` id split, and an `.l-en`
+track of `%%EN-SECTION:id%%` placeholders. You write only the answer sheet — an HTML file
+whose `<!--EN-TITLE-->`, `<!--EN-TOC:id-->`, `<!--EN-SECTION:id-->` and `<!--EN-FOOTER-->`
+delimiters name what follows each one. `--fill` forces the `en-` ids and `#en-` anchors,
+so the sheet never has to think about them.
+
+What the English track must be:
+
+- **Element-for-element identical to the Thai one.** `--verify` compares `h2`, `h3`,
+  `pre`, `table` and `blockquote` counts between the tracks and fails on a mismatch —
+  that check exists because "translate this section" quietly becomes "summarise this
+  section" on a long post.
+- **Complete.** Table cells, image alt text, the labels baked into inline-styled diagram
+  divs, and the Thai `#` comments inside code blocks are all prose. `--verify` fails on
+  any Thai character left in the EN track. The code itself, command names, paths, URLs,
+  class names and ids are identical in both tracks.
+- **In the house voice** — a professor writing for practitioners. Read the EN track of
+  `blog/hermes-101.html` before starting; it is the register reference.
+
+What stays monolingual, and why (each of these is read by a regex that concatenates or
+truncates on a nested tag): the card title and excerpt in `blog/index.html`
+(`gen_feed.py`'s `text_of` would emit `"ThaiEnglish"` into the feed), `.post-nav__title`
+and `.post-nav__dir` (INV-10, `RE_PLINK`), the `.series-nav` chips and their `<h3>`
+(INV-03/03b), the OpenClaw ordinal badge line (INV-20a is line-scoped), `<title>`, the
+meta description, `og:title`/`og:description`/`og:image:alt`/`twitter:image:alt`
+(T1/T2/T3) and the single `<time datetime>` (INV-36).
 
 ## Step 5 — the card in `blog/index.html`
 
@@ -454,7 +501,9 @@ Adding a DevOps post touches **4 files** (5 with a diagram):
 1. `images/<slug>-cover.jpg` — new file, JPG, ≤200 KB, not shared with any other post.
 2. `blog/<slug>.html` — from `page-design/assets/post-template.html`; one `<h1>`,
    `lang="th"`, meta description, the filled-in `<!-- social -->` block, canonical
-   `:root`, the 4-line a11y block, `blog-nav`, `post-nav`, `blog-footer`.
+   `:root`, the 4-line a11y block, `blog-nav`, `post-nav`, `blog-footer`, **and the
+   English track** (Step 4b — `python3 scripts/bilingualize.py --post <slug>`, then
+   `--fill`, then `--verify` until it prints OK).
 3. `blog/index.html` — card at the top of the right `.blog-grid` with an
    `<h4 class="card__title">`, hero `Articles`, `.category__count` and the section's
    `.series-count` all **recomputed**.

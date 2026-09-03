@@ -73,16 +73,19 @@ blocks. No category-filter UI, no client-side JS.
 
 - `#series-hermes` — "Hermes Agent in Practice" (10 cards, all numbered #1–#10; launched 2026-09-01 as
   7 posts mirroring the OpenClaw arc, extended the same day with #8 Automation, #9 Models & Cost,
-  #10 Desktop & Fleet) — bilingual guides to Nous Research's Hermes Agent harness; each post
-  carries the Life-style pure-CSS TH ⇄ EN switch, a Deep Blue hero, and its own 10-chip
-  `.series-nav` strip, whose content no SERIES7 check polices
+  #10 Desktop & Fleet) — guides to Nous Research's Hermes Agent harness, a Deep Blue hero, and its
+  own 10-chip `.series-nav` strip, whose content no SERIES7 check polices
 - `#series-openclaw` — "OpenClaw for Organizations" (13 cards; 7 of them are the numbered series, the rest standalone)
 - `#series-devops` — "DevOps & Vibe Coding" (24 cards)
-- `#series-life` — "Life Thought & Philosophy" (9 cards; completed 2026-09-01) — bilingual essays
+- `#series-life` — "Life Thought & Philosophy" (9 cards; completed 2026-09-01) — essays
   walking the book *One Day of Light* through its whole day (Morning, Noon, Twilight + the
-  head-fake finale); each post carries a pure-CSS TH ⇄ EN switch
-  (checkbox + sibling selectors, Thai default; INV-38-clean) and its own 9-chip `.series-nav`
-  strip, whose content no SERIES7 check polices
+  head-fake finale), with its own 9-chip `.series-nav` strip, whose content no SERIES7 check polices
+
+**Every post is bilingual.** All 56 carry the same pure-CSS TH ⇄ EN switch — a visually hidden
+checkbox before `<main>`, two content tracks `.l-th` / `.l-en`, and a `ไทย · English` pill in the
+hero (checkbox + sibling selectors, Thai default, INV-38-clean, no persistence across pages). Life
+shipped it 2026-09-01, Hermes copied it unchanged the same day, and the remaining 37 posts were
+converted 2026-09-03 by `scripts/bilingualize.py` — see "Bilingual posts" below.
 
 The hero `.blog-hero__stats` reads **4 Series · 56 Articles**; there is deliberately no
 "N Categories" stat, though INV-02e still verifies one if it is ever reinstated, and INV-02d still
@@ -111,9 +114,45 @@ Match the pattern to the post's series; do not mix them.
 
 The numbered OpenClaw series order is fixed: `openclaw-101` → `agent-teams` → `memory` → `security` → `integrations` → `skills` → `production`. All 7 chips appear in all 7 posts. Adding a post to this series means editing all seven files.
 
+### Bilingual posts — the TH ⇄ EN switch
+
+All 56 posts carry it. The mechanism is four CSS lines and no JavaScript:
+
+```css
+.lang-switch-box { position: absolute; left: -9999px; }   /* focusable, off-canvas */
+.l-en { display: none; }                                   /* Thai is the default track */
+#langSwitch:checked ~ main .l-en { display: revert; }      /* revert, so spans stay inline */
+#langSwitch:checked ~ main .l-th { display: none; }
+```
+
+Four things follow from that selector and each has bitten once:
+
+- **The checkbox is a direct child of `<body>`, before `<main id="main">`** — a general sibling
+  combinator reaches nothing above itself. Anything the switch must reach lives inside `<main>`,
+  which is why `deployment-hosting`, `openclaw-memory-architecture` and
+  `vibe-coding-devops-process` had their `<main>` moved up to wrap the hero on 2026-09-03.
+- **`display: revert`, never `block`** — `.l-en` is used on `<div>`, `<details>` and `<span>` alike.
+- **Class names must dodge INV-12's menu-token regex** (`hamburger|burger|nav__toggle|nav-toggle|navtoggle|menu-toggle|menu__toggle`). `lang-switch` / `l-th` / `l-en` are verified clear; do not rename.
+- **`check_visibility.py` defines "bilingual" as the substring `class="l-en"`** and then demands
+  `inLanguage: ["th","en"]`, so the head and the markup must change in one commit.
+
+The tracks are coarse: one `<span>` pair each on the `<h1>`, the hero sub and the series footer, a
+duplicated `<details class="post-toc l-th|l-en">`, and one `<div class="l-th">` / `<div class="l-en" lang="en">`
+pair holding the whole article twice. Heading ids are namespaced `th-` / `en-` so the two copies do
+not collide, and each TOC links only into its own track. **Navigation belongs to neither track** —
+the `.series-nav` strip, the `.post-nav` pair, the hero ordinal badge and the card titles stay
+monolingual, because INV-03, INV-10 and `gen_feed.py` all read those with regexes that concatenate
+or truncate on a nested tag.
+
+`scripts/bilingualize.py` does the whole mechanical conversion (`--all`), splices a translation in
+(`--fill <slug>`), and runs the per-file checks the sitewide linters cannot make while a sweep is in
+flight (`--verify <slug>`). It reads its CSS out of `blog/hermes-101.html` (Deep Blue heroes) or
+`blog/morning-waking.html` (Sunrise heroes) rather than carrying a copy, so the pattern has one
+source of truth.
+
 ## Conventions
 
-- **Language**: `<html lang="th">` on posts — including the 9 bilingual Life posts, whose EN track is `lang="en"` wrappers behind the CSS switch. All 6 nav-bearing index pages (`index.html`, `blog/index.html`, `books/index.html`, `publications/index.html`, `projects/index.html`, `news/index.html`) and the 4 `books/` detail pages are `lang="en"`. Headings and technical terms in English, body prose in Thai (marked with `<span lang="th">` on the section pages).
+- **Language**: `<html lang="th">` on all 56 posts — Thai is the default track; the EN track is `lang="en"` wrappers behind the CSS switch, and the page-level `lang` never flips (it cannot, without JavaScript). All 6 nav-bearing index pages (`index.html`, `blog/index.html`, `books/index.html`, `publications/index.html`, `projects/index.html`, `news/index.html`) and the 4 `books/` detail pages are `lang="en"`. Headings and technical terms in English, body prose in Thai (marked with `<span lang="th">` on the section pages).
 - **CSS variables**: defined per-file in each blog page's own `:root`. Re-keyed to the book covers on 2026-08-26 (`scripts/retoken.py`, 28 tokens in 49 blocks): `--navy: #11304b`, `--blue: #226299` (a TEXT colour now — 6.4:1 on white), `--blue-dark: #1a4d7a`, `--blue-light: #4992b9` (**borders only**), `--slate: #334155`, `--slate-light: #526174`, `--bg: #faf7f0`, brand `--gold: #c4a46c` / `--gold-dark: #7a5f22` / `--cloud` / `--parchment`, and `--focus` (re-pointed to gold inside footers and `<pre>`, where the blue ring collapses to 2.12:1). `--font` (Inter + Sarabun for Thai), `--mono` (JetBrains Mono + Sarabun). Longer posts add semantic accents (`--green`, `--amber`, `--purple`, `--code-bg`). Copy the `:root` from the nearest sibling post rather than inventing one. `openclaw-101.html` predates this and uses raw hex throughout.
 - **Fonts**: Google Fonts `<link>` per page — Inter 300–900, **Sarabun 400/600/700 for Thai** (looped, the Thai body-prose convention; added 2026-08-26 to 39 pages — the 10 island posts load no webfont at all and are deferred to the island conversion), plus JetBrains Mono 400–600 on posts with code.
 - **Diagrams**: render as PNG in `images/` and `<img>` them in. Inline HTML/CSS and ASCII-art diagrams have repeatedly broken layout and were replaced (`c270892`, `4ae2660`) — do not reintroduce them.
@@ -246,8 +285,10 @@ Learned from Houseofmvps/claude-rank (MIT) and adapted to this site:
   from the INV-27-validated tags; `type="application/ld+json"` must keep DOUBLE quotes
   (INV-38's whitelist regex requires them). The old BlogPosting microdata was stripped
   2026-09-02 — do not reintroduce `itemprop` attributes; the social block's `og:image`
-  meta no longer carries `itemprop="image"`, and the 19 bilingual posts carry a 14th
-  line, `og:locale:alternate` `en_US`.
+  meta no longer carries `itemprop="image"`. Since every post is bilingual, all 56 carry
+  a 14th line, `og:locale:alternate` `en_US`, and `inLanguage` is the array `["th","en"]`
+  rather than the scalar `"th"` — `check_visibility.py` S1 keys off `class="l-en"` and
+  fails when the two disagree, so the markup and the metadata must land together.
 - Still manual, still the owner's: Search Console verification, and a Rich-Results
   spot-check after structured-data changes.
 

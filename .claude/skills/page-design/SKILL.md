@@ -284,6 +284,12 @@ Content    .callout  .callout--info|--warn|--good|--bad    [defined in the templ
            .figure  .figure__img  .figure__caption          [live since ea3c8e8 — the 4
                                           books/ DETAIL pages use it for their cover figure]
            .figure--qr                 (reservation QR, books/one-day-of-light.html #event)
+Language   .lang-switch-box  .lang-switch  .lang-th  .lang-sep  .lang-en
+           .l-th  .l-en                    (the TH ⇄ EN switch — all 56 posts. Pure CSS:
+                                          a hidden checkbox before <main>, two content
+                                          tracks. The short .l-* names are the TRACKS;
+                                          .lang-* are the pill. Never rename to anything
+                                          matching INV-12's menu-token regex.)
 Code       <pre><code>                      (never .code-block)
 ```
 
