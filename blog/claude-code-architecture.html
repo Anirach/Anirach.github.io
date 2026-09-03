@@ -304,6 +304,34 @@
       ::view-transition-old(*),
       ::view-transition-new(*) { animation: none !important; }
     }
+
+    /* ── LANGUAGE SWITCH — pure CSS, zero JavaScript (INV-38) ──
+       One visually-hidden checkbox as a direct child of body, BEFORE the main landmark,
+       so `#langSwitch:checked ~ main …` reaches every content block. The two
+       tracks are paired blocks: .l-th (default) and .l-en (hidden until
+       checked; display:revert restores block for divs, inline for spans).
+       Naming stays clear of INV-12's menu-token regex (hamburger|burger|
+       nav__toggle|nav-toggle|navtoggle|menu-toggle|menu__toggle) — verified.
+       No JS also means no persistence across posts; each post opens in Thai. */
+    .lang-switch-box { position: absolute; left: -9999px; }
+    .l-en { display: none; }
+    #langSwitch:checked ~ main .l-en { display: revert; }
+    #langSwitch:checked ~ main .l-th { display: none; }
+    .lang-switch {
+      display: inline-flex; align-items: center; gap: 0.55rem;
+      margin-top: 1.4rem; padding: 0.4rem 1.1rem; border-radius: 50px;
+      background: rgba(255,255,255,0.85); border: 1px solid rgba(255,255,255,0.4);
+      cursor: pointer; font-size: 0.85rem; user-select: none;
+    }
+    .lang-switch span { color: var(--slate-light); font-weight: 600; transition: color 0.2s; }
+    .lang-switch .lang-sep { color: var(--gray); font-weight: 400; }
+    .lang-switch .lang-th { color: var(--navy); font-weight: 800; }
+    #langSwitch:checked ~ main .lang-switch .lang-th { color: var(--slate-light); font-weight: 600; }
+    #langSwitch:checked ~ main .lang-switch .lang-en { color: var(--navy); font-weight: 800; }
+    .lang-switch:hover { border-color: #fff; }
+    #langSwitch:focus-visible ~ main .lang-switch {
+      outline: 2px solid var(--focus); outline-offset: 3px;
+    }
   </style>
   <!-- social -->
   <link rel="canonical" href="https://anirach.com/blog/claude-code-architecture.html">
@@ -311,6 +339,7 @@
   <meta property="og:url" content="https://anirach.com/blog/claude-code-architecture.html">
   <meta property="og:site_name" content="Anirach Mingkhwan">
   <meta property="og:locale" content="th_TH">
+  <meta property="og:locale:alternate" content="en_US">
   <meta property="article:published_time" content="2026-03-15">
   <meta property="article:author" content="https://anirach.com/">
   <meta property="og:title" content="Claude Code Architecture Deep Dive">
@@ -341,13 +370,17 @@
     "datePublished": "2026-03-15",
     "dateModified": "2026-08-26",
     "image": "https://anirach.com/images/claude-code-architecture-og.jpg",
-    "inLanguage": "th",
+    "inLanguage": [
+      "th",
+      "en"
+    ],
     "mainEntityOfPage": "https://anirach.com/blog/claude-code-architecture.html"
   }
   </script>
 </head>
 <body>
 <a href="#main" class="skip-link">Skip to content</a>
+<input type="checkbox" id="langSwitch" class="lang-switch-box" aria-label="Switch language: Thai / English">
 
   <nav class="blog-nav">
     <div class="blog-nav__inner">
@@ -365,33 +398,50 @@
       <span class="post-hero__tag">AI Agent</span>
       <span class="post-hero__tag">Architecture</span>
     </div>
-    <h1 class="post-hero__title">Claude Code Architecture Deep Dive</h1>
+    <h1 class="post-hero__title"><span class="l-th">Claude Code Architecture Deep Dive</span><span class="l-en" lang="en">Claude Code Architecture Deep Dive</span></h1>
     <div class="post-hero__meta">
       <span>By <strong style="color:#fff">Anirach Mingkhwan</strong></span>
       <span class="post-hero__series">AI Developer Tools 2026</span>
     
       <span><time datetime="2026-03-15">15 Mar 2026</time> · 7 min read</span></div>
+    <label for="langSwitch" class="lang-switch" title="สลับภาษา · Switch language"><span class="lang-th">ไทย</span><span class="lang-sep">·</span><span class="lang-en" lang="en">English</span></label>
     <div class="post-hero__image">
       <img src="../images/claude-code-architecture-cover.jpg" alt="Claude Code — เจาะลึกสถาปัตยกรรม Claude Code" width="800" height="800" loading="eager" fetchpriority="high" decoding="async">
     </div>
   </header>
 
   <article class="post-body">
-    <details class="post-toc" open>
-      <summary>In this post &middot; <span lang="th">ในบทความนี้</span></summary>
+    <details class="post-toc l-th" open>
+      <summary>ในบทความนี้</summary>
       <ol>
-          <li><a href="#overview">Overview: Claude Code คืออะไร?</a></li>
-          <li><a href="#core-architecture-layers">Core Architecture Layers</a></li>
-          <li><a href="#tool-system">Tool System - ความสามารถของ Claude Code</a></li>
-          <li><a href="#context-management">Context Management</a></li>
-          <li><a href="#mcp">MCP: Model Context Protocol</a></li>
-          <li><a href="#sub-agents">Sub-agents: Parallel Execution</a></li>
-          <li><a href="#security-model">Security Model</a></li>
-          <li><a href="#model-routing">Model Routing</a></li>
-          <li><a href="#hooks-system">Hooks System</a></li>
-          <li><a href="#summary">สรุป: Lessons Learned</a></li>
+          <li><a href="#th-overview">Overview: Claude Code คืออะไร?</a></li>
+          <li><a href="#th-core-architecture-layers">Core Architecture Layers</a></li>
+          <li><a href="#th-tool-system">Tool System - ความสามารถของ Claude Code</a></li>
+          <li><a href="#th-context-management">Context Management</a></li>
+          <li><a href="#th-mcp">MCP: Model Context Protocol</a></li>
+          <li><a href="#th-sub-agents">Sub-agents: Parallel Execution</a></li>
+          <li><a href="#th-security-model">Security Model</a></li>
+          <li><a href="#th-model-routing">Model Routing</a></li>
+          <li><a href="#th-hooks-system">Hooks System</a></li>
+          <li><a href="#th-summary">สรุป: Lessons Learned</a></li>
       </ol>
     </details>
+    <details class="post-toc l-en" open>
+      <summary>In this post</summary>
+      <ol>
+          <li><a href="#en-overview">Overview: What Is Claude Code?</a></li>
+          <li><a href="#en-core-architecture-layers">Core Architecture Layers</a></li>
+          <li><a href="#en-tool-system">Tool System — What Claude Code Can Do</a></li>
+          <li><a href="#en-context-management">Context Management</a></li>
+          <li><a href="#en-mcp">MCP: Model Context Protocol</a></li>
+          <li><a href="#en-sub-agents">Sub-agents: Parallel Execution</a></li>
+          <li><a href="#en-security-model">Security Model</a></li>
+          <li><a href="#en-model-routing">Model Routing</a></li>
+          <li><a href="#en-hooks-system">Hooks System</a></li>
+          <li><a href="#en-summary">Summary: Lessons Learned</a></li>
+      </ol>
+    </details>
+    <div class="l-th">
 
 
     <p>Claude Code คือ <strong>AI Coding Assistant</strong> แบบ CLI จาก Anthropic ที่ไม่ใช่แค่ chatbot แต่เป็น <strong>autonomous agent</strong> ที่อ่าน/เขียนไฟล์, รัน commands, และทำงานจริงใน codebase ของคุณได้</p>
@@ -400,7 +450,7 @@
 
     <hr>
 
-    <h2 id="overview">Overview: Claude Code คืออะไร?</h2>
+    <h2 id="th-overview">Overview: Claude Code คืออะไร?</h2>
 
     <p>Claude Code ต่างจาก ChatGPT หรือ web-based AI ตรงที่มันรันใน <strong>terminal ของคุณ</strong> และมีสิทธิ์เข้าถึง filesystem, Git, และ shell commands ได้จริง:</p>
 
@@ -432,7 +482,7 @@
 
     <hr>
 
-    <h2 id="core-architecture-layers">Core Architecture Layers</h2>
+    <h2 id="th-core-architecture-layers">Core Architecture Layers</h2>
 
     <p>Claude Code แบ่งเป็น 4 layers หลัก:</p>
 
@@ -517,7 +567,7 @@
 
     <hr>
 
-    <h2 id="tool-system">Tool System - ความสามารถของ Claude Code</h2>
+    <h2 id="th-tool-system">Tool System - ความสามารถของ Claude Code</h2>
 
     <p>Claude Code มี <strong>built-in tools</strong> ที่ให้ AI โต้ตอบกับ codebase ได้:</p>
 
@@ -589,7 +639,7 @@ Claude: "Fixed the null check bug in auth.ts. Tests passing."</code></pre>
 
     <hr>
 
-    <h2 id="context-management">Context Management</h2>
+    <h2 id="th-context-management">Context Management</h2>
 
     <p>หนึ่งในความท้าทายของ AI agent คือ <strong>context window</strong> มีจำกัด Claude Code จัดการด้วยหลายวิธี:</p>
 
@@ -646,7 +696,7 @@ E-commerce API built with Node.js + PostgreSQL
 
     <hr>
 
-    <h2 id="mcp">MCP: Model Context Protocol</h2>
+    <h2 id="th-mcp">MCP: Model Context Protocol</h2>
 
     <p><strong>MCP</strong> คือ protocol ที่ให้ Claude Code เชื่อมต่อกับ <strong>external tools</strong> ได้ไม่จำกัด:</p>
 
@@ -689,7 +739,7 @@ E-commerce API built with Node.js + PostgreSQL
 
     <hr>
 
-    <h2 id="sub-agents">Sub-agents: Parallel Execution</h2>
+    <h2 id="th-sub-agents">Sub-agents: Parallel Execution</h2>
 
     <p>Claude Code สามารถ <strong>spawn sub-agents</strong> เพื่อทำงานขนานกันได้:</p>
 
@@ -731,7 +781,7 @@ E-commerce API built with Node.js + PostgreSQL
 
     <hr>
 
-    <h2 id="security-model">Security Model</h2>
+    <h2 id="th-security-model">Security Model</h2>
 
     <p>Claude Code ออกแบบมาให้ <strong>safe by default</strong>:</p>
 
@@ -764,7 +814,7 @@ E-commerce API built with Node.js + PostgreSQL
 
     <hr>
 
-    <h2 id="model-routing">Model Routing</h2>
+    <h2 id="th-model-routing">Model Routing</h2>
 
     <p>Claude Code เลือกใช้ model ตาม task:</p>
 
@@ -781,7 +831,7 @@ E-commerce API built with Node.js + PostgreSQL
 
     <hr>
 
-    <h2 id="hooks-system">Hooks System</h2>
+    <h2 id="th-hooks-system">Hooks System</h2>
 
     <p>Claude Code มี <strong>hooks</strong> ที่ให้ inject custom logic ได้:</p>
 
@@ -812,7 +862,7 @@ E-commerce API built with Node.js + PostgreSQL
 
     <hr>
 
-    <h2 id="summary">สรุป: Lessons Learned</h2>
+    <h2 id="th-summary">สรุป: Lessons Learned</h2>
 
     <p>จากการศึกษา Claude Code architecture เราได้เรียนรู้:</p>
 
@@ -843,7 +893,462 @@ E-commerce API built with Node.js + PostgreSQL
       <strong>Key takeaway:</strong> การสร้าง AI Agent ที่ทำงานจริงได้ต้องคิดเรื่อง <strong>tool design, context management, และ safety</strong> ไม่ใช่แค่ prompt engineering
     </blockquote>
 
-    <p class="post-series-footer">Part of the AI Developer Tools Series</p>
+    
+    </div>
+    <div class="l-en" lang="en">
+
+        <p>Claude Code is a CLI <strong>AI Coding Assistant</strong> from Anthropic — not just a chatbot, but an <strong>autonomous agent</strong> that reads and writes files, runs commands, and does real work inside your codebase.</p>
+
+    <p>Today we go deep into <strong>the architecture behind it</strong>: how Claude Code is designed so that an AI can work both safely and efficiently.</p>
+
+    <hr>
+
+        <h2 id="en-overview">Overview: What Is Claude Code?</h2>
+
+    <p>Claude Code differs from ChatGPT or any web-based AI in one decisive way: it runs in <strong>your terminal</strong>, with genuine access to the filesystem, Git, and shell commands:</p>
+
+    <div class="flow-diagram">
+      <div class="flow-step" style="border-color: rgba(34,197,94,0.3); background: rgba(34,197,94,0.04);">
+        <div class="flow-step__title">Developer</div>
+        <div class="flow-step__sub">Types a command</div>
+      </div>
+      <span class="flow-arrow">-></span>
+      <div class="flow-step" style="border-color: rgba(34,98,153,0.3); background: rgba(34,98,153,0.04);">
+        <div class="flow-step__title">Claude Code CLI</div>
+        <div class="flow-step__sub">Agent loop</div>
+      </div>
+      <span class="flow-arrow">-></span>
+      <div class="flow-step" style="border-color: rgba(249,115,22,0.3); background: rgba(249,115,22,0.04);">
+        <div class="flow-step__title">Tools</div>
+        <div class="flow-step__sub">Read/Write/Bash</div>
+      </div>
+      <span class="flow-arrow">-></span>
+      <div class="flow-step" style="border-color: rgba(168,85,247,0.3); background: rgba(168,85,247,0.04);">
+        <div class="flow-step__title">Codebase</div>
+        <div class="flow-step__sub">Files & Git</div>
+      </div>
+    </div>
+
+    <blockquote>
+      <strong>Key insight:</strong> Claude Code is not merely a wrapper around an API. It is an <strong>agentic system</strong> with the full set — tool use, memory, and an execution environment
+    </blockquote>
+
+    <hr>
+
+        <h2 id="en-core-architecture-layers">Core Architecture Layers</h2>
+
+    <p>Claude Code divides into four main layers:</p>
+
+    <div class="layer-stack">
+      <div class="layer-item layer-item--user">
+        <span class="layer-item__icon">1</span>
+        <div class="layer-item__content">
+          <div class="layer-item__title">User Interface Layer</div>
+          <div class="layer-item__desc">Terminal UI, VSCode Extension, input handling</div>
+        </div>
+      </div>
+      <div class="layer-item layer-item--agent">
+        <span class="layer-item__icon">2</span>
+        <div class="layer-item__content">
+          <div class="layer-item__title">Agent Controller</div>
+          <div class="layer-item__desc">Main loop, context management, model routing</div>
+        </div>
+      </div>
+      <div class="layer-item layer-item--tool">
+        <span class="layer-item__icon">3</span>
+        <div class="layer-item__content">
+          <div class="layer-item__title">Tool Execution Layer</div>
+          <div class="layer-item__desc">File ops, Bash, Grep, Search, MCP servers</div>
+        </div>
+      </div>
+      <div class="layer-item layer-item--system">
+        <span class="layer-item__icon">4</span>
+        <div class="layer-item__content">
+          <div class="layer-item__title">System Integration</div>
+          <div class="layer-item__desc">Git, filesystem, permissions, sandboxing</div>
+        </div>
+      </div>
+    </div>
+
+    <h3>1. User Interface Layer</h3>
+
+    <p>Claude Code supports several interfaces:</p>
+
+    <ul>
+      <li><strong>CLI Mode</strong> - runs in the terminal via the <code>claude</code> command</li>
+      <li><strong>VSCode Extension</strong> - embedded in the editor, with context awareness</li>
+      <li><strong>API/SDK Mode</strong> - for automation and CI/CD</li>
+    </ul>
+
+    <h3>2. Agent Controller — the Heart of the System</h3>
+
+    <p>The Agent Controller is the <strong>"brain"</strong> that governs everything the system does:</p>
+
+    <div class="arch-diagram">
+      <div class="arch-box">
+        <div class="arch-label">Agent Loop</div>
+        <div class="arch-row">
+          <div class="arch-container">
+            <div class="arch-name">Input Processing</div>
+            <div class="arch-item">User message</div>
+            <div class="arch-item">Context injection</div>
+          </div>
+          <div class="arch-container">
+            <div class="arch-name">Model Call</div>
+            <div class="arch-item">Claude API</div>
+            <div class="arch-item">Tool selection</div>
+          </div>
+          <div class="arch-container">
+            <div class="arch-name">Execution</div>
+            <div class="arch-item">Run tools</div>
+            <div class="arch-item">Collect results</div>
+          </div>
+        </div>
+        <div class="arch-arrow-down">Loop until done</div>
+      </div>
+    </div>
+
+    <p>Each iteration of the loop:</p>
+
+    <ol>
+      <li><strong>Receive input</strong> - the user message plus tool results from the previous iteration</li>
+      <li><strong>Build context</strong> - assemble the system prompt, CLAUDE.md, and conversation history</li>
+      <li><strong>Call Claude</strong> - send it to the API and get back a response plus tool calls</li>
+      <li><strong>Execute tools</strong> - run the tools Claude selected (Read, Write, Bash, etc.)</li>
+      <li><strong>Check completion</strong> - if the work is not finished, return to step 1</li>
+    </ol>
+
+    <hr>
+
+        <h2 id="en-tool-system">Tool System — What Claude Code Can Do</h2>
+
+    <p>Claude Code ships with <strong>built-in tools</strong> that let the AI act on the codebase:</p>
+
+    <div class="tool-grid">
+      <div class="tool-badge">
+        <span class="tool-badge__icon">Read</span>
+        <span class="tool-badge__name">Read files</span>
+      </div>
+      <div class="tool-badge">
+        <span class="tool-badge__icon">Write</span>
+        <span class="tool-badge__name">Create new files</span>
+      </div>
+      <div class="tool-badge">
+        <span class="tool-badge__icon">Edit</span>
+        <span class="tool-badge__name">Edit files</span>
+      </div>
+      <div class="tool-badge">
+        <span class="tool-badge__icon">Bash</span>
+        <span class="tool-badge__name">Run commands</span>
+      </div>
+      <div class="tool-badge">
+        <span class="tool-badge__icon">Glob</span>
+        <span class="tool-badge__name">Find files</span>
+      </div>
+      <div class="tool-badge">
+        <span class="tool-badge__icon">Grep</span>
+        <span class="tool-badge__name">Search content</span>
+      </div>
+      <div class="tool-badge">
+        <span class="tool-badge__icon">Agent</span>
+        <span class="tool-badge__name">Spawn sub-agents</span>
+      </div>
+      <div class="tool-badge">
+        <span class="tool-badge__icon">WebSearch</span>
+        <span class="tool-badge__name">Search the web</span>
+      </div>
+    </div>
+
+    <h3>Tool Execution Flow</h3>
+
+    <pre><code>User: "Fix the bug in auth.ts"
+
+Claude thinks: I need to read the file first
+  -> Tool: Read(file_path="src/auth.ts")
+  <- Returns: file content
+
+Claude thinks: I see the issue, let me fix it
+  -> Tool: Edit(file_path="src/auth.ts", old_string="...", new_string="...")
+  <- Returns: success
+
+Claude thinks: Let me verify by running tests
+  -> Tool: Bash(command="npm test")
+  <- Returns: All tests passed
+
+Claude: "Fixed the null check bug in auth.ts. Tests passing."</code></pre>
+
+    <h3>Permission Model</h3>
+
+    <p>Claude Code has a set of <strong>permission modes</strong> the user chooses from:</p>
+
+    <table>
+      <thead><tr><th>Mode</th><th>Auto-approve</th><th>Use case</th></tr></thead>
+      <tbody>
+        <tr><td><strong>Ask</strong></td><td>None - asks every time</td><td>Learning, sensitive code</td></tr>
+        <tr><td><strong>Auto-edit</strong></td><td>Read/Edit automatically</td><td>Development workflow</td></tr>
+        <tr><td><strong>Full auto</strong></td><td>Every tool</td><td>CI/CD, automation</td></tr>
+      </tbody>
+    </table>
+
+    <hr>
+
+        <h2 id="en-context-management">Context Management</h2>
+
+    <p>One of the standing challenges for an AI agent is that the <strong>context window</strong> is finite. Claude Code manages it in several ways:</p>
+
+    <h3>1. CLAUDE.md - Project Memory</h3>
+
+    <p>A <code>CLAUDE.md</code> file in the project is <strong>persistent context</strong>, loaded every single time:</p>
+
+    <pre><code># CLAUDE.md
+
+## Project Overview
+E-commerce API built with Node.js + PostgreSQL
+
+## Development
+- Run tests: npm test
+- Start dev: npm run dev
+- DB migration: npm run migrate
+
+## Conventions
+- Use camelCase for variables
+- All API routes in /src/routes/
+- Error handling via middleware</code></pre>
+
+    <h3>2. Automatic Context Injection</h3>
+
+    <p>Claude Code injects context automatically:</p>
+
+    <ul>
+      <li><strong>Git status</strong> - current branch, uncommitted changes</li>
+      <li><strong>IDE selection</strong> - the code highlighted in VSCode</li>
+      <li><strong>Recent conversation</strong> - a compressed summary once it runs long</li>
+      <li><strong>Tool results</strong> - output from the preceding tools</li>
+    </ul>
+
+    <h3>3. Context Compaction</h3>
+
+    <p>When a conversation grows too long, Claude Code <strong>compacts</strong> the older messages into a summary to save tokens:</p>
+
+    <div class="flow-diagram">
+      <div class="flow-step">
+        <div class="flow-step__title">Full History</div>
+        <div class="flow-step__sub">100k tokens</div>
+      </div>
+      <span class="flow-arrow">-></span>
+      <div class="flow-step">
+        <div class="flow-step__title">Compaction</div>
+        <div class="flow-step__sub">AI summarize</div>
+      </div>
+      <span class="flow-arrow">-></span>
+      <div class="flow-step">
+        <div class="flow-step__title">Summary + Recent</div>
+        <div class="flow-step__sub">~20k tokens</div>
+      </div>
+    </div>
+
+    <hr>
+
+        <h2 id="en-mcp">MCP: Model Context Protocol</h2>
+
+    <p><strong>MCP</strong> is the protocol that lets Claude Code connect to <strong>external tools</strong> without limit:</p>
+
+    <div class="component-grid">
+      <div class="component-card">
+        <div class="component-card__icon">MCP</div>
+        <div class="component-card__name">Database MCP</div>
+        <div class="component-card__desc">Query PostgreSQL and MySQL directly</div>
+      </div>
+      <div class="component-card">
+        <div class="component-card__icon">MCP</div>
+        <div class="component-card__name">Browser MCP</div>
+        <div class="component-card__desc">Control Playwright browser</div>
+      </div>
+      <div class="component-card">
+        <div class="component-card__icon">MCP</div>
+        <div class="component-card__name">Docker MCP</div>
+        <div class="component-card__desc">Manage containers</div>
+      </div>
+      <div class="component-card">
+        <div class="component-card__icon">MCP</div>
+        <div class="component-card__name">Custom MCPs</div>
+        <div class="component-card__desc">Build your own tools</div>
+      </div>
+    </div>
+
+    <h3>MCP Architecture</h3>
+
+    <pre><code>Claude Code
+    |
+    +-- Built-in Tools (Read, Write, Bash, etc.)
+    |
+    +-- MCP Client
+         |
+         +-- stdio:// -> Local MCP Server
+         +-- sse:// -> Remote MCP Server
+         +-- docker:// -> Containerized MCP</code></pre>
+
+    <p>MCP servers let Claude Code extend its capabilities without limit, and without anyone editing the core code.</p>
+
+    <hr>
+
+        <h2 id="en-sub-agents">Sub-agents: Parallel Execution</h2>
+
+    <p>Claude Code can <strong>spawn sub-agents</strong> to work in parallel:</p>
+
+    <div class="arch-diagram">
+      <div class="arch-box">
+        <div class="arch-label">Multi-agent Execution</div>
+        <div class="arch-row">
+          <div class="arch-container">
+            <div class="arch-name">Main Agent</div>
+            <div class="arch-item">Coordinate</div>
+          </div>
+        </div>
+        <div class="arch-arrow-down">spawns</div>
+        <div class="arch-row">
+          <div class="arch-container">
+            <div class="arch-name">Sub-agent 1</div>
+            <div class="arch-item">Research code</div>
+          </div>
+          <div class="arch-container">
+            <div class="arch-name">Sub-agent 2</div>
+            <div class="arch-item">Run tests</div>
+          </div>
+          <div class="arch-container">
+            <div class="arch-name">Sub-agent 3</div>
+            <div class="arch-item">Check docs</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <p>The sub-agent types available:</p>
+
+    <ul>
+      <li><strong>Explore</strong> - search and understand the codebase</li>
+      <li><strong>Plan</strong> - plan the implementation</li>
+      <li><strong>General-purpose</strong> - ordinary work of any kind</li>
+      <li><strong>Background</strong> - runs async, never blocking the main agent</li>
+    </ul>
+
+    <hr>
+
+        <h2 id="en-security-model">Security Model</h2>
+
+    <p>Claude Code is designed to be <strong>safe by default</strong>:</p>
+
+    <h3>1. Sandbox Execution</h3>
+
+    <p>Bash commands run in a sandbox that:</p>
+    <ul>
+      <li>Limits network access</li>
+      <li>Prevents access to files outside the working directory</li>
+      <li>Blocks dangerous commands (rm -rf /, etc.)</li>
+    </ul>
+
+    <h3>2. Prompt Injection Defense</h3>
+
+    <p>Claude Code stays wary of <strong>prompt injection</strong> from external sources:</p>
+    <ul>
+      <li>Tool outputs are sanitised</li>
+      <li>File contents are marked untrusted</li>
+      <li>The user gets a warning when suspicious content turns up</li>
+    </ul>
+
+    <h3>3. Git Safety</h3>
+
+    <p>There are safeguards around Git operations:</p>
+    <ul>
+      <li>No force push to main/master without asking</li>
+      <li>No reset --hard without a warning</li>
+      <li>Commit messages must carry Co-Authored-By</li>
+    </ul>
+
+    <hr>
+
+        <h2 id="en-model-routing">Model Routing</h2>
+
+    <p>Claude Code picks its model to suit the task:</p>
+
+    <table>
+      <thead><tr><th>Model</th><th>Use case</th><th>Trade-off</th></tr></thead>
+      <tbody>
+        <tr><td><strong>Opus</strong></td><td>Complex reasoning, architecture</td><td>Slow, expensive</td></tr>
+        <tr><td><strong>Sonnet</strong></td><td>General coding, default</td><td>Balanced</td></tr>
+        <tr><td><strong>Haiku</strong></td><td>Simple tasks, sub-agents</td><td>Fast, cheap</td></tr>
+      </tbody>
+    </table>
+
+    <p>The user can override that with the <code>/model</code> command, or set it in settings.</p>
+
+    <hr>
+
+        <h2 id="en-hooks-system">Hooks System</h2>
+
+    <p>Claude Code carries <strong>hooks</strong> for injecting custom logic:</p>
+
+    <pre><code># .claude/settings.json
+{
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Bash",
+        "command": "echo 'Running: $TOOL_INPUT' >> ~/.claude/bash.log"
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "Edit",
+        "command": "prettier --write $FILE_PATH"
+      }
+    ]
+  }
+}</code></pre>
+
+    <p>The hook types supported:</p>
+    <ul>
+      <li><strong>PreToolUse</strong> - before a tool runs</li>
+      <li><strong>PostToolUse</strong> - after a tool runs</li>
+      <li><strong>Notification</strong> - event notifications</li>
+    </ul>
+
+    <hr>
+
+        <h2 id="en-summary">Summary: Lessons Learned</h2>
+
+    <p>From studying the Claude Code architecture, here is what we take away:</p>
+
+    <div class="component-grid">
+      <div class="component-card">
+        <div class="component-card__icon">Loop</div>
+        <div class="component-card__name">Agent Loop Pattern</div>
+        <div class="component-card__desc">Think -> Act -> Observe -> Repeat</div>
+      </div>
+      <div class="component-card">
+        <div class="component-card__icon">Tool</div>
+        <div class="component-card__name">Tool Abstraction</div>
+        <div class="component-card__desc">Capability = Tool definitions</div>
+      </div>
+      <div class="component-card">
+        <div class="component-card__icon">Context</div>
+        <div class="component-card__name">Context Management</div>
+        <div class="component-card__desc">Persistent + Dynamic + Compaction</div>
+      </div>
+      <div class="component-card">
+        <div class="component-card__icon">Safety</div>
+        <div class="component-card__name">Safety by Design</div>
+        <div class="component-card__desc">Permissions + Sandbox + Confirmation</div>
+      </div>
+    </div>
+
+    <blockquote>
+      <strong>Key takeaway:</strong> building an AI agent that does real work means thinking about <strong>tool design, context management, and safety</strong> — not just prompt engineering
+    </blockquote>
+
+    </div>
+
+<p class="post-series-footer">Part of the AI Developer Tools Series</p>
 
   </article>
 

@@ -257,6 +257,34 @@
       ::view-transition-old(*),
       ::view-transition-new(*) { animation: none !important; }
     }
+
+    /* ── LANGUAGE SWITCH — pure CSS, zero JavaScript (INV-38) ──
+       One visually-hidden checkbox as a direct child of body, BEFORE the main landmark,
+       so `#langSwitch:checked ~ main …` reaches every content block. The two
+       tracks are paired blocks: .l-th (default) and .l-en (hidden until
+       checked; display:revert restores block for divs, inline for spans).
+       Naming stays clear of INV-12's menu-token regex (hamburger|burger|
+       nav__toggle|nav-toggle|navtoggle|menu-toggle|menu__toggle) — verified.
+       No JS also means no persistence across posts; each post opens in Thai. */
+    .lang-switch-box { position: absolute; left: -9999px; }
+    .l-en { display: none; }
+    #langSwitch:checked ~ main .l-en { display: revert; }
+    #langSwitch:checked ~ main .l-th { display: none; }
+    .lang-switch {
+      display: inline-flex; align-items: center; gap: 0.55rem;
+      margin-top: 1.4rem; padding: 0.4rem 1.1rem; border-radius: 50px;
+      background: rgba(255,255,255,0.85); border: 1px solid rgba(255,255,255,0.4);
+      cursor: pointer; font-size: 0.85rem; user-select: none;
+    }
+    .lang-switch span { color: var(--slate-light); font-weight: 600; transition: color 0.2s; }
+    .lang-switch .lang-sep { color: var(--gray); font-weight: 400; }
+    .lang-switch .lang-th { color: var(--navy); font-weight: 800; }
+    #langSwitch:checked ~ main .lang-switch .lang-th { color: var(--slate-light); font-weight: 600; }
+    #langSwitch:checked ~ main .lang-switch .lang-en { color: var(--navy); font-weight: 800; }
+    .lang-switch:hover { border-color: #fff; }
+    #langSwitch:focus-visible ~ main .lang-switch {
+      outline: 2px solid var(--focus); outline-offset: 3px;
+    }
   </style>
   <!-- social -->
   <link rel="canonical" href="https://anirach.com/blog/openclaw-memory-architecture.html">
@@ -264,6 +292,7 @@
   <meta property="og:url" content="https://anirach.com/blog/openclaw-memory-architecture.html">
   <meta property="og:site_name" content="Anirach Mingkhwan">
   <meta property="og:locale" content="th_TH">
+  <meta property="og:locale:alternate" content="en_US">
   <meta property="article:published_time" content="2026-03-20">
   <meta property="article:author" content="https://anirach.com/">
   <meta property="og:title" content="OpenClaw Memory Architecture">
@@ -294,13 +323,17 @@
     "datePublished": "2026-03-20",
     "dateModified": "2026-08-26",
     "image": "https://anirach.com/images/openclaw-memory-architecture-og.jpg",
-    "inLanguage": "th",
+    "inLanguage": [
+      "th",
+      "en"
+    ],
     "mainEntityOfPage": "https://anirach.com/blog/openclaw-memory-architecture.html"
   }
   </script>
 </head>
 <body>
 <a href="#main" class="skip-link">Skip to content</a>
+<input type="checkbox" id="langSwitch" class="lang-switch-box" aria-label="Switch language: Thai / English">
   <nav class="blog-nav">
     <div class="blog-nav__inner">
       <a href="../index.html" class="blog-nav__home">Anirach</a>
@@ -309,38 +342,59 @@
     </div>
   </nav>
 
+  <main id="main">
+
   <section class="post-hero">
     <span class="post-hero__tag">OpenClaw</span>
     <span class="post-hero__tag">Memory System</span>
     <span class="post-hero__tag">AI Workflow</span>
-    <h1 class="post-hero__title">OpenClaw Memory Architecture — ออกแบบความจำให้ Agent ทำงานต่อเนื่องแบบมืออาชีพ 🧠</h1>
+    <h1 class="post-hero__title"><span class="l-th">OpenClaw Memory Architecture — ออกแบบความจำให้ Agent ทำงานต่อเนื่องแบบมืออาชีพ 🧠</span><span class="l-en" lang="en">OpenClaw Memory Architecture — Designing Agent Memory for Professional, Continuous Work 🧠</span></h1>
     <div class="post-hero__meta">Practical System Design • สำหรับงานวิจัยและงานที่ต้องต่อเนื่องทุกวัน
       <span><time datetime="2026-03-20">20 Mar 2026</time> · 9 min read</span></div>
+    <label for="langSwitch" class="lang-switch" title="สลับภาษา · Switch language"><span class="lang-th">ไทย</span><span class="lang-sep">·</span><span class="lang-en" lang="en">English</span></label>
     <div class="post-hero__cover">
       <img src="../images/openclaw-memory-architecture-cover.jpg" alt="Memory Architecture — ออกแบบความจำให้ Agent ทำงานต่อเนื่อง" width="800" height="800" loading="eager" fetchpriority="high" decoding="async">
     </div>
   </section>
 
-  <main id="main"><article class="post-body">
-    <details class="post-toc" open>
-      <summary>In this post &middot; <span lang="th">ในบทความนี้</span></summary>
+<article class="post-body">
+    <details class="post-toc l-th" open>
+      <summary>ในบทความนี้</summary>
       <ol>
-          <li><a href="#why">ทำไม Agent ต้องมี “สถาปัตยกรรมความจำ”?</a></li>
-          <li><a href="#s-2">ภาพรวมโครงสร้าง Memory Architecture</a></li>
-          <li><a href="#layer-1">Layer 1: Identity (Who I am)</a></li>
-          <li><a href="#layer-2">Layer 2: Workspace Config (How I operate)</a></li>
-          <li><a href="#layer-3">Layer 3: Memory System (What I remember)</a></li>
-          <li><a href="#workflow">Workflow ที่ควรใช้จริงในทุก session</a></li>
-          <li><a href="#example">ตัวอย่างโครงสร้างไฟล์ที่แนะนำ</a></li>
-          <li><a href="#s-8">ข้อผิดพลาดที่เจอบ่อย</a></li>
-          <li><a href="#decision-matrix">Decision Matrix: อะไรควรเก็บไฟล์ไหน?</a></li>
-          <li><a href="#governance-boundary">Governance Boundary: Main Session vs Shared Context</a></li>
-          <li><a href="#anti-patterns">Anti-Patterns และวิธีแก้</a></li>
-          <li><a href="#summary">สรุป: ความเก่งของ Agent = ความต่อเนื่อง + governance ของระบบความจำ</a></li>
+          <li><a href="#th-why">ทำไม Agent ต้องมี “สถาปัตยกรรมความจำ”?</a></li>
+          <li><a href="#th-s-2">ภาพรวมโครงสร้าง Memory Architecture</a></li>
+          <li><a href="#th-layer-1">Layer 1: Identity (Who I am)</a></li>
+          <li><a href="#th-layer-2">Layer 2: Workspace Config (How I operate)</a></li>
+          <li><a href="#th-layer-3">Layer 3: Memory System (What I remember)</a></li>
+          <li><a href="#th-workflow">Workflow ที่ควรใช้จริงในทุก session</a></li>
+          <li><a href="#th-example">ตัวอย่างโครงสร้างไฟล์ที่แนะนำ</a></li>
+          <li><a href="#th-s-8">ข้อผิดพลาดที่เจอบ่อย</a></li>
+          <li><a href="#th-decision-matrix">Decision Matrix: อะไรควรเก็บไฟล์ไหน?</a></li>
+          <li><a href="#th-governance-boundary">Governance Boundary: Main Session vs Shared Context</a></li>
+          <li><a href="#th-anti-patterns">Anti-Patterns และวิธีแก้</a></li>
+          <li><a href="#th-summary">สรุป: ความเก่งของ Agent = ความต่อเนื่อง + governance ของระบบความจำ</a></li>
       </ol>
     </details>
+    <details class="post-toc l-en" open>
+      <summary>In this post</summary>
+      <ol>
+          <li><a href="#en-why">Why Does an Agent Need a "Memory Architecture"?</a></li>
+          <li><a href="#en-s-2">The Memory Architecture at a Glance</a></li>
+          <li><a href="#en-layer-1">Layer 1: Identity (Who I am)</a></li>
+          <li><a href="#en-layer-2">Layer 2: Workspace Config (How I operate)</a></li>
+          <li><a href="#en-layer-3">Layer 3: Memory System (What I remember)</a></li>
+          <li><a href="#en-workflow">The Workflow to Use in Every Session</a></li>
+          <li><a href="#en-example">A Recommended File Structure</a></li>
+          <li><a href="#en-s-8">Common Mistakes</a></li>
+          <li><a href="#en-decision-matrix">Decision Matrix: What Belongs in Which File?</a></li>
+          <li><a href="#en-governance-boundary">Governance Boundary: Main Session vs Shared Context</a></li>
+          <li><a href="#en-anti-patterns">Anti-Patterns and How to Fix Them</a></li>
+          <li><a href="#en-summary">Conclusion: A Capable Agent = Continuity + Governance of Its Memory System</a></li>
+      </ol>
+    </details>
+    <div class="l-th">
 
-    <h2 id="why">ทำไม Agent ต้องมี “สถาปัตยกรรมความจำ”?</h2>
+    <h2 id="th-why">ทำไม Agent ต้องมี “สถาปัตยกรรมความจำ”?</h2>
     <p>ปัญหาคลาสสิกของ AI assistant คือเก่งใน session นั้น ๆ แต่พอ context reset แล้วเหมือนเริ่มใหม่หมด ทำให้เกิดงานซ้ำ ตัดสินใจไม่ต่อเนื่อง และเสียเวลาในการ recap ทุกครั้ง</p>
     <p>แนวทางที่เวิร์กจริงคือแยกความจำเป็นชั้น (layer) พร้อมนิยามหน้าที่ชัดเจนว่าไฟล์ไหนใช้เพื่ออะไร และควรอัปเดตเมื่อไร</p>
 
@@ -349,7 +403,7 @@
       <p style="margin:0">ถ้าเรื่องไหนสำคัญและต้องจำข้าม session ให้เขียนลงไฟล์เสมอ — <strong>Text &gt; Brain</strong></p>
     </div>
 
-    <h2 id="s-2">ภาพรวมโครงสร้าง Memory Architecture</h2>
+    <h2 id="th-s-2">ภาพรวมโครงสร้าง Memory Architecture</h2>
     <p>โครงนี้ทำงานดีเพราะเริ่มจาก identity ก่อนเสมอ แล้วค่อยไป config และ memory ทำให้ agent รักษาบุคลิก กติกา และบริบทงานได้พร้อมกัน</p>
 
     <div class="arch-diagram">
@@ -371,7 +425,7 @@
       </div>
     </div>
 
-    <h2 id="layer-1">Layer 1: Identity (Who I am)</h2>
+    <h2 id="th-layer-1">Layer 1: Identity (Who I am)</h2>
     <p>Layer นี้ไม่ใช่เรื่องสวยงาม แต่เป็นแกนของ consistency ในการตอบและการตัดสินใจ</p>
     <ul>
       <li><code>SOUL.md</code> — โทนเสียง ขอบเขต บุคลิก</li>
@@ -380,7 +434,7 @@
     </ul>
     <p>ข้อดีคือแม้ model เปลี่ยนหรือ session restart วิธีคิดหลักยังคงเดิม เพราะ grounded จากไฟล์ก่อนเริ่มงานทุกครั้ง</p>
 
-    <h2 id="layer-2">Layer 2: Workspace Config (How I operate)</h2>
+    <h2 id="th-layer-2">Layer 2: Workspace Config (How I operate)</h2>
     <p>ชั้นนี้คือ operational contract ที่ทำให้ agent ไม่เผลอทำเกินขอบเขต</p>
     <ul>
       <li><code>AGENTS.md</code> — policy การทำงาน privacy firewall กติกา owner-only</li>
@@ -393,7 +447,7 @@
       <p style="margin:0">แยก “policy” ออกจาก “knowledge” ชัด ๆ: policy อยู่ AGENTS.md ส่วนความรู้ operational อยู่ memory files เพื่อให้ update ง่ายและ audit ง่าย</p>
     </div>
 
-    <h2 id="layer-3">Layer 3: Memory System (What I remember)</h2>
+    <h2 id="th-layer-3">Layer 3: Memory System (What I remember)</h2>
     <h3>3.1 Daily Notes = short-term durable log</h3>
     <p>ไฟล์รายวันใน <code>memory/YYYY-MM-DD.md</code> เหมาะสำหรับบันทึกเหตุการณ์ดิบ เช่น แก้ bug อะไร ตัดสินใจอะไร ทดลองอะไรแล้วผลเป็นอย่างไร</p>
 
@@ -403,14 +457,14 @@
     <h3>3.3 Topic Notes = deep reference</h3>
     <p>ไฟล์เฉพาะเรื่อง เช่น <code>infra-setup-notes.md</code>, <code>rag-setup-notes.md</code> ช่วยให้ตอบคำถามเทคนิคเร็วขึ้นโดยไม่ต้องค้นทั้งประวัติ</p>
 
-    <h2 id="workflow">Workflow ที่ควรใช้จริงในทุก session</h2>
+    <h2 id="th-workflow">Workflow ที่ควรใช้จริงในทุก session</h2>
     <p>โฟลว์นี้ทำให้ memory เป็นระบบจริง ไม่ใช่แค่ “หวังว่าจะจำได้”</p>
 
     <div style="margin:2rem 0;text-align:center;">
                 <img class="post-body__wide" src="../images/openclaw-memory-arch.png" alt="OpenClaw Memory Architecture" style="border-radius:12px;box-shadow:0 8px 30px rgba(0,0,0,0.2);" width="2750" height="1375" loading="lazy" decoding="async">
             </div>
 
-    <h2 id="example">ตัวอย่างโครงสร้างไฟล์ที่แนะนำ</h2>
+    <h2 id="th-example">ตัวอย่างโครงสร้างไฟล์ที่แนะนำ</h2>
     <p>ด้านล่างคือตัวอย่างที่ใช้งานได้จริงและขยายต่อได้ง่าย</p>
     <pre><code>workspace/
 ├── SOUL.md
@@ -429,7 +483,7 @@
 
     <p>เหตุผลที่โครงนี้ดีคืออ่านง่าย, แยก concern ชัด, และรองรับทั้งงานรายวันกับงานที่ต้อง maintain ระยะยาว</p>
 
-    <h2 id="s-8">ข้อผิดพลาดที่เจอบ่อย</h2>
+    <h2 id="th-s-8">ข้อผิดพลาดที่เจอบ่อย</h2>
     <ul>
       <li>เก็บทุกอย่างไว้ในไฟล์เดียว ทำให้ค้นยากและเสี่ยง context noise</li>
       <li>ไม่ทบทวน daily notes เป็นระยะ ทำให้ MEMORY.md ไม่เคย evolve</li>
@@ -437,7 +491,7 @@
       <li>ปะปนข้อมูลส่วนตัวจาก main session ไป shared context (ผิดหลัก privacy)</li>
     </ul>
 
-    <h2 id="decision-matrix">Decision Matrix: อะไรควรเก็บไฟล์ไหน?</h2>
+    <h2 id="th-decision-matrix">Decision Matrix: อะไรควรเก็บไฟล์ไหน?</h2>
     <p>จุดตัดสินใจที่สำคัญที่สุดคือ “ข้อมูลนี้มีอายุการใช้งานนานแค่ไหน” และ “ต้องใช้ข้าม session หรือไม่” ถ้าตอบไม่ได้ชัด ให้เริ่มจาก daily note แล้วค่อย promote ขึ้น MEMORY.md ภายหลัง</p>
     <div class="info">
       <div class="info__title">Quick Routing Rules</div>
@@ -451,7 +505,7 @@
       </ul>
     </div>
 
-    <h2 id="governance-boundary">Governance Boundary: Main Session vs Shared Context</h2>
+    <h2 id="th-governance-boundary">Governance Boundary: Main Session vs Shared Context</h2>
     <p>ในงานจริง เรื่องนี้สำคัญกว่าความฉลาดของโมเดล เพราะถ้า boundary ไม่ชัด มีโอกาสเกิด data leakage ทันที</p>
     <div class="arch-diagram">
       <div class="arch-box">
@@ -468,7 +522,7 @@
       </div>
     </div>
 
-    <h2 id="anti-patterns">Anti-Patterns และวิธีแก้</h2>
+    <h2 id="th-anti-patterns">Anti-Patterns และวิธีแก้</h2>
     <h3>1) ใช้ MEMORY.md เป็น log รายวัน</h3>
     <p><strong>ปัญหา:</strong> ไฟล์บวมเร็ว ค้นยาก สัญญาณสำคัญจมหาย<br><strong>แก้:</strong> บันทึกดิบไว้ daily files แล้วทำ weekly curation</p>
 
@@ -481,10 +535,161 @@
     <h3>4) ลืม privacy context boundary</h3>
     <p><strong>ปัญหา:</strong> ข้อมูล private จาก main session หลุดไปในกลุ่ม<br><strong>แก้:</strong> บังคับ contextual gate ก่อนตอบทุกครั้งว่าเป็น DM หรือ shared channel</p>
 
-    <h2 id="summary">สรุป: ความเก่งของ Agent = ความต่อเนื่อง + governance ของระบบความจำ</h2>
+    <h2 id="th-summary">สรุป: ความเก่งของ Agent = ความต่อเนื่อง + governance ของระบบความจำ</h2>
     <p>ถ้าจะทำให้ AI assistant ใช้งานในระดับ production โดยเฉพาะงานวิจัย งานเอกสาร หรือ infra automation ให้คิดแบบ system design ตั้งแต่แรก: แยกชั้นความจำ, กำหนด lifecycle, บังคับ memory promotion, และวาง governance boundary ให้ชัด</p>
     <p>เมื่อทำครบ Agent จะไม่ใช่แค่ “ตอบเก่ง” แต่จะ “ทำงานต่อเนื่องได้จริง ปลอดภัย และ audit ได้” เหมือนทีมงานมืออาชีพที่มีทั้งสมุดบันทึกและระเบียบการทำงานชัดเจน</p>
-  </article></main>
+  
+    </div>
+    <div class="l-en" lang="en">
+
+        <h2 id="en-why">Why Does an Agent Need a "Memory Architecture"?</h2>
+    <p>The classic problem with an AI assistant is that it is brilliant inside one session, and then the context resets and it starts from zero. The result is repeated work, decisions that do not build on one another, and time lost recapping everything all over again.</p>
+    <p>The approach that actually works is to separate memory into layers, each with a clear job: which file is for what, and when it should be updated.</p>
+
+    <div class="info">
+      <div class="info__title">Core Principle</div>
+      <p style="margin:0">If something matters and has to survive across sessions, write it to a file — always. <strong>Text &gt; Brain</strong></p>
+    </div>
+
+        <h2 id="en-s-2">The Memory Architecture at a Glance</h2>
+    <p>This structure works because it always starts from identity, then moves on to config and memory. That order lets the agent hold on to its personality, its rules, and the context of the work all at the same time.</p>
+
+    <div class="arch-diagram">
+      <div class="arch-box">
+        <span class="arch-layer">Session Start</span>
+        <p><code>SOUL.md → USER.md → memory/today.md (+yesterday) → MEMORY.md (main session only)</code></p>
+      </div>
+      <div class="arch-box">
+        <span class="arch-layer">Layer 1</span>
+        <p><strong>Identity Files:</strong> define "who I am" and "who I am helping"</p>
+      </div>
+      <div class="arch-box">
+        <span class="arch-layer">Layer 2</span>
+        <p><strong>Workspace Config:</strong> operating rules, safety, and periodic tasks</p>
+      </div>
+      <div class="arch-box">
+        <span class="arch-layer">Layer 3</span>
+        <p><strong>Memory System:</strong> Daily logs + Curated long-term memory + Topic notes</p>
+      </div>
+    </div>
+
+        <h2 id="en-layer-1">Layer 1: Identity (Who I am)</h2>
+    <p>This layer is not decoration. It is the backbone of consistency in how the agent answers and how it decides.</p>
+    <ul>
+      <li><code>SOUL.md</code> — tone of voice, boundaries, personality</li>
+      <li><code>USER.md</code> — the owner's preferences and working style</li>
+      <li><code>IDENTITY.md</code> — the agent's name and role</li>
+    </ul>
+    <p>The benefit is that even when the model changes or the session restarts, the core way of thinking stays the same, because it is grounded in files before any work begins.</p>
+
+        <h2 id="en-layer-2">Layer 2: Workspace Config (How I operate)</h2>
+    <p>This layer is the operational contract that keeps the agent from wandering past its boundaries.</p>
+    <ul>
+      <li><code>AGENTS.md</code> — working policy, privacy firewall, owner-only rules</li>
+      <li><code>TOOLS.md</code> — details of the infra/local stack that get reused constantly</li>
+      <li><code>HEARTBEAT.md</code> — the periodic checklist (no task means no API call)</li>
+    </ul>
+
+    <div class="info">
+      <div class="info__title">Practical Tip</div>
+      <p style="margin:0">Keep "policy" cleanly separated from "knowledge": policy lives in AGENTS.md, operational knowledge lives in the memory files. That makes both easy to update and easy to audit.</p>
+    </div>
+
+        <h2 id="en-layer-3">Layer 3: Memory System (What I remember)</h2>
+    <h3>3.1 Daily Notes = short-term durable log</h3>
+    <p>The daily files in <code>memory/YYYY-MM-DD.md</code> are the right place for raw events: which bug was fixed, which decision was made, what was tried and what came of it.</p>
+
+    <h3>3.2 MEMORY.md = long-term curated memory</h3>
+    <p>This file should not be a dump of everything. It holds what "deserves to last" — preferences, decisions, lessons learned, recurring pitfalls.</p>
+
+    <h3>3.3 Topic Notes = deep reference</h3>
+    <p>Subject-specific files such as <code>infra-setup-notes.md</code> and <code>rag-setup-notes.md</code> make technical questions faster to answer without digging through the whole history.</p>
+
+        <h2 id="en-workflow">The Workflow to Use in Every Session</h2>
+    <p>This flow is what turns memory into a real system instead of just "hoping it remembers".</p>
+
+    <div style="margin:2rem 0;text-align:center;">
+                <img class="post-body__wide" src="../images/openclaw-memory-arch.png" alt="OpenClaw Memory Architecture" style="border-radius:12px;box-shadow:0 8px 30px rgba(0,0,0,0.2);" width="2750" height="1375" loading="lazy" decoding="async">
+            </div>
+
+        <h2 id="en-example">A Recommended File Structure</h2>
+    <p>Below is a layout that works in practice and is easy to extend.</p>
+    <pre><code>workspace/
+├── SOUL.md
+├── USER.md
+├── IDENTITY.md
+├── AGENTS.md
+├── TOOLS.md
+├── HEARTBEAT.md
+├── MEMORY.md
+└── memory/
+    ├── 2026-03-20.md
+    ├── infra-setup-notes.md
+    ├── rag-setup-notes.md
+    ├── knowledge-graph-setup.md
+    └── system-hardening-notes.md</code></pre>
+
+    <p>This structure is good because it is easy to read, it separates concerns cleanly, and it serves both the day-to-day work and the things that have to be maintained for the long haul.</p>
+
+        <h2 id="en-s-8">Common Mistakes</h2>
+    <ul>
+      <li>Keeping everything in a single file, which makes searching hard and invites context noise</li>
+      <li>Never revisiting the daily notes, so MEMORY.md never evolves</li>
+      <li>Assuming "keeping it in my head is enough", which breaks the moment the session resets</li>
+      <li>Letting personal data from the main session bleed into shared context (a privacy violation)</li>
+    </ul>
+
+        <h2 id="en-decision-matrix">Decision Matrix: What Belongs in Which File?</h2>
+    <p>The most important decision points are "how long does this information stay useful?" and "does it need to cross sessions?" If the answer is not clear, start with a daily note and promote it to MEMORY.md later.</p>
+    <div class="info">
+      <div class="info__title">Quick Routing Rules</div>
+      <ul>
+        <li><strong>Identity/voice boundary</strong> → <code>SOUL.md</code></li>
+        <li><strong>Stable user preferences</strong> → <code>USER.md</code></li>
+        <li><strong>Operating and safety rules</strong> → <code>AGENTS.md</code></li>
+        <li><strong>Raw day-to-day events</strong> → <code>memory/YYYY-MM-DD.md</code></li>
+        <li><strong>Long-term lessons and decisions</strong> → <code>MEMORY.md</code></li>
+        <li><strong>Deep domain-specific knowledge</strong> → <code>memory/*-notes.md</code></li>
+      </ul>
+    </div>
+
+        <h2 id="en-governance-boundary">Governance Boundary: Main Session vs Shared Context</h2>
+    <p>In real work this matters more than how clever the model is, because an unclear boundary means data leakage is one answer away.</p>
+    <div class="arch-diagram">
+      <div class="arch-box">
+        <span class="arch-layer">Main Session (Private)</span>
+        <p>Full read access to <code>MEMORY.md</code>, used for personalization while working with the system's owner.</p>
+      </div>
+      <div class="arch-box">
+        <span class="arch-layer">Shared / Group Context</span>
+        <p>Never pull in personal long-term memory unless it is genuinely needed. Answer from the current context only.</p>
+      </div>
+      <div class="arch-box">
+        <span class="arch-layer">Safety Rule</span>
+        <p>When it is not clear whether something should be disclosed, default to <strong>not disclosing it</strong> and ask for confirmation first, every time.</p>
+      </div>
+    </div>
+
+        <h2 id="en-anti-patterns">Anti-Patterns and How to Fix Them</h2>
+    <h3>1) Using MEMORY.md as a daily log</h3>
+    <p><strong>Problem:</strong> the file bloats fast, searching becomes hard, and the important signals sink out of sight<br><strong>Fix:</strong> keep the raw record in the daily files and curate weekly</p>
+
+    <h3>2) Mixing policy in with operational notes</h3>
+    <p><strong>Problem:</strong> a config edit inadvertently destroys a safety rule<br><strong>Fix:</strong> policy lives in <code>AGENTS.md</code> and nowhere else; operational technique goes into <code>TOOLS.md</code>/<code>memory/*-notes.md</code></p>
+
+    <h3>3) Having no promotion cycle</h3>
+    <p><strong>Problem:</strong> plenty of daily logs, but no long-term intelligence ever forms<br><strong>Fix:</strong> set a review cycle every 2-3 days and promote only what will affect future decisions</p>
+
+    <h3>4) Forgetting the privacy context boundary</h3>
+    <p><strong>Problem:</strong> private information from the main session leaks into a group<br><strong>Fix:</strong> enforce a contextual gate before every answer — is this a DM or a shared channel?</p>
+
+        <h2 id="en-summary">Conclusion: A Capable Agent = Continuity + Governance of Its Memory System</h2>
+    <p>If you want an AI assistant that holds up in production — especially for research, document work, or infra automation — think like a system designer from the start: separate the memory layers, define the lifecycle, enforce memory promotion, and draw the governance boundary clearly.</p>
+    <p>Do all of that and the agent stops being merely "good at answering" and becomes something that "genuinely works continuously, safely, and auditably" — like a professional colleague who keeps both a notebook and a clear set of working procedures.</p>
+
+    </div>
+
+</article></main>
 
   <footer class="blog-footer">
     <nav class="blog-footer__nav" aria-label="Site">

@@ -448,6 +448,34 @@
       ::view-transition-old(*),
       ::view-transition-new(*) { animation: none !important; }
     }
+
+    /* ── LANGUAGE SWITCH — pure CSS, zero JavaScript (INV-38) ──
+       One visually-hidden checkbox as a direct child of body, BEFORE the main landmark,
+       so `#langSwitch:checked ~ main …` reaches every content block. The two
+       tracks are paired blocks: .l-th (default) and .l-en (hidden until
+       checked; display:revert restores block for divs, inline for spans).
+       Naming stays clear of INV-12's menu-token regex (hamburger|burger|
+       nav__toggle|nav-toggle|navtoggle|menu-toggle|menu__toggle) — verified.
+       No JS also means no persistence across posts; each post opens in Thai. */
+    .lang-switch-box { position: absolute; left: -9999px; }
+    .l-en { display: none; }
+    #langSwitch:checked ~ main .l-en { display: revert; }
+    #langSwitch:checked ~ main .l-th { display: none; }
+    .lang-switch {
+      display: inline-flex; align-items: center; gap: 0.55rem;
+      margin-top: 1.4rem; padding: 0.4rem 1.1rem; border-radius: 50px;
+      background: rgba(255,255,255,0.85); border: 1px solid rgba(255,255,255,0.4);
+      cursor: pointer; font-size: 0.85rem; user-select: none;
+    }
+    .lang-switch span { color: var(--slate-light); font-weight: 600; transition: color 0.2s; }
+    .lang-switch .lang-sep { color: var(--gray); font-weight: 400; }
+    .lang-switch .lang-th { color: var(--navy); font-weight: 800; }
+    #langSwitch:checked ~ main .lang-switch .lang-th { color: var(--slate-light); font-weight: 600; }
+    #langSwitch:checked ~ main .lang-switch .lang-en { color: var(--navy); font-weight: 800; }
+    .lang-switch:hover { border-color: #fff; }
+    #langSwitch:focus-visible ~ main .lang-switch {
+      outline: 2px solid var(--focus); outline-offset: 3px;
+    }
   </style>
     <!-- social -->
     <link rel="canonical" href="https://anirach.com/blog/openclaw-production.html">
@@ -455,6 +483,7 @@
     <meta property="og:url" content="https://anirach.com/blog/openclaw-production.html">
     <meta property="og:site_name" content="Anirach Mingkhwan">
     <meta property="og:locale" content="th_TH">
+    <meta property="og:locale:alternate" content="en_US">
     <meta property="article:published_time" content="2026-03-10">
     <meta property="article:author" content="https://anirach.com/">
     <meta property="og:title" content="Production Deployment &amp; Scaling — จาก Prototype สู่ระบบจริง">
@@ -485,13 +514,17 @@
     "datePublished": "2026-03-10",
     "dateModified": "2026-08-26",
     "image": "https://anirach.com/images/openclaw-production-og.jpg",
-    "inLanguage": "th",
+    "inLanguage": [
+      "th",
+      "en"
+    ],
     "mainEntityOfPage": "https://anirach.com/blog/openclaw-production.html"
   }
   </script>
 </head>
 <body>
 <a href="#main" class="skip-link">Skip to content</a>
+<input type="checkbox" id="langSwitch" class="lang-switch-box" aria-label="Switch language: Thai / English">
     <!-- NAV -->
     <nav class="blog-nav">
       <div class="blog-nav__inner">
@@ -507,13 +540,14 @@
       <div class="post-hero__tags">
         <span class="post-hero__tag">OpenClaw for Organizations 2026 • Post #7 (Final)</span>
       </div>
-      <h1 class="post-hero__title">Production Deployment &amp; Scaling</h1>
-      <p class="post-hero__sub">จาก Prototype สู่ระบบจริง — การ deploy OpenClaw บน production แบบมืออาชีพ</p>
+      <h1 class="post-hero__title"><span class="l-th">Production Deployment &amp; Scaling</span><span class="l-en" lang="en">Production Deployment &amp; Scaling</span></h1>
+      <p class="post-hero__sub"><span class="l-th">จาก Prototype สู่ระบบจริง — การ deploy OpenClaw บน production แบบมืออาชีพ</span><span class="l-en" lang="en">From prototype to the real thing — deploying OpenClaw in production, professionally</span></p>
       <div class="post-hero__meta">
         <span>By <strong><span><span>Anirach Mingkhwan</span></span></strong></span>
         <span><time datetime="2026-03-10">10 Mar 2026</time></span>
       
       <span><time datetime="2026-03-10">10 Mar 2026</time> · 17 min read</span></div>
+      <label for="langSwitch" class="lang-switch" title="สลับภาษา · Switch language"><span class="lang-th">ไทย</span><span class="lang-sep">·</span><span class="lang-en" lang="en">English</span></label>
       <div class="post-hero__cover">
         <img src="../images/openclaw-production-cover.jpg" alt="Production — จาก Prototype สู่ระบบจริง" width="800" height="800" loading="eager" fetchpriority="high" decoding="async">
       </div>
@@ -521,25 +555,43 @@
 
     <!-- Main Content -->
     <article class="post-body">
-    <details class="post-toc" open>
-      <summary>In this post &middot; <span lang="th">ในบทความนี้</span></summary>
+    <details class="post-toc l-th" open>
+      <summary>ในบทความนี้</summary>
       <ol>
-          <li><a href="#s-1">1. จาก Laptop Prototype สู่ Production System</a></li>
-          <li><a href="#choosing-your-infrastructure">2. Choosing Your Infrastructure</a></li>
-          <li><a href="#docker-deployment-architecture">3. Docker Deployment Architecture</a></li>
-          <li><a href="#installation-setup-on-vps">4. Installation &amp; Setup on VPS</a></li>
-          <li><a href="#multi-user-multi-channel-scaling">5. Multi-User &amp; Multi-Channel Scaling</a></li>
-          <li><a href="#monitoring-cost-tracking">6. Monitoring &amp; Cost Tracking</a></li>
-          <li><a href="#backup-strategies">7. Backup Strategies</a></li>
-          <li><a href="#upgrade-workflow">8. Upgrade Workflow</a></li>
-          <li><a href="#security-hardening-for-production">9. Security Hardening for Production</a></li>
-          <li><a href="#performance-optimization">10. Performance Optimization</a></li>
-          <li><a href="#lessons-from-running-45-agents">11. Lessons from Running 45 Agents</a></li>
-          <li><a href="#key-takeaways">12. Key Takeaways</a></li>
+          <li><a href="#th-s-1">1. จาก Laptop Prototype สู่ Production System</a></li>
+          <li><a href="#th-choosing-your-infrastructure">2. Choosing Your Infrastructure</a></li>
+          <li><a href="#th-docker-deployment-architecture">3. Docker Deployment Architecture</a></li>
+          <li><a href="#th-installation-setup-on-vps">4. Installation &amp; Setup on VPS</a></li>
+          <li><a href="#th-multi-user-multi-channel-scaling">5. Multi-User &amp; Multi-Channel Scaling</a></li>
+          <li><a href="#th-monitoring-cost-tracking">6. Monitoring &amp; Cost Tracking</a></li>
+          <li><a href="#th-backup-strategies">7. Backup Strategies</a></li>
+          <li><a href="#th-upgrade-workflow">8. Upgrade Workflow</a></li>
+          <li><a href="#th-security-hardening-for-production">9. Security Hardening for Production</a></li>
+          <li><a href="#th-performance-optimization">10. Performance Optimization</a></li>
+          <li><a href="#th-lessons-from-running-45-agents">11. Lessons from Running 45 Agents</a></li>
+          <li><a href="#th-key-takeaways">12. Key Takeaways</a></li>
       </ol>
     </details>
+    <details class="post-toc l-en" open>
+      <summary>In this post</summary>
+      <ol>
+          <li><a href="#en-s-1">1. From Laptop Prototype to Production System</a></li>
+          <li><a href="#en-choosing-your-infrastructure">2. Choosing Your Infrastructure</a></li>
+          <li><a href="#en-docker-deployment-architecture">3. Docker Deployment Architecture</a></li>
+          <li><a href="#en-installation-setup-on-vps">4. Installation &amp; Setup on VPS</a></li>
+          <li><a href="#en-multi-user-multi-channel-scaling">5. Multi-User &amp; Multi-Channel Scaling</a></li>
+          <li><a href="#en-monitoring-cost-tracking">6. Monitoring &amp; Cost Tracking</a></li>
+          <li><a href="#en-backup-strategies">7. Backup Strategies</a></li>
+          <li><a href="#en-upgrade-workflow">8. Upgrade Workflow</a></li>
+          <li><a href="#en-security-hardening-for-production">9. Security Hardening for Production</a></li>
+          <li><a href="#en-performance-optimization">10. Performance Optimization</a></li>
+          <li><a href="#en-lessons-from-running-45-agents">11. Lessons from Running 45 Agents</a></li>
+          <li><a href="#en-key-takeaways">12. Key Takeaways</a></li>
+      </ol>
+    </details>
+    <div class="l-th">
 
-                <h2 id="s-1">1. จาก Laptop Prototype สู่ Production System</h2>
+                <h2 id="th-s-1">1. จาก Laptop Prototype สู่ Production System</h2>
                 
                 <p>การเปลี่ยนจาก AI agent ที่รันบน laptop ส่วนตัวไปสู่ระบบ production ที่รัน 24/7 นั้นไม่ใช่แค่การ copy-paste code ไปยัง server ใหม่ — มันเป็นการเปลี่ยนแปลงครั้งใหญ่ที่ต้องคิดใหม่ทั้งหมดเรื่อง reliability, security, scalability และ cost management</p>
 
@@ -555,7 +607,7 @@
 
                 <p>ในบทความนี้เราจะมาดูทุกด้านของการ deploy OpenClaw บน production จาก infrastructure selection ไปจนถึง lessons learned จากการรัน 45 agents พร้อมกัน</p>
 
-                <h2 id="choosing-your-infrastructure">2. Choosing Your Infrastructure</h2>
+                <h2 id="th-choosing-your-infrastructure">2. Choosing Your Infrastructure</h2>
 
                 <p>การเลือก infrastructure เป็นจุดเริ่มต้นสำคัญ สำหรับ OpenClaw คุณต้องมี server ที่มี CPU และ RAM เพียงพอสำหรับการรัน Node.js applications หลาย ๆ ตัวพร้อม ๆ กัน</p>
 
@@ -640,7 +692,7 @@
                     <strong>Why Hetzner?</strong> สำหรับ OpenClaw deployment, Hetzner ให้ performance-to-price ratio ที่ดีที่สุด โดยเฉพาะ CPX และ CCX series ที่มี CPU power เพียงพอสำหรับ concurrent agent processing
                 </div>
 
-                <h2 id="docker-deployment-architecture">3. Docker Deployment Architecture</h2>
+                <h2 id="th-docker-deployment-architecture">3. Docker Deployment Architecture</h2>
 
                 <p>OpenClaw ถูกออกแบบมาให้รันบน Docker containers ตั้งแต่แรก ซึ่งทำให้การ deploy บน production เป็นเรื่องง่าย แต่คุณต้องเข้าใจ architecture ของระบบก่อน:</p>
 
@@ -745,7 +797,7 @@ Response:
   }
 }</code></pre>
 
-                <h2 id="installation-setup-on-vps">4. Installation & Setup on VPS</h2>
+                <h2 id="th-installation-setup-on-vps">4. Installation & Setup on VPS</h2>
 
                 <p>นี่คือ step-by-step process สำหรับการติดตั้ง OpenClaw บน production VPS:</p>
 
@@ -842,7 +894,7 @@ sudo certbot --nginx -d your-domain.com
 sudo crontab -e
 # Add: 0 12 * * * /usr/bin/certbot renew --quiet</code></pre>
 
-                <h2 id="multi-user-multi-channel-scaling">5. Multi-User & Multi-Channel Scaling</h2>
+                <h2 id="th-multi-user-multi-channel-scaling">5. Multi-User & Multi-Channel Scaling</h2>
 
                 <p>การรัน OpenClaw สำหรับ users หลายคนต้องการการวางแผนเรื่อง agent isolation และ resource sharing อย่างรอบคอบ</p>
 
@@ -902,7 +954,7 @@ sudo crontab -e
 └── signal/
     └── groups/</code></pre>
 
-                <h2 id="monitoring-cost-tracking">6. Monitoring & Cost Tracking</h2>
+                <h2 id="th-monitoring-cost-tracking">6. Monitoring & Cost Tracking</h2>
 
                 <p>การ monitor OpenClaw บน production ไม่ใช่แค่ดู uptime แต่ต้องติดตาม API costs, resource usage และ performance metrics</p>
 
@@ -1012,7 +1064,7 @@ services:
     ports:
       - "9100:9100"</code></pre>
 
-                <h2 id="backup-strategies">7. Backup Strategies</h2>
+                <h2 id="th-backup-strategies">7. Backup Strategies</h2>
 
                 <p>การ backup OpenClaw system ต้องครอบคลุมทั้ง application data, user workspaces, agent memory และ configuration</p>
 
@@ -1077,7 +1129,7 @@ git push origin main</code></pre>
                     <strong>Security Warning:</strong> อย่า commit API keys หรือ sensitive data ลง git repository โดยตรง ใช้ .gitignore และ environment variables แทน
                 </div>
 
-                <h2 id="upgrade-workflow">8. Upgrade Workflow</h2>
+                <h2 id="th-upgrade-workflow">8. Upgrade Workflow</h2>
 
                 <p>การ upgrade OpenClaw บน production ต้องทำอย่างระมัดระวัง เพื่อหลีกเลี่ยง downtime และ data loss</p>
 
@@ -1144,7 +1196,7 @@ tar -xzf $LATEST_BACKUP/workspace.tar.gz -C /
 # 4. Restart service
 sudo systemctl start openclaw</code></pre>
 
-                <h2 id="security-hardening-for-production">9. Security Hardening for Production</h2>
+                <h2 id="th-security-hardening-for-production">9. Security Hardening for Production</h2>
 
                 <p>OpenClaw บน production เป็น high-value target เพราะมีข้อมูล sensitive และ API access หลายระบบ การ harden security จึงเป็นสิ่งจำเป็น</p>
 
@@ -1224,7 +1276,7 @@ Environment=ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}
 # /opt/openclaw/scripts/rotate-keys.sh
 # Automated key rotation script</code></pre>
 
-                <h2 id="performance-optimization">10. Performance Optimization</h2>
+                <h2 id="th-performance-optimization">10. Performance Optimization</h2>
 
                 <p>การ optimize performance ของ OpenClaw เป็นการหา balance ระหว่าง response time, cost และ resource utilization</p>
 
@@ -1317,7 +1369,7 @@ async function getCachedResponse(query, model) {
   return response;
 }</code></pre>
 
-                <h2 id="lessons-from-running-45-agents">11. Lessons from Running 45 Agents</h2>
+                <h2 id="th-lessons-from-running-45-agents">11. Lessons from Running 45 Agents</h2>
 
                 <p>หลังจากรัน OpenClaw บน production กับ 45 agents พร้อมกันมา 6 เดือน นี่คือ insights สำคัญที่ได้เรียนรู้:</p>
 
@@ -1363,7 +1415,7 @@ async function getCachedResponse(query, model) {
                     <strong>Pro Tip:</strong> เริ่มต้นด้วย 10-15 agents ก่อน scaling ขึ้น คุณจะเจอปัญหาหลาย ๆ อย่างที่ไม่ได้คิดไว้ในระดับ small scale
                 </div>
 
-                <h2 id="key-takeaways">12. Key Takeaways</h2>
+                <h2 id="th-key-takeaways">12. Key Takeaways</h2>
 
                 <div class="key-takeaways">
                     <h3>🎯 สิ่งสำคัญที่ต้องจำ</h3>
@@ -1385,8 +1437,859 @@ async function getCachedResponse(query, model) {
 
                 <p>หากคุณยังไม่ได้อ่านบทความก่อนหน้า แนะนำให้อ่านตามลำดับเพื่อให้ได้ understanding ที่สมบูรณ์:</p>
             
-        <nav aria-label="OpenClaw for Organizations">
-        <div class="series-nav">
+    </div>
+    <div class="l-en" lang="en">
+
+        <h2 id="en-s-1">1. From Laptop Prototype to Production System</h2>
+
+    <p>Moving an AI agent off your own laptop and onto a production system that runs 24/7 is not a matter of copy-pasting code onto a new server — it is a wholesale change that makes you rethink reliability, security, scalability and cost management from the ground up.</p>
+
+    <p>Once your OpenClaw agent starts gathering users and has to run dependably, you meet a new class of challenge that never came up in the prototype:</p>
+
+    <ul>
+        <li><strong>Uptime requirements:</strong> the agent has to run continuously, not switch on and off with your laptop</li>
+        <li><strong>Multi-user scaling:</strong> managing multiple agents for many different users</li>
+        <li><strong>Resource management:</strong> memory, CPU and API cost, all growing with the user count</li>
+        <li><strong>Data persistence:</strong> backup, recovery and workspace management</li>
+        <li><strong>Security hardening:</strong> keeping out unauthorized access and data breaches</li>
+    </ul>
+
+    <p>In this post we will look at every side of deploying OpenClaw in production, from infrastructure selection through to the lessons learned from running 45 agents at once.</p>
+
+        <h2 id="en-choosing-your-infrastructure">2. Choosing Your Infrastructure</h2>
+
+    <p>Choosing your infrastructure is an important first move. For OpenClaw you need a server with enough CPU and RAM to run several Node.js applications side by side.</p>
+
+    <h3>VPS Provider Comparison</h3>
+
+    <div class="table-wrapper">
+        <table>
+            <thead>
+                <tr>
+                    <th>Provider</th>
+                    <th>Instance Type</th>
+                    <th>vCPU</th>
+                    <th>RAM</th>
+                    <th>Storage</th>
+                    <th>Price/Month</th>
+                    <th>Network</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td><strong>Hetzner</strong></td>
+                    <td>CPX41</td>
+                    <td>8 vCPU</td>
+                    <td>16 GB</td>
+                    <td>240 GB SSD</td>
+                    <td>$29</td>
+                    <td>20 TB</td>
+                </tr>
+                <tr>
+                    <td><strong>DigitalOcean</strong></td>
+                    <td>Premium 8GB</td>
+                    <td>4 vCPU</td>
+                    <td>8 GB</td>
+                    <td>160 GB SSD</td>
+                    <td>$48</td>
+                    <td>5 TB</td>
+                </tr>
+                <tr>
+                    <td><strong>AWS Lightsail</strong></td>
+                    <td>$40 Plan</td>
+                    <td>2 vCPU</td>
+                    <td>8 GB</td>
+                    <td>160 GB SSD</td>
+                    <td>$40</td>
+                    <td>4 TB</td>
+                </tr>
+                <tr>
+                    <td><strong>Hetzner</strong></td>
+                    <td>CCX33</td>
+                    <td>8 vCPU (Dedicated)</td>
+                    <td>32 GB</td>
+                    <td>240 GB SSD</td>
+                    <td>$49</td>
+                    <td>20 TB</td>
+                </tr>
+                <tr>
+                    <td><strong>Hostinger</strong></td>
+                    <td>KVM 4</td>
+                    <td>4 vCPU</td>
+                    <td>16 GB</td>
+                    <td>200 GB NVMe</td>
+                    <td>$16</td>
+                    <td>8 TB</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <h3>Recommended Specifications</h3>
+
+    <p>From experience running OpenClaw in a multi-user setup, these are the specs I recommend:</p>
+
+    <ul>
+        <li><strong>Minimum:</strong> 4 vCPU, 8GB RAM for 5-10 agents</li>
+        <li><strong>Recommended:</strong> 8 vCPU, 16GB RAM for 15-30 agents</li>
+        <li><strong>High-scale:</strong> 8+ vCPU, 32GB RAM for 30+ agents</li>
+        <li><strong>Storage:</strong> 100GB+ SSD (workspace data, logs, backups)</li>
+        <li><strong>Network:</strong> 5TB+ bandwidth (API calls, file downloads)</li>
+    </ul>
+
+    <div class="alert info">
+        <strong>Why Hetzner?</strong> For an OpenClaw deployment, Hetzner gives the best performance-to-price ratio — especially the CPX and CCX series, which carry enough CPU power for concurrent agent processing
+    </div>
+
+        <h2 id="en-docker-deployment-architecture">3. Docker Deployment Architecture</h2>
+
+    <p>OpenClaw was designed to run on Docker containers from the start, which makes deploying to production easy — but you need to understand the architecture of the system first:</p>
+
+    <h3>Container Architecture</h3>
+
+    <ul>
+        <li><strong>Gateway Container:</strong> the main OpenClaw process, which handles sessions and routing</li>
+        <li><strong>Sandbox Containers:</strong> separate environments for running agent tools</li>
+        <li><strong>Shared Volumes:</strong> workspace data, configurations and logs</li>
+        <li><strong>Network Bridge:</strong> internal communication between containers</li>
+    </ul>
+
+    <h3>Production Docker Compose Setup</h3>
+
+    <pre><code>version: '3.8'
+
+services:
+  openclaw-gateway:
+    image: openclaw/gateway:latest
+    container_name: openclaw_gateway
+    restart: unless-stopped
+    ports:
+      - "3000:3000"  # Gateway API
+      - "8080:8080"  # Web UI (if enabled)
+    volumes:
+      - ./workspace:/workspace
+      - ./config:/app/config
+      - ./logs:/app/logs
+      - /var/run/docker.sock:/var/run/docker.sock
+    environment:
+      - NODE_ENV=production
+      - OPENCLAW_CONFIG_PATH=/app/config/openclaw.json
+      - OPENCLAW_LOG_LEVEL=info
+      - OPENCLAW_MAX_AGENTS=30
+      - OPENCLAW_SANDBOX_LIMIT=10
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+    depends_on:
+      - redis
+      - postgres
+
+  redis:
+    image: redis:7-alpine
+    container_name: openclaw_redis
+    restart: unless-stopped
+    volumes:
+      - redis_data:/data
+    command: redis-server --appendonly yes --maxmemory 1gb
+
+  postgres:
+    image: postgres:15-alpine
+    container_name: openclaw_postgres
+    restart: unless-stopped
+    environment:
+      - POSTGRES_DB=openclaw
+      - POSTGRES_USER=openclaw
+      - POSTGRES_PASSWORD=${DB_PASSWORD}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./backups:/backups
+
+  nginx:
+    image: nginx:alpine
+    container_name: openclaw_nginx
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./ssl:/etc/nginx/ssl:ro
+    depends_on:
+      - openclaw-gateway
+
+volumes:
+  redis_data:
+  postgres_data:</code></pre>
+
+    <h3>Health Checks and Monitoring</h3>
+
+    <p>Setting health checks up correctly matters, because they are how Docker restarts a failing container on its own:</p>
+
+    <pre><code># Health check endpoint in the OpenClaw Gateway
+GET /health
+
+Response:
+{
+  "status": "healthy",
+  "uptime": 3600,
+  "activeAgents": 15,
+  "sandboxes": {
+    "active": 8,
+    "limit": 10
+  },
+  "memory": {
+    "used": "2.1GB",
+    "available": "16GB"
+  }
+}</code></pre>
+
+        <h2 id="en-installation-setup-on-vps">4. Installation & Setup on VPS</h2>
+
+    <p>Here is the step-by-step process for installing OpenClaw on a production VPS:</p>
+
+    <h3>Step 1: OS Setup (Ubuntu 22.04 LTS)</h3>
+
+    <pre><code># Update system
+sudo apt update && sudo apt upgrade -y
+
+# Install essential packages
+sudo apt install -y curl git ufw fail2ban htop
+
+# Configure firewall
+sudo ufw allow 22/tcp  # SSH
+sudo ufw allow 80/tcp  # HTTP
+sudo ufw allow 443/tcp # HTTPS
+sudo ufw enable
+
+# Create openclaw user
+sudo adduser openclaw
+sudo usermod -aG docker openclaw
+sudo usermod -aG sudo openclaw</code></pre>
+
+    <h3>Step 2: Docker Installation</h3>
+
+    <pre><code># Install Docker
+curl -fsSL https://get.docker.com -o get-docker.sh
+sudo sh get-docker.sh
+
+# Install Docker Compose
+sudo curl -L "https://github.com/docker/compose/releases/latest/download/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
+sudo chmod +x /usr/local/bin/docker-compose
+
+# Add user to docker group
+sudo usermod -aG docker openclaw</code></pre>
+
+    <h3>Step 3: Node.js and OpenClaw</h3>
+
+    <pre><code># Install Node.js 18+
+curl -fsSL https://deb.nodesource.com/setup_18.x | sudo -E bash -
+sudo apt-get install -y nodejs
+
+# Install OpenClaw globally
+sudo npm install -g openclaw
+
+# Create workspace directory
+sudo mkdir -p /opt/openclaw
+sudo chown openclaw:openclaw /opt/openclaw
+cd /opt/openclaw
+
+# Initialize OpenClaw
+openclaw init --production</code></pre>
+
+    <h3>Step 4: SystemD Service Configuration</h3>
+
+    <pre><code># /etc/systemd/system/openclaw.service
+[Unit]
+Description=OpenClaw AI Agent Gateway
+After=docker.service
+Requires=docker.service
+
+[Service]
+Type=simple
+User=openclaw
+WorkingDirectory=/opt/openclaw
+Environment=NODE_ENV=production
+Environment=OPENCLAW_CONFIG_PATH=/opt/openclaw/config/openclaw.json
+ExecStart=/usr/bin/npm start
+Restart=always
+RestartSec=10
+StandardOutput=syslog
+StandardError=syslog
+SyslogIdentifier=openclaw
+
+[Install]
+WantedBy=multi-user.target</code></pre>
+
+    <pre><code># Enable and start service
+sudo systemctl enable openclaw
+sudo systemctl start openclaw
+sudo systemctl status openclaw
+
+# Check logs
+sudo journalctl -u openclaw -f</code></pre>
+
+    <h3>Step 5: SSL and Domain Setup</h3>
+
+    <pre><code># Install Certbot for Let's Encrypt
+sudo apt install certbot python3-certbot-nginx
+
+# Get SSL certificate
+sudo certbot --nginx -d your-domain.com
+
+# Configure automatic renewal
+sudo crontab -e
+# Add: 0 12 * * * /usr/bin/certbot renew --quiet</code></pre>
+
+        <h2 id="en-multi-user-multi-channel-scaling">5. Multi-User & Multi-Channel Scaling</h2>
+
+    <p>Running OpenClaw for several users at once calls for careful planning around agent isolation and resource sharing.</p>
+
+    <h3>Agent Isolation Patterns</h3>
+
+    <ul>
+        <li><strong>Per-User Workspaces:</strong> every user gets a separate workspace</li>
+        <li><strong>Memory Isolation:</strong> agent memory does not cross-contaminate</li>
+        <li><strong>API Key Management:</strong> users can bring their own API keys</li>
+        <li><strong>Resource Limits:</strong> cap CPU/Memory per user</li>
+    </ul>
+
+    <h3>Multi-Channel Configuration</h3>
+
+    <pre><code># openclaw.json - Multi-channel setup
+{
+  "channels": {
+    "telegram": {
+      "enabled": true,
+      "botToken": "${TELEGRAM_BOT_TOKEN}",
+      "allowedUsers": ["user1", "user2"],
+      "workspace": "/workspace/telegram"
+    },
+    "discord": {
+      "enabled": true,
+      "botToken": "${DISCORD_BOT_TOKEN}",
+      "guildId": "your-guild-id",
+      "workspace": "/workspace/discord"
+    },
+    "signal": {
+      "enabled": true,
+      "phoneNumber": "+66xxxxxxxxx",
+      "workspace": "/workspace/signal"
+    }
+  },
+  "agents": {
+    "maxConcurrent": 30,
+    "memoryLimit": "2GB",
+    "timeoutMinutes": 60,
+    "sandboxLimit": 10
+  }
+}</code></pre>
+
+    <h3>Workspace Management</h3>
+
+    <pre><code># Workspace structure for multi-user
+/opt/openclaw/workspace/
+├── telegram/
+│   ├── user1/
+│   │   ├── memory/
+│   │   ├── files/
+│   │   └── config/
+│   └── user2/
+├── discord/
+│   ├── guild1/
+│   └── guild2/
+└── signal/
+    └── groups/</code></pre>
+
+        <h2 id="en-monitoring-cost-tracking">6. Monitoring & Cost Tracking</h2>
+
+    <p>Monitoring OpenClaw in production is not just watching uptime — you have to keep track of API costs, resource usage and performance metrics.</p>
+
+    <h3>Cost Tracking Implementation</h3>
+
+    <pre><code># Cost tracking script
+#!/bin/bash
+# /opt/openclaw/scripts/cost-monitor.sh
+
+DATE=$(date +%Y-%m-%d)
+COST_LOG="/opt/openclaw/logs/costs-$DATE.log"
+
+# Get session status for all active agents
+openclaw gateway status --json | jq '.agents[] | {
+  user: .user,
+  model: .model,
+  tokens: .totalTokens,
+  cost: .estimatedCost
+}' >> $COST_LOG
+
+# Daily cost summary
+python3 /opt/openclaw/scripts/cost-summary.py $COST_LOG</code></pre>
+
+    <h3>Real Monthly Cost Breakdown (45 Agents)</h3>
+
+    <div class="table-wrapper">
+        <table>
+            <thead>
+                <tr>
+                    <th>Category</th>
+                    <th>Service/Model</th>
+                    <th>Usage</th>
+                    <th>Cost</th>
+                    <th>Percentage</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td><strong>Infrastructure</strong></td>
+                    <td>Hetzner CCX33</td>
+                    <td>1 server</td>
+                    <td>$49</td>
+                    <td>12%</td>
+                </tr>
+                <tr>
+                    <td><strong>LLM API</strong></td>
+                    <td>Claude 3 Opus</td>
+                    <td>15M tokens</td>
+                    <td>$225</td>
+                    <td>56%</td>
+                </tr>
+                <tr>
+                    <td><strong>LLM API</strong></td>
+                    <td>Claude 3 Sonnet</td>
+                    <td>25M tokens</td>
+                    <td>$75</td>
+                    <td>19%</td>
+                </tr>
+                <tr>
+                    <td><strong>Other APIs</strong></td>
+                    <td>Search, Maps, etc.</td>
+                    <td>Various</td>
+                    <td>$35</td>
+                    <td>9%</td>
+                </tr>
+                <tr>
+                    <td><strong>Storage/Backup</strong></td>
+                    <td>S3, Backups</td>
+                    <td>500GB</td>
+                    <td>$15</td>
+                    <td>4%</td>
+                </tr>
+                <tr style="font-weight: bold; background: #f3f4f6;">
+                    <td colspan="3"><strong>Total Monthly</strong></td>
+                    <td><strong>$399</strong></td>
+                    <td><strong>100%</strong></td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <h3>Monitoring Dashboard Setup</h3>
+
+    <pre><code># Prometheus + Grafana monitoring
+version: '3.8'
+
+services:
+  prometheus:
+    image: prom/prometheus
+    volumes:
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml
+      - prometheus_data:/prometheus
+    ports:
+      - "9090:9090"
+
+  grafana:
+    image: grafana/grafana
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_PASSWORD}
+    volumes:
+      - grafana_data:/var/lib/grafana
+    ports:
+      - "3001:3000"
+
+  node-exporter:
+    image: prom/node-exporter
+    ports:
+      - "9100:9100"</code></pre>
+
+        <h2 id="en-backup-strategies">7. Backup Strategies</h2>
+
+    <p>Backing up an OpenClaw system has to cover application data, user workspaces, agent memory and configuration alike.</p>
+
+    <h3>What to Backup</h3>
+
+    <ul>
+        <li><strong>Workspace Data:</strong> user files, agent memory, conversation history</li>
+        <li><strong>Configuration:</strong> openclaw.json, API keys, channel settings</li>
+        <li><strong>Database:</strong> PostgreSQL data (if you use it)</li>
+        <li><strong>Logs:</strong> important for troubleshooting and cost tracking</li>
+        <li><strong>SSL Certificates:</strong> Let's Encrypt certificates and private keys</li>
+    </ul>
+
+    <h3>Automated Backup Script</h3>
+
+    <pre><code>#!/bin/bash
+# /opt/openclaw/scripts/backup.sh
+
+BACKUP_DATE=$(date +%Y%m%d_%H%M%S)
+BACKUP_DIR="/opt/backups/openclaw_$BACKUP_DATE"
+S3_BUCKET="your-backup-bucket"
+
+# Create backup directory
+mkdir -p $BACKUP_DIR
+
+# Backup workspace
+tar -czf $BACKUP_DIR/workspace.tar.gz /opt/openclaw/workspace/
+
+# Backup configuration
+cp -r /opt/openclaw/config $BACKUP_DIR/
+
+# Backup database (if using PostgreSQL)
+docker exec openclaw_postgres pg_dump -U openclaw openclaw > $BACKUP_DIR/database.sql
+
+# Backup logs (last 7 days)
+find /opt/openclaw/logs -name "*.log" -mtime -7 -exec cp {} $BACKUP_DIR/ \;
+
+# Upload to S3
+aws s3 sync $BACKUP_DIR s3://$S3_BUCKET/backups/
+
+# Keep only last 30 days locally
+find /opt/backups -name "openclaw_*" -mtime +30 -delete
+
+# Send notification
+echo "Backup completed: $BACKUP_DATE" | mail -s "OpenClaw Backup" admin@yourdomain.com</code></pre>
+
+    <h3>Git-based Backup for Code</h3>
+
+    <pre><code># Setup git backup for workspace
+cd /opt/openclaw/workspace
+git init
+git remote add origin git@github.com:yourorg/openclaw-workspace.git
+
+# Daily git backup
+#!/bin/bash
+cd /opt/openclaw/workspace
+git add -A
+git commit -m "Daily backup $(date +%Y-%m-%d)"
+git push origin main</code></pre>
+
+    <div class="alert danger">
+        <strong>Security Warning:</strong> never commit API keys or sensitive data straight into a git repository. Use .gitignore and environment variables instead.
+    </div>
+
+        <h2 id="en-upgrade-workflow">8. Upgrade Workflow</h2>
+
+    <p>Upgrading OpenClaw in production has to be done carefully, to avoid downtime and data loss.</p>
+
+    <h3>Pre-Upgrade Checklist</h3>
+
+    <ul>
+        <li>✅ Backup current system completely</li>
+        <li>✅ Read the changelog and the breaking changes</li>
+        <li>✅ Test the upgrade on a staging environment</li>
+        <li>✅ Schedule maintenance window</li>
+        <li>✅ Notify users about downtime</li>
+    </ul>
+
+    <h3>Rolling Upgrade Process</h3>
+
+    <pre><code># Zero-downtime upgrade script
+#!/bin/bash
+
+# 1. Backup current system
+/opt/openclaw/scripts/backup.sh
+
+# 2. Stop accepting new sessions
+openclaw gateway maintenance --enable
+
+# 3. Wait for active sessions to complete (max 30 minutes)
+timeout 1800 openclaw gateway wait-idle
+
+# 4. Update OpenClaw
+npm update -g openclaw
+
+# 5. Test configuration
+openclaw config validate
+
+# 6. Restart gateway
+sudo systemctl restart openclaw
+
+# 7. Verify health
+sleep 30
+openclaw gateway health || exit 1
+
+# 8. Re-enable service
+openclaw gateway maintenance --disable
+
+echo "Upgrade completed successfully"</code></pre>
+
+    <h3>Rollback Strategy</h3>
+
+    <pre><code># Emergency rollback script
+#!/bin/bash
+
+PREVIOUS_VERSION="2.1.5"  # Keep track of last working version
+
+# 1. Stop current service
+sudo systemctl stop openclaw
+
+# 2. Reinstall previous version
+npm uninstall -g openclaw
+npm install -g openclaw@$PREVIOUS_VERSION
+
+# 3. Restore backup if needed
+LATEST_BACKUP=$(ls -t /opt/backups/openclaw_* | head -n1)
+tar -xzf $LATEST_BACKUP/workspace.tar.gz -C /
+
+# 4. Restart service
+sudo systemctl start openclaw</code></pre>
+
+        <h2 id="en-security-hardening-for-production">9. Security Hardening for Production</h2>
+
+    <p>OpenClaw in production is a high-value target, because it holds sensitive data and API access to several systems at once. Hardening security is not optional.</p>
+
+    <h3>Firewall Configuration</h3>
+
+    <pre><code># UFW firewall rules
+sudo ufw --force reset
+sudo ufw default deny incoming
+sudo ufw default allow outgoing
+
+# Allow SSH (custom port recommended)
+sudo ufw allow 2222/tcp
+
+# Allow HTTP/HTTPS
+sudo ufw allow 80/tcp
+sudo ufw allow 443/tcp
+
+# OpenClaw Gateway (internal only)
+sudo ufw allow from 10.0.0.0/8 to any port 3000
+
+# Enable firewall
+sudo ufw enable</code></pre>
+
+    <h3>SSH Hardening</h3>
+
+    <pre><code># /etc/ssh/sshd_config
+Port 2222
+PermitRootLogin no
+PasswordAuthentication no
+PubkeyAuthentication yes
+MaxAuthTries 3
+ClientAliveInterval 300
+ClientAliveCountMax 2
+
+# Allow only specific users
+AllowUsers openclaw
+
+# Restart SSH
+sudo systemctl restart sshd</code></pre>
+
+    <h3>Fail2Ban Configuration</h3>
+
+    <pre><code># /etc/fail2ban/jail.local
+[DEFAULT]
+bantime = 3600
+findtime = 600
+maxretry = 3
+
+[sshd]
+enabled = true
+port = 2222
+
+[nginx-http-auth]
+enabled = true
+
+[openclaw-api]
+enabled = true
+port = 3000
+filter = openclaw-api
+logpath = /opt/openclaw/logs/gateway.log
+maxretry = 5</code></pre>
+
+    <h3>API Keys and Secrets Management</h3>
+
+    <pre><code># Use environment variables for secrets
+# /opt/openclaw/.env (chmod 600)
+ANTHROPIC_API_KEY=sk-...
+OPENAI_API_KEY=sk-...
+TELEGRAM_BOT_TOKEN=bot:...
+DB_PASSWORD=secure_password
+
+# Load in systemd service
+Environment=ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}
+
+# Rotate API keys monthly
+#!/bin/bash
+# /opt/openclaw/scripts/rotate-keys.sh
+# Automated key rotation script</code></pre>
+
+        <h2 id="en-performance-optimization">10. Performance Optimization</h2>
+
+    <p>Optimizing OpenClaw's performance is a matter of finding the balance between response time, cost and resource utilization.</p>
+
+    <h3>Context Window Management</h3>
+
+    <pre><code># openclaw.json - Performance settings
+{
+  "performance": {
+    "contextWindow": {
+      "maxTokens": 8000,
+      "compactionThreshold": 6000,
+      "summaryRatio": 0.3
+    },
+    "caching": {
+      "enabled": true,
+      "ttl": 3600,
+      "maxSize": "500MB"
+    },
+    "concurrency": {
+      "maxAgents": 30,
+      "maxSandboxes": 10,
+      "queueTimeout": 30000
+    }
+  }
+}</code></pre>
+
+    <h3>Model Selection Strategy</h3>
+
+    <div class="table-wrapper">
+        <table>
+            <thead>
+                <tr>
+                    <th>Use Case</th>
+                    <th>Model</th>
+                    <th>Cost per 1K tokens</th>
+                    <th>When to Use</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>Simple Q&A</td>
+                    <td>Claude 3 Haiku</td>
+                    <td>$0.25</td>
+                    <td>Quick responses, basic tasks</td>
+                </tr>
+                <tr>
+                    <td>General Tasks</td>
+                    <td>Claude 3 Sonnet</td>
+                    <td>$3</td>
+                    <td>Most production workloads</td>
+                </tr>
+                <tr>
+                    <td>Complex Reasoning</td>
+                    <td>Claude 3 Opus</td>
+                    <td>$15</td>
+                    <td>Research, coding, analysis</td>
+                </tr>
+                <tr>
+                    <td>Code Generation</td>
+                    <td>GPT-4</td>
+                    <td>$10</td>
+                    <td>Specialized coding tasks</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <h3>Caching Strategies</h3>
+
+    <pre><code># Redis caching for common queries
+const redis = require('redis');
+const client = redis.createClient();
+
+// Cache expensive API calls
+async function getCachedResponse(query, model) {
+  const cacheKey = `llm:${model}:${hashQuery(query)}`;
+
+  // Check cache first
+  const cached = await client.get(cacheKey);
+  if (cached) {
+    return JSON.parse(cached);
+  }
+
+  // Call LLM API
+  const response = await callLLM(query, model);
+
+  // Cache for 1 hour
+  await client.setex(cacheKey, 3600, JSON.stringify(response));
+
+  return response;
+}</code></pre>
+
+        <h2 id="en-lessons-from-running-45-agents">11. Lessons from Running 45 Agents</h2>
+
+    <p>After six months of running OpenClaw in production with 45 agents at once, these are the insights that mattered:</p>
+
+    <h3>What Actually Breaks in Production</h3>
+
+    <ul>
+        <li><strong>Memory Leaks:</strong> agent memory keeps growing if the context is not compacted on schedule</li>
+        <li><strong>API Rate Limits:</strong> the Anthropic API enforces rate limits far more strictly than in development</li>
+        <li><strong>Disk Space:</strong> log files and workspace data grow faster than you expect (20GB/month)</li>
+        <li><strong>Docker Socket Issues:</strong> mounting the Docker socket causes occasional permission problems</li>
+        <li><strong>Session Persistence:</strong> agent sessions vanish when the gateway restarts, unless they are persisted to the database</li>
+    </ul>
+
+    <h3>Cost Surprises</h3>
+
+    <ul>
+        <li><strong>Model Selection Impact:</strong> using Opus instead of Sonnet multiplies the bill by five, and buys only 20-30% better performance</li>
+        <li><strong>Context Window Costs:</strong> long conversations that are never compacted send token usage through the roof</li>
+        <li><strong>Failed Requests:</strong> API calls that fail are still billed — you need good retry logic</li>
+        <li><strong>Background Tasks:</strong> heartbeat and monitoring tasks eat more tokens than you would guess</li>
+    </ul>
+
+    <h3>Maintenance Overhead</h3>
+
+    <ul>
+        <li><strong>User Support:</strong> 20% of the time goes to answering users who report that "the agent isn't replying"</li>
+        <li><strong>API Key Rotation:</strong> it has to be done monthly, and it has to be coordinated across several services</li>
+        <li><strong>Backup Monitoring:</strong> backup scripts fail silently unless you set up alerting properly</li>
+        <li><strong>Dependency Updates:</strong> OpenClaw ships breaking changes often, and you have to follow them closely</li>
+    </ul>
+
+    <h3>Things Nobody Tells You</h3>
+
+    <ul>
+        <li><strong>Cold Start Problem:</strong> a new user's first agent takes 30-60 seconds to load its workspace</li>
+        <li><strong>Time Zone Confusion:</strong> multi-timezone users make scheduling tasks complicated</li>
+        <li><strong>Model Availability:</strong> the Claude API has the occasional outage or spell of degraded performance</li>
+        <li><strong>Resource Competition:</strong> multiple agents running at once fight over CPU, and response times slow down</li>
+        <li><strong>Log Analysis:</strong> debugging production issues is extremely hard without proper structured logging</li>
+    </ul>
+
+    <div class="alert">
+        <strong>Pro Tip:</strong> start with 10-15 agents before you scale up. You will meet a whole set of problems you never anticipated — and small scale is where you want to meet them.
+    </div>
+
+        <h2 id="en-key-takeaways">12. Key Takeaways</h2>
+
+    <div class="key-takeaways">
+        <h3>🎯 What to remember</h3>
+        <ul>
+            <li><strong>Infrastructure matters:</strong> Hetzner gives the best value for OpenClaw workloads</li>
+            <li><strong>Start small, scale gradually:</strong> 10-15 agents first, then add more a few at a time</li>
+            <li><strong>Monitor costs religiously:</strong> LLM API costs climb faster than you think — check them daily</li>
+            <li><strong>Backup everything, test restores:</strong> workspace data is the most valuable thing you have; do not lose it</li>
+            <li><strong>Context window management:</strong> the key factor for both performance and cost control</li>
+            <li><strong>Security from day one:</strong> OpenClaw has access to many systems, so harden it from the start</li>
+            <li><strong>Model selection strategy:</strong> use Sonnet as the default, Opus only for genuinely complex tasks</li>
+            <li><strong>User education is crucial:</strong> users need to understand the limitations and the best practices</li>
+            <li><strong>Staging environment:</strong> you need a test environment ahead of every production change</li>
+            <li><strong>Community support:</strong> the OpenClaw community carries a lot of insight — follow the Discord and the forums</li>
+        </ul>
+    </div>
+
+    <p>This is the last post (#7) in the "OpenClaw for Organizations 2026" series, which has covered every aspect of bringing OpenClaw into an organization, from the first steps through to a production deployment you can rely on.</p>
+
+    <p>If you have not read the earlier posts, I recommend going through them in order for the complete picture:</p>
+
+    </div>
+
+    <nav aria-label="OpenClaw for Organizations">
+      <div class="series-nav">
             <h3>📚 OpenClaw for Organizations 2026</h3>
             <div class="series-links">
                 <a href="/blog/openclaw-101">#1 OpenClaw 101</a>
