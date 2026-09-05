@@ -68,3 +68,47 @@ Already paid — each one's BASELINE key is gone, do not resurrect them:
 - **INV-10** (8 stale `.post-nav__title` labels → 0; `verify-wiring.py` agrees at 0 warn), `73032cb`, 2026-08-26.
 - **INV-05b** retired outright (`21d5cfc`, 2026-08-26): its whole domain was illustrative paths inside
   `<pre>`/`<code>`, so it was deleted rather than narrowed. Checks 59 → 58.
+
+## 2026-09-05 — three checks added for the AI Transformation launch
+
+Checks 58 → 61. All three landed green on the tree as it stood, which is the point: they were
+written to close surfaces nothing was watching, not to paper over a failure.
+
+**INV-03c — non-SERIES7 strip consistency (FAIL).** The `.series-nav` content checks
+(INV-03/03b/20) iterate the hardcoded `SERIES7` list, so the Hermes (10 chips), Life (9) and now
+AI Transformation (20) strips had **no content check at all** — and each is duplicated by hand into
+every member of its series. The new check needs no table: it groups posts by their strip's `<h3>`,
+substitutes each post's own href for its current chip, and requires the members' chip sequences to
+be identical. That single comparison proves both "same strip everywhere" and "each marks itself".
+A closure pass then requires every chip to target a member of that same strip.
+
+Fault-injected before being trusted, on Hermes:
+
+| Injection | Result |
+|---|---|
+| one chip label mistyped in one file (`#4 Security` → `#4 Secrity`) | `hermes-memory.html\|shape` names the file, the strip, the chip index and both values |
+| a chip re-pointed at `/blog/openclaw-101` in all 10 files | `\|shape` on the self-marked post **and** `\|closure` — INV-09 stays silent because the target file exists, which is exactly the gap |
+| clean tree | silent; Hermes 10/10 and Life 9/9 agree |
+
+**INV-03d — parser self-check (FAIL).** `_parse_navs` now finds the strip with a div-depth walk
+(`series_nav_body`) instead of `RE_SNAV`'s first `</div></div>`. The self-check's fourth probe is
+the one that matters, and the first draft of it asserted something **false**: it claimed the old
+regex could not parse a grouped strip. It can. With chips as direct children of each group — the
+shape actually shipped — the first `</div></div>` is group-4 plus `.series-links`, i.e. the true
+end, and the old regex returns all 20 chips. The probe was rewritten to wrap the chips one level
+deeper, which is what a future "let me just wrap the chips" edit would produce:
+
+```
+shipped grouped  old RE_SNAV=20   depth walker=20
+nested chips     old RE_SNAV= 5   depth walker=20
+```
+
+The check now fails if the old regex ever parses the nested probe too, so it cannot go vacuous
+without saying so. **Read this before "simplifying" the walker back to a regex:** the depth walk is
+defence in depth for the shipped markup, not a hard requirement of it.
+
+**INV-02f — `.blog-jump` chips (FAIL).** The jump strip on `blog/index.html` is not a card, not a
+counter and not a nav pattern, so every existing check looked straight past it; the Life launch
+forgot its chip twice (`dae4304`). The check now requires each chip to anchor a real
+`series-section`, its trailing `· N` to equal that section's card count, and each section to have
+exactly one chip. Tests: change a count → fires; delete a chip → fires; clean → silent.

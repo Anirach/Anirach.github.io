@@ -13,7 +13,7 @@ side read as one cover. The owner said so, with screenshots.
 Round 2 -- this file -- keeps the spec-table architecture and throws away the
 generic vocabulary. Two changes:
 
-  1. ONE MOTIF PER POST. 37 named drawings, not 5 shapes with parameters. The
+  1. ONE MOTIF PER POST. 76 named drawings, not 5 shapes with parameters. The
      picture IS the subject: Kubernetes is a helm wheel steering hex pods, the
      testing pyramid is a pyramid, Docker-vs-VMs is the only split frame on the
      page. Where two posts share territory (3 memory posts, 3 testing posts,
@@ -27,20 +27,31 @@ generic vocabulary. Two changes:
      navy line, gold detail. Grid drops to near-nothing.
      DevOps (24)   -- cyanotype blueprint on navy. White line-work, grid kept
      as the blueprint texture, one CLUSTER ACCENT as the lit ink.
+     Life (9)      -- gold on the two dark grounds; one lit object per essay.
+     Hermes (10)   -- teal geometry on cloud/parchment, alternating.
+     AI Transf (20) -- coral diagram primitives on cream/parchment, alternating.
+     Diagram primitives ONLY (tiles, bars, discs, rings, arrows, axes), with
+     exactly one SOLID NAVY core (c["core"]) and one coral point per drawing.
+
+     Five grounds, not four: `cream` joined navy/deep/cloud/parchment with the
+     AI Transformation series (2026-09-05) -- it is the site's own --bg, so the
+     covers sit on the page's paper rather than on a tinted card.
 
 WHY THAT LIGHT/DARK SPLIT AND NOT THE OTHER WAY ROUND
 -----------------------------------------------------
 It is forced, not chosen. A cover sits inside its post's hero, so it may not
 share the hero's tone or it vanishes (this site shipped a teal cover on a teal
-hero once). Posts have exactly two hero families: OpenClaw = Deep Blue (dark),
-DevOps = Sunrise (light). So OpenClaw covers must be LIGHT and DevOps covers
-must be DARK. FORBIDDEN below is that rule; check() enforces it against the
-post's real HTML, not a second table that could drift.
+hero once). Posts have exactly two hero families: Deep Blue (dark) for
+OpenClaw, Hermes and AI Transformation; Sunrise (light) for DevOps and Life.
+So a Deep Blue post's cover must be LIGHT and a Sunrise post's cover must be
+DARK. FORBIDDEN below is that rule; check() enforces it against the post's
+real HTML, not a second table that could drift.
 
-    python3 scripts/make_cover.py --all          # redraw all 37 + share cards
+    python3 scripts/make_cover.py --all          # redraw all 76 + share cards
     python3 scripts/make_cover.py openclaw-101   # one, by slug
     python3 scripts/make_cover.py --check        # validate the table, draw nothing
-    python3 scripts/make_cover.py --contact      # 37-up contact sheet for review
+    python3 scripts/make_cover.py --contact      # 76-up contact sheet for review
+    python3 scripts/make_cover.py --contact "AI TRANSFORMATION"   # one series only
 
 THE SPEC TABLE
 --------------
@@ -118,6 +129,7 @@ ACCENTS = {
     "teal":   (20, 184, 166),     # reliability
     "red":    (239, 68, 68),      # security       --red
     "gold":   GOLD,               # vibe coding
+    "coral":  (194, 65, 12),      # AI Transformation   --coral
 }
 
 
@@ -201,6 +213,9 @@ def ink(g, accent):
       ln   structural stroke        hi   the highlight -- "this is the point"
       fill faint body fill          hif  highlight fill (semi-transparent)
       gold detail accent           dimf  inactive/background body
+      core the ONE solid mass a drawing is allowed -- navy on light paper,
+           near-white on the blueprints, so a motif can state its centre
+           without reaching past this dict for a module constant
     """
     dark = g in DARK_GROUNDS
     acc = ACCENTS.get(accent, VIOLET)
@@ -214,7 +229,7 @@ def ink(g, accent):
             "ln": (255, 255, 255, 215), "ln2": (255, 255, 255, 120),
             "fill": (255, 255, 255, 24), "dimf": (255, 255, 255, 14),
             "hi": acc, "hif": (*acc, 80), "gold": GOLD, "chip": (*acc, 235),
-            "chiptx": (13, 27, 42), "bg": bg,
+            "chiptx": (13, 27, 42), "bg": bg, "core": (255, 255, 255, 235),
         }
     # poster: filled violet pictograms, navy line, gold detail
     return {
@@ -223,12 +238,12 @@ def ink(g, accent):
         "ln": (*NAVY, 210), "ln2": (*NAVY, 110),
         "fill": (*NAVY, 20), "dimf": (*NAVY, 12),
         "hi": acc, "hif": (*acc, 90), "gold": GOLD_DARK, "chip": (*acc, 255),
-        "chiptx": WHITE, "bg": bg,
+        "chiptx": WHITE, "bg": bg, "core": NAVY,
     }
 
 
 # --------------------------------------------------------------------------
-# drawing helpers -- shared by the 37 motifs
+# drawing helpers -- shared by the 76 motifs
 # --------------------------------------------------------------------------
 def rr(d, box, r, fill=None, outline=None, w=6):
     d.rounded_rectangle([box[0], box[1], box[2], box[3]], radius=int(r),
@@ -1740,6 +1755,607 @@ def hm_fleet(d, b, c, o):
                fill=c["hi"] if i == 1 else c["ln2"], width=4)
 
 
+# --- AI Transformation for Organizations (at_*) --------------------------
+# One family rule, and it is what makes twenty covers read as one series
+# beside Hermes' teal geometry and OpenClaw's filled violet pictograms:
+# DIAGRAM PRIMITIVES ONLY -- tiles, bars, discs, rings, arrows, axes -- with
+# exactly one SOLID NAVY core per drawing (c["core"]), coral kept for the one
+# thing the post argues about, and everything else in navy tints with
+# outlines.  No pictograms, no scenery, no metaphor objects.
+
+def at_spine(d, b, c, o):
+    """Six strata pierced by one vertical coral spine under a solid navy cap,
+    a 2x3 dot scorecard at the right with one dot coral.  vs oc_memarch's four
+    labelled strata and oc_memory's stack + magnifier: six bars, and the page's
+    only SPINE driven through them."""
+    x0, y0, x1, y1 = b
+    w, h = x1 - x0, y1 - y0
+    n = 6
+    sh = h / n
+    bx1 = x0 + w * 0.60
+    for i in range(n):
+        yy = y0 + i * sh
+        inset = w * 0.014 * (n - 1 - i)
+        rr(d, (x0 + inset, yy + sh * 0.14, bx1, yy + sh * 0.86), sh * 0.28,
+           fill=c["fill"] if i % 2 else c["dimf"], outline=c["ln2"], w=5)
+    sx = x0 + w * 0.42
+    d.line([(sx, y0 + sh * 0.45), (sx, y1 - sh * 0.08)], fill=c["hi"], width=15)
+    cap = w * 0.032
+    rr(d, (sx - cap, y0 + sh * 0.02, sx + cap, y0 + sh * 0.62), cap * 0.55,
+       fill=c["core"], outline=None)
+    gx = x0 + w * 0.745
+    rr(d, (gx - w * 0.035, y0 + h * 0.14, x1, y1 - h * 0.14), h * 0.07,
+       fill=None, outline=c["ln2"], w=5)
+    for r_ in range(2):
+        for k in range(3):
+            dx = gx + k * w * 0.075
+            dy = y0 + h * (0.34 + r_ * 0.31)
+            lit = (r_ == 0 and k == 2)
+            circ(d, dx, dy, h * 0.058, fill=c["hi"] if lit else c["fill"],
+                 outline=c["hi"] if lit else c["ln2"], w=5)
+
+
+def at_chevrons(d, b, c, o):
+    """Five chevron boxes -- data, prediction, judgment, action, outcome --
+    the prediction box coral, the judgment box solid navy, and a gold coin
+    shrinking away beneath prediction.  vs dv_cicd's conveyor of tool stations
+    and hm_railbolt's schedule rail: the page's only arrow-SHAPED boxes."""
+    x0, y0, x1, y1 = b
+    w, h = x1 - x0, y1 - y0
+    n = 5
+    gap = w * 0.014
+    cw = (w - gap * (n - 1)) / n
+    nd = min(cw * 0.24, h * 0.20)
+    yt, yb = y0 + h * 0.05, y0 + h * 0.57
+    ym = (yt + yb) / 2
+    for i in range(n):
+        xa = x0 + i * (cw + gap)
+        xb = xa + cw
+        pts = [(xa, yt), (xb - nd, yt), (xb, ym), (xb - nd, yb), (xa, yb)]
+        if i:
+            pts.append((xa + nd, ym))
+        if i == 1:
+            d.polygon(pts, fill=c["hif"], outline=c["hi"], width=7)
+        elif i == 2:
+            d.polygon(pts, fill=c["core"], outline=None)
+        else:
+            d.polygon(pts, fill=c["fill"], outline=c["ln2"], width=6)
+    coinx = x0 + (cw + gap) * 1.5 - gap / 2
+    for k, r_ in enumerate((0.085, 0.062, 0.042)):
+        circ(d, coinx + w * 0.028 * k, yb + h * (0.12 + k * 0.10), h * r_,
+             fill=None, outline=c["gold"], w=7 - k * 2)
+
+
+def at_engine(d, b, c, o):
+    """Seven ring nodes riding a wide ellipse around a solid navy hub, coral
+    chevrons in the gaps between neighbours, one node coral -- and no spokes at
+    all.  vs oc_integrations' hub-and-SPOKES and hm_loop's arrow closing round
+    a page: this is a NECKLACE; nothing touches the hub."""
+    x0, y0, x1, y1 = b
+    w, h = x1 - x0, y1 - y0
+    cx, cy = (x0 + x1) / 2, (y0 + y1) / 2
+    rx, ry = min(w * 0.42, h * 1.45), h * 0.40
+    n = 7
+    d.ellipse([cx - rx, cy - ry, cx + rx, cy + ry], outline=c["ln2"], width=4)
+    for i in range(n):
+        a = -math.pi / 2 + i * 2 * math.pi / n
+        am = a + math.pi / n
+        tx, ty = -rx * math.sin(am), ry * math.cos(am)
+        tl = math.hypot(tx, ty) or 1.0
+        tx, ty = tx / tl, ty / tl
+        px_, py_ = cx + rx * math.cos(am), cy + ry * math.sin(am)
+        s = h * 0.075
+        for sgn in (-1, 1):
+            d.line([(px_ - tx * s + sgn * -ty * s * 0.8,
+                     py_ - ty * s + sgn * tx * s * 0.8),
+                    (px_ + tx * s * 0.5, py_ + ty * s * 0.5)],
+                   fill=c["hi"], width=7, joint="curve")
+    for i in range(n):
+        a = -math.pi / 2 + i * 2 * math.pi / n
+        nx, ny = cx + rx * math.cos(a), cy + ry * math.sin(a)
+        lit = i == 2
+        circ(d, nx, ny, h * 0.115, fill=(255, 255, 255, 235),
+             outline=c["hi"] if lit else c["ln"], w=8 if lit else 6)
+    circ(d, cx, cy, h * 0.17, fill=c["core"], outline=None)
+
+
+def at_stairs(d, b, c, o):
+    """Five ascending blocks with numeral badges, the fifth solid navy, one
+    coral arrow climbing just above their tops.  vs dv_pyramid's stacked tiers
+    and hm_ladder's rungs: the page's only STAIRCASE."""
+    x0, y0, x1, y1 = b
+    w, h = x1 - x0, y1 - y0
+    n = 5
+    gap = w * 0.018
+    bw = (w - gap * (n - 1)) / n
+    pts = []
+    for i in range(n):
+        bx = x0 + i * (bw + gap)
+        bh = h * (0.24 + i * 0.15)
+        top = y1 - bh
+        last = i == n - 1
+        rr(d, (bx, top, bx + bw, y1), h * 0.035,
+           fill=c["core"] if last else (c["fill"] if i % 2 else c["dimf"]),
+           outline=None if last else c["ln2"], w=5)
+        br = h * 0.075
+        bcx, bcy = bx + bw * 0.5, top + br * 1.5
+        circ(d, bcx, bcy, br, fill=None,
+             outline=(255, 255, 255, 230) if last else c["ln"], w=5)
+        label(d, bcx, bcy, str(i + 1),
+              (255, 255, 255, 235) if last else c["ln"], h * 0.115)
+        pts.append((bcx, top - h * 0.075))
+    d.line(pts, fill=c["hi"], width=9, joint="curve")
+    arrow(d, pts[-1], (x1 - w * 0.005, y1 - h * 0.95), c["hi"], 9, 30)
+
+
+def at_portfolio(d, b, c, o):
+    """Two navy axis arrows -- value up, learnability right -- and four bubbles
+    of different radius: the biggest coral at top right, one solid navy.  No
+    grid, no quadrant rules.  vs at_core's 2x2 of cells and dv_sre's dial:
+    axes and BUBBLES."""
+    x0, y0, x1, y1 = b
+    w, h = x1 - x0, y1 - y0
+    ox, oy = x0 + w * 0.05, y1 - h * 0.05
+    arrow(d, (ox, oy), (ox, y0 + h * 0.03), c["ln"], 7, 24)
+    arrow(d, (ox, oy), (x1 - w * 0.005, oy), c["ln"], 7, 24)
+    pw, ph = (x1 - w * 0.06) - ox, oy - (y0 + h * 0.06)
+    for fx, fy, r_, kind in ((0.22, 0.30, 0.105, "tint"),
+                             (0.36, 0.13, 0.080, "tint"),
+                             (0.46, 0.58, 0.150, "core"),
+                             (0.78, 0.70, 0.235, "hi")):
+        px_, py_ = ox + pw * fx, oy - ph * fy
+        r2 = h * r_
+        if kind == "hi":
+            circ(d, px_, py_, r2, fill=c["hif"], outline=c["hi"], w=9)
+            circ(d, px_, py_, r2 * 0.22, fill=c["hi"])
+        elif kind == "core":
+            circ(d, px_, py_, r2, fill=c["core"], outline=None)
+        else:
+            circ(d, px_, py_, r2, fill=c["fill"], outline=c["ln2"], w=6)
+
+
+def at_lanes(d, b, c, o):
+    """Four open lane rules with one path stepping across them left to right,
+    its segment in lane two coral, a handoff dot at every crossing and a solid
+    navy terminal block.  vs dv_git's commit rail (a branch that leaves and
+    MERGES BACK) and at_spine's closed bars: open LANES."""
+    x0, y0, x1, y1 = b
+    w, h = x1 - x0, y1 - y0
+    lane = [y0 + h * (0.13 + i * 0.245) for i in range(4)]
+    for ly in lane:
+        d.line([(x0, ly), (x1, ly)], fill=c["ln2"], width=4)
+    seg = [(0.02, 0.20, 0), (0.20, 0.47, 1), (0.47, 0.68, 2), (0.68, 0.88, 3)]
+    for a, bb, li in seg:
+        col = c["hi"] if li == 1 else c["ln"]
+        d.line([(x0 + w * a, lane[li]), (x0 + w * bb, lane[li])],
+               fill=col, width=11)
+    for i in range(len(seg) - 1):
+        xa = x0 + w * seg[i][1]
+        d.line([(xa, lane[seg[i][2]]), (xa, lane[seg[i + 1][2]])],
+               fill=c["ln"], width=8)
+        circ(d, xa, lane[seg[i][2]], h * 0.05, fill=c["core"])
+        circ(d, xa, lane[seg[i + 1][2]], h * 0.05, fill=c["core"])
+    tw_ = w * 0.10
+    rr(d, (x1 - tw_, lane[3] - h * 0.09, x1, lane[3] + h * 0.09), h * 0.03,
+       fill=c["core"], outline=None)
+
+
+def at_wedge(d, b, c, o):
+    """Four rows of paired tiles with connectors, one tall coral wedge rising
+    alongside them and a short coral red line capping it.  vs hm_ladder's
+    rungs and at_stairs' blocks: ROWS beside a wedge -- nothing to climb."""
+    x0, y0, x1, y1 = b
+    w, h = x1 - x0, y1 - y0
+    for i in range(4):
+        ry_ = y0 + h * (0.05 + i * 0.245)
+        rh = h * 0.17
+        rr(d, (x0, ry_, x0 + w * 0.20, ry_ + rh), rh * 0.28,
+           fill=c["core"] if i == 0 else c["fill"], outline=None if i == 0 else c["ln2"], w=5)
+        rr(d, (x0 + w * 0.28, ry_, x0 + w * 0.48, ry_ + rh), rh * 0.28,
+           fill=c["dimf"], outline=c["ln2"], w=5)
+        d.line([(x0 + w * 0.20, ry_ + rh / 2), (x0 + w * 0.28, ry_ + rh / 2)],
+               fill=c["ln"], width=6)
+        circ(d, x0 + w * 0.24, ry_ + rh / 2, h * 0.028, fill=c["ln"])
+    d.polygon([(x0 + w * 0.58, y1 - h * 0.02), (x1 - w * 0.02, y1 - h * 0.02),
+               (x1 - w * 0.02, y0 + h * 0.06)],
+              fill=c["hif"], outline=c["hi"], width=7)
+    d.line([(x0 + w * 0.64, y0 + h * 0.21), (x1 - w * 0.02, y0 + h * 0.21)],
+           fill=c["hi"], width=13)
+
+
+def at_sorter(d, b, c, o):
+    """One role bar cut into six task segments, three drop arrows dispersing
+    them into three bins, the human bin solid navy and one segment coral.  vs
+    hm_kanban's three-column board: a BAR that empties into BINS."""
+    x0, y0, x1, y1 = b
+    w, h = x1 - x0, y1 - y0
+    by0, by1 = y0 + h * 0.02, y0 + h * 0.20
+    rr(d, (x0, by0, x1, by1), h * 0.045, fill=c["fill"], outline=c["ln"], w=6)
+    segw = w / 6
+    for k in range(6):
+        sx = x0 + k * segw
+        if k == 2:
+            rr(d, (sx + 4, by0 + 4, sx + segw - 4, by1 - 4), h * 0.035,
+               fill=c["hi"], outline=None)
+        elif k:
+            d.line([(sx, by0), (sx, by1)], fill=c["ln2"], width=5)
+    binw = w * 0.28
+    cxs = [x0 + w * 0.16, x0 + w * 0.5, x0 + w * 0.84]
+    for i, bcx in enumerate(cxs):
+        arrow(d, (bcx, by1 + h * 0.05), (bcx, y0 + h * 0.52), c["ln2"], 6, 22)
+        top = y0 + h * 0.58
+        last = i == 2
+        rr(d, (bcx - binw / 2, top, bcx + binw / 2, y1), h * 0.06,
+           fill=c["core"] if last else c["dimf"],
+           outline=None if last else c["ln"], w=6)
+        for k in range(2):
+            tx = bcx - binw * 0.22 + k * binw * 0.44
+            rr(d, (tx - binw * 0.14, top + h * 0.09, tx + binw * 0.14, top + h * 0.25),
+               h * 0.02, fill=None,
+               outline=(255, 255, 255, 200) if last else c["ln2"], w=4)
+
+
+def at_factory(d, b, c, o):
+    """A sawtooth-roofed shed with six windows, one coral, standing on a solid
+    navy foundation bar.  vs dv_cloud's cloud-on-pillars and oc_beyond's
+    pedimented temple: the page's only SAWTOOTH."""
+    x0, y0, x1, y1 = b
+    w, h = x1 - x0, y1 - y0
+    bx0, bx1 = x0 + w * 0.16, x1 - w * 0.16
+    roof, top, floor = y0 + h * 0.02, y0 + h * 0.32, y1 - h * 0.18
+    bw = bx1 - bx0
+    d.rectangle([bx0, top, bx1, floor], fill=c["dimf"], outline=None)
+    teeth = 4
+    tw_ = bw / teeth
+    for k in range(teeth):
+        tx = bx0 + k * tw_
+        d.polygon([(tx, top), (tx, roof), (tx + tw_, top)],
+                  fill=c["fill"], outline=c["ln"], width=6)
+    d.rectangle([bx0, top, bx1, floor], fill=None, outline=c["ln"], width=6)
+    ww, wh = bw * 0.22, (floor - top) * 0.30
+    for r_ in range(2):
+        for k in range(3):
+            wx = bx0 + bw * (0.10 + k * 0.28)
+            wy = top + (floor - top) * (0.16 + r_ * 0.44)
+            lit = (r_ == 0 and k == 2)
+            rr(d, (wx, wy, wx + ww, wy + wh), wh * 0.16,
+               fill=c["hi"] if lit else c["fill"],
+               outline=None if lit else c["ln2"], w=5)
+    rr(d, (x0 + w * 0.08, floor + h * 0.02, x1 - w * 0.08, y1 - h * 0.02),
+       h * 0.045, fill=c["core"], outline=None)
+
+
+def at_federated(d, b, c, o):
+    """A solid navy hub with four rounded tiles in the corners: two navy arrows
+    in from the left, two coral arrows in from the right.  vs oc_integrations'
+    six spokes, hm_gateway's funnel and hm_fleet's fan-out: four CORNER tiles,
+    and arrows arriving from both sides."""
+    x0, y0, x1, y1 = b
+    w, h = x1 - x0, y1 - y0
+    cx, cy = (x0 + x1) / 2, (y0 + y1) / 2
+    R = h * 0.21
+    tw_, th_ = w * 0.20, h * 0.30
+    corners = [(x0 + w * 0.005, y0 + h * 0.02, 0), (x0 + w * 0.005, y1 - th_ - h * 0.02, 0),
+               (x1 - tw_ - w * 0.005, y0 + h * 0.02, 1),
+               (x1 - tw_ - w * 0.005, y1 - th_ - h * 0.02, 1)]
+    for tx, ty, right in corners:
+        rr(d, (tx, ty, tx + tw_, ty + th_), h * 0.05,
+           fill=c["hif"] if right else c["fill"],
+           outline=c["hi"] if right else c["ln"], w=6)
+        for k in range(2):
+            d.line([(tx + tw_ * 0.14, ty + th_ * (0.34 + k * 0.28)),
+                    (tx + tw_ * 0.66, ty + th_ * (0.34 + k * 0.28))],
+                   fill=c["hi"] if right else c["ln2"], width=5)
+        sx_, sy_ = tx + tw_ / 2, ty + th_ / 2
+        dx_, dy_ = cx - sx_, cy - sy_
+        dl = math.hypot(dx_, dy_) or 1.0
+        dx_, dy_ = dx_ / dl, dy_ / dl
+        arrow(d, (sx_ + dx_ * (tw_ * 0.46), sy_ + dy_ * (th_ * 0.52)),
+              (cx - dx_ * (R + 14), cy - dy_ * (R + 14)),
+              c["hi"] if right else c["ln"], 8, 26)
+    circ(d, cx, cy, R, fill=c["core"], outline=None)
+    circ(d, cx, cy, R * 0.42, fill=None, outline=(255, 255, 255, 220), w=7)
+
+
+def at_core(d, b, c, o):
+    """A 2x2 of cells: the top-right cell solid coral around a white ring, the
+    other three faint, a dashed coral bracket hugging the lit one and a solid
+    navy origin marker at the corner.  vs at_portfolio's axes-and-bubbles and
+    dv_dockervm's split frame: FOUR CELLS, one lit."""
+    x0, y0, x1, y1 = b
+    w, h = x1 - x0, y1 - y0
+    gx0, gx1 = x0 + w * 0.02, x0 + w * 0.84
+    gy0, gy1 = y0 + h * 0.11, y1 - h * 0.06
+    mx, my = (gx0 + gx1) / 2, (gy0 + gy1) / 2
+    d.rectangle([gx0, gy0, mx, my], fill=c["dimf"])
+    d.rectangle([mx, my, gx1, gy1], fill=c["dimf"])
+    d.rectangle([gx0, my, mx, gy1], fill=c["fill"])
+    d.rectangle([mx, gy0, gx1, my], fill=c["hi"])
+    cw, ch = (gx1 - gx0) / 2, (gy1 - gy0) / 2
+    circ(d, mx + cw / 2, gy0 + ch / 2, min(cw, ch) * 0.34,
+         fill=None, outline=(255, 255, 255, 235), w=9)
+    d.rectangle([gx0, gy0, gx1, gy1], fill=None, outline=c["ln"], width=6)
+    d.line([(mx, gy0), (mx, gy1)], fill=c["ln"], width=6)
+    d.line([(gx0, my), (gx1, my)], fill=c["ln"], width=6)
+    ox_, oy_ = w * 0.028, h * 0.075
+    bxp = [(mx - ox_, my + oy_), (mx - ox_, gy0 - oy_), (gx1 + ox_, gy0 - oy_),
+           (gx1 + ox_, my + oy_)]
+    for i in range(len(bxp) - 1):
+        ax, ay = bxp[i]
+        bx_, by_ = bxp[i + 1]
+        seglen = math.hypot(bx_ - ax, by_ - ay)
+        steps = max(int(seglen / (h * 0.09)), 1)
+        for s in range(steps):
+            t0, t1 = s / steps, s / steps + 0.55 / steps
+            d.line([(ax + (bx_ - ax) * t0, ay + (by_ - ay) * t0),
+                    (ax + (bx_ - ax) * t1, ay + (by_ - ay) * t1)],
+                   fill=c["hi"], width=7)
+    circ(d, gx0, gy1, h * 0.075, fill=c["core"])
+
+
+def at_contract(d, b, c, o):
+    """One sheet split by a rule: three solid navy bars on the left, three
+    dashed coral bars on the right, a coral seal at the foot.  vs at_ledger's
+    tabbed bar and at_gate's slotted bar: a SHEET in two inks, and the page's
+    only seal."""
+    x0, y0, x1, y1 = b
+    w, h = x1 - x0, y1 - y0
+    sx0, sx1 = x0 + w * 0.07, x1 - w * 0.07
+    sy0, sy1 = y0 + h * 0.02, y1 - h * 0.02
+    rr(d, (sx0, sy0, sx1, sy1), h * 0.06, fill=(255, 255, 255, 235),
+       outline=c["ln"], w=7)
+    mx = (sx0 + sx1) / 2
+    d.line([(mx, sy0 + h * 0.10), (mx, sy1 - h * 0.10)], fill=c["ln2"], width=5)
+    bh = h * 0.15
+    for i in range(3):
+        yy = sy0 + h * (0.12 + i * 0.24)
+        rr(d, (sx0 + w * 0.05, yy, mx - w * 0.05, yy + bh), bh * 0.3,
+           fill=c["core"], outline=None)
+        ax, bx_ = mx + w * 0.05, sx1 - w * 0.05
+        steps = 7
+        for s in range(steps):
+            t0 = s / steps
+            t1 = t0 + 0.6 / steps
+            d.line([(ax + (bx_ - ax) * t0, yy + bh / 2),
+                    (ax + (bx_ - ax) * t1, yy + bh / 2)], fill=c["hi"], width=13)
+    sr = h * 0.13
+    scx, scy = sx1 - w * 0.07, sy1 - h * 0.17
+    circ(d, scx, scy, sr, fill=c["hi"], outline=None)
+    circ(d, scx, scy, sr * 0.5, fill=None, outline=(255, 255, 255, 235), w=6)
+
+
+def at_rails(d, b, c, o):
+    """Five vertical rail tiles inside one coral envelope, a solid navy gate
+    block astride the fourth and a coral stop-bar beneath it.  vs hm_railbolt's
+    horizontal schedule rail and dv_secpipe's pipe: VERTICAL rails, and the
+    page's only ENVELOPE."""
+    x0, y0, x1, y1 = b
+    w, h = x1 - x0, y1 - y0
+    rr(d, (x0 + w * 0.01, y0 + h * 0.02, x1 - w * 0.01, y1 - h * 0.02),
+       h * 0.14, fill=None, outline=c["hi"], w=10)
+    n = 5
+    inner0, inner1 = x0 + w * 0.07, x1 - w * 0.07
+    slot = (inner1 - inner0) / n
+    rw = slot * 0.52
+    for i in range(n):
+        rcx = inner0 + slot * (i + 0.5)
+        rr(d, (rcx - rw / 2, y0 + h * 0.16, rcx + rw / 2, y1 - h * 0.16),
+           rw * 0.28, fill=c["fill"] if i % 2 else c["dimf"], outline=c["ln"], w=6)
+        for k in range(3):
+            yy = y0 + h * (0.28 + k * 0.22)
+            d.line([(rcx - rw * 0.26, yy), (rcx + rw * 0.26, yy)],
+                   fill=c["ln2"], width=5)
+    gcx = inner0 + slot * 3.5
+    gw = rw * 1.7
+    rr(d, (gcx - gw / 2, y0 + h * 0.34, gcx + gw / 2, y0 + h * 0.54), h * 0.045,
+       fill=c["core"], outline=None)
+    d.line([(gcx - gw * 0.62, y0 + h * 0.62), (gcx + gw * 0.62, y0 + h * 0.62)],
+           fill=c["hi"], width=13)
+
+
+def at_gate(d, b, c, o):
+    """Five evaluation tracks dropping into one wide solid navy bar with a
+    single open slot, four outcome chips beneath and one of them coral.  vs
+    hm_gateway's converging funnel and dv_autotest's gauntlet: it is the BAR
+    that carries the gap."""
+    x0, y0, x1, y1 = b
+    w, h = x1 - x0, y1 - y0
+    barx0, barx1 = x0 + w * 0.02, x1 - w * 0.02
+    bary0, bary1 = y0 + h * 0.44, y0 + h * 0.64
+    for i in range(5):
+        tx = x0 + w * (0.10 + i * 0.20)
+        rr(d, (tx - w * 0.035, y0 + h * 0.02, tx + w * 0.035, y0 + h * 0.14),
+           h * 0.03, fill=c["fill"], outline=c["ln2"], w=5)
+        d.line([(tx, y0 + h * 0.14), (tx, bary0)], fill=c["ln"], width=6)
+    gap0, gap1 = x0 + w * 0.60, x0 + w * 0.70
+    rr(d, (barx0, bary0, gap0, bary1), h * 0.045, fill=c["core"], outline=None)
+    rr(d, (gap1, bary0, barx1, bary1), h * 0.045, fill=c["core"], outline=None)
+    cw = w * 0.21
+    for i in range(4):
+        cx_ = x0 + w * (0.10 + i * 0.267)
+        rr(d, (cx_ - cw / 2, y0 + h * 0.76, cx_ + cw / 2, y1 - h * 0.02),
+           h * 0.05, fill=c["hi"] if i == 0 else c["fill"],
+           outline=None if i == 0 else c["ln2"], w=5)
+
+
+def at_incident(d, b, c, o):
+    """A thick ring of travel around a solid navy evidence disc, broken at the
+    top where a coral spark strikes in and closing again under a navy head.  vs
+    at_engine's necklace, hm_loop's arrow round a page and dv_gitops' sync
+    loop: the page's only BROKEN ring."""
+    x0, y0, x1, y1 = b
+    w, h = x1 - x0, y1 - y0
+    cx, cy = (x0 + x1) / 2, y0 + h * 0.58
+    rx, ry = min(w * 0.40, h * 1.4), h * 0.37
+    bb = [cx - rx, cy - ry, cx + rx, cy + ry]
+    d.arc(bb, 302, 238, fill=c["ln"], width=15)
+    a = math.radians(238)
+    hxp, hyp = cx + rx * math.cos(a), cy + ry * math.sin(a)
+    tx, ty = -rx * math.sin(a), ry * math.cos(a)
+    tl = math.hypot(tx, ty) or 1.0
+    tx, ty = tx / tl, ty / tl
+    s = h * 0.10
+    d.polygon([(hxp + tx * s, hyp + ty * s),
+               (hxp - tx * s * 0.4 - ty * s * 0.7, hyp - ty * s * 0.4 + tx * s * 0.7),
+               (hxp - tx * s * 0.4 + ty * s * 0.7, hyp - ty * s * 0.4 - tx * s * 0.7)],
+              fill=c["ln"])
+    gx_ = cx + rx * math.cos(math.radians(272))
+    gy_ = cy + ry * math.sin(math.radians(272))
+    d.line([(gx_ + w * 0.045, y0 + h * 0.01), (gx_ - w * 0.005, y0 + h * 0.11),
+            (gx_ + w * 0.028, y0 + h * 0.11), (gx_ - w * 0.012, gy_ - h * 0.02)],
+           fill=c["hi"], width=10, joint="curve")
+    circ(d, gx_ - w * 0.012, gy_, h * 0.05, fill=c["hi"])
+    circ(d, cx, cy, h * 0.175, fill=c["core"], outline=None)
+    circ(d, cx, cy, h * 0.075, fill=None, outline=(255, 255, 255, 225), w=7)
+
+
+def at_ledger(d, b, c, o):
+    """A wide solid navy ledger bar with five tabs standing up from its top
+    edge, one coral, and a thin gold rule beneath.  vs at_gate (a bar with a
+    GAP and chips below) and at_scorecard (tiles that float clear of the bar):
+    here the tabs TOUCH."""
+    x0, y0, x1, y1 = b
+    w, h = x1 - x0, y1 - y0
+    bary0, bary1 = y0 + h * 0.48, y0 + h * 0.84
+    n = 5
+    gap = w * 0.02
+    tw_ = (w * 0.94 - gap * (n - 1)) / n
+    for i in range(n):
+        tx = x0 + w * 0.03 + i * (tw_ + gap)
+        lit = i == 3
+        rr(d, (tx, y0 + h * 0.10, tx + tw_, bary0 + h * 0.08), h * 0.05,
+           fill=c["hi"] if lit else (c["fill"] if i % 2 else c["dimf"]),
+           outline=None if lit else c["ln"], w=6)
+        if not lit:
+            for k in range(2):
+                yy = y0 + h * (0.22 + k * 0.13)
+                d.line([(tx + tw_ * 0.18, yy), (tx + tw_ * 0.82, yy)],
+                       fill=c["ln2"], width=5)
+    rr(d, (x0, bary0, x1, bary1), h * 0.06, fill=c["core"], outline=None)
+    d.line([(x0 + w * 0.06, y1 - h * 0.05), (x1 - w * 0.06, y1 - h * 0.05)],
+           fill=c["gold"], width=7)
+
+
+def at_supply(d, b, c, o):
+    """Three supplier tiles chained into one solid navy tile, over a footprint
+    meter whose filled portion is coral and whose threshold is a navy tick.  vs
+    dv_net's packet path and dv_sre's burn-down: the page's only CHAIN."""
+    x0, y0, x1, y1 = b
+    w, h = x1 - x0, y1 - y0
+    ty0, ty1 = y0 + h * 0.04, y0 + h * 0.46
+    tw_ = w * 0.155
+    xs = [x0 + w * 0.01, x0 + w * 0.235, x0 + w * 0.46]
+    for tx in xs:
+        rr(d, (tx, ty0, tx + tw_, ty1), h * 0.05,
+           fill=c["fill"], outline=c["ln"], w=6)
+        for k in range(2):
+            yy = ty0 + (ty1 - ty0) * (0.34 + k * 0.3)
+            d.line([(tx + tw_ * 0.2, yy), (tx + tw_ * 0.8, yy)], fill=c["ln2"], width=5)
+    cy_ = (ty0 + ty1) / 2
+    linkw = h * 0.10
+    for gx_ in (x0 + w * 0.185, x0 + w * 0.41, x0 + w * 0.635):
+        for k in (-1, 1):
+            d.ellipse([gx_ + k * linkw * 0.42 - linkw * 0.62, cy_ - linkw * 0.44,
+                       gx_ + k * linkw * 0.42 + linkw * 0.62, cy_ + linkw * 0.44],
+                      outline=c["ln"], width=6)
+    dx_ = x0 + w * 0.72
+    rr(d, (dx_, ty0 - h * 0.03, x1 - w * 0.01, ty1 + h * 0.03), h * 0.06,
+       fill=c["core"], outline=None)
+    circ(d, (dx_ + x1 - w * 0.01) / 2, cy_, h * 0.09, fill=None,
+         outline=(255, 255, 255, 225), w=7)
+    my0, my1 = y1 - h * 0.28, y1 - h * 0.06
+    rr(d, (x0 + w * 0.01, my0, x1 - w * 0.01, my1), h * 0.05,
+       fill=c["dimf"], outline=c["ln"], w=6)
+    full = (x1 - w * 0.01) - (x0 + w * 0.01)
+    rr(d, (x0 + w * 0.01 + 6, my0 + 6, x0 + w * 0.01 + full * 0.58, my1 - 6),
+       h * 0.04, fill=c["hi"], outline=None)
+    tkx = x0 + w * 0.01 + full * 0.78
+    d.line([(tkx, my0 - h * 0.07), (tkx, my1 + h * 0.05)], fill=c["ln"], width=9)
+
+
+def at_track(d, b, c, o):
+    """A six-segment day track with tick marks, a solid navy start block at day
+    zero, a checkpoint dot on every boundary and a coral flag at day 180.  vs
+    hm_railbolt's schedule rail and at_lanes' four lanes: six SEGMENTS, and the
+    page's only flag."""
+    x0, y0, x1, y1 = b
+    w, h = x1 - x0, y1 - y0
+    tx0, tx1 = x0 + w * 0.11, x1 - w * 0.13
+    ty0, ty1 = y0 + h * 0.36, y0 + h * 0.60
+    segw = (tx1 - tx0) / 6
+    for k in range(6):
+        sx = tx0 + k * segw
+        rr(d, (sx, ty0, sx + segw, ty1), h * 0.03,
+           fill=c["fill"] if k % 2 else c["dimf"], outline=c["ln2"], w=5)
+    rr(d, (x0 + w * 0.005, ty0 - h * 0.09, x0 + w * 0.095, ty1 + h * 0.09),
+       h * 0.045, fill=c["core"], outline=None)
+    for k in range(7):
+        bx_ = tx0 + k * segw
+        circ(d, bx_, (ty0 + ty1) / 2, h * 0.055, fill=c["fill"], outline=c["ln"], w=6)
+        d.line([(bx_, ty1 + h * 0.09), (bx_, ty1 + h * 0.20)], fill=c["ln2"], width=5)
+    px_ = tx1 + w * 0.035
+    d.line([(px_, y0 + h * 0.08), (px_, y1 - h * 0.06)], fill=c["ln"], width=8)
+    d.polygon([(px_, y0 + h * 0.08), (x1 - w * 0.005, y0 + h * 0.22),
+               (px_, y0 + h * 0.36)], fill=c["hi"])
+
+
+def at_scorecard(d, b, c, o):
+    """Six upright columns with reading rules inside them, one coral, floating
+    clear above a separate solid navy base bar, with a gold tick under the lit
+    column.  vs at_ledger's tabs (which touch their bar) and at_factory's
+    windows (which sit inside a shed): free-standing COLUMNS."""
+    x0, y0, x1, y1 = b
+    w, h = x1 - x0, y1 - y0
+    n = 6
+    gap = w * 0.022
+    cw = (w - gap * (n - 1)) / n
+    for i in range(n):
+        cx_ = x0 + i * (cw + gap)
+        lit = i == 4
+        rr(d, (cx_, y0 + h * 0.02, cx_ + cw, y0 + h * 0.60), h * 0.045,
+           fill=c["hi"] if lit else (c["fill"] if i % 2 else c["dimf"]),
+           outline=None if lit else c["ln"], w=6)
+        for k in range(3):
+            yy = y0 + h * (0.16 + k * 0.15)
+            d.line([(cx_ + cw * 0.18, yy), (cx_ + cw * 0.82, yy)],
+                   fill=(255, 255, 255, 210) if lit else c["ln2"], width=5)
+    rr(d, (x0, y0 + h * 0.70, x1, y0 + h * 0.86), h * 0.05,
+       fill=c["core"], outline=None)
+    tcx = x0 + 4 * (cw + gap) + cw / 2
+    d.line([(tcx - h * 0.08, y1 - h * 0.08), (tcx - h * 0.02, y1 - h * 0.015),
+            (tcx + h * 0.09, y1 - h * 0.15)], fill=c["gold"], width=9, joint="curve")
+
+
+def at_spiral(d, b, c, o):
+    """An outward navy spiral off a solid navy hub, three arrowheads growing as
+    it widens, a coral dot at the outer end.  vs dv_k8s' helm wheel, oc_idle's
+    gears and hm_loop's closed circle: the page's only SPIRAL."""
+    x0, y0, x1, y1 = b
+    w, h = x1 - x0, y1 - y0
+    cx, cy = (x0 + x1) / 2, (y0 + y1) / 2
+    kx, ky = min(w * 0.47, h * 1.6), h * 0.46
+    tmax = 4.3 * math.pi
+    pts = []
+    steps = 240
+    for i in range(steps + 1):
+        t = tmax * i / steps
+        r_ = t / tmax
+        pts.append((cx + kx * r_ * math.cos(t - math.pi / 2),
+                    cy + ky * r_ * math.sin(t - math.pi / 2)))
+    d.line(pts, fill=c["ln"], width=9, joint="curve")
+    for frac, hs in ((0.42, 20), (0.68, 27), (0.92, 36)):
+        i = int(steps * frac)
+        ax, ay = pts[i - 4]
+        bx_, by_ = pts[i]
+        ang = math.atan2(by_ - ay, bx_ - ax)
+        d.polygon([(bx_ + hs * math.cos(ang), by_ + hs * math.sin(ang)),
+                   (bx_ - hs * 0.5 * math.sin(ang), by_ + hs * 0.5 * math.cos(ang)),
+                   (bx_ + hs * 0.5 * math.sin(ang), by_ - hs * 0.5 * math.cos(ang))],
+                  fill=c["ln"])
+    circ(d, cx, cy, h * 0.10, fill=c["core"], outline=None)
+    circ(d, pts[-1][0], pts[-1][1], h * 0.085, fill=c["hi"], outline=None)
+
+
 MOTIFS = {
     "oc_os": oc_os, "oc_team": oc_team, "oc_memory": oc_memory,
     "oc_security": oc_security, "oc_integrations": oc_integrations,
@@ -1761,6 +2377,13 @@ MOTIFS = {
     "hm_isolation": hm_isolation, "hm_gateway": hm_gateway,
     "hm_loop": hm_loop, "hm_alwayson": hm_alwayson,
     "hm_railbolt": hm_railbolt, "hm_ladder": hm_ladder, "hm_fleet": hm_fleet,
+    "at_spine": at_spine, "at_chevrons": at_chevrons, "at_engine": at_engine,
+    "at_stairs": at_stairs, "at_portfolio": at_portfolio, "at_lanes": at_lanes,
+    "at_wedge": at_wedge, "at_sorter": at_sorter, "at_factory": at_factory,
+    "at_federated": at_federated, "at_core": at_core, "at_contract": at_contract,
+    "at_rails": at_rails, "at_gate": at_gate, "at_incident": at_incident,
+    "at_ledger": at_ledger, "at_supply": at_supply, "at_track": at_track,
+    "at_scorecard": at_scorecard, "at_spiral": at_spiral,
 }
 
 
@@ -1919,8 +2542,15 @@ def check(rows):
     return bad
 
 
-def contact_sheet(rows):
-    cols, cell, pad = 6, 260, 10
+def contact_sheet(rows, prefix=None):
+    """8-up, because 76 covers at 6 columns is a 13-row scroll. `prefix` filters
+    on the eyebrow so one series can be reviewed on its own sheet."""
+    if prefix:
+        rows = [r for r in rows if r["eyebrow"].startswith(prefix)]
+        if not rows:
+            print("no cover has an eyebrow starting %r" % prefix)
+            return None
+    cols, cell, pad = 8, 260, 10
     n = len(rows)
     rowsn = (n + cols - 1) // cols
     sheet = Image.new("RGB", (cols * (cell + pad) + pad, rowsn * (cell + pad) + pad),
@@ -1931,7 +2561,10 @@ def contact_sheet(rows):
             continue
         im = Image.open(p).resize((cell, cell), Image.LANCZOS)
         sheet.paste(im, (pad + (i % cols) * (cell + pad), pad + (i // cols) * (cell + pad)))
-    out = ROOT / ".covers" / "contact-sheet.jpg"
+    name = "contact-sheet.jpg"
+    if prefix:
+        name = "contact-%s.jpg" % re.sub(r"[^a-z0-9]+", "-", prefix.lower()).strip("-")
+    out = ROOT / ".covers" / name
     out.parent.mkdir(exist_ok=True)
     sheet.save(out, "JPEG", quality=88, optimize=True)
     print("contact sheet: %s (%d covers, %.0f KB)"
@@ -1944,7 +2577,8 @@ def main():
     ap.add_argument("slug", nargs="?")
     ap.add_argument("--all", action="store_true")
     ap.add_argument("--check", action="store_true")
-    ap.add_argument("--contact", action="store_true")
+    ap.add_argument("--contact", nargs="?", const="", default=None,
+                    metavar="EYEBROW-PREFIX")
     ap.add_argument("--no-og", action="store_true")
     a = ap.parse_args()
 
@@ -1960,8 +2594,8 @@ def main():
               % (len(rows), len({r["motif"] for r in rows}),
                  len({r["ground"] for r in rows}), len({r["accent"] for r in rows})))
         return 0
-    if a.contact:
-        contact_sheet(rows)
+    if a.contact is not None:
+        contact_sheet(rows, a.contact or None)
         return 0
 
     todo = rows if a.all else [r for r in rows if r["slug"] == a.slug]

@@ -91,6 +91,31 @@ RE_SNAV = re.compile(r'<div class="series-nav">(.*?)</div>\s*</div>', re.S)
 # A structural check should not be this brittle about attribute order.
 RE_SNAV_ITEM = re.compile(
     r'<(a href="([^"]+)"[^>]*|span class="current"[^>]*)>([^<]*)<')
+RE_SNAV_OPEN = re.compile(r'<div class="series-nav">')
+RE_DIV_TOKEN = re.compile(r"<div\b|</div>")
+
+
+def series_nav_body(s):
+    """Inner HTML of the first .series-nav, bounded by div DEPTH.
+
+    RE_SNAV stops at the first `</div></div>`, which is correct for a flat
+    chip strip and wrong for a grouped one: the AI Transformation series wraps
+    its 20 chips in four labelled `.series-links__group` divs, and the regex
+    would return only the first group.  Walking the depth returns the whole
+    strip for both shapes.  INV-03d fault-injects exactly that difference.
+
+    The opener is searched on a blank_inert() copy so a strip quoted inside a
+    <pre> sample cannot be mistaken for the real one; offsets are preserved,
+    so the slice is taken from the original text."""
+    m = RE_SNAV_OPEN.search(blank_inert(s))
+    if not m:
+        return None
+    depth = 1
+    for t in RE_DIV_TOKEN.finditer(s, m.end()):
+        depth += 1 if t.group(0) != "</div>" else -1
+        if depth == 0:
+            return s[m.end():t.start()]
+    return None
 RE_PNAV_OPEN = re.compile(r'<(div|nav)\s+class="post-nav">')
 RE_PLINK = re.compile(                       # trap #1: [^>]*> is load-bearing
     r'<a\s+href="([^"]+)"\s+class="post-nav__link"[^>]*>\s*'
@@ -642,10 +667,9 @@ class Site(object):
         self.snav = {}           # post -> (h3_text, [(kind, href, label)])
         for f in self.posts:
             s = self.post(f)
-            m = RE_SNAV.search(s)
-            if not m:
+            body = series_nav_body(s)
+            if body is None:
                 continue
-            body = m.group(1)
             h3 = re.search(r"<h3[^>]*>(.*?)</h3>", body, re.S)
             items = [(k, h, l.strip()) for k, h, l in RE_SNAV_ITEM.findall(body)]
             self.snav[f] = (htmlmod.unescape(h3.group(1)).strip() if h3 else None,
@@ -804,6 +828,40 @@ def _(site):
 # ---------------------------------------------------------------------------
 # INV-03 — the 7-entry OpenClaw series-nav chip strip
 # ---------------------------------------------------------------------------
+@check("INV-02f", ".blog-jump chips match the series sections they anchor")
+def _(site):
+    """The jump strip is hand-maintained and was forgotten twice (dae4304).
+    Nothing read it until now: it is not a card, not a counter and not a nav
+    pattern, so every existing check looked straight past a chip that pointed
+    at a section that had been renamed, or a count that had stopped being true."""
+    out = []
+    m = re.search(r'<nav class="blog-jump"[^>]*>(.*?)</nav>', site.idx, re.S)
+    if not m:
+        return [Violation("blog-jump", "blog/index.html has no .blog-jump strip")]
+    chips = re.findall(r'<a href="#([^"]+)">([^<]*)</a>', m.group(1))
+    have = {sid: len(RE_CARD.findall(body)) for sid, body, _o in site.sections}
+    seen = Counter(sid for sid, _t in chips)
+    for sid, text in chips:
+        if sid not in have:
+            out.append(Violation("jump|" + sid,
+                                 "jump chip #%s anchors no <section class=\"series-section\">"
+                                 % sid))
+            continue
+        n = re.search(r"\u00b7\s*(\d+)\s*$", htmlmod.unescape(text).strip())
+        if not n:
+            out.append(Violation("jump|" + sid,
+                                 "jump chip %r has no trailing count" % text.strip()))
+        elif int(n.group(1)) != have[sid]:
+            out.append(Violation("jump|" + sid,
+                                 "jump chip #%s says %s, section holds %d card(s)"
+                                 % (sid, n.group(1), have[sid])))
+    for sid in sorted(have):
+        if seen[sid] != 1:
+            out.append(Violation("jump|missing|" + sid,
+                                 "#%s has %d jump chip(s), want exactly 1" % (sid, seen[sid])))
+    return out
+
+
 @check("INV-03", "each of the 7 OpenClaw posts has one 7-entry .series-nav, current == self")
 def _(site):
     out = []
@@ -843,6 +901,114 @@ def _(site):
         h3 = site.snav[f][0]
         if h3 != SERIES_NAV_H3:
             out.append(Violation(f, "%s h3=%r (others: %r)" % (f, h3, SERIES_NAV_H3)))
+    return out
+
+
+@check("INV-03c", "every non-SERIES7 .series-nav strip is identical across its "
+                  "members, marks exactly itself current, and links only to members")
+def _(site):
+    """The SERIES7 checks above police the OpenClaw strip against a hardcoded
+    table.  Hermes (10 chips), Life (9) and AI Transformation (20) had NO
+    content check at all — a mistyped label or a chip left pointing at the
+    previous post was invisible until a reader found it, and every one of those
+    strips is duplicated into 9-20 files by hand.
+
+    This check needs no table.  Group the posts by their strip's <h3>, then
+    require the members to agree: substitute each post's OWN href for its
+    current chip, and identical sequences prove both "same strip everywhere"
+    and "each marks itself" in one comparison."""
+    out = []
+    groups = defaultdict(list)
+    for f, (h3, _items) in site.snav.items():
+        if f not in SERIES7:
+            groups[h3 or "(no h3)"].append(f)
+    for h3, members in sorted(groups.items()):
+        shapes = {}
+        for f in sorted(members):
+            seq, n_cur = [], 0
+            for k, href, label in site.snav[f][1]:
+                label = htmlmod.unescape(label)
+                if k.startswith("span"):
+                    n_cur += 1
+                    seq.append(("/blog/" + f[:-5], label))      # self-href
+                else:
+                    seq.append((href, label))
+            shapes[f] = tuple(seq)
+            if n_cur != 1:
+                out.append(Violation(f + "|current",
+                                     '%s has %d <span class="current"> in strip %r '
+                                     "(want exactly 1)" % (f, n_cur, h3)))
+        ref = Counter(shapes.values()).most_common(1)[0][0]
+        for f, seq in sorted(shapes.items()):
+            if seq == ref:
+                continue
+            j = next((i for i, (a, b) in enumerate(zip(seq, ref)) if a != b),
+                     min(len(seq), len(ref)))
+            out.append(Violation(f + "|shape",
+                                 "%s strip %r differs from its %d sibling(s) at chip "
+                                 "%d: %r vs %r" % (f, h3, len(members) - 1, j + 1,
+                                                   seq[j:j + 1], ref[j:j + 1])))
+        for href, _label in ref:
+            tgt = href.rstrip("/").rsplit("/", 1)[-1] + ".html"
+            if tgt not in members:
+                out.append(Violation("%s|closure|%s" % (h3, href),
+                                     "strip %r links %s, but that post does not carry "
+                                     "this strip" % (h3, href)))
+    return out
+
+
+@check("INV-03d", "linter self-check: the .series-nav parser survives a grouped strip", FAIL)
+def _(site):
+    """series_nav_body() walks div depth because RE_SNAV stops at the first
+    `</div></div>`.  Probe 3 is the one that matters: a strip whose chips sit
+    inside group divs.  Assert the OLD regex undercounts it, so this check can
+    never pass vacuously if someone reverts the parser."""
+    out = []
+    chip = '<a href="/blog/p%d">#%d L</a>'
+    flat = ('<div class="series-nav"><h3>H</h3><div class="series-links">'
+            + "".join(chip % (i, i) for i in range(1, 11)) + "</div></div>")
+    grouped = ('<div class="series-nav"><h3>H</h3>'
+               '<div class="series-links series-links--grouped">'
+               + "".join('<div class="series-links__group">'
+                         '<p class="series-links__label">G%d</p>' % g
+                         + "".join(chip % (i, i)
+                                   for i in range(g * 5 - 4, g * 5 + 1))
+                         + "</div>" for g in range(1, 5))
+               + "</div></div>")
+
+    def n_items(text):
+        body = series_nav_body(text)
+        return len(RE_SNAV_ITEM.findall(body)) if body is not None else -1
+
+    if n_items(flat) != 10:
+        out.append(Violation("flat", "flat 10-chip strip parsed as %d chips"
+                             % n_items(flat)))
+    if n_items(grouped) != 20:
+        out.append(Violation("grouped", "grouped 4x5 strip parsed as %d chips (want 20) "
+                             "— the depth walker regressed" % n_items(grouped)))
+    # Probe 3 is the vacuity guard.  The SHIPPED grouped strip keeps its chips
+    # as direct children of each group, and the old RE_SNAV happens to survive
+    # that (its first `</div></div>` is group-4 + series-links, i.e. the true
+    # end).  Wrap the chips one level deeper and the regex stops at group 1 —
+    # that is the shape that proves the depth walker earns its place, and it is
+    # exactly what a future "let me just wrap the chips" edit would produce.
+    nested = grouped.replace('<a href', '<div class="chip"><a href').replace(
+        "</a>", "</a></div>")
+    if n_items(nested) != 20:
+        out.append(Violation("nested", "a grouped strip with wrapped chips parsed as %d "
+                             "chips (want 20)" % n_items(nested)))
+    m = RE_SNAV.search(nested)
+    if m and len(RE_SNAV_ITEM.findall(m.group(1))) >= 20:
+        out.append(Violation("vacuous", "RE_SNAV now parses even the nested strip, so this "
+                             "self-check no longer proves the depth walker does anything "
+                             "— re-derive it"))
+    decoy = "<pre>" + flat + "</pre>" + flat.replace("#1 L", "#1 REAL")
+    body = series_nav_body(decoy)
+    if body is None or "#1 REAL" not in body:
+        out.append(Violation("decoy", "a .series-nav quoted inside <pre> was parsed as "
+                             "the real strip"))
+    if series_nav_body('<div class="series-nav"><h3>H</h3>') is not None:
+        out.append(Violation("unterminated", "an unterminated strip did not return None"))
     return out
 
 
