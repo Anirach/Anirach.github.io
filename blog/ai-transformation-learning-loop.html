@@ -1,0 +1,1763 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Build a Learning System — วงจรการเรียนรู้ที่คู่แข่งซื้อไม่ได้ | Anirach Mingkhwan</title>
+  <meta name="description" content="ความได้เปรียบที่ยั่งยืนไม่ใช่การเข้าถึงโมเดล แต่คือวงจรการเรียนรู้ห้าขั้น Observe, Preserve, Compare, Change, Verify พร้อม Canvas 75 นาที">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=Sarabun:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      color-scheme: light;
+      /* ink */
+      --navy: #11304b; --slate: #334155; --slate-light: #526174; --gray: #94a3b8;
+      /* ground */
+      --bg: #faf7f0; --white: #ffffff; --code-bg: #1e293b;
+      /* accent */
+      --blue: #226299; --blue-dark: #1a4d7a; --blue-light: #4992b9;
+      /* brand — sampled from the book covers. --gold is decorative on light grounds (2.2:1); --gold-dark is its text form. */
+      --gold: #c4a46c; --gold-dark: #7a5f22; --coral: #c2410c; --cloud: #dee7e6; --parchment: #e9e1c4; --focus: #226299;
+      /* status — use only these six, never invent a seventh */
+      --green: #22c55e; --red: #ef4444; --amber: #f59e0b;
+      --cyan: #06b6d4; --purple: #226299; --purple-dark: #1a4d7a;
+      /* type */
+      --font: 'Inter', 'Sarabun', -apple-system, BlinkMacSystemFont, sans-serif;
+      --mono: 'JetBrains Mono', 'Fira Code', 'Sarabun', monospace;
+      /* form */
+      --radius: 12px; --radius-sm: 8px; --radius-lg: 16px;
+      --measure: 720px; --wide: 860px;
+      --transition: 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+    html { scroll-behavior: smooth; }
+    body { font-family: var(--font); font-size: 17px; line-height: 1.8; color: var(--slate); background: var(--bg); -webkit-font-smoothing: antialiased; }
+    .blog-nav { position: fixed; top: 0; left: 0; right: 0; z-index: 100; background: rgba(248,250,252,0.85); backdrop-filter: blur(20px); border-bottom: 1px solid rgba(0,0,0,0.05); }
+    .blog-nav__inner { max-width: 860px; margin: 0 auto; padding: 0 2rem; height: 56px; display: flex; align-items: center; justify-content: space-between; }
+    .blog-nav__back { font-size: 0.85rem; font-weight: 500; color: var(--blue); text-decoration: none; }
+    .blog-nav__back:hover { color: #1a4d7a; }
+    .blog-nav__title { font-size: 0.85rem; font-weight: 600; color: var(--navy); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 50%; }
+    /* ── HERO ── house .post-hero on the approved Deep Blue gradient (page-design
+       §5 / INV-28). Ink is inverted for the dark ground: white title/meta, tag
+       pills white on 18% white — the openclaw-production treatment. The
+       background value must stay byte-identical to the approved string. */
+    .post-hero { padding: 8rem 2rem 3rem; background: linear-gradient(135deg, #11304b 0%, #1a4d7a 45%, #226299 100%); color: #fff; text-align: center; }
+    .post-hero__tags { display: flex; gap: 0.5rem; justify-content: center; margin-bottom: 1.25rem; flex-wrap: wrap; }
+    .post-hero__tag { display: inline-block; font-size: 0.72rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.1em; color: #fff; background: rgba(255,255,255,0.18); padding: 0.35rem 0.9rem; border-radius: 20px; }
+    .post-hero__title { font-size: clamp(1.8rem, 5vw, 3rem); font-weight: 800; color: #fff; line-height: 1.2; margin-bottom: 1rem; max-width: 720px; margin-left: auto; margin-right: auto; }
+    .post-hero__sub { font-size: 1.05rem; max-width: 640px; margin: 0 auto 1.5rem; line-height: 1.7; color: #fff; }
+    .post-hero__meta { font-size: 0.85rem; color: #fff; display: flex; align-items: center; justify-content: center; gap: 1.5rem; flex-wrap: wrap; }
+    .post-hero__series { font-weight: 600; color: #fff; }
+    /* the switch pill and the focus ring both sit on the dark hero: the pill is
+       a light chip so its labels keep their light-ground colours, and --focus
+       re-points to gold here (blue collapses on blue — the footer/pre
+       precedent). */
+    .post-hero { --focus: var(--gold); }
+    .post-hero__cover {
+      aspect-ratio: 1 / 1;
+      max-width: 380px;
+      margin: 2.5rem auto 0;
+      border-radius: var(--radius-lg, 16px);
+      overflow: hidden;
+      box-shadow: 0 20px 60px rgba(17,48,75,0.14);
+    }
+    .post-hero__cover img { width: 100%; height: 100%; object-fit: cover; display: block; }
+    .post-body { max-width: 720px; margin: 0 auto; padding: 3rem 2rem 6rem; }
+    .post-body h2 { font-size: 1.6rem; font-weight: 800; color: var(--navy); margin: 3rem 0 1rem; padding-bottom: 0.5rem; border-bottom: 2px solid rgba(34,98,153,0.15); }
+    .post-body h3 { font-size: 1.25rem; font-weight: 700; color: var(--navy); margin: 2.25rem 0 0.75rem; }
+    .post-body p { margin-bottom: 1.25rem; }
+    .post-body strong { font-weight: 700; color: var(--navy); }
+    .post-body a { color: var(--blue); text-decoration: underline; text-decoration-thickness: 1px; text-underline-offset: 2px; }
+    .post-body ul, .post-body ol { margin: 0.5rem 0 1.25rem 1.5rem; }
+    .post-body li { margin-bottom: 0.4rem; }
+    .post-body blockquote { background: rgba(34,98,153,0.06); border-left: 4px solid var(--blue); padding: 1rem 1.25rem; border-radius: 0 10px 10px 0; margin: 1.25rem 0; font-size: 0.95rem; color: var(--navy); }
+    .post-body hr { border: none; height: 1px; background: linear-gradient(90deg, transparent, rgba(34,98,153,0.2), transparent); margin: 3rem 0; }
+    /* ── CODE ── */
+    .post-body pre { background: var(--code-bg); border-radius: 12px; padding: 1.5rem; margin: 1.25rem 0 1.5rem; overflow-x: auto; border: 1px solid rgba(255,255,255,0.05); }
+    .post-body pre code { font-family: var(--mono); font-size: 0.85rem; color: #e2e8f0; line-height: 1.7; background: none; padding: 0; white-space: pre-wrap; }
+    .post-body code { font-family: var(--mono); font-size: 0.88em; background: rgba(34,98,153,0.08); color: var(--blue-dark); padding: 0.15em 0.45em; border-radius: 5px; }
+    /* ── TABLES ── */
+    .table-wrapper { overflow-x: auto; margin: 1.5rem 0; border-radius: 0.5rem; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1); }
+    table { width: 100%; border-collapse: collapse; background: white; }
+    th { background: #226299; color: white; padding: 1rem; text-align: left; font-weight: 600; }
+    td { padding: 1rem; border-bottom: 1px solid #e5e7eb; }
+    .post-body table { display: block; width: 100%; overflow-x: auto; }
+    /* ── ALERTS ── */
+    .alert { background: #fef3cd; border: 1px solid #facc15; border-radius: 0.5rem; padding: 1rem; margin: 1.5rem 0; }
+    .alert.danger { background: #fee2e2; border-color: #ef4444; }
+    .alert.info { background: #e0f2fe; border-color: #06b6d4; }
+    .alert.success { background: #d1fae5; border-color: #10b981; }
+    /* ── KEY TAKEAWAYS ── */
+    .key-takeaways { background: linear-gradient(135deg, #f3f4f6 0%, #e5e7eb 100%); border-radius: 1rem; padding: 2rem; margin: 3rem 0; }
+    .key-takeaways h3 { color: #226299; margin-bottom: 1.5rem; }
+    .post-series-footer { text-align: center; font-size: 0.85rem; color: var(--slate-light); font-style: italic; margin-top: 2rem; padding-top: 2rem; border-top: 1px solid #e2e8f0; }
+    .blog-footer { background: var(--navy); padding: 2rem 0; text-align: center; }
+    .blog-footer a { color: var(--gold); text-decoration: none; font-weight: 600; font-size: 0.9rem; }
+    .blog-footer span { color: var(--gray); font-size: 0.8rem; display: block; margin-top: 0.4rem; }
+    @media (max-width: 600px) {
+      .post-hero { padding: 7rem 1.25rem 2.5rem; }
+      .post-body { padding: 2rem 1.25rem 4rem; }
+      .post-hero__meta { flex-direction: column; gap: 0.4rem; }
+      .post-body h2 { font-size: 1.4rem; }
+      .post-body h3 { font-size: 1.15rem; }
+      .post-body pre { padding: 1rem; border-radius: 8px; }
+    }
+
+    :focus-visible { outline: 2px solid var(--focus); outline-offset: 3px; border-radius: 2px; }
+    /* the ring sits on the page ground (3px offset). Inside the navy footers
+       and code blocks var(--blue) collapses to 2.12:1, so those scopes
+       re-point --focus to gold (5.73:1 on navy). */
+    .footer, .blog-footer, pre { --focus: var(--gold); }
+    :focus:not(:focus-visible) { outline: none; }
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after {
+        animation-duration: .01ms !important; animation-iteration-count: 1 !important;
+        transition-duration: .01ms !important; scroll-behavior: auto !important;
+      }
+    }
+    h1, h2, h3, .post-hero__title, .card__title { text-wrap: balance; }
+
+    .post-body img, .post-body svg { max-width: 100%; height: auto; }
+
+    /* ── SKIP LINK ── a11y-perf R5: the link and the landmark it targets are a
+       pair — useless without both halves. Off-screen until focused, then the
+       first tab stop on every page. */
+    .skip-link { position: absolute; left: -9999px; }
+    .skip-link:focus {
+      left: 1rem; top: 1rem; z-index: 999;
+      background: var(--navy); color: #fff;
+      padding: 0.75rem 1.25rem; border-radius: var(--radius-sm);
+      font-weight: 600; text-decoration: none;
+    }
+
+    /* ── POST WAYFINDING ── the wordmark is the home link; the footer carries
+       the full destination row. */
+    .blog-nav__home {
+      font-size: 0.9rem; font-weight: 800; color: var(--navy);
+      text-decoration: none; margin-right: 1rem;
+    }
+    .blog-nav__home:hover { color: var(--blue); }
+    .blog-nav__inner > .blog-nav__back { margin-right: auto; }
+    .blog-footer__nav {
+      display: flex; flex-wrap: wrap; justify-content: center; gap: 0.35rem 1.25rem;
+      max-width: 860px; margin: 0 auto 1.25rem; padding: 0 2rem 1.25rem;
+      border-bottom: 1px solid rgba(255,255,255,0.12);
+    }
+    .blog-footer__nav a { color: var(--gold); font-size: 0.85rem; font-weight: 600; text-decoration: none; }
+    .blog-footer__nav a:hover { color: #fff; text-decoration: underline; }
+
+    html { scroll-padding-top: 5rem; }
+    [id] { scroll-margin-top: 5rem; }
+
+    /* Thai needs more room than Latin at the same nominal size. */
+    .post-body:lang(th) { font-size: 18px; line-height: 1.85; }
+    .post-body p, .post-body li, .post-body blockquote { text-wrap: pretty; }
+
+    /* ---- side-scroll affordance ----
+       pre blocks and tables can exceed 720px. These layers paint a shadow ONLY
+       where there is more content in that direction; when fully scrolled the
+       cover slides over the shadow and hides it. No JavaScript, no wrapper. */
+    .post-body pre, .post-body table {
+      overflow-x: auto;
+      background-image:
+        linear-gradient(to right, var(--code-bg, #0f172a) 30%, rgba(15,23,42,0)),
+        linear-gradient(to left, var(--code-bg, #0f172a) 30%, rgba(15,23,42,0)),
+        radial-gradient(farthest-side at 0 50%, rgba(0,0,0,.28), rgba(0,0,0,0)),
+        radial-gradient(farthest-side at 100% 50%, rgba(0,0,0,.28), rgba(0,0,0,0));
+      background-position: 0 0, 100% 0, 0 0, 100% 0;
+      background-repeat: no-repeat;
+      background-size: 40px 100%, 40px 100%, 14px 100%, 14px 100%;
+      background-attachment: local, local, scroll, scroll;
+    }
+    .post-body table {
+      background-image:
+        linear-gradient(to right, var(--white, #fff) 30%, rgba(255,255,255,0)),
+        linear-gradient(to left, var(--white, #fff) 30%, rgba(255,255,255,0)),
+        radial-gradient(farthest-side at 0 50%, rgba(17,48,75,.16), rgba(17,48,75,0)),
+        radial-gradient(farthest-side at 100% 50%, rgba(17,48,75,.16), rgba(17,48,75,0));
+      background-position: 0 0, 100% 0, 0 0, 100% 0;
+      background-repeat: no-repeat;
+      background-size: 40px 100%, 40px 100%, 14px 100%, 14px 100%;
+      background-attachment: local, local, scroll, scroll;
+    }
+
+    /* ---- table of contents ---- */
+    .post-toc {
+      max-width: 720px;
+      margin: 2rem auto 0;
+      padding: 1rem 1.25rem;
+      background: rgba(34,98,153,0.05);
+      border: 1px solid rgba(34,98,153,0.14);
+      border-left: 3px solid var(--gold, #c4a46c);
+      border-radius: 10px;
+      font-size: 0.92rem;
+    }
+    .post-toc > summary {
+      cursor: pointer;
+      font-weight: 700;
+      color: var(--navy);
+      list-style: none;
+    }
+    .post-toc > summary::-webkit-details-marker { display: none; }
+    .post-toc > summary::before {
+      content: "\25B8";
+      display: inline-block;
+      margin-right: 0.5rem;
+      transition: transform 0.2s ease;
+      color: var(--gold-dark, #7a5f22);
+    }
+    .post-toc[open] > summary::before { transform: rotate(90deg); }
+    .post-toc > summary:focus-visible { outline: 3px solid var(--focus, #226299); outline-offset: 3px; }
+    .post-toc ol { margin: 0.85rem 0 0.25rem; padding-left: 1.4rem; }
+    .post-toc li { margin-bottom: 0.4rem; line-height: 1.5; }
+    .post-toc a { color: var(--slate); text-decoration: none; }
+    .post-toc a:hover, .post-toc a:focus-visible { color: var(--blue-dark, #1a4d7a); text-decoration: underline; }
+    @media (max-width: 600px) { .post-toc { margin: 1.25rem 1rem 0; } }
+
+    /* ---- cross-document view transitions ---- */
+    @view-transition { navigation: auto; }
+    .nav, .blog-nav { view-transition-name: site-nav; }
+    .footer, .blog-footer { view-transition-name: site-footer; }
+    @media (prefers-reduced-motion: reduce) {
+      ::view-transition-group(*),
+      ::view-transition-old(*),
+      ::view-transition-new(*) { animation: none !important; }
+    }
+
+    /* ── SERIES STRIP — Hermes Agent in Practice ──
+       Same class and inner-wrapper shape as the OpenClaw strip because the
+       linter's RE_SNAV recognises exactly `series-nav` + a nested div; a
+       renamed strip would read as "no nav" and fail INV-08. All content
+       checks (INV-03 family) iterate the SERIES7 list only, so this strip's
+       labels are convention, not contract. House-styled, not the island CSS. */
+    .series-nav {
+      max-width: 720px; margin: 2rem auto 0; padding: 1.1rem 1.4rem;
+      background: rgba(255,255,255,0.75); border: 1px solid rgba(34,98,153,0.15);
+      border-left: 3px solid var(--gold); border-radius: 12px;
+    }
+    .series-nav h3 {
+      font-size: 0.78rem; font-weight: 700; text-transform: uppercase;
+      letter-spacing: 0.08em; color: var(--gold-dark); margin-bottom: 0.6rem;
+    }
+    .series-links { display: flex; flex-wrap: wrap; gap: 0.5rem; }
+    .series-links a, .series-links .current {
+      font-size: 0.82rem; font-weight: 600; padding: 0.35rem 0.8rem;
+      border-radius: 50px; text-decoration: none;
+    }
+    .series-links a { color: var(--blue-dark); background: rgba(34,98,153,0.08); }
+    .series-links a:hover { background: rgba(34,98,153,0.16); }
+    .series-links .current { color: #fff; background: var(--blue-dark); }
+    @media (max-width: 600px) { .series-nav { margin: 1.5rem 1rem 0; } }
+
+    /* ── FIGURE — the sanctioned diagram component (page-design §4 Content).
+       Diagrams are PNGs; this repo built them out of divs twice and reverted
+       twice. The image is wrapped in a link to itself so a phone can pinch a
+       1400px drawing without a line of JavaScript. */
+    .figure { margin: 2.5rem 0; }
+    .figure__img { width: 100%; height: auto; display: block;
+                   border-radius: var(--radius); border: 1px solid rgba(0,0,0,0.06); }
+    .figure__caption { font-size: 0.85rem; color: var(--slate-light);
+                       text-align: center; margin-top: 0.75rem; }
+
+    /* ── REFERENCES — every material number in this series carries its source.
+       The tags are the book's own four evidence labels. */
+    .references { margin-top: 3rem; padding-top: 2rem; border-top: 1px solid #e2e8f0; }
+    .references__note { font-size: 0.85rem; color: var(--slate-light); margin-bottom: 1rem; }
+    .references__list { padding-left: 1.4rem; font-size: 0.9rem; line-height: 1.75; }
+    .references__list li { margin-bottom: 0.7rem; }
+    .ref-tag { display: inline-block; font-size: 0.7rem; font-weight: 700;
+               letter-spacing: 0.06em; text-transform: uppercase; padding: 0.1rem 0.5rem;
+               border-radius: 50px; margin-right: 0.4rem; vertical-align: 0.05em;
+               background: rgba(34,98,153,0.1); color: var(--blue-dark); }
+    .ref-tag--law { background: rgba(239,68,68,0.12); color: #991b1b; }
+    .ref-tag--synthesis { background: rgba(196,164,108,0.22); color: var(--gold-dark); }
+    .ref-supports { display: block; color: var(--slate-light); font-size: 0.85rem; }
+
+    /* ── SERIES STRIP, GROUPED — twenty chips is four rows of noise unless they
+       are grouped, so the four parts of the book label their own rows. The
+       .series-nav and .series-links wrappers stay byte-literal because INV-08
+       recognises the strip by exactly those two, and the chips stay direct
+       children of a group because INV-03's item regex cannot see through a
+       nested tag. Grouping is a modifier plus two elements of .series-links —
+       the flat OpenClaw, Hermes and Life strips are untouched. */
+    .series-links--grouped { display: grid; gap: 0.9rem; }
+    .series-links__group { position: relative; display: flex; flex-wrap: wrap;
+                           gap: 0.5rem; padding-left: 8.25rem; min-height: 2rem; }
+    .series-links__label { position: absolute; left: 0; top: 0.45rem; width: 7.5rem;
+                           margin: 0; font-size: 0.72rem; font-weight: 700;
+                           text-transform: uppercase; letter-spacing: 0.08em;
+                           color: var(--slate-light); line-height: 1.3; }
+    @media (max-width: 600px) {
+      .series-links__group { padding-left: 0; }
+      .series-links__label { position: static; width: auto; flex-basis: 100%;
+                             margin-bottom: 0.1rem; }
+    }
+
+    /* ── LANGUAGE SWITCH — pure CSS, zero JavaScript (INV-38) ──
+       One visually-hidden checkbox as a direct child of body, BEFORE the main landmark,
+       so `#langSwitch:checked ~ main …` reaches every content block. The two
+       tracks are paired blocks: .l-th (default) and .l-en (hidden until
+       checked; display:revert restores block for divs, inline for spans).
+       Naming stays clear of INV-12's menu-token regex (hamburger|burger|
+       nav__toggle|nav-toggle|navtoggle|menu-toggle|menu__toggle) — verified.
+       No JS also means no persistence across posts; each post opens in Thai. */
+    .lang-switch-box { position: absolute; left: -9999px; }
+    .l-en { display: none; }
+    #langSwitch:checked ~ main .l-en { display: revert; }
+    #langSwitch:checked ~ main .l-th { display: none; }
+    .lang-switch {
+      display: inline-flex; align-items: center; gap: 0.55rem;
+      margin-top: 1.4rem; padding: 0.4rem 1.1rem; border-radius: 50px;
+      background: rgba(255,255,255,0.85); border: 1px solid rgba(255,255,255,0.4);
+      cursor: pointer; font-size: 0.85rem; user-select: none;
+    }
+    .lang-switch span { color: var(--slate-light); font-weight: 600; transition: color 0.2s; }
+    .lang-switch .lang-sep { color: var(--gray); font-weight: 400; }
+    .lang-switch .lang-th { color: var(--navy); font-weight: 800; }
+    #langSwitch:checked ~ main .lang-switch .lang-th { color: var(--slate-light); font-weight: 600; }
+    #langSwitch:checked ~ main .lang-switch .lang-en { color: var(--navy); font-weight: 800; }
+    .lang-switch:hover { border-color: #fff; }
+    #langSwitch:focus-visible ~ main .lang-switch {
+      outline: 2px solid var(--focus); outline-offset: 3px;
+    }
+  </style>
+  <!-- social -->
+  <link rel="canonical" href="https://anirach.com/blog/ai-transformation-learning-loop.html">
+  <meta property="og:type" content="article">
+  <meta property="og:url" content="https://anirach.com/blog/ai-transformation-learning-loop.html">
+  <meta property="og:site_name" content="Anirach Mingkhwan">
+  <meta property="og:locale" content="th_TH">
+  <meta property="og:locale:alternate" content="en_US">
+  <meta property="article:published_time" content="2026-09-05">
+  <meta property="article:author" content="https://anirach.com/">
+  <meta property="og:title" content="Build a Learning System — วงจรการเรียนรู้ที่คู่แข่งซื้อไม่ได้">
+  <meta property="og:description" content="ความได้เปรียบที่ยั่งยืนไม่ใช่การเข้าถึงโมเดล แต่คือวงจรการเรียนรู้ห้าขั้น Observe, Preserve, Compare, Change, Verify พร้อม Canvas 75 นาที">
+  <meta property="og:image" content="https://anirach.com/images/ai-transformation-learning-loop-og.jpg">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
+  <meta property="og:image:alt" content="Build a Learning System — วงจรการเรียนรู้ที่คู่แข่งซื้อไม่ได้">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:image" content="https://anirach.com/images/ai-transformation-learning-loop-og.jpg">
+  <meta name="twitter:image:alt" content="Build a Learning System — วงจรการเรียนรู้ที่คู่แข่งซื้อไม่ได้">
+  <meta name="robots" content="max-image-preview:large">
+  <meta name="theme-color" content="#11304b">
+  <link rel="icon" href="/favicon.ico" sizes="any">
+  <link rel="apple-touch-icon" href="/apple-touch-icon.png">
+  <!-- /social -->
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "BlogPosting",
+    "headline": "Build a Learning System — วงจรการเรียนรู้ที่คู่แข่งซื้อไม่ได้",
+    "author": {
+      "@type": "Person",
+      "@id": "https://anirach.com/#person",
+      "name": "Anirach Mingkhwan",
+      "url": "https://anirach.com/"
+    },
+    "datePublished": "2026-09-05",
+    "dateModified": "2026-09-05",
+    "image": "https://anirach.com/images/ai-transformation-learning-loop-og.jpg",
+    "inLanguage": [
+      "th",
+      "en"
+    ],
+    "mainEntityOfPage": "https://anirach.com/blog/ai-transformation-learning-loop.html"
+  }
+  </script>
+</head>
+<body>
+<a href="#main" class="skip-link">Skip to content</a>
+<input type="checkbox" id="langSwitch" class="lang-switch-box" aria-label="Switch language: Thai / English">
+
+  <nav class="blog-nav">
+    <div class="blog-nav__inner">
+      <a href="../index.html" class="blog-nav__home">Anirach</a>
+      <a href="./" class="blog-nav__back">‹ Blog</a>
+      <div class="blog-nav__title">Build a Learning System</div>
+    </div>
+  </nav>
+
+  <main id="main">
+
+  <header class="post-hero">
+    <div class="post-hero__tags">
+      <span class="post-hero__tag">Learning Loop</span>
+      <span class="post-hero__tag">Learning Velocity</span>
+      <span class="post-hero__tag">Working Session</span>
+    </div>
+    <h1 class="post-hero__title"><span class="l-th">Build a Learning System — วงจรการเรียนรู้ที่คู่แข่งซื้อไม่ได้</span><span class="l-en" lang="en">Build a Learning System — The Loop Your Competitors Cannot Buy</span></h1>
+    <p class="post-hero__sub"><span class="l-th">ความได้เปรียบที่ยั่งยืนไม่ใช่การเข้าถึงโมเดล แต่คือความสามารถในการเห็นสิ่งที่เกิดขึ้น เก็บหลักฐาน แก้ถูกจุด และตรวจสอบก่อนปล่อยรอบถัดไป — พร้อม Learning loop canvas 75 นาที</span><span class="l-en" lang="en">The durable advantage is not model access but the ability to see what happened, preserve the evidence, change the right part of the system and verify before the next release — with a 75-minute learning loop canvas.</span></p>
+    <div class="post-hero__meta">
+      <span>By <strong>Anirach Mingkhwan</strong></span>
+      <span class="post-hero__series">AI Transformation for Organizations 2026 • Post #3</span>
+      <span><time datetime="2026-09-05">5 Sep 2026</time></span>
+      <span>29 min read</span>
+    </div>
+    <label for="langSwitch" class="lang-switch" title="สลับภาษา · Switch language"><span class="lang-th">ไทย</span><span class="lang-sep">·</span><span class="lang-en" lang="en">English</span></label>
+    <div class="post-hero__cover">
+      <img src="../images/ai-transformation-learning-loop-cover.jpg" alt="Build a Learning System — วงจรการเรียนรู้ที่คู่แข่งซื้อไม่ได้" width="800" height="800" loading="eager" fetchpriority="high" decoding="async">
+    </div>
+  </header>
+
+  <article class="post-body">
+
+    <details class="post-toc l-th" open>
+      <summary>ในบทความนี้</summary>
+      <ol>
+          <li><a href="#th-cannot-buy">1. อะไรที่ซื้อได้ในธุรกรรมเดียว และอะไรที่ซื้อไม่ได้</a></li>
+          <li><a href="#th-five-moves">2. ห้าท่าของวงจร — Observe, Preserve, Compare, Change, Verify</a></li>
+          <li><a href="#th-learning-engine">3. เครื่องยนต์การเรียนรู้ และความเร็วในการเรียนรู้</a></li>
+          <li><a href="#th-aurora">4. Aurora Assurance — เมื่อจดหมายแปดหมื่นฉบับไม่ได้บอกอะไรเลย</a></li>
+          <li><a href="#th-five-principles">5. หลักปฏิบัติห้าประการที่ทำให้วงจรเดินได้จริง</a></li>
+          <li><a href="#th-canvas">6. Learning loop canvas — 75 นาที สู่กฎบัตรหนึ่งหน้า</a></li>
+          <li><a href="#th-metrics-failures">7. ตัวชี้วัดสำคัญสิบตัว และรูปแบบความล้มเหลวหกแบบ</a></li>
+          <li><a href="#th-road-ahead">8. ก้าวต่อไป — วงจรเดินได้เท่าที่หลักฐานอนุญาต</a></li>
+      </ol>
+    </details>
+    <details class="post-toc l-en" open>
+      <summary>In this post</summary>
+      <ol>
+          <li><a href="#en-cannot-buy">1. What you can buy in one transaction, and what you cannot</a></li>
+          <li><a href="#en-five-moves">2. The five moves of the loop — Observe, Preserve, Compare, Change, Verify</a></li>
+          <li><a href="#en-learning-engine">3. The learning engine, and learning velocity</a></li>
+          <li><a href="#en-aurora">4. Aurora Assurance — when eighty thousand letters said nothing at all</a></li>
+          <li><a href="#en-five-principles">5. The five operating principles that keep the loop turning</a></li>
+          <li><a href="#en-canvas">6. The learning loop canvas — 75 minutes to a one-page charter</a></li>
+          <li><a href="#en-metrics-failures">7. Ten metrics that matter, and six failure patterns</a></li>
+          <li><a href="#en-road-ahead">8. The road ahead — the loop turns only as far as the evidence allows</a></li>
+      </ol>
+    </details>
+    <div class="l-th">
+
+    <p>🤔 <strong>โมเดล บริการ Cloud และชุด prompt ที่เขียนไว้ดีแล้ว — ทั้งหมดนี้คู่แข่งซื้อได้ในธุรกรรมเดียว แล้วอะไรคือสิ่งที่เขาซื้อไม่ได้?</strong></p>
+
+    <p>ตอนที่แล้วของซีรีส์นี้ — <a href="/blog/ai-transformation-prediction">#2 Cheaper Prediction</a> — จบด้วยข้อสรุปว่าหน่วยของการเปลี่ยนผ่านไม่ใช่เครื่องมือ แต่คือ<strong>การตัดสินใจ</strong> เมื่อการคาดการณ์ราคาถูกลง สิ่งที่แพงขึ้นคือดุลยพินิจ ข้อมูล และการกระทำที่ต่อจากคำทำนายนั้น แต่การรู้ว่าหน่วยคือการตัดสินใจยังไม่พอ เพราะการตัดสินใจที่ไม่มีใครย้อนกลับมาดูผลได้ ก็คือการเดาที่มีเอกสารประกอบสวยขึ้นเท่านั้นเอง</p>
+
+    <p>คำตอบหนึ่งบรรทัดของบทที่ 1 คือ สิ่งที่ซื้อไม่ได้ในธุรกรรมเดียวคือ <strong>วงจรการเรียนรู้</strong> (learning loop) — ความสามารถที่จะเห็นสิ่งที่เกิดขึ้น เก็บหลักฐาน ปรับส่วนที่ถูกต้องของระบบ และยืนยันผลก่อนปล่อยรุ่นถัดไป<sup><a href="#th-ref-1">[1]</a></sup> ที่เหลือของบทความนี้คือการแกะวงจรนั้นออกเป็นห้าท่า หลักปฏิบัติห้าข้อ เวิร์กช็อป 75 นาที และตัวชี้วัดสิบตัวที่บอกได้ว่าวงจรของคุณหมุนจริงหรือหมุนแต่ในสไลด์</p>
+
+    <h2 id="th-cannot-buy">1. อะไรที่ซื้อได้ในธุรกรรมเดียว และอะไรที่ซื้อไม่ได้</h2>
+
+    <p>บทที่ 1 ของคู่มือเปิดด้วยประโยคเดียวที่วางเดิมพันไว้ทั้งบท<sup><a href="#th-ref-1">[1]</a></sup></p>
+
+    <blockquote><em>"The durable advantage is not access to a model. It is the ability to convert operating experience into safer and more valuable behavior."</em> — ความได้เปรียบที่ยั่งยืนไม่ใช่การเข้าถึงโมเดล แต่คือความสามารถในการเปลี่ยนประสบการณ์การใช้งานจริงให้กลายเป็นพฤติกรรมที่ปลอดภัยขึ้นและมีคุณค่ามากขึ้น</blockquote>
+
+    <p>ฉบับภาษาไทยของบทเดียวกันขยายความไว้แบบนี้ และผมอยากให้อ่านช้า ๆ เพราะทุกคำในประโยคที่สองทำงานหมด<sup><a href="#th-ref-1">[1]</a></sup></p>
+
+    <blockquote>"การเปลี่ยนผ่านด้วย AI ไม่ใช่การติดตั้งโมเดล แต่คือการสร้างระบบการเรียนรู้ขององค์กร ที่ทำให้การตัดสินใจดีขึ้นได้เร็วกว่าสภาพแวดล้อมที่เปลี่ยนไป ทั้งโมเดล นโยบาย พฤติกรรมลูกค้า ข้อมูล และภัยคุกคามล้วนไม่หยุดนิ่ง คู่แข่งอาจซื้อโมเดลและบริการ Cloud แบบเดียวกันได้ แต่ไม่สามารถซื้อความสามารถในการมองเห็นสิ่งที่เกิดขึ้น เก็บหลักฐาน ปรับส่วนที่ถูกต้องของระบบ และยืนยันผลก่อนปล่อยรุ่นถัดไปได้ในครั้งเดียว"</blockquote>
+
+    <p><strong>การเปลี่ยนผ่านองค์กรด้วย AI</strong> (AI transformation) จึงไม่ใช่โครงการจัดหา มันคือการสร้างความสามารถชนิดหนึ่งขึ้นมาในองค์กร และความสามารถชนิดนั้นมีคุณสมบัติที่นักกลยุทธ์ชอบเรียกว่า <em>สะสมได้</em> — ยิ่งหมุนนาน ยิ่งได้เปรียบ เพราะสิ่งที่สะสมไม่ใช่จำนวน license แต่คือกรณีที่เคยพลาดแล้วถูกแปลงเป็นชุดทดสอบ นโยบายที่เคยคลุมเครือแล้วถูกเขียนใหม่ให้ตัดสินได้ และเส้นทางการทำงานที่เคยส่งต่อกันแบบเงียบ ๆ แล้วถูกทำให้เห็นได้</p>
+
+    <h3>ทำไมคำว่า "ในครั้งเดียว" จึงเป็นหัวใจของประโยค</h3>
+
+    <p>ประโยคของคู่มือไม่ได้บอกว่าคู่แข่งสร้างวงจรการเรียนรู้ไม่ได้ตลอดกาล มันบอกว่าเขาซื้อมัน<em>ในธุรกรรมเดียว</em>ไม่ได้ — และนี่คือความต่างที่ผู้บริหารมักมองข้าม ลองแยกความสามารถทั้งสี่ในประโยคนั้นออกมาดูทีละอัน แล้วถามว่าแต่ละอันซื้อมาพร้อมสัญญาได้ไหม</p>
+
+    <p><strong>มองเห็นสิ่งที่เกิดขึ้น</strong> ต้องการเครื่องมือวัดที่ฝังอยู่ในกระบวนงานจริง ไม่ใช่ dashboard ที่ต่อกับ log ของโมเดล การเห็นในความหมายนี้คือการเห็น<em>ผลลัพธ์ของกรณี</em> — ลูกค้าได้คำตอบที่ถูกไหม ต้องโทรกลับหรือเปล่า ผู้ตรวจแก้อะไร — ซึ่งเป็นข้อมูลที่กระจายอยู่ในหลายระบบและมักไม่มีใครเป็นเจ้าของ</p>
+
+    <p><strong>เก็บหลักฐาน</strong> ต้องการการตัดสินใจล่วงหน้าว่าจะเก็บอะไร นานแค่ไหน ใครเข้าถึงได้ และเก็บอย่างไรให้ยังใช้ได้เมื่อระบบเปลี่ยนรุ่น องค์กรจำนวนมากค้นพบตอนเกิดเหตุว่าตัวเองเก็บผลลัพธ์ไว้ แต่ไม่ได้เก็บ<em>บริบท</em>ที่ทำให้ผลลัพธ์นั้นเกิดขึ้น — และหลักฐานที่ประกอบเหตุการณ์ย้อนกลับไม่ได้ ก็ไม่ใช่หลักฐาน</p>
+
+    <p><strong>ปรับส่วนที่ถูกต้องของระบบ</strong> ต้องการอำนาจข้ามหน่วยงาน เพราะ "ส่วนที่ถูกต้อง" มักไม่ใช่โมเดล แต่เป็นนโยบายที่กำกวม เป็นแบบฟอร์มที่ถามคำถามผิด หรือเป็นจุดส่งต่อที่ไม่มีใครรับผิดชอบ ทีมที่แก้ได้แค่ prompt จะแก้ prompt ทุกครั้ง ไม่ใช่เพราะวินิจฉัยผิด แต่เพราะนั่นคือสิ่งเดียวที่เขามีอำนาจแตะ</p>
+
+    <p><strong>ยืนยันผลก่อนปล่อยรุ่นถัดไป</strong> ต้องการวินัยการปล่อยของ ซึ่งเป็นเรื่องวัฒนธรรมพอ ๆ กับเรื่องเทคนิค องค์กรที่เคยชินกับการปล่อยแล้วค่อยดู จะรู้สึกว่าการตั้งเกณฑ์ล่วงหน้าเป็นการถ่วงงาน จนกว่าจะเจอเหตุการณ์แรกที่ทำให้เข้าใจว่าเกณฑ์นั้นคือสิ่งที่ทำให้ยังกล้าปล่อยของอยู่</p>
+
+    <p>ทั้งสี่อย่างเป็นความสามารถขององค์กร ไม่ใช่ฟีเจอร์ของซอฟต์แวร์ ซื้อเครื่องมือมาช่วยได้ แต่ซื้อ<em>ความสามารถ</em>ไม่ได้ นี่คือเหตุผลที่คู่มือนิยาม <strong>วงจรการเรียนรู้</strong> (learning loop) ว่าเป็น "วงจรปิดที่เปลี่ยนข้อมูลเป็นการตัดสินใจ การลงมือทำ ผลลัพธ์ที่สังเกตได้ หลักฐาน และการปรับปรุงรอบถัดไป"<sup><a href="#th-ref-1">[1]</a></sup> — คำสำคัญคือ <em>ปิด</em> ถ้าปลายทางไม่วิ่งกลับมาที่ต้นทาง สิ่งที่คุณมีคือท่อ ไม่ใช่วงจร</p>
+
+    <div class="alert">
+        <strong>เส้นแบ่งที่ใช้ตรวจตัวเองได้ใน 30 วินาที:</strong> ถามทีมว่า "กรณีที่ระบบตอบผิดเมื่อสามสัปดาห์ก่อน ตอนนี้อยู่ที่ไหน" ถ้าคำตอบคือ "อยู่ในอีเมล" หรือ "จำได้ว่ามีคนแก้ไปแล้ว" แปลว่ายังไม่มีวงจร ถ้าคำตอบคือ "อยู่ในชุดทดสอบ หมายเลขนี้ และรอบล่าสุดยังผ่าน" แปลว่ามี
+    </div>
+
+    <h2 id="th-five-moves">2. ห้าท่าของวงจร — Observe, Preserve, Compare, Change, Verify</h2>
+
+    <p>คู่มือไม่ได้ปล่อยให้คำว่า "วงจรการเรียนรู้" ลอยอยู่เป็นคำสวย ๆ แต่ระบุองค์ประกอบไว้ครบทั้ง<strong>ห้าท่า</strong><sup><a href="#th-ref-1">[1]</a></sup></p>
+
+    <blockquote>"วงจรการเรียนรู้ที่ใช้งานได้จริงมีห้าท่า ได้แก่ สังเกตสิ่งที่เกิดขึ้น เก็บบริบท เส้นทาง การกระทำ และผลลัพธ์ เปรียบเทียบผลจริงกับความคาดหมายที่ประกาศไว้ ปรับ Workflow ข้อมูล ตัวควบคุม โมเดล หรือบทบาทมนุษย์ แล้วตรวจสอบกับกรณีที่เป็นตัวแทน กรณีซ่อน และกรณีรุนแรงก่อนเพิ่มการเปิดรับ"</blockquote>
+
+    <p>ห้าท่านี้ดูเรียบง่ายจนหลอกตา ผมจึงอยากแยกทีละท่าและชี้จุดที่องค์กรไทยที่ผมเคยคุยด้วยมักตกม้าตายกัน</p>
+
+    <p><strong>Observe — สังเกตสิ่งที่เกิดขึ้น</strong> คำที่ต้องเน้นคือ "ที่เกิดขึ้น" ไม่ใช่ "ที่สาธิต" สิ่งที่ต้องสังเกตคือพฤติกรรมของระบบตอนเจอกรณีจริงซึ่งมีความหลากหลายที่เดโมไม่มีวันแสดงได้ การสังเกตที่ใช้ได้ต้องลงถึงระดับกรณี ไม่ใช่ค่าเฉลี่ยรายเดือน เพราะค่าเฉลี่ยคือเครื่องมือกลบปัญหาที่มีประสิทธิภาพที่สุดที่มนุษย์เคยประดิษฐ์ขึ้น</p>
+
+    <p><strong>Preserve — เก็บบริบท เส้นทาง การกระทำ และผลลัพธ์</strong> สี่อย่างนี้ต้องครบ เก็บแค่ผลลัพธ์แปลว่ารู้ว่าผิด แต่ไม่รู้ว่าทำไม เก็บแค่บริบทแปลว่ารู้ว่าระบบเห็นอะไร แต่ไม่รู้ว่ามันเดินทางไหนต่อ คำว่า "เส้นทาง" ในที่นี้คือ <strong>Trace</strong> — ลำดับขั้นที่ระบบเดินผ่านจริง รวมถึงเครื่องมือที่เรียกและข้อมูลที่ค้นคืนมา ซึ่งเป็นสิ่งที่ต้องออกแบบให้เก็บตั้งแต่วันแรก ไม่ใช่ต่อเติมทีหลังตอนเกิดเหตุ</p>
+
+    <p><strong>Compare — เปรียบเทียบผลจริงกับความคาดหมายที่ประกาศไว้</strong> คำที่ทำงานหนักที่สุดคือ "ประกาศไว้" ความคาดหมายที่เขียนหลังเห็นผลแล้วไม่ใช่ความคาดหมาย มันคือคำอธิบาย การประกาศล่วงหน้าว่า "เราคาดว่าอัตราการโทรกลับในกลุ่มกรณีนี้จะลดจาก X เหลือ Y ภายในสี่สัปดาห์ และถ้าไม่ถึงเราจะทำอย่างนี้" คือสิ่งที่แยกการทดลองออกจากการเล่าเรื่อง</p>
+
+    <p><strong>Change — ปรับ Workflow ข้อมูล ตัวควบคุม โมเดล หรือบทบาทมนุษย์</strong> สังเกตลำดับที่คู่มือเขียน: โมเดลมาเป็นลำดับที่สี่จากห้า ไม่ใช่ลำดับแรก นี่ไม่ใช่อุบัติเหตุทางการเรียบเรียง แต่เป็นการจัดลำดับความน่าจะเป็นตามที่พบจริง — ปัญหาที่ดูเหมือนปัญหาโมเดล ส่วนใหญ่เป็นปัญหาการออกแบบกระบวนงานหรือคุณภาพบริบทที่ป้อนเข้าไป</p>
+
+    <p><strong>Verify — ตรวจสอบกับกรณีที่เป็นตัวแทน กรณีซ่อน และกรณีรุนแรง ก่อนเพิ่มการเปิดรับ</strong> สามชนิดนี้ตอบคำถามคนละข้อ กรณีที่เป็นตัวแทนตอบว่า "งานปกติยังดีอยู่ไหม" กรณีซ่อนตอบว่า "เราเผลอปรับระบบให้เก่งเฉพาะข้อสอบที่เห็นหรือเปล่า" และกรณีรุนแรงตอบว่า "ตอนที่มันพลาด มันพลาดแรงแค่ไหน" วรรคสุดท้าย "ก่อนเพิ่มการเปิดรับ" คือกฎการปล่อยของ: การขยายผลเป็นรางวัลของหลักฐาน ไม่ใช่ของกำหนดการ</p>
+
+    <h3>สินทรัพย์ปฏิบัติการเจ็ดชนิด ไม่ใช่เศษซากของโครงการ</h3>
+
+    <p>ทันทีหลังห้าท่า คู่มือทิ้งประโยคที่ผมคิดว่าเป็นประโยคที่มีต้นทุนสูงที่สุดในบทนี้ ถ้าใครทำตามจริง<sup><a href="#th-ref-1">[1]</a></sup></p>
+
+    <blockquote>"Prompt แม่แบบบริบท รุ่นของคลังความรู้ Tool Schema ชุดทดสอบ Threshold และ Release Manifest จึงต้องถูกดูแลเสมือนสินทรัพย์ปฏิบัติการ"</blockquote>
+
+    <p>เจ็ดชนิดนี้คือสิ่งที่ในโครงการนำร่องส่วนใหญ่ถูกปฏิบัติเหมือน<em>เศษซากของโครงการ</em> — อยู่ในเครื่องของคนที่ทำ อยู่ในแชตของทีม อยู่ในไฟล์ชื่อ <code>final_v3_ใช้อันนี้.txt</code> และหายไปพร้อมกับคนที่ลาออก ถ้าจะให้มันเป็น <strong>สินทรัพย์ปฏิบัติการ</strong> จริง แต่ละชิ้นต้องตอบสามคำถามให้ได้: ใครเป็นเจ้าของ เวอร์ชันเปลี่ยนเมื่อไร และอยู่ที่ไหน</p>
+
+    <p>ตารางข้างล่างเป็นแบบฟอร์มของบทความนี้ ไม่ใช่ของคู่มือ — คู่มือระบุชื่อสินทรัพย์ทั้งเจ็ดไว้ แต่ไม่ได้กำหนดเจ้าของ เวอร์ชัน หรือที่อยู่ให้ ผมเติมสามคอลัมน์นั้นเข้าไปเพราะเป็นสามคำถามที่ทำให้คำว่า "สินทรัพย์" มีผลบังคับ ให้ใช้เป็นจุดตั้งต้นแล้วแก้ให้ตรงกับโครงสร้างขององค์กรคุณ</p>
+
+    <div class="table-wrapper">
+        <table>
+            <thead>
+                <tr>
+                    <th>Operating asset</th>
+                    <th>Owner</th>
+                    <th>Version bumps when</th>
+                    <th>Where it lives</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td><strong>Prompt</strong></td>
+                    <td>เจ้าของกระบวนงาน ร่วมกับผู้ดูแลผลิตภัณฑ์</td>
+                    <td>ทุกครั้งที่ถ้อยคำเปลี่ยนจนพฤติกรรมเปลี่ยน ไม่ใช่เฉพาะตอนแก้ครั้งใหญ่</td>
+                    <td>ที่เก็บโค้ดพร้อมประวัติการแก้ ไม่ใช่กล่องข้อความในหน้าจอตั้งค่า</td>
+                </tr>
+                <tr>
+                    <td><strong>แม่แบบบริบท</strong> (context template)</td>
+                    <td>ทีมข้อมูลหรือวิศวกรรม</td>
+                    <td>เมื่อเปลี่ยนว่าจะใส่ข้อมูลชนิดใดเข้าไป หรือเปลี่ยนลำดับความสำคัญ</td>
+                    <td>ที่เดียวกับ Prompt เพราะสองอย่างนี้เปลี่ยนพฤติกรรมพอ ๆ กัน</td>
+                </tr>
+                <tr>
+                    <td><strong>รุ่นของคลังความรู้</strong> (corpus snapshot)</td>
+                    <td>เจ้าของข้อมูลต้นทาง</td>
+                    <td>ทุกครั้งที่เอกสารต้นทางถูกเพิ่ม ลบ หรือแก้เนื้อหาที่มีผลต่อคำตอบ</td>
+                    <td>ที่เก็บที่ระบุรุ่นได้และย้อนไปดูรุ่นเก่าได้</td>
+                </tr>
+                <tr>
+                    <td><strong>Tool Schema</strong></td>
+                    <td>ทีมวิศวกรรมที่เป็นเจ้าของเครื่องมือนั้น</td>
+                    <td>เมื่อพารามิเตอร์ ขอบเขตค่า หรือผลข้างเคียงของเครื่องมือเปลี่ยน</td>
+                    <td>ทะเบียนเครื่องมือกลาง ไม่ใช่กระจายอยู่ในโค้ดของแต่ละทีม</td>
+                </tr>
+                <tr>
+                    <td><strong>ชุดทดสอบ</strong> (evaluation cases)</td>
+                    <td>เจ้าของวงจร</td>
+                    <td>ทุกครั้งที่มีกรณีพลาดใหม่ถูกแปลงเป็นเคส และทุกครั้งที่ถอดเคสเก่าออก</td>
+                    <td>ที่เก็บเดียวกับโค้ด รันอัตโนมัติทุกครั้งก่อนปล่อย</td>
+                </tr>
+                <tr>
+                    <td><strong>Threshold</strong></td>
+                    <td>ตัวแทนความเสี่ยง ร่วมกับเจ้าของกระบวนงาน</td>
+                    <td>เมื่อระดับผลกระทบเปลี่ยน หรือเมื่อมีหลักฐานพอจะขยับเกณฑ์</td>
+                    <td>ในกฎบัตรวงจร และในโค้ดของด่านอนุมัติ ให้ตรงกันเสมอ</td>
+                </tr>
+                <tr>
+                    <td><strong>Release Manifest</strong></td>
+                    <td>ผู้นำผลิตภัณฑ์</td>
+                    <td>ทุกครั้งที่ปล่อย เพราะมันคือบันทึกว่ารุ่นนี้ประกอบด้วยอะไรบ้าง</td>
+                    <td>ผูกกับรุ่นที่ปล่อยจริง เรียกดูย้อนหลังได้พร้อม Trace</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <p>ถ้าคุณกรอกตารางนี้แล้วพบว่าคอลัมน์ Owner มีชื่อเดียวกันทั้งเจ็ดแถว นั่นไม่ใช่ความเรียบร้อย นั่นคือคอขวด และถ้าคอลัมน์ Where it lives มีคำว่า "อยู่กับทีม" มากกว่าสองแถว แปลว่าองค์กรของคุณยังเรียนรู้ในระดับบุคคล ไม่ใช่ระดับองค์กร</p>
+
+    <h2 id="th-learning-engine">3. เครื่องยนต์การเรียนรู้ และความเร็วในการเรียนรู้</h2>
+
+    <p>ถ้าจะวาดวงจรการเรียนรู้ออกมาเป็นภาพเดียว ภาพนั้นควรมีหน้าตาแบบนี้ — เจ็ดจุดที่ต่อกันเป็นวง โดยมีมาตรวัดอยู่ตรงกลาง ไม่ใช่มีโมเดลอยู่ตรงกลาง</p>
+
+    <figure class="figure">
+      <a href="../images/ai-transformation-fig-01-learning-engine.png">
+        <img class="figure__img" src="../images/ai-transformation-fig-01-learning-engine.png" alt="แผนภาพเครื่องยนต์การเรียนรู้ขององค์กร: วงจรเจ็ดจุด ข้อมูล บริบท ปัญญา ดุลพินิจ การกระทำ ผลลัพธ์ การเรียนรู้ หมุนรอบแกนกลางที่เขียนว่า Learning velocity ความเร็วในการเรียนรู้" width="1400" height="1000" loading="lazy" decoding="async">
+      </a>
+      <figcaption class="figure__caption">รูปที่ 1 · เครื่องยนต์การเรียนรู้ขององค์กร — วัดความล่าช้าของ feedback เวลาปรับการตัดสินใจ และเวลาสู่การปรับปรุงในวงกว้าง</figcaption>
+    </figure>
+
+    <p>ห่วงโซ่เจ็ดขั้นนี้มาจากกลยุทธ์ประโยคเดียวของคู่มือ ซึ่งผมยกมาแล้วในตอน <a href="/blog/ai-transformation-layers">#1 Six Layers</a> และจะยกซ้ำอีกหลายครั้งตลอดซีรีส์ เพราะมันคือประโยคที่ทั้งเล่มเดินตาม<sup><a href="#th-ref-1">[1]</a></sup></p>
+
+    <blockquote>"สร้างความสามารถขององค์กรในการเปลี่ยนข้อมูลเป็นบริบท บริบทเป็นปัญญา ปัญญาเป็นดุลยพินิจ ดุลยพินิจเป็นการกระทำที่ได้รับอนุญาต การกระทำเป็นผลลัพธ์ที่สังเกตได้ และผลลัพธ์เป็นการเรียนรู้ที่ตรวจสอบได้ เร็วกว่าสภาพแวดล้อมที่เปลี่ยนไป"</blockquote>
+
+    <p>วรรคสุดท้ายคือสิ่งที่ทำให้ห่วงโซ่นี้เป็น<em>วง</em> ไม่ใช่<em>เส้น</em> และวรรคนั้นมีชื่อเรียกของมันเอง คู่มือนิยาม <strong>ความเร็วในการเรียนรู้</strong> (learning velocity) ไว้ว่า "ความเร็วที่องค์กรเปลี่ยนหลักฐานจากผลลัพธ์จริงให้เป็นการตัดสินใจ กระบวนงาน มาตรการควบคุม และความรู้ที่ดีขึ้นและนำกลับมาใช้ได้"<sup><a href="#th-ref-1">[1]</a></sup></p>
+
+    <p>อ่านนิยามนี้แล้วจะเห็นว่ามันไม่ใช่ตัวชี้วัดของโมเดลเลยแม้แต่น้อย ปลายทางของมันคือสี่อย่าง — การตัดสินใจ กระบวนงาน มาตรการควบคุม และความรู้ที่ใช้ซ้ำได้ — ซึ่งไม่มีอันไหนที่วัดได้จากหน้าจอ evaluation ของโมเดล องค์กรที่วัดแต่ความแม่นยำจึงมักตอบไม่ได้ว่าตัวเองเรียนรู้เร็วขึ้นหรือเปล่า เพราะวัดผิดตัวมาตั้งแต่ต้น</p>
+
+    <div class="alert info">
+        <strong>ข้อควรระวังเรื่องคำ:</strong> มาตรวัดสามตัวที่ปรากฏในรูปที่ 1 (ความล่าช้าของ feedback · เวลาปรับการตัดสินใจ · เวลาสู่การปรับปรุงในวงกว้าง) เป็นการอ่านของรูปนี้ ส่วนคอลัมน์ <strong>Learning</strong> ใน Board Scorecard ของคู่มือใช้คำต่างออกไปเล็กน้อย คือ Feedback latency, เวลาถึงการปรับปรุงที่พิสูจน์แล้ว และการเกิดซ้ำ (recurrence)<sup><a href="#th-ref-1">[1]</a></sup> ผมแยกให้ชัดตรงนี้เพราะเวลาไปทำสไลด์เสนอบอร์ด ต้องใช้ชุดคำของ scorecard ไม่ใช่ชุดคำของรูป
+    </div>
+
+    <h3>ทำไมการเรียนรู้จึงหยุดอยู่ที่การปรับโมเดลไม่ได้</h3>
+
+    <p>คู่มืออ้างงาน r8 ของผมเองในประเด็นนี้ เป็นเอกสารที่ผู้เขียนจัดส่งให้โครงการและยังไม่ตีพิมพ์ จึงไม่มี URL ให้ลิงก์<sup><a href="#th-ref-2">[2]</a></sup> ข้อเสนอมีอยู่ว่า เมื่อผลจากโมเดลมีทั้ง<em>อำนาจสูง</em>และ<em>เป็นองค์ประกอบที่ขาดไม่ได้</em>สำหรับงานที่ประกาศไว้ ภาระการรับรองความถูกต้องต้องกระจายไปยัง Boundary รอบโมเดล ไม่ใช่ฝากไว้กับตัวโมเดล</p>
+
+    <p>แปลเป็นภาษาองค์กรได้ว่า ถ้าคำตอบของ AI คือสิ่งที่คนใช้ตัดสินใจจริง และงานนั้นทำต่อไม่ได้ถ้าไม่มีมัน การเรียนรู้จะครอบคลุมแค่การปรับโมเดลไม่ได้ ระบบการตัดสินใจ<em>ทั้งระบบ</em>ต้องดีขึ้น — ตั้งแต่ข้อมูลที่ป้อนเข้า นโยบายที่ใช้ตัดสิน ตัวควบคุมก่อนเกิดผล ไปจนถึงบทบาทของคนที่อนุมัติ ซึ่งเป็นเหตุผลว่าทำไมท่าที่สี่ของวงจร (Change) ถึงลิสต์โมเดลไว้เป็นลำดับที่สี่</p>
+
+    <h3>วินัยของวงจรมีกรอบสากลรองรับ แต่กรอบไม่ได้รับประกันผลตอบแทน</h3>
+
+    <p>ประเด็นนี้คู่มือระบุแหล่งอ้างอิงไว้สองแหล่ง และผมตรวจสถานะทั้งคู่ใหม่ในวันที่เขียนบทความนี้</p>
+
+    <p>NIST เผยแพร่ <strong>AI Risk Management Framework (AI RMF 1.0)</strong> เมื่อ 26 มกราคม 2023 และ ณ วันที่ 5 กันยายน 2569 ยังคงเป็นรุ่น 1.0 เป็นกรอบโดยสมัครใจ และไม่ใช่การรับรอง<sup><a href="#th-ref-3">[3]</a></sup> แกนกลางของกรอบนี้คือสี่ฟังก์ชัน <strong>GOVERN, MAP, MEASURE, MANAGE</strong> โดย GOVERN ใช้กับทุกขั้นตอนของการบริหารความเสี่ยง ส่วน MAP, MEASURE และ MANAGE ใช้กับบริบทเฉพาะของระบบและกับแต่ละช่วงของวงจรชีวิต และเอกสารเขียนกำกับไว้เองด้วยว่า <em>"Actions do not constitute a checklist, nor are they necessarily an ordered set of steps"</em> — การกระทำเหล่านี้ไม่ใช่ checklist และไม่จำเป็นต้องเรียงตามลำดับ<sup><a href="#th-ref-3">[3]</a></sup></p>
+
+    <p>ฝั่งมาตรฐาน <strong>ISO/IEC 42001:2023</strong> (Information technology — Artificial intelligence — Management system) มีวันเผยแพร่ธันวาคม 2023 และเมื่อตรวจสอบวันที่ 5 กันยายน 2569 ยังเป็น Edition 1 สถานะ Published ที่ระยะ 60.60<sup><a href="#th-ref-4">[4]</a></sup> คำอธิบายสาธารณะของ ISO ระบุว่ามาตรฐานนี้กำหนดข้อกำหนดสำหรับการจัดตั้ง นำไปใช้ ธำรงรักษา และ<em>ปรับปรุงอย่างต่อเนื่อง</em>ซึ่งระบบการจัดการปัญญาประดิษฐ์ (AI Management System) ภายในองค์กร<sup><a href="#th-ref-4">[4]</a></sup> คำว่า "ปรับปรุงอย่างต่อเนื่อง" นั่นแหละคือวงจร ในภาษาของระบบการจัดการ</p>
+
+    <p>แต่คู่มือปิดย่อหน้านี้ด้วยประโยคที่ผมอยากให้ทุกคนจำไว้ก่อนเอาสองชื่อนี้ไปใส่สไลด์<sup><a href="#th-ref-1">[1]</a></sup></p>
+
+    <blockquote>"แต่กรอบเหล่านี้ไม่ได้ให้ประกันผลตอบแทนทางธุรกิจในอัตราใด"</blockquote>
+
+    <div class="alert danger">
+        <strong>สิ่งที่ทั้งสองกรอบนี้ไม่ใช่:</strong> ไม่ใช่กฎหมาย ไม่ใช่หลักฐานว่าระบบของคุณน่าเชื่อถือ และไม่ใช่ตัวประกันว่าจะได้ผลตอบแทนทางการเงิน AI RMF เป็นกรอบโดยสมัครใจที่ไม่มีการรับรอง ส่วน ISO/IEC 42001 เป็นมาตรฐานระบบการจัดการ การพูดว่า "เราทำตาม NIST แล้ว" จึงไม่ได้แปลว่าโมเดลของคุณปลอดภัย มันแปลว่าคุณมีวินัยของวงจรที่อธิบายให้คนนอกฟังได้ ซึ่งเป็นคนละเรื่องกัน และก็เป็นเรื่องที่มีค่าในตัวมันเอง
+    </div>
+
+    <h3>บรรพบุรุษทางความคิดของคำว่า "ปรับส่วนที่ถูกต้อง"</h3>
+
+    <p>ตรงนี้ผมขอเติมบริบททางประวัติศาสตร์ที่คู่มือไม่ได้อ้างไว้ ถือเป็นกรอบของบทความนี้เอง ไม่ใช่การอ้างอิงของหนังสือ: แนวคิดที่ว่าการแก้ปัญหาที่ดีต้องกล้ากลับไปตั้งคำถามกับ<em>กฎที่ผลิตปัญหานั้น</em> ไม่ใช่แค่แก้ค่าให้กลับเข้าเกณฑ์ มีชื่อเรียกมานานแล้วว่า <strong>double-loop learning</strong> ซึ่ง Chris Argyris เขียนไว้ใน Harvard Business Review ตั้งแต่เดือนกันยายน 1977<sup><a href="#th-ref-6">[6]</a></sup></p>
+
+    <p>สิบสี่ปีถัดมา Argyris กลับมาเขียนบทความที่คนอ้างถึงมากกว่า คือ <em>"Teaching Smart People How to Learn"</em> (พฤษภาคม–มิถุนายน 1991) และย่อหน้าเปิดของมันยังอ่านได้เหมือนเขียนเมื่อวาน<sup><a href="#th-ref-5">[5]</a></sup></p>
+
+    <blockquote><em>"…those members of the organization that many assume to be the best at learning are, in fact, not very good at it. I am talking about the well-educated, high-powered, high-commitment professionals who occupy key leadership positions in the modern corporation."</em></blockquote>
+
+    <p>ผมยกมาเพราะมันอธิบายอาการที่พบบ่อยที่สุดในโครงการ AI ขององค์กรใหญ่ได้ตรงที่สุด — ทีมที่เก่งที่สุด มีการศึกษาสูงที่สุด และทุ่มเทที่สุด มักเป็นทีมที่ปรับ prompt ซ้ำ ๆ ได้อย่างชำนาญ แต่ไม่กลับไปถามว่าทำไมกระบวนงานถึงพาให้ระบบต้องเดาตั้งแต่แรก การแก้ให้กลับเข้าเกณฑ์เดิมนั้นทำได้เร็วและได้ความรู้สึกว่าคืบหน้า ส่วนการกลับไปแก้กฎที่ผลิตปัญหานั้นช้า ขัดใจคน และมักต้องข้ามหน่วยงาน — ท่าที่สี่ของวงจรจึงเป็นท่าที่ยากที่สุด ไม่ใช่เพราะเทคนิค แต่เพราะการเมืองภายใน</p>
+
+    <h2 id="th-aurora">4. Aurora Assurance — เมื่อจดหมายแปดหมื่นฉบับไม่ได้บอกอะไรเลย</h2>
+
+    <p>คู่มือใช้กรณีตัวอย่างชื่อ <strong>Aurora Assurance</strong> (กรณีสมมติจากหนังสือ) เป็นภาพประกอบของทั้งบท และผมคิดว่ามันคือกรณีศึกษาที่มีประโยชน์ที่สุดในเล่ม เพราะมันไม่ได้เล่าเรื่องความสำเร็จ แต่เล่าเรื่อง<em>การเปลี่ยนคำถาม</em></p>
+
+    <p>ระยะแรก Aurora นับจดหมายสินไหมที่ AI ช่วยเขียนได้ <strong>แปดหมื่นฉบับ</strong> เป็นความสำเร็จ ตัวเลขนี้สวยและรายงานง่าย แต่มันคือ<em>ตัวชี้วัดกิจกรรม</em> ไม่ใช่ผลลัพธ์ — มันบอกว่าระบบทำงานเยอะ ไม่ได้บอกว่าลูกค้าได้อะไรขึ้นมา และสิ่งที่เกิดขึ้นจริงก็พิสูจน์เรื่องนั้น: ลูกค้ายังโทรกลับมาถามว่าอะไรไม่คุ้มครอง ส่วนผู้พิจารณาสินไหมก็แอบเขียนกรณียาก ๆ ใหม่เองแบบเงียบ ๆ โดยไม่มีการบันทึกไว้ที่ไหนเลย</p>
+
+    <p>สังเกตอาการที่สองให้ดี เพราะมันคืออาการที่อันตรายกว่า ตัวเลข "แปดหมื่นฉบับ" ยังนับต่อไปได้เรื่อย ๆ ทั้งที่ส่วนหนึ่งของงานนั้นถูกมนุษย์เขียนใหม่ไปแล้ว — และไม่มีใครรู้ว่ามากแค่ไหน เพราะการแก้ของผู้ตรวจไม่ได้ถูกเก็บเป็นข้อมูล องค์กรที่เก็บแต่ตัวเลขกิจกรรมจะมองไม่เห็นอาการนี้ตลอดกาล</p>
+
+    <p>Aurora จึงทิ้งเป้าหมายเชิงกิจกรรมและแทนที่ด้วย<strong>ผลลัพธ์สามข้อ</strong> ได้แก่ อธิบายถูกต้องตั้งแต่การติดต่อครั้งแรก ลดสายโทรกลับที่หลีกเลี่ยงได้ และไม่ปล่อยข้อความคุ้มครองที่ไม่มีหลักฐานรองรับ ทั้งสามข้อนี้มีคุณสมบัติร่วมกันอย่างหนึ่งคือ <em>ลูกค้ารู้สึกได้</em> — ต่างจาก "จำนวนจดหมายที่ AI เขียน" ซึ่งไม่มีลูกค้าคนไหนสนใจ</p>
+
+    <p>แล้ว Aurora ก็เริ่มเก็บหลักฐาน: ข้อความอ้างอิงที่ระบบใช้ การแก้ของผู้ตรวจ ประเภทของกรณี ผลตัดสินสุดท้าย และการติดตามซ้ำจากลูกค้า ห้าอย่างนี้ตรงกับท่าที่สองของวงจรพอดี — บริบท เส้นทาง การกระทำ และผลลัพธ์ ครบ</p>
+
+    <p>การทบทวนรายสัปดาห์ (ซึ่งเป็นรอบของ Aurora ไม่ใช่รอบที่คู่มือแนะนำให้ทุกองค์กรใช้) พบสิ่งที่ค่าเฉลี่ยไม่มีวันเปิดเผย: ระบบทำงานได้ดีในกรณีกรมธรรม์เดียว <em>แต่</em>พลาดเมื่อสองกรมธรรม์เชื่อมกัน คู่มือไม่ได้ให้ตัวเลขใด ๆ กับกลุ่มกรณีนี้ ไม่มีอัตรา ไม่มีจำนวนเคส และผมจะไม่แต่งขึ้นมาให้ สิ่งที่สำคัญคือ<em>รูปร่าง</em>ของการค้นพบ: ปัญหาไม่ได้กระจายทั่วทั้งงาน แต่กระจุกอยู่ในกลุ่มกรณีที่มีเงื่อนไขซ้อนกัน</p>
+
+    <p>สิ่งที่ Aurora ทำต่อคือส่วนที่ผมอยากให้ทุกทีมลอกไปใช้ — กลุ่มกรณีนั้นถูก<strong>ส่งต่อให้ผู้เชี่ยวชาญ</strong> ถูก<strong>แปลงเป็นชุดทดสอบ</strong> และถูกใช้<strong>ปรับ Retrieval ก่อนขยายผล</strong> สามอย่างนี้คือท่าที่สาม สี่ และห้าเรียงกันในย่อหน้าเดียว และมันคือความต่างระหว่างองค์กรที่เจอปัญหาแล้วแก้ กับองค์กรที่เจอปัญหาแล้ว<em>เรียนรู้</em></p>
+
+    <div class="table-wrapper">
+        <table>
+            <thead>
+                <tr>
+                    <th>Move</th>
+                    <th>What Aurora did</th>
+                    <th>What it produced</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td><strong>Observe</strong></td>
+                    <td>เลิกนับจำนวนจดหมาย แล้วดูว่าลูกค้ายังต้องโทรกลับหรือไม่ และผู้ตรวจแก้อะไรบ้าง</td>
+                    <td>เห็นอาการที่ตัวเลขกิจกรรมกลบไว้ คือการเขียนใหม่แบบไม่มีบันทึก</td>
+                </tr>
+                <tr>
+                    <td><strong>Preserve</strong></td>
+                    <td>เก็บข้อความอ้างอิง การแก้ของผู้ตรวจ ประเภทกรณี ผลตัดสิน และการติดตามซ้ำ</td>
+                    <td>ชุดหลักฐานที่ประกอบเหตุการณ์ย้อนกลับได้ในระดับกรณี</td>
+                </tr>
+                <tr>
+                    <td><strong>Compare</strong></td>
+                    <td>ทบทวนรายสัปดาห์เทียบกับผลลัพธ์สามข้อที่ประกาศไว้ล่วงหน้า</td>
+                    <td>พบว่าปัญหากระจุกที่กรณีสองกรมธรรม์ ไม่ได้กระจายทั่วงาน</td>
+                </tr>
+                <tr>
+                    <td><strong>Change</strong></td>
+                    <td>ส่งกลุ่มกรณีนั้นให้ผู้เชี่ยวชาญ และปรับ Retrieval ไม่ใช่ปรับ Prompt</td>
+                    <td>แก้ที่ชั้นบริบท ซึ่งเป็นชั้นที่ผลิตปัญหาจริง</td>
+                </tr>
+                <tr>
+                    <td><strong>Verify</strong></td>
+                    <td>แปลงกรณีที่พลาดเป็นชุดทดสอบ แล้วค่อยขยายผลหลังจากนั้น</td>
+                    <td>การขยายผลที่มีหลักฐานรองรับ ไม่ใช่การขยายผลตามกำหนดการ</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <p>และประโยคปิดของกรณีนี้คือประโยคที่ผมคิดว่าคุ้มค่าทั้งบท: บทเรียนที่มีค่าที่สุดของ Aurora ไม่ใช่การค้นพบว่า AI เขียนแทนได้ตรงไหน แต่คือการค้นพบว่า<strong>จุดใดของกระบวนงานที่หลักฐานยังไม่พอจะปล่อยคำตอบออกไป</strong></p>
+
+    <blockquote>💡 มุมมองของผม: ประโยคนั้นกลับหัวคำถามที่องค์กรส่วนใหญ่ถามอยู่ แทนที่จะถามว่า "AI ทำอะไรแทนเราได้บ้าง" ให้ถามว่า "กระบวนงานของเราตรงไหนที่ตัดสินใจโดยไม่มีหลักฐานพอ" คำถามแรกได้ลิสต์ use case คำถามที่สองได้แผนที่ความเสี่ยง และแผนที่นั้นมีประโยชน์แม้ในวันที่คุณยังไม่ได้ใช้ AI เลย</blockquote>
+
+    <div class="alert danger">
+        <strong>อย่าหยิบตัวเลขนี้ไปใช้:</strong> "แปดหมื่นฉบับ" เป็นตัวเลขในกรณีสมมติ และหน้าที่ของมันในเรื่องคือการเป็น<em>เป้าหมายที่ถูกทิ้ง</em> ไม่ใช่ผลสำเร็จที่ควรเลียนแบบ มันไม่ใช่ benchmark ไม่ใช่ขนาดที่พึงประสงค์ และไม่ควรปรากฏในตารางตัวชี้วัดของใครทั้งสิ้น เช่นเดียวกับรอบทบทวนรายสัปดาห์ ซึ่งเป็นรอบของ Aurora ไม่ใช่คำแนะนำสากล
+    </div>
+
+    <h2 id="th-five-principles">5. หลักปฏิบัติห้าประการที่ทำให้วงจรเดินได้จริง</h2>
+
+    <p>ห้าท่าเป็นโครงสร้าง ส่วน <strong>หลักปฏิบัติห้าประการ</strong> คือกฎที่ทำให้โครงสร้างนั้นไม่ถูกบิดกลับเป็นการรายงานผลแบบเดิม คู่มือเขียนไว้ห้าข้อ สั้นทุกข้อ และห้ามเรียงใหม่หรือยุบรวมกัน<sup><a href="#th-ref-1">[1]</a></sup></p>
+
+    <ol>
+        <li><strong>เรียนรู้จากพฤติกรรมที่ปล่อยจริง</strong> ไม่ใช่เดโมที่คัดกรณีมาแล้ว</li>
+        <li><strong>ผูกการเปลี่ยนแปลงกับหลักฐาน</strong> ระบุกลุ่มกรณี เกณฑ์ผ่าน และเงื่อนไขย้อนกลับ</li>
+        <li><strong>มอง Trace เป็นความสามารถของผลิตภัณฑ์</strong> หากย้อนสร้างเหตุการณ์ไม่ได้ องค์กรเรียนรู้อย่างน่าเชื่อถือไม่ได้</li>
+        <li><strong>แยกคุณค่า คุณภาพ ความเสี่ยง ต้นทุน และภาระมนุษย์</strong> คะแนนเดียวซ่อนการแลกเปลี่ยน</li>
+        <li><strong>ตั้งเจ้าของวงจร</strong> ต้องมีผู้รับผิดชอบตั้งแต่พบสัญญาณจนยืนยันว่าแก้ได้ผล</li>
+    </ol>
+
+    <blockquote>💡 มุมมองของผม: หลักข้อที่ห้าเขียนสั้นที่สุดในทั้งห้าข้อ — "ตั้งเจ้าของวงจร ต้องมีผู้รับผิดชอบตั้งแต่พบสัญญาณจนยืนยันว่าแก้ได้ผล" — และผมคิดว่ามันเป็นข้อที่ทำได้ยากที่สุด เพราะสิ่งที่ต้องมีเจ้าของไม่ใช่ระบบ ไม่ใช่โครงการ และไม่ใช่ dashboard แต่คือ<em>ช่วงเวลา</em> ตั้งแต่วินาทีที่มีสัญญาณจนถึงวินาทีที่พิสูจน์ได้ว่าแก้แล้วจริง ช่วงเวลาแบบนี้พาดผ่านหลายหน่วยงานเสมอ และในผังองค์กรทั่วไปมันจึงไม่มีเจ้าของโดยธรรมชาติ ถ้าคุณจะเลือกทำอย่างเดียวจากบทความนี้ ให้เลือกตั้งชื่อคนคนนี้</blockquote>
+
+    <p>สามข้อแรกเป็นเรื่องหลักฐาน ข้อที่สี่เป็นเรื่องการอ่านผล และข้อที่ห้าเป็นเรื่องอำนาจ ผมขอขยายทีละข้อสั้น ๆ ก่อนจะแปลงเป็นตารางตรวจ</p>
+
+    <p><strong>ข้อ 1</strong> ปิดช่องว่างระหว่างเดโมกับงานจริง เดโมที่คัดกรณีมาแล้วบอกเราแค่ว่า "ทำได้ในกรณีที่เลือกมา" ซึ่งเป็นข้อมูลที่มีค่าน้อยมากสำหรับการตัดสินใจว่าจะปล่อยของหรือไม่ <strong>ข้อ 2</strong> เปลี่ยนการปล่อยของจากเหตุการณ์เป็นการทดลอง — ระบุกลุ่มกรณีที่ตั้งใจปรับปรุง เกณฑ์ที่ถือว่าผ่าน และเงื่อนไขที่จะย้อนกลับ ทั้งสามอย่างต้องเขียนก่อนปล่อย ไม่ใช่หลังปล่อย</p>
+
+    <p><strong>ข้อ 3</strong> ยกระดับ Trace จาก "ของที่ทีม infra ทำให้" เป็น "ความสามารถของผลิตภัณฑ์" ซึ่งมีผลจริงต่องบประมาณและลำดับความสำคัญ เพราะสิ่งที่ถูกจัดเป็นความสามารถของผลิตภัณฑ์จะได้เข้าคิว roadmap ส่วนสิ่งที่ถูกจัดเป็นงาน infra จะได้เศษเวลา <strong>ข้อ 4</strong> ห้ามยุบมิติที่ขัดแย้งกันเป็นคะแนนเดียว เพราะคะแนนรวมจะทำให้ความเร็วที่เพิ่มขึ้นกลบความเสี่ยงที่เพิ่มขึ้นได้เสมอ และ <strong>ข้อ 5</strong> ก็อย่างที่เขียนไว้ในกรอบข้างบน</p>
+
+    <div class="table-wrapper">
+        <table>
+            <thead>
+                <tr>
+                    <th>Principle</th>
+                    <th>Weekly check</th>
+                    <th>Signal it is not yet true</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td><strong>1 · เรียนรู้จากพฤติกรรมที่ปล่อยจริง</strong></td>
+                    <td>สัปดาห์นี้เราดูกรณีจริงกี่กรณี และเลือกมาอย่างไร</td>
+                    <td>ตัวอย่างที่ยกในที่ประชุมเป็นกรณีเดิมที่เคยใช้ตอนขออนุมัติโครงการ</td>
+                </tr>
+                <tr>
+                    <td><strong>2 · ผูกการเปลี่ยนแปลงกับหลักฐาน</strong></td>
+                    <td>Release ล่าสุดประกาศกลุ่มกรณี เกณฑ์ และเงื่อนไข Rollback ไว้ก่อนหรือไม่</td>
+                    <td>บันทึกการเปลี่ยนแปลงเขียนว่า "ปรับปรุงคุณภาพคำตอบ" โดยไม่มีตัวเลขใด ๆ</td>
+                </tr>
+                <tr>
+                    <td><strong>3 · มอง Trace เป็นความสามารถของผลิตภัณฑ์</strong></td>
+                    <td>หยิบกรณีที่ผิดมาหนึ่งกรณี แล้วประกอบเหตุการณ์ย้อนกลับได้ภายในกี่นาที</td>
+                    <td>ต้องขอให้วิศวกรคนใดคนหนึ่งเข้าไปไล่ log ให้ จึงจะตอบได้</td>
+                </tr>
+                <tr>
+                    <td><strong>4 · แยกคุณค่า คุณภาพ ความเสี่ยง ต้นทุน และภาระมนุษย์</strong></td>
+                    <td>รายงานล่าสุดแสดงห้ามิติแยกกันหรือยุบเป็นคะแนนเดียว</td>
+                    <td>มีตัวเลขสรุปตัวเดียวสีเขียว ทั้งที่กรณีร้ายแรงเพิ่มขึ้น</td>
+                </tr>
+                <tr>
+                    <td><strong>5 · ตั้งเจ้าของวงจร</strong></td>
+                    <td>ถามสามคนว่าใครเป็นเจ้าของวงจร แล้วได้ชื่อเดียวกันหรือไม่</td>
+                    <td>ได้คำตอบว่า "ทีม AI" หรือ "คณะกรรมการ" ซึ่งแปลว่าไม่มีใคร</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <h2 id="th-canvas">6. Learning loop canvas — 75 นาที สู่กฎบัตรหนึ่งหน้า</h2>
+
+    <p>ส่วนที่ผมชอบที่สุดของบทนี้คือคู่มือไม่ปล่อยให้ผู้อ่านจบด้วยความรู้สึกดี ๆ แต่ให้เวิร์กช็อปที่จัดได้จริงในบ่ายเดียว คู่มือกำหนดไว้ว่าให้จัดเวลา <strong>75 นาที</strong> ร่วมกับเจ้าของกระบวนการ ผู้ปฏิบัติงาน ผู้นำผลิตภัณฑ์ ทีมข้อมูลหรือวิศวกรรม ตัวแทนความเสี่ยง และผู้ได้รับผลกระทบหนึ่งคน<sup><a href="#th-ref-1">[1]</a></sup></p>
+
+    <div class="alert info">
+        <strong>สองอย่างที่ผมเติมเข้าไปเอง:</strong> หนึ่ง — คู่มือระบุผู้เข้าร่วมไว้ <strong>หกบทบาท</strong> ส่วนบทบาทที่เจ็ดคือ <em>ผู้ดำเนินการประชุม</em> (facilitator) เป็นข้อเสนอของบทความนี้ ไม่ใช่ของคู่มือ ผมเติมเพราะวงที่มีตัวแทนความเสี่ยงกับผู้ปฏิบัติงานนั่งด้วยกันมักคุยไม่จบใน 75 นาทีถ้าไม่มีคนคุมเวลา สอง — คู่มือให้เวลารวม 75 นาทีกับหกขั้นตอน แต่<strong>ไม่ได้แบ่งนาทีต่อขั้น</strong> ตัวเลขนาทีในตารางข้างล่างเป็นการจัดสรรของผม ใช้เป็นแนวทาง ไม่ใช่ตารางเวลาของหนังสือ
+    </div>
+
+    <h3>ใครต้องอยู่ในห้อง และมาพร้อมอะไร</h3>
+
+    <div class="table-wrapper">
+        <table>
+            <thead>
+                <tr>
+                    <th>Role</th>
+                    <th>Why the loop needs them</th>
+                    <th>What to bring</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td><strong>เจ้าของกระบวนการ</strong></td>
+                    <td>เป็นคนเดียวที่ประกาศได้ว่าผลลัพธ์ธุรกิจข้อไหนคือข้อที่นับ</td>
+                    <td>ตัวเลขปัจจุบันของผลลัพธ์นั้น แม้จะหยาบก็ตาม</td>
+                </tr>
+                <tr>
+                    <td><strong>ผู้ปฏิบัติงานหน้างาน</strong></td>
+                    <td>รู้ว่าเส้นทางจริงต่างจากเส้นทางในเอกสารตรงไหน</td>
+                    <td>สามกรณีล่าสุดที่ต้องแก้เอง และเหตุผลที่ต้องแก้</td>
+                </tr>
+                <tr>
+                    <td><strong>ผู้นำผลิตภัณฑ์</strong></td>
+                    <td>เป็นคนตัดสินว่าอะไรเข้าคิวและอะไรรอ</td>
+                    <td>แผนการปล่อยรุ่นถัดไป และสิ่งที่ยอมเลื่อนได้</td>
+                </tr>
+                <tr>
+                    <td><strong>ทีมข้อมูลหรือวิศวกรรม</strong></td>
+                    <td>รู้ว่าสัญญาณไหนเก็บอยู่แล้ว และสัญญาณไหนยังไม่มี</td>
+                    <td>รายการสิ่งที่ระบบบันทึกไว้ในวันนี้ พร้อมระยะเวลาที่เก็บ</td>
+                </tr>
+                <tr>
+                    <td><strong>ตัวแทนความเสี่ยง</strong></td>
+                    <td>เป็นคนตั้งชื่อความเสียหายที่ห้ามเพิ่ม และเงื่อนไข Rollback</td>
+                    <td>เหตุการณ์ในอดีตที่ยังหลอนอยู่ และข้อกำหนดที่ผูกพันอยู่จริง</td>
+                </tr>
+                <tr>
+                    <td><strong>ผู้ได้รับผลกระทบหนึ่งคน</strong></td>
+                    <td>เป็นคนเดียวในห้องที่ไม่มีแรงจูงใจให้โครงการดูดี</td>
+                    <td>ประสบการณ์ตรง ไม่ต้องเตรียมสไลด์</td>
+                </tr>
+                <tr>
+                    <td><strong>ผู้ดำเนินการประชุม</strong> <em>(ข้อเสนอของบทความนี้)</em></td>
+                    <td>ทำให้หกขั้นจบใน 75 นาที และบันทึกทุกอย่างลงหน้ากระดาษเดียว</td>
+                    <td>แบบฟอร์มกฎบัตรเปล่า และนาฬิกาที่ทุกคนเห็น</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <h3>กำหนดการหกขั้น</h3>
+
+    <div class="table-wrapper">
+        <table>
+            <thead>
+                <tr>
+                    <th>Minute</th>
+                    <th>Step</th>
+                    <th>Who</th>
+                    <th>Output</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>0–12</td>
+                    <td>ระบุผลลัพธ์ธุรกิจหนึ่งข้อ และความเสียหายหนึ่งข้อที่ห้ามเพิ่ม</td>
+                    <td>เจ้าของกระบวนการนำ ตัวแทนความเสี่ยงถ่วง</td>
+                    <td>สองประโยค เขียนบนกระดานให้ทุกคนเห็นตลอดวง</td>
+                </tr>
+                <tr>
+                    <td>12–30</td>
+                    <td>วาดเส้นทางการตัดสินใจตั้งแต่จุดเริ่มจนถึงผลลัพธ์ และทำเครื่องหมายทุกจุดส่งต่อ</td>
+                    <td>ผู้ปฏิบัติงาน ร่วมกับผู้ได้รับผลกระทบ</td>
+                    <td>แผนภาพเส้นเดียว พร้อมวงกลมรอบทุกจุดส่งต่อ</td>
+                </tr>
+                <tr>
+                    <td>30–45</td>
+                    <td>รวบรวมผลลัพธ์ การแก้ไข ข้อร้องเรียน Incident, Trace และสัญญาณที่ยังขาด</td>
+                    <td>ทีมข้อมูลหรือวิศวกรรม</td>
+                    <td>บัญชีสัญญาณสองคอลัมน์ — "มีอยู่แล้ว" กับ "ยังไม่มี"</td>
+                </tr>
+                <tr>
+                    <td>45–57</td>
+                    <td>กำหนดรอบทบทวน เจ้าของการตัดสินใจ และเส้นทาง Escalation</td>
+                    <td>ผู้นำผลิตภัณฑ์ ร่วมกับตัวแทนความเสี่ยง</td>
+                    <td>ชื่อคน หนึ่งชื่อต่อหนึ่งบทบาท ไม่ใช่ชื่อทีม</td>
+                </tr>
+                <tr>
+                    <td>57–70</td>
+                    <td>เลือกกลุ่มกรณี ค่าเริ่มต้น เป้าหมาย และเงื่อนไข Rollback</td>
+                    <td>ผู้นำผลิตภัณฑ์ ร่วมกับทีมข้อมูล</td>
+                    <td>สี่บรรทัดที่วัดได้ ไม่มีคำว่า "ดีขึ้น" ลอย ๆ</td>
+                </tr>
+                <tr>
+                    <td>70–75</td>
+                    <td>นัดวันทบทวนหลักฐานครั้งแรก</td>
+                    <td>เจ้าของวงจร</td>
+                    <td>วันที่ในปฏิทินของทุกคนก่อนออกจากห้อง</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <p>ขั้นที่ผมเห็นล้มบ่อยที่สุดคือขั้นที่หก และมันล้มด้วยเหตุผลเดียวเสมอ — ทุกคนเห็นด้วยว่าควรทบทวน แต่ไม่มีใครยอมเสียเวลาเปิดปฏิทินตอนนั้น การนัดวันจึงกลายเป็น "เดี๋ยวส่งอีเมลนัด" ซึ่งแปลว่าไม่มีวัน ถ้าคุณจัดเวิร์กช็อปนี้ ให้กันห้านาทีสุดท้ายไว้กดปฏิทินจริง ๆ ต่อหน้ากัน</p>
+
+    <h3>กฎบัตรวงจรการเรียนรู้ — หนึ่งหน้า เก้าช่อง</h3>
+
+    <p>ผลลัพธ์ของเวิร์กช็อปนี้คู่มือระบุชัดเจนว่าคือ <strong>กฎบัตรวงจรการเรียนรู้</strong> (loop charter) หนึ่งหน้า ไม่ใช่แผนจัดซื้อเทคโนโลยี<sup><a href="#th-ref-1">[1]</a></sup> ตารางข้างล่างคือการจัดหกขั้นข้างบนใหม่ให้เป็นเก้าช่องที่กรอกได้ พร้อมเกณฑ์ว่าช่องนั้น "ตอบแล้วจริง" เมื่อไร</p>
+
+    <div class="table-wrapper">
+        <table>
+            <thead>
+                <tr>
+                    <th>Charter field</th>
+                    <th>Question it answers</th>
+                    <th>Done when</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td><strong>Outcome</strong></td>
+                    <td>ผลลัพธ์ธุรกิจข้อไหนที่เราตั้งใจปรับปรุง</td>
+                    <td>เขียนเป็นประโยคเดียวที่ลูกค้าหรือผู้ใช้รู้สึกได้ ไม่ใช่ตัวชี้วัดกิจกรรม</td>
+                </tr>
+                <tr>
+                    <td><strong>Harm that must not increase</strong></td>
+                    <td>ความเสียหายข้อไหนที่ห้ามเพิ่มแม้ผลลัพธ์จะดีขึ้น</td>
+                    <td>ตัวแทนความเสี่ยงเป็นคนเขียน และเจ้าของกระบวนการยอมรับ</td>
+                </tr>
+                <tr>
+                    <td><strong>Decision path &amp; handoffs</strong></td>
+                    <td>การตัดสินใจนี้เดินผ่านใครบ้าง ตั้งแต่จุดเริ่มจนถึงผล</td>
+                    <td>ทุกจุดส่งต่อมีชื่อ และไม่มีลูกศรไหนที่ไม่มีเจ้าของ</td>
+                </tr>
+                <tr>
+                    <td><strong>Review cadence</strong></td>
+                    <td>เราจะกลับมาดูหลักฐานทุกกี่สัปดาห์</td>
+                    <td>รอบสั้นพอที่จะแก้ทัน และยาวพอที่จะมีข้อมูลให้ดู</td>
+                </tr>
+                <tr>
+                    <td><strong>Decision owner</strong></td>
+                    <td>ใครตัดสินว่าจะขยาย จะคงไว้ หรือจะถอย</td>
+                    <td>เป็นชื่อคน ไม่ใช่ชื่อทีมและไม่ใช่ชื่อคณะกรรมการ</td>
+                </tr>
+                <tr>
+                    <td><strong>Escalation</strong></td>
+                    <td>ถ้าเกินอำนาจคนนั้น เรื่องขึ้นไปที่ใครและภายในกี่ชั่วโมง</td>
+                    <td>มีเส้นทางและมีเวลากำกับ ไม่ใช่แค่ชื่อผู้บริหาร</td>
+                </tr>
+                <tr>
+                    <td><strong>Case slice / baseline / target</strong></td>
+                    <td>เราทดลองกับกลุ่มกรณีไหน ค่าเริ่มต้นเท่าไร และคาดหวังเท่าไร</td>
+                    <td>กลุ่มกรณีแคบพอจะวัดได้ และค่าเริ่มต้นวัดมาแล้วจริง</td>
+                </tr>
+                <tr>
+                    <td><strong>Rollback condition</strong></td>
+                    <td>เห็นอะไรแล้วเราจะถอยทันทีโดยไม่ต้องถกเถียง</td>
+                    <td>เขียนเป็นเงื่อนไขที่เครื่องตรวจได้ หรือคนตรวจได้ในนาทีเดียว</td>
+                </tr>
+                <tr>
+                    <td><strong>First evidence review date</strong></td>
+                    <td>วันไหนที่เราจะมานั่งดูหลักฐานชุดแรกด้วยกัน</td>
+                    <td>อยู่ในปฏิทินของทุกคนแล้ว ก่อนออกจากห้อง</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <div class="alert">
+        <strong>เกณฑ์ตรวจกฎบัตรที่ใช้ได้เสมอ:</strong> ถ้ากฎบัตรของคุณยาวเกินหนึ่งหน้า แปลว่ามีบางช่องที่ยังตัดสินใจไม่ลง และคุณกำลังใช้ความยาวแทนการตัดสินใจ ถ้ามันมีชื่อผลิตภัณฑ์ของผู้ขายอยู่ในนั้น แปลว่าคุณเผลอเขียนแผนจัดซื้อ ไม่ใช่กฎบัตรวงจร
+    </div>
+
+    <h2 id="th-metrics-failures">7. ตัวชี้วัดสำคัญสิบตัว และรูปแบบความล้มเหลวหกแบบ</h2>
+
+    <p>คู่มือให้ตัวชี้วัดไว้ <strong>สิบตัว</strong> และกำกับด้วยกฎการอ่านที่สำคัญไม่แพ้ตัวชี้วัดเอง<sup><a href="#th-ref-1">[1]</a></sup></p>
+
+    <blockquote>"ต้องอ่านตัวเลขร่วมกัน งานเร็วขึ้นแต่ความผิดพลาดรุนแรงเพิ่มขึ้นไม่ใช่ความก้าวหน้า"</blockquote>
+
+    <p>ตารางข้างล่างเรียงตามลำดับของคู่มือ ส่วนคอลัมน์ <strong>Scorecard</strong> เป็นการจับคู่ของบทความนี้เข้ากับหกคอลัมน์ของ Board Scorecard ที่ผมแนะนำไว้ใน <a href="/blog/ai-transformation-layers">ตอน #1</a> — คู่มือไม่ได้พิมพ์การจับคู่นี้ไว้ ผมทำขึ้นเพื่อให้เอาไปวางบนวาระประชุมผู้บริหารได้โดยไม่ต้องแปลอีกชั้น</p>
+
+    <div class="table-wrapper">
+        <table>
+            <thead>
+                <tr>
+                    <th>#</th>
+                    <th>Metric</th>
+                    <th>What it exposes</th>
+                    <th>Scorecard</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>1</td>
+                    <td>ผลลัพธ์ธุรกิจแยกตามกลุ่มกรณี</td>
+                    <td>ว่าผลดีขึ้นทั้งงาน หรือดีขึ้นเฉพาะกลุ่มง่ายแล้วกลบกลุ่มยากไว้</td>
+                    <td>Value</td>
+                </tr>
+                <tr>
+                    <td>2</td>
+                    <td>อัตราผ่านครั้งแรก (first-pass acceptance)</td>
+                    <td>ว่าผลงานใช้ได้เลยหรือมนุษย์ต้องรื้อทำใหม่เงียบ ๆ</td>
+                    <td>Quality</td>
+                </tr>
+                <tr>
+                    <td>3</td>
+                    <td>เวลามัธยฐานจากพบปัญหาถึงเพิ่ม Regression Test</td>
+                    <td>ว่าบทเรียนกลายเป็นภูมิคุ้มกันเร็วแค่ไหน หรือค้างอยู่ในหัวคน</td>
+                    <td>Learning</td>
+                </tr>
+                <tr>
+                    <td>4</td>
+                    <td>สัดส่วน Release ที่มีสมมติฐานและเกณฑ์ล่วงหน้า</td>
+                    <td>ว่าเราปล่อยของแบบทดลอง หรือปล่อยแล้วค่อยหาคำอธิบาย</td>
+                    <td>Learning</td>
+                </tr>
+                <tr>
+                    <td>5</td>
+                    <td>ความครบถ้วนของ Trace</td>
+                    <td>ว่าเราจะประกอบเหตุการณ์ย้อนกลับได้กี่เปอร์เซ็นต์ของกรณีที่เกิดจริง</td>
+                    <td>Risk</td>
+                </tr>
+                <tr>
+                    <td>6</td>
+                    <td>อัตราผ่านกรณีรุนแรง (severe-case pass rate)</td>
+                    <td>ว่าตอนพลาด มันพลาดในกรณีที่ราคาแพงหรือกรณีที่ไม่มีใครเดือดร้อน</td>
+                    <td>Risk</td>
+                </tr>
+                <tr>
+                    <td>7</td>
+                    <td>อัตราความผิดพลาดที่หลุดจริงหลังปล่อยใช้</td>
+                    <td>ว่าด่านก่อนปล่อยของเราจับได้จริงหรือจับได้แต่ในห้องทดลอง</td>
+                    <td>Risk</td>
+                </tr>
+                <tr>
+                    <td>8</td>
+                    <td>เวลาตรวจต่อกรณี (reviewer minutes)</td>
+                    <td>ว่าเราย้ายงานไปให้ AI แล้วโยนภาระใหม่ไปไว้บนไหล่ผู้ตรวจหรือเปล่า</td>
+                    <td>People</td>
+                </tr>
+                <tr>
+                    <td>9</td>
+                    <td>เหตุผลการ Override</td>
+                    <td>ว่ามนุษย์ไม่เห็นด้วยกับระบบเพราะอะไร — ซึ่งคือข้อมูลออกแบบชั้นดี</td>
+                    <td>People</td>
+                </tr>
+                <tr>
+                    <td>10</td>
+                    <td>สัดส่วนกรณีแก้ไขที่นำกลับไปปรับข้อมูล Retrieval นโยบาย หรือการประเมิน</td>
+                    <td>ว่าวงจรปิดจริงหรือขาดตรงปลาย — ตัวเดียวที่วัด "ความเป็นวง" ตรง ๆ</td>
+                    <td>Learning</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <p>ถ้าองค์กรของคุณเริ่มได้แค่สามตัว ผมแนะนำตัวที่ 3, 7 และ 10 เพราะสามตัวนี้ประกอบกันเป็นคำถามเดียวที่สำคัญที่สุด — เห็นปัญหาแล้วนานแค่ไหนกว่าจะกลายเป็นภูมิคุ้มกัน ยังมีอะไรหลุดออกไปอีกไหม และบทเรียนวิ่งกลับเข้าสู่ระบบจริงหรือไม่ ส่วนตัวที่ 8 กับ 9 คือคู่ที่คนลืมบ่อยที่สุดและเป็นคู่ที่บอกล่วงหน้าได้ดีที่สุดว่าโครงการกำลังจะถูกต่อต้าน</p>
+
+    <div class="alert danger">
+        <strong>บทนี้ไม่มีค่าเกณฑ์แม้แต่ตัวเดียว:</strong> คู่มือให้<em>นิยาม</em>ของตัวชี้วัดสิบตัว ไม่ได้ให้เป้าหมายหรือค่ามาตรฐาน และผมจะไม่แต่งขึ้นมาให้ เพราะเกณฑ์ที่ถูกต้องขึ้นกับระดับผลกระทบของงานคุณ ไม่ใช่ตัวเลขจากหนังสือ วิธีตั้งเกณฑ์ที่ถูกคือวัดค่าเริ่มต้นของตัวเองก่อน แล้วประกาศเป้าที่ขยับได้จริงในหนึ่งรอบทบทวน — และเขียนมันลงในกฎบัตร ไม่ใช่ในสไลด์
+    </div>
+
+    <h3>รูปแบบความล้มเหลว</h3>
+
+    <p>คู่มือปิดบทด้วยรายการที่สั้นที่สุดและเจ็บที่สุด — หกรูปแบบที่ทำให้วงจรหยุดหมุนโดยที่ทุกคนยังรู้สึกว่างานเดินอยู่<sup><a href="#th-ref-1">[1]</a></sup> ผมเติมวิธีตรวจจับให้แต่ละข้อ</p>
+
+    <ul>
+        <li><strong>Pilot เพื่อการแสดงผล</strong> — โครงการนำร่องที่ออกแบบมาเพื่อให้ผ่านการนำเสนอ ไม่ใช่เพื่อให้เรียนรู้ <em>วิธีตรวจ:</em> ถามว่าถ้าผลออกมาไม่ดี ใครจะเป็นคนกล้าพูด และเคยมี pilot ไหนถูกยุติเพราะหลักฐานหรือยัง</li>
+        <li><strong>Dashboard ที่ไม่มีผู้มีอำนาจตัดสินใจ</strong> — หน้าจอสวยที่ไม่มีใครมีอำนาจสั่งอะไรจากมันได้ <em>วิธีตรวจ:</em> ชี้ไปที่กราฟหนึ่งอันแล้วถามว่า "ถ้าเส้นนี้แดง ใครทำอะไรได้ภายในวันนี้"</li>
+        <li><strong>ค่าเฉลี่ยที่กลบจุดอ่อนของบางกลุ่ม</strong> — ตัวเลขรวมที่ดีขึ้นทั้งที่กลุ่มเปราะบางแย่ลง <em>วิธีตรวจ:</em> แยกตัวเลขเดิมตามกลุ่มกรณีที่ยากที่สุดสามกลุ่ม แล้วดูว่าเรื่องเล่ายังเหมือนเดิมไหม</li>
+        <li><strong>การแก้ Prompt ซ้ำโดยไม่วิเคราะห์ Workflow</strong> — อาการที่พบบ่อยที่สุด และเป็นรูปแบบเดียวกับที่แนวคิด double-loop learning ชี้ไว้ตั้งแต่ปี 1977<sup><a href="#th-ref-6">[6]</a></sup> คือแก้ให้กลับเข้าเกณฑ์เดิมโดยไม่แตะกฎที่ผลิตปัญหา <em>วิธีตรวจ:</em> นับว่าสามเดือนที่ผ่านมาแก้ prompt กี่ครั้ง และแก้กระบวนงานกี่ครั้ง ถ้าอัตราส่วนคือสิบต่อศูนย์ คุณเจอมันแล้ว</li>
+        <li><strong>การเรียนรู้เฉพาะหลังเกิดเหตุ</strong> — องค์กรที่ปรับปรุงได้เฉพาะเมื่อมีคนเดือดร้อนพอจะร้องเรียน <em>วิธีตรวจ:</em> ดูว่าการปรับปรุงห้าครั้งล่าสุดเริ่มจากสัญญาณเชิงรุกหรือจากเรื่องร้องเรียน</li>
+        <li><strong>การทิ้งข้อเสนอแนะหน้างานด้วยคำว่า User Error</strong> — คำอธิบายที่ปิดการเรียนรู้ได้เร็วที่สุดในภาษาองค์กร <em>วิธีตรวจ:</em> อ่านบันทึกการปิด Incident ห้าใบล่าสุด แล้วนับว่ามีกี่ใบที่สาเหตุลงท้ายว่า "ผู้ใช้ทำผิดขั้นตอน"</li>
+    </ul>
+
+    <p>ข้อที่ห้าเป็นข้อที่มีหลักฐานภายนอกหนุนอยู่พอดี NIST เผยแพร่บทสรุปงานวิจัยเมื่อ 9 มิถุนายน 2026 ระบุผลทางคณิตศาสตร์ว่า ไม่มีชุดการ์ดเรลจำกัดชุดใดที่ทนทานต่อ Adversarial Prompt ได้ทุกกรณี ซึ่งสนับสนุนแนวทางเฝ้าระวังและปรับปรุงต่อเนื่องหลังปล่อยใช้ แทนการวางการป้องกันชุดตายตัว<sup><a href="#th-ref-7">[7]</a></sup> พูดอีกอย่างคือ การรอให้เกิดเหตุก่อนแล้วค่อยเรียนรู้ ไม่ใช่แค่นิสัยที่ไม่ดี แต่เป็นกลยุทธ์ที่มีขอบเขตทางคณิตศาสตร์กำกับไว้แล้วว่าไม่พอ — โดยผลนั้นก็มีขอบเขตของมันเช่นกัน คือไม่ได้ระบุว่ารอบเวลาหรือชุดการควบคุมที่ถูกต้องสำหรับแต่ละบริบทการใช้งานควรเป็นอย่างไร</p>
+
+    <h2 id="th-road-ahead">8. ก้าวต่อไป — วงจรเดินได้เท่าที่หลักฐานอนุญาต</h2>
+
+    <p>ถ้าอ่านมาถึงตรงนี้แล้วรู้สึกว่าบทนี้เรียกร้องเยอะ ผมเห็นด้วย — แต่ขอชี้ให้เห็นว่าไม่มีข้อไหนเลยที่ต้องซื้อของใหม่ ห้าท่าเป็นวินัย หลักปฏิบัติห้าข้อเป็นข้อตกลง เวิร์กช็อป 75 นาทีใช้ห้องประชุมกับกระดานหนึ่งแผ่น และตัวชี้วัดสิบตัวส่วนใหญ่คำนวณจากข้อมูลที่องค์กรมีอยู่แล้วแต่ไม่เคยเอามาวางเรียงกัน</p>
+
+    <p>ถ้าจะเริ่มสัปดาห์นี้จริง ๆ ผมแนะนำสี่ก้าวนี้ตามลำดับ</p>
+
+    <ol>
+        <li><strong>เลือกกระบวนงานเดียว</strong> ที่มีปริมาณพอจะเห็นรูปแบบ และมีผลกระทบพอจะมีคนสนใจ — ไม่ใช่กระบวนงานที่ง่ายที่สุด</li>
+        <li><strong>ตั้งชื่อเจ้าของวงจร</strong> หนึ่งชื่อ ก่อนจะเริ่มเก็บข้อมูลใด ๆ เพราะข้อมูลที่ไม่มีเจ้าของจะกลายเป็น dashboard ที่ไม่มีใครสั่งอะไรได้</li>
+        <li><strong>จัดเวิร์กช็อป 75 นาที</strong> ให้ได้กฎบัตรหนึ่งหน้าออกมา และอย่าออกจากห้องโดยไม่มีวันทบทวนหลักฐานครั้งแรก</li>
+        <li><strong>วัดค่าเริ่มต้นของตัวชี้วัดสามตัว</strong> (ผมเสนอ 3, 7 และ 10) แล้วรอบทบทวนแรกค่อยคุยเรื่องเป้าหมาย ไม่ใช่ตั้งเป้าก่อนรู้ค่าเริ่มต้น</li>
+    </ol>
+
+    <p>และมีเงื่อนไขข้อหนึ่งที่บทนี้แตะไว้แต่ยังไม่ได้ตอบ — วงจรจะหมุนได้ก็ต่อเมื่อ AI มีอำนาจอยู่ในระดับที่หลักฐานรองรับไหว ให้อำนาจมากเกินหลักฐาน วงจรจะกลายเป็นการสอบสวนหลังเกิดเหตุ ให้อำนาจน้อยเกินไป ก็จะไม่มีพฤติกรรมจริงให้เรียนรู้เลย การหาจุดสมดุลนั้นคือเรื่องของตอนหน้า</p>
+
+    <div class="alert info">
+        <strong>🧭 ชั้นที่บทความนี้ขยับ:</strong> ชั้น <strong>Learning loop</strong> (วงจรการเรียนรู้) — คำถาม <strong>Q1</strong> (เรากำลังพยายามปรับปรุง Outcome ขององค์กรข้อไหน และเราจะรู้ได้เร็วแค่ไหนว่าทำได้จริง) — Scorecard คอลัมน์ <strong>Learning</strong> ซึ่งเป็นคอลัมน์ที่วัดว่าหลักฐานเดินทางจากผลลัพธ์กลับมาเป็นการปรับปรุงเร็วแค่ไหน ตอนหน้า <a href="/blog/ai-transformation-maturity">#4 Earn the Right to Increase Authority</a> จะพาไปดูห้าระดับวุฒิภาวะที่วัดกันเป็นราย Workflow ไม่ใช่รายองค์กร และหลักฐานที่ต้องมีเพิ่มขึ้นในทุกระดับที่อำนาจเพิ่มขึ้น
+    </div>
+
+    <div class="key-takeaways">
+        <h3>🎯 สิ่งสำคัญที่ต้องจำ</h3>
+        <ul>
+            <li><strong>Learning loop</strong> = วงจรปิดที่เปลี่ยนข้อมูลเป็นการตัดสินใจ การลงมือทำ ผลลัพธ์ที่สังเกตได้ หลักฐาน และการปรับปรุงรอบถัดไป</li>
+            <li><strong>Five moves</strong> = Observe, Preserve, Compare, Change, Verify — และโมเดลเป็นสิ่งที่ถูกปรับเป็นลำดับที่สี่จากห้า ไม่ใช่ลำดับแรก</li>
+            <li><strong>Learning velocity</strong> = ความเร็วที่หลักฐานจากผลลัพธ์จริงกลายเป็นการตัดสินใจ กระบวนงาน มาตรการควบคุม และความรู้ที่ใช้ซ้ำได้</li>
+            <li><strong>Operating assets</strong> = Prompt, แม่แบบบริบท, รุ่นของคลังความรู้, Tool Schema, ชุดทดสอบ, Threshold และ Release Manifest ต้องมีเจ้าของและเวอร์ชัน ไม่ใช่เศษซากของโครงการ</li>
+            <li><strong>Loop owner</strong> = ต้องมีคนรับผิดชอบช่วงเวลาตั้งแต่พบสัญญาณจนยืนยันว่าแก้ได้ผล และต้องเป็นชื่อคน ไม่ใช่ชื่อทีม</li>
+            <li><strong>Loop charter</strong> = ผลลัพธ์ของเวิร์กช็อป 75 นาทีคือกฎบัตรหนึ่งหน้า ไม่ใช่แผนจัดซื้อเทคโนโลยี</li>
+            <li><strong>อ่านตัวชี้วัดร่วมกัน</strong> = งานเร็วขึ้นแต่ความผิดพลาดรุนแรงเพิ่มขึ้นไม่ใช่ความก้าวหน้า และบทนี้ไม่ได้ให้ค่าเกณฑ์ไว้เลยแม้แต่ตัวเดียว</li>
+        </ul>
+    </div>
+
+    <section class="references" aria-labelledby="references">
+        <h2 id="references">อ้างอิง</h2>
+        <p class="references__note">ทุกแหล่งอ้างอิงตรวจสอบและเข้าถึงเมื่อ 5 กันยายน 2569 (2026-09-05) ซีรีส์นี้ใช้ป้ายกำกับหลักฐานสี่แบบตามคู่มือต้นทาง — <strong>Law</strong> กฎหมายที่ผูกพันเมื่ออยู่ในขอบเขต · <strong>Standard</strong> มาตรฐานและแนวปฏิบัติที่เป็นความสมัครใจจนกว่าจะถูกผนวกเข้าเป็นข้อผูกพัน · <strong>Study</strong> หลักฐานเชิงประจักษ์หรือการออกแบบวิจัยที่ระบุชัด · <strong>Synthesis</strong> การสังเคราะห์ของผู้เขียน</p>
+        <ol class="references__list">
+            <li id="th-ref-1"><span class="ref-tag ref-tag--synthesis">Synthesis</span> Mingkhwan, A. <cite>AI Transformation as an Organizational Core — Bilingual Companion Playbook</cite>, บทที่ 1 "สร้างระบบการเรียนรู้" หน้า 8–10. ต้นฉบับของผู้เขียน ไม่ได้เผยแพร่ออนไลน์จึงไม่มีลิงก์ · evidence snapshot 5 กันยายน 2026 — เข้าถึง 2026-09-05. <span class="ref-supports">รองรับ: ประโยคเปิดบท ห้าท่าของวงจร สินทรัพย์ปฏิบัติการเจ็ดชนิด นิยาม learning loop และ learning velocity คอลัมน์ Learning ของ Board Scorecard กรณีสมมติ Aurora Assurance หลักปฏิบัติห้าประการ เวิร์กช็อป 75 นาทีกับหกขั้นตอน กฎบัตรหนึ่งหน้า ตัวชี้วัดสิบตัว และรูปแบบความล้มเหลวหกแบบ</span></li>
+            <li id="th-ref-2"><span class="ref-tag ref-tag--synthesis">Synthesis</span> Mingkhwan, A. <cite>Engineering AI-Core Systems — A Reference Architecture and Assurance Contract for Software 3.0, revision 8</cite>. ต้นฉบับของผู้เขียน กันยายน 2026 · ยังไม่เผยแพร่และไม่มี URL สาธารณะ จึงไม่มีลิงก์. <span class="ref-supports">รองรับ: ข้อเสนอว่าเมื่อผลจากโมเดลมีทั้งอำนาจสูงและขาดไม่ได้สำหรับงานที่ประกาศไว้ ภาระการรับรองความถูกต้องต้องกระจายไปยัง Boundary รอบโมเดล — เป็นข้อโต้แย้งเชิงออกแบบ ไม่ใช่ผลเชิงประจักษ์</span></li>
+            <li id="th-ref-3"><span class="ref-tag ref-tag--standard">Standard</span> National Institute of Standards and Technology. <cite>Artificial Intelligence Risk Management Framework (AI RMF 1.0)</cite>, NIST AI 100-1. <a href="https://www.nist.gov/itl/ai-risk-management-framework">nist.gov</a> — เผยแพร่ 26 มกราคม 2023, เข้าถึง 2026-09-05. <span class="ref-supports">รองรับ: สถานะรุ่น 1.0 ที่ยังเป็นกรอบโดยสมัครใจและไม่ใช่การรับรอง ณ 5 กันยายน 2026 · สี่ฟังก์ชัน GOVERN, MAP, MEASURE, MANAGE · ข้อความของเอกสารเองว่าการกระทำเหล่านี้ไม่ใช่ checklist และไม่จำเป็นต้องเรียงลำดับ</span></li>
+            <li id="th-ref-4"><span class="ref-tag ref-tag--standard">Standard</span> ISO/IEC. <cite>ISO/IEC 42001:2023 — Information technology — Artificial intelligence — Management system</cite>. <a href="https://www.iso.org/standard/42001">iso.org</a> — เผยแพร่ ธันวาคม 2023, เข้าถึง 2026-09-05. <span class="ref-supports">รองรับ: สถานะ Published, Edition 1, ระยะ 60.60 เมื่อตรวจสอบวันที่ 5 กันยายน 2026 · คำอธิบายสาธารณะของ ISO เรื่องข้อกำหนดสำหรับการจัดตั้ง นำไปใช้ ธำรงรักษา และปรับปรุงอย่างต่อเนื่องซึ่ง AI Management System (อ้างเฉพาะคำอธิบายสาธารณะ ไม่ใช่เนื้อความของข้อกำหนด)</span></li>
+            <li id="th-ref-5"><span class="ref-tag ref-tag--synthesis">Synthesis</span> Argyris, C. <cite>Teaching Smart People How to Learn</cite>. Harvard Business Review, พฤษภาคม–มิถุนายน 1991. <a href="https://hbr.org/1991/05/teaching-smart-people-how-to-learn">hbr.org</a> — เข้าถึง 2026-09-05. <span class="ref-supports">รองรับ: ย่อหน้าเปิดที่ระบุว่ากลุ่มคนที่หลายคนคิดว่าเรียนรู้เก่งที่สุดกลับเรียนรู้ได้ไม่ดีนัก (ส่วนที่เหลือของบทความอยู่หลังกำแพงสมาชิก จึงไม่มีการอ้างเกินย่อหน้านี้)</span></li>
+            <li id="th-ref-6"><span class="ref-tag ref-tag--synthesis">Synthesis</span> Argyris, C. <cite>Double Loop Learning in Organizations</cite>. Harvard Business Review, กันยายน 1977. <a href="https://hbr.org/1977/09/double-loop-learning-in-organizations">hbr.org</a> — เข้าถึง 2026-09-05. <span class="ref-supports">รองรับ: การระบุว่าคำว่า double-loop learning เป็นของ Chris Argyris — คำอธิบายความต่างระหว่างการแก้ให้กลับเข้าเกณฑ์กับการกลับไปตั้งคำถามกับกฎ เป็นคำอธิบายของผู้เขียนบทความนี้ และคู่มือต้นทางไม่ได้อ้างถึง Argyris</span></li>
+            <li id="th-ref-7"><span class="ref-tag ref-tag--standard">Standard</span> National Institute of Standards and Technology. <cite>NIST Mathematical Proof Supports Transition to a Continuous-Monitor-and-Update Security Model for AI Systems</cite>. <a href="https://www.nist.gov/news-events/news/2026/06/nist-mathematical-proof-supports-transition-continuous-monitor-and-update">nist.gov</a> — เผยแพร่ 9 มิถุนายน 2026, เข้าถึง 2026-09-05. <span class="ref-supports">รองรับ: ผลทางคณิตศาสตร์ว่าไม่มีชุดการ์ดเรลจำกัดชุดใดที่ทนทานต่อ Adversarial Prompt ได้ทุกกรณี จึงสนับสนุนการเฝ้าระวังและปรับปรุงต่อเนื่องหลังปล่อยใช้ · ขอบเขต: ผลทางคณิตศาสตร์ไม่ได้ระบุรอบเวลาหรือชุดการควบคุมที่ถูกต้องสำหรับทุกบริบทการใช้งาน</span></li>
+        </ol>
+    </section>
+    </div>
+
+    <div class="l-en" lang="en">
+
+    <p>🤔 <strong>Models, cloud services and a well-written set of prompts — a competitor can buy every one of them in a single transaction. So what is it they cannot buy?</strong></p>
+
+    <p>The previous post in this series — <a href="/blog/ai-transformation-prediction">#2 Cheaper Prediction</a> — closed on the conclusion that the unit of transformation is not the tool but <strong>the decision</strong>. When prediction gets cheap, what gets expensive is the judgment, the data and the action that follow the prediction. But knowing that the unit is the decision is not yet enough, because a decision whose outcome nobody ever comes back to look at is only a guess with better documentation attached.</p>
+
+    <p>Chapter 1's one-line answer is that the thing you cannot buy in a single transaction is the <strong>learning loop</strong> — the ability to see what happened, preserve the evidence, change the right part of the system, and verify the result before the next release.<sup><a href="#en-ref-1">[1]</a></sup> The rest of this post takes that loop apart into five moves, five principles, a 75-minute working session, and the ten metrics that tell you whether your loop really turns or only turns in the slide deck.</p>
+
+    <h2 id="en-cannot-buy">1. What you can buy in one transaction, and what you cannot</h2>
+
+    <p>Chapter 1 of the playbook opens with a single sentence that stakes out everything the chapter goes on to claim.<sup><a href="#en-ref-1">[1]</a></sup></p>
+
+    <blockquote><em>"The durable advantage is not access to a model. It is the ability to convert operating experience into safer and more valuable behavior."</em></blockquote>
+
+    <p>The chapter then expands the same idea at length, and I want you to read it slowly, because every word of the closing sentence is doing work.<sup><a href="#en-ref-1">[1]</a></sup></p>
+
+    <blockquote>"AI transformation is not the installation of a model. It is the creation of an organizational learning system that can improve decisions faster than its environment changes. Models, policies, customer behavior, data, and threats all move. Competitors can often obtain similar foundation models and cloud services. What they cannot buy in one transaction is the ability to see what happened, preserve the evidence, change the right part of the system, and verify the result before the next release."</blockquote>
+
+    <p><strong>AI transformation</strong> is therefore not a procurement project. It is the construction of a capability inside the organization, and that capability has the property strategists like to call <em>cumulative</em> — the longer it turns, the further ahead it puts you, because what accumulates is not a licence count but the cases that once went wrong and were turned into test sets, the policies that were once ambiguous and were rewritten until they could actually be decided, and the routes through the work that used to be handed on in silence and have now been made visible.</p>
+
+    <h3>Why "in one transaction" is the heart of the sentence</h3>
+
+    <p>The playbook's sentence does not say a competitor can never build a learning loop. It says they cannot buy one <em>in a single transaction</em> — and that is the distinction executives most often read straight past. Take the four capabilities in that sentence one at a time and ask whether each of them arrives with a contract.</p>
+
+    <p><strong>See what happened</strong> requires instrumentation inside the real workflow, not a dashboard wired to the model's logs. Seeing, in this sense, means seeing <em>case outcomes</em> — did the customer get the right answer, did they have to call back, what did the reviewer change — and that data is scattered across several systems and usually owned by nobody.</p>
+
+    <p><strong>Preserve the evidence</strong> requires deciding in advance what to keep, for how long, who may read it, and how to store it so that it still means something once the system changes version. A great many organizations discover during an incident that they kept the outputs but not the <em>context</em> that produced them — and evidence that cannot reconstruct the event is not evidence.</p>
+
+    <p><strong>Change the right part of the system</strong> requires authority across departments, because "the right part" is usually not the model. It is the ambiguous policy, the form that asks the wrong question, or the handoff nobody owns. A team whose only lever is the prompt will pull the prompt every single time — not because it diagnosed badly, but because that is the one thing it has the authority to touch.</p>
+
+    <p><strong>Verify the result before the next release</strong> requires release discipline, which is as much a cultural matter as a technical one. An organization used to shipping first and looking later will experience a threshold set in advance as friction, right up until the first incident that makes it clear the threshold is the thing still letting them ship at all.</p>
+
+    <p>All four are organizational capabilities, not software features. You can buy tools that help; you cannot buy the <em>capability</em>. This is why the playbook defines the <strong>learning loop</strong> as "a closed cycle that turns data into decisions, actions, observed outcomes, evidence, and improvements to the next cycle"<sup><a href="#en-ref-1">[1]</a></sup> — and the load-bearing word is <em>closed</em>. If the far end does not run back to the near end, what you have is a pipe, not a loop.</p>
+
+    <div class="alert">
+        <strong>A boundary you can test on yourself in 30 seconds:</strong> ask the team, "the case where the system answered wrongly three weeks ago — where is it now?" If the answer is "in an email thread" or "I remember somebody fixed it", there is no loop yet. If the answer is "in the evaluation set, case number such-and-such, and the latest run still passes", there is one.
+    </div>
+
+    <h2 id="en-five-moves">2. The five moves of the loop — Observe, Preserve, Compare, Change, Verify</h2>
+
+    <p>The playbook does not leave the phrase "learning loop" floating as a pleasantry. It names all <strong>five moves</strong>.<sup><a href="#en-ref-1">[1]</a></sup></p>
+
+    <blockquote>"A useful learning loop has five moves. Observe what happened. Preserve the context, route, action, and outcome. Compare the result with a declared expectation. Change the workflow, data, controls, model, or human role. Verify the change on representative, hidden, and severe cases before increasing exposure."</blockquote>
+
+    <p>Those five look simple enough to be deceptive, so I want to take them one at a time and point at the place where the Thai organizations I have worked with most often come unstuck.</p>
+
+    <p><strong>Observe — see what happened.</strong> The word to lean on is "happened", not "demonstrated". What has to be observed is the system's behaviour on real cases, which carry a variety no demo will ever show. Observation of any use goes down to the level of the individual case, not the monthly average, because the average is the most efficient device for concealing a problem that humans have ever invented.</p>
+
+    <p><strong>Preserve — keep the context, the route, the action and the outcome.</strong> All four, or it does not count. Keeping only outcomes means knowing that something was wrong but not why. Keeping only context means knowing what the system saw but not where it travelled next. "Route" here means the <strong>trace</strong> — the sequence of steps the system actually walked, including the tools it called and the passages it retrieved — and it has to be designed in from day one, not bolted on during an incident.</p>
+
+    <p><strong>Compare — measure the result against a declared expectation.</strong> The hardest-working word is "declared". An expectation written after the result is in is not an expectation; it is a commentary. Saying in advance that "we expect the callback rate in this case slice to fall from X to Y within four weeks, and if it does not, here is what we will do" is what separates an experiment from a story.</p>
+
+    <p><strong>Change — adjust the workflow, the data, the controls, the model, or the human role.</strong> Notice the order the playbook writes it in: the model is fourth of five, not first. That is not an accident of composition but a ranking by observed likelihood — problems that look like model problems are, in the main, workflow-design problems or problems with the quality of the context being fed in.</p>
+
+    <p><strong>Verify — test on representative, hidden and severe cases before increasing exposure.</strong> The three kinds answer three different questions. Representative cases answer "is the ordinary work still fine?" Hidden cases answer "have we quietly tuned the system to the exam paper we can see?" And severe cases answer "when it fails, how hard does it fail?" The closing clause, "before increasing exposure", is the release rule: scale is the reward for evidence, not for a date on a plan.</p>
+
+    <h3>Seven operating assets, not project debris</h3>
+
+    <p>Immediately after the five moves the playbook drops the sentence I consider the most expensive in the chapter, for anyone who actually acts on it.<sup><a href="#en-ref-1">[1]</a></sup></p>
+
+    <blockquote>"Prompts, context templates, corpus snapshots, tool schemas, evaluation cases, thresholds, and release manifests are therefore operating assets, not project debris."</blockquote>
+
+    <p>These seven are exactly what most pilots treat as <em>project debris</em> — living on the machine of the person who built them, in the team chat, in a file called <code>final_v3_use_this_one.txt</code>, and gone the day that person resigns. For them to be <strong>operating assets</strong> in earnest, each one has to answer three questions: who owns it, when does its version change, and where does it live.</p>
+
+    <p>The table below is this post's worksheet, not the playbook's — the playbook names the seven assets but assigns them no owner, no version rule and no address. I added those three columns because they are the three questions that give the word "asset" any force. Use it as a starting point and bend it to your own org chart.</p>
+
+    <div class="table-wrapper">
+        <table>
+            <thead>
+                <tr>
+                    <th>Operating asset</th>
+                    <th>Owner</th>
+                    <th>Version bumps when</th>
+                    <th>Where it lives</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td><strong>Prompt</strong></td>
+                    <td>The process owner, jointly with the product lead</td>
+                    <td>Every time the wording changes enough to change behaviour, not only on the big rewrites</td>
+                    <td>A code repository with revision history, not a text box on a settings screen</td>
+                </tr>
+                <tr>
+                    <td><strong>Context template</strong></td>
+                    <td>The data or engineering team</td>
+                    <td>When you change which kinds of information go in, or the order of priority between them</td>
+                    <td>The same place as the prompt, because the two change behaviour to the same degree</td>
+                </tr>
+                <tr>
+                    <td><strong>Corpus snapshot</strong></td>
+                    <td>The owner of the source documents</td>
+                    <td>Every time a source document is added, removed, or edited in a way that changes answers</td>
+                    <td>A store that can name a version and let you go back to an older one</td>
+                </tr>
+                <tr>
+                    <td><strong>Tool schema</strong></td>
+                    <td>The engineering team that owns that tool</td>
+                    <td>When a parameter, a value range, or a side effect of the tool changes</td>
+                    <td>A central tool registry, not scattered through each team's code</td>
+                </tr>
+                <tr>
+                    <td><strong>Evaluation cases</strong></td>
+                    <td>The loop owner</td>
+                    <td>Every time a new failure becomes a case, and every time an old case is retired</td>
+                    <td>The same repository as the code, run automatically before every release</td>
+                </tr>
+                <tr>
+                    <td><strong>Threshold</strong></td>
+                    <td>The risk representative, jointly with the process owner</td>
+                    <td>When the consequence level changes, or when there is evidence enough to move the bar</td>
+                    <td>In the loop charter and in the code of the approval gate — always the same value in both</td>
+                </tr>
+                <tr>
+                    <td><strong>Release manifest</strong></td>
+                    <td>The product lead</td>
+                    <td>On every release, because it is the record of what this version was made of</td>
+                    <td>Bound to the version actually released, retrievable later alongside the trace</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <p>If you fill this in and find that the Owner column carries the same name in all seven rows, that is not tidiness, it is a bottleneck. And if the "Where it lives" column says "with the team" in more than two rows, your organization is still learning at the level of individuals rather than at the level of the organization.</p>
+
+    <h2 id="en-learning-engine">3. The learning engine, and learning velocity</h2>
+
+    <p>If you were to draw the learning loop as a single picture, it ought to look like this — seven nodes joined into a ring, with a measure at the centre rather than a model at the centre.</p>
+
+    <figure class="figure">
+      <a href="../images/ai-transformation-fig-01-learning-engine.png">
+        <img class="figure__img" src="../images/ai-transformation-fig-01-learning-engine.png" alt="The organizational learning engine: a seven-node cycle — data, context, intelligence, judgment, action, outcome, learning — around a core labelled Learning velocity." width="1400" height="1000" loading="lazy" decoding="async">
+      </a>
+      <figcaption class="figure__caption">Figure 1 · The organizational learning engine — measure feedback latency, decision adaptation time and time to scaled improvement.</figcaption>
+    </figure>
+
+    <p>That seven-step chain comes from the playbook's one-sentence strategy, which I quoted in <a href="/blog/ai-transformation-layers">#1 Six Layers</a> and will quote several more times across this series, because it is the sentence the whole book walks behind.<sup><a href="#en-ref-1">[1]</a></sup></p>
+
+    <blockquote>"Build the organizational capability to convert data into context, context into intelligence, intelligence into judgment, judgment into authorized action, action into observable outcomes, and outcomes into verified learning faster than the environment changes."</blockquote>
+
+    <p>The final clause is what makes the chain a <em>ring</em> and not a <em>line</em>, and that clause has a name of its own. The playbook defines <strong>learning velocity</strong> as "how quickly an organization converts reliable outcome evidence into better decisions, workflows, controls, and reusable knowledge."<sup><a href="#en-ref-1">[1]</a></sup></p>
+
+    <p>Read that definition and you will see it is not a model metric in any part. Its destinations are four things — decisions, workflows, controls, and reusable knowledge — and not one of them can be read off a model evaluation screen. Organizations that measure accuracy alone usually cannot say whether they are learning any faster, because they were measuring the wrong object from the start.</p>
+
+    <div class="alert info">
+        <strong>A caution about wording:</strong> the three measures that appear in Figure 1 (feedback latency · decision adaptation time · time to scaled improvement) are this figure's reading. The <strong>Learning</strong> column of the playbook's board scorecard uses a slightly different set: feedback latency, time to verified improvement, and recurrence.<sup><a href="#en-ref-1">[1]</a></sup> I separate the two here because when the slide goes to the board, the scorecard's vocabulary is the one to use, not the figure's.
+    </div>
+
+    <h3>Why learning cannot stop at tuning the model</h3>
+
+    <p>On this point the playbook cites my own r8 paper, a document supplied by the author to the project and not yet published, so there is no URL to link to.<sup><a href="#en-ref-2">[2]</a></sup> The argument runs like this: once model output is both <em>authoritative</em> and <em>indispensable</em> for a declared task, the burden of assurance has to move to the boundaries around the model rather than rest on the model itself.</p>
+
+    <p>Translated into organizational language: if the AI's answer is what people actually decide on, and the work cannot proceed without it, then learning cannot be confined to tuning the model. The <em>whole</em> decision system has to improve — the data going in, the policy used to decide, the controls that sit before any effect lands, and the role of the person who approves. Which is precisely why the fourth move of the loop (Change) lists the model fourth.</p>
+
+    <h3>The discipline of the loop has international backing, but a framework guarantees no return</h3>
+
+    <p>The playbook names two sources on this point, and I re-checked the status of both on the day I wrote this post.</p>
+
+    <p>NIST released the <strong>AI Risk Management Framework (AI RMF 1.0)</strong> on 26 January 2023, and as of 5 September 2026 it remains at version 1.0, is explicitly voluntary, and confers no certification.<sup><a href="#en-ref-3">[3]</a></sup> Its core is four functions — <strong>GOVERN, MAP, MEASURE, MANAGE</strong> — where GOVERN applies to every stage of risk management while MAP, MEASURE and MANAGE apply within a system's specific context and at particular points of the lifecycle; and the document says of itself that <em>"Actions do not constitute a checklist, nor are they necessarily an ordered set of steps"</em>.<sup><a href="#en-ref-3">[3]</a></sup></p>
+
+    <p>On the standards side, <strong>ISO/IEC 42001:2023</strong> (Information technology — Artificial intelligence — Management system) carries a publication date of December 2023 and, checked on 5 September 2026, is Edition 1 with status Published at stage 60.60.<sup><a href="#en-ref-4">[4]</a></sup> ISO's public description says the standard specifies requirements for establishing, implementing, maintaining and <em>continually improving</em> an Artificial Intelligence Management System within an organization.<sup><a href="#en-ref-4">[4]</a></sup> "Continually improving" is the loop, in the language of management systems.</p>
+
+    <p>But the playbook closes that paragraph with a sentence I would like everyone to hold in mind before either name goes on a slide.<sup><a href="#en-ref-1">[1]</a></sup></p>
+
+    <blockquote>"These frameworks support the discipline of a loop; they do not promise a financial return."</blockquote>
+
+    <div class="alert danger">
+        <strong>What these two frameworks are not:</strong> not law, not proof that your system is trustworthy, and not a guarantee of financial return. AI RMF is a voluntary framework with no certification attached; ISO/IEC 42001 is a management-system standard. Saying "we follow NIST" therefore does not mean your model is safe. It means you have loop discipline you can explain to an outsider — which is a different thing altogether, and a thing worth having in its own right.
+    </div>
+
+    <h3>The intellectual ancestor of "change the right part"</h3>
+
+    <p>Here I want to add a piece of historical context the playbook does not cite; it is this post's framing, not the book's reference: the idea that good problem-solving must be willing to go back and question <em>the rule that produced the problem</em>, rather than merely pulling a value back inside its limits, has had a name for a long time — <strong>double-loop learning</strong>, which Chris Argyris wrote about in Harvard Business Review as far back as September 1977.<sup><a href="#en-ref-6">[6]</a></sup></p>
+
+    <p>Fourteen years later Argyris came back with the article people cite far more often, <em>"Teaching Smart People How to Learn"</em> (May–June 1991), and its opening paragraph still reads as though it were written yesterday.<sup><a href="#en-ref-5">[5]</a></sup></p>
+
+    <blockquote><em>"…those members of the organization that many assume to be the best at learning are, in fact, not very good at it. I am talking about the well-educated, high-powered, high-commitment professionals who occupy key leadership positions in the modern corporation."</em></blockquote>
+
+    <p>I quote it because it describes the commonest symptom in large-enterprise AI projects more exactly than anything I could write — the strongest, best-educated, most committed teams are usually the ones expertly patching the prompt over and over without going back to ask why the workflow forced the system to guess in the first place. Correcting a value back inside the old limits is fast and feels like progress; going back to change the rule that produced the problem is slow, unpopular and almost always cross-departmental. So the fourth move of the loop is the hardest move — not for technical reasons, but for internal-political ones.</p>
+
+    <h2 id="en-aurora">4. Aurora Assurance — when eighty thousand letters said nothing at all</h2>
+
+    <p>The playbook uses a case called <strong>Aurora Assurance</strong> (a fictional case from the playbook) to illustrate the whole chapter, and I think it is the most useful case study in the book, because it does not tell a story about success. It tells a story about <em>changing the question</em>.</p>
+
+    <p>In its first phase Aurora counted <strong>eighty thousand</strong> AI-assisted claim letters as the achievement. The number is handsome and easy to report, but it is an <em>activity metric</em>, not an outcome — it says the system did a great deal of work, not that the customer got anything better. And what actually happened proved exactly that: customers still called back to ask what was not covered, while adjusters quietly rewrote the difficult cases themselves, with no record of it kept anywhere at all.</p>
+
+    <p>Look hard at that second symptom, because it is the more dangerous one. The "eighty thousand" could keep climbing even though part of that work had already been rewritten by a human — and nobody knew how much, because the reviewers' corrections were never captured as data. An organization that keeps only activity numbers will never see this symptom, ever.</p>
+
+    <p>So Aurora dropped the activity target and replaced it with <strong>three outcomes</strong>: a correct explanation on first contact, fewer avoidable callbacks, and no coverage statement released without evidence behind it. All three share one property — <em>the customer can feel them</em> — unlike "number of letters the AI wrote", which no customer has ever cared about.</p>
+
+    <p>Then Aurora began preserving evidence: the passages the system cited, the reviewers' corrections, the case type, the final determination, and any repeat contact from the customer. Those five map precisely onto the second move of the loop — context, route, action and outcome, all present.</p>
+
+    <p>The weekly review (Aurora's cadence, not one the playbook recommends to every organization) turned up what an average would never disclose: the system did well on single-policy claims <em>but</em> missed when two policies interacted. The playbook attaches no number of any kind to that slice — no rate, no case count — and I am not going to invent one. What matters is the <em>shape</em> of the finding: the problem was not spread evenly across the work, it was concentrated in a slice of cases with overlapping conditions.</p>
+
+    <p>What Aurora did next is the part I would like every team to copy — that slice was <strong>routed to specialists</strong>, <strong>turned into evaluation cases</strong>, and used to <strong>tune retrieval before exposure was widened</strong>. Those three are moves three, four and five lined up in a single paragraph, and they are the difference between an organization that meets a problem and fixes it, and one that meets a problem and <em>learns</em>.</p>
+
+    <div class="table-wrapper">
+        <table>
+            <thead>
+                <tr>
+                    <th>Move</th>
+                    <th>What Aurora did</th>
+                    <th>What it produced</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td><strong>Observe</strong></td>
+                    <td>Stopped counting letters and looked at whether customers still called back, and at what the reviewers changed</td>
+                    <td>Sight of the symptom the activity number had buried: rewriting with no record kept</td>
+                </tr>
+                <tr>
+                    <td><strong>Preserve</strong></td>
+                    <td>Kept the cited passages, the reviewer corrections, the case type, the determination and the repeat contacts</td>
+                    <td>An evidence set that can reconstruct the event at the level of a single case</td>
+                </tr>
+                <tr>
+                    <td><strong>Compare</strong></td>
+                    <td>Reviewed weekly against the three outcomes declared in advance</td>
+                    <td>The finding that the problem sat in two-policy cases, not across the work</td>
+                </tr>
+                <tr>
+                    <td><strong>Change</strong></td>
+                    <td>Routed that slice to specialists and tuned retrieval rather than the prompt</td>
+                    <td>A fix at the context layer, which was the layer producing the problem</td>
+                </tr>
+                <tr>
+                    <td><strong>Verify</strong></td>
+                    <td>Turned the failed cases into an evaluation set, and only then widened exposure</td>
+                    <td>Scaling backed by evidence rather than scaling to a date</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <p>And the closing sentence of the case is the one I think pays for the whole chapter: Aurora's most valuable lesson was not discovering where AI could write on its behalf. It was discovering <strong>which points in the workflow lacked the evidence to release an answer at all</strong>.</p>
+
+    <blockquote>💡 My view: that sentence inverts the question most organizations are asking. Instead of "what can AI do in our place?", ask "where in our workflow do we decide without evidence enough?" The first question yields a list of use cases. The second yields a map of risk — and that map is useful even on a day when you are not using AI at all.</blockquote>
+
+    <div class="alert danger">
+        <strong>Do not lift this number:</strong> "eighty thousand" is a figure inside a fictional case, and its job in the story is to be the <em>target that was abandoned</em>, not an achievement to imitate. It is not a benchmark, not a desirable scale, and it has no business appearing in anybody's metrics table. The same goes for the weekly review cadence, which is Aurora's own and not universal advice.
+    </div>
+
+    <h2 id="en-five-principles">5. The five operating principles that keep the loop turning</h2>
+
+    <p>The five moves are the structure; the <strong>five operating principles</strong> are the rules that stop that structure being bent back into ordinary status reporting. The playbook writes five, every one of them short, and they are never to be reordered or merged.<sup><a href="#en-ref-1">[1]</a></sup></p>
+
+    <ol>
+        <li><strong>Learn from released behavior</strong> — a polished demonstration says little about live case variation.</li>
+        <li><strong>Bind change to evidence</strong> — state the intended improvement, affected slice, threshold, and rollback condition.</li>
+        <li><strong>Treat traces as capability</strong> — if a decision cannot be reconstructed, the organization cannot learn reliably from it.</li>
+        <li><strong>Keep value, quality, risk, cost and human load separate</strong> — one aggregate score conceals tradeoffs.</li>
+        <li><strong>Assign an owner to the loop</strong> — someone must own the time from signal to verified improvement.</li>
+    </ol>
+
+    <blockquote>💡 My view: the fifth principle is the shortest of the five — "assign an owner to the loop; someone must own the time from signal to verified improvement" — and I think it is the hardest of the five to do, because the thing that needs an owner is not a system, not a project and not a dashboard. It is a <em>span of time</em>: from the second a signal appears to the second it is proved fixed. A span like that always cuts across several departments, and on an ordinary org chart it has no natural owner at all. If you take only one action out of this post, name that person.</blockquote>
+
+    <p>The first three principles are about evidence, the fourth is about how results are read, and the fifth is about authority. Let me expand each briefly before turning them into a check table.</p>
+
+    <p><strong>Principle 1</strong> closes the gap between the demo and the real work. A demonstration on cases someone chose tells us only "it worked on the cases we picked", which is very nearly worthless information for deciding whether to release. <strong>Principle 2</strong> converts a release from an event into an experiment — name the slice you intend to improve, the threshold that counts as passing, and the condition on which you will roll back. All three have to be written before the release, not after it.</p>
+
+    <p><strong>Principle 3</strong> promotes the trace from "something the infrastructure team provides" to "a product capability", which has real consequences for budget and priority, because what is classified as a product capability gets a place in the roadmap queue while what is classified as infrastructure work gets the leftovers. <strong>Principle 4</strong> forbids collapsing dimensions that pull against each other into a single score, because an aggregate will always let a gain in speed cover an increase in risk. And <strong>Principle 5</strong> is exactly as written in the box above.</p>
+
+    <div class="table-wrapper">
+        <table>
+            <thead>
+                <tr>
+                    <th>Principle</th>
+                    <th>Weekly check</th>
+                    <th>Signal it is not yet true</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td><strong>1 · Learn from released behavior</strong></td>
+                    <td>How many real cases did we look at this week, and how were they chosen?</td>
+                    <td>The example raised in the meeting is the same one used to get the project approved</td>
+                </tr>
+                <tr>
+                    <td><strong>2 · Bind change to evidence</strong></td>
+                    <td>Did the latest release declare its slice, its threshold and its rollback condition beforehand?</td>
+                    <td>The change log reads "improved answer quality" with no number anywhere in it</td>
+                </tr>
+                <tr>
+                    <td><strong>3 · Treat traces as capability</strong></td>
+                    <td>Take one case that went wrong — how many minutes to reconstruct the event?</td>
+                    <td>You have to ask a particular engineer to go and read the logs before anyone can answer</td>
+                </tr>
+                <tr>
+                    <td><strong>4 · Keep value, quality, risk, cost and human load separate</strong></td>
+                    <td>Does the latest report show the five dimensions separately or collapsed into one score?</td>
+                    <td>A single summary number showing green while severe cases are on the rise</td>
+                </tr>
+                <tr>
+                    <td><strong>5 · Assign an owner to the loop</strong></td>
+                    <td>Ask three people who owns the loop — do you get the same name?</td>
+                    <td>The answer comes back as "the AI team" or "the committee", which means nobody</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <h2 id="en-canvas">6. The learning loop canvas — 75 minutes to a one-page charter</h2>
+
+    <p>My favourite part of this chapter is that the playbook does not let the reader finish on a warm feeling; it hands over a working session you can actually hold in one afternoon. The instruction is to set aside <strong>75 minutes</strong> with the process owner, the frontline practitioner, the product lead, the data or engineering lead, the risk representative, and one person affected by the workflow.<sup><a href="#en-ref-1">[1]</a></sup></p>
+
+    <div class="alert info">
+        <strong>Two things I added myself:</strong> one — the playbook names <strong>six roles</strong>; the seventh, the <em>facilitator</em>, is this post's proposal and not the book's. I add it because a room holding both the risk representative and the frontline practitioner rarely finishes inside 75 minutes with nobody keeping time. Two — the playbook gives 75 minutes in total for six steps but <strong>splits no minutes between them</strong>. The minute figures in the table below are my allocation; treat them as guidance, not as the book's schedule.
+    </div>
+
+    <h3>Who has to be in the room, and what they bring</h3>
+
+    <div class="table-wrapper">
+        <table>
+            <thead>
+                <tr>
+                    <th>Role</th>
+                    <th>Why the loop needs them</th>
+                    <th>What to bring</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td><strong>Process owner</strong></td>
+                    <td>The only person who can declare which business outcome is the one that counts</td>
+                    <td>The current figure for that outcome, however rough it is</td>
+                </tr>
+                <tr>
+                    <td><strong>Frontline practitioner</strong></td>
+                    <td>Knows where the real route differs from the one in the documentation</td>
+                    <td>The three most recent cases they had to fix by hand, and why</td>
+                </tr>
+                <tr>
+                    <td><strong>Product lead</strong></td>
+                    <td>The person who decides what joins the queue and what waits</td>
+                    <td>The plan for the next release, and what can be allowed to slip</td>
+                </tr>
+                <tr>
+                    <td><strong>Data or engineering lead</strong></td>
+                    <td>Knows which signals are already captured and which do not exist yet</td>
+                    <td>A list of what the system records today, with retention periods</td>
+                </tr>
+                <tr>
+                    <td><strong>Risk representative</strong></td>
+                    <td>The person who names the harm that must not increase, and the rollback condition</td>
+                    <td>The past incidents that still haunt them, and the obligations that genuinely bind</td>
+                </tr>
+                <tr>
+                    <td><strong>One person affected by the workflow</strong></td>
+                    <td>The only person in the room with no incentive for the project to look good</td>
+                    <td>Direct experience; no slides required</td>
+                </tr>
+                <tr>
+                    <td><strong>Facilitator</strong> <em>(this post's proposal)</em></td>
+                    <td>Gets six steps finished inside 75 minutes and records everything on one page</td>
+                    <td>A blank charter form, and a clock everybody can see</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <h3>The six-step agenda</h3>
+
+    <div class="table-wrapper">
+        <table>
+            <thead>
+                <tr>
+                    <th>Minute</th>
+                    <th>Step</th>
+                    <th>Who</th>
+                    <th>Output</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>0–12</td>
+                    <td>Name one business outcome and one harm that must not increase</td>
+                    <td>Process owner leads, risk representative counterweights</td>
+                    <td>Two sentences, written on the board where everyone can see them throughout</td>
+                </tr>
+                <tr>
+                    <td>12–30</td>
+                    <td>Draw the decision from trigger to consequence and mark every handoff</td>
+                    <td>Frontline practitioner, with the affected person</td>
+                    <td>A single-line diagram with a circle around every handoff</td>
+                </tr>
+                <tr>
+                    <td>30–45</td>
+                    <td>Inventory outcomes, corrections, complaints, incidents, traces and missing signals</td>
+                    <td>Data or engineering lead</td>
+                    <td>A two-column signal inventory — "already have" and "do not have"</td>
+                </tr>
+                <tr>
+                    <td>45–57</td>
+                    <td>Define the review cadence, the decision owner and the escalation path</td>
+                    <td>Product lead, with the risk representative</td>
+                    <td>Names of people, one per role, never the name of a team</td>
+                </tr>
+                <tr>
+                    <td>57–70</td>
+                    <td>Select one case slice, a baseline, a target and a rollback condition</td>
+                    <td>Product lead, with the data team</td>
+                    <td>Four measurable lines, with no floating word like "better" in them</td>
+                </tr>
+                <tr>
+                    <td>70–75</td>
+                    <td>Assign the first evidence review date</td>
+                    <td>Loop owner</td>
+                    <td>A date in everybody's calendar before they leave the room</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <p>The step I see fail most often is the sixth, and it fails for the same reason every time — everyone agrees that a review is a good idea, but nobody wants to spend the meeting's last minutes opening a calendar. So scheduling becomes "I'll send an invitation later", which means there is no date. If you run this session, keep the final five minutes for pressing the calendar button in front of one another.</p>
+
+    <h3>The learning loop charter — one page, nine fields</h3>
+
+    <p>The playbook is explicit that the output of this session is a one-page <strong>learning loop charter</strong>, not a technology purchasing plan.<sup><a href="#en-ref-1">[1]</a></sup> The table below rearranges the six steps above into nine fields you can fill in, each with a test for when that field is genuinely answered.</p>
+
+    <div class="table-wrapper">
+        <table>
+            <thead>
+                <tr>
+                    <th>Charter field</th>
+                    <th>Question it answers</th>
+                    <th>Done when</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td><strong>Outcome</strong></td>
+                    <td>Which business outcome do we intend to improve?</td>
+                    <td>It is one sentence a customer or user can feel, not an activity metric</td>
+                </tr>
+                <tr>
+                    <td><strong>Harm that must not increase</strong></td>
+                    <td>Which harm must not grow even if the outcome improves?</td>
+                    <td>The risk representative wrote it and the process owner accepted it</td>
+                </tr>
+                <tr>
+                    <td><strong>Decision path &amp; handoffs</strong></td>
+                    <td>Who does this decision pass through, from trigger to consequence?</td>
+                    <td>Every handoff has a name, and no arrow is left without an owner</td>
+                </tr>
+                <tr>
+                    <td><strong>Review cadence</strong></td>
+                    <td>How many weeks between our looks at the evidence?</td>
+                    <td>Short enough to correct in time, long enough to have something to look at</td>
+                </tr>
+                <tr>
+                    <td><strong>Decision owner</strong></td>
+                    <td>Who decides whether to scale, hold, or step back?</td>
+                    <td>It is a person's name, not a team's and not a committee's</td>
+                </tr>
+                <tr>
+                    <td><strong>Escalation</strong></td>
+                    <td>If it exceeds that person's authority, who does it go to and within how many hours?</td>
+                    <td>There is a path with a time attached, not merely an executive's name</td>
+                </tr>
+                <tr>
+                    <td><strong>Case slice / baseline / target</strong></td>
+                    <td>Which slice are we experimenting on, from what baseline, expecting what?</td>
+                    <td>The slice is narrow enough to measure and the baseline has actually been measured</td>
+                </tr>
+                <tr>
+                    <td><strong>Rollback condition</strong></td>
+                    <td>What would we have to see to step back at once, with no debate?</td>
+                    <td>Written as a condition a machine can test, or a person can test in a minute</td>
+                </tr>
+                <tr>
+                    <td><strong>First evidence review date</strong></td>
+                    <td>On which day do we sit down together over the first set of evidence?</td>
+                    <td>It is in everybody's calendar already, before they leave the room</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <div class="alert">
+        <strong>A charter test that always works:</strong> if your charter runs longer than one page, some field has not been decided yet and you are using length as a substitute for deciding. And if a vendor's product name appears anywhere in it, you have accidentally written a purchasing plan rather than a loop charter.
+    </div>
+
+    <h2 id="en-metrics-failures">7. Ten metrics that matter, and six failure patterns</h2>
+
+    <p>The playbook gives <strong>ten metrics</strong>, and attaches to them a reading rule that matters every bit as much as the metrics themselves.<sup><a href="#en-ref-1">[1]</a></sup></p>
+
+    <blockquote>"Read them together. Faster throughput with more severe escapes is not progress."</blockquote>
+
+    <p>The table below keeps the playbook's order. The <strong>Scorecard</strong> column is this post's mapping onto the six columns of the board scorecard I set out in <a href="/blog/ai-transformation-layers">#1</a> — the playbook does not print that mapping; I made it so the table can go straight onto an executive agenda without a further round of translation.</p>
+
+    <div class="table-wrapper">
+        <table>
+            <thead>
+                <tr>
+                    <th>#</th>
+                    <th>Metric</th>
+                    <th>What it exposes</th>
+                    <th>Scorecard</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>1</td>
+                    <td>Business outcome by case slice</td>
+                    <td>Whether the result improved across the work, or only in the easy slice while the hard one stayed buried</td>
+                    <td>Value</td>
+                </tr>
+                <tr>
+                    <td>2</td>
+                    <td>First-pass acceptance</td>
+                    <td>Whether the output is usable as it stands, or a human quietly rebuilds it</td>
+                    <td>Quality</td>
+                </tr>
+                <tr>
+                    <td>3</td>
+                    <td>Median time from detected failure to added regression test</td>
+                    <td>How fast a lesson turns into immunity, or whether it stays in somebody's head</td>
+                    <td>Learning</td>
+                </tr>
+                <tr>
+                    <td>4</td>
+                    <td>Share of releases with a predeclared hypothesis and threshold</td>
+                    <td>Whether we ship as an experiment, or ship and then go looking for an explanation</td>
+                    <td>Learning</td>
+                </tr>
+                <tr>
+                    <td>5</td>
+                    <td>Trace completeness</td>
+                    <td>What percentage of real cases we could actually reconstruct after the fact</td>
+                    <td>Risk</td>
+                </tr>
+                <tr>
+                    <td>6</td>
+                    <td>Severe-case pass rate</td>
+                    <td>Whether the failures land on the expensive cases or on the ones nobody minds</td>
+                    <td>Risk</td>
+                </tr>
+                <tr>
+                    <td>7</td>
+                    <td>Post-release escape rate</td>
+                    <td>Whether our pre-release gate catches things in the field or only in the lab</td>
+                    <td>Risk</td>
+                </tr>
+                <tr>
+                    <td>8</td>
+                    <td>Reviewer minutes per case</td>
+                    <td>Whether moving work to the AI simply shifted a new load onto the reviewers</td>
+                    <td>People</td>
+                </tr>
+                <tr>
+                    <td>9</td>
+                    <td>Override reasons</td>
+                    <td>Why humans disagree with the system — which is first-rate design data</td>
+                    <td>People</td>
+                </tr>
+                <tr>
+                    <td>10</td>
+                    <td>Share of corrected cases reused in data, retrieval, policy or evaluation</td>
+                    <td>Whether the loop truly closes or breaks at the far end — the only one that measures "loopness" directly</td>
+                    <td>Learning</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <p>If your organization can only start with three, I would take numbers 3, 7 and 10, because together they compose the single most important question — once a problem is seen, how long until it becomes immunity, is anything still escaping, and does the lesson really run back into the system? Numbers 8 and 9 are the pair most often forgotten, and the pair that gives the earliest warning that a project is about to be resisted.</p>
+
+    <div class="alert danger">
+        <strong>This chapter carries no threshold value whatsoever:</strong> the playbook gives the <em>definitions</em> of ten metrics, not targets and not industry norms, and I am not going to invent any. The right threshold depends on the consequence level of your work, not on a number from a book. The correct way to set one is to measure your own baseline first, then declare a target that can genuinely move within a single review cycle — and write it in the charter, not on a slide.
+    </div>
+
+    <h3>Failure patterns</h3>
+
+    <p>The playbook closes the chapter with its shortest and most painful list — six patterns that stop the loop turning while everybody still feels the work is moving.<sup><a href="#en-ref-1">[1]</a></sup> I have added a way to detect each one.</p>
+
+    <ul>
+        <li><strong>Pilot theatre</strong> — a pilot designed to survive the presentation rather than to produce learning. <em>How to check:</em> ask who would dare say so if the results came out badly, and whether any pilot here has ever been stopped on the evidence.</li>
+        <li><strong>Dashboards without a decision owner</strong> — a handsome screen from which nobody has the authority to order anything. <em>How to check:</em> point at one chart and ask, "if this line goes red, who can do what about it today?"</li>
+        <li><strong>Averages that erase weak groups</strong> — an aggregate that improves while the vulnerable group gets worse. <em>How to check:</em> split the same number by the three hardest case slices and see whether the story survives.</li>
+        <li><strong>Repeated prompt patching without workflow diagnosis</strong> — the commonest symptom of all, and exactly the pattern double-loop learning pointed at back in 1977<sup><a href="#en-ref-6">[6]</a></sup>: correcting the value back inside the old limits without touching the rule that produced the problem. <em>How to check:</em> count how many prompt changes and how many workflow changes were made in the past three months. If the ratio is ten to zero, you have found it.</li>
+        <li><strong>Learning only after incidents</strong> — an organization that improves only when somebody is hurt enough to complain. <em>How to check:</em> look at the last five improvements and ask whether each began with a proactive signal or with a complaint.</li>
+        <li><strong>Dismissing frontline feedback as user error</strong> — the fastest learning-stopper in the corporate language. <em>How to check:</em> read the last five incident closure notes and count how many give a root cause ending in "the user did not follow the procedure".</li>
+    </ul>
+
+    <p>The fifth of those happens to have external support. NIST published a research summary on 9 June 2026 reporting a mathematical result that there is no finite set of guardrails universally robust against adversarial prompts, which supports a posture of continuous monitoring and updating after release rather than a fixed set of defences.<sup><a href="#en-ref-7">[7]</a></sup> Put another way: waiting for an incident before learning is not merely a bad habit, it is a strategy with a mathematical bound already written against it — a result that has its own boundary too, since it does not say what the correct cadence or set of controls should be for any particular operational context.</p>
+
+    <h2 id="en-road-ahead">8. The road ahead — the loop turns only as far as the evidence allows</h2>
+
+    <p>If you have read this far and feel the chapter asks for a great deal, I agree — but let me point out that not one item on the list requires buying anything new. The five moves are a discipline. The five principles are an agreement. The 75-minute session needs a meeting room and one whiteboard. And most of the ten metrics can be computed from data the organization already holds but has never laid side by side.</p>
+
+    <p>If you want to start this week in earnest, I would take these four steps in this order.</p>
+
+    <ol>
+        <li><strong>Pick one workflow</strong> with volume enough to show a pattern and consequence enough that someone cares — not the easiest one.</li>
+        <li><strong>Name the loop owner</strong>, one name, before you collect any data at all, because data with no owner becomes a dashboard from which nobody can order anything.</li>
+        <li><strong>Run the 75-minute session</strong> and come out with the one-page charter, and do not leave the room without a first evidence review date.</li>
+        <li><strong>Measure the baseline of three metrics</strong> (I suggest 3, 7 and 10) and leave the conversation about targets until the first review — rather than setting a target before you know your baseline.</li>
+    </ol>
+
+    <p>And there is one condition this chapter touches without answering — the loop can only turn if the AI's authority stays at a level the evidence can carry. Grant more authority than the evidence supports and the loop becomes a post-incident investigation. Grant too little and there is no real behaviour to learn from at all. Finding that balance is the subject of the next post.</p>
+
+    <div class="alert info">
+        <strong>🧭 Layer this post advances:</strong> the <strong>Learning loop</strong> layer — question <strong>Q1</strong> (which organizational outcome are we trying to improve, and how quickly can we learn whether we did) — scorecard column <strong>Learning</strong>, the column that measures how fast evidence travels from an outcome back into an improvement. Next time, <a href="/blog/ai-transformation-maturity">#4 Earn the Right to Increase Authority</a> walks through the five maturity levels that are measured per workflow rather than per organization, and the evidence that has to grow at every level where authority grows.
+    </div>
+
+    <div class="key-takeaways">
+        <h3>🎯 Key Takeaways</h3>
+        <ul>
+            <li><strong>Learning loop</strong> = a closed cycle that turns data into decisions, actions, observed outcomes, evidence, and improvements to the next cycle</li>
+            <li><strong>Five moves</strong> = Observe, Preserve, Compare, Change, Verify — and the model is the fourth thing to be changed of five, not the first</li>
+            <li><strong>Learning velocity</strong> = how quickly evidence from real outcomes becomes better decisions, workflows, controls and reusable knowledge</li>
+            <li><strong>Operating assets</strong> = prompts, context templates, corpus snapshots, tool schemas, evaluation cases, thresholds and release manifests need an owner and a version — they are not project debris</li>
+            <li><strong>Loop owner</strong> = somebody has to own the span from signal to verified improvement, and it must be a person's name, not a team's</li>
+            <li><strong>Loop charter</strong> = the output of the 75-minute session is a one-page charter, not a technology purchasing plan</li>
+            <li><strong>Read the metrics together</strong> = faster throughput with more severe escapes is not progress — and this chapter prints no threshold value anywhere</li>
+        </ul>
+    </div>
+
+    <section class="references" aria-labelledby="references">
+        <h2 id="references">References</h2>
+        <p class="references__note">Every source below was verified and accessed on 5 September 2026 (2026-09-05). This series uses the four evidence labels of the source playbook — <strong>Law</strong> binding obligations wherever they apply · <strong>Standard</strong> standards and guidance that remain voluntary until folded into an obligation · <strong>Study</strong> empirical evidence or a declared research design · <strong>Synthesis</strong> the author's own synthesis.</p>
+        <ol class="references__list">
+            <li id="en-ref-1"><span class="ref-tag ref-tag--synthesis">Synthesis</span> Mingkhwan, A. <cite>AI Transformation as an Organizational Core — Bilingual Companion Playbook</cite>, Chapter 1 "Build a learning system", pp. 8–10. The author's manuscript, not published online and so not linked · evidence snapshot 5 September 2026 — accessed 2026-09-05. <span class="ref-supports">Supports: the chapter's opening sentences, the five moves of the loop, the seven operating assets, the definitions of learning loop and learning velocity, the Learning column of the board scorecard, the fictional Aurora Assurance case, the five operating principles, the 75-minute session and its six steps, the one-page charter, the ten metrics, and the six failure patterns.</span></li>
+            <li id="en-ref-2"><span class="ref-tag ref-tag--synthesis">Synthesis</span> Mingkhwan, A. <cite>Engineering AI-Core Systems — A Reference Architecture and Assurance Contract for Software 3.0, revision 8</cite>. The author's manuscript, September 2026 · unpublished with no public URL, and so not linked. <span class="ref-supports">Supports: the argument that when model output is both authoritative and indispensable for a declared task, the burden of assurance must move to the boundaries around the model — a design argument, not an empirical result.</span></li>
+            <li id="en-ref-3"><span class="ref-tag ref-tag--standard">Standard</span> National Institute of Standards and Technology. <cite>Artificial Intelligence Risk Management Framework (AI RMF 1.0)</cite>, NIST AI 100-1. <a href="https://www.nist.gov/itl/ai-risk-management-framework">nist.gov</a> — published 26 January 2023, accessed 2026-09-05. <span class="ref-supports">Supports: that version 1.0 remains a voluntary framework conferring no certification as of 5 September 2026 · the four functions GOVERN, MAP, MEASURE, MANAGE · the document's own statement that the actions are not a checklist and not necessarily an ordered set of steps.</span></li>
+            <li id="en-ref-4"><span class="ref-tag ref-tag--standard">Standard</span> ISO/IEC. <cite>ISO/IEC 42001:2023 — Information technology — Artificial intelligence — Management system</cite>. <a href="https://www.iso.org/standard/42001">iso.org</a> — published December 2023, accessed 2026-09-05. <span class="ref-supports">Supports: status Published, Edition 1, stage 60.60 when checked on 5 September 2026 · ISO's public description of requirements for establishing, implementing, maintaining and continually improving an AI Management System (the public description only, not the text of the requirements).</span></li>
+            <li id="en-ref-5"><span class="ref-tag ref-tag--synthesis">Synthesis</span> Argyris, C. <cite>Teaching Smart People How to Learn</cite>. Harvard Business Review, May–June 1991. <a href="https://hbr.org/1991/05/teaching-smart-people-how-to-learn">hbr.org</a> — accessed 2026-09-05. <span class="ref-supports">Supports: the opening paragraph stating that the members of an organization many assume to be best at learning are in fact not very good at it (the remainder of the article sits behind a subscription wall, so nothing beyond this paragraph is cited).</span></li>
+            <li id="en-ref-6"><span class="ref-tag ref-tag--synthesis">Synthesis</span> Argyris, C. <cite>Double Loop Learning in Organizations</cite>. Harvard Business Review, September 1977. <a href="https://hbr.org/1977/09/double-loop-learning-in-organizations">hbr.org</a> — accessed 2026-09-05. <span class="ref-supports">Supports: attributing the term double-loop learning to Chris Argyris — the description of the difference between correcting a value back inside its limits and going back to question the rule is this post's own, and the source playbook does not cite Argyris.</span></li>
+            <li id="en-ref-7"><span class="ref-tag ref-tag--standard">Standard</span> National Institute of Standards and Technology. <cite>NIST Mathematical Proof Supports Transition to a Continuous-Monitor-and-Update Security Model for AI Systems</cite>. <a href="https://www.nist.gov/news-events/news/2026/06/nist-mathematical-proof-supports-transition-continuous-monitor-and-update">nist.gov</a> — published 9 June 2026, accessed 2026-09-05. <span class="ref-supports">Supports: the mathematical result that no finite set of guardrails is universally robust against adversarial prompts, which supports continuous monitoring and updating after release · boundary: the mathematical result does not specify the correct cadence or set of controls for every operational context.</span></li>
+        </ol>
+    </section>
+    </div>
+
+    <div class="post-series-footer">
+      <span class="l-th">บทความจากซีรีส์ AI Transformation for Organizations 2026</span><span class="l-en" lang="en">From the AI Transformation for Organizations 2026 series</span>
+    </div>
+
+    <nav aria-label="AI Transformation for Organizations">
+    <div class="series-nav">
+      <h3>🧭 AI Transformation for Organizations 2026</h3>
+      <div class="series-links series-links--grouped">
+        <div class="series-links__group">
+          <p class="series-links__label">Reframe · เปลี่ยนกรอบคิด</p>
+          <a href="/blog/ai-transformation-layers">#1 Six Layers</a>
+          <a href="/blog/ai-transformation-prediction">#2 Prediction</a>
+          <span class="current" aria-current="page">#3 Learning Loop</span>
+          <a href="/blog/ai-transformation-maturity">#4 Maturity</a>
+          <a href="/blog/ai-transformation-portfolio">#5 Portfolio</a>
+        </div>
+        <div class="series-links__group">
+          <p class="series-links__label">Redesign · ออกแบบองค์กรใหม่</p>
+          <a href="/blog/ai-transformation-workflow">#6 Four Lanes</a>
+          <a href="/blog/ai-transformation-evidence-ladder">#7 Evidence Ladder</a>
+          <a href="/blog/ai-transformation-workforce">#8 Workforce</a>
+          <a href="/blog/ai-transformation-factory">#9 AI Factory</a>
+          <a href="/blog/ai-transformation-operating-model">#10 Operating Model</a>
+        </div>
+        <div class="series-links__group">
+          <p class="series-links__label">Engineer · วิศวกรรมแกนกลาง</p>
+          <a href="/blog/ai-transformation-ai-core">#11 AI-Core</a>
+          <a href="/blog/ai-transformation-contract">#12 Contract</a>
+          <a href="/blog/ai-transformation-five-rails">#13 Five Rails</a>
+          <a href="/blog/ai-transformation-release-gate">#14 Release Gate</a>
+          <a href="/blog/ai-transformation-incident-loop">#15 Incident Loop</a>
+        </div>
+        <div class="series-links__group">
+          <p class="series-links__label">Lead · นำการเปลี่ยนผ่าน</p>
+          <a href="/blog/ai-transformation-obligations">#16 Obligations</a>
+          <a href="/blog/ai-transformation-suppliers-footprint">#17 Cost &amp; Footprint</a>
+          <a href="/blog/ai-transformation-first-90-days">#18 Days 0–90</a>
+          <a href="/blog/ai-transformation-days-91-180">#19 Days 91–180</a>
+          <a href="/blog/ai-transformation-eight-questions">#20 Eight Questions</a>
+        </div>
+      </div>
+    </div>
+    </nav>
+
+  </article>
+
+  </main>
+
+  <footer class="blog-footer">
+    <nav class="blog-footer__nav" aria-label="Site">
+      <a href="../index.html">Home</a>
+      <a href="./">Blog</a>
+      <a href="../publications/">Publications</a>
+      <a href="../books/">Books</a>
+      <a href="../projects/">Projects</a>
+      <a href="../news/">News</a>
+      <a href="../index.html#contact">Contact</a>
+    </nav>
+    <a href="./">← Back to Blog</a>
+    <span>© 2026 Anirach Mingkhwan — Associate Professor, KMUTNB</span>
+  </footer>
+
+</body>
+</html>

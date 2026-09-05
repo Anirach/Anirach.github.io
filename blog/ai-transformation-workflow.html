@@ -1,0 +1,1685 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Human in the Loop Is Not a Design — สี่เลนของกระบวนงานคนกับ AI | Anirach Mingkhwan</title>
+  <meta name="description" content="Human in the loop เป็นการควบคุมได้ก็ต่อเมื่อคนมีหลักฐาน เวลา ความสามารถ และอำนาจปฏิเสธ — ออกแบบใหม่ด้วยสี่เลน พร้อม Workflow teardown เจ็ดขั้น">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=Sarabun:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      color-scheme: light;
+      /* ink */
+      --navy: #11304b; --slate: #334155; --slate-light: #526174; --gray: #94a3b8;
+      /* ground */
+      --bg: #faf7f0; --white: #ffffff; --code-bg: #1e293b;
+      /* accent */
+      --blue: #226299; --blue-dark: #1a4d7a; --blue-light: #4992b9;
+      /* brand — sampled from the book covers. --gold is decorative on light grounds (2.2:1); --gold-dark is its text form. */
+      --gold: #c4a46c; --gold-dark: #7a5f22; --coral: #c2410c; --cloud: #dee7e6; --parchment: #e9e1c4; --focus: #226299;
+      /* status — use only these six, never invent a seventh */
+      --green: #22c55e; --red: #ef4444; --amber: #f59e0b;
+      --cyan: #06b6d4; --purple: #226299; --purple-dark: #1a4d7a;
+      /* type */
+      --font: 'Inter', 'Sarabun', -apple-system, BlinkMacSystemFont, sans-serif;
+      --mono: 'JetBrains Mono', 'Fira Code', 'Sarabun', monospace;
+      /* form */
+      --radius: 12px; --radius-sm: 8px; --radius-lg: 16px;
+      --measure: 720px; --wide: 860px;
+      --transition: 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+    html { scroll-behavior: smooth; }
+    body { font-family: var(--font); font-size: 17px; line-height: 1.8; color: var(--slate); background: var(--bg); -webkit-font-smoothing: antialiased; }
+    .blog-nav { position: fixed; top: 0; left: 0; right: 0; z-index: 100; background: rgba(248,250,252,0.85); backdrop-filter: blur(20px); border-bottom: 1px solid rgba(0,0,0,0.05); }
+    .blog-nav__inner { max-width: 860px; margin: 0 auto; padding: 0 2rem; height: 56px; display: flex; align-items: center; justify-content: space-between; }
+    .blog-nav__back { font-size: 0.85rem; font-weight: 500; color: var(--blue); text-decoration: none; }
+    .blog-nav__back:hover { color: #1a4d7a; }
+    .blog-nav__title { font-size: 0.85rem; font-weight: 600; color: var(--navy); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 50%; }
+    /* ── HERO ── house .post-hero on the approved Deep Blue gradient (page-design
+       §5 / INV-28). Ink is inverted for the dark ground: white title/meta, tag
+       pills white on 18% white — the openclaw-production treatment. The
+       background value must stay byte-identical to the approved string. */
+    .post-hero { padding: 8rem 2rem 3rem; background: linear-gradient(135deg, #11304b 0%, #1a4d7a 45%, #226299 100%); color: #fff; text-align: center; }
+    .post-hero__tags { display: flex; gap: 0.5rem; justify-content: center; margin-bottom: 1.25rem; flex-wrap: wrap; }
+    .post-hero__tag { display: inline-block; font-size: 0.72rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.1em; color: #fff; background: rgba(255,255,255,0.18); padding: 0.35rem 0.9rem; border-radius: 20px; }
+    .post-hero__title { font-size: clamp(1.8rem, 5vw, 3rem); font-weight: 800; color: #fff; line-height: 1.2; margin-bottom: 1rem; max-width: 720px; margin-left: auto; margin-right: auto; }
+    .post-hero__sub { font-size: 1.05rem; max-width: 640px; margin: 0 auto 1.5rem; line-height: 1.7; color: #fff; }
+    .post-hero__meta { font-size: 0.85rem; color: #fff; display: flex; align-items: center; justify-content: center; gap: 1.5rem; flex-wrap: wrap; }
+    .post-hero__series { font-weight: 600; color: #fff; }
+    /* the switch pill and the focus ring both sit on the dark hero: the pill is
+       a light chip so its labels keep their light-ground colours, and --focus
+       re-points to gold here (blue collapses on blue — the footer/pre
+       precedent). */
+    .post-hero { --focus: var(--gold); }
+    .post-hero__cover {
+      aspect-ratio: 1 / 1;
+      max-width: 380px;
+      margin: 2.5rem auto 0;
+      border-radius: var(--radius-lg, 16px);
+      overflow: hidden;
+      box-shadow: 0 20px 60px rgba(17,48,75,0.14);
+    }
+    .post-hero__cover img { width: 100%; height: 100%; object-fit: cover; display: block; }
+    .post-body { max-width: 720px; margin: 0 auto; padding: 3rem 2rem 6rem; }
+    .post-body h2 { font-size: 1.6rem; font-weight: 800; color: var(--navy); margin: 3rem 0 1rem; padding-bottom: 0.5rem; border-bottom: 2px solid rgba(34,98,153,0.15); }
+    .post-body h3 { font-size: 1.25rem; font-weight: 700; color: var(--navy); margin: 2.25rem 0 0.75rem; }
+    .post-body p { margin-bottom: 1.25rem; }
+    .post-body strong { font-weight: 700; color: var(--navy); }
+    .post-body a { color: var(--blue); text-decoration: underline; text-decoration-thickness: 1px; text-underline-offset: 2px; }
+    .post-body ul, .post-body ol { margin: 0.5rem 0 1.25rem 1.5rem; }
+    .post-body li { margin-bottom: 0.4rem; }
+    .post-body blockquote { background: rgba(34,98,153,0.06); border-left: 4px solid var(--blue); padding: 1rem 1.25rem; border-radius: 0 10px 10px 0; margin: 1.25rem 0; font-size: 0.95rem; color: var(--navy); }
+    .post-body hr { border: none; height: 1px; background: linear-gradient(90deg, transparent, rgba(34,98,153,0.2), transparent); margin: 3rem 0; }
+    /* ── CODE ── */
+    .post-body pre { background: var(--code-bg); border-radius: 12px; padding: 1.5rem; margin: 1.25rem 0 1.5rem; overflow-x: auto; border: 1px solid rgba(255,255,255,0.05); }
+    .post-body pre code { font-family: var(--mono); font-size: 0.85rem; color: #e2e8f0; line-height: 1.7; background: none; padding: 0; white-space: pre-wrap; }
+    .post-body code { font-family: var(--mono); font-size: 0.88em; background: rgba(34,98,153,0.08); color: var(--blue-dark); padding: 0.15em 0.45em; border-radius: 5px; }
+    /* ── TABLES ── */
+    .table-wrapper { overflow-x: auto; margin: 1.5rem 0; border-radius: 0.5rem; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1); }
+    table { width: 100%; border-collapse: collapse; background: white; }
+    th { background: #226299; color: white; padding: 1rem; text-align: left; font-weight: 600; }
+    td { padding: 1rem; border-bottom: 1px solid #e5e7eb; }
+    .post-body table { display: block; width: 100%; overflow-x: auto; }
+    /* ── ALERTS ── */
+    .alert { background: #fef3cd; border: 1px solid #facc15; border-radius: 0.5rem; padding: 1rem; margin: 1.5rem 0; }
+    .alert.danger { background: #fee2e2; border-color: #ef4444; }
+    .alert.info { background: #e0f2fe; border-color: #06b6d4; }
+    .alert.success { background: #d1fae5; border-color: #10b981; }
+    /* ── KEY TAKEAWAYS ── */
+    .key-takeaways { background: linear-gradient(135deg, #f3f4f6 0%, #e5e7eb 100%); border-radius: 1rem; padding: 2rem; margin: 3rem 0; }
+    .key-takeaways h3 { color: #226299; margin-bottom: 1.5rem; }
+    .post-series-footer { text-align: center; font-size: 0.85rem; color: var(--slate-light); font-style: italic; margin-top: 2rem; padding-top: 2rem; border-top: 1px solid #e2e8f0; }
+    .blog-footer { background: var(--navy); padding: 2rem 0; text-align: center; }
+    .blog-footer a { color: var(--gold); text-decoration: none; font-weight: 600; font-size: 0.9rem; }
+    .blog-footer span { color: var(--gray); font-size: 0.8rem; display: block; margin-top: 0.4rem; }
+    @media (max-width: 600px) {
+      .post-hero { padding: 7rem 1.25rem 2.5rem; }
+      .post-body { padding: 2rem 1.25rem 4rem; }
+      .post-hero__meta { flex-direction: column; gap: 0.4rem; }
+      .post-body h2 { font-size: 1.4rem; }
+      .post-body h3 { font-size: 1.15rem; }
+      .post-body pre { padding: 1rem; border-radius: 8px; }
+    }
+
+    :focus-visible { outline: 2px solid var(--focus); outline-offset: 3px; border-radius: 2px; }
+    /* the ring sits on the page ground (3px offset). Inside the navy footers
+       and code blocks var(--blue) collapses to 2.12:1, so those scopes
+       re-point --focus to gold (5.73:1 on navy). */
+    .footer, .blog-footer, pre { --focus: var(--gold); }
+    :focus:not(:focus-visible) { outline: none; }
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after {
+        animation-duration: .01ms !important; animation-iteration-count: 1 !important;
+        transition-duration: .01ms !important; scroll-behavior: auto !important;
+      }
+    }
+    h1, h2, h3, .post-hero__title, .card__title { text-wrap: balance; }
+
+    .post-body img, .post-body svg { max-width: 100%; height: auto; }
+
+    /* ── SKIP LINK ── a11y-perf R5: the link and the landmark it targets are a
+       pair — useless without both halves. Off-screen until focused, then the
+       first tab stop on every page. */
+    .skip-link { position: absolute; left: -9999px; }
+    .skip-link:focus {
+      left: 1rem; top: 1rem; z-index: 999;
+      background: var(--navy); color: #fff;
+      padding: 0.75rem 1.25rem; border-radius: var(--radius-sm);
+      font-weight: 600; text-decoration: none;
+    }
+
+    /* ── POST WAYFINDING ── the wordmark is the home link; the footer carries
+       the full destination row. */
+    .blog-nav__home {
+      font-size: 0.9rem; font-weight: 800; color: var(--navy);
+      text-decoration: none; margin-right: 1rem;
+    }
+    .blog-nav__home:hover { color: var(--blue); }
+    .blog-nav__inner > .blog-nav__back { margin-right: auto; }
+    .blog-footer__nav {
+      display: flex; flex-wrap: wrap; justify-content: center; gap: 0.35rem 1.25rem;
+      max-width: 860px; margin: 0 auto 1.25rem; padding: 0 2rem 1.25rem;
+      border-bottom: 1px solid rgba(255,255,255,0.12);
+    }
+    .blog-footer__nav a { color: var(--gold); font-size: 0.85rem; font-weight: 600; text-decoration: none; }
+    .blog-footer__nav a:hover { color: #fff; text-decoration: underline; }
+
+    html { scroll-padding-top: 5rem; }
+    [id] { scroll-margin-top: 5rem; }
+
+    /* Thai needs more room than Latin at the same nominal size. */
+    .post-body:lang(th) { font-size: 18px; line-height: 1.85; }
+    .post-body p, .post-body li, .post-body blockquote { text-wrap: pretty; }
+
+    /* ---- side-scroll affordance ----
+       pre blocks and tables can exceed 720px. These layers paint a shadow ONLY
+       where there is more content in that direction; when fully scrolled the
+       cover slides over the shadow and hides it. No JavaScript, no wrapper. */
+    .post-body pre, .post-body table {
+      overflow-x: auto;
+      background-image:
+        linear-gradient(to right, var(--code-bg, #0f172a) 30%, rgba(15,23,42,0)),
+        linear-gradient(to left, var(--code-bg, #0f172a) 30%, rgba(15,23,42,0)),
+        radial-gradient(farthest-side at 0 50%, rgba(0,0,0,.28), rgba(0,0,0,0)),
+        radial-gradient(farthest-side at 100% 50%, rgba(0,0,0,.28), rgba(0,0,0,0));
+      background-position: 0 0, 100% 0, 0 0, 100% 0;
+      background-repeat: no-repeat;
+      background-size: 40px 100%, 40px 100%, 14px 100%, 14px 100%;
+      background-attachment: local, local, scroll, scroll;
+    }
+    .post-body table {
+      background-image:
+        linear-gradient(to right, var(--white, #fff) 30%, rgba(255,255,255,0)),
+        linear-gradient(to left, var(--white, #fff) 30%, rgba(255,255,255,0)),
+        radial-gradient(farthest-side at 0 50%, rgba(17,48,75,.16), rgba(17,48,75,0)),
+        radial-gradient(farthest-side at 100% 50%, rgba(17,48,75,.16), rgba(17,48,75,0));
+      background-position: 0 0, 100% 0, 0 0, 100% 0;
+      background-repeat: no-repeat;
+      background-size: 40px 100%, 40px 100%, 14px 100%, 14px 100%;
+      background-attachment: local, local, scroll, scroll;
+    }
+
+    /* ---- table of contents ---- */
+    .post-toc {
+      max-width: 720px;
+      margin: 2rem auto 0;
+      padding: 1rem 1.25rem;
+      background: rgba(34,98,153,0.05);
+      border: 1px solid rgba(34,98,153,0.14);
+      border-left: 3px solid var(--gold, #c4a46c);
+      border-radius: 10px;
+      font-size: 0.92rem;
+    }
+    .post-toc > summary {
+      cursor: pointer;
+      font-weight: 700;
+      color: var(--navy);
+      list-style: none;
+    }
+    .post-toc > summary::-webkit-details-marker { display: none; }
+    .post-toc > summary::before {
+      content: "\25B8";
+      display: inline-block;
+      margin-right: 0.5rem;
+      transition: transform 0.2s ease;
+      color: var(--gold-dark, #7a5f22);
+    }
+    .post-toc[open] > summary::before { transform: rotate(90deg); }
+    .post-toc > summary:focus-visible { outline: 3px solid var(--focus, #226299); outline-offset: 3px; }
+    .post-toc ol { margin: 0.85rem 0 0.25rem; padding-left: 1.4rem; }
+    .post-toc li { margin-bottom: 0.4rem; line-height: 1.5; }
+    .post-toc a { color: var(--slate); text-decoration: none; }
+    .post-toc a:hover, .post-toc a:focus-visible { color: var(--blue-dark, #1a4d7a); text-decoration: underline; }
+    @media (max-width: 600px) { .post-toc { margin: 1.25rem 1rem 0; } }
+
+    /* ---- cross-document view transitions ---- */
+    @view-transition { navigation: auto; }
+    .nav, .blog-nav { view-transition-name: site-nav; }
+    .footer, .blog-footer { view-transition-name: site-footer; }
+    @media (prefers-reduced-motion: reduce) {
+      ::view-transition-group(*),
+      ::view-transition-old(*),
+      ::view-transition-new(*) { animation: none !important; }
+    }
+
+    /* ── SERIES STRIP — Hermes Agent in Practice ──
+       Same class and inner-wrapper shape as the OpenClaw strip because the
+       linter's RE_SNAV recognises exactly `series-nav` + a nested div; a
+       renamed strip would read as "no nav" and fail INV-08. All content
+       checks (INV-03 family) iterate the SERIES7 list only, so this strip's
+       labels are convention, not contract. House-styled, not the island CSS. */
+    .series-nav {
+      max-width: 720px; margin: 2rem auto 0; padding: 1.1rem 1.4rem;
+      background: rgba(255,255,255,0.75); border: 1px solid rgba(34,98,153,0.15);
+      border-left: 3px solid var(--gold); border-radius: 12px;
+    }
+    .series-nav h3 {
+      font-size: 0.78rem; font-weight: 700; text-transform: uppercase;
+      letter-spacing: 0.08em; color: var(--gold-dark); margin-bottom: 0.6rem;
+    }
+    .series-links { display: flex; flex-wrap: wrap; gap: 0.5rem; }
+    .series-links a, .series-links .current {
+      font-size: 0.82rem; font-weight: 600; padding: 0.35rem 0.8rem;
+      border-radius: 50px; text-decoration: none;
+    }
+    .series-links a { color: var(--blue-dark); background: rgba(34,98,153,0.08); }
+    .series-links a:hover { background: rgba(34,98,153,0.16); }
+    .series-links .current { color: #fff; background: var(--blue-dark); }
+    @media (max-width: 600px) { .series-nav { margin: 1.5rem 1rem 0; } }
+
+    /* ── FIGURE — the sanctioned diagram component (page-design §4 Content).
+       Diagrams are PNGs; this repo built them out of divs twice and reverted
+       twice. The image is wrapped in a link to itself so a phone can pinch a
+       1400px drawing without a line of JavaScript. */
+    .figure { margin: 2.5rem 0; }
+    .figure__img { width: 100%; height: auto; display: block;
+                   border-radius: var(--radius); border: 1px solid rgba(0,0,0,0.06); }
+    .figure__caption { font-size: 0.85rem; color: var(--slate-light);
+                       text-align: center; margin-top: 0.75rem; }
+
+    /* ── REFERENCES — every material number in this series carries its source.
+       The tags are the book's own four evidence labels. */
+    .references { margin-top: 3rem; padding-top: 2rem; border-top: 1px solid #e2e8f0; }
+    .references__note { font-size: 0.85rem; color: var(--slate-light); margin-bottom: 1rem; }
+    .references__list { padding-left: 1.4rem; font-size: 0.9rem; line-height: 1.75; }
+    .references__list li { margin-bottom: 0.7rem; }
+    .ref-tag { display: inline-block; font-size: 0.7rem; font-weight: 700;
+               letter-spacing: 0.06em; text-transform: uppercase; padding: 0.1rem 0.5rem;
+               border-radius: 50px; margin-right: 0.4rem; vertical-align: 0.05em;
+               background: rgba(34,98,153,0.1); color: var(--blue-dark); }
+    .ref-tag--law { background: rgba(239,68,68,0.12); color: #991b1b; }
+    .ref-tag--synthesis { background: rgba(196,164,108,0.22); color: var(--gold-dark); }
+    .ref-supports { display: block; color: var(--slate-light); font-size: 0.85rem; }
+
+    /* ── SERIES STRIP, GROUPED — twenty chips is four rows of noise unless they
+       are grouped, so the four parts of the book label their own rows. The
+       .series-nav and .series-links wrappers stay byte-literal because INV-08
+       recognises the strip by exactly those two, and the chips stay direct
+       children of a group because INV-03's item regex cannot see through a
+       nested tag. Grouping is a modifier plus two elements of .series-links —
+       the flat OpenClaw, Hermes and Life strips are untouched. */
+    .series-links--grouped { display: grid; gap: 0.9rem; }
+    .series-links__group { position: relative; display: flex; flex-wrap: wrap;
+                           gap: 0.5rem; padding-left: 8.25rem; min-height: 2rem; }
+    .series-links__label { position: absolute; left: 0; top: 0.45rem; width: 7.5rem;
+                           margin: 0; font-size: 0.72rem; font-weight: 700;
+                           text-transform: uppercase; letter-spacing: 0.08em;
+                           color: var(--slate-light); line-height: 1.3; }
+    @media (max-width: 600px) {
+      .series-links__group { padding-left: 0; }
+      .series-links__label { position: static; width: auto; flex-basis: 100%;
+                             margin-bottom: 0.1rem; }
+    }
+
+    /* ── LANGUAGE SWITCH — pure CSS, zero JavaScript (INV-38) ──
+       One visually-hidden checkbox as a direct child of body, BEFORE the main landmark,
+       so `#langSwitch:checked ~ main …` reaches every content block. The two
+       tracks are paired blocks: .l-th (default) and .l-en (hidden until
+       checked; display:revert restores block for divs, inline for spans).
+       Naming stays clear of INV-12's menu-token regex (hamburger|burger|
+       nav__toggle|nav-toggle|navtoggle|menu-toggle|menu__toggle) — verified.
+       No JS also means no persistence across posts; each post opens in Thai. */
+    .lang-switch-box { position: absolute; left: -9999px; }
+    .l-en { display: none; }
+    #langSwitch:checked ~ main .l-en { display: revert; }
+    #langSwitch:checked ~ main .l-th { display: none; }
+    .lang-switch {
+      display: inline-flex; align-items: center; gap: 0.55rem;
+      margin-top: 1.4rem; padding: 0.4rem 1.1rem; border-radius: 50px;
+      background: rgba(255,255,255,0.85); border: 1px solid rgba(255,255,255,0.4);
+      cursor: pointer; font-size: 0.85rem; user-select: none;
+    }
+    .lang-switch span { color: var(--slate-light); font-weight: 600; transition: color 0.2s; }
+    .lang-switch .lang-sep { color: var(--gray); font-weight: 400; }
+    .lang-switch .lang-th { color: var(--navy); font-weight: 800; }
+    #langSwitch:checked ~ main .lang-switch .lang-th { color: var(--slate-light); font-weight: 600; }
+    #langSwitch:checked ~ main .lang-switch .lang-en { color: var(--navy); font-weight: 800; }
+    .lang-switch:hover { border-color: #fff; }
+    #langSwitch:focus-visible ~ main .lang-switch {
+      outline: 2px solid var(--focus); outline-offset: 3px;
+    }
+  </style>
+  <!-- social -->
+  <link rel="canonical" href="https://anirach.com/blog/ai-transformation-workflow.html">
+  <meta property="og:type" content="article">
+  <meta property="og:url" content="https://anirach.com/blog/ai-transformation-workflow.html">
+  <meta property="og:site_name" content="Anirach Mingkhwan">
+  <meta property="og:locale" content="th_TH">
+  <meta property="og:locale:alternate" content="en_US">
+  <meta property="article:published_time" content="2026-09-05">
+  <meta property="article:author" content="https://anirach.com/">
+  <meta property="og:title" content="Human in the Loop Is Not a Design — สี่เลนของกระบวนงานคนกับ AI">
+  <meta property="og:description" content="Human in the loop เป็นการควบคุมได้ก็ต่อเมื่อคนมีหลักฐาน เวลา ความสามารถ และอำนาจปฏิเสธ — ออกแบบใหม่ด้วยสี่เลน พร้อม Workflow teardown เจ็ดขั้น">
+  <meta property="og:image" content="https://anirach.com/images/ai-transformation-workflow-og.jpg">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
+  <meta property="og:image:alt" content="Human in the Loop Is Not a Design — สี่เลนของกระบวนงานคนกับ AI">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:image" content="https://anirach.com/images/ai-transformation-workflow-og.jpg">
+  <meta name="twitter:image:alt" content="Human in the Loop Is Not a Design — สี่เลนของกระบวนงานคนกับ AI">
+  <meta name="robots" content="max-image-preview:large">
+  <meta name="theme-color" content="#11304b">
+  <link rel="icon" href="/favicon.ico" sizes="any">
+  <link rel="apple-touch-icon" href="/apple-touch-icon.png">
+  <!-- /social -->
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "BlogPosting",
+    "headline": "Human in the Loop Is Not a Design — สี่เลนของกระบวนงานคนกับ AI",
+    "author": {
+      "@type": "Person",
+      "@id": "https://anirach.com/#person",
+      "name": "Anirach Mingkhwan",
+      "url": "https://anirach.com/"
+    },
+    "datePublished": "2026-09-05",
+    "dateModified": "2026-09-05",
+    "image": "https://anirach.com/images/ai-transformation-workflow-og.jpg",
+    "inLanguage": [
+      "th",
+      "en"
+    ],
+    "mainEntityOfPage": "https://anirach.com/blog/ai-transformation-workflow.html"
+  }
+  </script>
+</head>
+<body>
+<a href="#main" class="skip-link">Skip to content</a>
+<input type="checkbox" id="langSwitch" class="lang-switch-box" aria-label="Switch language: Thai / English">
+
+  <nav class="blog-nav">
+    <div class="blog-nav__inner">
+      <a href="../index.html" class="blog-nav__home">Anirach</a>
+      <a href="./" class="blog-nav__back">‹ Blog</a>
+      <div class="blog-nav__title">Human in the Loop Is Not a Design</div>
+    </div>
+  </nav>
+
+  <main id="main">
+
+  <header class="post-hero">
+    <div class="post-hero__tags">
+      <span class="post-hero__tag">Workflow Redesign</span>
+      <span class="post-hero__tag">Four Lanes</span>
+      <span class="post-hero__tag">Human Oversight</span>
+    </div>
+    <h1 class="post-hero__title"><span class="l-th">Human in the Loop Is Not a Design — สี่เลนของกระบวนงานคนกับ AI</span><span class="l-en" lang="en">Human in the Loop Is Not a Design — The Four Lanes of a Human-AI Workflow</span></h1>
+    <p class="post-hero__sub"><span class="l-th">&quot;Human in the loop&quot; กลายเป็นการควบคุมได้ก็ต่อเมื่อคนนั้นมีหลักฐาน เวลา ความสามารถ และอำนาจที่จะไม่เห็นด้วย — ไม่เช่นนั้นมันคือด่านพิธีกรรมที่รับผิดแทนโดยป้องกันอะไรไม่ได้</span><span class="l-en" lang="en">&quot;Human in the loop&quot; becomes a control only when that person has the evidence, time, competence and authority to disagree — otherwise it is a ceremonial checkpoint that absorbs blame without preventing failure.</span></p>
+    <div class="post-hero__meta">
+      <span>By <strong>Anirach Mingkhwan</strong></span>
+      <span class="post-hero__series">AI Transformation for Organizations 2026 • Post #6</span>
+      <span><time datetime="2026-09-05">5 Sep 2026</time></span>
+      <span>31 min read</span>
+    </div>
+    <label for="langSwitch" class="lang-switch" title="สลับภาษา · Switch language"><span class="lang-th">ไทย</span><span class="lang-sep">·</span><span class="lang-en" lang="en">English</span></label>
+    <div class="post-hero__cover">
+      <img src="../images/ai-transformation-workflow-cover.jpg" alt="Human in the Loop Is Not a Design — สี่เลนของกระบวนงานคนกับ AI" width="800" height="800" loading="eager" fetchpriority="high" decoding="async">
+    </div>
+  </header>
+
+  <article class="post-body">
+
+    <details class="post-toc l-th" open>
+      <summary>ในบทความนี้</summary>
+      <ol>
+          <li><a href="#th-ceremonial-control">1. ด่านพิธีกรรม — เมื่อ "มีคนตรวจ" ยังไม่ใช่การควบคุม</a></li>
+          <li><a href="#th-before-after">2. Task automation กับ Workflow redesign — เร็วขึ้นสิบเท่าแต่ส่งงานช้าเท่าเดิม</a></li>
+          <li><a href="#th-four-lanes">3. สี่เลนที่ทำงานร่วมกัน — ใครถืออะไร และห้ามถืออะไร</a></li>
+          <li><a href="#th-comparative-advantage">4. แบ่งงานตามความได้เปรียบเชิงเปรียบเทียบและระดับผลกระทบ</a></li>
+          <li><a href="#th-lannabuild">5. LannaBuild Engineering — ย้ายการออกแบบขึ้นไปต้นน้ำ</a></li>
+          <li><a href="#th-teardown">6. เวิร์กช็อป Workflow teardown and rebuild — เจ็ดขั้น และตารางกำกับสี่เลน</a></li>
+          <li><a href="#th-metrics-failures">7. ตัวชี้วัดสำคัญ รูปแบบความล้มเหลว และเส้นทางฝั่งไทย</a></li>
+          <li><a href="#th-road-ahead">8. เส้นทางข้างหน้า — จากลูกศรบนกระดานไปสู่หลักฐาน</a></li>
+      </ol>
+    </details>
+    <details class="post-toc l-en" open>
+      <summary>In this post</summary>
+      <ol>
+          <li><a href="#en-ceremonial-control">1. The Ceremonial Checkpoint — When "Someone Reviews It" Is Not Yet a Control</a></li>
+          <li><a href="#en-before-after">2. Task Automation vs Workflow Redesign — Ten Times Faster, Delivered Just as Slowly</a></li>
+          <li><a href="#en-four-lanes">3. Four Coordinated Lanes — Who Holds What, and What They Must Never Hold</a></li>
+          <li><a href="#en-comparative-advantage">4. Allocating Work by Comparative Advantage and Consequence</a></li>
+          <li><a href="#en-lannabuild">5. LannaBuild Engineering — Moving the Design Point Upstream</a></li>
+          <li><a href="#en-teardown">6. The Workflow Teardown and Rebuild Session — Seven Steps and the Four-Lane Marking Table</a></li>
+          <li><a href="#en-metrics-failures">7. Metrics That Matter, Failure Patterns, and the Thai Pathway</a></li>
+          <li><a href="#en-road-ahead">8. The Road Ahead — From Arrows on a Whiteboard to Evidence</a></li>
+      </ol>
+    </details>
+    <div class="l-th">
+
+    <p>🤔 <strong>ถ้าผู้ตรวจมีเวลาสองนาทีต่อเรื่อง ไม่เห็นแหล่งข้อมูล และปฏิเสธไม่ได้ เขาเป็น "การควบคุม" หรือ "ผู้รับผิดแทน"?</strong></p>
+
+    <p>ตอนที่แล้ว <a href="/blog/ai-transformation-portfolio">#5 Decision Portfolio</a> จบลงตรงที่คุณมีรายการการตัดสินใจที่จำแนกแล้วสามมิติ และเลือกท่าไว้สี่ท่า — ขยาย จำกัดขอบเขต ออกแบบใหม่ หรือยุติ ตอนนี้คือตอนแรกของกลุ่ม Redesign และเป็นตอนที่ต้องลงมือกับคำว่า "ออกแบบใหม่" จริง ๆ เพราะการเลือกได้ว่าจะปรับปรุงการตัดสินใจข้อไหน ยังไม่ได้บอกเลยว่ากระบวนงานรอบการตัดสินใจนั้นควรมีหน้าตาอย่างไร และคนควรไปยืนอยู่ตรงไหนของมัน</p>
+
+    <p>คำตอบหนึ่งบรรทัดของคำถามข้างบนคือ <strong>เขาเป็นผู้รับผิดแทน</strong> — "การมีมนุษย์อยู่ในวงจร" กลายเป็นการควบคุมได้ก็ต่อเมื่อคนคนนั้นมีครบสี่อย่าง คือหลักฐาน เวลา ความสามารถ และอำนาจที่จะไม่เห็นด้วย ขาดข้อใดข้อหนึ่ง สิ่งที่คุณติดตั้งไว้ในกระบวนงานไม่ใช่ด่านตรวจ แต่เป็นด่านพิธีกรรมที่ดูดซับความรับผิดเมื่อเกิดเรื่อง โดยไม่ได้ป้องกันอะไรเลย ที่เหลือของบทความนี้คือวิธีออกแบบให้มันเป็นด่านตรวจจริง ด้วยสี่เลน หนึ่งเวิร์กช็อปเจ็ดขั้น และตัวชี้วัดที่บอกได้ว่าการออกแบบนั้นทำงานหรือไม่</p>
+
+    <h2 id="th-ceremonial-control">1. ด่านพิธีกรรม — เมื่อ "มีคนตรวจ" ยังไม่ใช่การควบคุม</h2>
+
+    <p>บทที่ 4 ของคู่มือเปิดด้วยประโยคเดียวที่ผมคิดว่าเป็นประโยคที่แพงที่สุดในเล่ม เพราะมันทำลายคำตอบที่ทีมส่วนใหญ่ใช้ปิดคำถามเรื่องความเสี่ยงมาตลอดสองปี<sup><a href="#th-ref-1">[1]</a></sup></p>
+
+    <blockquote>"Human in the loop is not a design. It becomes a control only when the person has evidence time competence and authority to disagree."</blockquote>
+
+    <p>ฉบับภาษาไทยของหน้าเดียวกันขยายความไว้ตรงกว่านั้นอีก<sup><a href="#th-ref-1">[1]</a></sup></p>
+
+    <blockquote>"การมีมนุษย์อยู่ในวงจรยังไม่ใช่การออกแบบ ผู้ตรวจที่ไม่มีเวลา หลักฐาน อำนาจ หรือความเชี่ยวชาญอาจเป็นเพียงด่านพิธีกรรมที่รับผิดเมื่อเกิดปัญหาแต่ป้องกันไม่ได้ การออกแบบที่ดีต้องเริ่มจากการตัดสินใจ แล้วแยกงานออกเป็น Task จุดส่งต่อ หลักฐาน และผลที่ตามมา"</blockquote>
+
+    <p>ผมอยากให้คุณอ่านคำว่า <strong>ด่านพิธีกรรม</strong> ช้า ๆ อีกครั้ง เพราะมันไม่ใช่คำด่า มันเป็นคำวินิจฉัย ในเอกสารการกำกับดูแลของเกือบทุกองค์กรที่ผมได้อ่านในปีนี้ มีบรรทัดที่เขียนว่า "มีการตรวจสอบโดยมนุษย์ก่อนดำเนินการ" อยู่เสมอ และในเกือบทุกกรณี บรรทัดนั้นคือทั้งหมดที่เขียนไว้ ไม่มีต่อว่าผู้ตรวจเห็นอะไร ใช้เวลาเท่าไร มีคุณสมบัติอะไร และถ้าเขาปฏิเสธแล้วเรื่องจะเดินต่อไปทางไหน บรรทัดนั้นจึงทำหน้าที่เดียวคือย้าย <strong>ความรับผิดรับชอบ</strong> (accountability) จากระบบไปไว้บนตัวคน โดยไม่ได้เพิ่มความสามารถในการป้องกันความผิดพลาดขึ้นแม้แต่นิดเดียว</p>
+
+    <p>ในทางออกแบบ วิธีแก้คือเลิกเขียนคำว่า "มีคนตรวจ" แล้วเปลี่ยนเป็นการระบุเงื่อนไขสี่ข้อให้ครบ พร้อมหลักฐานที่ชี้ได้ว่าเงื่อนไขนั้นมีอยู่จริง ไม่ใช่มีอยู่ในนโยบาย ตารางข้างล่างคือแบบฟอร์มที่ผมใช้ซักกระบวนงานในนาทีแรกของทุกการทบทวน</p>
+
+    <div class="table-wrapper">
+        <table>
+            <thead>
+                <tr>
+                    <th>Condition</th>
+                    <th>คำถามทดสอบ</th>
+                    <th>หลักฐานที่ต้องมีอยู่จริง</th>
+                    <th>อาการเมื่อขาด</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td><strong>Evidence</strong> หลักฐาน</td>
+                    <td>ในหน้าจอที่ผู้ตรวจตัดสิน เขาเห็นอะไรบ้าง</td>
+                    <td>แหล่งข้อมูลที่ย้อนดูได้ ค่าความไม่แน่นอน กรณีใกล้เคียงในอดีต และ Trace ของขั้นตอนก่อนหน้า</td>
+                    <td>ผู้ตรวจอ่าน "ความลื่นไหลของภาษา" แทนที่จะอ่านความถูกต้อง</td>
+                </tr>
+                <tr>
+                    <td><strong>Time</strong> เวลา</td>
+                    <td>ระบบออกแบบให้ใช้เวลากี่นาทีต่อเรื่อง และงานจริงต้องใช้กี่นาที</td>
+                    <td>สถิติคิว เวลาที่ใช้จริงต่อเรื่อง และขนาดคิวสูงสุดที่ประกาศไว้</td>
+                    <td>อนุมัติแบบประทับตรา เพราะคิวยาวกว่ากำลังตรวจอย่างถาวร</td>
+                </tr>
+                <tr>
+                    <td><strong>Competence</strong> ความสามารถ</td>
+                    <td>ผู้ตรวจมีคุณสมบัติอะไรจึงตรวจเรื่องประเภทนี้ได้</td>
+                    <td>เกณฑ์คุณสมบัติที่เขียนไว้ต่อประเภทงาน และทะเบียนผู้ตรวจที่ผ่านเกณฑ์</td>
+                    <td>ผู้เชี่ยวชาญคนเดียวถูกตั้งเป็นผู้ตรวจของทุกอย่าง</td>
+                </tr>
+                <tr>
+                    <td><strong>Authority</strong> อำนาจ</td>
+                    <td>ถ้าผู้ตรวจปฏิเสธ เกิดอะไรขึ้นต่อจากนั้น</td>
+                    <td>เส้นทางปฏิเสธที่มีปลายทางชัด สิทธิ์หยุดงาน และการบันทึกเหตุผลที่อ่านย้อนได้</td>
+                    <td>ปฏิเสธได้ในทางทฤษฎี แต่ไม่มีใครรับเรื่องต่อ จึงไม่มีใครกล้าปฏิเสธ</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <p>สังเกตว่าคอลัมน์ที่สามไม่ได้ถามหาความตั้งใจ มันถามหาสิ่งของ — หน้าจอ ตัวเลข ทะเบียน เส้นทาง สิ่งที่ชี้ได้ ถ้าทีมตอบคอลัมน์นี้ด้วยคำว่า "เรามีนโยบาย" นั่นแปลว่าเงื่อนไขข้อนั้นยังไม่มีอยู่จริง และด่านนั้นยังเป็นด่านพิธีกรรม</p>
+
+    <h3>ข้อสังเกตนี้เก่ากว่า AI สี่ทศวรรษ</h3>
+
+    <p>ผมอยากถ่วงน้ำหนักเรื่องนี้ด้วยการชี้ว่ามันไม่ใช่ปัญหาที่เพิ่งเกิดขึ้นพร้อม foundation model Lisanne Bainbridge ตีพิมพ์บทความชื่อ <em>"Ironies of automation"</em> ในวารสาร <em>Automatica</em> เมื่อเดือนพฤศจิกายน ปี 1983 — นับถึงปีที่ผมเขียนบทความนี้คือ <strong>43 ปี</strong> — และมันยังคงเป็นบทความที่ถูกอ้างถึงอย่างต่อเนื่อง โดย Semantic Scholar บันทึกจำนวนการอ้างอิงไว้ที่ 2,572 ครั้ง ณ วันที่ผมตรวจสอบ<sup><a href="#th-ref-2">[2]</a></sup></p>
+
+    <p>ต้องพูดให้ตรงสองข้อ ข้อแรก บทความนั้นเขียนถึงระบบควบคุมในโรงงานอุตสาหกรรม ไม่ได้เขียนถึง AI สมัยใหม่ และไม่ได้ "ทำนาย" ปัญหา human in the loop ของยุคนี้ไว้ล่วงหน้า ข้อสอง บทความอยู่หลังกำแพงค่าสมัครสมาชิกของสำนักพิมพ์ และบทคัดย่อถูกถอนออกจากฐานข้อมูลดัชนี ผมจึงยืนยันได้เพียงตัวตนทางบรรณานุกรมของมัน ไม่ได้ยืนยันเนื้อความ — <strong>ผมจึงอ้างชื่อบทความและปีเท่านั้น ไม่ยกประโยคใดจากมันมาเลย</strong> การเชื่อมโยงมันเข้ากับปัญหาผู้ตรวจใน workflow ของ AI เป็นการสังเคราะห์ของผมเอง ไม่ใช่ข้อสรุปของผู้เขียน</p>
+
+    <p>แต่ลำดับความคิดนั้นตรงจนน่าสนใจ วิศวกรรมความปลอดภัยรู้จักรูปแบบนี้มานานมาก — เมื่อระบบอัตโนมัติทำงานปกติได้ดีกว่ามนุษย์เกือบตลอดเวลา บทบาทที่เหลือให้มนุษย์คือการ "เฝ้าดู" ซึ่งเป็นงานที่มนุษย์ทำได้แย่ที่สุด และพอถึงวินาทีที่ระบบล้ม เราก็คาดหวังให้คนที่ไม่ได้ลงมือมานานเข้ามารับช่วงต่อในสถานการณ์ที่ยากที่สุด นี่คือเหตุผลที่คู่มือไม่ยอมให้ "มีคนตรวจ" นับเป็นการออกแบบ และยืนยันว่าการออกแบบต้องเริ่มจากการตัดสินใจแล้วแยกงานลงไปเป็น Task จุดส่งต่อ หลักฐาน และผลที่ตามมา</p>
+
+    <p>คำว่า "เริ่มจากการตัดสินใจ" ตรงนี้ต่อจากตอนที่แล้วพอดี <strong>บัญชีรายการการตัดสินใจ</strong> (decision inventory) ที่คุณสร้างไว้ใน <a href="/blog/ai-transformation-portfolio">#5</a> คือจุดตั้งต้นของกระบวนงาน ไม่ใช่รายการเครื่องมือ และหัวข้อถัดไปคือเหตุผลว่าทำไมการเริ่มผิดจุดจึงให้ผลลัพธ์ที่ดูดีบนสไลด์แต่ไม่ขยับอะไรเลยในความเป็นจริง</p>
+
+    <h2 id="th-before-after">2. Task automation กับ Workflow redesign — เร็วขึ้นสิบเท่าแต่ส่งงานช้าเท่าเดิม</h2>
+
+    <p>มาสเตอร์คลาสที่เป็นต้นทางของคู่มือแยกสองคำนี้ออกจากกันในช่วง 19:44–22:16 และคู่มือนำมาขยายต่อในภาคผนวก A หัวข้อ 8<sup><a href="#th-ref-3">[3]</a></sup> ใจความคือ <strong>การทำ Task automation เพียงขั้นตอนเดียวในกระบวนงานที่ออกแบบไม่ดี สามารถสร้างตัวเลขเฉพาะจุดที่น่าประทับใจมาก โดยแทบไม่เปลี่ยนผลลัพธ์ตั้งแต่ต้นจนจบเลย</strong> ตัวอย่างที่คู่มือยกคือเอกสารที่เคยใช้เวลาร่างสองชั่วโมง เหลือสองนาที แต่ยังต้องรอผ่านการอนุมัติห้าชั้นเหมือนเดิม</p>
+
+    <p>ผมเจอรูปแบบนี้บ่อยจนเรียกมันว่า "กับดักสไลด์แรก" เพราะตัวเลขจากสองชั่วโมงเหลือสองนาทีนั้นจริง มันวัดได้ พิสูจน์ได้ และมันทำให้ทุกคนในห้องพยักหน้า ปัญหาคือมันวัดผิดหน่วย หน่วยที่ลูกค้ารู้สึกได้คือเวลาตั้งแต่เขายื่นเรื่องจนได้คำตอบ ไม่ใช่เวลาที่ใครสักคนใช้พิมพ์ร่าง และในกระบวนงานส่วนใหญ่ เวลาที่ลูกค้ารอไม่ได้อยู่ในขั้นตอนที่คนลงมือทำ มันอยู่ในช่องว่างระหว่างขั้นตอน</p>
+
+    <figure class="figure">
+      <a href="../images/ai-transformation-fig-04-redesign-the-flow.png">
+        <img class="figure__img" src="../images/ai-transformation-fig-04-redesign-the-flow.png" alt="แผนภาพเปรียบเทียบกระบวนงานก่อนและหลัง: ก่อน — รับเรื่อง ร่าง คิว ตรวจ คิว อนุมัติ; หลัง — รับเรื่องดิจิทัล การประเมินโดย AI ในขอบเขต ดำเนินการกรณีปกติ โต๊ะจัดการข้อยกเว้น หลักฐานผลลัพธ์" width="1400" height="840" loading="lazy" decoding="async">
+      </a>
+      <figcaption class="figure__caption">รูปที่ 4 · ออกแบบทั้งสายงานใหม่ ไม่ใช่แค่หนึ่งขั้นตอน — กรณีปกติไหลต่อเนื่อง คนเป็นเจ้าของความคลุมเครือและผลกระทบ</figcaption>
+    </figure>
+
+    <p>แถบบนของรูปคือกระบวนงานแบบเดิม รับเรื่อง → ร่าง → รอ → ตรวจ → รอ → อนุมัติ สองกล่องที่ถูกไฮไลต์ไว้คือกล่อง "รอ" ทั้งสองกล่อง เพราะนั่นคือที่ที่เวลาหายไป ตัวเลขใต้แถบเขียนว่าเวลาที่มีคนลงมือทำจริงรวมกัน 18 นาที ขณะที่เวลารอรวมกัน 46 ชั่วโมง</p>
+
+    <div class="alert">
+        <strong>⚠️ ตัวเลข 18 นาที และ 46 ชั่วโมง เป็นตัวเลขสมมติที่วาดไว้บนรูป</strong> เพื่อให้เห็นสัดส่วนระหว่างเวลาทำงานจริงกับเวลารอเท่านั้น ไม่มีงานวิจัย ไม่มีกรณีศึกษา และไม่มีผู้ให้บริการรายใดผลิตตัวเลขคู่นี้ขึ้นมา อย่านำไปใช้เป็นค่าฐาน เป้าหมาย หรือ benchmark ในเอกสารใด สิ่งที่ต้องยืมไปใช้คือ<em>วิธีวัด</em> — แยกเวลาลงมือออกจากเวลารอในกระบวนงานของคุณเอง แล้วดูว่าสองค่านี้ห่างกันกี่เท่า
+    </div>
+
+    <p>แถบล่างคือเส้นทางที่ออกแบบใหม่ รับเรื่องดิจิทัล → AI ประเมินในขอบเขต → ดำเนินการกรณีปกติ → โต๊ะจัดการข้อยกเว้น → พยานหลักฐานผลลัพธ์ สามบรรทัดใต้แถบสรุปเจตนาของการออกแบบทั้งหมดไว้ — กรณีปกติไหลต่อเนื่อง คนเป็นเจ้าของความคลุมเครือและผลกระทบ และทุกผลลัพธ์ป้อนกลับเข้าสู่การเรียนรู้</p>
+
+    <p>ข้อแตกต่างที่สำคัญที่สุดระหว่างสองแถบนี้ไม่ใช่จำนวนกล่อง แต่คือ<strong>สิ่งที่กล่องแต่ละใบเป็น</strong> ในแถบบน กล่องคือขั้นตอนของงานเอกสาร ในแถบล่าง กล่องคือจุดที่มีการตัดสินใจและมีหลักฐานถูกผลิตขึ้น "โต๊ะจัดการข้อยกเว้น" ไม่ใช่ชื่อสวย ๆ ของการตรวจ มันคือหน่วยงานที่มีคุณสมบัติ มีคิวของตัวเอง มีอำนาจปฏิเสธ และมีเส้นทางส่งต่อความไม่แน่นอน ซึ่งก็คือเงื่อนไขสี่ข้อในหัวข้อ <a href="#th-ceremonial-control">1</a> ที่ถูกทำให้เป็นโครงสร้างองค์กรจริง</p>
+
+    <p>คู่มือสรุปเส้นทางใหม่นี้เป็นหกจังหวะ ซึ่งผมใช้เป็นแบบตรวจเวลาวาดกระบวนงานใหม่ทุกครั้ง — ตรวจสอบ Input ที่รับเข้ามา สร้างค่าประมาณ ใช้กฎที่ประกาศไว้ร่วมกับดุลยพินิจ ทำกรณีธรรมดาให้เป็นอัตโนมัติ ส่งกรณีข้อยกเว้นไปยังคนที่มีคุณสมบัติ และบันทึก Outcome กลับมา ถ้ากระบวนงานใหม่ของคุณขาดจังหวะใดจังหวะหนึ่งไป มันมักจะขาดจังหวะสุดท้าย และนั่นคือจังหวะเดียวที่ทำให้ระบบดีขึ้นในรอบถัดไป</p>
+
+    <div class="table-wrapper">
+        <table>
+            <thead>
+                <tr>
+                    <th>Dimension</th>
+                    <th>Task automation</th>
+                    <th>Workflow redesign</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>หน่วยที่ออกแบบ</td>
+                    <td>ขั้นตอนเดียวภายในสายงานเดิม</td>
+                    <td>ผลลัพธ์ปลายทาง แล้วย้อนกลับมาออกแบบเส้นทางทั้งเส้น</td>
+                </tr>
+                <tr>
+                    <td>คำถามตั้งต้น</td>
+                    <td>ขั้นตอนไหนใส่ AI ได้บ้าง</td>
+                    <td>ผลลัพธ์ที่ต้องการคืออะไร และเส้นทางใหม่ควรมีจุดส่งต่อกี่จุด</td>
+                </tr>
+                <tr>
+                    <td>สิ่งที่เปลี่ยนจริง</td>
+                    <td>ความเร็วของขั้นตอนนั้น</td>
+                    <td>จุดส่งต่อ สิทธิ์ เกณฑ์ เส้นทางข้อยกเว้น และเจ้าของผลลัพธ์</td>
+                </tr>
+                <tr>
+                    <td>ตัวเลขที่มักถูกอ้าง</td>
+                    <td>เวลาต่อขั้นตอนลดลงกี่เท่า</td>
+                    <td>Cycle Time ตั้งแต่ต้นจนจบ และอัตราผ่านครั้งแรก</td>
+                </tr>
+                <tr>
+                    <td>ความเสี่ยงที่ตามมา</td>
+                    <td>เร็วเฉพาะจุด ขณะที่งานแก้ปลายน้ำเพิ่มขึ้น</td>
+                    <td>ต้องออกแบบ Governance ไปพร้อมกัน เพราะสเกลเดียวกันที่ขยายความสำเร็จก็ขยายความผิดพลาด</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <p>บรรทัดสุดท้ายของตารางคือประโยคที่คู่มือย้ำไว้ตรง ๆ ว่า Performance กับ Governance ต้องถูกออกแบบพร้อมกัน<sup><a href="#th-ref-1">[1]</a></sup> ผมเห็นด้วยแบบไม่มีเงื่อนไข เพราะการออกแบบกระบวนงานใหม่โดยไม่แตะเรื่องสิทธิ์และเส้นทางข้อยกเว้น คือการเพิ่มอัตราการผลิตของทั้งของดีและของเสียพร้อมกันในสัดส่วนเดิม และสิ่งที่คุณจะได้กลับมาคือปริมาณงานแก้ที่โตตามสเกล</p>
+
+    <p>คำที่คู่มือใช้เรียกงานทั้งหมดนี้คือ <strong>การออกแบบกระบวนงานใหม่</strong> (workflow redesign) และเครื่องมือหลักของมันคือการแบ่งงานออกเป็นสี่เลน</p>
+
+    <h2 id="th-four-lanes">3. สี่เลนที่ทำงานร่วมกัน — ใครถืออะไร และห้ามถืออะไร</h2>
+
+    <p>ข้อเสนอกลางของบทที่ 4 คือให้เลิกถามว่า "งานนี้คนทำหรือ AI ทำ" เพราะคำถามแบบสองทางเลือกนั้นบังคับให้คำตอบผิดเสมอ แล้วเปลี่ยนเป็นการวางงานลงในสี่เลนที่ทำงานร่วมกัน คู่มือเขียนชื่อเลนทั้งสี่ไว้แบบนี้<sup><a href="#th-ref-1">[1]</a></sup></p>
+
+    <blockquote>"ใช้สี่เลนที่ทำงานร่วมกัน <strong>เป้าหมายและวิจารณญาณ</strong> เป็นของมนุษย์ที่กำหนดผลลัพธ์ ข้อจำกัด ข้อยกเว้น และคุณค่าที่ข้อมูลอดีตให้ไม่ได้ <strong>การสร้างและวิเคราะห์</strong> ให้ AI ค้น เปรียบเทียบ ร่าง จำแนก หรือเสนอภายในขอบเขต <strong>การควบคุมเชิงโครงสร้าง</strong> ใช้ซอฟต์แวร์กำหนดสิทธิ์ Schema วงเงิน รายชื่อแหล่งข้อมูล ธุรกรรม และ Trace <strong>การตรวจและกู้คืน</strong> ให้ผู้มีคุณสมบัติหรือการทดสอบอิสระมีข้อมูลและอำนาจปฏิเสธ ส่งต่อความไม่แน่นอน อนุมัติผลกระทบ และหยุดหรือย้อนระบบ"</blockquote>
+
+    <p>ก่อนจะลงรายละเอียด ผมอยากชี้ที่มาของกรอบนี้ให้ชัด สี่เลนนี้เป็นการสังเคราะห์ของคู่มือเอง ไม่ได้มาจากมาสเตอร์คลาส ไม่ได้มาจากมาตรฐานสากลฉบับใด และไม่ได้มาจาก ETDA หรือ MIT ผมอ้างมันในฐานะโครงการทำงานที่ใช้ได้ ไม่ใช่ในฐานะข้อกำหนด</p>
+
+    <p>คุณค่าของกรอบนี้อยู่ที่คอลัมน์ "ห้ามถืออะไร" มากกว่าคอลัมน์ "ถืออะไร" เพราะความล้มเหลวส่วนใหญ่ที่ผมเห็นไม่ได้เกิดจากการที่เลนใดเลนหนึ่งทำงานของตัวเองไม่ได้ แต่เกิดจากการที่เลนหนึ่งถูกใช้แทนอีกเลนหนึ่ง โดยเฉพาะการเอาเลนที่สี่ไปทำงานของเลนที่สาม</p>
+
+    <div class="table-wrapper">
+        <table>
+            <thead>
+                <tr>
+                    <th>Lane</th>
+                    <th>ถืออะไร</th>
+                    <th>ห้ามถืออะไร</th>
+                    <th>หลักฐานที่เลนนี้ผลิต</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td><strong>เป้าหมายและวิจารณญาณ</strong><br>Purpose and judgment</td>
+                    <td>นิยามผลลัพธ์ที่ต้องการ ข้อจำกัด นิยามของข้อยกเว้น และคุณค่าที่ข้อมูลอดีตให้ไม่ได้</td>
+                    <td>ห้ามถูกใช้เป็นแรงงานตรวจงานจำนวนมากแทนเครื่อง และห้ามถูกเรียกมาตัดสินหลังผลเกิดไปแล้ว</td>
+                    <td>เอกสารเป้าหมายและข้อจำกัดที่ลงนาม นิยามข้อยกเว้น เกณฑ์การยอมรับ</td>
+                </tr>
+                <tr>
+                    <td><strong>การสร้างและวิเคราะห์</strong><br>Generation and analysis</td>
+                    <td>ค้น เปรียบเทียบ ร่าง จำแนก และเสนอ ภายในขอบเขตที่ประกาศไว้</td>
+                    <td>ห้ามเป็นผู้ทำให้เกิดผลจริงด้วยตัวเอง และห้ามเป็นผู้กำหนดขอบเขตของตัวเอง</td>
+                    <td>ข้อเสนอที่มีที่มาอ้างอิงได้ ค่าความไม่แน่นอน และเหตุผลประกอบ</td>
+                </tr>
+                <tr>
+                    <td><strong>การควบคุมเชิงโครงสร้าง</strong><br>Structural control</td>
+                    <td>ซอฟต์แวร์แบบ Deterministic ที่บังคับสิทธิ์ Schema วงเงิน รายชื่อแหล่งข้อมูล ธุรกรรม และการเก็บ Trace</td>
+                    <td>ห้ามถูกแทนที่ด้วยการเตือนในคู่มือ การอบรม หรือความตั้งใจของผู้ใช้</td>
+                    <td>ผลการบังคับกฎที่บันทึกไว้ทุกครั้ง ทั้งครั้งที่ผ่านและครั้งที่ถูกปฏิเสธ</td>
+                </tr>
+                <tr>
+                    <td><strong>การตรวจและกู้คืน</strong><br>Verification and recovery</td>
+                    <td>ผู้มีคุณสมบัติหรือการทดสอบอิสระ ที่มีข้อมูลและอำนาจปฏิเสธ ส่งต่อความไม่แน่นอน อนุมัติผลกระทบ และหยุดหรือย้อนระบบ</td>
+                    <td>ห้ามถูกใช้ตรวจสิ่งที่เลนที่สามบังคับได้อยู่แล้ว และห้ามมีคิวเกินกำลังที่ประกาศไว้</td>
+                    <td>เหตุผลการอนุมัติและ Override บันทึกการปฏิเสธ และหลักฐานว่าย้อนระบบได้จริง</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <p>เลนที่สามคือเลนที่ถูกละเลยมากที่สุด และเป็นเลนที่ชี้ขาดว่ากระบวนงานของคุณจะเป็นการควบคุมหรือเป็นพิธีกรรม <strong>การกำกับดูแลโดยมนุษย์</strong> (human oversight) ไม่ควรถูกใช้ทำงานที่ซอฟต์แวร์ทำได้แน่นอนกว่า ถูกกว่า และไม่เหนื่อย เช่น การตรวจว่าเลขบัญชีปลายทางอยู่ในรายชื่อที่อนุมัติหรือไม่ ยอดรวมเกินวงเงินของผู้ทำรายการหรือไม่ หรือเอกสารแนบครบตาม Schema หรือไม่ ทุกครั้งที่คุณให้คนทำงานสามอย่างนี้ คุณกำลังใช้ทรัพยากรที่หายากที่สุดในองค์กรไปกับงานที่มีอัตราพลาดสูงที่สุดของมนุษย์ และคุณกำลังกินเวลาที่เขาควรใช้กับสิ่งที่เขาเท่านั้นที่ทำได้</p>
+
+    <blockquote>💡 มุมมองของผม: หลักปฏิบัติข้อที่ 3 ของบทนี้เขียนไว้ว่า "อย่าใช้สมาธิมนุษย์บังคับสิ่งที่ซอฟต์แวร์บังคับได้ สิทธิ์ Schema และวงเงินควรเป็น Hard Control"<sup><a href="#th-ref-1">[1]</a></sup> — ผมใช้ประโยคนี้เป็นข้อสอบข้อแรกของทุกกระบวนงานที่เข้ามาให้ทบทวน ถ้ารายการตรวจของผู้ตรวจมีข้อที่เขียนได้เป็นเงื่อนไข if แสดงว่าข้อนั้นไม่ควรอยู่ในรายการตรวจตั้งแต่แรก มันควรอยู่ในโค้ด และทุกข้อที่เราย้ายออกจากสายตาคนไปไว้ในโค้ด คือเวลาที่เราคืนกลับให้เขาไปใช้กับข้อยกเว้น ซึ่งเป็นงานเดียวที่คนทำได้ดีกว่าเครื่องอย่างชัดเจน
+    </blockquote>
+
+    <p>อีกจุดที่ต้องระวังคือความสัมพันธ์ระหว่างเลนที่สองกับเลนที่สี่ ข้อเสนอที่ AI ผลิตออกมามีคุณสมบัติที่อันตรายอย่างหนึ่ง คือมันอ่านลื่นเสมอ ไม่ว่าจะถูกหรือผิด <strong>ระดับผลกระทบ</strong> (consequence) ของข้อเสนอจึงต้องถูกประเมินจากสิ่งที่มันจะไปทำ ไม่ใช่จากความน่าเชื่อถือของภาษาที่มันใช้ และ <strong>อำนาจตัดสินใจ</strong> (decision authority) ที่ระบบได้รับต้องสอดคล้องกับระดับผลกระทบนั้น ไม่ใช่กับความมั่นใจของโมเดล เรื่องนี้คือแกนของตอนหน้าทั้งตอน</p>
+
+    <h2 id="th-comparative-advantage">4. แบ่งงานตามความได้เปรียบเชิงเปรียบเทียบและระดับผลกระทบ</h2>
+
+    <p>มีคำถามที่ตามมาทันทีหลังจากวางสี่เลนเสร็จ คือแล้วในทางปฏิบัติ Task หนึ่ง ๆ ควรถูกจัดให้อยู่ในโหมดไหน มาสเตอร์คลาสตอบคำถามนี้ในช่วง 15:58–19:44 และคู่มือถอดความไว้ในภาคผนวก A หัวข้อ 7<sup><a href="#th-ref-3">[3]</a></sup> คำตอบเริ่มจากการปฏิเสธจุดยืนสองอย่างพร้อมกัน — ไม่เริ่มจากความเชื่อว่า "ต้องทำอัตโนมัติให้ได้มากที่สุด" และไม่เริ่มจากความเชื่อว่า "ทุกกรณีต้องมีคนอนุมัติ" แต่แบ่งงานตามความได้เปรียบเชิงเปรียบเทียบและตามระดับผลกระทบ</p>
+
+    <p>คำว่า <strong>ความเกื้อหนุนระหว่างคนกับ AI</strong> (human–AI complementarity) ในคู่มือหมายถึงเรื่องนี้โดยตรง ไม่ใช่คำขวัญเรื่องความร่วมมือ แต่เป็นข้อความเชิงเศรษฐศาสตร์ว่าแต่ละฝ่ายควรทำสิ่งที่ตัวเองเสียเปรียบน้อยที่สุด และสิ่งที่ตัดสินว่าจะยอมให้เกิดข้อผิดพลาดในระดับใดได้ คือผลกระทบเมื่อผิด ไม่ใช่ความสามารถเฉลี่ยของเครื่องมือ</p>
+
+    <div class="table-wrapper">
+        <table>
+            <thead>
+                <tr>
+                    <th>Mode</th>
+                    <th>เลือกเมื่อ</th>
+                    <th>คนทำอะไร</th>
+                    <th>AI ทำอะไร</th>
+                    <th>ต้องมีอะไรก่อนจึงใช้โหมดนี้ได้</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td><strong>Human-only</strong></td>
+                    <td>หลักฐานยังไม่ดีพอ ผลกระทบสูง หรือความสัมพันธ์และความรับผิดชอบส่วนบุคคลเป็นสาระของงานนั้น</td>
+                    <td>ทำทั้งหมด ตั้งแต่ตั้งคำถามจนถึงรับผิดชอบผล</td>
+                    <td>ไม่มีบทบาท หรือมีได้เฉพาะการค้นข้อมูลที่ไม่เข้าไปในเหตุผลของคำตัดสิน</td>
+                    <td>คำอธิบายว่าทำไมงานนี้อยู่ในกลุ่มนี้ และเงื่อนไขที่จะทำให้มันย้ายออกได้ในอนาคต</td>
+                </tr>
+                <tr>
+                    <td><strong>Human plus AI</strong></td>
+                    <td>ปริมาณงานสูง หลักฐานพอใช้ได้ และดุลยพินิจของคนยังเปลี่ยนผลลัพธ์อย่างมีนัย</td>
+                    <td>ตัดสิน ชั่งน้ำหนัก และรับผิดชอบผล</td>
+                    <td>รวบรวม คาดการณ์ สรุป และเสนอทางเลือกพร้อมที่มา</td>
+                    <td>กำลังการตรวจที่คำนวณแล้ว ไม่ใช่ความหวังว่าทีมเดิมจะรับไหว</td>
+                </tr>
+                <tr>
+                    <td><strong>AI-first with oversight</strong></td>
+                    <td>กรณีปกติมีนิยามชัด ผลกระทบต่อกรณีต่ำถึงกลาง และมีเส้นทางย้อนกลับที่ทดสอบแล้ว</td>
+                    <td>เฝ้าดูภาพรวม จัดการข้อยกเว้น กำหนดกรอบดุลยพินิจ สื่อสาร และเป็นเจ้าของผลลัพธ์</td>
+                    <td>จัดการกรณีปกติภายในขอบเขตที่ประกาศไว้</td>
+                    <td>ขอบเขตที่เขียนไว้ชัด เกณฑ์ส่งต่อความไม่แน่นอน และหลักฐานว่าหยุดหรือย้อนระบบได้จริง</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <p>คู่มือเติมประโยคหนึ่งต่อท้ายตารางแบบนี้ ซึ่งผมคิดว่าเป็นประโยคที่หัวหน้าฝ่ายบุคคลควรอ่านมากกว่าหัวหน้าฝ่ายเทคโนโลยี — บทบาทของคนจะเลื่อนจากการลงมือทำทุกขั้นตอน ไปเป็นการตรวจ การจัดการข้อยกเว้น การกำหนดกรอบดุลยพินิจ การสื่อสาร และการเป็นเจ้าของผลลัพธ์ ดังนั้น Reskilling จึงมากกว่าการสอนเขียน Prompt มันคือการเตรียมคนให้รับส่วนผสมของงานชุดใหม่<sup><a href="#th-ref-1">[1]</a></sup></p>
+
+    <div class="alert danger">
+        <strong>🚨 กับดักที่พบบ่อยที่สุดของโหมด Human plus AI</strong> คือการเปลี่ยนผู้เชี่ยวชาญที่หายากที่สุดในองค์กรให้กลายเป็นคอขวดของการตรวจ เมื่อ AI เพิ่มปริมาณข้อเสนอขึ้นหลายเท่า แต่จำนวนผู้ตรวจเท่าเดิม ผลลัพธ์คือคิวที่ยาวขึ้นเรื่อย ๆ จนกระทั่งการตรวจกลายเป็นการประทับตราโดยอัตโนมัติ นี่ไม่ใช่ความล้มเหลวของคน มันคือความล้มเหลวของการออกแบบ เพราะไม่มีใครคำนวณกำลังการตรวจไว้ตั้งแต่ต้น
+    </div>
+
+    <h3>หลักฐานเตือนว่าไม่มีกระบวนงานสูตรเดียวที่ใช้ได้ทุกที่</h3>
+
+    <p>คู่มือวางหลักฐานสามชิ้นไว้ตรงนี้เพื่อกันไม่ให้ผู้อ่านเลือกโหมดจากความรู้สึก ผมยกมาเพียงย่อหน้าเดียวและยกมาเพื่อเหตุผลเดียว คือเพื่อบอกว่า<strong>ต้องวัดในงานจริงของคุณเอง</strong> ไม่ใช่เพื่อใช้เป็นเป้าหมาย ตัวเลขทั้งสามชุดนี้เป็นหัวใจของตอนหน้า ไม่ใช่ของตอนนี้</p>
+
+    <p>ชิ้นแรก การใช้งานจริงกับเจ้าหน้าที่บริการลูกค้า 5,179 คนในบริษัทเดียว พบว่าจำนวนเรื่องที่ปิดได้ต่อชั่วโมงเพิ่มขึ้นเฉลี่ย 14% โดยกลุ่มประสบการณ์น้อยเพิ่มถึง 34% ส่วนกลุ่มเชี่ยวชาญสูงแทบไม่เปลี่ยน — เป็นผลจากบริษัทเดียว กระบวนงานเดียว และช่วงเวลาเดียว ไม่ใช่ค่าที่ยกไปใช้กับงานอื่นได้ และงานชิ้นนี้ยังเป็น working paper ไม่ใช่บทความที่ผ่าน peer review<sup><a href="#th-ref-4">[4]</a></sup> ชิ้นที่สอง การทดลองแบบลงทะเบียนล่วงหน้ากับที่ปรึกษา 758 คน พบว่าในงานที่อยู่ในขอบเขตความสามารถของโมเดล ผู้ใช้ AI ทำงานได้มากขึ้น 12.2% และเร็วขึ้น 25.1% แต่ในงานบริหารซับซ้อนหนึ่งงานที่เลือกให้อยู่นอกขอบเขต โอกาสตอบถูกกลับลดลง 19% — เป็นงานจำลอง ประชากรเดียว โมเดลรุ่นเดียว และเส้นขอบเขตนั้นขยับได้<sup><a href="#th-ref-5">[5]</a></sup> ชิ้นที่สาม Meta-analysis ปี 2024 จาก 106 การทดลอง (370 effect size) พบว่าระบบคนบวก AI ดีกว่าคนอย่างเดียวโดยเฉลี่ย (g = 0.64) แต่แย่กว่าฝ่ายที่เก่งกว่าระหว่างคนกับ AI (g = −0.23) และงานประเภทตัดสินใจคือกลุ่มที่เสียผลชัดที่สุด — งานวิจัยที่รวบรวมสิ้นสุดมิถุนายน 2023 และมีความแปรปรวนสูง จึงต้องวัดในงานจริงของเราเอง<sup><a href="#th-ref-6">[6]</a></sup></p>
+
+    <p>ผมขอย้ำเงื่อนไขของชิ้นที่สาม เพราะมันเป็นชิ้นที่ถูกยกไปใช้ผิดบ่อยที่สุด <strong>ค่าทั้งสองต้องเดินทางไปด้วยกันเสมอ</strong> การยก −0.23 ไปอย่างเดียวทำให้อ่านเหมือนงานวิจัยบอกว่าคนบวก AI แย่กว่าไม่ทำอะไร ซึ่งไม่ใช่ และการยก 0.64 ไปอย่างเดียวทำให้อ่านเหมือนงานวิจัยรับรองว่าจับคู่แล้วดีขึ้นเสมอ ซึ่งก็ไม่ใช่ ข้อสรุปเชิงออกแบบที่คู่มือดึงออกมาจากหลักฐานทั้งสามชิ้นจึงเป็นประโยคเดียว — ให้วัดทั้งสามแบบ คือ Human-only, AI-only และแบบผสม บนงานจริงชิ้นเดียวกัน แล้วค่อยเลือก<sup><a href="#th-ref-1">[1]</a></sup></p>
+
+    <h2 id="th-lannabuild">5. LannaBuild Engineering — ย้ายการออกแบบขึ้นไปต้นน้ำ</h2>
+
+    <p>คู่มือใช้กรณีของ LannaBuild Engineering <em>(กรณีสมมติจากหนังสือ)</em> เป็นตัวอย่างของการย้ายจุดออกแบบ และผมชอบกรณีนี้เพราะมันเริ่มจากความล้มเหลวที่ตรงกับหัวข้อ <a href="#th-ceremonial-control">1</a> แบบพอดีเป๊ะ</p>
+
+    <p>รูปแบบเดิมคือ สั่งให้ AI เขียนข้อเสนอประมูลทั้งฉบับ แล้วให้วิศวกรอาวุโสหนึ่งคนอ่านร่างยาวภายใต้เส้นตาย นี่คือด่านพิธีกรรมในรูปแบบที่บริสุทธิ์ที่สุด วิศวกรคนนั้นมีความสามารถครบ แต่ไม่มีเวลา ไม่มีหลักฐานว่าข้อความแต่ละย่อหน้ามาจากไหน และในทางปฏิบัติก็ไม่มีอำนาจปฏิเสธ เพราะการปฏิเสธแปลว่าไม่ได้ยื่นซองทัน องค์กรจึงได้ความเร็วในการร่างมา และได้ความเสี่ยงที่ไม่มีใครมองเห็นแถมมาด้วย</p>
+
+    <p>การออกแบบใหม่ของ LannaBuild ไม่ได้เริ่มที่การทำให้การตรวจดีขึ้น มันเริ่มก่อนหน้านั้น — <strong>เริ่มก่อนการเขียน</strong> ซึ่งเป็นการย้ายจุดออกแบบขึ้นไปต้นน้ำ ตารางข้างล่างคือการถอดกระบวนงานใหม่ของคู่มือ แล้วกำกับแต่ละขั้นด้วยเลนจากหัวข้อ <a href="#th-four-lanes">3</a> ตัวกระบวนงานเป็นของคู่มือ ส่วนคอลัมน์เลนและหลักฐานเป็นการกำกับของผมเอง</p>
+
+    <div class="table-wrapper">
+        <table>
+            <thead>
+                <tr>
+                    <th>ขั้นตอนหลังออกแบบใหม่</th>
+                    <th>Lane</th>
+                    <th>เหตุผล</th>
+                    <th>หลักฐานที่ผลิตออกมา</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>AI แยกข้อกำหนดจากเอกสารประมูล และสร้าง Compliance Matrix ที่ย้อนดูแหล่งได้</td>
+                    <td>การสร้างและวิเคราะห์</td>
+                    <td>เป็นงานค้นและจำแนกปริมาณมากในขอบเขตที่ชัด และผลลัพธ์ตรวจย้อนได้ทีละบรรทัด</td>
+                    <td>Compliance Matrix ที่ทุกแถวชี้กลับไปยังหน้าและข้อของเอกสารต้นทาง</td>
+                </tr>
+                <tr>
+                    <td>ระบบ Deterministic ตรวจวันที่ ยอดรวม หน่วย และเอกสารบังคับ</td>
+                    <td>การควบคุมเชิงโครงสร้าง</td>
+                    <td>ทั้งสี่อย่างเขียนเป็นกฎได้ทั้งหมด จึงไม่ควรใช้สายตาคน</td>
+                    <td>รายการข้อที่ไม่ผ่าน พร้อมกฎที่ถูกละเมิดและเวลาที่ตรวจ</td>
+                </tr>
+                <tr>
+                    <td>ผู้เชี่ยวชาญเขียนข้อยกเว้นทางเทคนิค</td>
+                    <td>เป้าหมายและวิจารณญาณ</td>
+                    <td>เป็นจุดที่ข้อมูลอดีตให้คำตอบไม่ได้ และเป็นจุดที่ดุลยพินิจเปลี่ยนผลจริง</td>
+                    <td>ข้อยกเว้นที่มีเจ้าของชื่อกำกับ พร้อมเหตุผลทางวิศวกรรม</td>
+                </tr>
+                <tr>
+                    <td>AI ประกอบเฉพาะโมดูลที่อนุมัติแล้ว</td>
+                    <td>การสร้างและวิเคราะห์ ภายใต้ขอบเขตของการควบคุมเชิงโครงสร้าง</td>
+                    <td>ขอบเขตถูกจำกัดด้วยรายชื่อโมดูลที่อนุมัติ ไม่ใช่ด้วยคำสั่งใน Prompt</td>
+                    <td>ร่างที่ทุกส่วนอ้างกลับไปยังโมดูลต้นทางที่มีสถานะอนุมัติ</td>
+                </tr>
+                <tr>
+                    <td>เจ้าของด้านพาณิชย์และกฎหมายอนุมัติราคาและคำมั่น</td>
+                    <td>การตรวจและกู้คืน</td>
+                    <td>ราคาและคำมั่นคือสองสิ่งที่ผูกพันองค์กร จึงต้องมีเจ้าของที่มีอำนาจจริงลงนาม</td>
+                    <td>บันทึกการอนุมัติแยกตามประเภทข้อผูกพัน พร้อมเหตุผล</td>
+                </tr>
+                <tr>
+                    <td>ข้อกล่าวอ้างที่ไม่มีหลักฐานถูกระงับ ไม่ใช่ถูกไฮไลต์</td>
+                    <td>การควบคุมเชิงโครงสร้าง</td>
+                    <td>การไฮไลต์คือการโยนงานกลับไปให้สายตาคนอีกครั้ง การระงับคือการไม่ให้มันเข้าสู่ร่างตั้งแต่แรก</td>
+                    <td>รายการข้อความที่ถูกระงับ พร้อมเหตุผลว่าขาดหลักฐานอะไร</td>
+                </tr>
+                <tr>
+                    <td>คำถามขอชี้แจงและเหตุผลที่แพ้ประมูล ถูกเพิ่มเข้าชุดประเมิน</td>
+                    <td>การตรวจและกู้คืน ต่อเข้าวงจรการเรียนรู้</td>
+                    <td>เป็นจุดเดียวที่ผลลัพธ์จริงย้อนกลับมาเปลี่ยนระบบในรอบถัดไป</td>
+                    <td>ชุดประเมินที่โตขึ้นทุกรอบ พร้อมวันที่และแหล่งที่มาของแต่ละรายการ</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <p>บรรทัดที่หกคือบรรทัดที่ผมอยากให้คุณจำมากที่สุด — <strong>"ระงับ ไม่ใช่ไฮไลต์"</strong> ความแตกต่างนี้ดูเล็กมากบนกระดาษ แต่มันคือความแตกต่างระหว่างเลนที่สามกับเลนที่สี่ทั้งหมด การไฮไลต์ข้อความที่ไม่มีหลักฐานแล้วส่งให้คนตัดสิน คือการเพิ่มภาระให้ผู้ตรวจตามปริมาณที่ AI ผลิต ซึ่งแปลว่ายิ่งใช้มากยิ่งแย่ ส่วนการระงับคือการทำให้ข้อความนั้นไม่มีอยู่ในร่างเลย ภาระของผู้ตรวจจึงไม่โตตามปริมาณ และเวลาที่เขามีถูกสงวนไว้ให้กับข้อยกเว้นจริง ๆ</p>
+
+    <p>ผลลัพธ์ที่คู่มือสรุปไว้คือ AI ลดงานประกอบเอกสารลง ส่วนคนย้ายไปเน้นกลยุทธ์ ข้อยกเว้น คำมั่น และการเรียนรู้<sup><a href="#th-ref-1">[1]</a></sup> ขอย้ำอีกครั้งว่ากรณีนี้เป็นกรณีสมมติ และคู่มือไม่ได้ให้ตัวเลขใด ๆ กับมันเลย ไม่มีมูลค่าซอง ไม่มีจำนวนคน ไม่มีอัตราชนะประมูล และผมจะไม่แต่งขึ้นมาเติม สิ่งที่ยืมไปใช้ได้คือลำดับของการออกแบบ ไม่ใช่ตัวเลขผลลัพธ์</p>
+
+    <h2 id="th-teardown">6. เวิร์กช็อป Workflow teardown and rebuild — เจ็ดขั้น และตารางกำกับสี่เลน</h2>
+
+    <p>ก่อนเข้าเวิร์กช็อป ผมอยากวางหลักปฏิบัติห้าประการของบทนี้ไว้เป็นกติกาของห้อง เพราะเจ็ดขั้นที่ตามมาจะกลายเป็นแบบฟอร์มเปล่า ๆ ถ้าไม่มีห้าข้อนี้กำกับ<sup><a href="#th-ref-1">[1]</a></sup></p>
+
+    <ol>
+        <li><strong>แยกงานในระดับการตัดสินใจ</strong> ออกแบบ Task ที่สร้างผลลัพธ์ ไม่ทำตำแหน่งงานทั้งตำแหน่งให้เป็นอัตโนมัติ</li>
+        <li><strong>วางคนในจุดที่วิจารณญาณเปลี่ยนผล</strong> ใช้ผู้เชี่ยวชาญกับเป้าหมาย ข้อยกเว้น คำมั่น และความกำกวม</li>
+        <li><strong>อย่าใช้สมาธิมนุษย์บังคับสิ่งที่ซอฟต์แวร์บังคับได้</strong> สิทธิ์ Schema และวงเงินควรเป็น Hard Control <em>(ข้อที่ผมยกมาไว้ในหัวข้อ <a href="#th-four-lanes">3</a> แล้ว)</em></li>
+        <li><strong>ออกแบบการตรวจเป็นกำลังการผลิต</strong> ระบุคุณสมบัติผู้ตรวจ หลักฐาน เวลา ขนาดคิว และอำนาจปฏิเสธ</li>
+        <li><strong>รักษาเส้นทางสร้างทักษะ</strong> หาก AI รับงานพื้นฐาน ต้องตอบให้ได้ว่าคนใหม่จะสะสมวิจารณญาณจากไหน</li>
+    </ol>
+
+    <p>ข้อ 4 เป็นข้อที่เปลี่ยนวิธีคิดของทีมได้เร็วที่สุด คำว่า "กำลังการผลิต" แปลว่าการตรวจต้องถูกวางแผนแบบเดียวกับที่เราวางแผนกำลังผลิตของโรงงาน คือมีหน่วยนับ มีเพดาน มีคิว และมีสิ่งที่เกิดขึ้นเมื่อคิวล้น ไม่ใช่แบบที่เราวางแผน "ความรอบคอบ" ส่วนข้อ 5 เป็นข้อที่จ่ายราคาช้าที่สุดแต่แพงที่สุด เพราะงานพื้นฐานที่ AI รับไปทำ คืองานเดียวกับที่เคยใช้ฝึกคนรุ่นใหม่ให้มีดุลยพินิจ ถ้าเราตัดมันออกโดยไม่สร้างเส้นทางใหม่ ในอีกห้าปีเราจะไม่มีผู้ตรวจที่มีคุณสมบัติเหลืออยู่เลย</p>
+
+    <h3>เจ็ดขั้นของ Workflow teardown and rebuild</h3>
+
+    <p>คอลัมน์ <em>Step</em> ในตารางข้างล่างเป็นข้อความของคู่มือ ส่วนคอลัมน์ <em>Question</em>, <em>Output</em> และ <em>Who</em> เป็นการขยายเชิงปฏิบัติของผม เพื่อให้แต่ละขั้นจบลงด้วยของที่จับต้องได้และมีชื่อคนกำกับ ไม่ใช่จบลงด้วยความเข้าใจร่วม</p>
+
+    <div class="table-wrapper">
+        <table>
+            <thead>
+                <tr>
+                    <th>#</th>
+                    <th>Step</th>
+                    <th>Question</th>
+                    <th>Output</th>
+                    <th>Who</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>1</td>
+                    <td>กำหนดผลลัพธ์ ลูกค้า ผลกระทบ และค่าฐาน</td>
+                    <td>ถ้ากระบวนงานนี้ทำงานได้ดีขึ้น ใครรู้สึกได้ก่อน และวันนี้ค่านั้นเท่าไร</td>
+                    <td>นิยาม Outcome หนึ่งบรรทัด พร้อมค่าฐานที่วัดจากข้อมูลจริง ไม่ใช่จากความจำ</td>
+                    <td>เจ้าของกระบวนงาน ร่วมกับตัวแทนลูกค้าภายในหรือภายนอก</td>
+                </tr>
+                <tr>
+                    <td>2</td>
+                    <td>แยก Workflow เป็นการตัดสินใจและงานที่สร้างหลักฐาน</td>
+                    <td>ในเส้นทางนี้มีจุดตัดสินใจกี่จุด และแต่ละจุดผลิตหลักฐานอะไรออกมา</td>
+                    <td>แผนผังที่กล่องทุกใบเป็นการตัดสินใจหรือหลักฐาน ไม่ใช่ชื่อแผนก</td>
+                    <td>คนที่ทำงานนั้นจริงทุกวัน ไม่ใช่หัวหน้าที่เคยทำเมื่อสามปีก่อน</td>
+                </tr>
+                <tr>
+                    <td>3</td>
+                    <td>กำกับแต่ละ Task ว่าเป็นของมนุษย์ AI ระบบ Deterministic หรือร่วมกันพร้อมเหตุผล</td>
+                    <td>Task นี้อยู่เลนไหน และเหตุผลคืออะไร ถ้าเหตุผลคือ "เคยทำมาแบบนี้" ถือว่ายังไม่มีเหตุผล</td>
+                    <td>ตารางกำกับสี่เลน ที่ทุกแถวมีเหตุผลเขียนเป็นประโยคเต็ม</td>
+                    <td>ทีมออกแบบร่วมกัน โดยผู้ปฏิบัติมีสิทธิ์คัดค้านการจัดเลน</td>
+                </tr>
+                <tr>
+                    <td>4</td>
+                    <td>ออกแบบจุดส่งต่อ บริบท สิทธิ์ เกณฑ์ และเส้นทางความไม่แน่นอน</td>
+                    <td>เมื่อส่งต่อ ผู้รับได้บริบทอะไรไปด้วย และถ้าระบบไม่มั่นใจ เรื่องไปที่ใคร</td>
+                    <td>ข้อกำหนดจุดส่งต่อทีละจุด พร้อม Threshold ที่เป็นตัวเลข และปลายทางของ Escalation</td>
+                    <td>สถาปนิกระบบ ร่วมกับเจ้าของสิทธิ์และเจ้าของความเสี่ยง</td>
+                </tr>
+                <tr>
+                    <td>5</td>
+                    <td>ทดสอบกรณีปกติ กรณีขอบ และกรณีล้มเหลวหรือถูกโจมตี</td>
+                    <td>เรามีเคสจริงของทั้งสามประเภทหรือยัง และผลที่ได้ต่างจากที่ออกแบบไว้ตรงไหน</td>
+                    <td>บันทึกผลการทดสอบสามชุด พร้อมรายการสิ่งที่ต้องแก้ก่อนใช้จริง</td>
+                    <td>ผู้ทดสอบที่ไม่ใช่คนออกแบบ เพื่อให้การทดสอบเป็นอิสระ</td>
+                </tr>
+                <tr>
+                    <td>6</td>
+                    <td>ประมาณ Cycle Time กำลังผู้ตรวจ ต้นทุน และภาระกู้คืน</td>
+                    <td>ถ้าปริมาณโตสามเท่า คิวของผู้ตรวจเป็นอย่างไร และการกู้คืนหนึ่งครั้งกินเวลาเท่าไร</td>
+                    <td>ตัวเลขประมาณการสี่ตัว พร้อมสมมติฐานที่เขียนไว้ให้ตรวจสอบได้</td>
+                    <td>เจ้าของกระบวนงาน ร่วมกับฝ่ายการเงินและหัวหน้าทีมผู้ตรวจ</td>
+                </tr>
+                <tr>
+                    <td>7</td>
+                    <td>เลือกการทดลองขอบเขตแคบและตั้งเจ้าของ Workflow</td>
+                    <td>เราจะทดลองกับงานชุดไหน นานเท่าไร และใครมีอำนาจสั่งหยุด</td>
+                    <td>ข้อเสนอการทดลองหนึ่งหน้า ที่ระบุชุดงาน ระยะเวลา เกณฑ์ตัดสิน และชื่อเจ้าของ</td>
+                    <td>เจ้าของ Workflow ที่มีชื่อจริง ไม่ใช่ชื่อคณะกรรมการ</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <h3>ตารางกำกับสี่เลน</h3>
+
+    <p>ขั้นที่ 2 และ 3 คือหัวใจของสิ่งที่คู่มือเรียกว่า <strong>การแยกงานเป็นภารกิจย่อย</strong> (task decomposition) และขั้นที่ 3 กับ 4 ก็เป็นขั้นที่ห้องประชุมมักเดินหลงมากที่สุด เพราะทุกคนเห็นด้วยว่า Task ควรถูกจัดเลน แต่พอลงมือจัดจริงก็กลายเป็นการเถียงกันด้วยความรู้สึก ตารางข้างล่างคือแบบฟอร์มที่ผมใช้บังคับให้การจัดเลนจบลงด้วยเหตุผลและหลักฐาน แถวตัวอย่างยกมาจากกรณี LannaBuild ในหัวข้อ <a href="#th-lannabuild">5</a></p>
+
+    <div class="alert">
+        <strong>📌 ตารางนี้ไม่ใช่ตารางของหนังสือ</strong> คู่มือให้เจ็ดขั้นมา แต่ไม่ได้ให้แบบฟอร์มนี้ ตารางกำกับหกคอลัมน์ข้างล่างเป็นการขยายขั้นที่ 3 และ 4 ของผมเอง เพื่อใช้ในซีรีส์นี้ ถ้าคุณนำไปใช้แล้วพบว่าคอลัมน์ไหนไม่ทำงานในบริบทของคุณ ให้ตัดออกได้ตามสบาย — แต่ผมแนะนำให้เก็บคอลัมน์ <em>Consequence if wrong</em> ไว้เป็นคอลัมน์สุดท้ายที่จะยอมตัด เพราะมันเป็นคอลัมน์เดียวที่กันไม่ให้การจัดเลนถูกตัดสินด้วยความสะดวก
+    </div>
+
+    <div class="table-wrapper">
+        <table>
+            <thead>
+                <tr>
+                    <th>Task</th>
+                    <th>Lane</th>
+                    <th>Reason</th>
+                    <th>Evidence produced</th>
+                    <th>Consequence if wrong</th>
+                    <th>Handoff to</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>ตรวจว่าเอกสารแนบครบตามรายการบังคับ</td>
+                    <td>การควบคุมเชิงโครงสร้าง</td>
+                    <td>เขียนเป็นกฎได้ทั้งหมด และไม่ต้องใช้ดุลยพินิจใด ๆ</td>
+                    <td>รายการเอกสารที่ขาด พร้อมเวลาที่ตรวจ</td>
+                    <td>ซองถูกตัดสิทธิ์ตั้งแต่ขั้นตรวจคุณสมบัติ กู้คืนไม่ได้หลังปิดรับ</td>
+                    <td>คืนกลับผู้ยื่นทันที ไม่ต้องเข้าคิวคน</td>
+                </tr>
+                <tr>
+                    <td>สร้าง Compliance Matrix จากเอกสารประมูล</td>
+                    <td>การสร้างและวิเคราะห์</td>
+                    <td>งานค้นและจำแนกปริมาณมากในขอบเขตชัด ตรวจย้อนได้ทีละแถว</td>
+                    <td>Matrix ที่ทุกแถวชี้กลับหน้าและข้อของต้นฉบับ</td>
+                    <td>ตกข้อกำหนดบางข้อ ทำให้ข้อเสนอไม่ผ่านเกณฑ์ทางเทคนิค</td>
+                    <td>ผู้เชี่ยวชาญทบทวนเฉพาะแถวที่ระบบทำเครื่องหมายว่าไม่แน่ใจ</td>
+                </tr>
+                <tr>
+                    <td>ตัดสินข้อยกเว้นทางเทคนิคที่เบี่ยงจากข้อกำหนด</td>
+                    <td>เป้าหมายและวิจารณญาณ</td>
+                    <td>ข้อมูลอดีตให้คำตอบไม่ได้ และเป็นจุดที่ดุลยพินิจเปลี่ยนผลจริง</td>
+                    <td>ข้อยกเว้นที่มีชื่อเจ้าของและเหตุผลทางวิศวกรรม</td>
+                    <td>รับความเสี่ยงทางวิศวกรรมที่บริษัทไม่ตั้งใจจะรับ</td>
+                    <td>เจ้าของด้านพาณิชย์และกฎหมาย เพื่ออนุมัติผลผูกพัน</td>
+                </tr>
+                <tr>
+                    <td>อนุมัติราคาและคำมั่นในข้อเสนอ</td>
+                    <td>การตรวจและกู้คืน</td>
+                    <td>เป็นข้อผูกพันขององค์กร จึงต้องมีผู้มีอำนาจจริงลงนาม</td>
+                    <td>บันทึกการอนุมัติแยกตามประเภทข้อผูกพัน</td>
+                    <td>ผูกพันในเงื่อนไขที่ทำไม่ได้จริง ย้อนกลับได้ยากมากหลังยื่น</td>
+                    <td>ยื่นซอง และส่งผลลัพธ์เข้าชุดประเมิน</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <h3>ใครควรอยู่ในห้องตอนกรอกตารางนี้</h3>
+
+    <p>คำถามนี้สำคัญกว่าที่หน้าตาของมันบอก เพราะตารางข้างบนกรอกได้เร็วมากถ้ากรอกโดยคนที่ไม่ได้ทำงานนั้น และผลที่ได้จะสวยงามและผิด รายงานของ MIT Sloan ปี 2023 ซึ่งอ้างอิงการสัมภาษณ์กว่า 50 ครั้ง เสนอให้ดึง <strong>เสียงและการมีส่วนร่วมของพนักงาน</strong> (worker voice) เข้ามาตั้งแต่ขั้นนิยามปัญหาและออกแบบกระบวนงาน ไม่ใช่มาขอความเห็นในฐานะ "ผู้ใช้ปลายทาง" หลังออกแบบเสร็จแล้ว<sup><a href="#th-ref-7">[7]</a></sup></p>
+
+    <p>เหตุผลที่รายงานให้ไว้ตรงกับปัญหาของขั้นที่ 2 พอดี — คนที่ทำงานนั้นทุกวันคือคนที่รู้ว่ากล่องแต่ละใบในแผนผังจริง ๆ แล้วมีขั้นตอนย่อยอะไรซ่อนอยู่ และรู้ว่ากรณีขอบหน้าตาเป็นอย่างไร ความรู้ชุดนี้เป็นความรู้เชิงปฏิบัติที่ไม่เคยถูกเขียนลงในเอกสารใด รายงานเองก็ตั้งข้อสังเกตต่อว่า การมีคนอยู่ในห้องยังไม่พอ เพราะความรู้ที่เป็น tacit นั้นอาจไม่เคยถูกแปลงเป็นคำพูดมาก่อน จึงต้องมีวิธีถามที่ช่วยดึงมันออกมา ไม่ใช่แค่เปิดโอกาสให้พูด</p>
+
+    <p>ต้องกำกับขอบเขตไว้ด้วยว่ารายงานฉบับนี้เป็นรายงานที่ศึกษาบริบทสหรัฐอเมริกาในปี 2023 ไม่ได้พูดถึงองค์กรไทย ไม่ได้พูดถึงกฎหมายแรงงานไทย และไม่ได้พูดถึงแนวปฏิบัติของไทย คู่มือเองก็กำกับไว้ว่าคำแนะนำเชิงออกแบบลักษณะนี้ต้องปรับให้เข้ากับโครงสร้างการมีส่วนร่วม ความสัมพันธ์แรงงาน วัฒนธรรม และกฎหมายในท้องถิ่น<sup><a href="#th-ref-1">[1]</a></sup></p>
+
+    <p>ขั้นที่ 7 คือขั้นที่ทำให้ทั้งเวิร์กช็อปมีความหมาย ผลลัพธ์ของ teardown ไม่ใช่นโยบายใหม่ ไม่ใช่ประกาศ และไม่ใช่แผนภาพที่สวยขึ้น แต่คือ<strong>การทดลองที่มีขอบเขตแคบและมีเจ้าของที่มีชื่อ</strong> เหตุผลเชิงหลักฐานอยู่ในหัวข้อ <a href="#th-comparative-advantage">4</a> แล้ว — เมื่อ meta-analysis บอกว่าผลของการจับคู่คนกับ AI แปรปรวนสูงและขึ้นกับประเภทงานอย่างมาก สิ่งเดียวที่ตอบได้ว่าการออกแบบของคุณได้ผลหรือไม่คือการวัดในงานของคุณเอง ไม่ใช่การอ้างค่าเฉลี่ยจากงานของคนอื่น และการวัดจะเกิดขึ้นได้ก็ต่อเมื่อมีคนหนึ่งคนที่ชื่อของเขาผูกอยู่กับผลลัพธ์นั้น</p>
+
+    <h2 id="th-metrics-failures">7. ตัวชี้วัดสำคัญ รูปแบบความล้มเหลว และเส้นทางฝั่งไทย</h2>
+
+    <p>คู่มือให้รายการตัวชี้วัดของบทนี้ไว้ยาวกว่าที่ผมยกมา เพราะมันรวมทั้งตัวชี้วัดด้านผลลัพธ์และด้านเศรษฐศาสตร์ไว้ในย่อหน้าเดียว ตารางข้างล่างคือชุดย่อยเฉพาะที่ใช้ตัดสินว่า<em>การออกแบบ</em>ทำงานหรือไม่ ซึ่งเป็นคำถามของตอนนี้ ผมเติมคอลัมน์ Scorecard ตามระบบหกคอลัมน์ของซีรีส์ เพื่อให้เห็นว่าตัวชี้วัดแต่ละตัวไปโผล่ที่มุมมองไหนของกระดานผู้บริหาร</p>
+
+    <div class="table-wrapper">
+        <table>
+            <thead>
+                <tr>
+                    <th>Metric</th>
+                    <th>นิยามที่ใช้วัดจริง</th>
+                    <th>เก็บจากไหน</th>
+                    <th>Scorecard</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>End-to-end cycle time</td>
+                    <td>เวลาตั้งแต่เรื่องเข้าจนถึงผลลัพธ์ที่ลูกค้ารับได้ นับรวมเวลารอทุกช่วง</td>
+                    <td>Timestamp ของระบบรับเรื่องและระบบส่งมอบ ไม่ใช่การจับเวลาของทีม</td>
+                    <td>Value</td>
+                </tr>
+                <tr>
+                    <td>First-pass yield</td>
+                    <td>สัดส่วนเรื่องที่ผ่านตั้งแต่รอบแรกโดยไม่ต้องแก้หรือส่งกลับ</td>
+                    <td>สถานะของเรื่องในระบบงาน นับเฉพาะเรื่องที่ปิดแล้ว</td>
+                    <td>Quality</td>
+                </tr>
+                <tr>
+                    <td>Correction minutes by task</td>
+                    <td>นาทีที่ใช้แก้งาน แยกตาม Task ไม่ใช่รวมทั้งกระบวนงาน</td>
+                    <td>บันทึกเวลาของงานแก้ ผูกกับรหัส Task ต้นทางที่ทำให้ต้องแก้</td>
+                    <td>Economics</td>
+                </tr>
+                <tr>
+                    <td>Reviewer queue</td>
+                    <td>ขนาดคิวและเวลารอเฉลี่ยของผู้ตรวจ เทียบกับเพดานคิวที่ประกาศไว้</td>
+                    <td>ระบบคิวของโต๊ะจัดการข้อยกเว้น เก็บรายวัน ไม่ใช่รายเดือน</td>
+                    <td>People</td>
+                </tr>
+                <tr>
+                    <td>Escalation precision</td>
+                    <td>สัดส่วนเรื่องที่ถูกส่งต่อขึ้นมาแล้วสมควรถูกส่งจริง ใช้ปรับ Threshold ในรอบถัดไป</td>
+                    <td>ผลการตัดสินของผู้ตรวจ เทียบกับเหตุผลที่ระบบใช้ส่งต่อ</td>
+                    <td>Learning</td>
+                </tr>
+                <tr>
+                    <td>Automation by consequence</td>
+                    <td>สัดส่วนงานอัตโนมัติ แยกตามระดับผลกระทบ ไม่ใช่ค่ารวมค่าเดียว</td>
+                    <td>ทะเบียนกระบวนงาน ผูกกับการจัดระดับผลกระทบของแต่ละกรณี</td>
+                    <td>Risk</td>
+                </tr>
+                <tr>
+                    <td>Recovery time</td>
+                    <td>เวลาตั้งแต่พบว่าผลผิดจนกลับสู่สถานะที่ถูกต้อง รวมเวลาแจ้งผู้ได้รับผลกระทบ</td>
+                    <td>บันทึก Incident ที่มีเวลาเริ่มและเวลาปิดจริง</td>
+                    <td>Risk</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <p>มีกฎหนึ่งข้อที่คู่มือเขียนไว้ท้ายรายการตัวชี้วัด และผมถือว่าเป็นกฎที่ห้ามละเว้น — <strong>ให้แยกผลตามระดับประสบการณ์ เพราะค่าเฉลี่ยซ่อนได้ทั้งผู้ได้ประโยชน์และผู้เสียโอกาสฝึก</strong><sup><a href="#th-ref-1">[1]</a></sup> เหตุผลอยู่ในหลักฐานชิ้นแรกของหัวข้อ <a href="#th-comparative-advantage">4</a> ที่กลุ่มประสบการณ์น้อยกับกลุ่มเชี่ยวชาญสูงได้ผลต่างกันอย่างสิ้นเชิงในการใช้งานเดียวกัน<sup><a href="#th-ref-4">[4]</a></sup> ถ้าคุณรายงานเป็นค่าเฉลี่ยค่าเดียว คุณจะมองไม่เห็นทั้งสองเรื่องที่สำคัญที่สุด คือใครกำลังได้ประโยชน์จริง และใครกำลังสูญเสียโอกาสในการสะสมทักษะ ซึ่งเป็นหลักปฏิบัติข้อที่ 5 ของบทนี้พอดี</p>
+
+    <p>ผมอยากเตือนอีกข้อหนึ่งเรื่องการใช้ตารางนี้ ตัวเลขทุกตัวจากกรณีสมมติในหัวข้อ <a href="#th-lannabuild">5</a> และตัวเลข 18 นาที กับ 46 ชั่วโมง ในหัวข้อ <a href="#th-before-after">2</a> ห้ามเข้ามาเป็นค่าเป้าหมายหรือค่าฐานในตารางนี้เด็ดขาด ค่าฐานของคุณต้องมาจากข้อมูลของคุณเอง ที่เก็บก่อนเริ่มการทดลอง</p>
+
+    <h3>รูปแบบความล้มเหลว</h3>
+
+    <ul>
+        <li><strong>ทำกระบวนการเดิมให้เป็นอัตโนมัติ</strong> โดยไม่แตะโครงสร้างของมันเลย — ได้ความเร็วของเส้นทางที่ผิดมาแทนความเร็วของเส้นทางที่ถูก</li>
+        <li><strong>ใช้ผู้เชี่ยวชาญที่ล้าเป็นผู้ตรวจทุกอย่าง</strong> — คนที่หายากที่สุดกลายเป็นคอขวดที่ยาวที่สุด และคุณภาพของการตรวจตกลงตามชั่วโมงที่ผ่านไปในแต่ละวัน</li>
+        <li><strong>อนุมัติแบบประทับตรา</strong> — ด่านยังอยู่ครบ แต่ไม่มีเรื่องไหนถูกปฏิเสธเลยเป็นเวลาหลายเดือน ซึ่งเป็นสัญญาณที่อ่านได้จากข้อมูล ไม่ต้องรอให้ใครมาบอก</li>
+        <li><strong>ซ่อนความไม่แน่นอนหลังภาษาลื่นไหล</strong> — ข้อความที่ไม่มีหลักฐานถูกเขียนด้วยน้ำเสียงเดียวกับข้อความที่มีหลักฐาน ผู้ตรวจจึงแยกไม่ออกด้วยการอ่านเพียงอย่างเดียว</li>
+        <li><strong>เรียก Tool ก่อนตรวจสิทธิ์</strong> — ระบบลงมือทำก่อนแล้วค่อยตรวจว่าทำได้หรือไม่ ซึ่งเปลี่ยนการควบคุมให้กลายเป็นการรายงานหลังเกิดเหตุ</li>
+    </ul>
+
+    <p>คู่มือระบุรูปแบบความล้มเหลวไว้เจ็ดข้อ อีกสองข้อที่ผมไม่ได้แยกเป็นรายการข้างบนคือ การตัดงานระดับเริ่มต้นออกโดยไม่สร้างเส้นทางเรียนรู้ใหม่ ซึ่งเป็นเรื่องเดียวกับหลักปฏิบัติข้อที่ 5 ในหัวข้อ <a href="#th-teardown">6</a> และการวัดความเร็วเฉพาะจุดขณะที่งานแก้ปลายน้ำเพิ่มขึ้น ซึ่งเป็นเรื่องเดียวกับกับดักสไลด์แรกในหัวข้อ <a href="#th-before-after">2</a> ทั้งเจ็ดข้อนี้ผมแนะนำให้พิมพ์แปะไว้ในห้องเวิร์กช็อป เพราะทุกข้ออ่านแล้วรู้สึกว่า "องค์กรเราไม่ทำแบบนั้นหรอก" จนกระทั่งได้ดูข้อมูลจริง</p>
+
+    <div class="alert info">
+        <strong>🇹🇭 เส้นทางฝั่งไทยมีเขียนไว้แล้ว</strong> — สพธอ. (ETDA) เผยแพร่คู่มือ <em>AI Job Redesign Guideline</em> ไว้ที่ ETDA Resource Center โดย ณ วันที่ 5 กันยายน 2026 หน้าเผยแพร่ระบุวันที่ 9 มกราคม 2026 ตัวไฟล์ PDF มีวันที่สร้างภายในเป็น 7 มกราคม 2026 ความยาว 49 หน้า และ<strong>ไม่มีเลขเวอร์ชันหรือเลขฉบับพิมพ์ระบุไว้ที่ใดในเอกสาร</strong><sup><a href="#th-ref-8">[8]</a></sup> เส้นทางที่คู่มือฉบับนี้วางไว้เดินจากการวิเคราะห์ภาระงานและลักษณะงาน (บทที่ 6) ไปสู่การทบทวนระดับการทำงานร่วมกันระหว่างคนกับ AI ต่อภาระงาน (บทที่ 7) แล้วจึงปรับบทบาท ความรับผิดชอบ และทักษะบุคลากร (บทที่ 8) ซึ่งเป็นลำดับเดียวกับขั้นที่ 2 ถึง 4 ของเวิร์กช็อปในหัวข้อ <a href="#th-teardown">6</a> โดยเอกสารยึดหลัก "คนเป็นศูนย์กลาง" และย้ำว่าองค์กรยังต้องมีการหารือกับพนักงาน การทบทวนด้านกฎหมายแรงงาน และการวัดคุณภาพงานในบริบทของตนเอง<br><br><strong>ข้อควรระวังสำคัญ:</strong> คู่มือของ ETDA มีบันไดระดับการใช้ AI เป็นของตัวเอง และมัน<em>ไม่ใช่</em>บันไดเดียวกับบันไดอำนาจสี่ขั้นของคู่มือเล่มที่ผมใช้ในซีรีส์นี้ และไม่ใช่บันไดเดียวกับระดับวุฒิภาวะห้าระดับใน <a href="/blog/ai-transformation-maturity">#4</a> ทั้งสามเป็นคนละมาตรวัด สร้างขึ้นคนละเจตนา และ<strong>ห้ามจับมาเทียบกันแบบหนึ่งต่อหนึ่ง</strong> ผมจะลงรายละเอียดของเส้นทาง ETDA ทั้งเส้นในตอน <a href="/blog/ai-transformation-workforce">#8 Redesign Tasks Before Headcount</a>
+    </div>
+
+    <h2 id="th-road-ahead">8. เส้นทางข้างหน้า — จากลูกศรบนกระดานไปสู่หลักฐาน</h2>
+
+    <p>ถ้าจะเก็บอะไรจากตอนนี้ไปสามอย่าง ผมอยากให้เป็นสามอย่างนี้ หนึ่ง ตารางเงื่อนไขสี่ข้อในหัวข้อ <a href="#th-ceremonial-control">1</a> ที่ใช้แยกด่านตรวจออกจากด่านพิธีกรรมได้ภายในสิบนาทีของการประชุม สอง ตารางสี่เลนในหัวข้อ <a href="#th-four-lanes">3</a> ที่คอลัมน์ "ห้ามถืออะไร" มีค่ามากกว่าคอลัมน์แรก และสาม ตารางกำกับหกคอลัมน์ในหัวข้อ <a href="#th-teardown">6</a> ที่บังคับให้ทุกการจัดเลนจบด้วยเหตุผล หลักฐาน และปลายทางของการส่งต่อ</p>
+
+    <p>แต่ผมต้องยอมรับข้อจำกัดของตอนนี้ให้ตรง สิ่งที่เราทำมาทั้งบทความคือการวางลูกศรบนกระดาน เราตอบได้แล้วว่าใครควรทำอะไร ด้วยเหตุผลอะไร และส่งต่อไปที่ไหน แต่เรายังไม่ได้ตอบสองคำถามที่ตามมาทันทีในห้องประชุมจริง คำถามแรกคือ ระบบควรได้อำนาจกระทำมากแค่ไหนในแต่ละขั้น และอะไรคือเงื่อนไขที่ทำให้มันควรได้เพิ่ม คำถามที่สองคือ เรารู้ได้อย่างไรว่าการจัดเลนแบบที่เราเพิ่งทำนั้นดีกว่าแบบเดิมจริง ไม่ใช่แค่ดูเป็นระบบกว่าบนสไลด์</p>
+
+    <p>ทั้งสองคำถามเป็นคำถามเชิงหลักฐาน และหลักฐานที่มีอยู่ก็ไม่ได้ให้คำตอบเดียวกับทุกคนทุกงาน ตัวเลขสามชุดที่ผมยกมาแบบผ่าน ๆ ในหัวข้อ <a href="#th-comparative-advantage">4</a> จะถูกกางออกเต็มพร้อมขอบเขตของแต่ละชุดในตอนหน้า พร้อมกับบันไดอำนาจสี่ขั้นของคู่มือ ที่ผูกอำนาจของระบบเข้ากับระดับผลกระทบแทนที่จะผูกกับความมั่นใจของโมเดล</p>
+
+    <div class="alert info">
+        <strong>🧭 ชั้นที่บทความนี้ขยับ:</strong> ชั้น <strong>Workflows</strong> — คำถาม <strong>Q3</strong> (คน AI กฎเชิงกำหนด และ Tool ควรทำอะไรบ้างตามลำดับ) — Scorecard สามคอลัมน์ที่ตอนนี้ขยับมากที่สุดคือ <strong>Quality</strong> ผ่านอัตราผ่านครั้งแรกและความแม่นของ Escalation, <strong>People</strong> ผ่านคิวและกำลังของผู้ตรวจ และ <strong>Risk</strong> ผ่านสัดส่วนอัตโนมัติแยกตามระดับผลกระทบและเวลากู้คืน โดยมี Value, Learning และ Economics เป็นคอลัมน์ประกอบในตารางตัวชี้วัดหัวข้อ <a href="#th-metrics-failures">7</a> ตอนหน้า <a href="/blog/ai-transformation-evidence-ladder">#7 What the Evidence Says</a> จะไล่หลักฐานทีละชิ้นพร้อมขอบเขตของมัน แล้ววางบันไดอำนาจสี่ขั้น — เสนอแนะ ร่าง กระทำเมื่ออนุมัติ และอัตโนมัติในขอบเขต — ให้อำนาจของระบบเดินตามระดับผลกระทบ ไม่ใช่เดินตามความมั่นใจของโมเดล
+    </div>
+
+    <div class="key-takeaways">
+        <h3>🎯 สิ่งสำคัญที่ต้องจำ</h3>
+        <ul>
+            <li><strong>Human in the loop</strong> = เป็นการควบคุมก็ต่อเมื่อผู้ตรวจมีครบสี่อย่าง คือหลักฐาน เวลา ความสามารถ และอำนาจปฏิเสธ ขาดข้อใดข้อหนึ่งคือด่านพิธีกรรม</li>
+            <li><strong>Four lanes</strong> = เป้าหมายและวิจารณญาณ · การสร้างและวิเคราะห์ · การควบคุมเชิงโครงสร้าง · การตรวจและกู้คืน — ทำงานร่วมกัน ไม่ใช่แทนกัน</li>
+            <li><strong>Start at the decision</strong> = เริ่มจากการตัดสินใจ แล้วแยกงานออกเป็น Task จุดส่งต่อ หลักฐาน และผลที่ตามมา ไม่ใช่เริ่มจากขั้นตอนที่ใส่ AI ได้ง่ายที่สุด</li>
+            <li><strong>Software enforces</strong> = สิทธิ์ Schema และวงเงินต้องอยู่ใน Hard Control ไม่ใช่อยู่ในสมาธิของผู้ตรวจหรือความตั้งใจของผู้ใช้</li>
+            <li><strong>Review capacity</strong> = การตรวจคือกำลังการผลิต ต้องระบุคุณสมบัติ หลักฐาน เวลา ขีดจำกัดคิว และอำนาจปฏิเสธ ให้ครบทั้งห้า</li>
+            <li><strong>Withhold, don't highlight</strong> = ข้อกล่าวอ้างที่ไม่มีหลักฐานควรถูกระงับตั้งแต่ต้นทาง ไม่ใช่ถูกไฮไลต์ส่งต่อให้คนตรวจ เพราะการไฮไลต์ทำให้ภาระผู้ตรวจโตตามปริมาณที่ AI ผลิต</li>
+            <li><strong>Bounded experiment</strong> = ผลลัพธ์ของ teardown คือการทดลองขอบเขตแคบที่มีเจ้าของชื่อจริง ไม่ใช่นโยบายฉบับใหม่</li>
+        </ul>
+    </div>
+
+    <section class="references" aria-labelledby="references">
+        <h2 id="references">อ้างอิง</h2>
+        <p class="references__note">ทุกแหล่งอ้างอิงตรวจสอบและเข้าถึงเมื่อ 5 กันยายน 2569 (2026-09-05) ซีรีส์นี้ใช้ป้ายกำกับหลักฐานสี่แบบตามคู่มือต้นทาง — <strong>Law</strong> กฎหมายที่ผูกพันเมื่ออยู่ในขอบเขต · <strong>Standard</strong> มาตรฐานและแนวปฏิบัติที่เป็นความสมัครใจจนกว่าจะถูกผนวกเข้าเป็นข้อผูกพัน · <strong>Study</strong> หลักฐานเชิงประจักษ์หรือการออกแบบวิจัยที่ระบุชัด · <strong>Synthesis</strong> การสังเคราะห์ของผู้เขียน</p>
+        <ol class="references__list">
+            <li id="th-ref-1"><span class="ref-tag ref-tag--synthesis">Synthesis</span> Mingkhwan, A. <cite>AI Transformation as an Organizational Core — Bilingual Companion Playbook</cite>, บทที่ 4 <em>Redesign the human AI workflow</em> และภาคผนวก A หัวข้อ 7–8. ต้นฉบับของผู้เขียน 97 หน้า ไม่ได้เผยแพร่ออนไลน์จึงไม่มีลิงก์ · evidence snapshot 5 กันยายน 2026 — เข้าถึง 2026-09-05. <span class="ref-supports">รองรับ: ประโยคเปิดบท "Human in the loop is not a design" และฉบับภาษาไทยของมัน · คำว่าด่านพิธีกรรม · สี่เลนที่ทำงานร่วมกันพร้อมชื่อเลนภาษาไทย · หลักปฏิบัติห้าประการ · เจ็ดขั้นของ Workflow teardown and rebuild · รายการตัวชี้วัดสำคัญและกฎแยกผลตามประสบการณ์ · รูปแบบความล้มเหลวเจ็ดข้อ · กรณีสมมติ LannaBuild Engineering · รูปที่ 4 End to end workflow redesign ซึ่งคู่มือระบุที่มาว่าเป็น Author synthesis</span></li>
+            <li id="th-ref-2"><span class="ref-tag ref-tag--study">Study</span> Bainbridge, L. <cite>Ironies of automation</cite>. Automatica 19(6), 775–779, พฤศจิกายน 1983. <a href="https://doi.org/10.1016/0005-1098(83)90046-8">doi.org</a> — เข้าถึง 2026-09-05. <span class="ref-supports">รองรับ: ปัญหาการวางคนไว้เฝ้าระบบอัตโนมัติมีมาก่อนคลื่น AI ราว 43 ปี และยังถูกอ้างถึงต่อเนื่อง (Semantic Scholar บันทึก 2,572 การอ้างอิง ณ 2026-09-05) — ยืนยันได้เฉพาะระเบียนทางบรรณานุกรมผ่าน Crossref เพราะตัวบทความอยู่หลังกำแพงสมาชิกและบทคัดย่อถูกถอนจากฐานดัชนี จึงไม่มีการยกข้อความใดมาอ้าง และการเชื่อมโยงเข้ากับ workflow ของ AI เป็นการสังเคราะห์ของผู้เขียน ไม่ใช่ข้อสรุปของบทความซึ่งเขียนถึงระบบควบคุมในโรงงาน</span></li>
+            <li id="th-ref-3"><span class="ref-tag ref-tag--synthesis">Synthesis</span> The Foundation (th). <cite>AI Transformation: จากการใช้ AI สู่องค์กรที่เรียนรู้เร็วที่สุด | The Masterclass EP01</cite>. <a href="https://www.youtube.com/watch?v=n_IwUYevRZo">youtube.com</a> — เผยแพร่ 28 สิงหาคม 2026, ความยาวประมาณ 52 นาที, เข้าถึง 2026-09-05. <span class="ref-supports">รองรับ: การแบ่งงานตามความได้เปรียบเชิงเปรียบเทียบและระดับผลกระทบ เป็นสามโหมด Human-only, Human plus AI และ AI-first with oversight (ช่วง 15:58–19:44) · การแยก Task automation ออกจาก Workflow redesign และเส้นทางใหม่หกจังหวะ (ช่วง 19:44–22:16) — คำบรรยายของวิดีโอเป็นคำบรรยายอัตโนมัติที่มีข้อผิดพลาด จึงเป็นการถอดความผ่านคู่มือเท่านั้น ไม่ใช่การอ้างคำต่อคำ และไม่ระบุว่าผู้บรรยาย "พูดว่า" ประโยคใด</span></li>
+            <li id="th-ref-4"><span class="ref-tag ref-tag--study">Study</span> Brynjolfsson, E., Li, D. &amp; Raymond, L. R. <cite>Generative AI at Work</cite>. NBER Working Paper 31161, เมษายน 2023. <a href="https://www.nber.org/papers/w31161">nber.org</a> — เข้าถึง 2026-09-05. <span class="ref-supports">รองรับ: เจ้าหน้าที่บริการลูกค้า 5,179 คนในบริษัทเดียว จำนวนเรื่องที่ปิดต่อชั่วโมงเพิ่มเฉลี่ย 14% กลุ่มประสบการณ์น้อยเพิ่ม 34% กลุ่มเชี่ยวชาญสูงแทบไม่เปลี่ยน — บริษัทเดียว กระบวนงานเดียว ช่วงเวลาเดียว ไม่ใช่ค่าประมาณผลิตภาพหรือผลตอบแทนสากล และยังคงสถานะเป็น working paper ไม่ได้ผ่าน peer review · เป็นเหตุผลของกฎแยกผลตามระดับประสบการณ์</span></li>
+            <li id="th-ref-5"><span class="ref-tag ref-tag--study">Study</span> Dell'Acqua, F., McFowland III, E., Mollick, E., Lifshitz, H., Kellogg, K. C., Rajendran, S., Krayer, L., Candelon, F. &amp; Lakhani, K. R. <cite>Navigating the Jagged Technological Frontier</cite>. Organization Science, Articles in Advance, เผยแพร่ออนไลน์ 11 มีนาคม 2026 (CC BY 4.0). <a href="https://doi.org/10.1287/orsc.2025.21838">doi.org</a> — เข้าถึง 2026-09-05. <span class="ref-supports">รองรับ: การทดลองแบบลงทะเบียนล่วงหน้ากับที่ปรึกษา 758 คน ทำงานได้มากขึ้น 12.2% และเร็วขึ้น 25.1% ในงานที่อยู่ในขอบเขตความสามารถ แต่โอกาสตอบถูกลดลง 19% ในงานบริหารซับซ้อนหนึ่งงานที่เลือกให้อยู่นอกขอบเขต — งานจำลอง ประชากรเดียว โมเดลรุ่นเดียว และเส้นขอบเขตขยับได้ · อ้างฉบับวารสาร ไม่ใช่ working paper ของ HBS ปี 2023</span></li>
+            <li id="th-ref-6"><span class="ref-tag ref-tag--study">Study</span> Vaccaro, M., Almaatouq, A. &amp; Malone, T. <cite>When combinations of humans and AI are useful: A systematic review and meta-analysis</cite>. Nature Human Behaviour 8, 2293–2303, เผยแพร่ออนไลน์ 28 ตุลาคม 2024. <a href="https://doi.org/10.1038/s41562-024-02024-1">doi.org</a> — เข้าถึง 2026-09-05. <span class="ref-supports">รองรับ: 106 การทดลอง 370 effect size · ระบบคนบวก AI ดีกว่าคนอย่างเดียว g = 0.64 (95% CI 0.53–0.74) แต่แย่กว่าฝ่ายที่เก่งกว่าระหว่างคนกับ AI g = −0.23 (95% CI −0.39 ถึง −0.07) · งานประเภทตัดสินใจเสียผล งานสร้างเนื้อหาได้ผล — วรรณกรรมที่รวบรวมสิ้นสุดมิถุนายน 2023 และมีความแปรปรวนสูง จึงต้องทดสอบเปรียบเทียบในบริบทของตนเอง และค่าทั้งสองต้องถูกอ้างคู่กันเสมอ</span></li>
+            <li id="th-ref-7"><span class="ref-tag ref-tag--study">Study</span> Kochan, T. A., Armstrong, B., Shah, J., Castilla, E. J., Likis, B. &amp; Mangelsdorf, M. E. <cite>Bringing Worker Voice Into Generative AI</cite>. MIT Sloan School of Management / MIT Institute for Work and Employment Research, ธันวาคม 2023. <a href="https://mitsloan.mit.edu/sites/default/files/2024-01/Bringing%20Worker%20Voice%20into%20Generative%20AI%2012%2021%202023.pdf">mitsloan.mit.edu</a> — เข้าถึง 2026-09-05. <span class="ref-supports">รองรับ: รายงานอ้างอิงการสัมภาษณ์กว่า 50 ครั้ง เสนอให้พนักงานมีส่วนร่วมตั้งแต่ขั้นนิยามปัญหาและออกแบบกระบวนงาน ไม่ใช่ในฐานะผู้ใช้ปลายทางหลังออกแบบเสร็จ · ความรู้เกี่ยวกับกระบวนงานของผู้ปฏิบัติเป็นความรู้แบบ tacit ที่อาจไม่เคยถูกแปลงเป็นคำพูด — เป็นรายงานบริบทสหรัฐอเมริกาปี 2023 ไม่ได้กล่าวถึงองค์กรไทยหรือกฎหมายแรงงานไทย และต้องปรับให้เข้ากับโครงสร้างและกฎหมายท้องถิ่น</span></li>
+            <li id="th-ref-8"><span class="ref-tag ref-tag--standard">Standard</span> สพธอ. (ETDA). <cite>AI Job Redesign Guideline — คู่มือแนวทางการออกแบบงานใหม่เพื่อรองรับการทำงานร่วมกับ AI</cite>. สำนักงานพัฒนาธุรกรรมทางอิเล็กทรอนิกส์, ETDA Resource Center. <a href="https://erc.etda.or.th/th/knowledge/ebook/ai-job-redesign-guideline">erc.etda.or.th</a> — หน้าเผยแพร่ระบุวันที่ 9 มกราคม 2026, ไฟล์ PDF มีวันที่สร้างภายใน 7 มกราคม 2026, 49 หน้า, เข้าถึง 2026-09-05. <span class="ref-supports">รองรับ: เส้นทางฝั่งไทยจากการวิเคราะห์ภาระงานและลักษณะงาน (บทที่ 6) สู่การทบทวนระดับการทำงานร่วมกันระหว่างคนกับ AI (บทที่ 7) และการปรับบทบาท ความรับผิดชอบ และทักษะบุคลากร (บทที่ 8) · หลักคนเป็นศูนย์กลาง · ข้อกำหนดว่ายังต้องมีการหารือกับพนักงาน การทบทวนด้านกฎหมายแรงงาน และการวัดคุณภาพงานในบริบทของตนเอง · เอกสารไม่ระบุเลขเวอร์ชันหรือเลขฉบับพิมพ์ และบันไดระดับการใช้ AI ของ ETDA เป็นคนละมาตรวัดกับบันไดอำนาจและบันไดวุฒิภาวะในซีรีส์นี้</span></li>
+        </ol>
+    </section>
+    </div>
+
+    <div class="l-en" lang="en">
+
+    <p>🤔 <strong>If the reviewer has two minutes per case, cannot see the sources, and cannot refuse, is that person a "control" or a designated blame-taker?</strong></p>
+
+    <p>The previous post, <a href="/blog/ai-transformation-portfolio">#5 Decision Portfolio</a>, left you with a decision inventory sorted along three dimensions and four moves to choose between — Scale, Contain, Redesign or Retire. This is the first post of the Redesign group, and the one that has to do actual work on the word "redesign", because being able to say which decision you intend to improve says nothing at all about what the workflow around that decision should look like, or where the people should stand inside it.</p>
+
+    <p>The one-line answer to the question above is that <strong>the person is a designated blame-taker</strong> — a human in the loop becomes a control only when that person has all four things: evidence, time, competence, and the authority to disagree. Remove any one of them and what you installed in the workflow is not a checkpoint but a ceremonial one, absorbing accountability when something goes wrong while preventing nothing. The rest of this post is how to design it so it really is a checkpoint: with four lanes, one seven-step working session, and metrics that can tell you whether the design works.</p>
+
+    <h2 id="en-ceremonial-control">1. The Ceremonial Checkpoint — When "Someone Reviews It" Is Not Yet a Control</h2>
+
+    <p>Chapter 4 of the playbook opens with what I consider the most expensive sentence in the book, because it demolishes the answer most teams have used to close down risk questions for two years running.<sup><a href="#en-ref-1">[1]</a></sup></p>
+
+    <blockquote>"Human in the loop is not a design. It becomes a control only when the person has evidence time competence and authority to disagree."</blockquote>
+
+    <p>The argument the chapter makes on the page that follows spells the diagnosis out even more directly.<sup><a href="#en-ref-1">[1]</a></sup></p>
+
+    <blockquote>"Effective redesign begins with the decision and decomposes the job into tasks, handoffs, evidence, and consequences. A reviewer who lacks time, evidence, authority, or domain competence is a ceremonial control that absorbs blame without preventing failure."</blockquote>
+
+    <p>I would like you to read the phrase <strong>ceremonial control</strong> slowly one more time, because it is not an insult. It is a diagnosis. In the governance documents of nearly every organisation whose papers I have read this year there is a line reading "a human reviews the output before it takes effect", and in nearly every case that line is all there is. Nothing follows about what the reviewer sees, how many minutes they get, what qualifies them, or where the case travels if they refuse. So the line does exactly one job: it moves <strong>accountability</strong> off the system and onto a person, without adding a single unit of capacity to prevent the error.</p>
+
+    <p>In design terms, the fix is to stop writing "a human reviews it" and start naming all four conditions in full, each with evidence you can point at showing that the condition exists in reality rather than in a policy. The table below is the form I use to interrogate a workflow in the first minute of every review.</p>
+
+    <div class="table-wrapper">
+        <table>
+            <thead>
+                <tr>
+                    <th>Condition</th>
+                    <th>Test question</th>
+                    <th>Evidence that must physically exist</th>
+                    <th>Symptom when it is missing</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td><strong>Evidence</strong></td>
+                    <td>On the screen where the reviewer decides, what do they actually see?</td>
+                    <td>Traceable sources, an uncertainty value, comparable past cases, and the Trace of the preceding steps</td>
+                    <td>The reviewer reads "fluency of language" instead of reading correctness</td>
+                </tr>
+                <tr>
+                    <td><strong>Time</strong></td>
+                    <td>How many minutes per case does the design allow, and how many does the work really take?</td>
+                    <td>Queue statistics, actual minutes spent per case, and a declared maximum queue size</td>
+                    <td>Rubber-stamp approval, because the queue is permanently longer than the review capacity</td>
+                </tr>
+                <tr>
+                    <td><strong>Competence</strong></td>
+                    <td>What qualifies this reviewer to review this class of case?</td>
+                    <td>Written competence criteria per class of work, and a register of reviewers who meet them</td>
+                    <td>A single expert is appointed the reviewer of everything</td>
+                </tr>
+                <tr>
+                    <td><strong>Authority</strong></td>
+                    <td>If the reviewer refuses, what happens next?</td>
+                    <td>A rejection route with a named destination, the right to stop the work, and reasons recorded so they can be read back</td>
+                    <td>Refusal is possible in theory, but nobody picks the case up, so nobody dares refuse</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <p>Notice that the third column does not ask about intent. It asks for objects — a screen, a number, a register, a route, something you can point at. If the team answers that column with "we have a policy", that condition does not yet exist, and the checkpoint is still a ceremonial one.</p>
+
+    <h3>This observation is four decades older than AI</h3>
+
+    <p>I want to put some weight behind this by pointing out that it is not a problem that arrived with foundation models. Lisanne Bainbridge published an article titled <em>"Ironies of automation"</em> in the journal <em>Automatica</em> in November 1983 — <strong>43 years</strong> before the year I am writing this — and it is still cited continuously, with Semantic Scholar recording 2,572 citations on the day I checked.<sup><a href="#en-ref-2">[2]</a></sup></p>
+
+    <p>Two things have to be said straight. First, that article was written about control systems in industrial plants. It was not written about modern AI, and it did not "predict" this era's human-in-the-loop problem. Second, the article sits behind the publisher's subscription wall and its abstract has been withdrawn from the indexing databases, so I can confirm only its bibliographic identity, not its text — <strong>I therefore cite the title and the year and quote not one sentence from it</strong>. Connecting it to the reviewer problem in an AI workflow is my own synthesis, not the author's conclusion.</p>
+
+    <p>But the logic runs strikingly parallel. Safety engineering has known the pattern for a very long time: when an automated system performs the normal case better than a person almost all of the time, the role left to the person is "watching", which is the task humans do worst — and then, in the second the system fails, we expect someone who has not had their hands on the work for a long while to take over in the hardest situation there is. This is why the playbook refuses to let "a human reviews it" count as a design, and insists that design begins at the decision and then decomposes the job into tasks, handoffs, evidence, and consequences.</p>
+
+    <p>That phrase, "begins at the decision", picks up exactly where the previous post left off. The <strong>decision inventory</strong> you built in <a href="/blog/ai-transformation-portfolio">#5</a> is the starting point of the workflow — not a list of tools. And the next section is the reason why starting at the wrong point produces results that look excellent on a slide and move nothing in reality.</p>
+
+    <h2 id="en-before-after">2. Task Automation vs Workflow Redesign — Ten Times Faster, Delivered Just as Slowly</h2>
+
+    <p>The masterclass the playbook is drawn from separates these two terms in the 19:44–22:16 stretch, and the playbook expands on it in Appendix A §8.<sup><a href="#en-ref-3">[3]</a></sup> The substance is that <strong>automating a single task inside a badly designed workflow can produce a hugely impressive local number while changing the end-to-end result almost not at all</strong>. The example the playbook gives is a document that used to take two hours to draft and now takes two minutes — and still waits through five levels of approval exactly as before.</p>
+
+    <p>I meet this pattern often enough that I call it "the first-slide trap", because the number that goes from two hours to two minutes is real. It is measurable, it is provable, and it makes everyone in the room nod. The problem is that it measures the wrong unit. The unit the customer feels is the time from submitting their case to receiving an answer, not the time somebody spends typing a draft — and in most workflows the customer's waiting time does not sit inside the steps where people are working. It sits in the gaps between the steps.</p>
+
+    <figure class="figure">
+      <a href="../images/ai-transformation-fig-04-redesign-the-flow.png">
+        <img class="figure__img" src="../images/ai-transformation-fig-04-redesign-the-flow.png" alt="Before-and-after workflow swimlanes: before — intake, draft, queue, review, queue, approve; after — digital intake, bounded AI assessment, normal-case action, exception desk, outcome evidence." width="1400" height="840" loading="lazy" decoding="async">
+      </a>
+      <figcaption class="figure__caption">Figure 4 · Redesign the flow, not one task — routine cases flow continuously, people own ambiguity and consequence.</figcaption>
+    </figure>
+
+    <p>The upper band of the figure is the old workflow: intake → draft → wait → review → wait → approve. The two highlighted boxes are both "wait" boxes, because that is where the time disappears. The numbers under the band read 18 minutes of hands-on work in total against 46 hours of waiting.</p>
+
+    <div class="alert">
+        <strong>⚠️ The figures of 18 minutes and 46 hours are illustrative numbers drawn onto the diagram</strong> purely to show the ratio between hands-on time and waiting time. No study, no case study and no vendor produced that pair of numbers. Do not use them as a baseline, a target or a benchmark in any document. What you should borrow is the <em>method of measurement</em> — separate hands-on time from waiting time in your own workflow, and see how many times apart the two values are.
+    </div>
+
+    <p>The lower band is the redesigned route: digital intake → bounded AI assessment → normal-case action → exception desk → outcome evidence. The three lines under that band summarise the intent of the whole design — routine cases flow continuously, people own ambiguity and consequence, and every outcome feeds back into learning.</p>
+
+    <p>The most important difference between the two bands is not the number of boxes. It is <strong>what each box is</strong>. In the upper band a box is a step of paperwork. In the lower band a box is a point where a decision is taken and evidence is produced. "Exception desk" is not a prettier name for review: it is a unit with declared competence, its own queue, the authority to refuse, and a route for handing off uncertainty — which is precisely the four conditions of section <a href="#en-ceremonial-control">1</a> turned into a real piece of organisational structure.</p>
+
+    <p>The playbook summarises this new route as six beats, which I use as a checklist every time I draw a workflow afresh — validate the input that comes in, create the prediction, apply the declared rules together with judgment, automate the ordinary cases, route exceptions to qualified people, and record the outcome back. If your new workflow is missing one of the beats, it is usually the last one — and that is the only beat that makes the system better on the next pass.</p>
+
+    <div class="table-wrapper">
+        <table>
+            <thead>
+                <tr>
+                    <th>Dimension</th>
+                    <th>Task automation</th>
+                    <th>Workflow redesign</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>Unit being designed</td>
+                    <td>A single step inside the existing chain</td>
+                    <td>The end outcome, then working backwards to design the whole route</td>
+                </tr>
+                <tr>
+                    <td>Opening question</td>
+                    <td>Which steps could we put AI into?</td>
+                    <td>What outcome do we want, and how many handoffs should the new route have?</td>
+                </tr>
+                <tr>
+                    <td>What actually changes</td>
+                    <td>The speed of that one step</td>
+                    <td>Handoffs, permissions, thresholds, exception routes, and ownership of the outcome</td>
+                </tr>
+                <tr>
+                    <td>The number usually quoted</td>
+                    <td>How many times faster that step became</td>
+                    <td>End-to-end Cycle Time and first-pass yield</td>
+                </tr>
+                <tr>
+                    <td>The risk that follows</td>
+                    <td>Fast in one place while downstream rework rises</td>
+                    <td>Governance has to be designed alongside, because the same scale that multiplies success multiplies error</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <p>The last row of that table is the sentence the playbook states outright: performance and governance must be designed together.<sup><a href="#en-ref-1">[1]</a></sup> I agree with it without reservation, because redesigning a workflow without touching permissions and exception routes is simply raising the production rate of the good and the bad in the same proportion — and what comes back to you is a volume of rework that grows with the scale.</p>
+
+    <p>The name the playbook gives to all of this work is <strong>workflow redesign</strong>, and its central instrument is dividing the work into four lanes.</p>
+
+    <h2 id="en-four-lanes">3. Four Coordinated Lanes — Who Holds What, and What They Must Never Hold</h2>
+
+    <p>The central proposal of Chapter 4 is to stop asking "does a person do this task or does AI do it", because a binary question of that shape forces a wrong answer every time, and to place work instead into four coordinated lanes. The playbook names the four like this.<sup><a href="#en-ref-1">[1]</a></sup></p>
+
+    <blockquote>"Use four coordinated lanes. <strong>Purpose and judgment</strong> belongs to people who define outcomes, constraints, exceptions, and values that historical data cannot supply. <strong>Generation and analysis</strong> lets AI search, compare, draft, classify, or propose inside a declared boundary. <strong>Structural control</strong> uses deterministic software to enforce permissions, schemas, limits, source membership, transactions, and trace capture. <strong>Verification and recovery</strong> gives a qualified person or independent test the information and authority to reject, route uncertainty, approve consequential effects, and stop or reverse the workflow."</blockquote>
+
+    <p>Before the detail, I want to be clear about where this frame comes from. The four lanes are the playbook's own synthesis. They do not come from the masterclass, they do not come from any international standard, and they do not come from ETDA or MIT. I cite them as a working scheme that holds up in practice, not as a requirement.</p>
+
+    <p>The value of the frame lies in the "must never hold" column more than in the "holds" column, because most of the failures I see do not come from one lane being unable to do its own job. They come from one lane being used in place of another — above all, from the fourth lane being put to work doing the third lane's job.</p>
+
+    <div class="table-wrapper">
+        <table>
+            <thead>
+                <tr>
+                    <th>Lane</th>
+                    <th>Holds</th>
+                    <th>Must never hold</th>
+                    <th>Evidence this lane produces</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td><strong>Purpose and judgment</strong><br>People define the outcome</td>
+                    <td>Defining the required outcome, the constraints, the definition of an exception, and the values historical data cannot supply</td>
+                    <td>Must never be used as bulk review labour in place of a machine, and must never be called in to judge after the effect has already happened</td>
+                    <td>A signed statement of outcome and constraints, the definition of exceptions, and acceptance criteria</td>
+                </tr>
+                <tr>
+                    <td><strong>Generation and analysis</strong><br>AI works inside a boundary</td>
+                    <td>Searching, comparing, drafting, classifying and proposing, inside a declared boundary</td>
+                    <td>Must never be the thing that causes a real effect by itself, and must never set its own boundary</td>
+                    <td>Proposals with citable provenance, an uncertainty value, and stated reasoning</td>
+                </tr>
+                <tr>
+                    <td><strong>Structural control</strong><br>Software enforces</td>
+                    <td>Deterministic software enforcing permissions, Schema, limits, source membership, transactions, and Trace capture</td>
+                    <td>Must never be replaced by a warning in a manual, by training, or by the user's good intentions</td>
+                    <td>The recorded result of every rule evaluation, both the passes and the refusals</td>
+                </tr>
+                <tr>
+                    <td><strong>Verification and recovery</strong><br>Qualified people and independent tests</td>
+                    <td>A qualified person or independent test with the information and the authority to reject, route uncertainty, approve consequential effects, and stop or reverse the workflow</td>
+                    <td>Must never be used to check what the third lane can already enforce, and must never carry a queue beyond its declared capacity</td>
+                    <td>Approval and Override reasons, records of refusals, and evidence that the system really can be reversed</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <p>The third lane is the most neglected of the four, and it is the one that decides whether your workflow is a control or a ceremony. <strong>Human oversight</strong> should not be spent on work that software does more reliably, more cheaply, and without getting tired — checking whether the destination account number is on the approved list, whether the total exceeds the initiator's limit, whether the attachments are complete against the Schema. Every time you hand a person those three jobs, you are spending the scarcest resource in the organisation on the tasks with the highest human error rate, and you are eating the time they should be spending on the thing only they can do.</p>
+
+    <blockquote>💡 My view: operating principle 3 of this chapter reads "Do not use attention to enforce what software can enforce. Permissions schemas and limits belong in hard controls."<sup><a href="#en-ref-1">[1]</a></sup> — I use that sentence as the first exam question for every workflow that comes to me for review. If the reviewer's checklist contains an item that could be written as an "if" condition, that item should never have been on the checklist. It belongs in code. And every item we move out of a person's field of vision and into code is time handed back to them for exceptions, which is the one job people do distinctly better than machines.
+    </blockquote>
+
+    <p>The other relationship to watch is the one between the second lane and the fourth. Proposals produced by AI carry one dangerous property: they always read smoothly, whether they are right or wrong. The <strong>consequence</strong> of a proposal therefore has to be assessed from what it is about to do, not from how credible its prose sounds — and the <strong>decision authority</strong> a system is granted has to track that level of consequence, not the model's confidence. That is the axis of the entire next post.</p>
+
+    <h2 id="en-comparative-advantage">4. Allocating Work by Comparative Advantage and Consequence</h2>
+
+    <p>A question follows immediately once the four lanes are laid out: in practice, which mode should any given task be placed in? The masterclass answers this in the 15:58–19:44 stretch, and the playbook paraphrases it in Appendix A §7.<sup><a href="#en-ref-3">[3]</a></sup> The answer begins by rejecting two positions at once — it does not start from a belief that "we should automate as much as possible", and it does not start from a belief that "every case must be approved by a person". It allocates work by comparative advantage and by consequence.</p>
+
+    <p>The phrase <strong>human–AI complementarity</strong> in the playbook means exactly this, and it is not a slogan about collaboration. It is an economic statement that each side should do what it is least disadvantaged at — and what settles how much error you can tolerate is the consequence when it is wrong, not the average capability of the tool.</p>
+
+    <div class="table-wrapper">
+        <table>
+            <thead>
+                <tr>
+                    <th>Mode</th>
+                    <th>Choose it when</th>
+                    <th>People do</th>
+                    <th>AI does</th>
+                    <th>What must exist before you may use this mode</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td><strong>Human-only</strong></td>
+                    <td>The evidence is not good enough, the stakes are high, or relationship and personal accountability are the substance of the work</td>
+                    <td>Everything, from framing the question through to owning the result</td>
+                    <td>No role, or only retrieval that does not enter the reasoning behind the ruling</td>
+                    <td>A written explanation of why this work sits in this group, and the conditions under which it could move out in future</td>
+                </tr>
+                <tr>
+                    <td><strong>Human plus AI</strong></td>
+                    <td>Volume is high, the evidence is adequate, and human judgment still changes the outcome materially</td>
+                    <td>Judge, weigh, and own the result</td>
+                    <td>Gather, predict, summarise, and propose options with provenance</td>
+                    <td>Review capacity that has actually been calculated, not a hope that the existing team will cope</td>
+                </tr>
+                <tr>
+                    <td><strong>AI-first with oversight</strong></td>
+                    <td>The normal case is clearly defined, per-case consequence is low to moderate, and there is a tested route back</td>
+                    <td>Supervise the whole, handle exceptions, set the frame for judgment, communicate, and own the outcome</td>
+                    <td>Handle the normal cases inside the declared boundary</td>
+                    <td>A clearly written boundary, thresholds for routing uncertainty, and evidence that the system really can be stopped or reversed</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <p>The playbook adds one sentence after that table which I think the head of HR should read more urgently than the head of technology — people's roles shift from performing every step to reviewing, handling exceptions, framing judgment, communicating, and owning outcomes. Reskilling is therefore more than teaching people to write a Prompt: it is preparing them for a changed mix of work.<sup><a href="#en-ref-1">[1]</a></sup></p>
+
+    <div class="alert danger">
+        <strong>🚨 The most common trap in the Human plus AI mode</strong> is turning the scarcest experts in the organisation into the review bottleneck. When AI multiplies the volume of proposals several times over while the number of reviewers stays the same, the result is a queue that grows and grows until review becomes automatic stamping. This is not a failure of people. It is a failure of design, because nobody calculated the review capacity at the outset.
+    </div>
+
+    <h3>The evidence warns against a universal workflow</h3>
+
+    <p>The playbook places three pieces of evidence here to stop readers picking a mode by feel. I bring them in for one paragraph only, and for one reason only: to say that <strong>you have to measure on your own real work</strong>, not to use them as targets. All three sets of numbers are the heart of the next post, not this one.</p>
+
+    <p>First: in one firm's deployment across 5,179 customer-support agents, issues resolved per hour rose 14% on average — 34% for novice and lower-skilled workers, and hardly at all for the most experienced. That is one firm, one workflow and one period, not a universal return, and the paper is still a working paper rather than a peer-reviewed article.<sup><a href="#en-ref-4">[4]</a></sup> Second: a preregistered experiment with 758 consultants found AI users completed 12.2% more tasks 25.1% faster inside the tested capability frontier — and were 19% less likely to be correct on one complex managerial task chosen to sit outside it. Simulated tasks, one population, one model generation, and that frontier moves.<sup><a href="#en-ref-5">[5]</a></sup> Third: a 2024 meta-analysis of 106 experiments (370 effect sizes) found human-plus-AI systems beat humans alone on average (g = 0.64) but lost to the better of human-alone or AI-alone (g = −0.23), with decision tasks the worst case. The literature ends in June 2023 and is highly heterogeneous, so the comparison has to be run on our own work.<sup><a href="#en-ref-6">[6]</a></sup></p>
+
+    <p>Let me restate the condition on the third piece, because it is the one most often misused. <strong>Both values must always travel together.</strong> Carrying only −0.23 makes it read as though the research says people plus AI is worse than doing nothing, which it does not, and carrying only 0.64 makes it read as though the research certifies that pairing always improves things, which it also does not. The design conclusion the playbook draws from all three pieces is therefore a single sentence: measure all three arrangements — Human-only, AI-only, and the combination — on the same real task, and only then choose.<sup><a href="#en-ref-1">[1]</a></sup></p>
+
+    <h2 id="en-lannabuild">5. LannaBuild Engineering — Moving the Design Point Upstream</h2>
+
+    <p>The playbook uses the case of LannaBuild Engineering <em>(a fictional case from the playbook)</em> as its example of moving the design point, and I like this case because it starts from a failure that matches section <a href="#en-ceremonial-control">1</a> almost exactly.</p>
+
+    <p>The old arrangement was to have AI write the entire bid, then hand a single senior engineer a long draft to read under deadline. This is the ceremonial checkpoint in its purest form. That engineer had full competence, but no time, no evidence of where each paragraph came from, and in practice no authority to refuse — because refusing meant missing the submission. So the organisation gained speed in drafting, and got invisible risk thrown in with it.</p>
+
+    <p>LannaBuild's redesign did not begin by making the review better. It began earlier than that — <strong>it began before the writing</strong>, which is what moving the design point upstream means. The table below transcribes the playbook's redesigned workflow and marks each step with a lane from section <a href="#en-four-lanes">3</a>. The workflow itself is the playbook's; the lane and evidence columns are my own annotation.</p>
+
+    <div class="table-wrapper">
+        <table>
+            <thead>
+                <tr>
+                    <th>Step after the redesign</th>
+                    <th>Lane</th>
+                    <th>Reason</th>
+                    <th>Evidence produced</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>AI extracts the requirements from the tender documents and builds a traceable Compliance Matrix</td>
+                    <td>Generation and analysis</td>
+                    <td>High-volume search and classification inside a clear boundary, with output that can be traced back line by line</td>
+                    <td>A Compliance Matrix in which every row points back to the page and clause of the source document</td>
+                </tr>
+                <tr>
+                    <td>Deterministic checks compare dates, totals, units, and mandatory attachments</td>
+                    <td>Structural control</td>
+                    <td>All four can be written as rules in full, so they should not consume a person's eyes</td>
+                    <td>A list of failing items with the rule violated and the time of the check</td>
+                </tr>
+                <tr>
+                    <td>Specialists draft the technical exceptions</td>
+                    <td>Purpose and judgment</td>
+                    <td>This is the point where historical data cannot supply an answer, and where judgment changes the real result</td>
+                    <td>Exceptions carrying a named owner and the engineering reasoning behind them</td>
+                </tr>
+                <tr>
+                    <td>AI assembles only the approved modules</td>
+                    <td>Generation and analysis, inside the boundary set by structural control</td>
+                    <td>The boundary is enforced by the list of approved modules, not by an instruction in a Prompt</td>
+                    <td>A draft in which every part cites the source module and its approval status</td>
+                </tr>
+                <tr>
+                    <td>Commercial and legal owners approve price and commitments</td>
+                    <td>Verification and recovery</td>
+                    <td>Price and commitments are the two things that bind the organisation, so an owner with real authority has to sign</td>
+                    <td>Approval records separated by type of commitment, with reasons</td>
+                </tr>
+                <tr>
+                    <td>Unsupported claims are withheld, not highlighted</td>
+                    <td>Structural control</td>
+                    <td>Highlighting throws the work back onto a person's eyes again; withholding stops it entering the draft in the first place</td>
+                    <td>A list of withheld statements with the reason for the missing evidence</td>
+                </tr>
+                <tr>
+                    <td>Clarification requests and lost-bid reasons are added to the evaluation set</td>
+                    <td>Verification and recovery, feeding the learning loop</td>
+                    <td>This is the only point where the real outcome comes back and changes the system on the next pass</td>
+                    <td>An evaluation set that grows every cycle, with a date and a source for each entry</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <p>The sixth row is the one I most want you to remember — <strong>"withhold, do not highlight"</strong>. The difference looks tiny on paper, but it is the whole difference between the third lane and the fourth. Highlighting an unsupported statement and sending it to a person to judge adds load to the reviewer in proportion to what AI produces, which means the more you use it the worse it gets. Withholding means the statement is simply not in the draft at all. The reviewer's load therefore does not grow with volume, and the time they have is reserved for the genuine exceptions.</p>
+
+    <p>The result the playbook records is that AI reduced the document-assembly work while people moved toward strategy, exceptions, commitments, and learning.<sup><a href="#en-ref-1">[1]</a></sup> Let me repeat that this is a fictional case, and that the playbook gives it no figures at all — no bid value, no headcount, no win rate — and I am not going to invent any to fill the gap. What you can borrow is the sequence of the design, not a set of result numbers.</p>
+
+    <h2 id="en-teardown">6. The Workflow Teardown and Rebuild Session — Seven Steps and the Four-Lane Marking Table</h2>
+
+    <p>Before the session itself, I want to put this chapter's five operating principles up as the rules of the room, because the seven steps that follow become an empty form without them.<sup><a href="#en-ref-1">[1]</a></sup></p>
+
+    <ol>
+        <li><strong>Decompose work at the decision level.</strong> Redesign tasks that create the outcome rather than automating a job title.</li>
+        <li><strong>Place people where judgment changes the result.</strong> Reserve expertise for purpose, exceptions, commitments and ambiguity.</li>
+        <li><strong>Do not use attention to enforce what software can enforce.</strong> Permissions, schemas and limits belong in hard controls. <em>(the one I already quoted in section <a href="#en-four-lanes">3</a>)</em></li>
+        <li><strong>Design review as operating capacity.</strong> Specify competence, evidence, time, queue limit and authority to reject.</li>
+        <li><strong>Preserve skill formation.</strong> Decide how novices build judgment if AI performs the routine cases that once trained them.</li>
+    </ol>
+
+    <p>Principle 4 changes a team's thinking fastest. The words "operating capacity" mean that review has to be planned the way we plan a factory's production capacity — with a unit of measure, a ceiling, a queue, and a defined thing that happens when the queue overflows — rather than the way we plan "being careful". Principle 5 is the one whose bill arrives slowest and costs most, because the routine work AI takes over is the same work that used to train the next generation into judgment. Cut it away without building a new route and in five years there will be no qualified reviewers left at all.</p>
+
+    <h3>The seven steps of Workflow teardown and rebuild</h3>
+
+    <p>The <em>Step</em> column in the table below is the playbook's text. The <em>Question</em>, <em>Output</em> and <em>Who</em> columns are my own practical expansion, so that each step ends with something tangible and a named person against it, rather than ending in shared understanding.</p>
+
+    <div class="table-wrapper">
+        <table>
+            <thead>
+                <tr>
+                    <th>#</th>
+                    <th>Step</th>
+                    <th>Question</th>
+                    <th>Output</th>
+                    <th>Who</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>1</td>
+                    <td>Define the outcome, customer, consequence and baseline.</td>
+                    <td>If this workflow got better, who would feel it first, and what is that value today?</td>
+                    <td>A one-line definition of the Outcome, with a baseline measured from real data rather than from memory</td>
+                    <td>The workflow owner, together with a representative of the internal or external customer</td>
+                </tr>
+                <tr>
+                    <td>2</td>
+                    <td>Break the flow into decisions and evidence-producing tasks.</td>
+                    <td>How many decision points does this route contain, and what evidence does each of them produce?</td>
+                    <td>A map in which every box is a decision or a piece of evidence, not the name of a department</td>
+                    <td>The people who really do the work every day, not the manager who did it three years ago</td>
+                </tr>
+                <tr>
+                    <td>3</td>
+                    <td>Mark each task human, AI, deterministic system or shared, and give a reason.</td>
+                    <td>Which lane is this Task in, and what is the reason? If the reason is "we have always done it this way", there is no reason yet.</td>
+                    <td>A four-lane marking table in which every row carries a reason written as a full sentence</td>
+                    <td>The design team together, with practitioners holding the right to object to a lane assignment</td>
+                </tr>
+                <tr>
+                    <td>4</td>
+                    <td>Design handoffs, context, permissions, tests and uncertainty routes.</td>
+                    <td>At a handoff, what context travels with the case, and if the system is not confident, who receives it?</td>
+                    <td>A specification per handoff, with a numeric Threshold and a named destination for Escalation</td>
+                    <td>The systems architect, with the owner of the permissions and the owner of the risk</td>
+                </tr>
+                <tr>
+                    <td>5</td>
+                    <td>Stress-test one normal case, one edge case, and one failure or attack.</td>
+                    <td>Do we have a real case of all three types yet, and where does the result differ from the design?</td>
+                    <td>Three sets of test records, with a list of what must be fixed before going live</td>
+                    <td>A tester who is not the designer, so that the test is independent</td>
+                </tr>
+                <tr>
+                    <td>6</td>
+                    <td>Estimate cycle time, reviewer capacity, cost and recovery effort.</td>
+                    <td>If volume triples, what happens to the reviewer queue, and how long does one recovery take?</td>
+                    <td>Four estimates, with the assumptions written down so they can be checked</td>
+                    <td>The workflow owner, with finance and the head of the review team</td>
+                </tr>
+                <tr>
+                    <td>7</td>
+                    <td>Select a bounded experiment and name the workflow owner.</td>
+                    <td>Which set of work will we experiment on, for how long, and who has the authority to call a halt?</td>
+                    <td>A one-page experiment proposal naming the work set, the duration, the decision criteria, and the owner</td>
+                    <td>A workflow owner with a real name, not the name of a committee</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <h3>The four-lane marking table</h3>
+
+    <p>Steps 2 and 3 are the heart of what the playbook calls <strong>task decomposition</strong>, and steps 3 and 4 are where meeting rooms most often lose their way, because everyone agrees that Tasks should be assigned to lanes and then, when the assigning actually starts, it turns into an argument conducted on instinct. The table below is the form I use to force lane assignment to end in reasons and evidence. The example rows are taken from the LannaBuild case in section <a href="#en-lannabuild">5</a>.</p>
+
+    <div class="alert">
+        <strong>📌 This table is not the book's table.</strong> The playbook gives the seven steps but does not give this form. The six-column marking table below is my own expansion of steps 3 and 4, built for this series. If you use it and find a column that does not work in your context, cut it freely — but I would suggest keeping <em>Consequence if wrong</em> as the last column you are willing to lose, because it is the only column that stops lane assignment being decided by convenience.
+    </div>
+
+    <div class="table-wrapper">
+        <table>
+            <thead>
+                <tr>
+                    <th>Task</th>
+                    <th>Lane</th>
+                    <th>Reason</th>
+                    <th>Evidence produced</th>
+                    <th>Consequence if wrong</th>
+                    <th>Handoff to</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>Check that the attachments are complete against the mandatory list</td>
+                    <td>Structural control</td>
+                    <td>Fully expressible as rules, and requires no judgment whatsoever</td>
+                    <td>A list of missing documents, with the time of the check</td>
+                    <td>The bid is disqualified at the eligibility stage, unrecoverable once submissions close</td>
+                    <td>Returned to the submitter immediately, with no human queue</td>
+                </tr>
+                <tr>
+                    <td>Build the Compliance Matrix from the tender documents</td>
+                    <td>Generation and analysis</td>
+                    <td>High-volume search and classification inside a clear boundary, traceable row by row</td>
+                    <td>A Matrix in which every row points back to the page and clause of the original</td>
+                    <td>A requirement is missed, so the bid fails the technical criteria</td>
+                    <td>A specialist reviews only the rows the system has marked uncertain</td>
+                </tr>
+                <tr>
+                    <td>Rule on technical exceptions that deviate from the requirements</td>
+                    <td>Purpose and judgment</td>
+                    <td>Historical data cannot answer it, and judgment changes the real result</td>
+                    <td>Exceptions with a named owner and engineering reasoning</td>
+                    <td>Accepting engineering risk the company did not intend to accept</td>
+                    <td>Commercial and legal owners, to approve the binding effect</td>
+                </tr>
+                <tr>
+                    <td>Approve the price and the commitments in the bid</td>
+                    <td>Verification and recovery</td>
+                    <td>These bind the organisation, so someone with real authority has to sign</td>
+                    <td>Approval records separated by type of commitment</td>
+                    <td>Committing to terms that cannot actually be met, extremely hard to reverse after submission</td>
+                    <td>Submit the bid, and send the outcome into the evaluation set</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <h3>Who should be in the room while this table is filled in</h3>
+
+    <p>This question matters more than it looks, because the table above can be filled in very fast by people who do not do the work — and the result will be beautiful and wrong. A 2023 MIT Sloan report drawing on more than 50 interviews puts <strong>worker voice</strong> in at problem definition and work-process design, not as "end-user" feedback after the design is set.<sup><a href="#en-ref-7">[7]</a></sup></p>
+
+    <p>The reason the report gives lands exactly on the problem in step 2 — the people who do the work every day are the ones who know what sub-steps are really hidden inside each box on the map, and what an edge case actually looks like. That body of knowledge is practical knowledge that has never been written into any document. The report goes further and observes that having those people in the room is not enough, because tacit knowledge may never have been put into words before, so you need a way of asking that draws it out rather than merely an opportunity to speak.</p>
+
+    <p>The boundary has to be marked as well: this report studies the United States context in 2023. It does not discuss Thai organisations, it does not discuss Thai labour law, and it does not discuss Thai practice. The playbook itself notes that design guidance of this kind must be adapted to local representation structures, labour relations, culture, and law.<sup><a href="#en-ref-1">[1]</a></sup></p>
+
+    <p>Step 7 is what gives the whole session its meaning. The output of a teardown is not a new policy, not an announcement, and not a prettier diagram. It is <strong>a bounded experiment with a named owner</strong>. The evidentiary reason is already in section <a href="#en-comparative-advantage">4</a> — when the meta-analysis says the effect of pairing people with AI is highly variable and heavily dependent on the type of task, the only thing that can tell you whether your design works is measuring it on your own work, not quoting an average from somebody else's. And measurement only happens when there is one person whose name is attached to the result.</p>
+
+    <h2 id="en-metrics-failures">7. Metrics That Matter, Failure Patterns, and the Thai Pathway</h2>
+
+    <p>The playbook's metrics list for this chapter is longer than what I bring across, because it packs outcome metrics and economic metrics into a single paragraph. The table below is the subset that decides whether <em>the design</em> works, which is this post's question. I have added the Scorecard column from the series' six-column system, so you can see which view of the executive board each metric surfaces on.</p>
+
+    <div class="table-wrapper">
+        <table>
+            <thead>
+                <tr>
+                    <th>Metric</th>
+                    <th>The definition you actually measure</th>
+                    <th>Where it comes from</th>
+                    <th>Scorecard</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>End-to-end cycle time</td>
+                    <td>Time from the case arriving to an outcome the customer can accept, counting every waiting period</td>
+                    <td>Timestamps from the intake system and the delivery system, not a team's own stopwatch</td>
+                    <td>Value</td>
+                </tr>
+                <tr>
+                    <td>First-pass yield</td>
+                    <td>The share of cases that pass on the first attempt with no correction and no return</td>
+                    <td>Case status in the work system, counting only closed cases</td>
+                    <td>Quality</td>
+                </tr>
+                <tr>
+                    <td>Correction minutes by task</td>
+                    <td>Minutes spent on rework, separated by Task rather than totalled across the workflow</td>
+                    <td>Time records for rework, linked to the code of the originating Task that caused it</td>
+                    <td>Economics</td>
+                </tr>
+                <tr>
+                    <td>Reviewer queue</td>
+                    <td>Queue size and average reviewer waiting time, against the declared queue ceiling</td>
+                    <td>The exception desk's queue system, collected daily rather than monthly</td>
+                    <td>People</td>
+                </tr>
+                <tr>
+                    <td>Escalation precision</td>
+                    <td>The share of escalated cases that deserved escalation, used to tune the Threshold on the next pass</td>
+                    <td>Reviewer rulings, compared against the reason the system escalated</td>
+                    <td>Learning</td>
+                </tr>
+                <tr>
+                    <td>Automation by consequence</td>
+                    <td>The automated share of the work, split by level of consequence rather than a single blended figure</td>
+                    <td>The workflow register, linked to the consequence classification of each case</td>
+                    <td>Risk</td>
+                </tr>
+                <tr>
+                    <td>Recovery time</td>
+                    <td>Time from discovering a wrong outcome to being back in a correct state, including notifying those affected</td>
+                    <td>Incident records with a real start time and a real close time</td>
+                    <td>Risk</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <p>There is one rule the playbook writes at the end of its metrics list that I treat as non-waivable — <strong>segment by experience level, because averages can hide both the beneficiary and the person losing practice</strong>.<sup><a href="#en-ref-1">[1]</a></sup> The reason is in the first piece of evidence in section <a href="#en-comparative-advantage">4</a>, where the low-experience group and the highly expert group got completely different results from the same deployment.<sup><a href="#en-ref-4">[4]</a></sup> If you report a single average, you will see neither of the two things that matter most: who is really benefiting, and who is losing the chance to accumulate skill — which is precisely principle 5 of this chapter.</p>
+
+    <p>One further warning about using this table. Every number from the fictional case in section <a href="#en-lannabuild">5</a>, and the 18 minutes and 46 hours in section <a href="#en-before-after">2</a>, must never enter this table as a target or a baseline. Your baseline has to come from your own data, collected before the experiment begins.</p>
+
+    <h3>Failure patterns</h3>
+
+    <ul>
+        <li><strong>Automating the old process unchanged</strong>, without touching its structure at all — you buy the speed of the wrong route instead of the speed of the right one</li>
+        <li><strong>Making one exhausted expert the universal reviewer</strong> — the scarcest person becomes the longest bottleneck, and review quality falls with every hour that passes in the day</li>
+        <li><strong>Rubber-stamp approval</strong> — the checkpoints are all still there, but nothing has been refused for months, which is a signal you can read out of the data without waiting for anyone to tell you</li>
+        <li><strong>Hiding uncertainty behind fluent prose</strong> — unsupported statements are written in the same register as supported ones, so the reviewer cannot separate them by reading alone</li>
+        <li><strong>Allowing tools before authorization</strong> — the system acts first and checks whether it was permitted afterwards, which turns a control into an after-the-fact report</li>
+    </ul>
+
+    <p>The playbook names seven failure patterns. The two I did not break out as list items above are removing entry-level work without building a new learning path, which is the same matter as principle 5 in section <a href="#en-teardown">6</a>, and measuring local speed while downstream rework rises, which is the same matter as the first-slide trap in section <a href="#en-before-after">2</a>. I would suggest printing all seven and pinning them up in the workshop room, because every one of them reads as "our organisation would never do that" right up until you look at the real data.</p>
+
+    <div class="alert info">
+        <strong>🇹🇭 The Thai pathway is already written down</strong> — ETDA publishes its <em>AI Job Redesign Guideline</em> on the ETDA Resource Center, and as of 5 September 2026 the publication page carries the date 9 January 2026, while the PDF itself has an internal creation date of 7 January 2026 and runs to 49 pages, and <strong>no version number or edition number is stated anywhere in the document</strong>.<sup><a href="#en-ref-8">[8]</a></sup> The pathway it lays out runs from analysing workload and the nature of the work (Chapter 6) to reviewing the level of human–AI collaboration per unit of work (Chapter 7) and then to adjusting roles, responsibilities and workforce skills (Chapter 8) — the same sequence as steps 2 to 4 of the session in section <a href="#en-teardown">6</a> — with the document built on a "human-centred" principle and insisting that organisations still need employee consultation, labour-law review, and measurement of job quality in their own context.<br><br><strong>An important caution:</strong> ETDA's guideline carries its own ladder of AI usage levels, and it is <em>not</em> the same ladder as the four-step authority ladder in the playbook I am using for this series, nor the same as the five maturity levels in <a href="/blog/ai-transformation-maturity">#4</a>. All three are different instruments, built with different intentions, and <strong>must never be mapped onto each other one-to-one</strong>. I will walk the ETDA pathway end to end in <a href="/blog/ai-transformation-workforce">#8 Redesign Tasks Before Headcount</a>
+    </div>
+
+    <h2 id="en-road-ahead">8. The Road Ahead — From Arrows on a Whiteboard to Evidence</h2>
+
+    <p>If you take three things from this post, I would like them to be these. One, the four-condition table in section <a href="#en-ceremonial-control">1</a>, which separates a real checkpoint from a ceremonial one within ten minutes of a meeting. Two, the four-lane table in section <a href="#en-four-lanes">3</a>, whose "must never hold" column is worth more than its first column. Three, the six-column marking table in section <a href="#en-teardown">6</a>, which forces every lane assignment to end in a reason, a piece of evidence, and a destination for the handoff.</p>
+
+    <p>But I have to be straight about the limits of this post. What we have done throughout it is draw arrows on a whiteboard. We can now say who should do what, for what reason, and where it hands off — but we have not answered the two questions that follow immediately in a real meeting. The first is how much authority to act the system should be granted at each step, and what conditions would justify granting it more. The second is how we would know that the lane assignment we have just made is genuinely better than the old arrangement, rather than merely looking more systematic on a slide.</p>
+
+    <p>Both are questions of evidence, and the evidence that exists does not give everyone the same answer on every task. The three sets of numbers I passed over quickly in section <a href="#en-comparative-advantage">4</a> will be opened up in full, each with its own boundary, in the next post — alongside the playbook's four-step authority ladder, which ties a system's authority to the level of consequence instead of tying it to the model's confidence.</p>
+
+    <div class="alert info">
+        <strong>🧭 Layer this post advances:</strong> the <strong>Workflows</strong> layer — question <strong>Q3</strong> (what should people, AI, deterministic rules and Tools each do, and in what order) — and the three Scorecard columns this post moves most are <strong>Quality</strong> through first-pass yield and escalation precision, <strong>People</strong> through reviewer queue and capacity, and <strong>Risk</strong> through automation by consequence and recovery time, with Value, Learning and Economics as the supporting columns in the metrics table in section <a href="#en-metrics-failures">7</a>. The next post, <a href="/blog/ai-transformation-evidence-ladder">#7 What the Evidence Says</a>, walks the evidence piece by piece with the boundary on each, then lays out the four-step authority ladder — recommend, draft, act on approval, and automate within bounds — so that a system's authority follows the level of consequence rather than following the model's confidence.
+    </div>
+
+    <div class="key-takeaways">
+        <h3>🎯 Key Takeaways</h3>
+        <ul>
+            <li><strong>Human in the loop</strong> = a control only when the reviewer has all four — evidence, time, competence, and the authority to refuse. Missing any one of them makes it a ceremonial checkpoint.</li>
+            <li><strong>Four lanes</strong> = purpose and judgment · generation and analysis · structural control · verification and recovery — coordinated, never substituted for one another.</li>
+            <li><strong>Start at the decision</strong> = begin at the decision, then decompose the job into tasks, handoffs, evidence, and consequences — not at whichever step is easiest to put AI into.</li>
+            <li><strong>Software enforces</strong> = permissions, Schema and limits belong in hard controls, not in a reviewer's attention or a user's good intentions.</li>
+            <li><strong>Review capacity</strong> = review is operating capacity; specify competence, evidence, time, queue limit and authority to reject — all five.</li>
+            <li><strong>Withhold, don't highlight</strong> = unsupported claims should be withheld upstream rather than highlighted and passed to a person, because highlighting makes reviewer load grow with the volume AI produces.</li>
+            <li><strong>Bounded experiment</strong> = the output of a teardown is a narrowly bounded experiment with a real named owner, not a new policy document.</li>
+        </ul>
+    </div>
+
+    <section class="references" aria-labelledby="references">
+        <h2 id="references">References</h2>
+        <p class="references__note">Every source was verified and accessed on 5 September 2026 (2026-09-05). This series uses the four evidence labels of the source playbook — <strong>Law</strong> binding where it applies · <strong>Standard</strong> standards and guidance that are voluntary until incorporated into an obligation · <strong>Study</strong> empirical evidence or an explicitly stated research design · <strong>Synthesis</strong> the author's own synthesis.</p>
+        <ol class="references__list">
+            <li id="en-ref-1"><span class="ref-tag ref-tag--synthesis">Synthesis</span> Mingkhwan, A. <cite>AI Transformation as an Organizational Core — Bilingual Companion Playbook</cite>, Chapter 4 <em>Redesign the human AI workflow</em> and Appendix A §7–8. The author's own 97-page manuscript, not published online and therefore not linked · evidence snapshot 5 September 2026 — accessed 2026-09-05. <span class="ref-supports">Supports: the chapter's opening sentence "Human in the loop is not a design" and its Thai counterpart · the term ceremonial control · the four coordinated lanes and their lane names · the five operating principles · the seven steps of Workflow teardown and rebuild · the metrics list and the rule to segment by experience level · the seven failure patterns · the fictional LannaBuild Engineering case · Figure 4 End to end workflow redesign, which the playbook attributes to Author synthesis</span></li>
+            <li id="en-ref-2"><span class="ref-tag ref-tag--study">Study</span> Bainbridge, L. <cite>Ironies of automation</cite>. Automatica 19(6), 775–779, November 1983. <a href="https://doi.org/10.1016/0005-1098(83)90046-8">doi.org</a> — accessed 2026-09-05. <span class="ref-supports">Supports: the problem of leaving a person to watch an automated system predates the AI wave by roughly 43 years and is still cited (Semantic Scholar records 2,572 citations as of 2026-09-05) — only the bibliographic record is verified, via Crossref, because the article sits behind a subscription wall and its abstract has been withdrawn from the indexing databases, so no passage is quoted, and connecting it to AI workflows is the author's synthesis rather than a conclusion of the article, which concerns industrial control systems</span></li>
+            <li id="en-ref-3"><span class="ref-tag ref-tag--synthesis">Synthesis</span> The Foundation (th). <cite>AI Transformation: From Using AI to the Fastest-Learning Organisation | The Masterclass EP01</cite>. <a href="https://www.youtube.com/watch?v=n_IwUYevRZo">youtube.com</a> — published 28 August 2026, running time about 52 minutes, accessed 2026-09-05. <span class="ref-supports">Supports: allocating work by comparative advantage and consequence across the three modes Human-only, Human plus AI and AI-first with oversight (the 15:58–19:44 stretch) · separating Task automation from Workflow redesign and the six beats of the new route (the 19:44–22:16 stretch) — the video's captions are machine-generated and contain errors, so this is paraphrase through the playbook only, never a word-for-word quotation, and no claim is made about what the presenter "said"</span></li>
+            <li id="en-ref-4"><span class="ref-tag ref-tag--study">Study</span> Brynjolfsson, E., Li, D. &amp; Raymond, L. R. <cite>Generative AI at Work</cite>. NBER Working Paper 31161, April 2023. <a href="https://www.nber.org/papers/w31161">nber.org</a> — accessed 2026-09-05. <span class="ref-supports">Supports: 5,179 customer-support agents in one firm, issues resolved per hour up 14% on average, up 34% for the low-experience group, and barely changed for the highly expert group — one firm, one workflow, one period, not a universal productivity or return estimate, and still a working paper that has not been peer-reviewed · the reason behind the rule to segment by experience level</span></li>
+            <li id="en-ref-5"><span class="ref-tag ref-tag--study">Study</span> Dell'Acqua, F., McFowland III, E., Mollick, E., Lifshitz, H., Kellogg, K. C., Rajendran, S., Krayer, L., Candelon, F. &amp; Lakhani, K. R. <cite>Navigating the Jagged Technological Frontier</cite>. Organization Science, Articles in Advance, published online 11 March 2026 (CC BY 4.0). <a href="https://doi.org/10.1287/orsc.2025.21838">doi.org</a> — accessed 2026-09-05. <span class="ref-supports">Supports: a preregistered experiment with 758 consultants completing 12.2% more tasks 25.1% faster on work inside the capability frontier, but 19% less likely to be correct on one complex managerial task chosen to sit outside it — simulated tasks, one population, one model generation, and the frontier moves · cite the journal version, not the 2023 HBS working paper</span></li>
+            <li id="en-ref-6"><span class="ref-tag ref-tag--study">Study</span> Vaccaro, M., Almaatouq, A. &amp; Malone, T. <cite>When combinations of humans and AI are useful: A systematic review and meta-analysis</cite>. Nature Human Behaviour 8, 2293–2303, published online 28 October 2024. <a href="https://doi.org/10.1038/s41562-024-02024-1">doi.org</a> — accessed 2026-09-05. <span class="ref-supports">Supports: 106 experiments, 370 effect sizes · human-plus-AI systems better than humans alone at g = 0.64 (95% CI 0.53–0.74) but worse than the better of human or AI alone at g = −0.23 (95% CI −0.39 to −0.07) · decision tasks lose, content-creation tasks gain — the literature ends in June 2023 and is highly heterogeneous, so the comparison must be tested locally, and both values must always be cited together</span></li>
+            <li id="en-ref-7"><span class="ref-tag ref-tag--study">Study</span> Kochan, T. A., Armstrong, B., Shah, J., Castilla, E. J., Likis, B. &amp; Mangelsdorf, M. E. <cite>Bringing Worker Voice Into Generative AI</cite>. MIT Sloan School of Management / MIT Institute for Work and Employment Research, December 2023. <a href="https://mitsloan.mit.edu/sites/default/files/2024-01/Bringing%20Worker%20Voice%20into%20Generative%20AI%2012%2021%202023.pdf">mitsloan.mit.edu</a> — accessed 2026-09-05. <span class="ref-supports">Supports: a report drawing on more than 50 interviews that puts worker participation at problem definition and work-process design rather than as end-user feedback after the design is finished · practitioners' knowledge of their workflow is tacit and may never have been put into words — this is a 2023 United States report that does not address Thai organisations or Thai labour law and must be adapted to local structures and law</span></li>
+            <li id="en-ref-8"><span class="ref-tag ref-tag--standard">Standard</span> ETDA. <cite>AI Job Redesign Guideline</cite>. Electronic Transactions Development Agency, ETDA Resource Center. <a href="https://erc.etda.or.th/th/knowledge/ebook/ai-job-redesign-guideline">erc.etda.or.th</a> — publication page dated 9 January 2026, PDF internal creation date 7 January 2026, 49 pages, accessed 2026-09-05. <span class="ref-supports">Supports: the Thai pathway from analysing workload and the nature of the work (Chapter 6) to reviewing the level of human–AI collaboration (Chapter 7) and adjusting roles, responsibilities and workforce skills (Chapter 8) · the human-centred principle · the requirement that organisations still need employee consultation, labour-law review, and measurement of job quality in their own context · the document states no version or edition number, and ETDA's ladder of AI usage levels is a different instrument from the authority ladder and the maturity ladder used in this series</span></li>
+        </ol>
+    </section>
+    </div>
+
+    <div class="post-series-footer">
+      <span class="l-th">บทความจากซีรีส์ AI Transformation for Organizations 2026</span><span class="l-en" lang="en">From the AI Transformation for Organizations 2026 series</span>
+    </div>
+
+    <nav aria-label="AI Transformation for Organizations">
+    <div class="series-nav">
+      <h3>🧭 AI Transformation for Organizations 2026</h3>
+      <div class="series-links series-links--grouped">
+        <div class="series-links__group">
+          <p class="series-links__label">Reframe · เปลี่ยนกรอบคิด</p>
+          <a href="/blog/ai-transformation-layers">#1 Six Layers</a>
+          <a href="/blog/ai-transformation-prediction">#2 Prediction</a>
+          <a href="/blog/ai-transformation-learning-loop">#3 Learning Loop</a>
+          <a href="/blog/ai-transformation-maturity">#4 Maturity</a>
+          <a href="/blog/ai-transformation-portfolio">#5 Portfolio</a>
+        </div>
+        <div class="series-links__group">
+          <p class="series-links__label">Redesign · ออกแบบองค์กรใหม่</p>
+          <span class="current" aria-current="page">#6 Four Lanes</span>
+          <a href="/blog/ai-transformation-evidence-ladder">#7 Evidence Ladder</a>
+          <a href="/blog/ai-transformation-workforce">#8 Workforce</a>
+          <a href="/blog/ai-transformation-factory">#9 AI Factory</a>
+          <a href="/blog/ai-transformation-operating-model">#10 Operating Model</a>
+        </div>
+        <div class="series-links__group">
+          <p class="series-links__label">Engineer · วิศวกรรมแกนกลาง</p>
+          <a href="/blog/ai-transformation-ai-core">#11 AI-Core</a>
+          <a href="/blog/ai-transformation-contract">#12 Contract</a>
+          <a href="/blog/ai-transformation-five-rails">#13 Five Rails</a>
+          <a href="/blog/ai-transformation-release-gate">#14 Release Gate</a>
+          <a href="/blog/ai-transformation-incident-loop">#15 Incident Loop</a>
+        </div>
+        <div class="series-links__group">
+          <p class="series-links__label">Lead · นำการเปลี่ยนผ่าน</p>
+          <a href="/blog/ai-transformation-obligations">#16 Obligations</a>
+          <a href="/blog/ai-transformation-suppliers-footprint">#17 Cost &amp; Footprint</a>
+          <a href="/blog/ai-transformation-first-90-days">#18 Days 0–90</a>
+          <a href="/blog/ai-transformation-days-91-180">#19 Days 91–180</a>
+          <a href="/blog/ai-transformation-eight-questions">#20 Eight Questions</a>
+        </div>
+      </div>
+    </div>
+    </nav>
+
+  </article>
+
+  </main>
+
+  <footer class="blog-footer">
+    <nav class="blog-footer__nav" aria-label="Site">
+      <a href="../index.html">Home</a>
+      <a href="./">Blog</a>
+      <a href="../publications/">Publications</a>
+      <a href="../books/">Books</a>
+      <a href="../projects/">Projects</a>
+      <a href="../news/">News</a>
+      <a href="../index.html#contact">Contact</a>
+    </nav>
+    <a href="./">← Back to Blog</a>
+    <span>© 2026 Anirach Mingkhwan — Associate Professor, KMUTNB</span>
+  </footer>
+
+</body>
+</html>

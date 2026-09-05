@@ -1,0 +1,1709 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>The AI and Data Factory — หกบริการที่ทำให้ use case ถัดไปถูกลง | Anirach Mingkhwan</title>
+  <meta name="description" content="โรงงาน AI และข้อมูลไม่ได้ผลิตโมเดล แต่ผลิตชิ้นส่วนที่ใช้ซ้ำได้ — หกบริการ หนึ่งแถบควบคุมร่วม และ Minimum production package ก่อนปล่อยทุกครั้ง">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=Sarabun:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      color-scheme: light;
+      /* ink */
+      --navy: #11304b; --slate: #334155; --slate-light: #526174; --gray: #94a3b8;
+      /* ground */
+      --bg: #faf7f0; --white: #ffffff; --code-bg: #1e293b;
+      /* accent */
+      --blue: #226299; --blue-dark: #1a4d7a; --blue-light: #4992b9;
+      /* brand — sampled from the book covers. --gold is decorative on light grounds (2.2:1); --gold-dark is its text form. */
+      --gold: #c4a46c; --gold-dark: #7a5f22; --coral: #c2410c; --cloud: #dee7e6; --parchment: #e9e1c4; --focus: #226299;
+      /* status — use only these six, never invent a seventh */
+      --green: #22c55e; --red: #ef4444; --amber: #f59e0b;
+      --cyan: #06b6d4; --purple: #226299; --purple-dark: #1a4d7a;
+      /* type */
+      --font: 'Inter', 'Sarabun', -apple-system, BlinkMacSystemFont, sans-serif;
+      --mono: 'JetBrains Mono', 'Fira Code', 'Sarabun', monospace;
+      /* form */
+      --radius: 12px; --radius-sm: 8px; --radius-lg: 16px;
+      --measure: 720px; --wide: 860px;
+      --transition: 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+    html { scroll-behavior: smooth; }
+    body { font-family: var(--font); font-size: 17px; line-height: 1.8; color: var(--slate); background: var(--bg); -webkit-font-smoothing: antialiased; }
+    .blog-nav { position: fixed; top: 0; left: 0; right: 0; z-index: 100; background: rgba(248,250,252,0.85); backdrop-filter: blur(20px); border-bottom: 1px solid rgba(0,0,0,0.05); }
+    .blog-nav__inner { max-width: 860px; margin: 0 auto; padding: 0 2rem; height: 56px; display: flex; align-items: center; justify-content: space-between; }
+    .blog-nav__back { font-size: 0.85rem; font-weight: 500; color: var(--blue); text-decoration: none; }
+    .blog-nav__back:hover { color: #1a4d7a; }
+    .blog-nav__title { font-size: 0.85rem; font-weight: 600; color: var(--navy); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 50%; }
+    /* ── HERO ── house .post-hero on the approved Deep Blue gradient (page-design
+       §5 / INV-28). Ink is inverted for the dark ground: white title/meta, tag
+       pills white on 18% white — the openclaw-production treatment. The
+       background value must stay byte-identical to the approved string. */
+    .post-hero { padding: 8rem 2rem 3rem; background: linear-gradient(135deg, #11304b 0%, #1a4d7a 45%, #226299 100%); color: #fff; text-align: center; }
+    .post-hero__tags { display: flex; gap: 0.5rem; justify-content: center; margin-bottom: 1.25rem; flex-wrap: wrap; }
+    .post-hero__tag { display: inline-block; font-size: 0.72rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.1em; color: #fff; background: rgba(255,255,255,0.18); padding: 0.35rem 0.9rem; border-radius: 20px; }
+    .post-hero__title { font-size: clamp(1.8rem, 5vw, 3rem); font-weight: 800; color: #fff; line-height: 1.2; margin-bottom: 1rem; max-width: 720px; margin-left: auto; margin-right: auto; }
+    .post-hero__sub { font-size: 1.05rem; max-width: 640px; margin: 0 auto 1.5rem; line-height: 1.7; color: #fff; }
+    .post-hero__meta { font-size: 0.85rem; color: #fff; display: flex; align-items: center; justify-content: center; gap: 1.5rem; flex-wrap: wrap; }
+    .post-hero__series { font-weight: 600; color: #fff; }
+    /* the switch pill and the focus ring both sit on the dark hero: the pill is
+       a light chip so its labels keep their light-ground colours, and --focus
+       re-points to gold here (blue collapses on blue — the footer/pre
+       precedent). */
+    .post-hero { --focus: var(--gold); }
+    .post-hero__cover {
+      aspect-ratio: 1 / 1;
+      max-width: 380px;
+      margin: 2.5rem auto 0;
+      border-radius: var(--radius-lg, 16px);
+      overflow: hidden;
+      box-shadow: 0 20px 60px rgba(17,48,75,0.14);
+    }
+    .post-hero__cover img { width: 100%; height: 100%; object-fit: cover; display: block; }
+    .post-body { max-width: 720px; margin: 0 auto; padding: 3rem 2rem 6rem; }
+    .post-body h2 { font-size: 1.6rem; font-weight: 800; color: var(--navy); margin: 3rem 0 1rem; padding-bottom: 0.5rem; border-bottom: 2px solid rgba(34,98,153,0.15); }
+    .post-body h3 { font-size: 1.25rem; font-weight: 700; color: var(--navy); margin: 2.25rem 0 0.75rem; }
+    .post-body p { margin-bottom: 1.25rem; }
+    .post-body strong { font-weight: 700; color: var(--navy); }
+    .post-body a { color: var(--blue); text-decoration: underline; text-decoration-thickness: 1px; text-underline-offset: 2px; }
+    .post-body ul, .post-body ol { margin: 0.5rem 0 1.25rem 1.5rem; }
+    .post-body li { margin-bottom: 0.4rem; }
+    .post-body blockquote { background: rgba(34,98,153,0.06); border-left: 4px solid var(--blue); padding: 1rem 1.25rem; border-radius: 0 10px 10px 0; margin: 1.25rem 0; font-size: 0.95rem; color: var(--navy); }
+    .post-body hr { border: none; height: 1px; background: linear-gradient(90deg, transparent, rgba(34,98,153,0.2), transparent); margin: 3rem 0; }
+    /* ── CODE ── */
+    .post-body pre { background: var(--code-bg); border-radius: 12px; padding: 1.5rem; margin: 1.25rem 0 1.5rem; overflow-x: auto; border: 1px solid rgba(255,255,255,0.05); }
+    .post-body pre code { font-family: var(--mono); font-size: 0.85rem; color: #e2e8f0; line-height: 1.7; background: none; padding: 0; white-space: pre-wrap; }
+    .post-body code { font-family: var(--mono); font-size: 0.88em; background: rgba(34,98,153,0.08); color: var(--blue-dark); padding: 0.15em 0.45em; border-radius: 5px; }
+    /* ── TABLES ── */
+    .table-wrapper { overflow-x: auto; margin: 1.5rem 0; border-radius: 0.5rem; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1); }
+    table { width: 100%; border-collapse: collapse; background: white; }
+    th { background: #226299; color: white; padding: 1rem; text-align: left; font-weight: 600; }
+    td { padding: 1rem; border-bottom: 1px solid #e5e7eb; }
+    .post-body table { display: block; width: 100%; overflow-x: auto; }
+    /* ── ALERTS ── */
+    .alert { background: #fef3cd; border: 1px solid #facc15; border-radius: 0.5rem; padding: 1rem; margin: 1.5rem 0; }
+    .alert.danger { background: #fee2e2; border-color: #ef4444; }
+    .alert.info { background: #e0f2fe; border-color: #06b6d4; }
+    .alert.success { background: #d1fae5; border-color: #10b981; }
+    /* ── KEY TAKEAWAYS ── */
+    .key-takeaways { background: linear-gradient(135deg, #f3f4f6 0%, #e5e7eb 100%); border-radius: 1rem; padding: 2rem; margin: 3rem 0; }
+    .key-takeaways h3 { color: #226299; margin-bottom: 1.5rem; }
+    .post-series-footer { text-align: center; font-size: 0.85rem; color: var(--slate-light); font-style: italic; margin-top: 2rem; padding-top: 2rem; border-top: 1px solid #e2e8f0; }
+    .blog-footer { background: var(--navy); padding: 2rem 0; text-align: center; }
+    .blog-footer a { color: var(--gold); text-decoration: none; font-weight: 600; font-size: 0.9rem; }
+    .blog-footer span { color: var(--gray); font-size: 0.8rem; display: block; margin-top: 0.4rem; }
+    @media (max-width: 600px) {
+      .post-hero { padding: 7rem 1.25rem 2.5rem; }
+      .post-body { padding: 2rem 1.25rem 4rem; }
+      .post-hero__meta { flex-direction: column; gap: 0.4rem; }
+      .post-body h2 { font-size: 1.4rem; }
+      .post-body h3 { font-size: 1.15rem; }
+      .post-body pre { padding: 1rem; border-radius: 8px; }
+    }
+
+    :focus-visible { outline: 2px solid var(--focus); outline-offset: 3px; border-radius: 2px; }
+    /* the ring sits on the page ground (3px offset). Inside the navy footers
+       and code blocks var(--blue) collapses to 2.12:1, so those scopes
+       re-point --focus to gold (5.73:1 on navy). */
+    .footer, .blog-footer, pre { --focus: var(--gold); }
+    :focus:not(:focus-visible) { outline: none; }
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after {
+        animation-duration: .01ms !important; animation-iteration-count: 1 !important;
+        transition-duration: .01ms !important; scroll-behavior: auto !important;
+      }
+    }
+    h1, h2, h3, .post-hero__title, .card__title { text-wrap: balance; }
+
+    .post-body img, .post-body svg { max-width: 100%; height: auto; }
+
+    /* ── SKIP LINK ── a11y-perf R5: the link and the landmark it targets are a
+       pair — useless without both halves. Off-screen until focused, then the
+       first tab stop on every page. */
+    .skip-link { position: absolute; left: -9999px; }
+    .skip-link:focus {
+      left: 1rem; top: 1rem; z-index: 999;
+      background: var(--navy); color: #fff;
+      padding: 0.75rem 1.25rem; border-radius: var(--radius-sm);
+      font-weight: 600; text-decoration: none;
+    }
+
+    /* ── POST WAYFINDING ── the wordmark is the home link; the footer carries
+       the full destination row. */
+    .blog-nav__home {
+      font-size: 0.9rem; font-weight: 800; color: var(--navy);
+      text-decoration: none; margin-right: 1rem;
+    }
+    .blog-nav__home:hover { color: var(--blue); }
+    .blog-nav__inner > .blog-nav__back { margin-right: auto; }
+    .blog-footer__nav {
+      display: flex; flex-wrap: wrap; justify-content: center; gap: 0.35rem 1.25rem;
+      max-width: 860px; margin: 0 auto 1.25rem; padding: 0 2rem 1.25rem;
+      border-bottom: 1px solid rgba(255,255,255,0.12);
+    }
+    .blog-footer__nav a { color: var(--gold); font-size: 0.85rem; font-weight: 600; text-decoration: none; }
+    .blog-footer__nav a:hover { color: #fff; text-decoration: underline; }
+
+    html { scroll-padding-top: 5rem; }
+    [id] { scroll-margin-top: 5rem; }
+
+    /* Thai needs more room than Latin at the same nominal size. */
+    .post-body:lang(th) { font-size: 18px; line-height: 1.85; }
+    .post-body p, .post-body li, .post-body blockquote { text-wrap: pretty; }
+
+    /* ---- side-scroll affordance ----
+       pre blocks and tables can exceed 720px. These layers paint a shadow ONLY
+       where there is more content in that direction; when fully scrolled the
+       cover slides over the shadow and hides it. No JavaScript, no wrapper. */
+    .post-body pre, .post-body table {
+      overflow-x: auto;
+      background-image:
+        linear-gradient(to right, var(--code-bg, #0f172a) 30%, rgba(15,23,42,0)),
+        linear-gradient(to left, var(--code-bg, #0f172a) 30%, rgba(15,23,42,0)),
+        radial-gradient(farthest-side at 0 50%, rgba(0,0,0,.28), rgba(0,0,0,0)),
+        radial-gradient(farthest-side at 100% 50%, rgba(0,0,0,.28), rgba(0,0,0,0));
+      background-position: 0 0, 100% 0, 0 0, 100% 0;
+      background-repeat: no-repeat;
+      background-size: 40px 100%, 40px 100%, 14px 100%, 14px 100%;
+      background-attachment: local, local, scroll, scroll;
+    }
+    .post-body table {
+      background-image:
+        linear-gradient(to right, var(--white, #fff) 30%, rgba(255,255,255,0)),
+        linear-gradient(to left, var(--white, #fff) 30%, rgba(255,255,255,0)),
+        radial-gradient(farthest-side at 0 50%, rgba(17,48,75,.16), rgba(17,48,75,0)),
+        radial-gradient(farthest-side at 100% 50%, rgba(17,48,75,.16), rgba(17,48,75,0));
+      background-position: 0 0, 100% 0, 0 0, 100% 0;
+      background-repeat: no-repeat;
+      background-size: 40px 100%, 40px 100%, 14px 100%, 14px 100%;
+      background-attachment: local, local, scroll, scroll;
+    }
+
+    /* ---- table of contents ---- */
+    .post-toc {
+      max-width: 720px;
+      margin: 2rem auto 0;
+      padding: 1rem 1.25rem;
+      background: rgba(34,98,153,0.05);
+      border: 1px solid rgba(34,98,153,0.14);
+      border-left: 3px solid var(--gold, #c4a46c);
+      border-radius: 10px;
+      font-size: 0.92rem;
+    }
+    .post-toc > summary {
+      cursor: pointer;
+      font-weight: 700;
+      color: var(--navy);
+      list-style: none;
+    }
+    .post-toc > summary::-webkit-details-marker { display: none; }
+    .post-toc > summary::before {
+      content: "\25B8";
+      display: inline-block;
+      margin-right: 0.5rem;
+      transition: transform 0.2s ease;
+      color: var(--gold-dark, #7a5f22);
+    }
+    .post-toc[open] > summary::before { transform: rotate(90deg); }
+    .post-toc > summary:focus-visible { outline: 3px solid var(--focus, #226299); outline-offset: 3px; }
+    .post-toc ol { margin: 0.85rem 0 0.25rem; padding-left: 1.4rem; }
+    .post-toc li { margin-bottom: 0.4rem; line-height: 1.5; }
+    .post-toc a { color: var(--slate); text-decoration: none; }
+    .post-toc a:hover, .post-toc a:focus-visible { color: var(--blue-dark, #1a4d7a); text-decoration: underline; }
+    @media (max-width: 600px) { .post-toc { margin: 1.25rem 1rem 0; } }
+
+    /* ---- cross-document view transitions ---- */
+    @view-transition { navigation: auto; }
+    .nav, .blog-nav { view-transition-name: site-nav; }
+    .footer, .blog-footer { view-transition-name: site-footer; }
+    @media (prefers-reduced-motion: reduce) {
+      ::view-transition-group(*),
+      ::view-transition-old(*),
+      ::view-transition-new(*) { animation: none !important; }
+    }
+
+    /* ── SERIES STRIP — Hermes Agent in Practice ──
+       Same class and inner-wrapper shape as the OpenClaw strip because the
+       linter's RE_SNAV recognises exactly `series-nav` + a nested div; a
+       renamed strip would read as "no nav" and fail INV-08. All content
+       checks (INV-03 family) iterate the SERIES7 list only, so this strip's
+       labels are convention, not contract. House-styled, not the island CSS. */
+    .series-nav {
+      max-width: 720px; margin: 2rem auto 0; padding: 1.1rem 1.4rem;
+      background: rgba(255,255,255,0.75); border: 1px solid rgba(34,98,153,0.15);
+      border-left: 3px solid var(--gold); border-radius: 12px;
+    }
+    .series-nav h3 {
+      font-size: 0.78rem; font-weight: 700; text-transform: uppercase;
+      letter-spacing: 0.08em; color: var(--gold-dark); margin-bottom: 0.6rem;
+    }
+    .series-links { display: flex; flex-wrap: wrap; gap: 0.5rem; }
+    .series-links a, .series-links .current {
+      font-size: 0.82rem; font-weight: 600; padding: 0.35rem 0.8rem;
+      border-radius: 50px; text-decoration: none;
+    }
+    .series-links a { color: var(--blue-dark); background: rgba(34,98,153,0.08); }
+    .series-links a:hover { background: rgba(34,98,153,0.16); }
+    .series-links .current { color: #fff; background: var(--blue-dark); }
+    @media (max-width: 600px) { .series-nav { margin: 1.5rem 1rem 0; } }
+
+    /* ── FIGURE — the sanctioned diagram component (page-design §4 Content).
+       Diagrams are PNGs; this repo built them out of divs twice and reverted
+       twice. The image is wrapped in a link to itself so a phone can pinch a
+       1400px drawing without a line of JavaScript. */
+    .figure { margin: 2.5rem 0; }
+    .figure__img { width: 100%; height: auto; display: block;
+                   border-radius: var(--radius); border: 1px solid rgba(0,0,0,0.06); }
+    .figure__caption { font-size: 0.85rem; color: var(--slate-light);
+                       text-align: center; margin-top: 0.75rem; }
+
+    /* ── REFERENCES — every material number in this series carries its source.
+       The tags are the book's own four evidence labels. */
+    .references { margin-top: 3rem; padding-top: 2rem; border-top: 1px solid #e2e8f0; }
+    .references__note { font-size: 0.85rem; color: var(--slate-light); margin-bottom: 1rem; }
+    .references__list { padding-left: 1.4rem; font-size: 0.9rem; line-height: 1.75; }
+    .references__list li { margin-bottom: 0.7rem; }
+    .ref-tag { display: inline-block; font-size: 0.7rem; font-weight: 700;
+               letter-spacing: 0.06em; text-transform: uppercase; padding: 0.1rem 0.5rem;
+               border-radius: 50px; margin-right: 0.4rem; vertical-align: 0.05em;
+               background: rgba(34,98,153,0.1); color: var(--blue-dark); }
+    .ref-tag--law { background: rgba(239,68,68,0.12); color: #991b1b; }
+    .ref-tag--synthesis { background: rgba(196,164,108,0.22); color: var(--gold-dark); }
+    .ref-supports { display: block; color: var(--slate-light); font-size: 0.85rem; }
+
+    /* ── SERIES STRIP, GROUPED — twenty chips is four rows of noise unless they
+       are grouped, so the four parts of the book label their own rows. The
+       .series-nav and .series-links wrappers stay byte-literal because INV-08
+       recognises the strip by exactly those two, and the chips stay direct
+       children of a group because INV-03's item regex cannot see through a
+       nested tag. Grouping is a modifier plus two elements of .series-links —
+       the flat OpenClaw, Hermes and Life strips are untouched. */
+    .series-links--grouped { display: grid; gap: 0.9rem; }
+    .series-links__group { position: relative; display: flex; flex-wrap: wrap;
+                           gap: 0.5rem; padding-left: 8.25rem; min-height: 2rem; }
+    .series-links__label { position: absolute; left: 0; top: 0.45rem; width: 7.5rem;
+                           margin: 0; font-size: 0.72rem; font-weight: 700;
+                           text-transform: uppercase; letter-spacing: 0.08em;
+                           color: var(--slate-light); line-height: 1.3; }
+    @media (max-width: 600px) {
+      .series-links__group { padding-left: 0; }
+      .series-links__label { position: static; width: auto; flex-basis: 100%;
+                             margin-bottom: 0.1rem; }
+    }
+
+    /* ── LANGUAGE SWITCH — pure CSS, zero JavaScript (INV-38) ──
+       One visually-hidden checkbox as a direct child of body, BEFORE the main landmark,
+       so `#langSwitch:checked ~ main …` reaches every content block. The two
+       tracks are paired blocks: .l-th (default) and .l-en (hidden until
+       checked; display:revert restores block for divs, inline for spans).
+       Naming stays clear of INV-12's menu-token regex (hamburger|burger|
+       nav__toggle|nav-toggle|navtoggle|menu-toggle|menu__toggle) — verified.
+       No JS also means no persistence across posts; each post opens in Thai. */
+    .lang-switch-box { position: absolute; left: -9999px; }
+    .l-en { display: none; }
+    #langSwitch:checked ~ main .l-en { display: revert; }
+    #langSwitch:checked ~ main .l-th { display: none; }
+    .lang-switch {
+      display: inline-flex; align-items: center; gap: 0.55rem;
+      margin-top: 1.4rem; padding: 0.4rem 1.1rem; border-radius: 50px;
+      background: rgba(255,255,255,0.85); border: 1px solid rgba(255,255,255,0.4);
+      cursor: pointer; font-size: 0.85rem; user-select: none;
+    }
+    .lang-switch span { color: var(--slate-light); font-weight: 600; transition: color 0.2s; }
+    .lang-switch .lang-sep { color: var(--gray); font-weight: 400; }
+    .lang-switch .lang-th { color: var(--navy); font-weight: 800; }
+    #langSwitch:checked ~ main .lang-switch .lang-th { color: var(--slate-light); font-weight: 600; }
+    #langSwitch:checked ~ main .lang-switch .lang-en { color: var(--navy); font-weight: 800; }
+    .lang-switch:hover { border-color: #fff; }
+    #langSwitch:focus-visible ~ main .lang-switch {
+      outline: 2px solid var(--focus); outline-offset: 3px;
+    }
+  </style>
+  <!-- social -->
+  <link rel="canonical" href="https://anirach.com/blog/ai-transformation-factory.html">
+  <meta property="og:type" content="article">
+  <meta property="og:url" content="https://anirach.com/blog/ai-transformation-factory.html">
+  <meta property="og:site_name" content="Anirach Mingkhwan">
+  <meta property="og:locale" content="th_TH">
+  <meta property="og:locale:alternate" content="en_US">
+  <meta property="article:published_time" content="2026-09-05">
+  <meta property="article:author" content="https://anirach.com/">
+  <meta property="og:title" content="The AI and Data Factory — หกบริการที่ทำให้ use case ถัดไปถูกลง">
+  <meta property="og:description" content="โรงงาน AI และข้อมูลไม่ได้ผลิตโมเดล แต่ผลิตชิ้นส่วนที่ใช้ซ้ำได้ — หกบริการ หนึ่งแถบควบคุมร่วม และ Minimum production package ก่อนปล่อยทุกครั้ง">
+  <meta property="og:image" content="https://anirach.com/images/ai-transformation-factory-og.jpg">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
+  <meta property="og:image:alt" content="The AI and Data Factory — หกบริการที่ทำให้ use case ถัดไปถูกลง">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:image" content="https://anirach.com/images/ai-transformation-factory-og.jpg">
+  <meta name="twitter:image:alt" content="The AI and Data Factory — หกบริการที่ทำให้ use case ถัดไปถูกลง">
+  <meta name="robots" content="max-image-preview:large">
+  <meta name="theme-color" content="#11304b">
+  <link rel="icon" href="/favicon.ico" sizes="any">
+  <link rel="apple-touch-icon" href="/apple-touch-icon.png">
+  <!-- /social -->
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "BlogPosting",
+    "headline": "The AI and Data Factory — หกบริการที่ทำให้ use case ถัดไปถูกลง",
+    "author": {
+      "@type": "Person",
+      "@id": "https://anirach.com/#person",
+      "name": "Anirach Mingkhwan",
+      "url": "https://anirach.com/"
+    },
+    "datePublished": "2026-09-05",
+    "dateModified": "2026-09-05",
+    "image": "https://anirach.com/images/ai-transformation-factory-og.jpg",
+    "inLanguage": [
+      "th",
+      "en"
+    ],
+    "mainEntityOfPage": "https://anirach.com/blog/ai-transformation-factory.html"
+  }
+  </script>
+</head>
+<body>
+<a href="#main" class="skip-link">Skip to content</a>
+<input type="checkbox" id="langSwitch" class="lang-switch-box" aria-label="Switch language: Thai / English">
+
+  <nav class="blog-nav">
+    <div class="blog-nav__inner">
+      <a href="../index.html" class="blog-nav__home">Anirach</a>
+      <a href="./" class="blog-nav__back">‹ Blog</a>
+      <div class="blog-nav__title">The AI and Data Factory</div>
+    </div>
+  </nav>
+
+  <main id="main">
+
+  <header class="post-hero">
+    <div class="post-hero__tags">
+      <span class="post-hero__tag">AI &amp; Data Factory</span>
+      <span class="post-hero__tag">Context Engineering</span>
+      <span class="post-hero__tag">Reuse</span>
+    </div>
+    <h1 class="post-hero__title"><span class="l-th">The AI and Data Factory — หกบริการที่ทำให้ use case ถัดไปถูกลง</span><span class="l-en" lang="en">The AI and Data Factory — Six Services That Make the Next Use Case Cheaper</span></h1>
+    <p class="post-hero__sub"><span class="l-th">โรงงานไม่ได้ผลิตโมเดล — มันผลิต data products, context, evaluation set, tool contract, release manifest และ feedback ที่กลายเป็น regression test ซึ่งใช้ซ้ำได้ทั่วองค์กร และมันเริ่มจาก demand ไม่ใช่การเก็บข้อมูล</span><span class="l-en" lang="en">A factory does not produce a model — it produces data products, context, evaluation sets, tool contracts, release manifests and feedback turned into regression tests, reusable across the organization, and it starts from demand, not data collection.</span></p>
+    <div class="post-hero__meta">
+      <span>By <strong>Anirach Mingkhwan</strong></span>
+      <span class="post-hero__series">AI Transformation for Organizations 2026 • Post #9</span>
+      <span><time datetime="2026-09-05">5 Sep 2026</time></span>
+      <span>31 min read</span>
+    </div>
+    <label for="langSwitch" class="lang-switch" title="สลับภาษา · Switch language"><span class="lang-th">ไทย</span><span class="lang-sep">·</span><span class="lang-en" lang="en">English</span></label>
+    <div class="post-hero__cover">
+      <img src="../images/ai-transformation-factory-cover.jpg" alt="The AI and Data Factory — หกบริการที่ทำให้ use case ถัดไปถูกลง" width="800" height="800" loading="eager" fetchpriority="high" decoding="async">
+    </div>
+  </header>
+
+  <article class="post-body">
+
+    <details class="post-toc l-th" open>
+      <summary>ในบทความนี้</summary>
+      <ol>
+          <li><a href="#th-output-is-not-a-model">ผลผลิตของโรงงานไม่ใช่โมเดล — แล้วสิ่งที่มันผลิตจริง ๆ คืออะไร</a></li>
+          <li><a href="#th-demand-first">เริ่มจาก Demand ไม่ใช่จากการเก็บข้อมูล และบันได project → capability → operating model</a></li>
+          <li><a href="#th-six-services">หกบริการที่ใช้ซ้ำได้ และแถบควบคุมร่วมที่พาดผ่านทั้งหก</a></li>
+          <li><a href="#th-context-engineering">Context Engineering — บริบทเป็นองค์ประกอบของรุ่น ไม่ใช่ท่อที่มองไม่เห็น</a></li>
+          <li><a href="#th-cx-refund-01">CX-REFUND-01 — กรณีเดียวที่ทั้งหกบริการต้องแตะ</a></li>
+          <li><a href="#th-value-stream">เวิร์กช็อปสองชั่วโมง และ Minimum production package เจ็ดรายการ</a></li>
+          <li><a href="#th-metrics-failures">ตัวชี้วัดสิบสองตัวพร้อมช่อง Scorecard และรูปแบบความล้มเหลวแปดแบบ</a></li>
+          <li><a href="#th-road-ahead">ก้าวต่อไป — จากชิ้นส่วนที่ใช้ซ้ำได้ สู่คำถามว่าใครเป็นเจ้าของอะไร</a></li>
+      </ol>
+    </details>
+    <details class="post-toc l-en" open>
+      <summary>In this post</summary>
+      <ol>
+          <li><a href="#en-output-is-not-a-model">The factory's output is not a model — so what does it actually produce?</a></li>
+          <li><a href="#en-demand-first">Start from demand, not data collection, and the project → capability → operating model ladder</a></li>
+          <li><a href="#en-six-services">Six reusable services, and the shared control band that spans all six</a></li>
+          <li><a href="#en-context-engineering">Context Engineering — context is part of the release, not invisible plumbing</a></li>
+          <li><a href="#en-cx-refund-01">CX-REFUND-01 — one case that every one of the six services has to touch</a></li>
+          <li><a href="#en-value-stream">A two-hour workshop, and the seven-item minimum production package</a></li>
+          <li><a href="#en-metrics-failures">Twelve metrics with a Scorecard column, and eight failure patterns</a></li>
+          <li><a href="#en-road-ahead">The road ahead — from reusable components to the question of who owns what</a></li>
+      </ol>
+    </details>
+    <div class="l-th">
+
+    <p>🤔 <strong>ถ้า use case ที่สองแพงเท่า use case แรก องค์กรมีโรงงานหรือมีแค่โปรเจกต์?</strong></p>
+
+    <p>ตอนที่แล้ว <a href="/blog/ai-transformation-workforce">Redesign Tasks Before Headcount</a> จบลงที่ข้อสรุปว่า เมื่อออกแบบงานระดับ task ใหม่แล้ว สิ่งที่ต้องตอบต่อคือชิ้นส่วนไหนควรถูกสร้างครั้งเดียวแล้วใช้ซ้ำทั้งองค์กร ไม่ใช่ให้ทุกทีมสร้างฐานเดิมซ้ำกันคนละรอบ ตอนนี้คือคำตอบของคำถามนั้น และเป็นบทที่ผมคิดว่าคนทำงานสายเทคโนโลยีกับสายธุรกิจอ่านแล้วมักเห็นภาพคนละภาพ — จึงเป็นบทที่ต้องอ่านด้วยกัน</p>
+
+    <p>คำตอบสั้น ๆ ของทั้งบทความคือ <strong>โรงงาน AI และข้อมูล</strong> (AI and data factory) ไม่ได้ผลิตโมเดล มันผลิตชิ้นส่วนที่ใช้ซ้ำได้ ได้แก่ ข้อมูลที่กำกับแล้ว บริบทที่มีเลขรุ่น ชุดประเมิน สัญญาการใช้ Tool, Release manifest, ขั้นตอนปฏิบัติงาน และ Feedback ที่ถูกแปลงเป็น Regression test — และมันเริ่มจาก Demand คือการตัดสินใจที่ต้องดีขึ้น ไม่ใช่เริ่มจากการไล่เก็บข้อมูลให้ครบก่อน</p>
+
+    <h2 id="th-output-is-not-a-model">1. ผลผลิตของโรงงานไม่ใช่โมเดล</h2>
+
+    <p>บทที่ 5 ของคู่มือเปิดด้วยนิยามเชิงปฏิเสธก่อน ซึ่งผมชอบวิธีเปิดแบบนี้มาก เพราะมันตัดความเข้าใจผิดสองข้อที่พบบ่อยที่สุดทิ้งไปตั้งแต่ประโยคแรก โรงงาน AI และข้อมูล<sup><a href="#th-ref-1">[1]</a></sup> <em>ไม่ใช่</em> ห้องที่เต็มไปด้วย Data Scientist และ <em>ไม่ใช่</em> คิวของ Pilot ที่แยกขาดจากกัน สองภาพนี้คือสิ่งที่องค์กรจำนวนมากสร้างขึ้นมาจริง ๆ แล้วเรียกมันว่าโรงงาน ทั้งที่ภาพแรกคือศูนย์รวมทักษะ ส่วนภาพที่สองคือกองงานที่บังเอิญใช้เครื่องมือคล้ายกัน</p>
+
+    <p>นิยามเชิงบวกของหนังสือคือ โรงงานเป็นระบบการผลิตที่ทำซ้ำได้ สำหรับแปลงการตัดสินใจทางธุรกิจหนึ่งเรื่องให้กลายเป็น Data Product ที่กำกับได้ Workflow ที่มี AI เป็นส่วนประกอบ หลักฐานที่วัดได้ และบริการที่มีคนติดตามผลอยู่จริง คำสำคัญในนิยามนี้คือ "ทำซ้ำได้" — ไม่ใช่ "ทันสมัย" ไม่ใช่ "ใหญ่" และไม่ใช่ "มีโมเดลของตัวเอง"</p>
+
+    <p>แล้วสิ่งที่โรงงานผลิตออกมาจริง ๆ คืออะไร หนังสือระบุไว้ตรง ๆ ว่าผลผลิตของมัน<em>ไม่ได้มีแค่โมเดล</em> แต่รวมถึงสิ่งเหล่านี้ทั้งหมด<sup><a href="#th-ref-1">[1]</a></sup></p>
+
+    <ul>
+        <li><strong>ข้อมูลต้นทางที่เชื่อถือได้</strong> — ไม่ใช่ dump ของฐานข้อมูล แต่คือชุดข้อมูลที่มีคนรับผิดชอบและมีคำนิยามที่ตกลงกันแล้ว</li>
+        <li><strong>Retrieval corpora</strong> — คลังความรู้ที่ตั้งใจคัดมาเพื่อค้นคืน ไม่ใช่ทุกไฟล์ในองค์กรที่เทลงฐานข้อมูลเวกเตอร์</li>
+        <li><strong>Context template</strong> — แม่แบบบริบทที่ประกอบคำสั่ง หลักฐาน และสถานะเข้าด้วยกันอย่างมีแบบแผน</li>
+        <li><strong>Tool contract</strong> — สัญญาการใช้เครื่องมือ ระบุขอบเขต Schema และผลที่มันก่อได้</li>
+        <li><strong>ชุดประเมิน (evaluation set)</strong> — กรณีทดสอบที่ติดป้ายคำตอบไว้แล้ว ใช้ตัดสินว่ารุ่นใหม่ดีขึ้นหรือแย่ลง</li>
+        <li><strong>Release manifest</strong> — เอกสารที่ผูกทุกชิ้นส่วนของรุ่นหนึ่งไว้ด้วยกัน</li>
+        <li><strong>ขั้นตอนปฏิบัติงาน</strong> — สิ่งที่คนหน้างานต้องทำเมื่อระบบเสนอผิด หรือเมื่อระบบไม่ตอบ</li>
+        <li><strong>Feedback ที่ถูกแปลงเป็น Regression test</strong> — คำแก้ของลูกค้าและผู้ตรวจที่กลายเป็นข้อสอบถาวรของระบบ</li>
+    </ul>
+
+    <p>อ่านรายการนี้ช้า ๆ แล้วจะเห็นว่าแทบไม่มีรายการไหนเลยที่เป็น "โมเดล" ในความหมายที่คนทั่วไปเข้าใจ ทุกรายการคือสิ่งที่<em>อยู่รอบ</em>โมเดล และเป็นสิ่งที่ทำให้โมเดลตัวเดิมทำงานได้ต่างกันโดยสิ้นเชิงในสององค์กร นี่คือเหตุผลที่การเปรียบเทียบองค์กรด้วยคำถามว่า "ใช้โมเดลตัวไหน" แทบไม่ให้ข้อมูลอะไรเลย คำถามที่ให้ข้อมูลคือ "ชิ้นส่วนในรายการข้างบนขององค์กรคุณ มีเจ้าของกี่รายการ และมีเลขรุ่นกี่รายการ"</p>
+
+    <h3>โปรเจกต์กับโรงงาน ต่างกันตรงไหน</h3>
+
+    <p>วิดีโอต้นทางของซีรีส์นี้อธิบายความต่างไว้ชัดในช่วง §10 (25:53–28:24)<sup><a href="#th-ref-2">[2]</a></sup> ว่ารูปแบบที่องค์กรทั่วไปทำกันคือทำ AI แบบโครงการ มีปัญหาหนึ่งเรื่อง ตั้งทีมหนึ่งทีม เก็บข้อมูล สร้างโมเดล ทดลอง แล้วจบ ปัญหาไม่ได้อยู่ที่ว่าทำแบบนี้แล้วไม่ได้ผล — โครงการหลายอันได้ผลจริง ปัญหาอยู่ที่ว่าเมื่อโครงการจบ สิ่งที่เหลืออยู่กับองค์กรมีน้อยมาก และโครงการถัดไปต้องเริ่มจากศูนย์อีกครั้ง วิดีโอสรุปหลักการไว้ประโยคเดียวว่าการใช้ซ้ำทำให้ต้นทุนส่วนเพิ่มของ use case ถัดไปลดลง</p>
+
+    <div class="alert">
+        <strong>ข้อควรระวังที่ผมอยากปักหมุดไว้ตั้งแต่ต้น:</strong> ทั้งหนังสือและวิดีโอต้นทาง <em>ไม่ได้</em> ระบุตัวเลขใด ๆ ว่าการใช้ซ้ำลดต้นทุนลงกี่เปอร์เซ็นต์หรือกี่เท่า ถ้าใครอ้างตัวเลขแบบนั้นโดยอ้างอิงแนวคิด AI Factory ให้ถามหาที่มา คำถามเปิดของบทความนี้ ("ถ้า use case ที่สองแพงเท่า use case แรก…") จึงเป็น<em>คำถามสำหรับตรวจสอบตัวเอง</em> ไม่ใช่ผลการวัด
+    </div>
+
+    <div class="table-wrapper">
+        <table>
+            <thead>
+                <tr>
+                    <th>Dimension</th>
+                    <th>ทำแบบโปรเจกต์</th>
+                    <th>ทำแบบโรงงาน</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>จุดเริ่ม</td>
+                    <td>มีปัญหาหนึ่งเรื่อง หรือมีข้อมูลชุดหนึ่งอยู่แล้วจึงหาว่าจะใช้ทำอะไร</td>
+                    <td>มีการตัดสินใจที่ต้องดีขึ้น พร้อมเจ้าของและผลลัพธ์ที่วัดได้</td>
+                </tr>
+                <tr>
+                    <td>สิ่งที่ส่งมอบ</td>
+                    <td>โมเดลหรือเดโม พร้อมสไลด์สรุปผล</td>
+                    <td>Data product, บริบทที่มีเลขรุ่น ชุดประเมิน Tool contract และ Manifest</td>
+                </tr>
+                <tr>
+                    <td>สิ่งที่เหลืออยู่เมื่อทีมสลาย</td>
+                    <td>ความรู้ในหัวคน และ repo ที่ไม่มีใครดูแลต่อ</td>
+                    <td>ชิ้นส่วนที่มีเจ้าของ มีเลขรุ่น และมีคนใช้ต่อได้ทันที</td>
+                </tr>
+                <tr>
+                    <td>ต้นทุนของ use case ถัดไป</td>
+                    <td>ใกล้เคียงของเดิม เพราะสร้างฐานเดิมใหม่ทุกครั้ง</td>
+                    <td>ลดลงตามสัดส่วนชิ้นส่วนที่ใช้ซ้ำได้ — หนังสือและวิดีโอไม่ได้ระบุว่าลดเท่าไร</td>
+                </tr>
+                <tr>
+                    <td>หลักฐาน</td>
+                    <td>ผลทดสอบครั้งเดียวตอนปิดโครงการ</td>
+                    <td>หลักฐานที่เดินทางไปพร้อมผลิตภัณฑ์และถูกรันซ้ำทุกรุ่น</td>
+                </tr>
+                <tr>
+                    <td>การเรียนรู้</td>
+                    <td>อยู่ในรายงานสรุปบทเรียนที่ไม่มีใครเปิดอ่านอีก</td>
+                    <td>Feedback ถูกตรวจแล้วกลายเป็น Regression test ที่บังคับใช้จริง</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <p>ตารางนี้เป็นการอ่านของผมจากเนื้อหาในบท ไม่ใช่ตารางที่พิมพ์อยู่ในหนังสือ แต่แถวสุดท้ายคือแถวที่ผมใช้ตรวจองค์กรจริงบ่อยที่สุด เพราะมันตอบได้ด้วยคำถามเดียว: เมื่อสามเดือนก่อนมีเคสที่ระบบตอบผิดจนต้องขอโทษลูกค้า วันนี้เคสนั้นอยู่ในชุดทดสอบที่รันทุกครั้งก่อนปล่อยรุ่นใหม่หรือยัง ถ้าคำตอบคือ "อยู่ในอีเมลของหัวหน้าทีม" องค์กรนั้นยังทำงานแบบโครงการอยู่ ไม่ว่าจะมีแพลตฟอร์มดีแค่ไหน</p>
+
+    <h2 id="th-demand-first">2. โรงงานเริ่มจาก Demand ไม่ใช่จากการเก็บข้อมูล</h2>
+
+    <p>ประโยคที่ผมคิดว่าแพงที่สุดในบทนี้สั้นมาก: โรงงานเริ่มจาก Demand<sup><a href="#th-ref-1">[1]</a></sup> ให้ระบุการตัดสินใจที่ต้องการปรับปรุง ใครคือผู้รับผิดชอบการตัดสินใจนั้น AI มีอำนาจเพียงใดในกระบวนการ และวัดผลอย่างไร — ทั้งสี่ข้อนี้ต้องเสร็จ<em>ก่อน</em>ไปเก็บข้อมูลเพิ่ม</p>
+
+    <p>ทำไมลำดับนี้ถึงสำคัญ เพราะลำดับที่กลับกันคือรูปแบบความล้มเหลวข้อแรกที่บทนี้ระบุไว้ตรง ๆ นั่นคือการสร้าง Data Lake โดยไม่รู้ว่าจะปรับการตัดสินใจใด ผมเจอรูปแบบนี้บ่อยจนแทบทำนายได้ล่วงหน้า: องค์กรลงทุนกับ platform ข้อมูลอยู่หลายปี จบด้วยคลังที่ครบถ้วนมาก แล้วเพิ่งมาถามว่า "ทีนี้จะเอาไปทำอะไรดี" คำตอบที่ได้มักเป็นรายการ use case ที่ไม่มีใครเป็นเจ้าของ เพราะคนที่เป็นเจ้าของการตัดสินใจจริง ๆ ไม่เคยอยู่ในห้องตอนออกแบบคลังนั้น</p>
+
+    <p>คำว่า "AI มีอำนาจเพียงใด" ในที่นี้คือ <strong>อำนาจตัดสินใจ</strong> (decision authority) ซึ่งซีรีส์นี้แยกไว้เป็นมิติอิสระตั้งแต่ตอน <a href="/blog/ai-transformation-portfolio">#5 Decision Portfolio</a> — ระบบที่แค่ร่างคำตอบให้คนตรวจ กับระบบที่ปล่อยผลจริงได้เอง เป็นคนละงานที่ต้องการชิ้นส่วนจากโรงงานคนละชุด แม้จะเป็นการตัดสินใจเรื่องเดียวกันก็ตาม เช่นเดียวกับ <strong>ระดับผลกระทบ</strong> (consequence) ซึ่งจะกลับมาอีกครั้งในรูปของตัวชี้วัด "evaluation coverage by consequence" ในหัวข้อที่ 7</p>
+
+    <p>เมื่อรู้ว่าจะปรับการตัดสินใจใดแล้ว ขั้นถัดไปตามหนังสือคือหล่อข้อมูลสำคัญให้เป็นผลิตภัณฑ์ที่ Domain เป็นเจ้าของ พร้อมคำนิยาม <strong>ที่มาของข้อมูลและผลลัพธ์</strong> (provenance) เกณฑ์คุณภาพ กฎการเข้าถึง และคำมั่นเรื่องระดับบริการ สังเกตว่าห้าอย่างนี้ไม่ใช่งานวิศวกรรมข้อมูลล้วน ๆ — "คำนิยาม" กับ "เกณฑ์คุณภาพ" เป็นการตัดสินใจทางธุรกิจที่ทีมข้อมูลตัดสินแทนไม่ได้</p>
+
+    <h3>บันไดสามขั้น: project → capability → operating model</h3>
+
+    <p>วิดีโอต้นทางแยกไว้สามระดับในช่วง §13 (34:04–37:18) และหนังสือนำมาเรียบเรียงต่อ<sup><a href="#th-ref-2">[2]</a></sup> ความสำคัญของบันไดนี้ไม่ได้อยู่ที่การจัดอันดับองค์กร แต่อยู่ที่การอธิบายว่าทำไมการนับจำนวน use case ถึงเป็นตัวชี้วัดที่หลอกตัวเองได้ง่ายที่สุด วิดีโอใช้ภาพเปรียบเทียบว่าองค์กรที่มี Pilot จำนวนมากแต่แยกกันอยู่ อาจอยู่ห่างจากการเปลี่ยนผ่านมากกว่าองค์กรที่มีการใช้งานไม่กี่รายการแต่ใช้แพลตฟอร์ม วงจร Feedback และเส้นทางขยายร่วมกัน — นี่คือภาพเปรียบเทียบเชิงวาทศิลป์ ไม่ใช่ผลการวัด และไม่ควรถูกยกไปวางในตารางตัวชี้วัดใด ๆ</p>
+
+    <div class="table-wrapper">
+        <table>
+            <thead>
+                <tr>
+                    <th>Level</th>
+                    <th>สิ่งที่มันพิสูจน์หรือเพิ่มเข้ามา</th>
+                    <th>คำถามที่ตอบได้แล้ว</th>
+                    <th>สิ่งที่ยังตอบไม่ได้</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>AI project</td>
+                    <td>พิสูจน์ว่าปัญหาหนึ่งเรื่องแก้ได้ด้วยวิธีนี้</td>
+                    <td>เทคนิคนี้ทำงานกับข้อมูลของเราได้ไหม</td>
+                    <td>ทำซ้ำกับเรื่องที่สองด้วยแรงที่น้อยลงได้หรือไม่</td>
+                </tr>
+                <tr>
+                    <td>AI capability</td>
+                    <td>เพิ่มข้อมูลที่ใช้ซ้ำได้ การจัดการโมเดล governance ความเชี่ยวชาญ และความสามารถในการทดลอง</td>
+                    <td>เรื่องที่สองเริ่มจากฐานที่มีอยู่แล้วได้ไหม</td>
+                    <td>การตัดสินใจประจำวันขององค์กรเปลี่ยนไปแล้วหรือยัง</td>
+                </tr>
+                <tr>
+                    <td>AI operating model</td>
+                    <td>ทำให้ความสามารถเหล่านั้นเป็นส่วนหนึ่งของวิธีออกแบบ decision และ workflow</td>
+                    <td>เราออกแบบงานใหม่โดยถือว่ามีความสามารถนี้อยู่แล้วหรือไม่</td>
+                    <td>ใครเป็นเจ้าของอะไรเมื่อขยายข้าม domain — คำถามของตอนถัดไป</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <div class="alert info">
+        <strong>อย่าสับบันได:</strong> บันไดสามขั้นนี้เป็นการแยก<em>ระดับการส่งมอบ</em> ไม่ใช่บันไดวุฒิภาวะห้าระดับ (สำรวจ / ช่วยงาน / บริหารอย่างเป็นระบบ / บูรณาการ / ปฏิบัติการแบบ AI-core) ที่ตอน <a href="/blog/ai-transformation-maturity">#4 Five Maturity Levels</a> เป็นเจ้าของ ทั้งสองอย่างวัดคนละแกน และซีรีส์นี้มีข้อตกลงชัดเจนว่าจะไม่นำมาปนกันในบทเดียว
+    </div>
+
+    <h3>พลังสามด้านที่ไม่ได้มาฟรี</h3>
+
+    <p>อีกกรอบหนึ่งที่หนังสือหยิบมาจากวิดีโอช่วง §11 (28:24–31:13) คือพลังสามด้านของ <strong>รูปแบบการดำเนินงาน</strong> (operating model) แบบดิจิทัล<sup><a href="#th-ref-2">[2]</a></sup> ได้แก่ <strong>Scale</strong> คือรองรับลูกค้า ธุรกรรม หรือการตัดสินใจได้มากขึ้นโดยทรัพยากรไม่โตตามสัดส่วน <strong>Scope</strong> คือนำข้อมูลและความสามารถ AI ไปใช้ซ้ำข้ามผลิตภัณฑ์ บริการ และบริบท และ <strong>Learning</strong> คือเปลี่ยน interaction ให้กลายเป็นความเข้าใจที่ดีขึ้นและผลการทำงานที่ดีขึ้นในอนาคต</p>
+
+    <p>ประโยคที่ต้องอ่านคู่กันเสมอคือ พลังทั้งสามนี้<em>ไม่ใช่</em>คุณสมบัติที่เกิดขึ้นเองจากโมเดล มันเป็นผลของการออกแบบองค์กร ผมเน้นประโยคนี้เพราะมันคือเหตุผลที่บทนี้มีอยู่ทั้งบท ถ้าพลังสามด้านมาพร้อมโมเดล การซื้อ API ก็เพียงพอแล้ว และคงไม่มีใครต้องสร้างโรงงาน วงจรเศรษฐศาสตร์ที่หนังสือเขียนไว้คือ use → evidence → learning → ผลิตภัณฑ์หรือกระบวนการที่ดีขึ้น → การใช้งานที่มีค่ามากขึ้น โดยวัดคุณภาพและความเสียหายในทุกขั้น ซึ่งก็คือ <strong>วงจรการเรียนรู้</strong> (learning loop) ที่ตอน <a href="/blog/ai-transformation-learning-loop">#3 The Learning Engine</a> เจาะไว้แล้ว โรงงานคือรูปธรรมทางวิศวกรรมของวงจรนั้น</p>
+
+    <h2 id="th-six-services">3. หกบริการที่ใช้ซ้ำได้ และแถบควบคุมร่วม</h2>
+
+    <p>นี่คือหัวใจของบท และเป็นภาพที่ผมแนะนำให้ผู้บริหารจำไว้ภาพเดียวจากตอนนี้ ความสามารถของโรงงานประกอบด้วยบริการที่ใช้ซ้ำได้หกด้าน ได้แก่ Data products, Context services, Model services, Evaluation services, Tool registry services และ Observability services โดยมีการควบคุมร่วมสี่ด้าน คือ Security, Privacy, FinOps และ Sustainability พาดผ่านทั้งหกบริการ<sup><a href="#th-ref-1">[1]</a></sup></p>
+
+    <figure class="figure">
+      <a href="../images/ai-transformation-fig-06-ai-data-factory.png">
+        <img class="figure__img" src="../images/ai-transformation-fig-06-ai-data-factory.png" alt="แผนภาพหกช่องบริการของโรงงาน: Data products, Context services, Model services, Evaluation, Tool registry, Observability วางเหนือแถบสีเข้ม SHARED ASSURANCE" width="1400" height="700" loading="lazy" decoding="async">
+      </a>
+      <figcaption class="figure__caption">รูปที่ 6 · หกบริการของโรงงาน AI และข้อมูล — ชิ้นส่วนที่ใช้ซ้ำได้ทำให้รอบการเรียนรู้ที่ปลอดภัยรอบถัดไปสั้นลง</figcaption>
+    </figure>
+
+    <p>สิ่งที่ทำให้การแบ่งหกช่องนี้มีประโยชน์ ไม่ใช่ตัวเลขหก แต่คือสิ่งที่แต่ละช่อง<em>เป็นเจ้าของและกำหนดรุ่น</em> ผมจึงจัดตารางด้านล่างด้วยสามคำถาม: บริการนี้เป็นเจ้าของอะไร ใครคือผู้ใช้ และมันปล่อยหลักฐานอะไรออกมาให้คนอื่นตรวจได้ ถ้าช่องใดตอบไม่ได้ครบสามคำถาม ช่องนั้นยังเป็นทีม ไม่ใช่บริการ</p>
+
+    <div class="table-wrapper">
+        <table>
+            <thead>
+                <tr>
+                    <th>Service</th>
+                    <th>สิ่งที่เป็นเจ้าของและกำหนดรุ่น</th>
+                    <th>ผู้ใช้บริการ</th>
+                    <th>หลักฐานที่ปล่อยออกมา</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td><strong>Data products</strong><br>ผลิตภัณฑ์ข้อมูล</td>
+                    <td>ข้อเท็จจริงที่กำกับแล้ว พร้อมคำนิยาม ที่มาของข้อมูล เกณฑ์คุณภาพ กฎการเข้าถึง และคำมั่นระดับบริการ</td>
+                    <td>ทุก Workflow, Context services และการประเมินระบบ</td>
+                    <td>Data contract, Lineage, ค่าความสดของข้อมูล และบันทึกการละเมิดสัญญาข้อมูล</td>
+                </tr>
+                <tr>
+                    <td><strong>Context services</strong><br>บริการบริบท</td>
+                    <td>การประกอบคำสั่ง หลักฐานที่ค้นคืนมา และ Memory เข้าเป็นบริบทหนึ่งชุด</td>
+                    <td>ทุก Candidate ที่ใช้โมเดลตอบงานจริง</td>
+                    <td>Context manifest, รหัส Corpus snapshot, เลขรุ่นของ Ranking และ Template</td>
+                </tr>
+                <tr>
+                    <td><strong>Model services</strong><br>บริการโมเดล</td>
+                    <td>การส่งงานไปยังโมเดลขนาดเหมาะสมที่สุดที่ยังทำงานได้ และการจัดการเมื่อ Provider เปลี่ยน</td>
+                    <td>ทีมที่ดูแล Workflow แต่ละสาย</td>
+                    <td>เลขรุ่นของนโยบายการส่งงาน บันทึกการเปลี่ยน Provider และต้นทุนกับ Latency ต่อภารกิจ</td>
+                </tr>
+                <tr>
+                    <td><strong>Evaluation services</strong><br>การประเมินระบบ</td>
+                    <td>กรณีที่ติดป้ายคำตอบไว้แล้ว การสอบเทียบ Judge และการรันชุดทดสอบ</td>
+                    <td>ด่านอนุมัติการนำระบบออกใช้ และผู้อนุมัติรุ่น</td>
+                    <td>เลขรุ่นของ Golden set, ความครอบคลุมตามระดับผลกระทบ ผลรันพร้อมข้อจำกัดที่พบ</td>
+                </tr>
+                <tr>
+                    <td><strong>Tool registry services</strong><br>ทะเบียนเครื่องมือ</td>
+                    <td>ขอบเขต Schema ประเภทของผลที่เครื่องมือก่อได้ และเงื่อนไขการอนุมัติ</td>
+                    <td>Guard ภายนอก และ Runtime ที่เรียกเครื่องมือ</td>
+                    <td>Tool contract, Effect class, กฎการอนุมัติ และประวัติการเปลี่ยนแปลง</td>
+                </tr>
+                <tr>
+                    <td><strong>Observability services</strong><br>ความสามารถในการสังเกตระบบ</td>
+                    <td>Trace, ผลลัพธ์ที่เกิดขึ้นจริง ต้นทุน การเลื่อนไหลของพฤติกรรม และเหตุการณ์ผิดปกติ</td>
+                    <td>ฝ่ายปฏิบัติการ ฝ่ายความเสี่ยง และคณะกรรมการ</td>
+                    <td>Trace ที่ย้อนกลับได้ บันทึกผลลัพธ์ สัญญาณ Drift และไทม์ไลน์ของ Incident</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <div class="alert danger">
+        <strong>หกบริการนี้ไม่ใช่มาตรฐานของใคร:</strong> ไม่มีองค์กรมาตรฐานใดนิยาม "โรงงาน AI หกบริการ" ไว้ นี่คือการสังเคราะห์ของผู้เขียนหนังสือ<sup><a href="#th-ref-1">[1]</a></sup> ที่ตั้งใจให้เป็นภาษากลางสำหรับออกแบบการใช้ซ้ำ ไม่ใช่สถาปัตยกรรมอ้างอิงที่ผ่านการรับรอง และไม่ใช่ผังองค์กรที่ต้องทำตาม อย่าอ้างหกช่องนี้ว่าเป็นข้อกำหนดของ ISO, NIST หรือของวิดีโอต้นทาง
+    </div>
+
+    <h3>ที่มาของข้อมูลและผลลัพธ์ มีคำศัพท์กลางให้ใช้แล้ว</h3>
+
+    <p>ในตารางข้างบน คำว่า provenance โผล่สองที่ คือที่ Data products และที่ Observability ซึ่งไม่ใช่เรื่องบังเอิญ — ที่มาของข้อมูลและผลลัพธ์เป็นสิ่งที่ต้องถูกบันทึกตั้งแต่ต้นทาง และต้องอ่านย้อนได้ที่ปลายทาง ข่าวดีคือเรื่องนี้ไม่ต้องประดิษฐ์คำศัพท์เอง <strong>W3C PROV-O</strong> เป็น W3C Recommendation เผยแพร่เมื่อ 30 เมษายน 2013 และ ณ วันที่ 5 กันยายน 2026 ยังคงสถานะเดิม ไม่มีเอกสารใดมาแทนที่<sup><a href="#th-ref-3">[3]</a></sup> มันให้ชุดคลาสและคุณสมบัติสำหรับแทนและแลกเปลี่ยนข้อมูล provenance ที่เกิดจากคนละระบบและคนละบริบท ด้วยแกนหลักคือ entity, activity, agent และความสัมพันธ์แบบการอนุพัทธ์</p>
+
+    <p>สิ่งที่ PROV-O <em>ไม่ได้</em> ให้ และต้องพูดให้ชัดคือ มันเป็น<em>คำศัพท์</em> ไม่ใช่นโยบายการตรวจสอบ ไม่ใช่แบบการจัดเก็บ และไม่ได้บอกว่าองค์กรต้องเก็บอะไรนานเท่าไร คำถามเหล่านั้นเป็นของนโยบายภายในและของกฎหมายที่ใช้บังคับ ประโยชน์จริงของการยึดคำศัพท์กลางคือ เมื่อ Data product กับ Observability พูดภาษาเดียวกัน ตัวชี้วัด "provenance coverage" ในหัวข้อที่ 7 จึงนับได้จริงแทนที่จะเป็นความรู้สึก</p>
+
+    <h3>แถบควบคุมร่วมสี่ด้าน</h3>
+
+    <p>แถบสีเข้มใต้ทั้งหกช่องในรูปคือสิ่งที่ผมเห็นองค์กรพลาดบ่อยที่สุด เพราะมันเป็นสิ่งที่ "ทุกคนรับผิดชอบ" จึงมักแปลว่าไม่มีใครรับผิดชอบ หนังสือระบุการควบคุมร่วมสี่ด้าน คือ Security, Privacy, FinOps และ Sustainability<sup><a href="#th-ref-1">[1]</a></sup> พาดผ่านทั้งหกบริการ ไม่ใช่ตั้งเป็นด่านตรวจตอนท้าย</p>
+
+    <p><strong>Security</strong> — สิ่งที่ผมอยากให้จำคือ ความปลอดภัยของระบบ AI ไม่ได้เริ่มตอนขึ้น production เอกสาร <strong>NIST SP 800-218A</strong> ซึ่งเป็น SSDF Community Profile สำหรับ Generative AI และ dual-use foundation models เผยแพร่เมื่อ 26 กรกฎาคม 2024 และ ณ 5 กันยายน 2026 ยังคงสถานะ Final ไม่มีฉบับปรับปรุงมาแทน<sup><a href="#th-ref-4">[4]</a></sup> จุดที่เกี่ยวกับโรงงานโดยตรงคือ มันเขียนไว้ว่ากลุ่มผู้ใช้เอกสารนี้รวมถึง<em>ผู้จัดหา</em>ระบบ AI ไม่ใช่แค่ผู้พัฒนา แปลว่าการซื้อโมเดลหรือบริการจากภายนอกไม่ได้ทำให้เรื่องนี้หายไป มันย้ายไปอยู่ในสัญญาและในหลักฐานที่เราต้องเรียกจาก Supplier แทน — และตามที่หนังสือกำกับไว้ Profile ด้านความปลอดภัยช่วยลดความเสี่ยง แต่ไม่รับประกันพฤติกรรมที่ปลอดภัยตอนใช้งานจริง</p>
+
+    <p><strong>Privacy</strong> — ในบทนี้ความเป็นส่วนตัวถูกระบุในฐานะ<em>ตระกูลการควบคุม</em>ที่ต้องพาดผ่านทุกบริการ ไม่ใช่ในฐานะข้อกฎหมาย ผมจึงจะไม่ตีความ PDPA ในตอนนี้ เรื่องนั้นเป็นของตอนที่ว่าด้วย governance โดยเฉพาะ สิ่งที่ต้องตัดสินในระดับโรงงานคือ ข้อมูลอะไรเข้าไปอยู่ใน Corpus ได้บ้าง Context services เก็บ Memory อะไรไว้บ้างและนานเท่าไร และ Trace ที่ Observability เก็บมีข้อมูลส่วนบุคคลปนอยู่หรือไม่</p>
+
+    <p><strong>FinOps</strong> — FinOps Foundation จัด <em>FinOps for AI</em> ไว้เป็นหมวดเทคโนโลยีหนึ่งของ FinOps Framework และหน้า FinOps for AI Overview ปรับปรุงล่าสุดเมื่อ 17 กุมภาพันธ์ 2026<sup><a href="#th-ref-5">[5]</a></sup> สิ่งที่แถบนี้ทำในทางปฏิบัติคือ <em>allocation</em> ระบุให้ได้ว่าใครคือผู้บริโภคผลลัพธ์ของโมเดล <em>forecasting</em> ซึ่ง FinOps Foundation เองระบุว่าคาดการณ์ได้ยากกว่าคลาวด์ทั่วไปและต้องอาศัยประสบการณ์มากกว่า <em>optimization</em> และ <em>unit economics</em> ที่เพิ่มหน่วยฐาน token เข้ามา เช่น ต้นทุนต่อการเรียกใช้หนึ่งครั้งหรือต่อผลลัพธ์ที่สำเร็จหนึ่งชิ้น รวมถึงการกำกับด้วย Quota, Reserved capacity และ Throttle ตัวเลขราคาและพลังงานจริง ๆ เป็นเรื่องของตอน <a href="/blog/ai-transformation-suppliers-footprint">#17 Suppliers, Cost and Footprint</a> ตอนนี้ผมพูดเฉพาะว่าแถบนี้<em>ทำอะไร</em></p>
+
+    <p><strong>Sustainability</strong> — คำที่หนังสือใช้คือ sustainability หรือ <strong>AI ที่ยั่งยืน</strong> ไม่ใช่คำว่า GreenOps ป้าย <code>GREENOPS</code> ที่ปรากฏบนแถบสีเข้มในภาพประกอบเป็นคำย่อของซีรีส์นี้เอง ใช้เพื่อให้ป้ายบนภาพสั้นพอ ไม่ใช่ถ้อยคำของหนังสือ ผมกำกับไว้ตรงนี้เพราะซีรีส์นี้มีข้อตกลงว่าจะไม่ยัดคำที่ต้นทางไม่ได้ใช้เข้าไปในปากต้นทาง</p>
+
+    <h3>เจ้าของและการปรับปรุงต่อเนื่อง เป็นกระบวนการ ไม่ใช่ checklist ครั้งเดียว</h3>
+
+    <p>คำถามที่ตามมาทันทีจากตารางหกบริการคือ ใครดูแลว่าบริการเหล่านี้ยังทำงานได้ดีอยู่ในปีที่สอง คำตอบเชิงโครงสร้างมีมาตรฐานสากลรองรับอยู่แล้ว <strong>ISO/IEC 42001:2023</strong> ว่าด้วย <strong>ระบบการจัดการ AI</strong> (AI management system) ฉบับที่ 1 ลงวันที่ธันวาคม 2023 และ ณ 5 กันยายน 2026 มีสถานะ Published ที่ขั้น 60.60 โดยไม่มีการแก้ไข ภาคผนวก หรือฉบับใหม่ประกาศไว้ในหน้าแคตตาล็อกของ ISO<sup><a href="#th-ref-6">[6]</a></sup> คำอธิบายสาธารณะของมาตรฐานระบุว่าเป็นข้อกำหนดสำหรับการจัดตั้ง นำไปใช้ คงไว้ และปรับปรุงระบบการจัดการ AI อย่างต่อเนื่องภายในองค์กร</p>
+
+    <div class="alert">
+        <strong>ขอบเขตที่ต้องกำกับไว้เสมอ:</strong> บทความนี้อ้างเฉพาะคำอธิบายสาธารณะของ ISO/IEC 42001 และไม่ได้ทำซ้ำข้อกำหนดที่มีลิขสิทธิ์ Minimum production package ในหัวข้อที่ 6 <em>ไม่ใช่</em> งานตรวจความสอดคล้อง ไม่ใช่การรับรอง และไม่ทำให้ระบบใด "ได้มาตรฐาน" ทั้ง ISO/IEC 42001, NIST SP 800-218A, PROV-O และ FinOps ต่างไม่ได้รับรองโรงงานของใคร คู่มือต้นทางระบุขอบเขตตัวเองไว้ว่าเป็นทรัพยากรด้านการออกแบบองค์กรและวิศวกรรม ไม่ใช่คำแนะนำทางกฎหมาย การตรวจสอบ การรับรอง การลงทุน การจ้างงาน Cybersecurity หรือ Safety
+    </div>
+
+    <p>และต้องเน้นด้วยว่าเอกสารทั้งสี่ฉบับนี้ทำคนละหน้าที่กัน ห้ามใช้แทนกัน: PROV-O ให้<em>คำศัพท์</em>สำหรับที่มาของข้อมูล ISO/IEC 42001 ให้<em>กระบวนการจัดการตลอดวงจรชีวิต</em> NIST SP 800-218A ให้<em>แนวปฏิบัติการพัฒนาที่ปลอดภัยและแนวปฏิบัติฝั่งผู้จัดหา</em> ส่วน FinOps for AI บอกว่า<em>แถบต้นทุนทำอะไรในทางปฏิบัติ</em> องค์กรที่หยิบมาแค่ฉบับเดียวแล้วบอกว่าครอบคลุมแล้ว กำลังปิดช่องหนึ่งและเปิดอีกสามช่องทิ้งไว้</p>
+
+    <h2 id="th-context-engineering">4. Context Engineering — บริบทเป็นองค์ประกอบของรุ่น</h2>
+
+    <p>ถ้าให้ผมเลือกย่อหน้าเดียวจากบทที่ 5 ที่คิดว่าเปลี่ยนวิธีทำงานของทีมวิศวกรรมได้มากที่สุด ผมเลือกย่อหน้านี้ หนังสือเขียนไว้ในหน้า 23 ว่า<sup><a href="#th-ref-1">[1]</a></sup></p>
+
+    <blockquote>สำหรับ Generative AI งานต้องขยายถึง Context Engineering เพราะข้อความที่ค้นคืน คำสั่ง สถานะเซสชัน ความหมายของเครื่องมือ และ Threshold นโยบายล้วนร่วมกำหนดพฤติกรรม จึงต้องอยู่ในกระบวนการปล่อยรุ่น</blockquote>
+
+    <p>ประโยคภาษาอังกฤษของฉบับเดียวกันจบด้วยวลีที่คมกว่า คือสิ่งเหล่านี้ "belong to the release process rather than invisible plumbing" — เป็นขององค์ประกอบของรุ่น ไม่ใช่ท่อที่มองไม่เห็น ผมชอบคำว่า invisible plumbing เพราะมันอธิบายสภาพจริงในองค์กรส่วนใหญ่ได้ตรงเผง: Prompt อยู่ในไฟล์ที่ไม่มีใครรีวิว Corpus ถูกอัปเดตโดยคนที่หวังดี Threshold ถูกแก้ในหน้าคอนฟิกตอนตีสอง และไม่มีรายการใดในสามอย่างนี้ปรากฏในบันทึกการปล่อยรุ่น</p>
+
+    <p>ห้าอย่างที่ต้องอยู่ในกระบวนการปล่อยรุ่นตามประโยคนี้ มีชื่อชัดเจน และผมแนะนำให้ทีมพิมพ์ห้าบรรทัดนี้แปะไว้ข้างจอ</p>
+
+    <ul>
+        <li><strong>ข้อความที่ค้นคืน</strong> (retrieved passages) — Corpus snapshot ไหน วันมีผลเมื่อไร รหัสข้อความอะไร</li>
+        <li><strong>คำสั่ง</strong> (instructions) — System prompt และ Template ทุกชั้นที่ประกอบขึ้นเป็นคำสั่งจริง</li>
+        <li><strong>สถานะเซสชัน</strong> (session state) — สิ่งที่ระบบจำข้ามเทิร์นและข้ามช่องทาง</li>
+        <li><strong>ความหมายของเครื่องมือ</strong> (tool semantics) — เครื่องมือชื่อนี้ทำอะไรจริง ๆ และคำอธิบายที่โมเดลเห็นตรงกับพฤติกรรมจริงหรือไม่</li>
+        <li><strong>Threshold นโยบาย</strong> (policy thresholds) — เส้นแบ่งที่ทำให้ระบบส่งต่อให้คน หรือหยุด</li>
+    </ul>
+
+    <p>ห้าอย่างนี้เปลี่ยนพฤติกรรมของระบบได้มากพอ ๆ กับการเปลี่ยนโมเดล แต่ในองค์กรส่วนใหญ่ การเปลี่ยนโมเดลต้องผ่านการอนุมัติหลายชั้น ส่วนการแก้ Prompt ทำได้ด้วยการ commit เดียว นี่คือความไม่สมมาตรที่บทนี้พยายามปิด</p>
+
+    <blockquote>💡 มุมมองของผม: หลักปฏิบัติข้อที่ 3 ของบทนี้เขียนสั้นแต่มีผลบังคับสูงที่สุด — <strong>"ถือบริบทเป็นองค์ประกอบของรุ่น กำหนดรุ่นของ Prompt, Template, Corpus, Ranking, Memory และ Tool ร่วมกัน"</strong><sup><a href="#th-ref-1">[1]</a></sup> คำที่ผมอยากให้อ่านช้า ๆ คือ "ร่วมกัน" ทีมจำนวนมากกำหนดเลขรุ่นให้ Prompt แล้ว แต่ Corpus อัปเดตแยก Ranking config อัปเดตแยก และ Memory ไม่มีเลขรุ่นเลย ผลคือเมื่อระบบเริ่มตอบแปลกไปหลังปล่อยรุ่นไปสักพัก ไม่มีใครย้อนได้ว่าอะไรเปลี่ยน เพราะไม่มีจุดใดที่บันทึกสภาพทั้งชุดไว้พร้อมกัน</blockquote>
+
+    <p>หลักปฏิบัติอีกสี่ข้อที่เหลือของบทนี้<sup><a href="#th-ref-1">[1]</a></sup> คือ ข้อ 1 <strong>เริ่มจากการตัดสินใจ</strong> ระบุ Outcome ผู้ใช้ อำนาจ และผลกระทบก่อนสร้าง Pipeline ซึ่งเป็นสิ่งที่หัวข้อที่ 2 ทั้งหัวข้อขยายไว้แล้ว ข้อ 2 <strong>บริหารข้อมูลเป็นผลิตภัณฑ์</strong> ข้อมูลสำคัญต้องมีเจ้าของ Semantic contract, Lineage, Access และ Lifecycle ข้อ 4 <strong>ส่งหลักฐานไปพร้อมผลิตภัณฑ์</strong> รุ่นที่ไม่มีผลทดสอบ ข้อจำกัด และ Rollback ยังไม่พร้อม และข้อ 5 <strong>เปลี่ยน Feedback เป็นการเรียนรู้ที่กำกับได้</strong> ตรวจคำแก้ สร้างกรณีข้างเคียง แล้วผ่าน Gate ใหม่</p>
+
+    <p>ข้อ 4 มีคำที่ควรอ่านซ้ำคือคำว่า "ยังไม่พร้อม" — ไม่ใช่ "ควรปรับปรุง" หนังสือเลือกใช้คำที่แปลว่า incomplete คือยังไม่ครบองค์ประกอบ ซึ่งเป็นคนละสถานะกับ "ผ่านแบบมีข้อสังเกต" ในทางปฏิบัติ นี่คือความต่างระหว่างองค์กรที่มี <strong>ด่านอนุมัติการนำระบบออกใช้</strong> (release gate) จริง กับองค์กรที่มีแค่การประชุมก่อนปล่อยรุ่น</p>
+
+    <p>คำถามที่หลายคนถามต่อทันทีคือ แล้วต้องบันทึกบริบทเป็นเอกสารรูปแบบไหน คำตอบคือ <strong>บัญชีรายการบริบทขณะทำงาน</strong> (runtime-context manifest) ซึ่งเป็นเครื่องมือที่ตอน <a href="/blog/ai-transformation-ai-core">#11 When Is AI the Core?</a> เป็นเจ้าของและจะลงรายละเอียดทีละช่อง ในตอนนี้ผมขอหยุดไว้แค่หลักการว่า ถ้าห้าอย่างข้างบนไม่ได้ถูกผูกไว้ในเอกสารเดียวที่มีเลขรุ่น เราจะไม่มีทางตอบคำถาม "รุ่นที่ตอบผิดเมื่อวานคือรุ่นไหน" ได้เลย</p>
+
+    <h2 id="th-cx-refund-01">5. CX-REFUND-01 — กรณีเดียวที่ทั้งหกบริการต้องแตะ</h2>
+
+    <p>ตั้งแต่หัวข้อนี้ไปจนจบซีรีส์ในส่วนวิศวกรรม หนังสือใช้กรณีเดียวกันตลอดเพื่อให้เปรียบเทียบข้ามบทได้ ชื่อของมันคือ <code>CX-REFUND-01</code> ผู้ช่วยคืนเงินลูกค้าของบริษัท Luma Commerce Thailand <em>(กรณีสมมติจากหนังสือ)</em><sup><a href="#th-ref-1">[1]</a></sup> — บริษัทนี้ไม่มีอยู่จริง และตัวเลขทุกตัวในกรณีนี้เป็นค่าตัวอย่าง ไม่ใช่ Threshold สากลที่ใครควรลอกไปใช้</p>
+
+    <p>ขอบเขตงานของมันคือ ตอบคำถามนโยบายคืนเงิน คัดแยกเคส ร่างคำตอบ เสนอการคืนเงิน และสร้าง CRM note โดยรองรับคำถามสองภาษา เครื่องมือทางการเงินตัวเดียวที่มันเสนอได้คือ <code>issue_refund</code> และ Guard ภายนอกจะดำเนินการคืนเงินได้เพียงหนึ่งรายการที่เข้าเกณฑ์ วงเงินไม่เกิน 2,000 บาท และต้องผ่านการยืนยันก่อน ส่วนการเงินอื่นทั้งหมดต้องไปที่คน</p>
+
+    <p>สิ่งที่ผมคิดว่าออกแบบได้ดีที่สุดในกรณีนี้ไม่ใช่ตัวความสามารถ แต่คือ<em>รายการยกเว้น</em> ขอบเขตของมันตัดออกอย่างชัดเจนหกอย่าง ได้แก่ เคสที่มีสัญญาณทุจริต สินค้าแบบสมัครสมาชิก คำสั่งซื้อจากมาร์เก็ตเพลส ข้อร้องเรียนทางกฎหมาย การชำระเงินที่ไม่ใช่สกุลบาท และยอดเกิน 2,000 บาท<sup><a href="#th-ref-1">[1]</a></sup> การเขียนรายการยกเว้นให้ชัดตั้งแต่ต้นเป็นสิ่งที่แยกระบบที่ออกแบบมาแล้ว ออกจากระบบที่แค่ "ลองดูก่อนว่าตอบได้แค่ไหน"</p>
+
+    <h3>โรงงานหกบริการแตะกรณีนี้อย่างไร</h3>
+
+    <p>ประโยชน์ของการมีกรณีร่วมคือ มันบังคับให้ทั้งหกช่องต้องส่งของจริงออกมา ไม่ใช่แค่มีอยู่บนแผนผัง ตารางด้านล่างคือสิ่งที่แต่ละบริการต้องส่งให้ <code>CX-REFUND-01</code> ตามที่หนังสือเล่าไว้ในหน้า 23</p>
+
+    <div class="table-wrapper">
+        <table>
+            <thead>
+                <tr>
+                    <th>Service</th>
+                    <th>สิ่งที่ต้องส่งให้ CX-REFUND-01</th>
+                    <th>สิ่งที่ห้ามทำ</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>Data products</td>
+                    <td>ข้อมูลคำสั่งซื้อและการชำระเงินยังคงเป็นบันทึกที่มีสภาพเป็นหลักฐาน เข้าถึงผ่านบริการที่จำกัดขอบเขตเท่านั้น</td>
+                    <td>ไม่คัดลอกข้อมูลธุรกรรมไปไว้ในคลังค้นคืนเพื่อความสะดวก</td>
+                </tr>
+                <tr>
+                    <td>Context services</td>
+                    <td>เจ้าของนโยบายเผยแพร่ Corpus snapshot ที่อนุมัติแล้ว พร้อมวันมีผล รหัสข้อความ เขตอำนาจ และที่มาของข้อมูล</td>
+                    <td>ไม่เทเอกสารลูกค้าทั้งหมดลงฐานข้อมูลเวกเตอร์</td>
+                </tr>
+                <tr>
+                    <td>Model services</td>
+                    <td>ส่งงานไปยังโมเดลขนาดเหมาะสมที่สุดที่ยังทำงานได้ และรองรับการเปลี่ยน Provider โดยไม่ทำให้หลักฐานเดิมใช้ไม่ได้</td>
+                    <td>ไม่เปลี่ยนโมเดลเงียบ ๆ โดยไม่รันชุดประเมินซ้ำ</td>
+                </tr>
+                <tr>
+                    <td>Evaluation services</td>
+                    <td>Golden set ที่ครอบคลุมคำขอปกติ ข้อยกเว้นนโยบาย หลักฐานขัดแย้งกัน สถานะการชำระเงินหาย Prompt injection และยอดที่ห้ามคืน</td>
+                    <td>ไม่ใช้ชุดทดสอบที่มีแต่เคสง่าย เพราะจะได้คะแนนสวยที่ไม่มีความหมาย</td>
+                </tr>
+                <tr>
+                    <td>Tool registry</td>
+                    <td>สัญญาของ <code>issue_refund</code> ระบุขอบเขต Schema ประเภทผล และเงื่อนไขการอนุมัติ ให้ Guard ภายนอกบังคับใช้</td>
+                    <td>ไม่ให้โมเดลเป็นผู้ตัดสินเองว่ายอดนี้อยู่ในวงเงินหรือไม่</td>
+                </tr>
+                <tr>
+                    <td>Observability</td>
+                    <td>Trace ที่ผูกคำตอบกลับไปยังรหัสข้อความและรุ่นของ Manifest พร้อมผลลัพธ์จริงหลังลูกค้าได้รับคำตอบ</td>
+                    <td>ไม่วัดแค่ Uptime แล้วสรุปว่าระบบสุขภาพดี</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <p>สองประโยคจากหน้า 23 ที่ผมยกมาเน้นเป็นพิเศษ ประโยคแรกคือ Candidate แต่ละรุ่นผูก Corpus, Context builder, Tool, Evaluator และ Threshold ไว้ใน Manifest เดียว — นี่คือรูปธรรมของหลักปฏิบัติข้อ 3 ที่หัวข้อก่อนหน้าพูดถึง ประโยคที่สองคือ คำแก้ไขของลูกค้าต้องผ่านการตรวจ<em>แล้วกลายเป็นกรณีความล้มเหลวที่บันทึกไว้</em> ไม่ใช่กลายเป็นข้อมูลฝึกโดยอัตโนมัติ</p>
+
+    <div class="alert danger">
+        <strong>ทำไมประโยคที่สองถึงสำคัญกว่าที่เห็น:</strong> ถ้าคำแก้ของลูกค้าไหลเข้าไปเป็นข้อมูลฝึกโดยไม่ผ่านการตรวจ องค์กรกำลังเปิดช่องให้ใครก็ตามที่รู้กลไกนี้ป้อนคำแก้ที่ผิดเข้าไปโดยตั้งใจ และเปิดช่องให้ความเข้าใจผิดของลูกค้าหนึ่งรายกลายเป็นพฤติกรรมของระบบที่ตอบทุกราย หลักปฏิบัติข้อ 5 จึงใช้คำว่า "การเรียนรู้ที่กำกับได้" ไม่ใช่ "การเรียนรู้อัตโนมัติ"
+    </div>
+
+    <p>ข้อสังเกตสุดท้ายของหัวข้อนี้ ตัวเลข 2,000 บาทและรายการยกเว้นทั้งหกไม่ได้มาจากงานวิจัยใด และไม่ควรถูกยกไปเป็นค่าเริ่มต้นขององค์กรอื่น สิ่งที่ควรลอกไปใช้คือ<em>รูปแบบ</em> — คือการเขียนขอบเขต วงเงิน รายการยกเว้น และเส้นทางที่ต้องส่งให้คน ให้ครบก่อนเขียน Prompt บรรทัดแรก</p>
+
+    <h2 id="th-value-stream">6. เวิร์กช็อป Factory value stream design</h2>
+
+    <p>หนังสือให้เวิร์กช็อปมาหนึ่งรายการต่อหนึ่งบท และของบทนี้ชื่อ <em>Factory value stream design</em> โครงของมันคือ จัดสองชั่วโมงร่วมกับเจ้าของหกบทบาท ได้แก่ Product, Domain, Data, Platform, Operations และ Risk แล้วไล่คำขอ<em>เพียงหนึ่งรายการ</em> จากเจตนาธุรกิจไปจนถึงผลลัพธ์ที่ปล่อยจริง<sup><a href="#th-ref-1">[1]</a></sup></p>
+
+    <p>ข้อกำหนดสองข้อในประโยคนั้นมักถูกละเลย ข้อแรกคือ "หกบทบาท" — ไม่ใช่หกคน และไม่ใช่หกทีม แต่เป็นเจ้าของจริงที่ตัดสินใจแทนบทบาทนั้นได้ในห้อง ถ้าฝั่ง Risk ส่งตัวแทนที่ต้องกลับไปถามก่อนตอบทุกคำถาม เวิร์กช็อปจะจบด้วยรายการคำถามค้าง ไม่ใช่แผนที่ ข้อที่สองคือ "คำขอเพียงหนึ่งรายการ" — ความอยากที่จะไล่สามเคสพร้อมกันเป็นกับดักที่ผมเห็นทุกครั้ง เพราะพอไล่หลายเคส ทุกอย่างจะถูกอธิบายในระดับที่กว้างพอจะครอบคลุมทุกเคส ซึ่งก็คือระดับที่ไม่พบปัญหาอะไรเลย</p>
+
+    <p>สิ่งที่ต้องระบุระหว่างไล่เส้นทาง หนังสือให้ไว้แปดอย่าง คือ แหล่งข้อมูลที่ถือเป็นหลักฐาน การแปลงข้อมูล การประกอบบริบท การตัดสินใจของโมเดล ผลที่เครื่องมือก่อ จุดส่งต่อให้คน หลักฐาน และ Feedback แล้วทำเครื่องหมายไว้สี่อย่าง คือ คิว งานกระทบยอด คำนิยามที่กำกวม และจุดที่ไม่มีเจ้าของ</p>
+
+    <div class="alert info">
+        <strong>สี่เครื่องหมายนี้คือผลลัพธ์ที่แท้จริงของเวิร์กช็อป:</strong> แผนที่สวย ๆ ไม่ใช่ของที่ต้องได้กลับบ้าน ของที่ต้องได้กลับบ้านคือรายการ<em>จุดที่ไม่มีเจ้าของ</em> และรายการ<em>คำนิยามที่กำกวม</em> เพราะสองอย่างนี้คือสาเหตุตั้งต้นของเหตุการณ์ผิดปกติเกือบทุกครั้งที่ผมเคยตามสอบ ส่วน "งานกระทบยอด" มักเป็นตัวเปิดโปงว่าองค์กรมีข้อมูลชุดเดียวกันอยู่สองที่โดยที่ไม่มีใครยอมรับว่าที่ไหนคือหลักฐาน
+    </div>
+
+    <p>ตารางด้านล่างคือการซอยสองชั่วโมงที่ผมใช้จริงเวลาจัดเวิร์กช็อปแบบนี้ ต้องกำกับให้ชัดว่า<em>หนังสือไม่ได้ให้กำหนดการรายช่วงมา</em> — หนังสือให้มาแค่ระยะเวลาสองชั่วโมง หกบทบาท และสิ่งที่ต้องระบุกับต้องทำเครื่องหมาย การแบ่งช่วงเวลาข้างล่างเป็นของผมเอง และหนังสือก็ไม่ได้อ้างว่าสองชั่วโมงเป็นเวลาที่เหมาะสมที่สุดหรือผ่านการวัดมาแล้ว มันเป็นค่าเริ่มต้นสำหรับการจัดประชุมเท่านั้น</p>
+
+    <div class="table-wrapper">
+        <table>
+            <thead>
+                <tr>
+                    <th>Segment</th>
+                    <th>เวลา</th>
+                    <th>สิ่งที่ทำในช่วงนี้</th>
+                    <th>ผลลัพธ์ที่ต้องได้ก่อนไปช่วงถัดไป</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>Frame the request</td>
+                    <td>15 นาที</td>
+                    <td>เลือกคำขอหนึ่งรายการ ระบุการตัดสินใจที่ต้องดีขึ้น เจ้าของ อำนาจของ AI และผลลัพธ์ที่วัดได้</td>
+                    <td>ประโยคเดียวที่ทุกคนในห้องเห็นตรงกันว่ากำลังไล่เรื่องอะไร</td>
+                </tr>
+                <tr>
+                    <td>Trace the path</td>
+                    <td>40 นาที</td>
+                    <td>ไล่จากเจตนาธุรกิจถึงผลลัพธ์ที่ปล่อยจริง ระบุแหล่งข้อมูลหลักฐาน การแปลง การประกอบบริบท การตัดสินใจของโมเดล และผลที่เครื่องมือก่อ</td>
+                    <td>เส้นทางเดียวที่ต่อเนื่อง ไม่มีช่วงที่ตอบว่า "ตรงนี้ระบบจัดการเอง"</td>
+                </tr>
+                <tr>
+                    <td>Human and evidence</td>
+                    <td>25 นาที</td>
+                    <td>ระบุจุดส่งต่อให้คน หลักฐานที่ต้องมีในแต่ละจุด และ Feedback ที่จะไหลกลับ</td>
+                    <td>รู้ว่าคนเข้ามาตรงไหน ด้วยข้อมูลอะไร และภายในเวลาเท่าไร</td>
+                </tr>
+                <tr>
+                    <td>Mark the four</td>
+                    <td>20 นาที</td>
+                    <td>ทำเครื่องหมายคิว งานกระทบยอด คำนิยามที่กำกวม และจุดที่ไม่มีเจ้าของ</td>
+                    <td>รายการที่นับได้ ไม่ใช่ความรู้สึกว่า "น่าจะมีปัญหาแถวนี้"</td>
+                </tr>
+                <tr>
+                    <td>Assign and close</td>
+                    <td>20 นาที</td>
+                    <td>กรอก Minimum production package ให้ครบเจ็ดช่อง พร้อมชื่อเจ้าของและวันที่</td>
+                    <td>ทุกช่องมีชื่อคน ไม่ใช่ชื่อทีม และไม่มีช่องใดเว้นว่าง</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <h3>Minimum production package — เจ็ดรายการที่ต้องมีก่อนปล่อย</h3>
+
+    <p>เวิร์กช็อปจบด้วยของชิ้นเดียว หนังสือเรียกมันว่า minimum production package และระบุไว้เจ็ดรายการ ได้แก่ Data contract, Context manifest, Golden-set plan, Effect boundary, Owner, Acceptance metric และ Rollback<sup><a href="#th-ref-1">[1]</a></sup> คำว่า "minimum" ต้องอ่านตามตัวอักษร — มันคือขั้นต่ำ ไม่ใช่การทดสอบความเพียงพอ การมีครบเจ็ดรายการไม่ได้แปลว่าระบบพร้อม แปลว่าระบบพร้อม<em>ให้ถูกตรวจ</em></p>
+
+    <p>ผมเพิ่มสามคอลัมน์ให้กับเจ็ดรายการนี้ตามธรรมเนียมของซีรีส์ คือเจ้าของ เลขรุ่น และหลักฐาน เพราะรายการที่ไม่มีสามสิ่งนี้จะกลายเป็นหัวข้อในสไลด์อย่างรวดเร็ว</p>
+
+    <div class="table-wrapper">
+        <table>
+            <thead>
+                <tr>
+                    <th>Item</th>
+                    <th>ต้องมีอะไรอยู่ในนั้นจริง ๆ</th>
+                    <th>Owner</th>
+                    <th>Version &amp; evidence</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td><strong>Data contract</strong></td>
+                    <td>คำนิยามของทุกฟิลด์ที่ใช้ ที่มาของข้อมูล เกณฑ์คุณภาพ กฎการเข้าถึง และคำมั่นระดับบริการ</td>
+                    <td>เจ้าของ Data product ฝั่ง Domain</td>
+                    <td>เลขรุ่นของสัญญา + บันทึกการละเมิดย้อนหลัง</td>
+                </tr>
+                <tr>
+                    <td><strong>Context manifest</strong></td>
+                    <td>รหัส Corpus snapshot, Template, Ranking config, นโยบาย Memory และรายการเครื่องมือที่มองเห็นได้ ผูกไว้ในเอกสารเดียว</td>
+                    <td>เจ้าของ Workflow ร่วมกับเจ้าของนโยบาย</td>
+                    <td>เลขรุ่นเดียวที่คลุมทุกชิ้นส่วน + diff จากรุ่นก่อน</td>
+                </tr>
+                <tr>
+                    <td><strong>Golden-set plan</strong></td>
+                    <td>จำนวนและประเภทของกรณีที่ต้องครอบคลุม แยกตามระดับผลกระทบ พร้อมวิธีสอบเทียบ Judge</td>
+                    <td>เจ้าของการประเมินระบบ</td>
+                    <td>เลขรุ่นของชุดทดสอบ + ผลรันล่าสุดพร้อมข้อจำกัด</td>
+                </tr>
+                <tr>
+                    <td><strong>Effect boundary</strong></td>
+                    <td>ขอบเขตของผลจริงที่ระบบก่อได้ วงเงิน รายการยกเว้น และสิ่งที่ต้องส่งให้คนเสมอ</td>
+                    <td>เจ้าของธุรกิจ ร่วมกับฝั่ง Risk</td>
+                    <td>เลขรุ่นของ Tool contract + บันทึกการอนุมัติ</td>
+                </tr>
+                <tr>
+                    <td><strong>Owner</strong></td>
+                    <td>ชื่อคนสำหรับผลลัพธ์ทางธุรกิจ สำหรับข้อมูล สำหรับแพลตฟอร์ม และสำหรับการปล่อยรุ่น</td>
+                    <td>ผู้บริหารที่มอบหมาย</td>
+                    <td>วันที่มอบหมาย + วันที่ทบทวนครั้งถัดไป</td>
+                </tr>
+                <tr>
+                    <td><strong>Acceptance metric</strong></td>
+                    <td>เกณฑ์ที่ประกาศไว้ล่วงหน้าว่ารุ่นนี้ผ่านหรือไม่ผ่าน วัดจากอะไร บนชุดงานใด</td>
+                    <td>เจ้าของผลลัพธ์ทางธุรกิจ</td>
+                    <td>ค่าที่ประกาศไว้ก่อนรัน + ผลจริงหลังรัน</td>
+                </tr>
+                <tr>
+                    <td><strong>Rollback</strong></td>
+                    <td>ขั้นตอนกลับสู่รุ่นก่อนหน้าหรือสู่ Fallback ที่ไม่ใช้โมเดล พร้อมเวลาที่ใช้จริง</td>
+                    <td>เจ้าของฝ่ายปฏิบัติการ</td>
+                    <td>วันที่ซ้อมครั้งล่าสุด + เวลาที่วัดได้จากการซ้อม</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <p>ช่องที่ผมตรวจก่อนเสมอคือช่องสุดท้าย เพราะ Rollback เป็นรายการเดียวในเจ็ดรายการที่พิสูจน์ไม่ได้ด้วยเอกสาร ถ้าไม่เคยซ้อม ตัวเลข "กลับได้ภายในสิบนาที" ก็เป็นความหวัง ไม่ใช่หลักฐาน และตามหลักปฏิบัติข้อ 4 ของบทนี้ รุ่นที่ไม่มี Rollback ที่ใช้ได้จริงยังไม่นับว่าพร้อม</p>
+
+    <h2 id="th-metrics-failures">7. ตัวชี้วัดสำคัญ และรูปแบบความล้มเหลว</h2>
+
+    <p>บทนี้เปิดหัวข้อตัวชี้วัดด้วยคำสั่งเดียวที่คุ้มค่าที่สุดในทั้งบท: <strong>แยกผลลัพธ์ธุรกิจออกจากสุขภาพของโรงงาน</strong><sup><a href="#th-ref-1">[1]</a></sup> เหตุผลที่ต้องแยกคือทั้งสองอย่างเคลื่อนไหวคนละจังหวะ โรงงานอาจแข็งแรงขึ้นทุกไตรมาสในขณะที่ผลลัพธ์ธุรกิจยังนิ่ง เพราะการตัดสินใจที่เลือกมาปรับไม่ใช่ตัวที่สร้างมูลค่า และในทางกลับกัน ผลลัพธ์ธุรกิจอาจดีขึ้นชั่วคราวจากปัจจัยภายนอกในขณะที่โรงงานกำลังผุ องค์กรที่รวมสองเรื่องนี้เป็นแดชบอร์ดเดียวจะเห็นสัญญาณช้ากว่าที่ควรเสมอ</p>
+
+    <p>หนังสือให้รายการตัวชี้วัดไว้สิบสองตัว<sup><a href="#th-ref-1">[1]</a></sup> และสิ่งที่ต้องเน้นคือ หนังสือ<em>ไม่ได้</em>กำหนดค่าเป้าหมายให้ตัวใดเลย มันเป็นคำศัพท์สำหรับการวัด ไม่ใช่เกณฑ์ผ่าน ผมเติมช่อง Scorecard เข้าไปตามธรรมเนียมของซีรีส์นี้ เพื่อให้เห็นว่าตัวชี้วัดแต่ละตัวไปเข้าช่องไหนของกระดานคะแนนองค์กร และเพื่อไม่ให้ทั้งโรงงานถูกวัดด้วยมิติเดียวคือความเร็ว</p>
+
+    <div class="table-wrapper">
+        <table>
+            <thead>
+                <tr>
+                    <th>Metric</th>
+                    <th>สิ่งที่บอกเรา</th>
+                    <th>สัญญาณเตือน</th>
+                    <th>Scorecard</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>Lead time จาก use case ที่อนุมัติแล้วถึง Release ที่กำกับได้</td>
+                    <td>องค์กรใช้เวลาเท่าไรในการเปลี่ยนการตัดสินใจหนึ่งเรื่องให้เป็นระบบที่ปล่อยได้อย่างมีหลักฐาน</td>
+                    <td>สั้นลงเพราะข้ามด่านตรวจ ไม่ใช่เพราะชิ้นส่วนถูกใช้ซ้ำ</td>
+                    <td>Learning</td>
+                </tr>
+                <tr>
+                    <td>ความสดของข้อมูล</td>
+                    <td>ข้อมูลที่ระบบใช้ตอบวันนี้เก่ากว่าความจริงเท่าไร</td>
+                    <td>วัดที่ Pipeline ว่ารันสำเร็จ แทนที่จะวัดที่อายุของข้อมูลซึ่งผู้ใช้เห็น</td>
+                    <td>Quality</td>
+                </tr>
+                <tr>
+                    <td>Contract violation</td>
+                    <td>ข้อมูลที่ผิดจากสัญญาที่ประกาศไว้ หลุดเข้าสู่ระบบกี่ครั้ง</td>
+                    <td>ค่าเป็นศูนย์เพราะไม่มีสัญญาให้ละเมิด ไม่ใช่เพราะไม่มีการละเมิด</td>
+                    <td>Risk</td>
+                </tr>
+                <tr>
+                    <td>Provenance coverage</td>
+                    <td>สัดส่วนของคำตอบที่ย้อนกลับไปหาที่มาของข้อมูลและผลลัพธ์ได้จริง</td>
+                    <td>สูงในรายงาน แต่ตรวจสุ่มแล้วรหัสข้อความชี้ไปยัง Corpus รุ่นที่ถูกลบไปแล้ว</td>
+                    <td>Risk</td>
+                </tr>
+                <tr>
+                    <td>Evaluation coverage ตามระดับผลกระทบ</td>
+                    <td>กรณีที่ผลกระทบสูงถูกทดสอบครอบคลุมพอ ๆ กับกรณีทั่วไปหรือไม่</td>
+                    <td>ความครอบคลุมรวมสูง แต่เคสผลกระทบสูงมีไม่กี่รายการเพราะหายาก</td>
+                    <td>Quality</td>
+                </tr>
+                <tr>
+                    <td>การใช้ซ้ำของ Component ที่อนุมัติแล้ว</td>
+                    <td>ชิ้นส่วนที่โรงงานผลิตไว้ ถูกใช้ต่อจริงในงานถัดไปมากน้อยเพียงใด</td>
+                    <td>ทุกทีมสร้าง Context builder ของตัวเองเพราะของกลาง "ไม่ตรงงาน"</td>
+                    <td>Economics</td>
+                </tr>
+                <tr>
+                    <td>Defect escape</td>
+                    <td>ข้อบกพร่องที่ผ่านด่านตรวจไปถึงผู้ใช้จริงกี่ครั้ง</td>
+                    <td>นับเฉพาะที่ลูกค้าร้องเรียน ซึ่งคือปลายภูเขาน้ำแข็ง</td>
+                    <td>Quality</td>
+                </tr>
+                <tr>
+                    <td>Rework</td>
+                    <td>งานที่ต้องทำซ้ำเพราะผลลัพธ์รอบแรกใช้ไม่ได้</td>
+                    <td>ไม่ถูกนับเลย เพราะถือเป็น "งานปกติของทีม"</td>
+                    <td>People</td>
+                </tr>
+                <tr>
+                    <td>Escalation</td>
+                    <td>ปริมาณงานที่ถูกส่งต่อให้คน และแนวโน้มของมัน</td>
+                    <td>ลดลงเพราะคนเลิกส่งต่อ ไม่ใช่เพราะปัญหาน้อยลง</td>
+                    <td>People</td>
+                </tr>
+                <tr>
+                    <td>p95 latency</td>
+                    <td>ประสบการณ์จริงของผู้ใช้กลุ่มที่ช้าที่สุด ไม่ใช่ผู้ใช้ทั่วไป</td>
+                    <td>รายงานค่าเฉลี่ยแทน ซึ่งซ่อนหางยาวที่ทำให้คนเลิกใช้</td>
+                    <td>Value</td>
+                </tr>
+                <tr>
+                    <td>พลังงานและต้นทุนต่องานที่สำเร็จ</td>
+                    <td>ราคาจริงของ "ผลลัพธ์ที่ใช้ได้หนึ่งชิ้น" ไม่ใช่ราคาต่อการเรียกหนึ่งครั้ง</td>
+                    <td>วัดต่อ token ซึ่งดูดีขึ้นได้ด้วยการตอบสั้นลงโดยที่งานยังไม่สำเร็จ</td>
+                    <td>Economics</td>
+                </tr>
+                <tr>
+                    <td>เวลาจากเหตุการณ์ที่ยืนยันแล้ว ถึงการปรับ Control ที่ใช้ซ้ำได้</td>
+                    <td>องค์กรเปลี่ยนบทเรียนหนึ่งครั้งให้เป็นการป้องกันถาวรได้เร็วแค่ไหน</td>
+                    <td>ปิดเคสเร็ว แต่ไม่มี Control ใดถูกเพิ่มเข้าไปในของกลาง</td>
+                    <td>Learning</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <div class="alert info">
+        <strong>ไม่มีค่าเป้าหมายในบทนี้ และผมจะไม่ประดิษฐ์ให้:</strong> หนังสือไม่ได้ระบุว่าความครอบคลุมควรกี่เปอร์เซ็นต์ Lead time ควรกี่วัน หรือ p95 ควรกี่วินาที เกณฑ์เหล่านี้ขึ้นกับงานและระดับผลกระทบขององค์กรนั้น ๆ สิ่งที่ทำได้ทันทีคือวัดค่าปัจจุบันไว้เป็นค่าฐานก่อนหนึ่งไตรมาส แล้วค่อยตั้งเกณฑ์จากค่าฐานของตัวเอง ไม่ใช่จากตัวเลขที่ยืมมาจากสไลด์ของคนอื่น
+    </div>
+
+    <h3>รูปแบบความล้มเหลว</h3>
+
+    <p>บทนี้ระบุรูปแบบความล้มเหลวไว้แปดแบบ<sup><a href="#th-ref-1">[1]</a></sup> ผมเรียงตามลำดับในหนังสือและเติมคำอธิบายว่าแต่ละแบบมีหน้าตาอย่างไรเวลาเจอจริง</p>
+
+    <ul>
+        <li><strong>สร้าง Data Lake โดยไม่รู้ว่าจะปรับการตัดสินใจใด</strong> — สังเกตได้จากการที่เอกสารของโครงการอธิบายสถาปัตยกรรมได้ละเอียดมาก แต่ตอบไม่ได้ว่าใครจะตัดสินใจต่างไปจากเดิมเมื่อระบบเสร็จ</li>
+        <li><strong>เรียกกลุ่ม Pilot ว่าโรงงาน</strong> — Pilot หลายตัวที่ไม่มีชิ้นส่วนร่วมกันเลย ก็ยังเป็น Pilot หลายตัว ไม่ใช่โรงงานหนึ่งแห่ง ตัวชี้วัดที่เปิดโปงเรื่องนี้คือการใช้ซ้ำของ Component ที่อนุมัติแล้ว</li>
+        <li><strong>ใช้ Shadow corpus</strong> — คลังความรู้ที่ทีมหนึ่งทำขึ้นเองข้าง ๆ ของกลาง เพราะของกลางช้าเกินรอ ปัญหาไม่ใช่ว่าทีมนั้นผิด แต่คือของกลางไม่ตอบสนอง และตอนนี้องค์กรมีความจริงสองชุด</li>
+        <li><strong>Prompt ไร้รุ่น</strong> — แก้ได้โดยไม่ทิ้งร่องรอย จึงย้อนไม่ได้ว่าพฤติกรรมที่เปลี่ยนไปเมื่อวานมาจากอะไร นี่คือรูปแบบที่หลักปฏิบัติข้อ 3 ตั้งใจปิด</li>
+        <li><strong>วัด Uptime แต่ไม่วัดความหมาย</strong> — ระบบตอบทุกคำถามได้รวดเร็ว และตอบผิดอย่างสม่ำเสมอ แดชบอร์ดเป็นสีเขียวทั้งแผง</li>
+        <li><strong>เชื่อ Feedback ของผู้ใช้ทุกชิ้นว่าเป็นความจริง</strong> — คำแก้ที่ไม่ผ่านการตรวจกลายเป็นข้อมูลฝึก และความเข้าใจผิดของคนหนึ่งกลายเป็นพฤติกรรมของระบบที่ตอบทุกคน</li>
+        <li><strong>ปรับ Retrieval โดยไม่ตรวจสถานะจริงหลังทำรายการ</strong> — คะแนนการค้นคืนดีขึ้น แต่ไม่มีใครตรวจว่าเมื่อระบบทำรายการแล้ว สถานะปลายทางถูกต้องหรือไม่</li>
+        <li><strong>รวมทุกคำตัดสินไว้ที่คิวของทีมผู้เชี่ยวชาญส่วนกลางทีมเดียว</strong> — ระบบปลอดภัยขึ้นในระยะแรก แล้วกลายเป็นคอขวดที่ทำให้ทุกทีมเริ่มหาทางเลี่ยง ซึ่งอันตรายกว่าเดิม เรื่องนี้เป็นสะพานตรงไปยังตอนถัดไป</li>
+    </ul>
+
+    <div class="alert">
+        <strong>หนึ่งข้อที่ผมเพิ่มเอง และขอกำกับให้ชัดว่าไม่ได้อยู่ในรายการของหนังสือ:</strong> <em>Golden set ที่สร้างครั้งเดียวแล้วไม่เคยรันซ้ำ จะหยุดเป็นหลักฐานภายในไม่กี่เดือน</em> นี่คือการอ่านของผมจากหลักปฏิบัติข้อ 5 ที่ใช้คำว่า "ผ่าน Gate ใหม่" และจากตัวชี้วัด evaluation coverage ตามระดับผลกระทบ — ไม่ใช่รูปแบบความล้มเหลวข้อที่เก้าที่หนังสือระบุไว้ ผมแยกให้ชัดเพราะซีรีส์นี้ถือว่าการอ้างว่าต้นทางพูดสิ่งที่ต้นทางไม่ได้พูด เป็นความผิดพลาดที่ร้ายแรงกว่าการเขียนสั้นไป
+    </div>
+
+    <h2 id="th-road-ahead">8. ก้าวต่อไป</h2>
+
+    <p>ถ้าจะสรุปทั้งบทเป็นการเปลี่ยนวิธีทำงานอย่างเดียว ผมจะเลือกข้อนี้: เปลี่ยนคำถามตอนอนุมัติโครงการ AI จาก "โครงการนี้จะสร้างอะไร" เป็น "โครงการนี้จะทิ้งชิ้นส่วนอะไรไว้ให้โครงการถัดไปใช้ต่อ และชิ้นส่วนนั้นจะมีเจ้าของ เลขรุ่น และหลักฐานหรือไม่" คำถามแรกได้ผลงาน คำถามที่สองได้ความสามารถ</p>
+
+    <p>สิ่งที่ทำได้ทันทีในสัปดาห์หน้ามีสามอย่าง หนึ่ง เปิดเอกสารอนุมัติโครงการ AI ฉบับล่าสุดขององค์กรแล้วนับดูว่าใน Minimum production package เจ็ดรายการ มีกี่รายการที่ปรากฏอยู่จริง — ประสบการณ์ของผมคือคำตอบมักไม่ถึงครึ่ง และรายการที่หายบ่อยที่สุดคือ Context manifest กับ Rollback ที่ซ้อมแล้ว สอง จัดเวิร์กช็อปสองชั่วโมงกับหกบทบาทบนคำขอเพียงหนึ่งรายการ แล้วนับจำนวน "จุดที่ไม่มีเจ้าของ" ที่โผล่ออกมา และสาม เลือกตัวชี้วัดจากตารางในหัวข้อที่ 7 มาสามตัวจากสามช่อง Scorecard ที่ต่างกัน แล้ววัดค่าฐานไว้ก่อน โดยยังไม่ต้องตั้งเป้า</p>
+
+    <p>ส่วนสิ่งที่บทนี้ตอบไม่ได้และเป็นเรื่องของตอนหน้า คือคำถามที่ตามมาจากรูปแบบความล้มเหลวข้อสุดท้าย โรงงานที่มีหกบริการและแถบควบคุมร่วม ต้องมีคนกำหนดมาตรฐาน คนสร้าง คนอนุมัติ และคนดำเนินงาน — และถ้ารวมทั้งสี่บทบาทไว้ที่ทีมกลางทีมเดียว โรงงานจะกลายเป็นคอขวด แต่ถ้าปล่อยให้แต่ละ Domain เลือกเองทั้งหมด องค์กรจะกลับไปมีความจริงหลายชุดเหมือนเดิม เส้นแบ่งอยู่ตรงไหนคือเนื้อหาของบทที่ 6</p>
+
+    <div class="alert info">
+        <strong>🧭 ชั้นที่บทความนี้ขยับ:</strong> ชั้น <strong>AI and data factory</strong> (โรงงาน AI และข้อมูล) ซึ่งหนังสือตั้งคำถามผู้นำประจำชั้นไว้ว่า "Which components should become reusable" — ชิ้นส่วนใดควรกลายเป็นของที่ใช้ซ้ำได้ และกำหนดหลักฐานขั้นต่ำของชั้นนี้ไว้ว่า "Data products context services evaluation harness tool registry and observability" บทความนี้ตอบคำถามผู้นำข้อ <strong>Q7</strong> ("Who owns value risk effects exceptions and learning" — ใครเป็นเจ้าของคุณค่า ความเสี่ยง ผลที่เกิดขึ้น ข้อยกเว้น และการเรียนรู้) โดยหนังสือพิมพ์คำถามทั้งแปดข้อไว้เป็นภาษาอังกฤษเท่านั้น คำแปลไทยในวงเล็บเป็นของผมเอง ไม่ใช่ถ้อยคำของหนังสือ บนกระดานคะแนนองค์กร บทนี้ขยับช่อง <strong>Learning</strong> (Lead time ถึง Release ที่กำกับได้ และเวลาจาก Incident ถึง Control ที่ใช้ซ้ำได้) <strong>Quality</strong> (ความสดของข้อมูล ความครอบคลุมการประเมินตามระดับผลกระทบ Defect escape) <strong>Risk</strong> (Contract violation และ Provenance coverage) และ <strong>Economics</strong> (การใช้ซ้ำของ Component และต้นทุนต่องานที่สำเร็จ) เป็นหลัก ตอนถัดไป <a href="/blog/ai-transformation-operating-model">#10 Federated by Design — ใครกำหนดมาตรฐาน สร้าง อนุมัติ และดำเนินงาน</a> ติดตั้งโมเดลการดำเนินงานแบบสหพันธ์และวางผนังสิทธิ์ตัดสินใจให้โรงงานที่เพิ่งออกแบบเสร็จในตอนนี้
+    </div>
+
+    <div class="key-takeaways">
+        <h3>🎯 สิ่งสำคัญที่ต้องจำ</h3>
+        <ul>
+            <li><strong>Factory output</strong> = ข้อมูลที่เชื่อถือได้ Retrieval corpora, Context template, Tool contract, ชุดประเมิน Release manifest, ขั้นตอนปฏิบัติงาน และ Feedback ที่กลายเป็น Regression test — ไม่ใช่โมเดล</li>
+            <li><strong>Demand first</strong> = เริ่มจากการตัดสินใจที่ต้องดีขึ้น เจ้าของ อำนาจของ AI และผลลัพธ์ที่วัดได้ ก่อนไปเก็บข้อมูลเพิ่ม</li>
+            <li><strong>Six services</strong> = Data products, Context, Model, Evaluation, Tool registry และ Observability — ภาษากลางสำหรับออกแบบการใช้ซ้ำ ไม่ใช่มาตรฐานของใคร</li>
+            <li><strong>Shared band</strong> = Security, Privacy, FinOps และ Sustainability (AI ที่ยั่งยืน) พาดผ่านทั้งหกบริการ ไม่ใช่ด่านตรวจตอนท้าย</li>
+            <li><strong>Context is release scope</strong> = ข้อความที่ค้นคืน คำสั่ง สถานะเซสชัน ความหมายของเครื่องมือ และ Threshold นโยบาย ต้องมีเลขรุ่นร่วมกันและผ่านกระบวนการปล่อยรุ่น</li>
+            <li><strong>Minimum production package</strong> = เจ็ดรายการที่ต้องมีก่อนปล่อย — Data contract, Context manifest, Golden-set plan, Effect boundary, Owner, Acceptance metric และ Rollback</li>
+            <li><strong>Two metric families</strong> = ผลลัพธ์ธุรกิจกับสุขภาพของโรงงานต้องวัดแยกกัน และหนังสือไม่ได้ให้ค่าเป้าหมายใดไว้เลย</li>
+        </ul>
+    </div>
+
+    <section class="references" aria-labelledby="references">
+        <h2 id="references">อ้างอิง</h2>
+        <p class="references__note">ตรวจสอบทุกแหล่งเมื่อ 5 กันยายน 2026 (เวลาประเทศไทย) · ป้ายหลักฐานสี่แบบ: <strong>Law</strong> ตัวบทกฎหมายหรือประกาศทางการ · <strong>Standard</strong> มาตรฐานหรือกรอบทางการที่เผยแพร่แล้ว · <strong>Study</strong> งานวิจัยหรือสัญญาณภาคสนาม · <strong>Synthesis</strong> การสังเคราะห์ของผู้เขียนหรือแหล่งที่ไม่ใช่งานวิจัย</p>
+        <ol class="references__list">
+            <li id="th-ref-1"><span class="ref-tag ref-tag--synthesis">Synthesis</span> Anirach Mingkhwan. <cite>AI Transformation as an Organizational Core — Bilingual Companion Playbook</cite> — บทที่ 5 "Build the AI and data factory" (หน้า 23–25) พร้อมภาคผนวก A และภาคผนวก B. ต้นฉบับของผู้เขียน ไม่มี URL สาธารณะ; ข้อมูลหลักฐาน ณ 5 กันยายน 2026. <span class="ref-supports">รองรับ: นิยามของโรงงานและรายการผลผลิต หลักการเริ่มจาก Demand หกบริการที่ใช้ซ้ำได้และแถบควบคุมร่วมสี่ด้าน หลักปฏิบัติห้าประการ ประโยค Context Engineering หน้า 23 เวิร์กช็อปสองชั่วโมงกับหกบทบาท Minimum production package เจ็ดรายการ ตัวชี้วัดสิบสองตัว รูปแบบความล้มเหลวแปดแบบ รูปที่ 6 และกรณีสมมติ CX-REFUND-01 พร้อมขอบเขต วงเงิน 2,000 บาท และรายการยกเว้นหกข้อ</span></li>
+            <li id="th-ref-2"><span class="ref-tag ref-tag--synthesis">Synthesis</span> The Foundation (th). <cite>AI Transformation: จากการใช้ AI สู่องค์กรที่เรียนรู้เร็วที่สุด | The Masterclass EP01</cite> — เผยแพร่ 28 สิงหาคม 2026 ความยาว 52 นาที. <a href="https://www.youtube.com/watch?v=n_IwUYevRZo">youtube.com</a> — เข้าถึง 2026-09-05. <span class="ref-supports">รองรับ: การเปรียบเทียบระหว่างการทำ AI แบบโครงการกับแบบโรงงาน (§10, 25:53–28:24) พลังสามด้าน Scale, Scope และ Learning ของ operating model (§11, 28:24–31:13) และบันได AI project → AI capability → AI operating model (§13, 34:04–37:18) — สรุปความจากถ้อยคำของหนังสือ ไม่ใช่การถอดคำพูด และเป็นการสังเคราะห์เชิงปฏิบัติ ไม่ใช่งานวิจัยแบบมีกลุ่มควบคุม</span></li>
+            <li id="th-ref-3"><span class="ref-tag ref-tag--standard">Standard</span> W3C. <cite>PROV-O: The PROV Ontology</cite> — W3C Recommendation, 30 เมษายน 2013. <a href="https://www.w3.org/TR/prov-o/">w3.org</a> — เข้าถึง 2026-09-05. <span class="ref-supports">รองรับ: การมีคำศัพท์กลางสำหรับ provenance ที่แลกเปลี่ยนข้ามระบบได้ ด้วยคลาสและคุณสมบัติบนฐาน OWL2 และข้อเท็จจริงที่ว่าเอกสารนี้เป็นคำศัพท์ ไม่ใช่นโยบายการตรวจสอบหรือแบบการจัดเก็บ</span></li>
+            <li id="th-ref-4"><span class="ref-tag ref-tag--standard">Standard</span> NIST. <cite>Secure Software Development Practices for Generative AI and Dual-Use Foundation Models: An SSDF Community Profile (NIST SP 800-218A)</cite> — เผยแพร่ 26 กรกฎาคม 2024 สถานะ Final. <a href="https://csrc.nist.gov/pubs/sp/800/218/a/final">csrc.nist.gov</a> — เข้าถึง 2026-09-05. <span class="ref-supports">รองรับ: การขยาย SSDF 1.1 ด้วยแนวปฏิบัติเฉพาะการพัฒนาโมเดล AI ตลอดวงจรชีวิต และการระบุกลุ่มผู้ใช้ที่รวมถึงผู้จัดหาระบบ AI ซึ่งเป็นฐานของข้อความว่าความปลอดภัยเป็นส่วนหนึ่งของแถบควบคุมร่วม ไม่ใช่การตรวจตอนท้าย</span></li>
+            <li id="th-ref-5"><span class="ref-tag ref-tag--standard">Standard</span> FinOps Foundation. <cite>FinOps for AI</cite> — หมวดเทคโนโลยีของ FinOps Framework และหน้า FinOps for AI Overview ปรับปรุงล่าสุด 17 กุมภาพันธ์ 2026. <a href="https://www.finops.org/framework/technology-categories/ai/">finops.org</a> — เข้าถึง 2026-09-05. <span class="ref-supports">รองรับ: ความหมายเชิงปฏิบัติของแถบ FinOps ในโรงงาน ได้แก่ allocation, forecasting ที่คาดการณ์ได้ยากกว่าคลาวด์ทั่วไป optimization, unit economics บนหน่วยฐาน token และการกำกับด้วย Quota, Reserved capacity และ Throttle</span></li>
+            <li id="th-ref-6"><span class="ref-tag ref-tag--standard">Standard</span> ISO / IEC. <cite>ISO/IEC 42001:2023 — Information technology — Artificial intelligence — Management system</cite> — ฉบับที่ 1 ธันวาคม 2023 สถานะ Published (stage 60.60). <a href="https://www.iso.org/standard/42001">iso.org</a> — เข้าถึง 2026-09-05. <span class="ref-supports">รองรับ: ข้อความว่าการมีเจ้าของ การติดตาม และการปรับปรุงต่อเนื่องของโรงงานเป็นกระบวนการของระบบการจัดการตลอดวงจรชีวิต ไม่ใช่ checklist ครั้งเดียว — อ้างจากคำอธิบายสาธารณะของมาตรฐานเท่านั้น ไม่ได้ทำซ้ำข้อกำหนดที่มีลิขสิทธิ์ และไม่เกี่ยวกับการรับรอง</span></li>
+        </ol>
+    </section>
+    </div>
+
+    <div class="l-en" lang="en">
+
+    <p>🤔 <strong>If the second use case costs as much as the first, does the organization have a factory, or just projects?</strong></p>
+
+    <p>The previous post, <a href="/blog/ai-transformation-workforce">Redesign Tasks Before Headcount</a>, ended on the conclusion that once work has been redesigned at task level, the next question is which components should be built once and reused across the whole organization, instead of every team rebuilding the same foundations on its own schedule. This post is the answer to that question, and it is the chapter I find technical and business readers most often finish holding two different pictures of — which is exactly why they should read it together.</p>
+
+    <p>The short answer to the whole article is that the <strong>AI and data factory</strong> does not produce a model. It produces reusable components: governed data, versioned context, evaluation sets, tool contracts, release manifests, operating procedures, and feedback converted into regression tests — and it begins with demand, meaning the decision that has to get better, not with a campaign to collect all the data first.</p>
+
+    <h2 id="en-output-is-not-a-model">1. The Factory's Output Is Not a Model</h2>
+
+    <p>Chapter 5 of the playbook opens with a negative definition, and I like that opening a great deal, because it throws out the two most common misunderstandings in its very first sentence. An AI and data factory<sup><a href="#en-ref-1">[1]</a></sup> is <em>not</em> a room full of data scientists, and it is <em>not</em> a queue of disconnected pilots. Both of those are things organizations genuinely build and then call a factory, when the first is a skills pool and the second is a pile of work that happens to share tooling.</p>
+
+    <p>The book's positive definition is that a factory is a repeatable production system for turning one business decision into governed data products, workflows with AI as a component, measurable evidence, and services that somebody is actually monitoring. The load-bearing word in that definition is "repeatable" — not "modern", not "large", and not "has a model of its own".</p>
+
+    <p>So what does the factory actually produce? The book states it directly: its output is <em>not merely a model</em>, but includes all of the following<sup><a href="#en-ref-1">[1]</a></sup></p>
+
+    <ul>
+        <li><strong>Trusted source data</strong> — not a database dump, but datasets with an accountable owner and definitions that have been agreed</li>
+        <li><strong>Retrieval corpora</strong> — knowledge deliberately curated for retrieval, not every file in the organization poured into a vector database</li>
+        <li><strong>Context templates</strong> — templates that assemble instructions, evidence and state in a disciplined way</li>
+        <li><strong>Tool contracts</strong> — the scope, the schema, and the effects a tool is allowed to cause</li>
+        <li><strong>Evaluation sets</strong> — labeled test cases that decide whether a new version is better or worse</li>
+        <li><strong>Release manifests</strong> — the document that binds every component of one version together</li>
+        <li><strong>Operating procedures</strong> — what the people on the floor do when the system proposes the wrong thing, or fails to answer at all</li>
+        <li><strong>Feedback converted into regression tests</strong> — customer and reviewer corrections that become the system's permanent exam</li>
+    </ul>
+
+    <p>Read that list slowly and you will notice that hardly any item on it is a "model" in the everyday sense of the word. Every item is something that sits <em>around</em> the model, and is what makes the same model behave completely differently in two organizations. This is why comparing organizations by asking "which model do you use?" tells you almost nothing. The question that does tell you something is: "of the components in the list above, how many have an owner, and how many have a version number?"</p>
+
+    <h3>What actually separates a project from a factory</h3>
+
+    <p>The source video for this series draws the distinction clearly in §10 (25:53–28:24)<sup><a href="#en-ref-2">[2]</a></sup>: the common organizational pattern is to do AI as a project — one problem, one team, collect data, build a model, run the trial, finish. The problem is not that this fails to work; plenty of projects work. The problem is that when the project closes, very little is left behind with the organization, and the next project starts from zero again. The video compresses the principle into a single sentence: reuse lowers the marginal cost of the next use case.</p>
+
+    <div class="alert">
+        <strong>A caution I want to pin down at the very start:</strong> neither the book nor the source video states <em>any</em> number for how much reuse lowers cost — no percentage and no multiple. If anyone quotes such a figure while invoking the AI factory idea, ask them for the source. The opening question of this article ("if the second use case costs as much as the first…") is therefore a <em>self-audit question</em>, not a measurement.
+    </div>
+
+    <div class="table-wrapper">
+        <table>
+            <thead>
+                <tr>
+                    <th>Dimension</th>
+                    <th>Run as a project</th>
+                    <th>Run as a factory</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>Starting point</td>
+                    <td>One problem, or one dataset that already exists and now needs a purpose</td>
+                    <td>A decision that has to get better, with an owner and a measurable outcome</td>
+                </tr>
+                <tr>
+                    <td>What is delivered</td>
+                    <td>A model or a demo, plus a closing slide deck</td>
+                    <td>Data products, versioned context, evaluation sets, tool contracts and manifests</td>
+                </tr>
+                <tr>
+                    <td>What survives the team disbanding</td>
+                    <td>Knowledge in people's heads, and a repo nobody maintains</td>
+                    <td>Components with owners, version numbers, and someone able to use them tomorrow</td>
+                </tr>
+                <tr>
+                    <td>Cost of the next use case</td>
+                    <td>About the same, because the same foundations get rebuilt every time</td>
+                    <td>Lower in proportion to what is reused — the book and the video do not say by how much</td>
+                </tr>
+                <tr>
+                    <td>Evidence</td>
+                    <td>One test result produced at project close</td>
+                    <td>Evidence that travels with the product and is rerun for every version</td>
+                </tr>
+                <tr>
+                    <td>Learning</td>
+                    <td>Sits in a lessons-learned report nobody opens again</td>
+                    <td>Feedback is validated and becomes a regression test that is actually enforced</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <p>That table is my reading of the chapter, not a table printed in the book, but the last row is the one I use most often when auditing a real organization, because it resolves to a single question: three months ago there was a case where the system answered wrongly enough that somebody had to apologize to a customer — is that case in the test set that runs before every release today? If the answer is "it is in the team lead's inbox", that organization is still working as a project, however good its platform is.</p>
+
+    <h2 id="en-demand-first">2. The Factory Begins with Demand, Not with Data Collection</h2>
+
+    <p>The most expensive sentence in this chapter is a short one: the factory begins with demand<sup><a href="#en-ref-1">[1]</a></sup>. Identify the decision to improve, who is accountable for that decision, what role AI is permitted to play in the process, and how the outcome will be measured — all four <em>before</em> going out to collect more data.</p>
+
+    <p>Why does the order matter? Because the reverse order is the first failure pattern the chapter names outright: building a data lake without knowing which decision it improves. I meet this pattern often enough to predict it. An organization invests in a data platform for several years, ends up with a genuinely complete warehouse, and only then asks "so what should we do with it?" The answer is usually a list of use cases with no owner, because the people who actually own the decisions were never in the room while the warehouse was being designed.</p>
+
+    <p>"What role AI is permitted to play" is <strong>decision authority</strong>, which this series has treated as an independent dimension since <a href="/blog/ai-transformation-portfolio">#5 Decision Portfolio</a> — a system that only drafts an answer for a person to check, and a system that can release a real effect on its own, are different pieces of work needing different components from the factory, even when the decision itself is the same. The same holds for <strong>consequence</strong>, which returns later as the metric "evaluation coverage by consequence" in section 7.</p>
+
+    <p>Once you know which decision you are improving, the book's next step is to shape the critical data into products the domain owns, with defined <strong>provenance</strong>, quality thresholds, access rules, and a service commitment. Notice that these five are not purely data-engineering work — "definitions" and "quality thresholds" are business decisions that a data team cannot make on the business's behalf.</p>
+
+    <h3>The three-rung ladder: project → capability → operating model</h3>
+
+    <p>The source video separates three levels in §13 (34:04–37:18), and the book restates them<sup><a href="#en-ref-2">[2]</a></sup>. The value of this ladder is not that it ranks organizations; it is that it explains why counting use cases is the easiest metric to fool yourself with. The video uses the illustration that an organization with a great many disconnected pilots may be further from transformation than one with only a handful of uses that share a platform, a feedback loop and an expansion path — that is a rhetorical illustration, not a measurement, and it should never be transplanted into a metrics table.</p>
+
+    <div class="table-wrapper">
+        <table>
+            <thead>
+                <tr>
+                    <th>Level</th>
+                    <th>What it proves or adds</th>
+                    <th>The question it can now answer</th>
+                    <th>The question it still cannot</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>AI project</td>
+                    <td>Proves that one problem can be addressed this way</td>
+                    <td>Does this technique work on our data?</td>
+                    <td>Can we do the second one with less effort?</td>
+                </tr>
+                <tr>
+                    <td>AI capability</td>
+                    <td>Adds reusable data, model management, governance, expertise and the ability to experiment</td>
+                    <td>Can the second problem start from a foundation that already exists?</td>
+                    <td>Have the organization's everyday decisions actually changed?</td>
+                </tr>
+                <tr>
+                    <td>AI operating model</td>
+                    <td>Makes those capabilities part of how decisions and workflows are designed</td>
+                    <td>Do we design new work assuming this capability is already there?</td>
+                    <td>Who owns what once it scales across domains — the next post's question</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <div class="alert info">
+        <strong>Do not confuse the ladders:</strong> these three rungs separate <em>levels of delivery</em>. They are not the five-level maturity ladder (explore / assist / manage systematically / integrate / operate AI-core) that <a href="/blog/ai-transformation-maturity">#4 Five Maturity Levels</a> owns. The two measure different axes, and this series has an explicit agreement never to mix them inside one post.
+    </div>
+
+    <h3>Three powers that do not come for free</h3>
+
+    <p>Another frame the book takes from the video, at §11 (28:24–31:13), is the three powers of a digital <strong>operating model</strong><sup><a href="#en-ref-2">[2]</a></sup>: <strong>Scale</strong> — serving more customers, transactions or decisions without a proportional growth in resources; <strong>Scope</strong> — reusing data and AI capabilities across products, services and contexts; and <strong>Learning</strong> — turning interactions into better understanding and better future performance.</p>
+
+    <p>The sentence that must always be read alongside them is that these three powers are <em>not</em> automatic properties of a model. They are the result of organizational design. I emphasize that sentence because it is the reason this whole chapter exists: if the three powers arrived with the model, buying an API would be sufficient and nobody would need to build a factory. The economic loop the book describes is use → evidence → learning → a better product or process → more valuable use, with quality and harm measured at every step — which is the <strong>learning loop</strong> that <a href="/blog/ai-transformation-learning-loop">#3 The Learning Engine</a> already examined. The factory is the engineering form of that loop.</p>
+
+    <h2 id="en-six-services">3. Six Reusable Services, and the Shared Control Band</h2>
+
+    <p>This is the heart of the chapter, and the one picture I recommend executives carry away from this post. Factory capability consists of six reusable services — data products, context services, model services, evaluation services, tool registry services and observability services — with four shared controls, security, privacy, FinOps and sustainability, spanning all six<sup><a href="#en-ref-1">[1]</a></sup>.</p>
+
+    <figure class="figure">
+      <a href="../images/ai-transformation-fig-06-ai-data-factory.png">
+        <img class="figure__img" src="../images/ai-transformation-fig-06-ai-data-factory.png" alt="Six factory service tiles — Data products, Context services, Model services, Evaluation, Tool registry, Observability — above a dark band reading SHARED ASSURANCE." width="1400" height="700" loading="lazy" decoding="async">
+      </a>
+      <figcaption class="figure__caption">Figure 6 · The six factory services — reusable components shorten the next safe learning cycle.</figcaption>
+    </figure>
+
+    <p>What makes this six-way split useful is not the number six; it is what each tile <em>owns and versions</em>. I have therefore arranged the table below around three questions: what does this service own, who consumes it, and what evidence does it emit for others to inspect? Any tile that cannot answer all three is still a team, not a service.</p>
+
+    <div class="table-wrapper">
+        <table>
+            <thead>
+                <tr>
+                    <th>Service</th>
+                    <th>What it owns and versions</th>
+                    <th>Consumer</th>
+                    <th>Evidence it emits</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td><strong>Data products</strong><br>governed facts</td>
+                    <td>Governed facts with definitions, provenance, quality thresholds, access rules and a service commitment</td>
+                    <td>Every workflow, context services, and evaluation</td>
+                    <td>Data contracts, lineage, freshness values, and a record of contract violations</td>
+                </tr>
+                <tr>
+                    <td><strong>Context services</strong><br>context assembly</td>
+                    <td>The assembly of instructions, retrieved evidence and memory into one context</td>
+                    <td>Every candidate that uses a model to do real work</td>
+                    <td>Context manifests, corpus snapshot ids, ranking and template versions</td>
+                </tr>
+                <tr>
+                    <td><strong>Model services</strong><br>routing and provider change</td>
+                    <td>Routing tasks to the smallest adequate model, and managing provider change</td>
+                    <td>The teams that own each workflow</td>
+                    <td>Routing-policy versions, provider-change records, and cost and latency per task</td>
+                </tr>
+                <tr>
+                    <td><strong>Evaluation services</strong><br>evaluation</td>
+                    <td>Labeled cases, judge calibration, and test execution</td>
+                    <td>The release gate, and whoever approves a version</td>
+                    <td>Golden-set versions, coverage by consequence, run results with the limitations found</td>
+                </tr>
+                <tr>
+                    <td><strong>Tool registry services</strong><br>tool registry</td>
+                    <td>Scopes, schemas, the class of effect a tool may cause, and approval requirements</td>
+                    <td>The external guard, and the runtime that calls the tool</td>
+                    <td>Tool contracts, effect classes, approval rules, and a change history</td>
+                </tr>
+                <tr>
+                    <td><strong>Observability services</strong><br>observability</td>
+                    <td>Traces, realized outcomes, cost, behavioral drift, and incidents</td>
+                    <td>Operations, risk, and the board</td>
+                    <td>Reconstructable traces, outcome records, drift signals, and incident timelines</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <div class="alert danger">
+        <strong>These six services are nobody's standard:</strong> no standards body defines a "six-service AI factory". This is the book author's synthesis<sup><a href="#en-ref-1">[1]</a></sup>, meant as a shared language for designing reuse — not a certified reference architecture, and not an org chart to be copied. Do not present these six tiles as a requirement of ISO, of NIST, or of the source video.
+    </div>
+
+    <h3>Provenance already has a shared vocabulary</h3>
+
+    <p>In the table above, provenance appears twice — under data products and under observability — and that is not a coincidence. The origin of data and of results has to be recorded at the source and be readable in reverse at the far end. The good news is that nobody has to invent the vocabulary. <strong>W3C PROV-O</strong> is a W3C Recommendation published on 30 April 2013, and as of 5 September 2026 it holds that status with nothing superseding it<sup><a href="#en-ref-3">[3]</a></sup>. It supplies a set of classes and properties for representing and interchanging provenance generated in different systems and different contexts, built around entities, activities, agents and derivation relationships.</p>
+
+    <p>What PROV-O <em>does not</em> give — and this needs saying plainly — is that it is a <em>vocabulary</em>, not an audit policy, not a storage design, and not a statement of how long an organization must retain anything. Those questions belong to internal policy and to applicable law. The real benefit of adopting a shared vocabulary is that when data products and observability speak the same language, the "provenance coverage" metric in section 7 becomes genuinely countable instead of a feeling.</p>
+
+    <h3>The four shared controls</h3>
+
+    <p>The dark band beneath all six tiles in the figure is the part I see organizations miss most often, because it is the part "everyone is responsible for", which usually translates to nobody. The book names four shared controls — security, privacy, FinOps and sustainability<sup><a href="#en-ref-1">[1]</a></sup> — spanning all six services, rather than sitting as a checkpoint at the end.</p>
+
+    <p><strong>Security</strong> — the thing I want remembered is that the security of an AI system does not begin at the point of going to production. <strong>NIST SP 800-218A</strong>, the SSDF Community Profile for generative AI and dual-use foundation models, was published on 26 July 2024 and, as of 5 September 2026, remains Final with no superseding revision<sup><a href="#en-ref-4">[4]</a></sup>. The part that bears directly on the factory is that its stated audience includes the <em>acquirers</em> of AI systems, not only their developers. Buying a model or a service from outside does not make this concern disappear; it moves it into the contract and into the evidence you have to demand from the supplier — and, as the book is careful to note, a secure-development profile reduces risk but does not guarantee secure behavior in deployment.</p>
+
+    <p><strong>Privacy</strong> — in this chapter privacy is named as a <em>control family</em> that must span every service, not as a legal requirement. I will therefore not interpret PDPA here; that belongs to the post devoted to governance. What has to be decided at factory level is which data may enter a corpus, what memory context services retain and for how long, and whether the traces observability keeps contain personal data.</p>
+
+    <p><strong>FinOps</strong> — the FinOps Foundation treats <em>FinOps for AI</em> as a technology category of the FinOps Framework, and its FinOps for AI Overview page was last updated on 17 February 2026<sup><a href="#en-ref-5">[5]</a></sup>. What this band does in practice is <em>allocation</em>, being able to say who consumes a model's output; <em>forecasting</em>, which the FinOps Foundation itself describes as less predictable than ordinary cloud and as requiring more experience; <em>optimization</em>; and <em>unit economics</em> with token-based units added, such as cost per call or per successful outcome, together with governance through quotas, reserved capacity and throttles. Actual prices and energy figures belong to <a href="/blog/ai-transformation-suppliers-footprint">#17 Suppliers, Cost and Footprint</a>; here I am describing only what the band <em>does</em>.</p>
+
+    <p><strong>Sustainability</strong> — the word the book uses is sustainability, or <strong>sustainable AI</strong>, and not GreenOps. The <code>GREENOPS</code> label that appears on the dark band in the figure is this series' own abbreviation, used to keep the label short enough to draw; it is not the book's wording. I flag it here because this series has an agreement not to put words in a source's mouth that the source did not use.</p>
+
+    <h3>Ownership and continual improvement are a process, not a one-time checklist</h3>
+
+    <p>The question that follows immediately from the six-service table is who ensures those services are still working well in year two. Structurally, there is already an international standard for that answer. <strong>ISO/IEC 42001:2023</strong> covers the <strong>AI management system</strong>; it is edition 1, dated December 2023, and as of 5 September 2026 it is Published at stage 60.60 with no revision, amendment or new edition listed on its ISO catalogue page<sup><a href="#en-ref-6">[6]</a></sup>. The standard's public description states that it specifies requirements for establishing, implementing, maintaining and continually improving an AI management system within an organization.</p>
+
+    <div class="alert">
+        <strong>A boundary that must always ride along:</strong> this article cites only the public description of ISO/IEC 42001 and does not reproduce protected requirements. The minimum production package in section 6 is <em>not</em> conformity work, is not certification, and does not make any system "standards-compliant". Neither ISO/IEC 42001, NIST SP 800-218A, PROV-O nor FinOps certifies anybody's factory. The source playbook states its own scope: it is an organizational design and engineering resource, and it is not legal, audit, certification, investment, employment, cybersecurity or safety advice.
+    </div>
+
+    <p>It also has to be stressed that these four documents do different jobs and must never be substituted for one another: PROV-O supplies a <em>vocabulary</em> for provenance; ISO/IEC 42001 supplies <em>lifecycle management processes</em>; NIST SP 800-218A supplies <em>secure-development and supplier-side practices</em>; and FinOps for AI says <em>what the cost band does in practice</em>. An organization that picks up one of them and declares itself covered has closed one gap and left the other three open.</p>
+
+    <h2 id="en-context-engineering">4. Context Engineering — Context Is Part of the Release</h2>
+
+    <p>If I had to choose one paragraph from Chapter 5 as the one most likely to change how an engineering team works, I would choose this one. The book writes, on page 23<sup><a href="#en-ref-1">[1]</a></sup></p>
+
+    <blockquote>For generative systems, this continues into context engineering. Retrieved passages, instructions, session state, tool semantics, and policy thresholds all influence behavior. They belong to the release process rather than invisible plumbing.</blockquote>
+
+    <p>The phrase that gives the sentence its edge is the last one: these things "belong to the release process rather than invisible plumbing". I like that phrase because it describes the real state of most organizations exactly: the prompt lives in a file nobody reviews, the corpus is updated by someone with good intentions, the threshold is changed on a config page at two in the morning — and not one of those three appears in the release record.</p>
+
+    <p>The five things that sentence puts inside the release process have precise names, and I recommend teams print these five lines and tape them beside the screen.</p>
+
+    <ul>
+        <li><strong>Retrieved passages</strong> — which corpus snapshot, effective from what date, carrying which passage ids</li>
+        <li><strong>Instructions</strong> — the system prompt and every template layer that composes the instruction the model actually receives</li>
+        <li><strong>Session state</strong> — what the system remembers across turns and across channels</li>
+        <li><strong>Tool semantics</strong> — what the tool with this name really does, and whether the description the model sees matches its actual behavior</li>
+        <li><strong>Policy thresholds</strong> — the lines that make the system hand off to a person, or stop</li>
+    </ul>
+
+    <p>These five can change a system's behavior as much as changing the model does. Yet in most organizations changing the model requires several layers of approval, while editing a prompt takes one commit. That asymmetry is what this chapter is trying to close.</p>
+
+    <blockquote>💡 My view: the chapter's third operating principle is written briefly and binds hardest — <strong>"Treat context as a release artifact — version prompts, templates, corpus, ranking, memory, and tools together."</strong><sup><a href="#en-ref-1">[1]</a></sup> The word to read slowly is "together". Plenty of teams version their prompts by now, but the corpus is updated separately, the ranking config is updated separately, and memory has no version at all. The result is that when the system starts answering oddly some weeks after a release, nobody can reconstruct what changed, because no single point recorded the whole set at once.</blockquote>
+
+    <p>The chapter's other four principles<sup><a href="#en-ref-1">[1]</a></sup> are: principle 1, <strong>start with the decision</strong> — define outcome, user, authority and consequence before building pipelines, which is what the whole of section 2 unpacked; principle 2, <strong>treat data as a product</strong> — give every critical set an owner, a semantic contract, lineage, an access policy and a lifecycle; principle 4, <strong>move evidence with the product</strong> — a candidate without test results, limitations and rollback is incomplete; and principle 5, <strong>turn feedback into governed learning</strong> — validate corrections, add neighboring cases, and rerun the gate.</p>
+
+    <p>Principle 4 contains a word worth reading twice: "incomplete" — not "could be improved". Incomplete means a required part is missing, which is a different state from "approved with observations". In practice, that is the difference between an organization that has a real <strong>release gate</strong> and one that merely holds a meeting before shipping.</p>
+
+    <p>The question many people ask next is what document context should be recorded in. The answer is the <strong>runtime-context manifest</strong>, a tool that <a href="/blog/ai-transformation-ai-core">#11 When Is AI the Core?</a> owns and will take field by field. Here I will stop at the principle: if the five items above are not bound into one versioned document, we will never be able to answer the question "which version was it that answered wrongly yesterday?"</p>
+
+    <h2 id="en-cx-refund-01">5. CX-REFUND-01 — One Case Every Service Must Touch</h2>
+
+    <p>From this section onward, through the engineering half of the series, the book uses a single case so that chapters can be compared against one another. It is called <code>CX-REFUND-01</code>, the customer refund companion of Luma Commerce Thailand <em>(a fictional case from the playbook)</em><sup><a href="#en-ref-1">[1]</a></sup> — the company does not exist, and every number in the case is an illustrative value, not a universal threshold for anyone to copy.</p>
+
+    <p>Its scope is to answer refund-policy questions, route cases, draft replies, propose refunds and create CRM notes, handling questions in two languages. The only financial tool it may propose is <code>issue_refund</code>, and an external guard may execute exactly one eligible refund, no greater than THB 2,000, and only after confirmation. Every other financial action goes to a person.</p>
+
+    <p>The best-designed part of this case is not the capability but the <em>exclusion list</em>. Its scope explicitly cuts out six things: cases with fraud flags, subscription products, marketplace orders, legal complaints, non-THB payments, and amounts above THB 2,000<sup><a href="#en-ref-1">[1]</a></sup>. Writing the exclusions clearly at the outset is what separates a system that has been designed from one that is merely "seeing how much it can answer".</p>
+
+    <h3>How the six factory services touch this case</h3>
+
+    <p>The value of a shared case is that it forces all six tiles to deliver something real rather than merely exist on a diagram. The table below is what each service has to hand to <code>CX-REFUND-01</code>, as the book describes it on page 23.</p>
+
+    <div class="table-wrapper">
+        <table>
+            <thead>
+                <tr>
+                    <th>Service</th>
+                    <th>What it must supply to CX-REFUND-01</th>
+                    <th>What it must not do</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>Data products</td>
+                    <td>Order and payment data stays authoritative, reachable only through scope-limited services</td>
+                    <td>Do not copy transaction data into a retrieval corpus for convenience</td>
+                </tr>
+                <tr>
+                    <td>Context services</td>
+                    <td>The policy owner publishes an approved corpus snapshot with effective dates, passage ids, jurisdiction and provenance</td>
+                    <td>Do not pour every customer document into a vector database</td>
+                </tr>
+                <tr>
+                    <td>Model services</td>
+                    <td>Route the task to the smallest adequate model, and absorb provider change without invalidating existing evidence</td>
+                    <td>Do not switch models silently without rerunning the evaluation set</td>
+                </tr>
+                <tr>
+                    <td>Evaluation services</td>
+                    <td>A golden set covering normal requests, policy exceptions, conflicting evidence, missing payment status, prompt injection, and prohibited refund amounts</td>
+                    <td>Do not use a test set made only of easy cases, which yields a handsome score that means nothing</td>
+                </tr>
+                <tr>
+                    <td>Tool registry</td>
+                    <td>The <code>issue_refund</code> contract naming scope, schema, effect class and approval requirements, for the external guard to enforce</td>
+                    <td>Do not let the model decide for itself whether an amount is within the limit</td>
+                </tr>
+                <tr>
+                    <td>Observability</td>
+                    <td>Traces binding the answer back to passage ids and manifest versions, together with the real outcome after the customer received the reply</td>
+                    <td>Do not measure uptime alone and conclude the system is healthy</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <p>Two sentences from page 23 deserve particular emphasis. The first is that each candidate version binds the corpus, the context builder, the tools, the evaluators and the thresholds into a single manifest — this is principle 3 from the previous section made concrete. The second is that customer corrections must be validated and <em>become recorded failure cases</em>, rather than becoming training data automatically.</p>
+
+    <div class="alert danger">
+        <strong>Why the second sentence matters more than it looks:</strong> if customer corrections flow into training data without validation, the organization has opened a channel for anyone who understands the mechanism to feed in wrong corrections deliberately, and a channel for one customer's misunderstanding to become the behavior the system shows everybody. That is why principle 5 says "governed learning" and not "automatic learning".
+    </div>
+
+    <p>One last observation for this section: the THB 2,000 figure and all six exclusions come from no research, and should not be adopted as another organization's defaults. What is worth copying is the <em>form</em> — writing out the scope, the limit, the exclusion list and the paths that must go to a person, in full, before the first line of the prompt is written.</p>
+
+    <h2 id="en-value-stream">6. The Factory Value Stream Design Workshop</h2>
+
+    <p>The book gives one working session per chapter, and this chapter's is called <em>Factory value stream design</em>. Its shape is: run two hours with the owners of six roles — product, domain, data, platform, operations and risk — and trace <em>one single request</em> from business intent to released outcome<sup><a href="#en-ref-1">[1]</a></sup>.</p>
+
+    <p>Two requirements inside that sentence are routinely skipped. The first is "six roles" — not six people and not six teams, but the actual owners who can decide on behalf of that role in the room. If risk sends a delegate who has to go and ask before answering anything, the workshop ends with a list of open questions rather than a map. The second is "one single request" — the urge to trace three cases at once is a trap I see every time, because as soon as you trace several, everything gets described at a level general enough to cover them all, which is exactly the level at which no problem is ever found.</p>
+
+    <p>The things to identify while tracing the path number eight in the book: authoritative sources, transformations, context assembly, model decisions, tool effects, human handoffs, evidence, and feedback. And there are four things to mark: queues, reconciliation work, ambiguous definitions, and ownerless points.</p>
+
+    <div class="alert info">
+        <strong>Those four marks are the workshop's real output:</strong> a handsome map is not what you take home. What you take home is the list of <em>ownerless points</em> and the list of <em>ambiguous definitions</em>, because those two are the root cause of nearly every incident I have ever traced back. "Reconciliation work", meanwhile, is usually what exposes that the organization holds the same data in two places while nobody will say which one is authoritative.
+    </div>
+
+    <p>The table below is how I actually slice those two hours when I run a session like this. It has to be flagged clearly that <em>the book supplies no segment-by-segment agenda</em> — it gives only the two-hour duration, the six roles, and the things to identify and to mark. The time split below is mine, and the book does not claim two hours is optimal or measured. It is a scheduling default, nothing more.</p>
+
+    <div class="table-wrapper">
+        <table>
+            <thead>
+                <tr>
+                    <th>Segment</th>
+                    <th>Time</th>
+                    <th>What happens in it</th>
+                    <th>What must exist before moving on</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>Frame the request</td>
+                    <td>15 min</td>
+                    <td>Pick one request; name the decision to improve, its owner, the authority AI holds, and the measurable outcome</td>
+                    <td>One sentence everybody in the room agrees describes what is being traced</td>
+                </tr>
+                <tr>
+                    <td>Trace the path</td>
+                    <td>40 min</td>
+                    <td>Follow business intent to released outcome, naming authoritative sources, transformations, context assembly, model decisions and tool effects</td>
+                    <td>One continuous path, with no stretch answered by "the system handles that part"</td>
+                </tr>
+                <tr>
+                    <td>Human and evidence</td>
+                    <td>25 min</td>
+                    <td>Name the human handoffs, the evidence required at each one, and the feedback that flows back</td>
+                    <td>Knowing where people enter, with what information, and within what time</td>
+                </tr>
+                <tr>
+                    <td>Mark the four</td>
+                    <td>20 min</td>
+                    <td>Mark queues, reconciliation work, ambiguous definitions, and ownerless points</td>
+                    <td>A countable list, not a feeling that "something is probably wrong around here"</td>
+                </tr>
+                <tr>
+                    <td>Assign and close</td>
+                    <td>20 min</td>
+                    <td>Fill in all seven fields of the minimum production package, with owner names and dates</td>
+                    <td>Every field carries a person's name, not a team's, and no field is left blank</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <h3>Minimum production package — the seven items required before release</h3>
+
+    <p>The workshop ends with a single artifact. The book calls it the minimum production package and names seven items: data contract, context manifest, golden-set plan, effect boundaries, owners, acceptance metrics and rollback<sup><a href="#en-ref-1">[1]</a></sup>. The word "minimum" has to be read literally — it is a floor, not a sufficiency test. Having all seven does not mean the system is ready; it means the system is ready <em>to be examined</em>.</p>
+
+    <p>I add three columns to those seven, following this series' convention: owner, version, and evidence — because an item without those three turns into a slide heading very quickly.</p>
+
+    <div class="table-wrapper">
+        <table>
+            <thead>
+                <tr>
+                    <th>Item</th>
+                    <th>What has to actually be inside it</th>
+                    <th>Owner</th>
+                    <th>Version &amp; evidence</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td><strong>Data contract</strong></td>
+                    <td>The definition of every field used, its provenance, quality thresholds, access rules and service commitment</td>
+                    <td>The data product owner on the domain side</td>
+                    <td>Contract version + the violation record behind it</td>
+                </tr>
+                <tr>
+                    <td><strong>Context manifest</strong></td>
+                    <td>Corpus snapshot ids, templates, ranking config, memory policy and the visible tool list, bound into one document</td>
+                    <td>The workflow owner together with the policy owner</td>
+                    <td>One version covering every component + the diff from the previous one</td>
+                </tr>
+                <tr>
+                    <td><strong>Golden-set plan</strong></td>
+                    <td>How many cases and of which kinds, separated by consequence level, plus how the judge is calibrated</td>
+                    <td>The evaluation owner</td>
+                    <td>Test-set version + the latest run with its limitations</td>
+                </tr>
+                <tr>
+                    <td><strong>Effect boundaries</strong></td>
+                    <td>The real effects the system may cause, the limit, the exclusion list, and what always goes to a person</td>
+                    <td>The business owner together with risk</td>
+                    <td>Tool-contract version + the approval record</td>
+                </tr>
+                <tr>
+                    <td><strong>Owners</strong></td>
+                    <td>A person's name for the business outcome, for the data, for the platform, and for the release</td>
+                    <td>The executive who assigns them</td>
+                    <td>Date assigned + date of the next review</td>
+                </tr>
+                <tr>
+                    <td><strong>Acceptance metrics</strong></td>
+                    <td>Pre-declared criteria for whether this version passes, measured how, on which workload</td>
+                    <td>The business outcome owner</td>
+                    <td>The value declared before the run + the actual result after it</td>
+                </tr>
+                <tr>
+                    <td><strong>Rollback</strong></td>
+                    <td>The steps back to the previous version or to a non-model fallback, with the time it actually takes</td>
+                    <td>The operations owner</td>
+                    <td>Date of the last rehearsal + the time measured during it</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <p>The field I always check first is the last one, because rollback is the only one of the seven that cannot be proved on paper. If it has never been rehearsed, "we can be back within ten minutes" is a hope, not evidence — and by this chapter's fourth principle, a version without a working rollback does not yet count as ready.</p>
+
+    <h2 id="en-metrics-failures">7. Metrics That Matter, and Failure Patterns</h2>
+
+    <p>The chapter opens its metrics section with the single most valuable instruction in it: <strong>separate outcome improvement from factory health</strong><sup><a href="#en-ref-1">[1]</a></sup>. They have to be separated because the two move on different clocks. The factory can strengthen every quarter while business outcomes stay flat, because the decisions chosen for improvement were not the ones creating value; and conversely, business outcomes can improve temporarily for external reasons while the factory rots. An organization that merges the two into one dashboard will always see the signal later than it should.</p>
+
+    <p>The book lists twelve measures<sup><a href="#en-ref-1">[1]</a></sup>, and the point to stress is that it sets <em>no</em> target value for any of them. It is a vocabulary for measurement, not a pass mark. I have added a Scorecard column, as this series does, so it is visible which column of the organizational scorecard each measure lands in, and so the whole factory is not judged on a single dimension called speed.</p>
+
+    <div class="table-wrapper">
+        <table>
+            <thead>
+                <tr>
+                    <th>Metric</th>
+                    <th>What it tells us</th>
+                    <th>Warning sign</th>
+                    <th>Scorecard</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>Lead time from approved use case to governed release</td>
+                    <td>How long the organization takes to turn one decision into a system it can release with evidence</td>
+                    <td>It shortens because gates were skipped, not because components were reused</td>
+                    <td>Learning</td>
+                </tr>
+                <tr>
+                    <td>Data freshness</td>
+                    <td>How far behind reality the data answering today's questions is</td>
+                    <td>Measured as "the pipeline ran successfully" instead of as the age of the data the user sees</td>
+                    <td>Quality</td>
+                </tr>
+                <tr>
+                    <td>Contract violations</td>
+                    <td>How often data that breaks the declared contract gets into the system anyway</td>
+                    <td>The count is zero because there is no contract to violate, not because nothing violated it</td>
+                    <td>Risk</td>
+                </tr>
+                <tr>
+                    <td>Provenance coverage</td>
+                    <td>The proportion of answers that can genuinely be traced back to the origin of the data and the result</td>
+                    <td>High in the report, but a spot check finds passage ids pointing at a deleted corpus version</td>
+                    <td>Risk</td>
+                </tr>
+                <tr>
+                    <td>Evaluation coverage by consequence</td>
+                    <td>Whether high-consequence cases are tested as thoroughly as ordinary ones</td>
+                    <td>Overall coverage is high, but high-consequence cases are few because they are hard to find</td>
+                    <td>Quality</td>
+                </tr>
+                <tr>
+                    <td>Reuse of approved components</td>
+                    <td>How much of what the factory has built is genuinely picked up by the next piece of work</td>
+                    <td>Every team builds its own context builder because the shared one "does not fit our case"</td>
+                    <td>Economics</td>
+                </tr>
+                <tr>
+                    <td>Defect escape</td>
+                    <td>How often a defect passes the gate and reaches real users</td>
+                    <td>Counting only what customers complain about, which is the tip of the iceberg</td>
+                    <td>Quality</td>
+                </tr>
+                <tr>
+                    <td>Rework</td>
+                    <td>Work that has to be redone because the first pass was unusable</td>
+                    <td>Never counted at all, because it is treated as "the team's normal work"</td>
+                    <td>People</td>
+                </tr>
+                <tr>
+                    <td>Escalation</td>
+                    <td>The volume of work handed to people, and which way it is trending</td>
+                    <td>It falls because people stopped escalating, not because there are fewer problems</td>
+                    <td>People</td>
+                </tr>
+                <tr>
+                    <td>p95 latency</td>
+                    <td>The real experience of the slowest group of users, not of the typical one</td>
+                    <td>The average is reported instead, hiding the long tail that makes people stop using it</td>
+                    <td>Value</td>
+                </tr>
+                <tr>
+                    <td>Energy and cost per successful task</td>
+                    <td>The true price of "one usable result", not the price of one call</td>
+                    <td>Measured per token, which improves by answering more briefly while the task still fails</td>
+                    <td>Economics</td>
+                </tr>
+                <tr>
+                    <td>Time from verified incident to reusable control improvement</td>
+                    <td>How quickly the organization turns one lesson into a permanent defense</td>
+                    <td>Cases close quickly, but no control is ever added to the shared components</td>
+                    <td>Learning</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <div class="alert info">
+        <strong>There are no target values in this chapter, and I will not invent any:</strong> the book does not say what percentage coverage should be, how many days lead time should take, or how many seconds p95 should be. Those thresholds depend on the work and on that organization's consequence levels. What can be done immediately is to measure the current value as a baseline for one quarter, and then set thresholds from your own baseline rather than from a number borrowed off somebody else's slide.
+    </div>
+
+    <h3>Failure patterns</h3>
+
+    <p>The chapter names eight failure patterns<sup><a href="#en-ref-1">[1]</a></sup>. I keep the book's order and add a note on what each one looks like when you meet it in the wild.</p>
+
+    <ul>
+        <li><strong>Building a data lake without knowing which decision it improves</strong> — recognizable because the project documentation describes the architecture in exquisite detail but cannot say who will decide differently once the system exists</li>
+        <li><strong>Calling a group of pilots a factory</strong> — several pilots sharing no components are still several pilots, not one factory. The metric that exposes this is reuse of approved components</li>
+        <li><strong>Shadow corpora</strong> — a knowledge store one team built alongside the shared one because the shared one was too slow to wait for. The problem is not that the team was wrong; it is that the shared service was unresponsive, and the organization now has two truths</li>
+        <li><strong>Unversioned prompts</strong> — editable without leaving a trace, so nobody can reconstruct what caused yesterday's change in behavior. This is the pattern principle 3 is designed to close</li>
+        <li><strong>Measuring uptime while ignoring semantic quality</strong> — the system answers every question fast, and answers wrongly with great consistency. The dashboard is entirely green</li>
+        <li><strong>Treating all user feedback as truth</strong> — unvalidated corrections become training data, and one person's misunderstanding becomes the behavior the system shows everybody</li>
+        <li><strong>Optimizing retrieval without post-state checks</strong> — retrieval scores improve, but nobody verifies that once the system has acted, the resulting state is actually correct</li>
+        <li><strong>Centralizing every delivery choice in one specialist queue</strong> — safer at first, then a bottleneck that every team starts finding ways around, which is more dangerous than the original state. This is the bridge straight into the next post</li>
+    </ul>
+
+    <div class="alert">
+        <strong>One item I am adding myself, flagged clearly as not being on the book's list:</strong> <em>a golden set built once and never rerun stops being evidence within a few months.</em> This is my reading of principle 5, with its instruction to "rerun the gate", and of the evaluation-coverage-by-consequence metric — it is not a ninth failure pattern that the book names. I separate it explicitly, because this series treats claiming a source said something it did not as a graver error than writing too little.
+    </div>
+
+    <h2 id="en-road-ahead">8. The Road Ahead</h2>
+
+    <p>If the whole chapter had to be compressed into one change of practice, I would choose this: change the question asked when an AI project is approved, from "what will this project build?" to "what components will this project leave behind for the next project to use, and will those components have an owner, a version and evidence?" The first question buys you an output. The second buys you a capability.</p>
+
+    <p>There are three things you can do next week. One, open your organization's most recent AI project approval document and count how many of the seven items in the minimum production package actually appear in it — in my experience the answer is usually fewer than half, and the two most often missing are the context manifest and a rehearsed rollback. Two, run the two-hour workshop with the six roles on one single request, and count the ownerless points that surface. Three, pick three metrics from the table in section 7, drawn from three different Scorecard columns, and measure a baseline without setting any target yet.</p>
+
+    <p>What this chapter cannot answer, and what the next one is for, follows from the last failure pattern. A factory with six services and a shared control band needs people who set the standards, people who build, people who approve and people who operate — and if all four roles sit with one central team, the factory becomes the bottleneck, while if every domain chooses everything for itself, the organization is back to holding several versions of the truth. Where that line falls is the content of Chapter 6.</p>
+
+    <div class="alert info">
+        <strong>🧭 Layer this post advances:</strong> the <strong>AI and data factory</strong> layer, for which the book sets the leadership question "Which components should become reusable" and defines the layer's minimum evidence as "Data products context services evaluation harness tool registry and observability". This post answers leadership question <strong>Q7</strong> ("Who owns value risk effects exceptions and learning"); the book prints all eight leadership questions in English, and both are quoted here verbatim from it. On the organizational scorecard, this post mainly moves <strong>Learning</strong> (lead time to a governed release, and time from incident to a reusable control), <strong>Quality</strong> (data freshness, evaluation coverage by consequence, defect escape), <strong>Risk</strong> (contract violations and provenance coverage) and <strong>Economics</strong> (component reuse and cost per successful task). The next post, <a href="/blog/ai-transformation-operating-model">#10 Federated by Design — Who Sets Standards, Builds, Approves and Operates</a>, installs the federated operating model and the decision-rights walls for the factory just designed here.
+    </div>
+
+    <div class="key-takeaways">
+        <h3>🎯 Key Takeaways</h3>
+        <ul>
+            <li><strong>Factory output</strong> = trusted source data, retrieval corpora, context templates, tool contracts, evaluation sets, release manifests, operating procedures and feedback turned into regression tests — not a model</li>
+            <li><strong>Demand first</strong> = start from the decision that has to get better, its owner, the authority AI holds and the measurable outcome, before collecting more data</li>
+            <li><strong>Six services</strong> = data products, context, model, evaluation, tool registry and observability — a shared language for designing reuse, not anybody's standard</li>
+            <li><strong>Shared band</strong> = security, privacy, FinOps and sustainability (sustainable AI) span all six services, rather than sitting as a checkpoint at the end</li>
+            <li><strong>Context is release scope</strong> = retrieved passages, instructions, session state, tool semantics and policy thresholds must be versioned together and pass through the release process</li>
+            <li><strong>Minimum production package</strong> = the seven items required before release — data contract, context manifest, golden-set plan, effect boundaries, owners, acceptance metrics and rollback</li>
+            <li><strong>Two metric families</strong> = business outcomes and factory health are measured separately, and the book supplies no target value for either</li>
+        </ul>
+    </div>
+
+    <section class="references" aria-labelledby="references">
+        <h2 id="references">References</h2>
+        <p class="references__note">Every source verified on 5 September 2026 (Asia/Bangkok) · Four evidence labels: <strong>Law</strong> statute or official notice · <strong>Standard</strong> a published formal standard or framework · <strong>Study</strong> research or a field signal · <strong>Synthesis</strong> the author's synthesis, or a source that is not research</p>
+        <ol class="references__list">
+            <li id="en-ref-1"><span class="ref-tag ref-tag--synthesis">Synthesis</span> Anirach Mingkhwan. <cite>AI Transformation as an Organizational Core — Bilingual Companion Playbook</cite> — Chapter 5, "Build the AI and data factory" (pp. 23–25), with Appendix A and Appendix B. Author's manuscript, no public URL; evidence snapshot as of 5 September 2026. <span class="ref-supports">Supports: the definition of the factory and its output list, the demand-first principle, the six reusable services and the four shared controls, the five operating principles, the context-engineering sentence on page 23, the two-hour session with six owners, the seven-item minimum production package, the twelve metrics, the eight failure patterns, Figure 6, and the fictional case CX-REFUND-01 with its scope, its THB 2,000 limit and its six exclusions.</span></li>
+            <li id="en-ref-2"><span class="ref-tag ref-tag--synthesis">Synthesis</span> The Foundation (th). <cite>AI Transformation: From Using AI to the Fastest-Learning Organization | The Masterclass EP01</cite> — a Thai-language episode, title translated here; published 28 August 2026, running time 52 minutes. <a href="https://www.youtube.com/watch?v=n_IwUYevRZo">youtube.com</a> — accessed 2026-09-05. <span class="ref-supports">Supports: the contrast between running AI as a project and running it as a factory (§10, 25:53–28:24), the three powers of an operating model — scale, scope and learning (§11, 28:24–31:13), and the AI project → AI capability → AI operating model ladder (§13, 34:04–37:18) — paraphrased from the book's wording, not transcribed, and a practitioner synthesis rather than a controlled study.</span></li>
+            <li id="en-ref-3"><span class="ref-tag ref-tag--standard">Standard</span> W3C. <cite>PROV-O: The PROV Ontology</cite> — W3C Recommendation, 30 April 2013. <a href="https://www.w3.org/TR/prov-o/">w3.org</a> — accessed 2026-09-05. <span class="ref-supports">Supports: that provenance has an interoperable vocabulary, expressed as OWL2 classes and properties, and that this document is a vocabulary rather than an audit policy or a storage design.</span></li>
+            <li id="en-ref-4"><span class="ref-tag ref-tag--standard">Standard</span> NIST. <cite>Secure Software Development Practices for Generative AI and Dual-Use Foundation Models: An SSDF Community Profile (NIST SP 800-218A)</cite> — published 26 July 2024, status Final. <a href="https://csrc.nist.gov/pubs/sp/800/218/a/final">csrc.nist.gov</a> — accessed 2026-09-05. <span class="ref-supports">Supports: that it augments SSDF 1.1 with practices specific to AI model development across the lifecycle, and that its stated audience includes the acquirers of AI systems — the basis for treating security as part of the shared control band rather than a review at the end.</span></li>
+            <li id="en-ref-5"><span class="ref-tag ref-tag--standard">Standard</span> FinOps Foundation. <cite>FinOps for AI</cite> — a technology category of the FinOps Framework; the FinOps for AI Overview page was last updated 17 February 2026. <a href="https://www.finops.org/framework/technology-categories/ai/">finops.org</a> — accessed 2026-09-05. <span class="ref-supports">Supports: what the FinOps band means operationally inside the factory — allocation, forecasting that is less predictable than ordinary cloud, optimization, unit economics on token-based units, and governance through quotas, reserved capacity and throttles.</span></li>
+            <li id="en-ref-6"><span class="ref-tag ref-tag--standard">Standard</span> ISO / IEC. <cite>ISO/IEC 42001:2023 — Information technology — Artificial intelligence — Management system</cite> — edition 1, December 2023, status Published (stage 60.60). <a href="https://www.iso.org/standard/42001">iso.org</a> — accessed 2026-09-05. <span class="ref-supports">Supports: that ownership, monitoring and continual improvement of the factory are lifecycle management-system processes rather than a one-time checklist — cited from the standard's public description only, reproducing no protected requirements, and unrelated to certification.</span></li>
+        </ol>
+    </section>
+    </div>
+
+    <div class="post-series-footer">
+      <span class="l-th">บทความจากซีรีส์ AI Transformation for Organizations 2026</span><span class="l-en" lang="en">From the AI Transformation for Organizations 2026 series</span>
+    </div>
+
+    <nav aria-label="AI Transformation for Organizations">
+    <div class="series-nav">
+      <h3>🧭 AI Transformation for Organizations 2026</h3>
+      <div class="series-links series-links--grouped">
+        <div class="series-links__group">
+          <p class="series-links__label">Reframe · เปลี่ยนกรอบคิด</p>
+          <a href="/blog/ai-transformation-layers">#1 Six Layers</a>
+          <a href="/blog/ai-transformation-prediction">#2 Prediction</a>
+          <a href="/blog/ai-transformation-learning-loop">#3 Learning Loop</a>
+          <a href="/blog/ai-transformation-maturity">#4 Maturity</a>
+          <a href="/blog/ai-transformation-portfolio">#5 Portfolio</a>
+        </div>
+        <div class="series-links__group">
+          <p class="series-links__label">Redesign · ออกแบบองค์กรใหม่</p>
+          <a href="/blog/ai-transformation-workflow">#6 Four Lanes</a>
+          <a href="/blog/ai-transformation-evidence-ladder">#7 Evidence Ladder</a>
+          <a href="/blog/ai-transformation-workforce">#8 Workforce</a>
+          <span class="current" aria-current="page">#9 AI Factory</span>
+          <a href="/blog/ai-transformation-operating-model">#10 Operating Model</a>
+        </div>
+        <div class="series-links__group">
+          <p class="series-links__label">Engineer · วิศวกรรมแกนกลาง</p>
+          <a href="/blog/ai-transformation-ai-core">#11 AI-Core</a>
+          <a href="/blog/ai-transformation-contract">#12 Contract</a>
+          <a href="/blog/ai-transformation-five-rails">#13 Five Rails</a>
+          <a href="/blog/ai-transformation-release-gate">#14 Release Gate</a>
+          <a href="/blog/ai-transformation-incident-loop">#15 Incident Loop</a>
+        </div>
+        <div class="series-links__group">
+          <p class="series-links__label">Lead · นำการเปลี่ยนผ่าน</p>
+          <a href="/blog/ai-transformation-obligations">#16 Obligations</a>
+          <a href="/blog/ai-transformation-suppliers-footprint">#17 Cost &amp; Footprint</a>
+          <a href="/blog/ai-transformation-first-90-days">#18 Days 0–90</a>
+          <a href="/blog/ai-transformation-days-91-180">#19 Days 91–180</a>
+          <a href="/blog/ai-transformation-eight-questions">#20 Eight Questions</a>
+        </div>
+      </div>
+    </div>
+    </nav>
+
+  </article>
+
+  </main>
+
+  <footer class="blog-footer">
+    <nav class="blog-footer__nav" aria-label="Site">
+      <a href="../index.html">Home</a>
+      <a href="./">Blog</a>
+      <a href="../publications/">Publications</a>
+      <a href="../books/">Books</a>
+      <a href="../projects/">Projects</a>
+      <a href="../news/">News</a>
+      <a href="../index.html#contact">Contact</a>
+    </nav>
+    <a href="./">← Back to Blog</a>
+    <span>© 2026 Anirach Mingkhwan — Associate Professor, KMUTNB</span>
+  </footer>
+
+</body>
+</html>

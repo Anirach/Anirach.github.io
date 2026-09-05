@@ -1,0 +1,1827 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Five Rails and the Effect Guard — ข้อเสนอไม่ใช่ผลจริง | Anirach Mingkhwan</title>
+  <meta name="description" content="โมเดลเสนอ ระบบกำหนดแน่นอนอนุมัติ สถานะจริงพิสูจน์ — รางควบคุมห้าชั้นกับ Effect guard เจ็ดข้อ พร้อมผลการทดสอบ 517 ครั้งและขอบเขตของมัน">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=Sarabun:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      color-scheme: light;
+      /* ink */
+      --navy: #11304b; --slate: #334155; --slate-light: #526174; --gray: #94a3b8;
+      /* ground */
+      --bg: #faf7f0; --white: #ffffff; --code-bg: #1e293b;
+      /* accent */
+      --blue: #226299; --blue-dark: #1a4d7a; --blue-light: #4992b9;
+      /* brand — sampled from the book covers. --gold is decorative on light grounds (2.2:1); --gold-dark is its text form. */
+      --gold: #c4a46c; --gold-dark: #7a5f22; --coral: #c2410c; --cloud: #dee7e6; --parchment: #e9e1c4; --focus: #226299;
+      /* status — use only these six, never invent a seventh */
+      --green: #22c55e; --red: #ef4444; --amber: #f59e0b;
+      --cyan: #06b6d4; --purple: #226299; --purple-dark: #1a4d7a;
+      /* type */
+      --font: 'Inter', 'Sarabun', -apple-system, BlinkMacSystemFont, sans-serif;
+      --mono: 'JetBrains Mono', 'Fira Code', 'Sarabun', monospace;
+      /* form */
+      --radius: 12px; --radius-sm: 8px; --radius-lg: 16px;
+      --measure: 720px; --wide: 860px;
+      --transition: 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+    html { scroll-behavior: smooth; }
+    body { font-family: var(--font); font-size: 17px; line-height: 1.8; color: var(--slate); background: var(--bg); -webkit-font-smoothing: antialiased; }
+    .blog-nav { position: fixed; top: 0; left: 0; right: 0; z-index: 100; background: rgba(248,250,252,0.85); backdrop-filter: blur(20px); border-bottom: 1px solid rgba(0,0,0,0.05); }
+    .blog-nav__inner { max-width: 860px; margin: 0 auto; padding: 0 2rem; height: 56px; display: flex; align-items: center; justify-content: space-between; }
+    .blog-nav__back { font-size: 0.85rem; font-weight: 500; color: var(--blue); text-decoration: none; }
+    .blog-nav__back:hover { color: #1a4d7a; }
+    .blog-nav__title { font-size: 0.85rem; font-weight: 600; color: var(--navy); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 50%; }
+    /* ── HERO ── house .post-hero on the approved Deep Blue gradient (page-design
+       §5 / INV-28). Ink is inverted for the dark ground: white title/meta, tag
+       pills white on 18% white — the openclaw-production treatment. The
+       background value must stay byte-identical to the approved string. */
+    .post-hero { padding: 8rem 2rem 3rem; background: linear-gradient(135deg, #11304b 0%, #1a4d7a 45%, #226299 100%); color: #fff; text-align: center; }
+    .post-hero__tags { display: flex; gap: 0.5rem; justify-content: center; margin-bottom: 1.25rem; flex-wrap: wrap; }
+    .post-hero__tag { display: inline-block; font-size: 0.72rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.1em; color: #fff; background: rgba(255,255,255,0.18); padding: 0.35rem 0.9rem; border-radius: 20px; }
+    .post-hero__title { font-size: clamp(1.8rem, 5vw, 3rem); font-weight: 800; color: #fff; line-height: 1.2; margin-bottom: 1rem; max-width: 720px; margin-left: auto; margin-right: auto; }
+    .post-hero__sub { font-size: 1.05rem; max-width: 640px; margin: 0 auto 1.5rem; line-height: 1.7; color: #fff; }
+    .post-hero__meta { font-size: 0.85rem; color: #fff; display: flex; align-items: center; justify-content: center; gap: 1.5rem; flex-wrap: wrap; }
+    .post-hero__series { font-weight: 600; color: #fff; }
+    /* the switch pill and the focus ring both sit on the dark hero: the pill is
+       a light chip so its labels keep their light-ground colours, and --focus
+       re-points to gold here (blue collapses on blue — the footer/pre
+       precedent). */
+    .post-hero { --focus: var(--gold); }
+    .post-hero__cover {
+      aspect-ratio: 1 / 1;
+      max-width: 380px;
+      margin: 2.5rem auto 0;
+      border-radius: var(--radius-lg, 16px);
+      overflow: hidden;
+      box-shadow: 0 20px 60px rgba(17,48,75,0.14);
+    }
+    .post-hero__cover img { width: 100%; height: 100%; object-fit: cover; display: block; }
+    .post-body { max-width: 720px; margin: 0 auto; padding: 3rem 2rem 6rem; }
+    .post-body h2 { font-size: 1.6rem; font-weight: 800; color: var(--navy); margin: 3rem 0 1rem; padding-bottom: 0.5rem; border-bottom: 2px solid rgba(34,98,153,0.15); }
+    .post-body h3 { font-size: 1.25rem; font-weight: 700; color: var(--navy); margin: 2.25rem 0 0.75rem; }
+    .post-body p { margin-bottom: 1.25rem; }
+    .post-body strong { font-weight: 700; color: var(--navy); }
+    .post-body a { color: var(--blue); text-decoration: underline; text-decoration-thickness: 1px; text-underline-offset: 2px; }
+    .post-body ul, .post-body ol { margin: 0.5rem 0 1.25rem 1.5rem; }
+    .post-body li { margin-bottom: 0.4rem; }
+    .post-body blockquote { background: rgba(34,98,153,0.06); border-left: 4px solid var(--blue); padding: 1rem 1.25rem; border-radius: 0 10px 10px 0; margin: 1.25rem 0; font-size: 0.95rem; color: var(--navy); }
+    .post-body hr { border: none; height: 1px; background: linear-gradient(90deg, transparent, rgba(34,98,153,0.2), transparent); margin: 3rem 0; }
+    /* ── CODE ── */
+    .post-body pre { background: var(--code-bg); border-radius: 12px; padding: 1.5rem; margin: 1.25rem 0 1.5rem; overflow-x: auto; border: 1px solid rgba(255,255,255,0.05); }
+    .post-body pre code { font-family: var(--mono); font-size: 0.85rem; color: #e2e8f0; line-height: 1.7; background: none; padding: 0; white-space: pre-wrap; }
+    .post-body code { font-family: var(--mono); font-size: 0.88em; background: rgba(34,98,153,0.08); color: var(--blue-dark); padding: 0.15em 0.45em; border-radius: 5px; }
+    /* ── TABLES ── */
+    .table-wrapper { overflow-x: auto; margin: 1.5rem 0; border-radius: 0.5rem; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1); }
+    table { width: 100%; border-collapse: collapse; background: white; }
+    th { background: #226299; color: white; padding: 1rem; text-align: left; font-weight: 600; }
+    td { padding: 1rem; border-bottom: 1px solid #e5e7eb; }
+    .post-body table { display: block; width: 100%; overflow-x: auto; }
+    /* ── ALERTS ── */
+    .alert { background: #fef3cd; border: 1px solid #facc15; border-radius: 0.5rem; padding: 1rem; margin: 1.5rem 0; }
+    .alert.danger { background: #fee2e2; border-color: #ef4444; }
+    .alert.info { background: #e0f2fe; border-color: #06b6d4; }
+    .alert.success { background: #d1fae5; border-color: #10b981; }
+    /* ── KEY TAKEAWAYS ── */
+    .key-takeaways { background: linear-gradient(135deg, #f3f4f6 0%, #e5e7eb 100%); border-radius: 1rem; padding: 2rem; margin: 3rem 0; }
+    .key-takeaways h3 { color: #226299; margin-bottom: 1.5rem; }
+    .post-series-footer { text-align: center; font-size: 0.85rem; color: var(--slate-light); font-style: italic; margin-top: 2rem; padding-top: 2rem; border-top: 1px solid #e2e8f0; }
+    .blog-footer { background: var(--navy); padding: 2rem 0; text-align: center; }
+    .blog-footer a { color: var(--gold); text-decoration: none; font-weight: 600; font-size: 0.9rem; }
+    .blog-footer span { color: var(--gray); font-size: 0.8rem; display: block; margin-top: 0.4rem; }
+    @media (max-width: 600px) {
+      .post-hero { padding: 7rem 1.25rem 2.5rem; }
+      .post-body { padding: 2rem 1.25rem 4rem; }
+      .post-hero__meta { flex-direction: column; gap: 0.4rem; }
+      .post-body h2 { font-size: 1.4rem; }
+      .post-body h3 { font-size: 1.15rem; }
+      .post-body pre { padding: 1rem; border-radius: 8px; }
+    }
+
+    :focus-visible { outline: 2px solid var(--focus); outline-offset: 3px; border-radius: 2px; }
+    /* the ring sits on the page ground (3px offset). Inside the navy footers
+       and code blocks var(--blue) collapses to 2.12:1, so those scopes
+       re-point --focus to gold (5.73:1 on navy). */
+    .footer, .blog-footer, pre { --focus: var(--gold); }
+    :focus:not(:focus-visible) { outline: none; }
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after {
+        animation-duration: .01ms !important; animation-iteration-count: 1 !important;
+        transition-duration: .01ms !important; scroll-behavior: auto !important;
+      }
+    }
+    h1, h2, h3, .post-hero__title, .card__title { text-wrap: balance; }
+
+    .post-body img, .post-body svg { max-width: 100%; height: auto; }
+
+    /* ── SKIP LINK ── a11y-perf R5: the link and the landmark it targets are a
+       pair — useless without both halves. Off-screen until focused, then the
+       first tab stop on every page. */
+    .skip-link { position: absolute; left: -9999px; }
+    .skip-link:focus {
+      left: 1rem; top: 1rem; z-index: 999;
+      background: var(--navy); color: #fff;
+      padding: 0.75rem 1.25rem; border-radius: var(--radius-sm);
+      font-weight: 600; text-decoration: none;
+    }
+
+    /* ── POST WAYFINDING ── the wordmark is the home link; the footer carries
+       the full destination row. */
+    .blog-nav__home {
+      font-size: 0.9rem; font-weight: 800; color: var(--navy);
+      text-decoration: none; margin-right: 1rem;
+    }
+    .blog-nav__home:hover { color: var(--blue); }
+    .blog-nav__inner > .blog-nav__back { margin-right: auto; }
+    .blog-footer__nav {
+      display: flex; flex-wrap: wrap; justify-content: center; gap: 0.35rem 1.25rem;
+      max-width: 860px; margin: 0 auto 1.25rem; padding: 0 2rem 1.25rem;
+      border-bottom: 1px solid rgba(255,255,255,0.12);
+    }
+    .blog-footer__nav a { color: var(--gold); font-size: 0.85rem; font-weight: 600; text-decoration: none; }
+    .blog-footer__nav a:hover { color: #fff; text-decoration: underline; }
+
+    html { scroll-padding-top: 5rem; }
+    [id] { scroll-margin-top: 5rem; }
+
+    /* Thai needs more room than Latin at the same nominal size. */
+    .post-body:lang(th) { font-size: 18px; line-height: 1.85; }
+    .post-body p, .post-body li, .post-body blockquote { text-wrap: pretty; }
+
+    /* ---- side-scroll affordance ----
+       pre blocks and tables can exceed 720px. These layers paint a shadow ONLY
+       where there is more content in that direction; when fully scrolled the
+       cover slides over the shadow and hides it. No JavaScript, no wrapper. */
+    .post-body pre, .post-body table {
+      overflow-x: auto;
+      background-image:
+        linear-gradient(to right, var(--code-bg, #0f172a) 30%, rgba(15,23,42,0)),
+        linear-gradient(to left, var(--code-bg, #0f172a) 30%, rgba(15,23,42,0)),
+        radial-gradient(farthest-side at 0 50%, rgba(0,0,0,.28), rgba(0,0,0,0)),
+        radial-gradient(farthest-side at 100% 50%, rgba(0,0,0,.28), rgba(0,0,0,0));
+      background-position: 0 0, 100% 0, 0 0, 100% 0;
+      background-repeat: no-repeat;
+      background-size: 40px 100%, 40px 100%, 14px 100%, 14px 100%;
+      background-attachment: local, local, scroll, scroll;
+    }
+    .post-body table {
+      background-image:
+        linear-gradient(to right, var(--white, #fff) 30%, rgba(255,255,255,0)),
+        linear-gradient(to left, var(--white, #fff) 30%, rgba(255,255,255,0)),
+        radial-gradient(farthest-side at 0 50%, rgba(17,48,75,.16), rgba(17,48,75,0)),
+        radial-gradient(farthest-side at 100% 50%, rgba(17,48,75,.16), rgba(17,48,75,0));
+      background-position: 0 0, 100% 0, 0 0, 100% 0;
+      background-repeat: no-repeat;
+      background-size: 40px 100%, 40px 100%, 14px 100%, 14px 100%;
+      background-attachment: local, local, scroll, scroll;
+    }
+
+    /* ---- table of contents ---- */
+    .post-toc {
+      max-width: 720px;
+      margin: 2rem auto 0;
+      padding: 1rem 1.25rem;
+      background: rgba(34,98,153,0.05);
+      border: 1px solid rgba(34,98,153,0.14);
+      border-left: 3px solid var(--gold, #c4a46c);
+      border-radius: 10px;
+      font-size: 0.92rem;
+    }
+    .post-toc > summary {
+      cursor: pointer;
+      font-weight: 700;
+      color: var(--navy);
+      list-style: none;
+    }
+    .post-toc > summary::-webkit-details-marker { display: none; }
+    .post-toc > summary::before {
+      content: "\25B8";
+      display: inline-block;
+      margin-right: 0.5rem;
+      transition: transform 0.2s ease;
+      color: var(--gold-dark, #7a5f22);
+    }
+    .post-toc[open] > summary::before { transform: rotate(90deg); }
+    .post-toc > summary:focus-visible { outline: 3px solid var(--focus, #226299); outline-offset: 3px; }
+    .post-toc ol { margin: 0.85rem 0 0.25rem; padding-left: 1.4rem; }
+    .post-toc li { margin-bottom: 0.4rem; line-height: 1.5; }
+    .post-toc a { color: var(--slate); text-decoration: none; }
+    .post-toc a:hover, .post-toc a:focus-visible { color: var(--blue-dark, #1a4d7a); text-decoration: underline; }
+    @media (max-width: 600px) { .post-toc { margin: 1.25rem 1rem 0; } }
+
+    /* ---- cross-document view transitions ---- */
+    @view-transition { navigation: auto; }
+    .nav, .blog-nav { view-transition-name: site-nav; }
+    .footer, .blog-footer { view-transition-name: site-footer; }
+    @media (prefers-reduced-motion: reduce) {
+      ::view-transition-group(*),
+      ::view-transition-old(*),
+      ::view-transition-new(*) { animation: none !important; }
+    }
+
+    /* ── SERIES STRIP — Hermes Agent in Practice ──
+       Same class and inner-wrapper shape as the OpenClaw strip because the
+       linter's RE_SNAV recognises exactly `series-nav` + a nested div; a
+       renamed strip would read as "no nav" and fail INV-08. All content
+       checks (INV-03 family) iterate the SERIES7 list only, so this strip's
+       labels are convention, not contract. House-styled, not the island CSS. */
+    .series-nav {
+      max-width: 720px; margin: 2rem auto 0; padding: 1.1rem 1.4rem;
+      background: rgba(255,255,255,0.75); border: 1px solid rgba(34,98,153,0.15);
+      border-left: 3px solid var(--gold); border-radius: 12px;
+    }
+    .series-nav h3 {
+      font-size: 0.78rem; font-weight: 700; text-transform: uppercase;
+      letter-spacing: 0.08em; color: var(--gold-dark); margin-bottom: 0.6rem;
+    }
+    .series-links { display: flex; flex-wrap: wrap; gap: 0.5rem; }
+    .series-links a, .series-links .current {
+      font-size: 0.82rem; font-weight: 600; padding: 0.35rem 0.8rem;
+      border-radius: 50px; text-decoration: none;
+    }
+    .series-links a { color: var(--blue-dark); background: rgba(34,98,153,0.08); }
+    .series-links a:hover { background: rgba(34,98,153,0.16); }
+    .series-links .current { color: #fff; background: var(--blue-dark); }
+    @media (max-width: 600px) { .series-nav { margin: 1.5rem 1rem 0; } }
+
+    /* ── FIGURE — the sanctioned diagram component (page-design §4 Content).
+       Diagrams are PNGs; this repo built them out of divs twice and reverted
+       twice. The image is wrapped in a link to itself so a phone can pinch a
+       1400px drawing without a line of JavaScript. */
+    .figure { margin: 2.5rem 0; }
+    .figure__img { width: 100%; height: auto; display: block;
+                   border-radius: var(--radius); border: 1px solid rgba(0,0,0,0.06); }
+    .figure__caption { font-size: 0.85rem; color: var(--slate-light);
+                       text-align: center; margin-top: 0.75rem; }
+
+    /* ── REFERENCES — every material number in this series carries its source.
+       The tags are the book's own four evidence labels. */
+    .references { margin-top: 3rem; padding-top: 2rem; border-top: 1px solid #e2e8f0; }
+    .references__note { font-size: 0.85rem; color: var(--slate-light); margin-bottom: 1rem; }
+    .references__list { padding-left: 1.4rem; font-size: 0.9rem; line-height: 1.75; }
+    .references__list li { margin-bottom: 0.7rem; }
+    .ref-tag { display: inline-block; font-size: 0.7rem; font-weight: 700;
+               letter-spacing: 0.06em; text-transform: uppercase; padding: 0.1rem 0.5rem;
+               border-radius: 50px; margin-right: 0.4rem; vertical-align: 0.05em;
+               background: rgba(34,98,153,0.1); color: var(--blue-dark); }
+    .ref-tag--law { background: rgba(239,68,68,0.12); color: #991b1b; }
+    .ref-tag--synthesis { background: rgba(196,164,108,0.22); color: var(--gold-dark); }
+    .ref-supports { display: block; color: var(--slate-light); font-size: 0.85rem; }
+
+    /* ── SERIES STRIP, GROUPED — twenty chips is four rows of noise unless they
+       are grouped, so the four parts of the book label their own rows. The
+       .series-nav and .series-links wrappers stay byte-literal because INV-08
+       recognises the strip by exactly those two, and the chips stay direct
+       children of a group because INV-03's item regex cannot see through a
+       nested tag. Grouping is a modifier plus two elements of .series-links —
+       the flat OpenClaw, Hermes and Life strips are untouched. */
+    .series-links--grouped { display: grid; gap: 0.9rem; }
+    .series-links__group { position: relative; display: flex; flex-wrap: wrap;
+                           gap: 0.5rem; padding-left: 8.25rem; min-height: 2rem; }
+    .series-links__label { position: absolute; left: 0; top: 0.45rem; width: 7.5rem;
+                           margin: 0; font-size: 0.72rem; font-weight: 700;
+                           text-transform: uppercase; letter-spacing: 0.08em;
+                           color: var(--slate-light); line-height: 1.3; }
+    @media (max-width: 600px) {
+      .series-links__group { padding-left: 0; }
+      .series-links__label { position: static; width: auto; flex-basis: 100%;
+                             margin-bottom: 0.1rem; }
+    }
+
+    /* ── LANGUAGE SWITCH — pure CSS, zero JavaScript (INV-38) ──
+       One visually-hidden checkbox as a direct child of body, BEFORE the main landmark,
+       so `#langSwitch:checked ~ main …` reaches every content block. The two
+       tracks are paired blocks: .l-th (default) and .l-en (hidden until
+       checked; display:revert restores block for divs, inline for spans).
+       Naming stays clear of INV-12's menu-token regex (hamburger|burger|
+       nav__toggle|nav-toggle|navtoggle|menu-toggle|menu__toggle) — verified.
+       No JS also means no persistence across posts; each post opens in Thai. */
+    .lang-switch-box { position: absolute; left: -9999px; }
+    .l-en { display: none; }
+    #langSwitch:checked ~ main .l-en { display: revert; }
+    #langSwitch:checked ~ main .l-th { display: none; }
+    .lang-switch {
+      display: inline-flex; align-items: center; gap: 0.55rem;
+      margin-top: 1.4rem; padding: 0.4rem 1.1rem; border-radius: 50px;
+      background: rgba(255,255,255,0.85); border: 1px solid rgba(255,255,255,0.4);
+      cursor: pointer; font-size: 0.85rem; user-select: none;
+    }
+    .lang-switch span { color: var(--slate-light); font-weight: 600; transition: color 0.2s; }
+    .lang-switch .lang-sep { color: var(--gray); font-weight: 400; }
+    .lang-switch .lang-th { color: var(--navy); font-weight: 800; }
+    #langSwitch:checked ~ main .lang-switch .lang-th { color: var(--slate-light); font-weight: 600; }
+    #langSwitch:checked ~ main .lang-switch .lang-en { color: var(--navy); font-weight: 800; }
+    .lang-switch:hover { border-color: #fff; }
+    #langSwitch:focus-visible ~ main .lang-switch {
+      outline: 2px solid var(--focus); outline-offset: 3px;
+    }
+  </style>
+  <!-- social -->
+  <link rel="canonical" href="https://anirach.com/blog/ai-transformation-five-rails.html">
+  <meta property="og:type" content="article">
+  <meta property="og:url" content="https://anirach.com/blog/ai-transformation-five-rails.html">
+  <meta property="og:site_name" content="Anirach Mingkhwan">
+  <meta property="og:locale" content="th_TH">
+  <meta property="og:locale:alternate" content="en_US">
+  <meta property="article:published_time" content="2026-09-05">
+  <meta property="article:author" content="https://anirach.com/">
+  <meta property="og:title" content="Five Rails and the Effect Guard — ข้อเสนอไม่ใช่ผลจริง">
+  <meta property="og:description" content="โมเดลเสนอ ระบบกำหนดแน่นอนอนุมัติ สถานะจริงพิสูจน์ — รางควบคุมห้าชั้นกับ Effect guard เจ็ดข้อ พร้อมผลการทดสอบ 517 ครั้งและขอบเขตของมัน">
+  <meta property="og:image" content="https://anirach.com/images/ai-transformation-five-rails-og.jpg">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
+  <meta property="og:image:alt" content="Five Rails and the Effect Guard — ข้อเสนอไม่ใช่ผลจริง">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:image" content="https://anirach.com/images/ai-transformation-five-rails-og.jpg">
+  <meta name="twitter:image:alt" content="Five Rails and the Effect Guard — ข้อเสนอไม่ใช่ผลจริง">
+  <meta name="robots" content="max-image-preview:large">
+  <meta name="theme-color" content="#11304b">
+  <link rel="icon" href="/favicon.ico" sizes="any">
+  <link rel="apple-touch-icon" href="/apple-touch-icon.png">
+  <!-- /social -->
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "BlogPosting",
+    "headline": "Five Rails and the Effect Guard — ข้อเสนอไม่ใช่ผลจริง",
+    "author": {
+      "@type": "Person",
+      "@id": "https://anirach.com/#person",
+      "name": "Anirach Mingkhwan",
+      "url": "https://anirach.com/"
+    },
+    "datePublished": "2026-09-05",
+    "dateModified": "2026-09-05",
+    "image": "https://anirach.com/images/ai-transformation-five-rails-og.jpg",
+    "inLanguage": [
+      "th",
+      "en"
+    ],
+    "mainEntityOfPage": "https://anirach.com/blog/ai-transformation-five-rails.html"
+  }
+  </script>
+</head>
+<body>
+<a href="#main" class="skip-link">Skip to content</a>
+<input type="checkbox" id="langSwitch" class="lang-switch-box" aria-label="Switch language: Thai / English">
+
+  <nav class="blog-nav">
+    <div class="blog-nav__inner">
+      <a href="../index.html" class="blog-nav__home">Anirach</a>
+      <a href="./" class="blog-nav__back">‹ Blog</a>
+      <div class="blog-nav__title">Five Rails and the Effect Guard</div>
+    </div>
+  </nav>
+
+  <main id="main">
+
+  <header class="post-hero">
+    <div class="post-hero__tags">
+      <span class="post-hero__tag">Five Rails</span>
+      <span class="post-hero__tag">Effect Guard</span>
+      <span class="post-hero__tag">Prompt Injection</span>
+    </div>
+    <h1 class="post-hero__title"><span class="l-th">Five Rails and the Effect Guard — ข้อเสนอไม่ใช่ผลจริง</span><span class="l-en" lang="en">Five Rails and the Effect Guard — A Proposal Is Not an Effect</span></h1>
+    <p class="post-hero__sub"><span class="l-th">โมเดลเสนอ • ระบบกำหนดแน่นอนอนุมัติ • สถานะจริงพิสูจน์ — รางควบคุมห้าชั้น Input, Dialog, Retrieval, Execution, Output กับ effect guard เจ็ดข้อ พร้อมผลการทดสอบ 517 ครั้งและสิ่งที่มัน &quot;ไม่&quot; พิสูจน์</span><span class="l-en" lang="en">The model proposes, deterministic control authorizes, authoritative state proves — five rails (Input, Dialog, Retrieval, Execution, Output), a seven-check effect guard, and a 517-execution specimen together with what it does not prove.</span></p>
+    <div class="post-hero__meta">
+      <span>By <strong>Anirach Mingkhwan</strong></span>
+      <span class="post-hero__series">AI Transformation for Organizations 2026 • Post #13</span>
+      <span><time datetime="2026-09-05">5 Sep 2026</time></span>
+      <span>34 min read</span>
+    </div>
+    <label for="langSwitch" class="lang-switch" title="สลับภาษา · Switch language"><span class="lang-th">ไทย</span><span class="lang-sep">·</span><span class="lang-en" lang="en">English</span></label>
+    <div class="post-hero__cover">
+      <img src="../images/ai-transformation-five-rails-cover.jpg" alt="Five Rails and the Effect Guard — ข้อเสนอไม่ใช่ผลจริง" width="800" height="800" loading="eager" fetchpriority="high" decoding="async">
+    </div>
+  </header>
+
+  <article class="post-body">
+
+    <details class="post-toc l-th" open>
+      <summary>ในบทความนี้</summary>
+      <ol>
+          <li><a href="#th-proposal-not-effect">1. ข้อเสนอไม่ใช่ผลจริง — เส้นแบ่งที่ต้องมีโค้ดยืนอยู่ ไม่ใช่ประโยค</a></li>
+          <li><a href="#th-five-rails">2. รางควบคุมห้าชั้น และกรอบการรับประกันรอบระบบ</a></li>
+          <li><a href="#th-effect-guard">3. Effect Guard เจ็ดข้อ กับอำนาจกระทำเท่าที่จำเป็น</a></li>
+          <li><a href="#th-specimen">4. Specimen 517 ครั้ง — สิ่งที่มันแสดง และสิ่งที่มันไม่ได้พิสูจน์</a></li>
+          <li><a href="#th-rail-map">5. เวิร์กช็อป — แผนที่สถาปัตยกรรมห้าราง (Artifact 3)</a></li>
+          <li><a href="#th-decision-matrix">6. เวิร์กช็อป — Decision and Consequence Matrix (Artifact 5)</a></li>
+          <li><a href="#th-tabletop">7. เวิร์กช็อป — Contract and Attack Tabletop</a></li>
+          <li><a href="#th-metrics-failures">8. ตัวชี้วัดสำคัญ และรูปแบบความล้มเหลว</a></li>
+          <li><a href="#th-road-ahead">9. เส้นทางข้างหน้า — จากรางควบคุมสู่ด่านอนุมัติ</a></li>
+      </ol>
+    </details>
+    <details class="post-toc l-en" open>
+      <summary>In this post</summary>
+      <ol>
+          <li><a href="#en-proposal-not-effect">1. A Proposal Is Not an Effect — a Boundary Needs Code Standing on It, Not a Sentence</a></li>
+          <li><a href="#en-five-rails">2. The Five Control Rails and the Assurance Envelope</a></li>
+          <li><a href="#en-effect-guard">3. The Seven-Check Effect Guard and Least Agency</a></li>
+          <li><a href="#en-specimen">4. The 517-Execution Specimen — What It Shows and What It Does Not Prove</a></li>
+          <li><a href="#en-rail-map">5. Workshop — The Five-Rail Architecture Map (Artifact 3)</a></li>
+          <li><a href="#en-decision-matrix">6. Workshop — The Decision and Consequence Matrix (Artifact 5)</a></li>
+          <li><a href="#en-tabletop">7. Workshop — The Contract and Attack Tabletop</a></li>
+          <li><a href="#en-metrics-failures">8. Metrics That Matter, and the Failure Patterns</a></li>
+          <li><a href="#en-road-ahead">9. The Road Ahead — From Control Rails to the Release Gate</a></li>
+      </ol>
+    </details>
+    <div class="l-th">
+
+    <p>🤔 <strong>โมเดลเสนอคืนเงิน 2,500 บาทพร้อมเหตุผลที่ฟังขึ้นมาก — อะไรควรหยุดมัน: prompt, classifier หรือโค้ดที่ไม่สนใจเหตุผลเลย?</strong></p>
+
+    <p>ตอนที่แล้ว <a href="/blog/ai-transformation-contract">#12 The Assurance Contract</a> จบลงที่เอกสารหนึ่งฉบับ — <strong>สัญญาการรับประกันเชิงระบบ</strong> (assurance contract) ที่บังคับให้เราเลิกพูดว่าระบบ "ปลอดภัยและน่าเชื่อถือ" แล้วเขียนเป็นรายคุณสมบัติแทนว่า อะไรคือ <strong>การรับประกันเชิงโครงสร้าง</strong> (structural guarantee) อะไรคือ <strong>ค่าประเมินเชิงความหมาย</strong> (semantic estimate) และอะไรคือความเสี่ยงที่ยังเหลืออยู่<sup><a href="#th-ref-1">[1]</a></sup> สัญญาบอกว่าเรารับประกัน <em>อะไร</em> ตอนนี้ตอบคำถามถัดไปที่วิศวกรต้องตอบทันที: แล้วเราจะเอาข้อผูกพันเหล่านั้นไปวางไว้ <em>ตรงไหน</em> ของระบบ</p>
+
+    <p>คำตอบหนึ่งบรรทัดคือ <strong>วางไว้บนราง ไม่ใช่ในคำสั่ง</strong> — <strong>รางควบคุมห้าชั้น</strong> (five rails) ที่ชื่อ Input, Dialog, Retrieval, Execution, Output วางกลไกไว้ตาม seam ของระบบ LLM ทุกจุด และมี effect guard เจ็ดข้อยืนขวางอยู่ตรงรอยต่อระหว่าง "สิ่งที่โมเดลเสนอ" กับ "สิ่งที่เกิดขึ้นจริงในระบบบัญชี" ประโยคที่บทนี้ให้เป็นหลักคือประโยคเดียว: <strong>โมเดลเสนอ • ระบบกำหนดแน่นอนอนุมัติ • สถานะจริงพิสูจน์</strong> ที่เหลือของบทความนี้คือการแกะประโยคนั้นออกเป็นรางห้าราง เวิร์กช็อปสามชุดที่กรอกได้จริง และผลการทดสอบชุดหนึ่งที่ผมจะบอกตรง ๆ ว่ามันพิสูจน์อะไร และ<em>ไม่ได้</em>พิสูจน์อะไร</p>
+
+    <h2 id="th-proposal-not-effect">1. ข้อเสนอไม่ใช่ผลจริง — เส้นแบ่งที่ต้องมีโค้ดยืนอยู่ ไม่ใช่ประโยค</h2>
+
+    <p>คู่มือใช้กรณีเดียวเดินตลอดส่วน Engineer ทั้งกลุ่ม คือ <strong>Luma Commerce Thailand</strong> กับ use case ชื่อ <code>CX-REFUND-01</code> ผู้ช่วยดูแลลูกค้าที่ตอบคำถามเรื่องนโยบายคืนเงินและ "คืนเงิน" ให้ได้เองในบางกรณี <em>(กรณีสมมติจากหนังสือ)</em> — ทั้งบริษัท ทั้งรหัส use case และตัวเลขทุกตัวในกรณีนี้เป็นเรื่องแต่งขึ้นเพื่อการสอน ไม่ใช่ลูกค้าจริงและไม่ใช่ผลการวัดจากระบบที่ใช้งานอยู่</p>
+
+    <p>สถานการณ์ในหัวข้อเปิดจึงเป็นแบบนี้ สัญญาของ <code>CX-REFUND-01</code> ระบุไว้ว่า refund ที่ผ่าน guard จะไม่เกิน <strong>2,000 บาท</strong> และจะไม่ทำงานหากไม่มี approval token ที่ยืนยันตัวตนแล้ว วันหนึ่งโมเดลเสนอ <strong>2,500 บาท</strong> พร้อมคำอธิบายสิทธิ์ที่เรียบร้อย อ้างข้อนโยบายถูกข้อ น้ำเสียงสุภาพ และเข้าเค้าทุกประการ คำถามคือใครควรเป็นคนบอกว่า "ไม่"</p>
+
+    <p>มีคำตอบที่ผิดอยู่สามแบบ และผมเจอทั้งสามแบบในห้องประชุมจริง แบบแรกคือ <em>เขียนเพิ่มใน prompt</em> ว่าห้ามเกินสองพัน แบบที่สองคือ <em>เอา classifier มาคั่น</em> แล้วให้มันจับข้อความที่ดูผิดปกติ แบบที่สามคือ <em>ให้โมเดลอีกตัวเป็นผู้ตรวจ</em> ทั้งสามแบบมีจุดร่วมเดียวกันคือ ตัวที่ตัดสินใจสุดท้ายยังเป็นระบบที่ให้ผลลัพธ์แบบความน่าจะเป็น และหลักฐานว่าเงินไม่เกินสองพันยังเป็น <em>ข้อความ</em> ไม่ใช่ <em>สถานะ</em></p>
+
+    <p>คำตอบของบทนี้ตรงกันข้ามอย่างสิ้นเชิง สิ่งที่ควรหยุด 2,500 บาทคือโค้ดที่ไม่อ่านคำอธิบายเลยแม้แต่บรรทัดเดียว ตรวจแค่ว่าจำนวนเงินอยู่ในช่วงที่สัญญาอนุญาตหรือไม่ มี approval token ที่ยืนยันตัวตนแล้วหรือยัง และคำขอนี้เคยถูกดำเนินการไปแล้วหรือเปล่า ถ้าข้อใดข้อหนึ่งไม่ผ่าน มันปฏิเสธและสร้าง escalation trace <strong>แม้คำอธิบายจะฟังน่าเชื่อถือ</strong><sup><a href="#th-ref-1">[1]</a></sup> นี่คือสิ่งที่คู่มือเรียกว่า <strong>การแยกข้อเสนอออกจากผลจริง</strong> (proposal–effect separation) และกลไกที่ทำให้มันเป็นจริงคือ <strong>การควบคุมก่อนเกิดผล</strong> (effect mediation)</p>
+
+    <p>ความต่างนี้ไม่ใช่เรื่องเทคนิคปลีกย่อย มันเปลี่ยนสิ่งที่เราพูดกับคณะกรรมการได้ ถ้าข้อจำกัดอยู่ใน prompt สิ่งที่พูดได้มากที่สุดคือ "เราสั่งโมเดลไว้แล้ว" ถ้าข้อจำกัดอยู่ในเส้นทางการทำงานของ tool ที่ทุกเส้นทางถูกบังคับผ่าน สิ่งที่พูดได้คือ "refund ที่ผ่านเส้นทางนี้ไม่มีทางเกินสองพันบาท" — และประโยคที่สองคือประโยคเดียวที่ตรวจสอบได้ ประโยคเปิดบทของคู่มือจึงเขียนไว้อย่างนี้<sup><a href="#th-ref-1">[1]</a></sup></p>
+
+    <blockquote>"การรับประกันคือการแปลงความมั่นใจให้กลายเป็นภาระที่ระบุผู้รับผิดชอบได้และทดสอบได้ และทำให้การกำหนดเส้นทางเมื่อระบบล้มเหลวเป็นส่วนหนึ่งของการออกแบบ"</blockquote>
+
+    <p>คำที่ทำงานหนักที่สุดในประโยคนั้นคือ "การกำหนดเส้นทางเมื่อระบบล้มเหลว" ระบบที่ออกแบบดีไม่ได้แปลว่าไม่พัง แต่แปลว่าเมื่อพัง มันรู้ว่าต้องไปทางไหน — ปฏิเสธ จำกัดขอบเขต ส่งต่อให้คน หรือหยุดแบบ fail closed และทุกทางเลือกเหล่านั้นถูกกำหนดไว้ล่วงหน้าในสัญญา ไม่ได้ถูกคิดสดตอนเกิดเหตุ คู่มือยังเติมกฎความถ่อมตนไว้อีกข้อ ซึ่งผมคิดว่าเป็นบรรทัดที่ทีมวิศวกรรมควรพิมพ์ติดผนัง<sup><a href="#th-ref-1">[1]</a></sup></p>
+
+    <blockquote>"สัญญาไม่ควรกล่าวว่าทั้งระบบ AI ปลอดภัย แต่ควรบอกอย่างจำกัดว่าอะไรบังคับได้ อะไรเป็นเพียงค่าประเมิน และเหลือความเสี่ยงอะไรไว้"</blockquote>
+
+    <p>เมื่อรับกฎข้อนี้แล้ว คำถามการออกแบบก็เปลี่ยนรูปทันที จากเดิมที่ถามว่า "จะทำให้โมเดลปลอดภัยขึ้นอย่างไร" กลายเป็น "จะวางอะไรไว้ตรงไหน เพื่อให้แต่ละคุณสมบัติที่เราสัญญาไว้มีกลไกรองรับจริง" คำตอบของคำถามหลังคือรางห้าราง</p>
+
+    <h2 id="th-five-rails">2. รางควบคุมห้าชั้น และกรอบการรับประกันรอบระบบ</h2>
+
+    <p>ก่อนดูภาพ ต้องแยกของสามอย่างที่คนมักเอามารวมกันเป็นก้อนเดียวชื่อ "guardrails" เสียก่อน คู่มือแยกไว้เป็นสามประเภทควบคุม และการแยกนี้เป็นเงื่อนไขเบื้องต้นของทุกอย่างที่ตามมา<sup><a href="#th-ref-1">[1]</a></sup></p>
+
+    <ul>
+        <li><strong>Hard enforcement</strong> — สร้างข้อบังคับเชิงโครงสร้าง เช่น Tool ที่อนุญาต, Parameter ที่ถูกต้อง, วงเงิน และ Payload ตาม Schema โดยมีเงื่อนไขสองข้อ: ทุกเส้นทางต้องถูกบังคับผ่าน (complete mediation) และ implementation ต้องถูกต้อง</li>
+        <li><strong>Soft detection</strong> — ประเมินคุณสมบัติเชิงความหมาย เช่น injection, faithfulness, relevance, privacy และ policy alignment คำตัดสินของมันมี False Accept และ False Reject บนประชากรที่ต้องระบุ</li>
+        <li><strong>Governance</strong> — ครอบคลุม Approval, Trace Retention, Audit, Rollback และ Incident Response ทำให้ตรวจสอบและกู้คืนได้ แต่ไม่ได้ทำให้คำตอบแต่ละรายการถูกต้อง</li>
+    </ul>
+
+    <p>สามอย่างนี้ตอบคนละคำถาม และ<strong>ทดแทนกันไม่ได้</strong> Hard enforcement ตอบว่า "เป็นไปไม่ได้" Soft detection ตอบว่า "น่าจะไม่ใช่ ที่ threshold นี้" Governance ตอบว่า "ถ้าเกิดขึ้นแล้ว เราตามหาและย้อนคืนได้" องค์กรที่เอาสามอย่างนี้มาเรียกรวมกันว่าระบบป้องกัน จะเผลอเขียนสัญญาที่ให้คำมั่นระดับ hard ด้วยกลไกระดับ soft โดยไม่รู้ตัว</p>
+
+    <figure class="figure">
+      <a href="../images/ai-transformation-fig-10-five-rails.png">
+        <img class="figure__img" src="../images/ai-transformation-fig-10-five-rails.png" alt="แผนภาพรางควบคุมห้าชั้นเรียงต่อกัน 1 Input 2 Dialog 3 Retrieval 4 Execution 5 Output ภายในกรอบสีแดง ASSURANCE ENVELOPE" width="1400" height="700" loading="lazy" decoding="async">
+      </a>
+      <figcaption class="figure__caption">รูปที่ 10 · รางควบคุมห้าชั้นและกรอบการรับประกัน — ร่องรอยที่สร้างเหตุการณ์ย้อนกลับได้ในทุกขั้นที่ระบบเดินผ่าน (เขียนใหม่จาก Mingkhwan 2026)</figcaption>
+    </figure>
+
+    <p>ภาพข้างบนคือรางห้าราง เรียงตามเส้นทางที่คำขอหนึ่งคำขอเดินผ่านจริง ตั้งแต่ข้อความที่ผู้ใช้พิมพ์ ไปจนถึงผลกระทบที่เกิดกับโลกภายนอก กรอบสีแดงที่ล้อมทั้งห้ารางคือ <strong>กรอบการรับประกันรอบระบบ</strong> (assurance envelope) — ขอบเขตที่เราประกาศว่าเรารับประกัน ส่วนแถบสีเข้มด้านล่างคือ <strong>ร่องรอยที่สร้างเหตุการณ์ย้อนกลับได้</strong> (reconstructable trace) ซึ่งไม่ใช่รางที่หก แต่พาดผ่านทุกขั้นที่ระบบเดินไปถึง</p>
+
+    <p>คู่มือบรรยายหน้าที่ของแต่ละรางไว้สั้น ๆ ดังนี้: Input Rail ดูแลคำขอของผู้ใช้ · Dialog Rail กำกับ policy ข้าม turn และ state transition ที่อนุญาต · Retrieval Rail บังคับ source membership พร้อมประเมิน relevance และ support · Execution Rail ตรวจสิทธิ์และขอบเขตของ tool effect ทุกครั้ง · Output Rail บังคับโครงสร้างและประเมินคุณภาพเชิงความหมายก่อน release · ส่วน trace พาดผ่านทั้งหมด<sup><a href="#th-ref-1">[1]</a></sup></p>
+
+    <div class="table-wrapper">
+        <table>
+            <thead>
+                <tr>
+                    <th>Rail</th>
+                    <th>What it enforces (structural)</th>
+                    <th>What it estimates (semantic)</th>
+                    <th>Trace it must write</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td><strong>1 Input</strong><br>อินพุต</td>
+                    <td>ขอบเขตของคำขอที่รับได้ และเส้นทางเมื่อไม่รับ — ส่วนที่แจกแจงได้เท่านั้น</td>
+                    <td>Injection และความสอดคล้องกับขอบเขต — เป็น Soft ทั้งหมด มี False Accept เสมอ</td>
+                    <td>เก็บ Score และ Threshold ที่ใช้ตัดสิน พร้อมเวอร์ชันของ detector</td>
+                </tr>
+                <tr>
+                    <td><strong>2 Dialog</strong><br>บทสนทนา</td>
+                    <td>State transition ที่แจกแจงได้ บังคับแบบ Hard ได้เฉพาะชุดที่นับได้จริง</td>
+                    <td>Policy ข้าม turn และการเบี่ยงเป้าหมายอย่างช้า ๆ — Soft และ Governance</td>
+                    <td>เก็บ State ก่อน/หลัง และคำตัดสินของแต่ละ turn</td>
+                </tr>
+                <tr>
+                    <td><strong>3 Retrieval</strong><br>การค้นคืน</td>
+                    <td>Provenance และ Source Membership — เอกสารต้องมาจาก index ที่ pin ไว้เท่านั้น</td>
+                    <td>Relevance และ Support ว่าข้อความที่ยกมารองรับคำตอบจริงหรือไม่</td>
+                    <td>เก็บ Source ID และ Score ของทุก passage ที่ถูกใช้</td>
+                </tr>
+                <tr>
+                    <td><strong>4 Execution</strong><br>การปฏิบัติการ</td>
+                    <td>Authorization, Schema, Parameter และขอบเขต — Hard ทั้งแถว นี่คือรางที่เงินเคลื่อนไหว</td>
+                    <td>ไม่มี ที่รางนี้ค่าประเมินไม่ใช่เกณฑ์ตัดสิน</td>
+                    <td>เก็บ Proposal, Verdict และ Pre/Post-state ของทุกครั้งที่เรียก tool</td>
+                </tr>
+                <tr>
+                    <td><strong>5 Output</strong><br>ผลลัพธ์</td>
+                    <td>Schema ของสิ่งที่ปล่อยออก — parse ไม่ผ่านคือไม่ปล่อย</td>
+                    <td>Faithfulness, Privacy และ Harm ก่อน release</td>
+                    <td>เก็บ Candidate, Citation และคำตัดสินของผู้ประเมินแต่ละตัว</td>
+                </tr>
+                <tr>
+                    <td><strong>ทุก Rail</strong><br>All</td>
+                    <td>Terminal Trace เป็น Hard — เขียน trace ไม่สำเร็จคือ block release</td>
+                    <td>Review และ Rollback อยู่ฝั่ง Governance ไม่ใช่ฝั่งประเมิน</td>
+                    <td>เก็บ Terminal Route ของทุกคำขอที่เดินเข้ามาถึง</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <p>คอลัมน์ที่สองกับสามคือหัวใจของตารางนี้ ทุกครั้งที่มีคนพูดว่า "ระบบเรามีการตรวจสอบแล้ว" คำถามเดียวที่ควรถามกลับคือ ตรวจอยู่คอลัมน์ไหน เพราะสิ่งที่อยู่คอลัมน์ที่สามเขียนเป็นคำมั่นในสัญญาไม่ได้ เขียนได้แค่เป็นค่าประเมินพร้อม threshold ประชากร และอัตราผิดพลาดสองด้าน</p>
+
+    <p>และนี่คือประโยคที่ผมคิดว่าสำคัญที่สุดของทั้งบท คู่มือเขียนไว้ตัวหนาว่า <strong>ไม่มี Rail ใดครอบคลุมทุกเรื่อง</strong> พร้อมตัวอย่างสี่ข้อที่อธิบายว่าทำไม<sup><a href="#th-ref-1">[1]</a></sup></p>
+
+    <ul>
+        <li><strong>Input Filter มองไม่เห็นคำสั่งอันตรายที่มาจาก Retrieval</strong> — คำสั่งที่ฝังในเอกสารไม่เคยผ่านช่องที่ผู้ใช้พิมพ์</li>
+        <li><strong>แหล่งที่อนุมัติแล้วอาจปนเปื้อน</strong> — allow-list บอกว่าเอกสารมาจากไหน ไม่ได้บอกว่าข้างในเขียนอะไร</li>
+        <li><strong>Tool call ที่มีสิทธิ์อาจผิดเจตนาผู้ใช้</strong> — การมีสิทธิ์ไม่เท่ากับการถูกต้อง</li>
+        <li><strong>Output Filter เรียกข้อมูลที่ tool เปิดเผยไปแล้วกลับคืนไม่ได้</strong> — ผลกระทบที่เกิดแล้วอยู่นอกเหนืออำนาจของด่านสุดท้าย</li>
+    </ul>
+
+    <p>ข้อสุดท้ายคือเหตุผลทางสถาปัตยกรรมที่ทำให้ Execution Rail มีน้ำหนักต่างจากรางอื่น รางอื่นตัดสินว่า <em>ข้อความ</em> จะถูกส่งต่อหรือไม่ ส่วน Execution Rail ตัดสินว่า <em>เงิน</em> จะเคลื่อนหรือไม่ — และการย้อนคืนสองอย่างนี้มีต้นทุนไม่เท่ากันเลย</p>
+
+    <h2 id="th-effect-guard">3. Effect Guard เจ็ดข้อ กับอำนาจกระทำเท่าที่จำเป็น</h2>
+
+    <p>ลงมาที่ Execution Rail แบบใกล้ ๆ ภาพต่อไปนี้คือรูปที่ผมอยากให้ติดตาที่สุดในซีรีส์นี้ ทางซ้ายคือสิ่งที่โมเดลผลิต ตรงกลางคือสิ่งที่ตัดสิน และทางขวาคือสิ่งที่เกิดขึ้นจริง</p>
+
+    <figure class="figure">
+      <a href="../images/ai-transformation-fig-11-proposal-not-effect.png">
+        <img class="figure__img" src="../images/ai-transformation-fig-11-proposal-not-effect.png" alt="แผนภาพข้อเสนอจากโมเดล issue_refund THB 2,500 ผ่านกล่อง EFFECT GUARD ที่ตรวจเจ็ดข้อ แล้วออกเป็น ระงับและส่งต่อ" width="1400" height="840" loading="lazy" decoding="async">
+      </a>
+      <figcaption class="figure__caption">รูปที่ 11 · ข้อเสนอไม่ใช่ผลจริง — โมเดลเสนอ • ระบบกำหนดแน่นอนอนุมัติ • สถานะจริงพิสูจน์</figcaption>
+    </figure>
+
+    <p>กล่องตรงกลางคือ <strong>effect guard</strong> — โปรแกรมธรรมดาที่ทำงานแบบกำหนดแน่นอน ไม่มีการเรียนรู้ ไม่มีความน่าจะเป็น และไม่อ่านเหตุผลประกอบ มันตรวจเจ็ดข้อตามลำดับ และถ้าข้อใดข้อหนึ่งไม่ผ่าน ปลายทางมีทางเดียวคือ <strong>ระงับและส่งต่อ</strong> (block and escalate)</p>
+
+    <div class="table-wrapper">
+        <table>
+            <thead>
+                <tr>
+                    <th>#</th>
+                    <th>Check</th>
+                    <th>What the guard actually verifies</th>
+                    <th>CX-REFUND-01 — ถ้าไม่ผ่าน</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>1</td>
+                    <td><strong>Identity</strong> — ตัวตน</td>
+                    <td>ผู้ที่จะได้รับผลกระทบคือคนเดียวกับที่ยืนยันตัวตนมาหรือไม่ ตรวจจากระบบยืนยันตัวตน ไม่ใช่จากบทสนทนา</td>
+                    <td>ปฏิเสธและส่งต่อ ไม่มีการ "ถามลูกค้าซ้ำ" ในช่องแชท</td>
+                </tr>
+                <tr>
+                    <td>2</td>
+                    <td><strong>Authority</strong> — อำนาจ</td>
+                    <td>เส้นทางนี้มีสิทธิ์เรียก tool ตัวนี้หรือไม่ ตรวจที่ระบบปลายทาง ไม่ใช่ที่ตัวโมเดล</td>
+                    <td>Fail closed ไม่มีการ fallback ไปเส้นทางที่สิทธิ์กว้างกว่า</td>
+                </tr>
+                <tr>
+                    <td>3</td>
+                    <td><strong>Schema</strong> — โครงสร้าง</td>
+                    <td>Payload ตรงตาม schema ที่ประกาศไว้ทุก field parse ไม่ผ่านคือไม่ทำงาน</td>
+                    <td>ปฏิเสธ พร้อมเก็บ candidate ไว้ในร่องรอยเพื่อวิเคราะห์ภายหลัง</td>
+                </tr>
+                <tr>
+                    <td>4</td>
+                    <td><strong>Parameters</strong> — ขอบเขต</td>
+                    <td>ค่าทุกตัวอยู่ในช่วงที่สัญญาอนุญาต รวมถึงวงเงินต่อครั้งและต่อรอบ</td>
+                    <td>2,500 บาทตกที่ข้อนี้ เพราะเพดานเชิงโครงสร้างคือ 2,000 บาท</td>
+                </tr>
+                <tr>
+                    <td>5</td>
+                    <td><strong>Risk</strong> — ความเสี่ยง</td>
+                    <td>คำขอนี้อยู่ในระดับผลกระทบที่เส้นทางนี้รับได้หรือไม่ ระดับที่สูงกว่าต้องเปลี่ยนเส้นทาง</td>
+                    <td>เปลี่ยนไปเส้นทางที่ต้องมีคนอนุมัติ ไม่ใช่ลดเกณฑ์ลงมา</td>
+                </tr>
+                <tr>
+                    <td>6</td>
+                    <td><strong>Approval</strong> — การอนุมัติ</td>
+                    <td>มี approval token ที่ยืนยันตัวตนแล้วหรือไม่ ข้อความว่า "ลูกค้าตกลงแล้ว" ไม่ใช่ token</td>
+                    <td>ไม่มี token ก็ไม่มีการกระทำ ไม่มีข้อยกเว้นให้กรณีเร่งด่วน</td>
+                </tr>
+                <tr>
+                    <td>7</td>
+                    <td><strong>Idempotency</strong> — ไม่ทำซ้ำ</td>
+                    <td>คำขอนี้เคยถูกดำเนินการไปแล้วหรือยัง กุญแจต้องมาจากคำสั่งซื้อ ไม่ใช่จาก session</td>
+                    <td>คืนผลเดิม ไม่สร้างรายการใหม่ แม้ระบบต้นทางจะ retry กี่ครั้งก็ตาม</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <blockquote>💡 มุมมองของผม: ในบรรดาหลักปฏิบัติห้าประการของบทนี้ ข้อที่ผมยกมาทั้งข้อคือข้อ 2 — <strong>"วาง Hard Control ที่ Release และ Effect Boundary Complete Mediation เป็นเงื่อนไขก่อนรับรอง"</strong> ประโยคนี้ตัดข้อถกเถียงยาว ๆ ทิ้งไปได้ทั้งหมด เพราะมันบอกว่าตำแหน่งของการควบคุมสำคัญกว่าความฉลาดของการควบคุม การตรวจที่แม่นที่สุดในโลกถ้าวางผิดที่ก็ยังเป็นการตรวจที่ข้ามได้ และคำว่า "เงื่อนไขก่อนรับรอง" แปลตรงตัวว่า ถ้ายังมีเส้นทางไหนเลี่ยง guard ได้ เราจะยังเซ็นรับรองไม่ได้ — ไม่ใช่เซ็นไปก่อนแล้วค่อยตามปิดทีหลัง</blockquote>
+
+    <p>หลักการนี้ไม่ได้เกิดในยุค LLM งาน <cite>The Protection of Information in Computer Systems</cite> ของ Saltzer และ Schroeder ปี 1975 ตั้งหลัก <strong>complete mediation</strong> ไว้เป็นประโยคเดียวว่า "ทุกการเข้าถึงทุกอ็อบเจกต์ต้องถูกตรวจสิทธิ์" และตั้ง <strong>least privilege</strong> ไว้ว่า "ทุกโปรแกรมและผู้ใช้ทุกคนควรทำงานด้วยชุดสิทธิ์น้อยที่สุดเท่าที่ทำงานให้เสร็จได้"<sup><a href="#th-ref-2">[2]</a></sup> ต้องพูดให้ตรง: งานปี 1975 ไม่ได้พูดถึง AI หรือโมเดลภาษาแม้แต่คำเดียว การเอามาวางคู่กับ Execution Rail เป็นการสังเคราะห์ของผู้เขียน และคู่มือเองก็ระบุขอบเขตของแหล่งนี้ไว้ว่า หลักความมั่นคงที่ยืนยงต้องถูกปรับใช้กับระบบ AI แบบกระจายในยุคปัจจุบัน ไม่ใช่ยกมาทั้งดุ้น</p>
+
+    <p>แต่มีจุดหนึ่งที่ไม่ใช่การสังเคราะห์ของใครเลย — OWASP เองเป็นคนวางสองเรื่องนี้ไว้ในหน้าเดียวกัน ในรายการ <cite>OWASP Top 10 for Large Language Model Applications 2025</cite> หัวข้อ LLM06:2025 Excessive Agency มาตรการป้องกันข้อหนึ่งใช้ชื่อหัวข้อว่า <strong>"Complete mediation"</strong> ตรงตัว และเนื้อความคือ "Implement authorization in downstream systems rather than relying on an LLM to decide if an action is allowed or not"<sup><a href="#th-ref-3">[3]</a></sup> — บังคับสิทธิ์ที่ระบบปลายทาง แทนที่จะพึ่งโมเดลให้ตัดสินว่าการกระทำนั้นทำได้หรือไม่ได้ นี่คือหน้าเดียวที่ผมจะเอามาตรฐานปี 2025 กับงานปี 1975 มาไว้ในประโยคเดียวกัน และแม้แต่ตรงนั้น OWASP ก็รับรอง <em>หลักการ</em> ไม่ได้รับรองรางห้ารางของคู่มือเล่มนี้</p>
+
+    <p>รายการเดียวกันยังแยกต้นเหตุของ Excessive Agency ไว้สามแบบ ซึ่งแปลเป็นภาษาที่ใช้ในเวิร์กช็อปได้ทันที: <strong>excessive functionality</strong> คือ agent เข้าถึงฟังก์ชันที่ไม่จำเป็นต่องานที่ตั้งใจ · <strong>excessive permissions</strong> คือ extension มีสิทธิ์บนระบบปลายทางเกินที่งานต้องใช้ · <strong>excessive autonomy</strong> คือระบบไม่ตรวจสอบและอนุมัติการกระทำที่มีผลกระทบสูงอย่างเป็นอิสระ<sup><a href="#th-ref-3">[3]</a></sup> สามข้อนี้คือคำนิยามเชิงปฏิบัติของสิ่งที่คู่มือเรียกว่า <strong>อำนาจกระทำเท่าที่จำเป็น</strong> (least agency) — จำกัดเครื่องมือ สิทธิ์ ระดับอิสระ ระยะเวลาที่สิทธิ์มีผล และวงเงิน ให้เหลือเท่าที่งานต้องใช้จริง ไม่ใช่เท่าที่ระบบทำได้</p>
+
+    <p>เรื่องวันที่ต้องพูดให้ชัดหนึ่งประโยค: ผมอ้างรหัสและถ้อยคำจากฉบับ <strong>2025</strong> (เผยแพร่ 17 พฤศจิกายน 2024) เพราะเป็นฉบับที่ยังตรวจสอบข้อความได้บนเว็บของผู้เผยแพร่ ณ วันที่เข้าถึง — OWASP เผยแพร่ฉบับ 2026 เมื่อ 3 สิงหาคม 2026 และประกาศเมื่อ 1 กันยายน 2026 แต่ ณ วันที่ 5 กันยายน 2026 หน้ารายความเสี่ยงรายข้อของฉบับใหม่ยังไม่ปรากฏบนเว็บผู้เผยแพร่ ผมจึงไม่อ้างรหัสหรือลำดับของฉบับ 2026 เลย</p>
+
+    <p>อีกแหล่งหนึ่งที่ควรอ่านคู่กันคือ <cite>LLM Prompt Injection Prevention Cheat Sheet</cite> ของ OWASP ซึ่งวางการป้องกันเป็นชั้น ๆ — ตรวจ input, ให้คนอยู่ในเส้นทางสำหรับคำขอความเสี่ยงสูง, แยกคำสั่งออกจากข้อมูลด้วยรูปแบบที่มีโครงสร้าง, ให้สิทธิ์น้อยที่สุด แล้วจึงตรวจสอบผลลัพธ์<sup><a href="#th-ref-4">[4]</a></sup> ประโยคที่ผมคิดว่าคนอ้างเอกสารนี้มักข้ามคือประโยคที่บอกว่า guardrail ที่เป็นโมเดลเอง <em>ก็ถูก inject ได้</em> และควรถือเป็นเพียงชั้นหนึ่งในการป้องกันเชิงลึก ไม่ใช่ตัวแทนของการตรวจ input — หน้านี้ไม่มีวันเผยแพร่หรือวันแก้ไขกำกับไว้เมื่อเรียกดูวันที่ 5 กันยายน 2026 ผมจึงอ้างด้วยวันที่เข้าถึงเพียงอย่างเดียว</p>
+
+    <div class="alert">
+        <strong>ระวังรายการ "เจ็ดข้อ" ที่ไม่ใช่ชุดเดียวกัน:</strong> ในหนังสือมีรายการเจ็ดข้อมากกว่าหนึ่งชุด รูปที่ 11 และตารางข้างบนใช้ชุด <em>Identity, Authority, Schema, Parameters, Risk, Approval, Idempotency</em> ส่วนคำนิยามของ <strong>การควบคุมก่อนเกิดผล</strong> ในอภิธานศัพท์ท้ายเล่มมีข้อที่เจ็ดเป็น <em>transaction limits</em> แทน idempotency และตัวอย่างที่กรอกแล้วของ <code>CX-REFUND-01</code> ใช้ชุดที่ต่างออกไปอีก คือ identity, order, eligibility, จำนวนเงิน, confirmation, idempotency และ state สามชุดนี้เป็นคนละชุดโดยเจตนา — ชุดแรกคือ guard ทั่วไป ชุดที่สองคือคำนิยาม ชุดที่สามคือการนำไปใช้กับกรณีหนึ่ง เวลาเขียนสัญญาให้ระบุว่ากำลังอ้างชุดไหน อย่ากลืนความต่างนี้ให้เนียน
+    </div>
+
+    <p>สิ่งสุดท้ายที่ guard ต้องทำคือเขียนร่องรอย และร่องรอยนั้นต้องแยกให้ออกว่าอะไรคือข้อเสนอ อะไรคือผล ตัวอย่างร่องรอยที่คู่มือใช้สาธิตหน้าตาประมาณนี้ <em>(กรณีสมมติจากหนังสือ)</em></p>
+
+    <pre><code># CX-REFUND-01 — illustrative retained event
+Begin       tr-8A41 · request rq-771 · authenticated customer c-204
+            order o-919 · Thai · manifest rc4
+
+Generate    candidate hash · protected text · citations
+            proposed: issue_refund(order=o-919, amount=1850, currency=THB)
+            ── ถึงบรรทัดนี้ยังไม่มีเงินเคลื่อนไหว นี่คือ "ข้อเสนอ" ──
+
+Execution   เก็บ Proposal · Verdict · Pre/Post-state
+            route: Reject | อนุมัติ | Fail Closed</code></pre>
+
+    <p>บรรทัด <code>proposed:</code> คือสิ่งที่โมเดลอยากให้เกิด ส่วนบรรทัด Execution คือสิ่งที่ระบบยอมให้เกิด ถ้าร่องรอยของคุณมีแค่บรรทัดเดียวและมันเขียนว่า "คืนเงินสำเร็จ" คุณจะตอบผู้ตรวจสอบไม่ได้เลยว่า guard ทำงานหรือไม่ เพราะคุณไม่ได้เก็บสิ่งที่ guard ปฏิเสธไว้</p>
+
+    <h2 id="th-specimen">4. Specimen 517 ครั้ง — สิ่งที่มันแสดง และสิ่งที่มันไม่ได้พิสูจน์</h2>
+
+    <p>ถึงตรงนี้ทุกอย่างยังเป็นข้อเสนอเชิงสถาปัตยกรรม คำถามที่ควรถามต่อคือ มีหลักฐานอะไรไหมว่าการวาง hard control ไว้ที่ effect boundary ให้ผลต่างจากการวาง soft control ไว้ที่อื่น คำตอบคือมี แต่เป็นหลักฐานขนาดเล็กมาก และผมจะเล่าทั้งขนาดของมันไปพร้อมกับตัวเลข</p>
+
+    <p>งานวิศวกรรม <cite>Engineering AI-Core Systems</cite> ฉบับปรับปรุงที่แปด มี specimen ที่จำกัดขอบเขตไว้อย่างจงใจ — การรัน deterministic <strong>517 ครั้ง</strong> บน fixture ที่ผู้เขียนสร้างขึ้นเอง ใช้ <code>CX-REFUND-01</code> เป็นกรณีทดสอบ และค่า config ชุดเดียว<sup><a href="#th-ref-5">[5]</a></sup> ไม่มีการสุ่มตัวอย่างจากประชากรใด ไม่มีช่วงความเชื่อมั่น และไม่มีระบบเปรียบเทียบ ตัวเลข 517 อธิบายเฉพาะตัวมันเอง</p>
+
+    <p>ในส่วนที่เป็น <strong>fixed suite</strong> คือชุดทดสอบที่ผู้เขียนเขียนไว้ล่วงหน้าและมองเห็นทั้งหมด ผลออกมาดังนี้: ระบบที่มี envelope ครบผ่านงานปกติ <strong>30 จาก 30</strong> กรณี ปล่อย policy escape <strong>ศูนย์จาก 40</strong> ครั้ง เกิด prohibited refund effect <strong>ศูนย์จาก 6</strong> ครั้ง และบันทึก route trace ครบ <strong>70 จาก 70</strong><sup><a href="#th-ref-5">[5]</a></sup> ตัวเลขชุดนี้อ่านง่ายจนอันตราย ผมจึงขอกำกับสามข้อ: 30 คือขนาดของแขนงานปกติในชุดนี้ ไม่ใช่ 517 และไม่ใช่จำนวนลูกค้า · ศูนย์จาก 40 แปลว่าศูนย์<em>ในชุดที่มองเห็น</em> ไม่ใช่ศูนย์ในโลกจริง · และ 6 คือตัวส่วนที่เล็กมากจนรองรับการอ้างอัตราใด ๆ ไม่ได้เลย</p>
+
+    <p>ส่วนที่น่าสนใจกว่าคือแขนที่สอง การทดสอบแบบ <strong>adaptive-to-implementation</strong> คือการเขียนการโจมตีขึ้นมา<em>หลัง</em>ได้เห็นวิธีที่ระบบนี้ป้องกันตัวเอง ไม่ใช่การโจมตีทั่วไปที่ยิงใส่โมเดลอะไรก็ได้ ผลคือ soft control เปิดข้อจำกัดของตัวเองออกมาทันที — violating candidate หลุดออกไป <strong>8 จาก 12</strong> ขณะที่ hard execution mediation บล็อก prohibited effect ได้ทั้ง <strong>4 ครั้ง</strong> จาก 4 ครั้ง<sup><a href="#th-ref-5">[5]</a></sup></p>
+
+    <p>คู่ตัวเลขนี้คือสาระทั้งหมดของบทความ ระบบเดียวกัน ผู้โจมตีคนเดียวกัน รอบเดียวกัน แต่ชั้นที่ประเมินความหมายปล่อยผ่านสองในสาม ขณะที่ชั้นที่ตรวจโครงสร้างกันได้หมด นี่ไม่ได้แปลว่า soft detection ไร้ค่า — มันจับสิ่งที่ hard control มองไม่เห็นเลย เช่นน้ำเสียงที่ชักจูงหรือข้ออ้างที่ไม่มีหลักฐานรองรับ แต่มันแปลว่า <strong>คุณสมบัติที่คุณยอมให้พลาดไม่ได้ ต้องไม่ถูกฝากไว้กับชั้นที่ประเมิน</strong></p>
+
+    <p>และต้องพูดถึงตัวส่วนอีกครั้ง 4 จาก 4 คือ<em>สี่ครั้ง</em> ไม่ใช่สี่ร้อยครั้ง ตัวเลขนี้เป็นตัวส่วนที่เล็กที่สุดในบทความทั้งบท ถ้าใครหยิบไปทำสไลด์แล้วเขียนว่า "guard กันได้ 100%" เขากำลังเปลี่ยนการสาธิตกลไกให้กลายเป็นสถิติ ซึ่งเป็นสิ่งที่ขอบเขตของ specimen ห้ามไว้ตรง ๆ</p>
+
+    <div class="alert danger">
+        <strong>ขอบเขตของ specimen — ต้องอ่านคู่กับตัวเลขทุกตัวข้างบน:</strong> ผลนี้แสดงการเชื่อม Control และตำแหน่ง Failure ใน Fixture ที่ผู้เขียนสร้าง ไม่ได้พิสูจน์ Production Quality, Independent Red Team, Legal Compliance หรือ Population Safety Rate
+    </div>
+
+    <p>ผมเพิ่มขอบเขตของตัวเองอีกสามข้อ งานชิ้นนี้เป็นต้นฉบับของผู้เขียนเอง <strong>ยังไม่ได้เผยแพร่และไม่มี URL สาธารณะ</strong> จึงไม่มีลิงก์ให้ตรวจ · ไม่มีการทำซ้ำโดยทีมอิสระ ไม่มีใครนอกคู่มือเล่มนี้ยืนยันตัวเลขเหล่านี้ · และทั้งหมดวัดบน fixture เดียว กรณีสมมติเดียว ไม่ใช่ระบบที่มีลูกค้าจริงใช้งาน ผมยกมาเพราะมันสาธิต <em>ตำแหน่งของความล้มเหลว</em> ได้ชัด ไม่ใช่เพราะมันวัดความปลอดภัยได้</p>
+
+    <h2 id="th-rail-map">5. เวิร์กช็อป — แผนที่สถาปัตยกรรมห้าราง (Artifact 3)</h2>
+
+    <p>ส่วนที่เหลือของบทความคือของที่กรอกได้จริง เริ่มจากแผนที่ซึ่งคู่มือเรียกว่า Artifact 3 คู่มือกำหนดสามอย่างไว้ก่อนตารางเสมอ — <strong>วัตถุประสงค์</strong> วางตัวควบคุมที่มีชื่อชัดเจนทุก seam ของ LLM · <strong>ใช้เมื่อ</strong> ออกแบบสถาปัตยกรรม เพิ่ม retrieval, memory, tool หรือ conversation state และเมื่อสืบเหตุการณ์หลุด · <strong>เจ้าของหลัก</strong> Application Architect ดูแลความครบถ้วนทั้งเส้นทาง แต่ละ rail มี operational owner ของตัวเอง และ Security ดูแล threat model<sup><a href="#th-ref-1">[1]</a></sup></p>
+
+    <p>สังเกตว่าเจ้าของมีสามระดับโดยตั้งใจ คนที่ตอบว่า "ทุกเส้นทางถูกบังคับผ่านครบไหม" ต้องเป็นคนเดียว ส่วนคนที่ดูแลว่ารางแต่ละรางทำงานประจำวันได้ดีแค่ไหน เป็นคนละคน และคนที่คิดแทนผู้โจมตีก็เป็นอีกคน ถ้าองค์กรของคุณมีชื่อเดียวในทั้งสามช่อง คุณไม่ได้มีเจ้าของ คุณมีคอขวด</p>
+
+    <div class="table-wrapper">
+        <table>
+            <thead>
+                <tr>
+                    <th>Rail</th>
+                    <th>Property and control class</th>
+                    <th>Signal, rule and evidence</th>
+                    <th>Route, owner and residual risk</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td><strong>1 Input</strong></td>
+                    <td>ขอบเขต/Injection; Soft</td>
+                    <td>เก็บ Score/Threshold</td>
+                    <td>Refuse จำกัด หรือ Escalate</td>
+                </tr>
+                <tr>
+                    <td><strong>2 Dialog</strong></td>
+                    <td>Policy ข้าม Turn; Soft/Governance; Hard เฉพาะ Transition ที่แจกแจงได้</td>
+                    <td>เก็บ State/Verdict</td>
+                    <td>Redirect, Refuse หรือ Escalate</td>
+                </tr>
+                <tr>
+                    <td><strong>3 Retrieval</strong></td>
+                    <td>Provenance Hard; Support/Relevance Soft</td>
+                    <td>เก็บ Source ID/Score</td>
+                    <td>ตัด Passage ค้นใหม่ หรือ Abstain</td>
+                </tr>
+                <tr>
+                    <td><strong>4 Execution</strong></td>
+                    <td>Authorization, Schema, Parameter, Bound; Hard</td>
+                    <td>เก็บ Proposal, Verdict, Pre/Post-state</td>
+                    <td>Reject อนุมัติ หรือ Fail Closed</td>
+                </tr>
+                <tr>
+                    <td><strong>5 Output</strong></td>
+                    <td>Schema Hard; Faithfulness, Privacy, Harm Soft</td>
+                    <td>เก็บ Candidate, Citation, Verdict</td>
+                    <td>Repair, Withhold หรือ Escalate</td>
+                </tr>
+                <tr>
+                    <td><strong>ทุก Rail</strong></td>
+                    <td>Terminal Trace Hard; Review/Rollback Governance</td>
+                    <td>เก็บ Terminal Route</td>
+                    <td>Block เมื่อเขียน Trace ไม่สำเร็จ</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <p>ใต้ตารางมีสองประโยคที่ผมถือว่าเป็นส่วนที่ทีมมักลืมมากที่สุด ประโยคแรกคือกฎเรื่องทางเลี่ยง: <strong>ทำเครื่องหมายทางเลี่ยงทุกแบบ</strong> ไม่ว่าจะเป็น Batch, Retry, Webhook, Cache, Admin Tool, Console, Direct Write, Vendor Fallback และ Recovery Script แล้ว<strong>ต้องควบคุมเส้นทางนั้นหรือถอดมันออกจากขอบเขตรับรอง</strong><sup><a href="#th-ref-1">[1]</a></sup> ประโยคนี้คือ complete mediation ในเวอร์ชันที่ทำงานจริง เพราะระบบส่วนใหญ่ไม่ได้ถูกเจาะที่ทางหลัก แต่ถูกเดินอ้อมที่สคริปต์กู้คืนซึ่งไม่มีใครนึกถึงตอนวาดสถาปัตยกรรม</p>
+
+    <p>ประโยคที่สองคือหลักการทั้งบทย่อเหลือบรรทัดเดียว<sup><a href="#th-ref-1">[1]</a></sup></p>
+
+    <blockquote>"หลักคือโมเดลเสนอ External Guard อนุญาต และ Transactional Tool จึงสร้าง Effect"</blockquote>
+
+    <p>คำว่า external สำคัญมาก guard ที่อยู่ในกระบวนการเดียวกับผู้เสนอ หรืออยู่ในบริบทเดียวกับข้อความที่อาจถูก inject ไม่ใช่ guard ตัวนอก และคำว่า transactional ก็สำคัญไม่แพ้กัน เพราะเครื่องมือที่สร้างผลต้องมีสถานะที่ commit หรือไม่ commit เท่านั้น ไม่มีสถานะกลางที่ "ทำไปครึ่งหนึ่ง"</p>
+
+    <h3>ตัวอย่างที่กรอกแล้ว — CX-REFUND-01</h3>
+
+    <p>ตารางถัดไปคือตัวอย่างที่คู่มือกรอกไว้ทั้งแถวสำหรับ <code>CX-REFUND-01</code> คอลัมน์ขวาสุดที่ผมอยากให้อ่านช้า ๆ คือ <strong>residual risk</strong> ของเจ้าของแต่ละราง เพราะนั่นคือส่วนที่ถูกลบทิ้งบ่อยที่สุดเวลาเอกสารนี้ถูกทำเป็นสไลด์ — และมันคือเหตุผลทั้งหมดที่เอกสารนี้มีอยู่</p>
+
+    <div class="table-wrapper">
+        <table>
+            <thead>
+                <tr>
+                    <th>Rail</th>
+                    <th>Example implementation</th>
+                    <th>Owner and residual risk</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td><strong>Input</strong></td>
+                    <td>Detector ตรวจ Scope และ Injection แล้วส่งคำขอผิดปกติเข้าคิว เก็บรุ่นของ detector ภาษา Score, Threshold และกติกาที่ใช้ตัดสิน</td>
+                    <td>Security — ความเสี่ยงที่เหลือคือ adaptive false negative คือการโจมตีที่เขียนขึ้นหลังเห็นวิธีป้องกัน</td>
+                </tr>
+                <tr>
+                    <td><strong>Dialog</strong></td>
+                    <td>State machine อนุญาตเฉพาะขั้น identify, explain, confirm fact, propose, confirm action, close และบันทึก state ก่อน/หลังพร้อม summary hash</td>
+                    <td>CX Product — ความเสี่ยงที่เหลือคือ slow goal drift การเบี่ยงเป้าหมายอย่างช้า ๆ ข้ามหลาย turn</td>
+                </tr>
+                <tr>
+                    <td><strong>Retrieval</strong></td>
+                    <td>ค้นเฉพาะ index ที่ pin ไว้ ตรวจ Source ID แบบ Hard ประเมิน Support และตัด passage เก่าทิ้ง เก็บ query, corpus, ranker, passage และ score</td>
+                    <td>Knowledge Platform — ความเสี่ยงที่เหลือคือเนื้อหาที่อนุมัติแล้วแต่ล้าสมัย</td>
+                </tr>
+                <tr>
+                    <td><strong>Execution</strong></td>
+                    <td>อนุญาตเฉพาะ <code>issue_refund</code> และให้ server เป็นผู้ตรวจ identity, order, eligibility, จำนวนเงิน, confirmation, idempotency และ state เก็บ proposal, argument ที่ normalize แล้ว, verdict, result และ post-state</td>
+                    <td>Payments — ความเสี่ยงที่เหลือคือ composed abuse การใช้หลายคำขอย่อยที่ถูกต้องทีละข้อประกอบกันเป็นผลที่ผิด</td>
+                </tr>
+                <tr>
+                    <td><strong>Output</strong></td>
+                    <td>Parse schema สแกน privacy และบังคับว่า policy claim ต้องมีหลักฐานรองรับ เก็บ candidate, citation, ผู้ประเมิน, threshold, route และข้อความที่ปล่อยจริง</td>
+                    <td>CX Quality — ความเสี่ยงที่เหลือคือจุดบอดร่วมระหว่างตัวสร้างกับตัวตัดสินที่ใช้ฐานเดียวกัน</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <p>อ่านคอลัมน์ขวาเรียงลงมาแล้วจะเห็นรูปแบบหนึ่ง ความเสี่ยงที่เหลือของทุกรางไม่ใช่ "ยังตรวจไม่ครบ" แต่เป็น "มีอะไรบางอย่างที่รางนี้มองไม่เห็นโดยธรรมชาติของมันเอง" นี่คือเหตุผลที่คู่มือยืนยันว่าไม่มีรางใดครอบคลุมทุกเรื่อง และเป็นเหตุผลที่เอกสารนี้ต้องมีเจ้าของรายชื่อจริง เพราะความเสี่ยงที่ไม่มีเจ้าของคือความเสี่ยงที่ไม่มีใครเฝ้า</p>
+
+    <h2 id="th-decision-matrix">6. เวิร์กช็อป — Decision and Consequence Matrix (Artifact 5)</h2>
+
+    <p>แผนที่ในหัวข้อ <a href="#th-rail-map">5</a> ตอบว่ากลไกอยู่ที่ไหน ตารางในหัวข้อนี้ตอบคำถามที่ต่างออกไป คือ <em>ระบบควรมีอำนาจแค่ไหน สำหรับการตัดสินใจแต่ละข้อ</em> คู่มือกำหนดวัตถุประสงค์ของ Artifact 5 ไว้ว่า กำหนดอำนาจแยกตามคำตัดสินและ effect <strong>ไม่ใช่กำหนดครั้งเดียวทั้ง application</strong> และเติมประโยคที่ผมคิดว่าควรอยู่ในนโยบาย AI ของทุกองค์กร: <strong>ความขาดไม่ได้ของโมเดลไม่ได้แปลว่าควรให้อิสระ</strong><sup><a href="#th-ref-1">[1]</a></sup></p>
+
+    <p>ประโยคนั้นตัดตรรกะที่ผมได้ยินบ่อยที่สุดทิ้งไปทั้งเส้น — "ระบบนี้ขาดโมเดลไม่ได้แล้ว เพราะฉะนั้นต้องปล่อยให้มันทำงานเอง" ความขาดไม่ได้เป็นข้อเท็จจริงเรื่องการพึ่งพา ส่วนอิสระเป็นการตัดสินใจเรื่องความเสี่ยง สองเรื่องนี้ตอบคนละคำถาม และคนที่ตอบก็คนละคน: <strong>เจ้าของการตัดสินใจทางธุรกิจ</strong> เป็นผู้ยอมรับระดับอำนาจ · <strong>Risk owner</strong> เป็นผู้ท้าทายค่า expected harm · <strong>Tool owner</strong> เป็นผู้บังคับเส้นทางให้เป็นจริง</p>
+
+    <p>วิธีใช้ค่า expected harm คู่มือระบุไว้ระวังมาก ให้ใช้เป็น<em>ตัวช่วย</em> ไม่ใช่ความจริงหนึ่งตัว โดยพิจารณาโอกาสเกิดคูณผลกระทบ แล้วปรับด้วย exposure, detectability และ recoverability จากนั้น<strong>แยกสี่อย่างออกจากกัน</strong> คือข้อความที่ปล่อยออกไป การอ่านข้อมูล การเขียนที่ย้อนกลับได้ และผลที่ย้อนกลับไม่ได้ หลักที่ตามมาคือ อำนาจยิ่งสูงและยิ่งกู้คืนยาก หลักฐานยิ่งต้องเข้มขึ้น และปิดท้ายด้วยประโยคที่ควรอ่านออกเสียง: <strong>"Detector จำนวนมากไม่อาจแทนคำตัดสินของคนที่กฎหมาย นโยบาย จริยธรรม หรือ Risk Appetite สงวนไว้"</strong><sup><a href="#th-ref-1">[1]</a></sup></p>
+
+    <div class="table-wrapper">
+        <table>
+            <thead>
+                <tr>
+                    <th>Decision or effect</th>
+                    <th>Consequence profile</th>
+                    <th>Authority and route</th>
+                    <th>Owner and stop condition</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>ค้นข้อมูล Policy และ Order</td>
+                    <td>Read-only แต่อ่อนไหว การเข้าถึงผิดตรวจพบได้จาก log แต่ข้อมูลที่รั่วแล้วกู้คืนไม่ได้</td>
+                    <td>Bounded Autonomous พร้อม least privilege, การผูก customer/order และการจำกัด field</td>
+                    <td>Data owner — หยุดเมื่อมีการเข้าถึงข้ามลูกค้า</td>
+                </tr>
+                <tr>
+                    <td>ปล่อยคำตอบเชิงนโยบายที่เป็นงานปกติ</td>
+                    <td>ทำให้เข้าใจผิดได้ทันที แก้ไขภายหลังได้แต่ความเชื่อถือเสียไปแล้ว</td>
+                    <td>Bounded Autonomous เฉพาะเมื่อ source, schema, support และ terminal trace ผ่านครบ</td>
+                    <td>Policy owner — withhold เมื่อ source เก่า ขัดแย้งกันเอง หรือ support อ่อน</td>
+                </tr>
+                <tr>
+                    <td>แนะนำแนวทางเยียวยา</td>
+                    <td>สร้างความคาดหวัง แต่ยังไม่มีเงินจ่ายออก</td>
+                    <td>Draft เท่านั้น และต้องระบุชัดว่ารอคำตัดสินของ guard</td>
+                    <td>CX Product — escalate เมื่อกำกวม มีข้อร้องเรียนทางกฎหมาย หรือมีสัญญาณ fraud</td>
+                </tr>
+                <tr>
+                    <td>ดำเนินการ refund ที่เข้าเงื่อนไข ไม่เกิน 2,000 บาท</td>
+                    <td>Financial write ที่มีต้นทุนการกู้คืนจำกัด</td>
+                    <td>Bounded Autonomous หลังลูกค้ายืนยัน และผ่าน hard rule ทุกข้อ</td>
+                    <td>Payments — หยุดทันทีเมื่อพบ prohibited effect, รายการซ้ำ, ตัวตนไม่ตรง หรือ state ผิด</td>
+                </tr>
+                <tr>
+                    <td>Refund เกินเพดาน หรือเป็นข้อยกเว้นเชิงนโยบาย</td>
+                    <td>ความสูญเสียสูงกว่า สร้างบรรทัดฐาน และมีความเสี่ยงเรื่องความเป็นธรรม</td>
+                    <td>ทำได้ต่อเมื่อมี named human approval โมเดลเตรียมหลักฐานให้ได้ แต่ตัดสินแทนไม่ได้</td>
+                    <td>Customer-care manager — ไม่มี approval คือไม่ทำ</td>
+                </tr>
+                <tr>
+                    <td>Chargeback สินค้าควบคุม หรือข้อพิพาทเรื่องสิทธิ</td>
+                    <td>อาจมีผลทางกฎหมายหรือผลที่ย้อนกลับไม่ได้</td>
+                    <td>คนตัดสินเท่านั้น AI ช่วยได้แค่จัดระเบียบ record</td>
+                    <td>Legal หรือผู้เชี่ยวชาญเฉพาะทาง — โอนเรื่องทันที</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <p>อ่านคอลัมน์ที่สามเรียงลงมาจะเห็นบันไดสี่ขั้นที่ตารางนี้เข้ารหัสไว้ — <strong>อัตโนมัติในขอบเขต → ร่าง → กระทำเมื่อมีคนที่ระบุชื่ออนุมัติ → คนตัดสินเท่านั้น</strong> สิ่งที่ทำให้บันไดนี้ต่างจากนโยบายทั่วไปคือ มันไม่ได้ผูกกับ "ระบบ" แต่ผูกกับ "การตัดสินใจ" ระบบเดียวกันจึงอยู่บนขั้นที่หนึ่งกับขั้นที่สี่พร้อมกันได้ ขึ้นกับว่ากำลังทำอะไรอยู่ และนั่นคือรูปธรรมของ least agency ที่ไม่ต้องเถียงกันเป็นนามธรรม</p>
+
+    <p>คอลัมน์ที่ควรกรอกเป็นอันดับแรกไม่ใช่คอลัมน์อำนาจ แต่เป็น <strong>stop condition</strong> ถ้าทีมกรอกเงื่อนไขหยุดไม่ได้ แปลว่ายังไม่รู้ว่าอะไรคือ "ผิดพลาด" สำหรับการตัดสินใจข้อนั้น และถ้าไม่รู้ว่าอะไรผิดพลาด การให้อำนาจทุกระดับก็เป็นการเดาทั้งหมด</p>
+
+    <h2 id="th-tabletop">7. เวิร์กช็อป — Contract and Attack Tabletop</h2>
+
+    <p>เวิร์กช็อปที่สามคือชุดที่ผมแนะนำให้ทำจริงในห้องเดียวกัน สองชั่วโมง คนครบทุกเจ้าของ คู่มือกำหนดโจทย์ไว้ห้ากรณี: คำขอปกติ · claim เชิงนโยบายที่ไม่มีหลักฐานรองรับ · passage ที่มี injection ฝังอยู่ · proposal ที่เกินวงเงิน · และ trace-write failure สำหรับแต่ละกรณีให้กรอก contract row หนึ่งแถว แล้ว<strong>เดินครบทั้งห้าราง</strong> ระบุ hard invariant, soft signal, threshold, route, evidence, owner, residual risk และ breach response จากนั้นตกลงกันให้จบว่า failure ใดบล็อก release และ failure ใดต้องส่งต่อให้คน<sup><a href="#th-ref-1">[1]</a></sup></p>
+
+    <p>กรณีที่ห้าคือกรณีที่ทีมมักข้าม และเป็นกรณีที่ผมยืนยันให้ทำเป็นกรณีแรก ๆ เพราะมันตอบคำถามที่แสบที่สุดคำถามเดียว: ถ้าเขียน trace ไม่สำเร็จ ระบบควรทำงานต่อหรือหยุด คำตอบของคู่มือชัดเจนและไม่มีเงื่อนไข — terminal trace เป็น hard control และเขียนไม่สำเร็จคือ block release องค์กรที่ตอบว่า "ก็ให้ทำงานต่อไปก่อน เดี๋ยวค่อยตามเก็บ log" กำลังบอกว่าการรับประกันของตัวเองเป็นทางเลือก</p>
+
+    <div class="table-wrapper">
+        <table>
+            <thead>
+                <tr>
+                    <th>Scenario</th>
+                    <th>Rail that must catch it</th>
+                    <th>Hard invariant vs soft signal</th>
+                    <th>Route</th>
+                    <th>Block release or escalate</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td><strong>คำขอปกติ</strong></td>
+                    <td>เดินครบทั้งห้าราง — ใช้เป็นเส้นฐาน</td>
+                    <td>Hard: schema และ terminal trace · Soft: relevance และ support</td>
+                    <td>ปล่อยตามปกติ พร้อม trace ครบทุกขั้นที่เดินผ่าน</td>
+                    <td>ไม่บล็อก แต่ถ้า trace ไม่ครบให้ถือว่าเป็น failure ทันที</td>
+                </tr>
+                <tr>
+                    <td><strong>Claim เชิงนโยบายที่ไม่มีหลักฐาน</strong></td>
+                    <td>Retrieval แล้วต่อด้วย Output</td>
+                    <td>Hard: ต้องมี passage รองรับจึงปล่อยได้ · Soft: ค่าประเมิน support</td>
+                    <td>Withhold หรือ abstain แล้วค้นใหม่จาก index ที่ pin ไว้</td>
+                    <td>บล็อกการปล่อยข้อความ ไม่ต้องส่งต่อคนถ้าค้นใหม่แล้วผ่าน</td>
+                </tr>
+                <tr>
+                    <td><strong>Passage ที่มี injection</strong></td>
+                    <td>Retrieval เป็นด่านแรก แต่ต้องรอด<em>ถึง</em> Execution</td>
+                    <td>Hard: allow-list ของแหล่ง และสิทธิ์ของ tool · Soft: detector ที่จับ injection</td>
+                    <td>ตัด passage ทิ้ง และ tool call ที่ตามมาต้องผ่าน guard ตามปกติ</td>
+                    <td>ไม่บล็อกทั้งระบบ แต่ทุก effect ที่เกิดตามมาต้องถูก mediate</td>
+                </tr>
+                <tr>
+                    <td><strong>Proposal ที่เกินวงเงิน</strong></td>
+                    <td>Execution เท่านั้น</td>
+                    <td>Hard ล้วน: parameter bound และ approval token</td>
+                    <td>Reject แล้วสร้าง escalation trace</td>
+                    <td>ส่งต่อให้ผู้มีอำนาจอนุมัติที่ระบุชื่อ ไม่ใช่บล็อกเงียบ ๆ</td>
+                </tr>
+                <tr>
+                    <td><strong>Trace-write failure</strong></td>
+                    <td>ทุก Rail — เป็นข้อบังคับร่วม</td>
+                    <td>Hard: terminal trace ต้องเขียนสำเร็จ ไม่มี soft signal ในข้อนี้</td>
+                    <td>Fail closed หยุดที่ตำแหน่งนั้น</td>
+                    <td>บล็อก release และเปิด incident เพราะการรับประกันขาดตอน</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <p>เพื่อไม่ให้เวิร์กช็อปนี้กลายเป็นการนึกภัยเอาเอง ควรผูกโจทย์ทั้งห้าเข้ากับอนุกรมวิธานการโจมตีที่มีคนจัดหมวดไว้แล้ว เอกสารที่ผมใช้คือ <cite>Adversarial Machine Learning: A Taxonomy and Terminology of Attacks and Mitigations</cite> รหัส NIST AI 100-2e2025 ซึ่ง ณ วันที่ 5 กันยายน 2026 ยังเป็นฉบับสมบูรณ์ล่าสุด — เผยแพร่เดือนมีนาคม 2025 ผ่านการอนุมัติจากคณะบรรณาธิการของ NIST เมื่อ 20 มีนาคม 2025 และมีการอัปโหลดไฟล์ฉบับแก้ไขเมื่อ 1 เมษายน 2025 โดยไม่มีฉบับใหม่มาแทนที่ในระเบียนของ CSRC<sup><a href="#th-ref-6">[6]</a></sup></p>
+
+    <p>การจับคู่ต่อไปนี้เป็นการจับคู่<strong>ของผมเอง</strong> ไม่ใช่การจับคู่ที่ NIST เผยแพร่ และ NIST ไม่ได้รับรองสถาปัตยกรรมห้ารางของคู่มือเล่มนี้แต่อย่างใด: passage ที่มี injection ตรงกับ indirect prompt injection ในหัวข้อ 3.4 แบบ integrity violation · trace-write failure ตรงกับ availability violation ในหัวข้อ 3.4.1 · claim ที่ไม่มีหลักฐานตรงกับ integrity violation ในหัวข้อ 3.4.2 · ส่วน proposal ที่เกินวงเงินตรงกับความเสี่ยงจากการที่ agent ใช้ tool ได้ในหัวข้อ 3.5<sup><a href="#th-ref-6">[6]</a></sup></p>
+
+    <p>ประโยคที่ผมอยากให้ทีมสถาปัตยกรรมอ่านคำต่อคำอยู่ในหัวข้อ 3.4.4 — เพราะ<strong>มาตรการที่มีอยู่ในปัจจุบันยังไม่ได้ป้องกันได้ครบทุกเทคนิคของผู้โจมตี</strong> ผู้ออกแบบระบบอาจออกแบบโดยตั้งสมมติฐานไว้เลยว่า prompt injection <em>เกิดขึ้นได้</em> หากโมเดลถูกให้รับ input จากแหล่งที่ไม่น่าเชื่อถือ เช่นโดยให้โมเดลติดต่อกับแหล่งข้อมูลที่อาจไม่น่าเชื่อถือผ่าน interface ที่นิยามไว้ชัดเจนเท่านั้น<sup><a href="#th-ref-6">[6]</a></sup> ประโยคนี้คือเหตุผลทั้งหมดของ Execution Rail: ถ้าเราออกแบบโดยสมมติว่า injection สำเร็จ คำถามจะไม่ใช่ "จะกรองอย่างไร" อีกต่อไป แต่กลายเป็น "แล้วมันสั่งอะไรได้บ้าง" ซึ่งเป็นคำถามที่ตอบด้วยสิทธิ์และวงเงิน ไม่ใช่ด้วย classifier</p>
+
+    <p>เอกสารเดียวกันยังเตือนเรื่อง agent โดยเฉพาะว่า เพราะ agent ลงมือทำได้ผ่าน tool การโจมตีจึงสร้างความเสี่ยงเพิ่มขึ้นในบริบทนี้ เช่นการยึด agent ไปรันโค้ดตามใจ หรือดูดข้อมูลออกจากสภาพแวดล้อมที่มันทำงานอยู่ และในหัวข้อ 4.1.2 มีประโยคที่ถ่อมตนที่สุดของทั้งเล่ม — การออกแบบมาตรการบรรเทาเป็นกระบวนการที่ทำแบบเฉพาะกิจและผิดพลาดได้โดยธรรมชาติ<sup><a href="#th-ref-6">[6]</a></sup> ต้องระบุขอบเขตของแหล่งนี้ด้วยว่า NIST เขียนไว้เองว่าเอกสารนี้เป็นแนวทางโดยสมัครใจ ไม่ได้มีสถานะแทนกฎหมายหรือข้อบังคับใด</p>
+
+    <p>สุดท้าย เมื่อกรอกตารางเสร็จ ให้ผูกรางแต่ละรางกลับเข้ากับรหัสความเสี่ยงที่ทีมความมั่นคงคุ้นเคย เพื่อให้เอกสารฉบับเดียวกันใช้คุยกับสองวงได้ ผมจับคู่ไว้แบบนี้ — และย้ำอีกครั้งว่านี่คือการจับคู่ของผู้เขียน ไม่ใช่การจับคู่ที่ OWASP เผยแพร่</p>
+
+    <div class="table-wrapper">
+        <table>
+            <thead>
+                <tr>
+                    <th>Rail</th>
+                    <th>OWASP LLM Top 10 (2025 codes)</th>
+                    <th>What the source actually says</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td><strong>Input, Dialog</strong></td>
+                    <td>LLM01:2025 Prompt Injection — แบบ direct</td>
+                    <td>คำสั่งของผู้ใช้เปลี่ยนพฤติกรรมของโมเดลโดยตรง และเอกสารระบุเองว่ายังไม่ชัดว่ามีวิธีป้องกันแบบกันได้เด็ดขาดหรือไม่<sup><a href="#th-ref-3">[3]</a></sup></td>
+                </tr>
+                <tr>
+                    <td><strong>Retrieval</strong></td>
+                    <td>LLM01:2025 — แบบ indirect</td>
+                    <td>โมเดลรับ input จากแหล่งภายนอกอย่างเว็บไซต์หรือไฟล์ ซึ่งเมื่อถูกตีความแล้วเปลี่ยนพฤติกรรมของโมเดล<sup><a href="#th-ref-3">[3]</a></sup></td>
+                </tr>
+                <tr>
+                    <td><strong>Execution</strong></td>
+                    <td>LLM06:2025 Excessive Agency</td>
+                    <td>จำกัด extension ที่เรียกได้และสิทธิ์บนระบบปลายทางให้เหลือน้อยที่สุด และบังคับสิทธิ์ที่ระบบปลายทาง ไม่ใช่ให้โมเดลตัดสิน<sup><a href="#th-ref-3">[3]</a></sup></td>
+                </tr>
+                <tr>
+                    <td><strong>Output</strong></td>
+                    <td>LLM05:2025 Improper Output Handling</td>
+                    <td>ระบุรูปแบบผลลัพธ์ให้ชัด ขอเหตุผลและการอ้างอิงแหล่ง แล้ว<strong>ใช้โค้ดแบบกำหนดแน่นอนตรวจสอบว่าเป็นไปตามนั้นจริง</strong><sup><a href="#th-ref-3">[3]</a></sup></td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <h2 id="th-metrics-failures">8. ตัวชี้วัดสำคัญ และรูปแบบความล้มเหลว</h2>
+
+    <p>ก่อนเข้าตาราง ขอวางหลักปฏิบัติห้าประการของบทนี้ไว้ทั้งชุด เพราะทุกตัวชี้วัดข้างล่างเป็นการทำหลักข้อใดข้อหนึ่งให้เป็นตัวเลข ผมยกข้อ 2 ไปพูดถึงแล้วในหัวข้อ <a href="#th-effect-guard">3</a> ที่เหลืออีกสี่ข้อคือ<sup><a href="#th-ref-1">[1]</a></sup></p>
+
+    <ol>
+        <li><strong>ระบุ Claim ทีละคุณสมบัติ</strong> — แยก Guarantee, Estimate และ Governance Duty ออกจากกัน</li>
+        <li><strong>วาง Hard Control ที่ Release และ Effect Boundary</strong> — Complete Mediation เป็นเงื่อนไขก่อนรับรอง</li>
+        <li><strong>สอบเทียบ Semantic Gate</strong> — รายงาน Threshold ประชากร False Accept, False Reject และความล้มเหลวสัมพันธ์กัน</li>
+        <li><strong>ตรวจ State และ Trace</strong> — คำบรรยายของโมเดลไม่ใช่หลักฐานว่า Effect ถูกต้อง</li>
+        <li><strong>ทดสอบไกลกว่าชุดที่มองเห็น</strong> — ใช้ Fixed, Hidden, Adaptive, Stateful, Failure และ Live Evidence</li>
+    </ol>
+
+    <p>ข้อ 3 มีคำที่ถูกข้ามบ่อยที่สุดคือ "ความล้มเหลวสัมพันธ์กัน" ทีมจำนวนมากวางผู้ตัดสินหลายตัวซ้อนกันแล้วคูณความน่าจะเป็นของความผิดพลาดเข้าด้วยกัน ราวกับว่ามันเป็นอิสระต่อกัน ทั้งที่ผู้ตัดสินเหล่านั้นมักใช้โมเดลฐานเดียวกัน ข้อมูลฝึกชุดเดียวกัน และพลาดในกรณีเดียวกัน การซ้อนสามชั้นที่พลาดพร้อมกันไม่ได้ให้ความมั่นใจสามเท่า</p>
+
+    <p>ส่วนข้อ 5 มีหลักฐานอิสระที่น่าสนใจมาสนับสนุนพอดี เมื่อวันที่ 9 มิถุนายน 2026 NIST เผยแพร่บทสรุปงานวิจัยที่รายงานบทพิสูจน์ทางคณิตศาสตร์ว่า <strong>ไม่มีชุด guardrail ที่จำกัดจำนวนชุดใดที่ทนทานต่อ adversarial prompt ได้ในทุกกรณี</strong> พร้อมข้อเสนอให้เปลี่ยนไปใช้แนวทางเฝ้าระวังและปรับปรุงต่อเนื่อง แทนการตั้งแนวป้องกันแบบตายตัว โดย NIST เองระบุข้อจำกัดไว้ว่าแนวทางนี้ก็ยังไม่ได้แก้ปัญหาได้อย่างสมบูรณ์<sup><a href="#th-ref-7">[7]</a></sup> อ่านคู่กับ specimen ในหัวข้อ <a href="#th-specimen">4</a> แล้วจะเห็นข้อสรุปเดียวกันจากคนละทาง: ชุดทดสอบที่มองเห็นไม่เคยเป็นหลักฐานของสิ่งที่มองไม่เห็น</p>
+
+    <p>ตัวชี้วัดที่คู่มือให้ติดตามมีดังนี้ พร้อมคอลัมน์ Scorecard ที่บอกว่าแต่ละตัวไปโผล่ที่คอลัมน์ไหนของตารางคะแนนหกคอลัมน์ที่เราใช้มาตั้งแต่ตอนแรกของซีรีส์</p>
+
+    <div class="table-wrapper">
+        <table>
+            <thead>
+                <tr>
+                    <th>Metric</th>
+                    <th>What it answers</th>
+                    <th>How to read it honestly</th>
+                    <th>Scorecard</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td><strong>Benign task success</strong></td>
+                    <td>งานปกติจบเองได้แค่ไหนเมื่อ envelope ทำงานครบ</td>
+                    <td>ต้องรายงานคู่กับตัวเลขความปลอดภัยเสมอ ตัวนี้ตัวเดียวคือด้านเดียวของเหรียญ</td>
+                    <td>Value</td>
+                </tr>
+                <tr>
+                    <td><strong>Policy escape</strong></td>
+                    <td>คำตอบที่ขัดนโยบายหลุดออกไปกี่ครั้ง</td>
+                    <td>แยกรายงานตามชุดทดสอบ ค่าจาก fixed suite ไม่ใช่ค่าจากชุดที่ปรับตามระบบ</td>
+                    <td>Risk</td>
+                </tr>
+                <tr>
+                    <td><strong>Prohibited-effect escape</strong></td>
+                    <td>ผลที่ต้องห้ามเกิดขึ้นจริงกี่ครั้ง</td>
+                    <td>ตัวนี้คือตัวชี้วัดของ Execution Rail โดยตรง ไม่ควรถูกเฉลี่ยรวมกับตัวอื่น</td>
+                    <td>Risk</td>
+                </tr>
+                <tr>
+                    <td><strong>False accept และ False reject</strong></td>
+                    <td>ประตูเชิงความหมายผิดพลาดสองด้านมากแค่ไหน</td>
+                    <td>ไม่มีความหมายเลยถ้าไม่ระบุ threshold และประชากรที่วัด และต้องรายงานทั้งสองด้านเสมอ</td>
+                    <td>Quality</td>
+                </tr>
+                <tr>
+                    <td><strong>Post-state correctness</strong></td>
+                    <td>สถานะจริงหลังการกระทำตรงกับที่ควรเป็นหรือไม่</td>
+                    <td>ตรวจจากระบบที่ถือสถานะ ไม่ใช่จากข้อความสรุปของโมเดล</td>
+                    <td>Quality</td>
+                </tr>
+                <tr>
+                    <td><strong>Trace completeness</strong></td>
+                    <td>ทุกขั้นที่ระบบเดินผ่านถูกบันทึกครบหรือไม่</td>
+                    <td>วัดเป็นสัดส่วนของคำขอที่มี terminal route ครบ ไม่ใช่ปริมาณ log ที่เก็บได้</td>
+                    <td>Risk</td>
+                </tr>
+                <tr>
+                    <td><strong>Escalation load</strong></td>
+                    <td>ภาระที่ตกกับคนที่ต้องรับเรื่องต่อหนักแค่ไหน</td>
+                    <td>ตัวนี้ลดลงเองไม่ได้ด้วยการปรับ threshold — ลดโดยไม่ดูตัวอื่นคือการซ่อนงานไว้ที่คน</td>
+                    <td>People</td>
+                </tr>
+                <tr>
+                    <td><strong>Rollback time</strong></td>
+                    <td>ย้อนผลกลับได้เร็วแค่ไหนเมื่อจำเป็น</td>
+                    <td>ต้องเป็นเวลาที่ซ้อมจริง ไม่ใช่เวลาที่ประมาณไว้ในเอกสาร</td>
+                    <td>Risk</td>
+                </tr>
+                <tr>
+                    <td><strong>Incident recurrence</strong></td>
+                    <td>เรื่องเดิมกลับมาซ้ำหรือไม่หลังแก้ไข</td>
+                    <td>ตัวนี้คือตัวชี้วัดของวงจรการเรียนรู้ ไม่ใช่ของทีมที่แก้เหตุการณ์</td>
+                    <td>Learning</td>
+                </tr>
+                <tr>
+                    <td><strong>Latency</strong></td>
+                    <td>ผู้ใช้รอนานขึ้นเท่าไรจากการที่มี guard</td>
+                    <td>รายงานแยกตามเส้นทาง เส้นทางที่ต้องมีคนอนุมัติมีเวลาคนละสเกลกับเส้นทางอัตโนมัติ</td>
+                    <td>Value</td>
+                </tr>
+                <tr>
+                    <td><strong>Token และ Cost แยกตาม consequence class</strong></td>
+                    <td>เราจ่ายเท่าไรสำหรับผลกระทบระดับไหน</td>
+                    <td>ยอดรวมไม่บอกอะไร ต้องแยกตามระดับผลกระทบจึงจะใช้ตัดสินใจได้</td>
+                    <td>Economics</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <p>กฎข้อเดียวที่คู่มือเขียนไว้ตัวหนาในหัวข้อตัวชี้วัดคือ <strong>ห้ามรวม Utility กับ Security เป็นคะแนนเดียวจนซ่อน Tradeoff</strong><sup><a href="#th-ref-1">[1]</a></sup> เหตุผลเป็นเรื่องเลขคณิตล้วน ๆ ระบบที่ทำงานปกติได้ดีขึ้นเล็กน้อยแต่ปล่อยผลต้องห้ามเพิ่มขึ้นหนึ่งครั้ง อาจได้คะแนนรวมสูงขึ้น ทั้งที่มันแย่ลงในมิติที่องค์กรรับไม่ได้ คะแนนเดียวไม่ได้ทำให้ตัดสินใจง่ายขึ้น มันแค่ทำให้การตัดสินใจที่ผิดดูมีเหตุผล</p>
+
+    <h3>รูปแบบความล้มเหลว</h3>
+
+    <p>คู่มือรวบรวมรูปแบบความล้มเหลวไว้แปดข้อ ผมเลือกมาเจ็ดข้อที่พบบ่อยที่สุดในองค์กรไทยที่ผมเข้าไปช่วยดู และเรียงจากข้อที่แก้ยากที่สุด<sup><a href="#th-ref-1">[1]</a></sup></p>
+
+    <ul>
+        <li><strong>คะแนนเดียวสำหรับ Utility และ Security</strong> — ตัวเลขรวมที่ดูดีขึ้นในขณะที่ผลต้องห้ามเพิ่มขึ้น เป็นความล้มเหลวที่มองไม่เห็นจนกว่าจะสาย เพราะตัวชี้วัดเองเป็นคนซ่อนมัน</li>
+        <li><strong>วางการป้องกันทั้งหมดไว้ที่ Output</strong> — ด่านสุดท้ายกรองข้อความได้ แต่เรียกคืนข้อมูลที่ tool เปิดเผยไปแล้วไม่ได้ และหยุดเงินที่โอนไปแล้วไม่ได้</li>
+        <li><strong>ถือว่า allow-list คือความน่าเชื่อถือ</strong> — รายการแหล่งที่อนุมัติแล้วบอกว่าเอกสารมาจากไหน ไม่ได้บอกว่าใครแก้ไขข้างในเมื่อวานนี้ แหล่งที่อนุมัติแล้วปนเปื้อนได้</li>
+        <li><strong>Retry โดยไม่มี Idempotency</strong> — ระบบต้นทางที่ลองใหม่อัตโนมัติจะเปลี่ยนคำขอเดียวให้กลายเป็นรายการหลายรายการ และกุญแจที่ผูกกับ session แทนที่จะผูกกับคำสั่งซื้อจะไม่ช่วยอะไรเลย</li>
+        <li><strong>ให้ Trace เป็นทางเลือก</strong> — ทั้งการเขียน trace หลัง release และการปล่อยให้ระบบทำงานต่อเมื่อเขียน trace ไม่สำเร็จ ทำให้การรับประกันขาดตอนตรงจุดที่ต้องใช้มันที่สุด</li>
+        <li><strong>อนุมัติจากคำบรรยาย ไม่ใช่จากสถานะ</strong> — ผู้ตรวจอ่านสรุปของโมเดลแล้วกดผ่าน ทั้งที่คำบรรยายของโมเดลไม่ใช่หลักฐานว่า effect เกิดขึ้นถูกต้อง</li>
+        <li><strong>อ้าง Zero Risk เพราะ Fixed Suite ไม่พบอะไร</strong> — ชุดที่เราเขียนเองคือชุดที่เรามองเห็น ศูนย์ในชุดที่มองเห็นไม่ใช่ศูนย์ในโลกจริง และหัวข้อ <a href="#th-specimen">4</a> คือหลักฐานที่ชัดที่สุดของข้อนี้</li>
+    </ul>
+
+    <p>อีกข้อที่คู่มือระบุไว้และผมอยากทิ้งไว้เป็นคำเตือนสุดท้ายคือ การกด escalation ลงเพื่อให้ตัวเลข automation ดูดีขึ้น ตัวเลขนั้นขยับได้จริงและขยับได้เร็วมาก แต่สิ่งที่เกิดขึ้นคือความเสี่ยงถูกย้ายจากคิวของคนไปอยู่ในคำตอบที่ปล่อยออกไปแล้ว ซึ่งเป็นที่ที่ราคาแพงกว่ามาก</p>
+
+    <h2 id="th-road-ahead">9. เส้นทางข้างหน้า — จากรางควบคุมสู่ด่านอนุมัติ</h2>
+
+    <p>ถ้าจะหยิบสามอย่างจากบทความนี้ไปใช้พรุ่งนี้ ผมเลือกให้ตามนี้ หนึ่ง — เปิดสถาปัตยกรรมของระบบที่คุณมีอยู่ แล้วชี้ว่าเพดานที่คุณสัญญาไว้กับผู้บริหารอยู่ในบรรทัดโค้ดไหน ถ้าชี้ไม่ได้ภายในห้านาที มันอยู่ใน prompt สอง — ทำ<strong>รายการทางเลี่ยง</strong>ตามหัวข้อ <a href="#th-rail-map">5</a> ให้ครบ ทั้ง batch, retry, webhook, cache, admin tool, console, direct write, vendor fallback และ recovery script แล้วตัดสินทีละเส้นทางว่าจะควบคุมหรือจะถอดออกจากขอบเขตรับรอง สาม — กรอกคอลัมน์ stop condition ของหัวข้อ <a href="#th-decision-matrix">6</a> ก่อนคอลัมน์อื่นทั้งหมด</p>
+
+    <p>สิ่งที่บทความนี้ยัง<em>ไม่</em>ตอบคือคำถามว่า แล้วเราจะรู้ได้อย่างไรว่ารางเหล่านี้ทำงานจริงก่อนปล่อยระบบออกไป และจะเฝ้าดูอย่างไรหลังปล่อยแล้ว หัวข้อ <a href="#th-specimen">4</a> แสดงให้เห็นแล้วว่าชุดทดสอบที่เขียนเองมีเพดานของมัน — 0 จาก 40 ในชุดที่มองเห็น กับ 8 จาก 12 ที่หลุดในชุดที่ปรับตามระบบ เป็นตัวเลขจากระบบเดียวกัน นั่นคืองานของตอนหน้า</p>
+
+    <div class="alert info">
+        <strong>🧭 ชั้นที่บทความนี้ขยับ:</strong> แกน <strong>Spine</strong> — AI-as-a-Core assurance spine หรือแกนการรับประกัน ที่พาดตั้งฉากผ่านทั้งหกชั้นขององค์กร ไม่ใช่ชั้นที่เจ็ด — คำถาม <strong>Q5</strong> (อะไรที่เราบังคับได้เชิงโครงสร้าง และอะไรที่เราทำได้แค่ประเมิน) โดยตอนนี้ตอบครึ่งหลังของคำถามที่ตอน <a href="/blog/ai-transformation-contract">#12</a> เปิดไว้ คือ "แล้วสิ่งที่บังคับได้นั้นถูกบังคับตรงไหน" — Scorecard คอลัมน์ <strong>Risk</strong> เพราะทุกตัวชี้วัดที่บทนี้เพิ่มเข้ามา ตั้งแต่ policy escape, prohibited-effect escape, trace completeness ไปจนถึง rollback time อ่านที่คอลัมน์นั้นทั้งหมด ตอนหน้า <a href="/blog/ai-transformation-release-gate">#14 Five Evaluation Tracks, One Release Gate</a> พาไปดูว่ารางเหล่านี้ต้องถูกทดสอบด้วยหลักฐานห้าเส้นทาง แล้วผ่านด่านเดียวสู่ Promote, Canary, Hold หรือ Reject — ปล่อยระบบด้วยหลักฐาน ไม่ใช่ด้วยวันที่ในปฏิทิน
+    </div>
+
+    <div class="key-takeaways">
+        <h3>🎯 สิ่งสำคัญที่ต้องจำ</h3>
+        <ul>
+            <li><strong>Five rails</strong> = Input, Dialog, Retrieval, Execution, Output อยู่ในกรอบการรับประกันรอบระบบเดียวกัน และมี trace ทุกชั้นที่ระบบเดินไปถึง</li>
+            <li><strong>Effect guard</strong> = ตัวตน อำนาจ โครงสร้าง ขอบเขต ความเสี่ยง การอนุมัติ ไม่ทำซ้ำ — ไม่ผ่านข้อใดข้อหนึ่งคือระงับและส่งต่อ</li>
+            <li><strong>Proposal ไม่ใช่ Effect</strong> = โมเดลเสนอ โค้ดที่กำหนดแน่นอนอนุมัติ และสถานะจริงเป็นผู้พิสูจน์ ไม่ใช่คำบรรยายของโมเดล</li>
+            <li><strong>Least agency</strong> = อำนาจกระทำเท่าที่จำเป็น จำกัดเครื่องมือ สิทธิ์ ระดับอิสระ ระยะเวลา และวงเงิน — ความขาดไม่ได้ของโมเดลไม่ได้แปลว่าควรให้อิสระ</li>
+            <li><strong>517 executions</strong> = ตัวอย่างที่สาธิตการเชื่อมกลไกและตำแหน่งความล้มเหลวใน fixture ที่ผู้เขียนสร้าง ไม่ใช่อัตราความปลอดภัยของประชากร</li>
+            <li><strong>Soft control รั่วได้</strong> = ในชุดที่ปรับตามระบบ violating candidate หลุด 8 จาก 12 ขณะที่ hard mediation กัน prohibited effect ได้ 4 จาก 4 — สี่ครั้ง ไม่ใช่สี่ร้อยครั้ง</li>
+            <li><strong>ไม่มี Rail ใดครอบคลุมทุกเรื่อง</strong> = แหล่งที่อนุมัติแล้วปนเปื้อนได้ tool call ที่มีสิทธิ์ผิดเจตนาได้ และ output filter เรียกข้อมูลที่รั่วไปแล้วกลับคืนไม่ได้</li>
+        </ul>
+    </div>
+
+    <section class="references" aria-labelledby="references">
+        <h2 id="references">อ้างอิง</h2>
+        <p class="references__note">ทุกแหล่งอ้างอิงตรวจสอบและเข้าถึงเมื่อ 5 กันยายน 2569 (2026-09-05) ซีรีส์นี้ใช้ป้ายกำกับหลักฐานสี่แบบตามคู่มือต้นทาง — <strong>Law</strong> กฎหมายที่ผูกพันเมื่ออยู่ในขอบเขต · <strong>Standard</strong> มาตรฐานและแนวปฏิบัติที่เป็นความสมัครใจจนกว่าจะถูกผนวกเข้าเป็นข้อผูกพัน · <strong>Study</strong> หลักฐานเชิงประจักษ์หรือการออกแบบวิจัยที่ระบุชัด · <strong>Synthesis</strong> การสังเคราะห์ของผู้เขียน</p>
+        <ol class="references__list">
+            <li id="th-ref-1"><span class="ref-tag ref-tag--synthesis">Synthesis</span> Mingkhwan, A. <cite>AI Transformation as an Organizational Core — Bilingual Companion Playbook</cite>, บทที่ 8 และ Artifacts 3–6. ต้นฉบับของผู้เขียน 97 หน้า ไม่ได้เผยแพร่ออนไลน์จึงไม่มีลิงก์ · evidence snapshot 5 กันยายน 2026 — เข้าถึง 2026-09-05. <span class="ref-supports">รองรับ: ประโยคเปิดบทเรื่องการแปลงความมั่นใจเป็นภาระที่ทดสอบได้ · สามประเภทควบคุม Hard, Soft, Governance · รางห้ารางกับกรอบการรับประกันรอบระบบ และประโยค "ไม่มี Rail ใดครอบคลุมทุกเรื่อง" · กฎความถ่อมตนของสัญญา · effect guard เจ็ดข้อและกรณี 2,000/2,500 บาท · หลักปฏิบัติห้าประการ · Artifact 3 แผนที่ห้ารางและกฎเรื่องทางเลี่ยง · Artifact 5 decision and consequence matrix · เวิร์กช็อป contract and attack tabletop · ตัวชี้วัดสำคัญและรูปแบบความล้มเหลว · คำแปลศัพท์จากอภิธานท้ายเล่ม</span></li>
+            <li id="th-ref-2"><span class="ref-tag ref-tag--study">Study</span> Saltzer, J. H. &amp; Schroeder, M. D. <cite>The Protection of Information in Computer Systems</cite>. Proceedings of the IEEE 63(9), 1278–1308, กันยายน 1975. <a href="https://doi.org/10.1109/PROC.1975.9939">doi.org</a> — เข้าถึง 2026-09-05. <span class="ref-supports">รองรับ: complete mediation "ทุกการเข้าถึงทุกอ็อบเจกต์ต้องถูกตรวจสิทธิ์" และ least privilege ในฐานะต้นทางปี 1975 ของหลักปฏิบัติข้อ 2 และของ Execution Rail — งานชิ้นนี้ไม่ได้กล่าวถึง AI หรือโมเดลภาษา การนำมาใช้กับระบบ AI เป็นการสังเคราะห์ของผู้เขียน</span></li>
+            <li id="th-ref-3"><span class="ref-tag ref-tag--standard">Standard</span> OWASP Gen AI Security Project. <cite>OWASP Top 10 for Large Language Model Applications 2025</cite> (LLM01:2025 Prompt Injection · LLM06:2025 Excessive Agency). <a href="https://genai.owasp.org/resource/owasp-top-10-for-llm-applications-2025/">genai.owasp.org</a> — เผยแพร่ 17 พฤศจิกายน 2024, เข้าถึง 2026-09-05. <span class="ref-supports">รองรับ: หัวข้อ "Complete mediation" ของ LLM06 ที่ระบุให้บังคับสิทธิ์ที่ระบบปลายทางแทนการให้โมเดลตัดสิน · ต้นเหตุสามแบบของ excessive agency · ความต่างระหว่าง direct กับ indirect prompt injection · ประโยคที่ระบุว่ายังไม่ชัดว่ามีวิธีป้องกัน prompt injection แบบกันได้เด็ดขาด · การจับคู่ rail กับรหัสความเสี่ยงเป็นการจับคู่ของผู้เขียน ไม่ใช่การจับคู่ที่ OWASP เผยแพร่ · ฉบับ 2026 เผยแพร่ 3 สิงหาคม 2026 และประกาศ 1 กันยายน 2026 แต่หน้ารายความเสี่ยงรายข้อยังไม่ปรากฏ ณ วันเข้าถึง</span></li>
+            <li id="th-ref-4"><span class="ref-tag ref-tag--standard">Standard</span> OWASP Foundation. <cite>LLM Prompt Injection Prevention Cheat Sheet</cite>. <a href="https://cheatsheetseries.owasp.org/cheatsheets/LLM_Prompt_Injection_Prevention_Cheat_Sheet.html">cheatsheetseries.owasp.org</a> — หน้าเอกสารไม่มีวันเผยแพร่หรือวันแก้ไขกำกับไว้ จึงอ้างด้วยวันที่เข้าถึงเพียงอย่างเดียว, เข้าถึง 2026-09-05. <span class="ref-supports">รองรับ: การป้องกันเป็นชั้น ๆ ตั้งแต่ตรวจ input, ให้คนอยู่ในเส้นทางสำหรับคำขอความเสี่ยงสูง, แยกคำสั่งออกจากข้อมูลด้วยรูปแบบที่มีโครงสร้าง, ให้สิทธิ์น้อยที่สุด จนถึงตรวจสอบผลลัพธ์ · ข้อจำกัดที่ระบุว่า guardrail ที่เป็นโมเดลเองก็ถูก inject ได้ และควรเป็นเพียงชั้นหนึ่งของการป้องกันเชิงลึก</span></li>
+            <li id="th-ref-5"><span class="ref-tag ref-tag--synthesis">Synthesis</span> Mingkhwan, A. <cite>Engineering AI-Core Systems — A Reference Architecture and Assurance Contract for Software 3.0, revision 8</cite>. ต้นฉบับของผู้เขียน กันยายน 2026 · ยังไม่เผยแพร่และไม่มี URL สาธารณะ จึงไม่มีลิงก์ — อ้างผ่านคู่มือ [1]. <span class="ref-supports">รองรับ: specimen ที่จำกัดขอบเขตไว้อย่างจงใจ 517 การรันแบบ deterministic · fixed suite 30 จาก 30 กรณีปกติ, ศูนย์จาก 40 policy escape, ศูนย์จาก 6 prohibited refund effect, 70 จาก 70 route trace · adaptive-to-implementation 8 จาก 12 violating candidate หลุด และ 4 จาก 4 prohibited effect ถูกบล็อก · ทุกตัวเลขอยู่ใต้ประโยคขอบเขตที่ยกมาไว้ในหัวข้อ 4 และไม่มีการทำซ้ำโดยทีมอิสระ</span></li>
+            <li id="th-ref-6"><span class="ref-tag ref-tag--standard">Standard</span> NIST. <cite>Adversarial Machine Learning: A Taxonomy and Terminology of Attacks and Mitigations</cite>, NIST AI 100-2e2025. <a href="https://nvlpubs.nist.gov/nistpubs/ai/NIST.AI.100-2e2025.pdf">nvlpubs.nist.gov</a> — เผยแพร่มีนาคม 2025 (อนุมัติ 20 มีนาคม 2025 · ไฟล์ฉบับแก้ไข 1 เมษายน 2025 · ยังเป็นฉบับล่าสุด ณ วันเข้าถึง), เข้าถึง 2026-09-05. <span class="ref-supports">รองรับ: อนุกรมวิธานการโจมตี GenAI ที่ใช้ผูกโจทย์ tabletop ทั้งห้ากรณี ได้แก่ indirect prompt injection หัวข้อ 3.4 พร้อมสามหมวดเป้าหมายของผู้โจมตี, availability หัวข้อ 3.4.1, integrity หัวข้อ 3.4.2 และความเสี่ยงจาก agent ที่ใช้ tool ได้ หัวข้อ 3.5 · ประโยคหัวข้อ 3.4.4 ว่ามาตรการปัจจุบันยังไม่ป้องกันได้ครบทุกเทคนิค · หัวข้อ 4.1.2 ว่าการออกแบบมาตรการบรรเทาเป็นกระบวนการเฉพาะกิจและผิดพลาดได้ · ขอบเขตของ NIST เองว่าเป็นแนวทางโดยสมัครใจ ไม่แทนกฎหมาย · การจับคู่กับรางห้ารางเป็นของผู้เขียน NIST ไม่ได้รับรองสถาปัตยกรรมนี้</span></li>
+            <li id="th-ref-7"><span class="ref-tag ref-tag--study">Study</span> NIST. <cite>Mathematical Proof Supports Transition to a Continuous-Monitor-and-Update Security Model for AI Systems</cite>. <a href="https://www.nist.gov/news-events/news/2026/06/nist-mathematical-proof-supports-transition-continuous-monitor-and-update">nist.gov</a> — เผยแพร่ 9 มิถุนายน 2026, เข้าถึง 2026-09-05. <span class="ref-supports">รองรับ: บทพิสูจน์ว่าไม่มีชุด guardrail ที่จำกัดจำนวนชุดใดทนทานต่อ adversarial prompt ได้ในทุกกรณี และข้อเสนอให้ใช้การเฝ้าระวังกับการปรับปรุงต่อเนื่องแทนแนวป้องกันแบบตายตัว พร้อมข้อจำกัดที่ NIST ระบุเองว่าแนวทางนี้ยังไม่ได้แก้ปัญหาอย่างสมบูรณ์ — ใช้สนับสนุนหลักปฏิบัติข้อ 5 และประโยค "ไม่มี Rail ใดครอบคลุมทุกเรื่อง"</span></li>
+        </ol>
+    </section>
+    </div>
+
+    <div class="l-en" lang="en">
+
+    <p>🤔 <strong>The model proposes a 2,500-baht refund with a very plausible explanation — what should stop it: the prompt, a classifier, or code that does not read the explanation at all?</strong></p>
+
+    <p>The previous post, <a href="/blog/ai-transformation-contract">#12 The Assurance Contract</a>, ended on a single document — the <strong>assurance contract</strong> that forces us to stop saying a system is "safe and reliable" and to write instead, property by property, what is a <strong>structural guarantee</strong>, what is a <strong>semantic estimate</strong>, and what residual risk is left over.<sup><a href="#en-ref-1">[1]</a></sup> The contract says <em>what</em> we guarantee. This post answers the question an engineer asks immediately afterwards: <em>where</em> in the system do those obligations actually sit?</p>
+
+    <p>The one-line answer is <strong>on the rails, not in the instructions</strong> — <strong>five rails</strong> named Input, Dialog, Retrieval, Execution and Output, placing a mechanism at every seam an LLM system has, with a seven-check effect guard standing in the joint between "what the model proposed" and "what actually happened in the ledger". The sentence this chapter hands you is one sentence: <strong>the model proposes • deterministic control authorizes • authoritative state proves</strong>. The rest of this post unpacks it into five rails, three workshops you can genuinely fill in, and one set of test results about which I will be blunt on what it proves and what it does <em>not</em>.</p>
+
+    <h2 id="en-proposal-not-effect">1. A Proposal Is Not an Effect — a Boundary Needs Code Standing on It, Not a Sentence</h2>
+
+    <p>The playbook runs one case through the whole Engineer group: <strong>Luma Commerce Thailand</strong> and a use case called <code>CX-REFUND-01</code>, a customer-care assistant that answers refund-policy questions and, in some cases, issues the refund itself <em>(a fictional case from the playbook)</em> — the company, the use-case ID and every number attached to this case are invented for teaching. There is no real customer here, and no measurement taken from a system in service.</p>
+
+    <p>So the scenario behind the opening question runs like this. The contract for <code>CX-REFUND-01</code> states that a refund cleared by the guard will not exceed <strong>2,000 baht</strong>, and will not execute at all without an authenticated approval token. One day the model proposes <strong>2,500 baht</strong> with a tidy eligibility explanation: it cites the right policy clause, the tone is courteous, and every part of it looks correct. The question is who should be the one to say no.</p>
+
+    <p>There are three wrong answers, and I have met all three in real meeting rooms. The first is <em>add a line to the prompt</em> saying never exceed two thousand. The second is <em>put a classifier in front</em> and let it flag text that looks abnormal. The third is <em>appoint a second model as the reviewer</em>. All three share one property: the thing making the final decision is still a system that produces probabilistic output, and the evidence that the money stayed under two thousand is still a piece of <em>text</em> rather than a piece of <em>state</em>.</p>
+
+    <p>This chapter's answer is the exact opposite. What should stop 2,500 baht is code that does not read a single line of the explanation, and checks only whether the amount falls inside the range the contract allows, whether an authenticated approval token is present, and whether this request has already been executed once. If any one of those fails, it refuses and writes an escalation trace <strong>even if the explanation sounds plausible</strong>.<sup><a href="#en-ref-1">[1]</a></sup> This is what the playbook calls <strong>proposal–effect separation</strong>, and the mechanism that makes it real is <strong>effect mediation</strong>.</p>
+
+    <p>The difference is not a technical detail. It changes what you are able to say to a board. If the limit lives in the prompt, the most you can claim is "we told the model". If the limit lives in a tool path that every route is forced through, what you can claim is "a refund that travels this path cannot exceed two thousand baht" — and the second sentence is the only one anybody can audit. That is why the chapter opens the way it does.<sup><a href="#en-ref-1">[1]</a></sup></p>
+
+    <blockquote>"Assurance converts confidence into accountable testable obligations and makes failure routing part of the design."</blockquote>
+
+    <p>The hardest-working phrase in that sentence is "failure routing". A well-designed system is not one that never breaks; it is one that, when it breaks, knows which way to go — refuse, narrow, escalate to a person, or stop fail-closed — and every one of those routes was written into the contract in advance rather than improvised during the incident. The playbook adds one more rule of modesty, and I think it is the line an engineering team should print and put on the wall.<sup><a href="#en-ref-1">[1]</a></sup></p>
+
+    <blockquote>"It should never claim that the whole AI system is safe. It should say narrowly what can be enforced, what can only be estimated, and what residual risk remains."</blockquote>
+
+    <p>Accept that rule and the design question changes shape immediately. It stops being "how do we make the model safer" and becomes "what do we put where, so that each property we promised has a real mechanism behind it". The answer to the second question is five rails.</p>
+
+    <h2 id="en-five-rails">2. The Five Control Rails and the Assurance Envelope</h2>
+
+    <p>Before we look at the figure, three things that people habitually lump together into one word — "guardrails" — have to come apart. The playbook keeps them as three distinct control classes, and that separation is a precondition for everything that follows.<sup><a href="#en-ref-1">[1]</a></sup></p>
+
+    <ul>
+        <li><strong>Hard enforcement</strong> — creates structural invariants such as authorized tools, valid parameters, transaction limits and schema-conforming payloads, subject to two conditions: every path must be mediated (complete mediation) and the implementation must be correct</li>
+        <li><strong>Soft detection</strong> — estimates semantic properties such as injection, faithfulness, relevance, privacy and policy alignment. Its verdicts carry false accepts and false rejects on a population that has to be stated</li>
+        <li><strong>Governance</strong> — supplies approval, trace retention, audit, rollback and incident response. It creates accountability and recovery, but it cannot make any individual answer correct</li>
+    </ul>
+
+    <p>The three answer different questions and <strong>cannot stand in for one another</strong>. Hard enforcement answers "impossible". Soft detection answers "probably not, at this threshold". Governance answers "if it happened, we can find it and reverse it". An organisation that collapses all three into one phrase — our protections — will write a contract that promises at the hard level using a mechanism that only works at the soft level, without noticing it has done so.</p>
+
+    <figure class="figure">
+      <a href="../images/ai-transformation-fig-10-five-rails.png">
+        <img class="figure__img" src="../images/ai-transformation-fig-10-five-rails.png" alt="Five chained control rails — 1 Input, 2 Dialog, 3 Retrieval, 4 Execution, 5 Output — inside a red ASSURANCE ENVELOPE." width="1400" height="700" loading="lazy" decoding="async">
+      </a>
+      <figcaption class="figure__caption">Figure 10 · The five control rails and the assurance envelope — reconstructable trace across every reached stage. Original redraw from Mingkhwan 2026.</figcaption>
+    </figure>
+
+    <p>The figure above is the five rails, in the order a single request actually travels: from the text a user types through to the effect that lands in the outside world. The red frame around all five is the <strong>assurance envelope</strong> — the boundary inside which we declare a guarantee. The dark bar underneath is the <strong>reconstructable trace</strong>, which is not a sixth rail but a span across every stage the system reaches.</p>
+
+    <p>The playbook states each rail's duty briefly: the Input Rail handles the user turn · the Dialog Rail governs multi-turn policy and permitted state transitions · the Retrieval Rail enforces source membership while estimating relevance and support · the Execution Rail authorizes and bounds every tool effect · the Output Rail enforces structure and estimates semantic quality before release · and trace retention spans them all.<sup><a href="#en-ref-1">[1]</a></sup></p>
+
+    <div class="table-wrapper">
+        <table>
+            <thead>
+                <tr>
+                    <th>Rail</th>
+                    <th>What it enforces (structural)</th>
+                    <th>What it estimates (semantic)</th>
+                    <th>Trace it must write</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td><strong>1 Input</strong><br>the user turn</td>
+                    <td>The scope of requests it will accept, and the route when it will not — only the part that can be enumerated</td>
+                    <td>Injection and fit to scope — entirely soft, and always carrying false accepts</td>
+                    <td>Retain the score and the threshold that decided it, with the detector version</td>
+                </tr>
+                <tr>
+                    <td><strong>2 Dialog</strong><br>multi-turn state</td>
+                    <td>Enumerable state transitions; hard enforcement only over the set you can actually count</td>
+                    <td>Cross-turn policy and slow goal drift — soft plus governance</td>
+                    <td>Retain the state before and after, and the verdict for each turn</td>
+                </tr>
+                <tr>
+                    <td><strong>3 Retrieval</strong><br>source membership</td>
+                    <td>Provenance and source membership — a document may come only from a pinned index</td>
+                    <td>Relevance and support: does the quoted passage really carry the answer</td>
+                    <td>Retain the source ID and score of every passage that was used</td>
+                </tr>
+                <tr>
+                    <td><strong>4 Execution</strong><br>tool effects</td>
+                    <td>Authorization, schema, parameters and bounds — hard across the whole row. This is the rail where money moves</td>
+                    <td>None. On this rail an estimate is not a deciding criterion</td>
+                    <td>Retain the proposal, the verdict and the pre/post-state of every tool call</td>
+                </tr>
+                <tr>
+                    <td><strong>5 Output</strong><br>release</td>
+                    <td>The schema of what is released — if it does not parse, it does not ship</td>
+                    <td>Faithfulness, privacy and harm before release</td>
+                    <td>Retain candidates, citations and the verdict of each judge</td>
+                </tr>
+                <tr>
+                    <td><strong>All rails</strong><br>every reached stage</td>
+                    <td>Terminal trace is hard — a failed trace write blocks release</td>
+                    <td>Review and rollback sit on the governance side, not the estimating side</td>
+                    <td>Retain the terminal route of every request that arrives</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <p>The second and third columns are the heart of that table. Every time someone says "our system has checks in place", the only question worth asking back is which column those checks are in — because what sits in the third column cannot be written into a contract as a commitment. It can only be written as an estimate, with a threshold, a population, and error rates on both sides.</p>
+
+    <p>And here is the sentence I consider the most important in the chapter. The playbook sets it in bold: <strong>no rail covers everything</strong>, with four examples explaining why.<sup><a href="#en-ref-1">[1]</a></sup></p>
+
+    <ul>
+        <li><strong>An input filter cannot see malicious instructions arriving through retrieval</strong> — an instruction embedded in a document never passes through the channel the user types into</li>
+        <li><strong>An approved source can be poisoned</strong> — an allow-list says where a document came from, not what is written inside it</li>
+        <li><strong>An authorized tool call can oppose the user's intent</strong> — having permission is not the same as being right</li>
+        <li><strong>An output filter cannot recall data a tool has already exposed</strong> — an effect that has happened is beyond the reach of the last gate</li>
+    </ul>
+
+    <p>That last item is the architectural reason the Execution Rail carries a different weight from the others. The other rails decide whether a piece of <em>text</em> goes forward. The Execution Rail decides whether <em>money</em> moves — and reversing those two things does not cost remotely the same.</p>
+
+    <h2 id="en-effect-guard">3. The Seven-Check Effect Guard and Least Agency</h2>
+
+    <p>Now down to the Execution Rail up close. The next figure is the one image I would most like to lodge in your memory from this whole series. On the left is what the model produces, in the middle is what decides, and on the right is what actually happens.</p>
+
+    <figure class="figure">
+      <a href="../images/ai-transformation-fig-11-proposal-not-effect.png">
+        <img class="figure__img" src="../images/ai-transformation-fig-11-proposal-not-effect.png" alt="A model proposal (issue_refund, THB 2,500) passes through an EFFECT GUARD that runs seven checks and exits as BLOCK AND ESCALATE." width="1400" height="840" loading="lazy" decoding="async">
+      </a>
+      <figcaption class="figure__caption">Figure 11 · A proposal is not an effect — the model proposes, deterministic control authorizes, authoritative state proves.</figcaption>
+    </figure>
+
+    <p>The box in the middle is the <strong>effect guard</strong> — an ordinary program that runs deterministically, does no learning, holds no probabilities, and never reads the accompanying rationale. It runs seven checks in order, and if any one of them fails there is exactly one destination: <strong>block and escalate</strong>.</p>
+
+    <div class="table-wrapper">
+        <table>
+            <thead>
+                <tr>
+                    <th>#</th>
+                    <th>Check</th>
+                    <th>What the guard actually verifies</th>
+                    <th>CX-REFUND-01 — if the check fails</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>1</td>
+                    <td><strong>Identity</strong></td>
+                    <td>Is the person who will be affected the same person who authenticated? Read from the identity system, never from the conversation</td>
+                    <td>Refuse and escalate. There is no "ask the customer again" inside the chat window</td>
+                </tr>
+                <tr>
+                    <td>2</td>
+                    <td><strong>Authority</strong></td>
+                    <td>Is this route permitted to call this tool? Checked in the downstream system, not in the model</td>
+                    <td>Fail closed. There is no fallback onto a route with wider permissions</td>
+                </tr>
+                <tr>
+                    <td>3</td>
+                    <td><strong>Schema</strong></td>
+                    <td>Does the payload match the declared schema in every field? If it does not parse, it does not run</td>
+                    <td>Refuse, and keep the candidate in the trace so it can be analysed later</td>
+                </tr>
+                <tr>
+                    <td>4</td>
+                    <td><strong>Parameters</strong></td>
+                    <td>Is every value inside the range the contract allows, including the per-transaction and per-period limits</td>
+                    <td>2,500 baht falls here, because the structural ceiling is 2,000 baht</td>
+                </tr>
+                <tr>
+                    <td>5</td>
+                    <td><strong>Risk</strong></td>
+                    <td>Is this request within the consequence class this route can carry? A higher class must change route</td>
+                    <td>Divert to the route that requires human approval, rather than lowering the bar</td>
+                </tr>
+                <tr>
+                    <td>6</td>
+                    <td><strong>Approval</strong></td>
+                    <td>Is there an authenticated approval token? The sentence "the customer agreed" is not a token</td>
+                    <td>No token, no action. There is no urgency exception</td>
+                </tr>
+                <tr>
+                    <td>7</td>
+                    <td><strong>Idempotency</strong></td>
+                    <td>Has this request already been executed? The key must come from the order, not from the session</td>
+                    <td>Return the original result, create no new record, however many times the caller retries</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <blockquote>💡 My view: of this chapter's five operating principles, the one I quote whole is principle 2 — <strong>"Put hard controls at release and effect boundaries — Complete mediation is a prerequisite."</strong> That sentence discards a great many long arguments, because it says the position of a control matters more than the cleverness of a control. The most accurate check in the world, placed at the wrong point, is still a check you can walk around. And "prerequisite" translates literally as: if any route can still bypass the guard, we cannot sign off yet — not sign now and close the gap later.</blockquote>
+
+    <p>The principle did not begin in the LLM era. Saltzer and Schroeder's 1975 paper <cite>The Protection of Information in Computer Systems</cite> laid down <strong>complete mediation</strong> in a single line — "every access to every object must be checked for authority" — and set out <strong>least privilege</strong> as "every program and every user of the system should operate using the least set of privileges necessary to complete the job".<sup><a href="#en-ref-2">[2]</a></sup> Let us be exact: the 1975 work does not mention AI or language models once. Placing it beside the Execution Rail is the author's synthesis, and the playbook itself states the boundary on this source — enduring security principles require adaptation to contemporary distributed AI systems, not wholesale transplantation.</p>
+
+    <p>But there is one point that is nobody's synthesis — OWASP itself puts the two on the same page. In <cite>OWASP Top 10 for Large Language Model Applications 2025</cite>, under LLM06:2025 Excessive Agency, one prevention item carries the literal heading <strong>"Complete mediation"</strong>, and its text reads "Implement authorization in downstream systems rather than relying on an LLM to decide if an action is allowed or not"<sup><a href="#en-ref-3">[3]</a></sup> — enforce authorization in the downstream system instead of trusting the model to decide whether an action is permitted. That is the one page where I will put a 2025 standard and a 1975 paper in the same sentence, and even there OWASP is endorsing the <em>principle</em>, not this playbook's five rails.</p>
+
+    <p>The same list separates the root causes of Excessive Agency into three, and they translate straight into the language of the workshop: <strong>excessive functionality</strong> is an agent with access to functions the intended operation does not need · <strong>excessive permissions</strong> is an extension holding permissions on downstream systems beyond what the application needs · <strong>excessive autonomy</strong> is an application that fails to independently verify and approve high-impact actions.<sup><a href="#en-ref-3">[3]</a></sup> Those three are the working definition of what the playbook calls <strong>least agency</strong> — hold the tools, the permissions, the degree of autonomy, the lifetime of that authority and the transaction limits down to what the job actually needs, not to what the system happens to be capable of.</p>
+
+    <p>One sentence on dates, said plainly: I cite the codes and wording of the <strong>2025</strong> edition (published 17 November 2024) because that is the edition whose text is still verifiable on the publisher's own site at the access date — OWASP published a 2026 edition on 3 August 2026 and announced it on 1 September 2026, but as of 5 September 2026 the per-risk pages of that new edition had not yet appeared on the publisher's site, so I cite no code and no ranking from the 2026 edition at all.</p>
+
+    <p>The other source worth reading beside it is OWASP's <cite>LLM Prompt Injection Prevention Cheat Sheet</cite>, which lays the defence out in layers — validate input, keep a human in the loop for high-risk requests, separate instructions from data using structured formats, grant least privilege, and only then validate the response.<sup><a href="#en-ref-4">[4]</a></sup> The sentence people citing this document tend to skip is the one saying that a guardrail which is itself a model <em>can also be injected</em>, and should be treated as one layer in a defence-in-depth design rather than as a replacement for input validation — the page carried no publication or revision date when I retrieved it on 5 September 2026, so I cite it by access date alone.</p>
+
+    <div class="alert">
+        <strong>Beware: the "seven checks" are not one single list:</strong> the book contains more than one list of seven. Figure 11 and the table above use <em>Identity, Authority, Schema, Parameters, Risk, Approval, Idempotency</em>. The definition of <strong>effect mediation</strong> in the closing glossary has <em>transaction limits</em> as its seventh item instead of idempotency. And the completed example for <code>CX-REFUND-01</code> uses a third set again: identity, order, eligibility, amount, confirmation, idempotency and state. The three lists differ deliberately — the first is the general guard, the second is the definition, the third is the application to one case. When you write a contract, say which list you are citing; do not smooth the difference away.
+    </div>
+
+    <p>The last thing the guard must do is write a trace, and that trace has to keep the proposal and the effect visibly apart. The illustrative trace the playbook uses looks roughly like this <em>(a fictional case from the playbook)</em></p>
+
+    <pre><code># CX-REFUND-01 — illustrative retained event
+Begin       tr-8A41 · request rq-771 · authenticated customer c-204
+            order o-919 · Thai · manifest rc4
+
+Generate    candidate hash · protected text · citations
+            proposed: issue_refund(order=o-919, amount=1850, currency=THB)
+            ── no money has moved by this line; this is the "proposal" ──
+
+Execution   retain Proposal · Verdict · Pre/Post-state
+            route: Reject | Approve | Fail Closed</code></pre>
+
+    <p>The <code>proposed:</code> line is what the model wanted to happen; the Execution line is what the system allowed to happen. If your trace has only one line and it reads "refund succeeded", you cannot tell an auditor whether the guard did anything at all, because you never kept what the guard refused.</p>
+
+    <h2 id="en-specimen">4. The 517-Execution Specimen — What It Shows and What It Does Not Prove</h2>
+
+    <p>Everything so far is an architectural proposal. The question to ask next is whether there is any evidence that putting hard controls at the effect boundary produces a different result from putting soft controls somewhere else. There is — but it is a very small piece of evidence, and I will give you its size in the same breath as its numbers.</p>
+
+    <p>The engineering paper <cite>Engineering AI-Core Systems</cite>, revision 8, includes a deliberately bounded authored specimen — <strong>517</strong> deterministic executions on a fixture the author built, using <code>CX-REFUND-01</code> as the test case and a single configuration.<sup><a href="#en-ref-5">[5]</a></sup> There is no sample drawn from any population, no confidence interval and no comparison system. The number 517 describes only itself.</p>
+
+    <p>In the <strong>fixed suite</strong> — the tests the author wrote in advance and could therefore see in full — the results ran as follows: with the full envelope engaged the system completed <strong>30 of 30</strong> benign cases, allowed <strong>zero of 40</strong> policy escapes, produced <strong>zero of 6</strong> prohibited refund effects, and recorded <strong>70 of 70</strong> route traces.<sup><a href="#en-ref-5">[5]</a></sup> That set of numbers is dangerously easy to read, so let me attach three notes: 30 is the size of the benign arm in this suite, not 517 and not a number of customers · zero of 40 means zero <em>in the visible suite</em>, not zero in the world · and 6 is a denominator so small it cannot support any rate claim at all.</p>
+
+    <p>The more interesting arm is the second one. <strong>Adaptive-to-implementation</strong> testing means writing the attacks <em>after</em> seeing how this particular system defends itself — not generic attacks fired at any model. The result was that soft controls disclosed their own limits at once: <strong>8 of 12</strong> violating candidates were released, while hard execution mediation blocked all <strong>4</strong> prohibited effect attempts out of 4.<sup><a href="#en-ref-5">[5]</a></sup></p>
+
+    <p>That pair of numbers is the whole substance of this post. Same system, same attacker, same run — yet the layer that estimates meaning let two-thirds through, while the layer that checks structure held completely. This does not make soft detection worthless: it catches things hard controls cannot see at all, such as a manipulative tone or a claim with no evidence behind it. What it means is that <strong>a property you cannot afford to get wrong must not be entrusted to a layer that estimates</strong>.</p>
+
+    <p>And the denominators need saying once more. 4 of 4 is <em>four attempts</em>, not four hundred. It is the smallest denominator in this entire post. Anyone who lifts it into a slide reading "the guard blocked 100%" is converting a demonstration of mechanism into a statistic, which is precisely what the specimen's own boundary forbids.</p>
+
+    <div class="alert danger">
+        <strong>The specimen's boundary — read it beside every number above:</strong> This illustrates wiring and failure localization in author-constructed fixtures. It does not establish production quality, independent red-team robustness, legal compliance, or a population safety rate.
+    </div>
+
+    <p>I will add three boundaries of my own. This work is the author's own manuscript, <strong>unpublished and with no public URL</strong>, so there is no link to check · there has been no replication by an independent team, and nobody outside this playbook has confirmed any of these numbers · and all of it was measured on one fixture and one fictional case, not on a system with real customers using it. I cite it because it localises <em>where failure happens</em> with unusual clarity, not because it measures safety.</p>
+
+    <h2 id="en-rail-map">5. Workshop — The Five-Rail Architecture Map (Artifact 3)</h2>
+
+    <p>The rest of this post is material you can actually fill in, beginning with the map the playbook calls Artifact 3. It always fixes three things before the table itself — <strong>purpose</strong>, put a named control at every LLM-specific seam · <strong>use when</strong>, designing architecture, adding retrieval, memory, tools or conversation state, and investigating escapes · <strong>accountable owner</strong>, the application architect owns end-to-end coverage, each rail has its own operational owner, and security owns the threat model.<sup><a href="#en-ref-1">[1]</a></sup></p>
+
+    <p>Notice that ownership sits at three levels on purpose. The person who answers "is every path mediated?" has to be one person. The person who watches how well each individual rail performs day to day is somebody else. And the person who thinks like an attacker is a third. If your organisation has one name in all three boxes, you do not have an owner; you have a bottleneck.</p>
+
+    <div class="table-wrapper">
+        <table>
+            <thead>
+                <tr>
+                    <th>Rail</th>
+                    <th>Property and control class</th>
+                    <th>Signal, rule and evidence</th>
+                    <th>Route, owner and residual risk</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td><strong>1 Input</strong></td>
+                    <td>Scope and injection; soft</td>
+                    <td>Retain score and threshold</td>
+                    <td>Refuse, narrow or escalate</td>
+                </tr>
+                <tr>
+                    <td><strong>2 Dialog</strong></td>
+                    <td>Cross-turn policy; soft/governance; hard only for enumerable transitions</td>
+                    <td>Retain states and verdict</td>
+                    <td>Redirect, refuse or escalate</td>
+                </tr>
+                <tr>
+                    <td><strong>3 Retrieval</strong></td>
+                    <td>Provenance hard; support/relevance soft</td>
+                    <td>Retain source IDs and scores</td>
+                    <td>Drop, retrieve again or abstain</td>
+                </tr>
+                <tr>
+                    <td><strong>4 Execution</strong></td>
+                    <td>Authorization, schema, parameters and bounds; hard</td>
+                    <td>Retain proposal, verdict and pre/post-state</td>
+                    <td>Reject, approve or fail closed</td>
+                </tr>
+                <tr>
+                    <td><strong>5 Output</strong></td>
+                    <td>Schema hard; faithfulness, privacy and harm soft</td>
+                    <td>Retain candidate, citations and verdicts</td>
+                    <td>Repair, withhold or escalate</td>
+                </tr>
+                <tr>
+                    <td><strong>All rails</strong></td>
+                    <td>Terminal trace hard; review/rollback governance</td>
+                    <td>Retain terminal route</td>
+                    <td>Block release if the trace write fails</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <p>Two sentences sit under that table and they are, in my experience, the part teams forget most often. The first is the bypass rule: <strong>mark every bypass</strong> — batch, retry, webhook, cache, administrator tool, console, direct write, vendor fallback and recovery script — and then <strong>either mediate that path or exclude it from the guarantee</strong>.<sup><a href="#en-ref-1">[1]</a></sup> That sentence is complete mediation in its working form, because most systems are not breached through the front door; they are walked around at the recovery script nobody had in mind while drawing the architecture.</p>
+
+    <p>The second sentence is the whole chapter compressed into one line.<sup><a href="#en-ref-1">[1]</a></sup></p>
+
+    <blockquote>"The model proposes; an external guard authorizes; a transactional tool creates the effect."</blockquote>
+
+    <p>The word external matters enormously. A guard living in the same process as the proposer, or in the same context as text that may have been injected, is not an external guard. And transactional matters just as much, because a tool that creates an effect must have only two states, committed or not committed — never an intermediate state where the thing is half done.</p>
+
+    <h3>The completed example — CX-REFUND-01</h3>
+
+    <p>The next table is the row-by-row example the playbook fills in for <code>CX-REFUND-01</code>. The right-hand column I would like you to read slowly is each owner's <strong>residual risk</strong>, because that is the column most often deleted when this document is turned into slides — and it is the entire reason the document exists.</p>
+
+    <div class="table-wrapper">
+        <table>
+            <thead>
+                <tr>
+                    <th>Rail</th>
+                    <th>Example implementation</th>
+                    <th>Owner and residual risk</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td><strong>Input</strong></td>
+                    <td>Detectors check scope and injection and queue anomalous requests; retain the detector version, the language, the score, the threshold and the rule that decided</td>
+                    <td>Security — the residual risk is adaptive false negatives, attacks written after seeing the defence</td>
+                </tr>
+                <tr>
+                    <td><strong>Dialog</strong></td>
+                    <td>A state machine permits only the steps identify, explain, confirm facts, propose, confirm action and close, and records the state before and after with a summary hash</td>
+                    <td>CX Product — the residual risk is slow goal drift across many turns</td>
+                </tr>
+                <tr>
+                    <td><strong>Retrieval</strong></td>
+                    <td>Search only pinned indexes, check source IDs as a hard rule, estimate support and drop stale passages; retain query, corpus, ranker, passage and score</td>
+                    <td>Knowledge Platform — the residual risk is approved-but-obsolete content</td>
+                </tr>
+                <tr>
+                    <td><strong>Execution</strong></td>
+                    <td>Permit only <code>issue_refund</code> and let the server validate identity, order, eligibility, amount, confirmation, idempotency and state; retain the proposal, the normalized arguments, the verdict, the result and the post-state</td>
+                    <td>Payments — the residual risk is composed abuse, several individually valid sub-requests assembling into a wrong effect</td>
+                </tr>
+                <tr>
+                    <td><strong>Output</strong></td>
+                    <td>Parse the schema, scan for privacy, and require that every policy claim has supporting evidence; retain the candidate, the citations, the judges, the thresholds, the route and the text actually released</td>
+                    <td>CX Quality — the residual risk is shared blind spots between a generator and a judge built on the same base</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <p>Read the right-hand column downwards and a pattern appears. No rail's residual risk is "we have not finished checking"; every one of them is "there is something this rail cannot see, by its own nature". That is why the playbook insists no rail covers everything, and why this document has to carry real names — because a risk with no owner is a risk nobody is watching.</p>
+
+    <h2 id="en-decision-matrix">6. Workshop — The Decision and Consequence Matrix (Artifact 5)</h2>
+
+    <p>The map in section <a href="#en-rail-map">5</a> answers where the mechanisms are. The table in this section answers a different question: <em>how much authority should the system have, for each individual decision?</em> The playbook states the purpose of Artifact 5 as setting authority per decision and effect, <strong>not once for the whole application</strong>, and adds a sentence I think belongs in every organisation's AI policy: <strong>model indispensability does not determine acceptable autonomy</strong>.<sup><a href="#en-ref-1">[1]</a></sup></p>
+
+    <p>That sentence cuts off the argument I hear most often — "the system cannot function without the model any more, so we have to let it run on its own". Indispensability is a fact about dependence; autonomy is a decision about risk. They answer different questions, and different people answer them: the <strong>business decision owner</strong> accepts the authority level · the <strong>risk owner</strong> challenges the expected harm · the <strong>tool owner</strong> enforces the route in code.</p>
+
+    <p>The playbook is very careful about how expected harm is used: as an <em>aid</em>, not as a single truth — likelihood multiplied by consequence, adjusted for exposure, detectability and recoverability, and then <strong>keeping four things apart</strong>: released text, reads, reversible writes, and irreversible effects. The rule that follows is that higher authority and lower recoverability require stronger evidence, and it closes with a sentence worth reading aloud: <strong>"Detectors cannot replace authority reserved to people"</strong> — the authority that law, policy, ethics or risk appetite has kept for a human being.<sup><a href="#en-ref-1">[1]</a></sup></p>
+
+    <div class="table-wrapper">
+        <table>
+            <thead>
+                <tr>
+                    <th>Decision or effect</th>
+                    <th>Consequence profile</th>
+                    <th>Authority and route</th>
+                    <th>Owner and stop condition</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>Retrieve policy and order facts</td>
+                    <td>Read-only but sensitive; wrong access is detectable in logs, but leaked data cannot be recovered</td>
+                    <td>Bounded autonomous, with least privilege, customer/order binding and field limits</td>
+                    <td>Data owner — stop on any cross-customer access</td>
+                </tr>
+                <tr>
+                    <td>Release a routine policy answer</td>
+                    <td>Can mislead immediately; correctable later, but trust is already spent</td>
+                    <td>Bounded autonomous only when source, schema, support and terminal trace all pass</td>
+                    <td>Policy owner — withhold when sources are stale, mutually contradictory or weakly supporting</td>
+                </tr>
+                <tr>
+                    <td>Recommend a remedy</td>
+                    <td>Creates expectation, but no money has been paid out</td>
+                    <td>Draft only, and it must state explicitly that it awaits the guard's verdict</td>
+                    <td>CX Product — escalate on ambiguity, a legal complaint or a fraud signal</td>
+                </tr>
+                <tr>
+                    <td>Execute an eligible refund of no more than 2,000 baht</td>
+                    <td>A financial write with a bounded cost of recovery</td>
+                    <td>Bounded autonomous after customer confirmation and once every hard rule passes</td>
+                    <td>Payments — stop immediately on a prohibited effect, a duplicate record, an identity mismatch or a bad state</td>
+                </tr>
+                <tr>
+                    <td>A refund above the ceiling, or a policy exception</td>
+                    <td>Higher loss, sets a precedent, and carries fairness risk</td>
+                    <td>Possible only with named human approval; the model may prepare the evidence but cannot decide in a person's place</td>
+                    <td>Customer-care manager — no approval means no action</td>
+                </tr>
+                <tr>
+                    <td>Chargeback, regulated goods, or a rights dispute</td>
+                    <td>May carry legal consequences or effects that cannot be reversed</td>
+                    <td>Human decision only; AI may do no more than organise the record</td>
+                    <td>Legal or a domain specialist — hand it over immediately</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <p>Read the third column downwards and you can see the four-rung ladder this table encodes — <strong>bounded autonomous → draft → act on named human approval → human decision only</strong>. What makes this ladder different from an ordinary policy is that it attaches to a "decision" rather than to a "system". The same system can therefore sit on rung one and rung four at the same time, depending on what it is doing — and that is least agency made concrete, with no need to argue about it in the abstract.</p>
+
+    <p>The column to fill in first is not the authority column; it is the <strong>stop condition</strong>. If the team cannot write the stop condition, it does not yet know what "wrong" means for that decision — and if you do not know what wrong looks like, every authority level you grant is a guess.</p>
+
+    <h2 id="en-tabletop">7. Workshop — The Contract and Attack Tabletop</h2>
+
+    <p>The third workshop is the one I recommend actually running in a single room: two hours, every owner present. The playbook sets five scenarios: a benign request · an unsupported policy claim · an injected passage · an over-limit proposal · and a trace-write failure. For each one, complete a contract row and then <strong>walk all five rails</strong>, identifying the hard invariant, the soft signal, the threshold, the route, the evidence, the owner, the residual risk and the breach response — and then settle, before you leave, which failures block release and which require human escalation.<sup><a href="#en-ref-1">[1]</a></sup></p>
+
+    <p>The fifth scenario is the one teams usually skip, and the one I insist on running early, because it answers the single most uncomfortable question: if the trace write fails, should the system carry on or stop? The playbook's answer is unambiguous and unconditional — the terminal trace is a hard control, and a failed write blocks release. An organisation that answers "let it keep going, we will collect the logs afterwards" is saying that its own assurance is optional.</p>
+
+    <div class="table-wrapper">
+        <table>
+            <thead>
+                <tr>
+                    <th>Scenario</th>
+                    <th>Rail that must catch it</th>
+                    <th>Hard invariant vs soft signal</th>
+                    <th>Route</th>
+                    <th>Block release or escalate</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td><strong>Benign request</strong></td>
+                    <td>Walks all five rails — use it as the baseline</td>
+                    <td>Hard: schema and terminal trace · Soft: relevance and support</td>
+                    <td>Release normally, with a complete trace at every stage reached</td>
+                    <td>No block — but an incomplete trace counts as a failure immediately</td>
+                </tr>
+                <tr>
+                    <td><strong>Unsupported policy claim</strong></td>
+                    <td>Retrieval, then Output</td>
+                    <td>Hard: a supporting passage is required before release · Soft: the support estimate</td>
+                    <td>Withhold or abstain, then retrieve again from the pinned index</td>
+                    <td>Block the text from being released; no human escalation needed if the retry passes</td>
+                </tr>
+                <tr>
+                    <td><strong>Injected passage</strong></td>
+                    <td>Retrieval is the first gate, but it must survive <em>through to</em> Execution</td>
+                    <td>Hard: the source allow-list and the tool's permissions · Soft: the injection detector</td>
+                    <td>Drop the passage, and any tool call that follows still passes the guard as usual</td>
+                    <td>Do not block the whole system, but every downstream effect must be mediated</td>
+                </tr>
+                <tr>
+                    <td><strong>Over-limit proposal</strong></td>
+                    <td>Execution only</td>
+                    <td>Purely hard: parameter bounds and the approval token</td>
+                    <td>Reject, then write an escalation trace</td>
+                    <td>Escalate to the named approver — not a silent block</td>
+                </tr>
+                <tr>
+                    <td><strong>Trace-write failure</strong></td>
+                    <td>All rails — it is a shared obligation</td>
+                    <td>Hard: the terminal trace must be written; there is no soft signal here</td>
+                    <td>Fail closed and stop at that point</td>
+                    <td>Block release and open an incident, because the assurance has a gap in it</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <p>To keep this workshop from becoming a session of imagining threats out of thin air, tie the five scenarios to an attack taxonomy somebody has already organised. The document I use is <cite>Adversarial Machine Learning: A Taxonomy and Terminology of Attacks and Mitigations</cite>, NIST AI 100-2e2025, which as of 5 September 2026 is still the current final edition — published in March 2025, approved by the NIST Editorial Review Board on 20 March 2025, with a corrected file re-uploaded on 1 April 2025 and no superseding edition listed on its CSRC record.<sup><a href="#en-ref-6">[6]</a></sup></p>
+
+    <p>The mapping that follows is <strong>mine</strong>, not one NIST has published, and NIST has in no way endorsed this playbook's five-rail architecture: the injected passage maps to indirect prompt injection in section 3.4 as an integrity violation · the trace-write failure maps to an availability violation in section 3.4.1 · the unsupported claim maps to an integrity violation in section 3.4.2 · and the over-limit proposal maps to the risks of tool-using agents in section 3.5.<sup><a href="#en-ref-6">[6]</a></sup></p>
+
+    <p>The sentence I would like every architecture team to read word for word sits in section 3.4.4 — because <strong>current mitigations do not offer full protection against all attacker techniques</strong>, application designers may design systems on the assumption that prompt injection <em>is possible</em> if a model is exposed to untrusted input sources, for example by allowing models to interact with potentially untrustworthy data sources only through well-defined interfaces.<sup><a href="#en-ref-6">[6]</a></sup> That sentence is the entire justification for the Execution Rail: if we design on the assumption that injection succeeds, the question stops being "how do we filter it" and becomes "what can it then command", which is a question answered with permissions and transaction limits, not with a classifier.</p>
+
+    <p>The same document warns specifically about agents: because agents can take actions using tools, these attacks create additional risks in that context, such as hijacking an agent to execute arbitrary code or to exfiltrate data from the environment it operates in. And section 4.1.2 carries the most modest sentence in the whole publication — designing mitigations is an inherently ad hoc and fallible process.<sup><a href="#en-ref-6">[6]</a></sup> The boundary on this source must also be stated: NIST writes that the guidance remains voluntary and is not intended to serve as or supersede existing regulations, laws or other mandatory guidance.</p>
+
+    <p>Finally, once the table is filled in, tie each rail back to the risk codes your security team already knows, so that one document can carry a conversation with two audiences. This is how I map them — and again, this is the author's mapping, not one OWASP publishes.</p>
+
+    <div class="table-wrapper">
+        <table>
+            <thead>
+                <tr>
+                    <th>Rail</th>
+                    <th>OWASP LLM Top 10 (2025 codes)</th>
+                    <th>What the source actually says</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td><strong>Input, Dialog</strong></td>
+                    <td>LLM01:2025 Prompt Injection — direct</td>
+                    <td>A user's prompt directly alters the model's behaviour, and the document itself states that it is unclear whether fool-proof methods of prevention exist<sup><a href="#en-ref-3">[3]</a></sup></td>
+                </tr>
+                <tr>
+                    <td><strong>Retrieval</strong></td>
+                    <td>LLM01:2025 — indirect</td>
+                    <td>The model accepts input from external sources such as websites or files which, when interpreted, alter the model's behaviour<sup><a href="#en-ref-3">[3]</a></sup></td>
+                </tr>
+                <tr>
+                    <td><strong>Execution</strong></td>
+                    <td>LLM06:2025 Excessive Agency</td>
+                    <td>Limit the extensions an agent may call and its permissions on downstream systems to the minimum necessary, and implement authorization in downstream systems rather than letting the model decide<sup><a href="#en-ref-3">[3]</a></sup></td>
+                </tr>
+                <tr>
+                    <td><strong>Output</strong></td>
+                    <td>LLM05:2025 Improper Output Handling</td>
+                    <td>Specify clear output formats, request detailed reasoning and source citations, and then <strong>use deterministic code to validate adherence</strong><sup><a href="#en-ref-3">[3]</a></sup></td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <h2 id="en-metrics-failures">8. Metrics That Matter, and the Failure Patterns</h2>
+
+    <p>Before the table, let me set out this chapter's five operating principles as a whole set, because every metric below is one of them turned into a number. I quoted principle 2 in section <a href="#en-effect-guard">3</a>; the other four are these.<sup><a href="#en-ref-1">[1]</a></sup></p>
+
+    <ol>
+        <li><strong>State claims property by property</strong> — separate guarantees, estimates and governance duties</li>
+        <li><strong>Put hard controls at release and effect boundaries</strong> — complete mediation is a prerequisite</li>
+        <li><strong>Calibrate semantic gates</strong> — report threshold, population, false accepts, false rejects and correlated failure</li>
+        <li><strong>Inspect state and traces</strong> — model narration is not evidence that an effect occurred correctly</li>
+        <li><strong>Test beyond the visible suite</strong> — combine fixed, hidden, adaptive, stateful, failure and live evidence</li>
+    </ol>
+
+    <p>The phrase most often skipped in principle 3 is "correlated failure". A great many teams stack several judges and then multiply their error probabilities together as though the judges were independent — when in practice those judges share a base model, share training data, and fail on the same cases. Three layers that fail simultaneously do not give you three times the confidence.</p>
+
+    <p>Principle 5, as it happens, has an independent piece of evidence supporting it. On 9 June 2026 NIST published a research summary reporting a mathematical proof that <strong>there is no finite set of guardrails that is universally robust against adversarial prompts</strong>, and recommending a shift towards continuous monitoring and updating rather than a fixed defensive posture — with NIST's own caveat that the approach will not completely solve the problem.<sup><a href="#en-ref-7">[7]</a></sup> Read it beside the specimen in section <a href="#en-specimen">4</a> and the same conclusion arrives from two directions: the visible test suite is never evidence about the invisible.</p>
+
+    <p>The metrics the playbook asks you to track are these, with a Scorecard column showing where each lands among the six columns we have used since the first post in the series.</p>
+
+    <div class="table-wrapper">
+        <table>
+            <thead>
+                <tr>
+                    <th>Metric</th>
+                    <th>What it answers</th>
+                    <th>How to read it honestly</th>
+                    <th>Scorecard</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td><strong>Benign task success</strong></td>
+                    <td>How much routine work finishes on its own with the full envelope engaged</td>
+                    <td>Always report it beside a security number; on its own it is one side of the coin</td>
+                    <td>Value</td>
+                </tr>
+                <tr>
+                    <td><strong>Policy escape</strong></td>
+                    <td>How often an answer that breaks policy got out</td>
+                    <td>Report per suite; a fixed-suite figure is not an adaptive-suite figure</td>
+                    <td>Risk</td>
+                </tr>
+                <tr>
+                    <td><strong>Prohibited-effect escape</strong></td>
+                    <td>How often a forbidden effect actually occurred</td>
+                    <td>This is the Execution Rail's own metric; it should never be averaged in with the others</td>
+                    <td>Risk</td>
+                </tr>
+                <tr>
+                    <td><strong>False accepts and false rejects</strong></td>
+                    <td>How wrong the semantic gates are, in both directions</td>
+                    <td>Meaningless without a stated threshold and population, and both sides must always be reported</td>
+                    <td>Quality</td>
+                </tr>
+                <tr>
+                    <td><strong>Post-state correctness</strong></td>
+                    <td>Whether the authoritative state after the action is what it should be</td>
+                    <td>Read it from the system that holds the state, not from the model's summary</td>
+                    <td>Quality</td>
+                </tr>
+                <tr>
+                    <td><strong>Trace completeness</strong></td>
+                    <td>Whether every stage the system reached was recorded</td>
+                    <td>Measure it as the share of requests with a complete terminal route, not as a volume of logs</td>
+                    <td>Risk</td>
+                </tr>
+                <tr>
+                    <td><strong>Escalation load</strong></td>
+                    <td>How heavy the burden is on the people who take the handovers</td>
+                    <td>This one cannot be reduced by moving a threshold; reducing it in isolation just hides work inside people</td>
+                    <td>People</td>
+                </tr>
+                <tr>
+                    <td><strong>Rollback time</strong></td>
+                    <td>How fast an effect can be reversed when it has to be</td>
+                    <td>It must be a rehearsed time, not a time estimated in a document</td>
+                    <td>Risk</td>
+                </tr>
+                <tr>
+                    <td><strong>Incident recurrence</strong></td>
+                    <td>Whether the same thing comes back after the fix</td>
+                    <td>This is the learning loop's metric, not the incident team's</td>
+                    <td>Learning</td>
+                </tr>
+                <tr>
+                    <td><strong>Latency</strong></td>
+                    <td>How much longer the user waits because the guard exists</td>
+                    <td>Report it per route; a route requiring human approval lives on a different time scale from an automatic one</td>
+                    <td>Value</td>
+                </tr>
+                <tr>
+                    <td><strong>Tokens and cost by consequence class</strong></td>
+                    <td>What we pay for which level of consequence</td>
+                    <td>A total tells you nothing; only the split by consequence class supports a decision</td>
+                    <td>Economics</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <p>The one rule the playbook sets in bold in its metrics section is <strong>never collapse utility and security into one score that hides the trade-off</strong>.<sup><a href="#en-ref-1">[1]</a></sup> The reason is pure arithmetic. A system that gets slightly better at routine work while letting one more prohibited effect through can post a higher combined score, even though it got worse on the dimension the organisation cannot accept. A single score does not make the decision easier; it only makes the wrong decision look reasoned.</p>
+
+    <h3>Failure patterns</h3>
+
+    <p>The playbook collects eight failure patterns. I have picked the seven I meet most often in the Thai organisations I am asked to look at, ordered from the hardest to fix.<sup><a href="#en-ref-1">[1]</a></sup></p>
+
+    <ul>
+        <li><strong>One score for utility and security</strong> — a combined number that improves while prohibited effects increase is a failure you cannot see until it is late, because the metric itself is what hides it</li>
+        <li><strong>Placing all protection at output</strong> — the last gate can filter text, but it cannot recall data a tool has already exposed, and it cannot stop money that has already moved</li>
+        <li><strong>Treating an allow-list as trustworthiness</strong> — a list of approved sources tells you where a document came from, not who edited the inside of it yesterday. An approved source can be poisoned</li>
+        <li><strong>Retry without idempotency</strong> — an upstream system that retries automatically turns one request into several records, and a key bound to the session instead of the order will not help at all</li>
+        <li><strong>Making the trace optional</strong> — both writing traces after release and letting the system continue when the trace write fails leave the assurance broken at exactly the point where it was needed most</li>
+        <li><strong>Approving narration instead of state</strong> — a reviewer reads the model's summary and clicks through, even though model narration is not evidence that the effect occurred correctly</li>
+        <li><strong>Claiming zero risk because the fixed suite found nothing</strong> — the suite we wrote is the suite we can see, zero in the visible suite is not zero in the world, and section <a href="#en-specimen">4</a> is the clearest evidence of this in the whole post</li>
+    </ul>
+
+    <p>One more pattern the playbook names, which I want to leave as the closing warning, is suppressing escalation to make the automation number look better. That number does move, and it moves fast — but what actually happens is that the risk migrates from a queue of people into answers that have already been released, which is a far more expensive place for it to live.</p>
+
+    <h2 id="en-road-ahead">9. The Road Ahead — From Control Rails to the Release Gate</h2>
+
+    <p>If you take three things from this post into tomorrow, I would choose these. One — open the architecture of the system you already run and point to the line of code where the ceiling you promised your executives lives. If you cannot point to it within five minutes, it lives in the prompt. Two — build the <strong>bypass inventory</strong> from section <a href="#en-rail-map">5</a> in full: batch, retry, webhook, cache, administrator tool, console, direct write, vendor fallback and recovery script, then decide path by path whether to mediate it or exclude it from the guarantee. Three — fill in the stop-condition column of section <a href="#en-decision-matrix">6</a> before any other column.</p>
+
+    <p>What this post does <em>not</em> answer is how you would know these rails work before you release the system, and how you would watch them afterwards. Section <a href="#en-specimen">4</a> has already shown that a suite you write yourself has a ceiling — 0 of 40 in the visible suite alongside 8 of 12 released in the adaptive suite, both from the same system. That is the next post's work.</p>
+
+    <div class="alert info">
+        <strong>🧭 Layer this post advances:</strong> the <strong>Spine</strong> — the AI-as-a-Core assurance spine that runs perpendicular through all six organisational layers rather than being a seventh one — and question <strong>Q5</strong> (what can we enforce structurally, and what can we only estimate), answering here the second half of the question <a href="/blog/ai-transformation-contract">#12</a> opened: where exactly is the enforceable part enforced? — Scorecard column <strong>Risk</strong>, because every metric this chapter adds, from policy escape and prohibited-effect escape through trace completeness to rollback time, is read in that column. Next time, <a href="/blog/ai-transformation-release-gate">#14 Five Evaluation Tracks, One Release Gate</a> shows how these rails have to be tested along five tracks of evidence and then pass a single gate into Promote, Canary, Hold or Reject — releasing on evidence rather than on a date in the calendar.
+    </div>
+
+    <div class="key-takeaways">
+        <h3>🎯 Key Takeaways</h3>
+        <ul>
+            <li><strong>Five rails</strong> = Input, Dialog, Retrieval, Execution and Output inside one assurance envelope, with a trace across every stage the system reaches</li>
+            <li><strong>Effect guard</strong> = identity, authority, schema, parameters, risk, approval, idempotency — failing any one of them means block and escalate</li>
+            <li><strong>A proposal is not an effect</strong> = the model proposes, deterministic code authorizes, and the authoritative state is what proves it — not the model's narration</li>
+            <li><strong>Least agency</strong> = hold tools, permissions, degree of autonomy, lifetime and transaction limits to what the job needs — model indispensability does not determine acceptable autonomy</li>
+            <li><strong>517 executions</strong> = a specimen demonstrating wiring and failure localisation in author-constructed fixtures, not a population safety rate</li>
+            <li><strong>Soft controls leak</strong> = in the adaptive suite 8 of 12 violating candidates were released, while hard mediation blocked 4 of 4 prohibited effects — four attempts, not four hundred</li>
+            <li><strong>No rail covers everything</strong> = an approved source can be poisoned, an authorized tool call can oppose intent, and an output filter cannot recall data already exposed</li>
+        </ul>
+    </div>
+
+    <section class="references" aria-labelledby="references">
+        <h2 id="references">References</h2>
+        <p class="references__note">Every source below was verified and accessed on 5 September 2026 (2026-09-05). This series uses the four evidence labels of the source playbook — <strong>Law</strong>, binding where it applies · <strong>Standard</strong>, standards and guidance that remain voluntary until an obligation absorbs them · <strong>Study</strong>, empirical evidence or an explicitly stated research design · <strong>Synthesis</strong>, the author's own synthesis.</p>
+        <ol class="references__list">
+            <li id="en-ref-1"><span class="ref-tag ref-tag--synthesis">Synthesis</span> Mingkhwan, A. <cite>AI Transformation as an Organizational Core — Bilingual Companion Playbook</cite>, Chapter 8 and Artifacts 3–6. Author's manuscript, 97 pages, not published online and therefore unlinked · evidence snapshot 5 September 2026 — accessed 2026-09-05. <span class="ref-supports">Supports: the chapter's opening sentence on converting confidence into testable obligations · the three control classes, hard, soft and governance · the five rails and the assurance envelope, and the sentence "no rail covers everything" · the contract's rule of modesty · the seven-check effect guard and the 2,000 / 2,500 baht case · the five operating principles · Artifact 3, the five-rail map and the bypass rule · Artifact 5, the decision and consequence matrix · the contract and attack tabletop · the metrics that matter and the failure patterns · the glossary renderings from the closing appendix</span></li>
+            <li id="en-ref-2"><span class="ref-tag ref-tag--study">Study</span> Saltzer, J. H. &amp; Schroeder, M. D. <cite>The Protection of Information in Computer Systems</cite>. Proceedings of the IEEE 63(9), 1278–1308, September 1975. <a href="https://doi.org/10.1109/PROC.1975.9939">doi.org</a> — accessed 2026-09-05. <span class="ref-supports">Supports: complete mediation, "every access to every object must be checked for authority", and least privilege, as the 1975 origin of operating principle 2 and of the Execution Rail — this work does not mention AI or language models; applying it to AI systems is the author's synthesis</span></li>
+            <li id="en-ref-3"><span class="ref-tag ref-tag--standard">Standard</span> OWASP Gen AI Security Project. <cite>OWASP Top 10 for Large Language Model Applications 2025</cite> (LLM01:2025 Prompt Injection · LLM06:2025 Excessive Agency). <a href="https://genai.owasp.org/resource/owasp-top-10-for-llm-applications-2025/">genai.owasp.org</a> — published 17 November 2024, accessed 2026-09-05. <span class="ref-supports">Supports: the "Complete mediation" item under LLM06 requiring authorization in downstream systems rather than a model's decision · the three root causes of excessive agency · the difference between direct and indirect prompt injection · the statement that it is unclear whether fool-proof prevention of prompt injection exists · the rail-to-risk mapping is the author's, not one OWASP publishes · a 2026 edition was published on 3 August 2026 and announced on 1 September 2026, but its per-risk pages had not appeared at the access date</span></li>
+            <li id="en-ref-4"><span class="ref-tag ref-tag--standard">Standard</span> OWASP Foundation. <cite>LLM Prompt Injection Prevention Cheat Sheet</cite>. <a href="https://cheatsheetseries.owasp.org/cheatsheets/LLM_Prompt_Injection_Prevention_Cheat_Sheet.html">cheatsheetseries.owasp.org</a> — the page carries no publication or revision date, so it is cited by access date alone, accessed 2026-09-05. <span class="ref-supports">Supports: layered defence from input validation, a human in the loop for high-risk requests, structured separation of instructions from data and least privilege through to response validation · the stated limit that a guardrail which is itself a model can also be injected and should be one layer of defence in depth</span></li>
+            <li id="en-ref-5"><span class="ref-tag ref-tag--synthesis">Synthesis</span> Mingkhwan, A. <cite>Engineering AI-Core Systems — A Reference Architecture and Assurance Contract for Software 3.0, revision 8</cite>. Author's manuscript, September 2026 · unpublished, with no public URL and therefore unlinked — cited through the playbook [1]. <span class="ref-supports">Supports: the deliberately bounded specimen of 517 deterministic executions · the fixed suite, 30 of 30 benign cases, zero of 40 policy escapes, zero of 6 prohibited refund effects, 70 of 70 route traces · adaptive-to-implementation, 8 of 12 violating candidates released and 4 of 4 prohibited effects blocked · every one of these numbers sits under the boundary sentence quoted in section 4, and none has been replicated by an independent team</span></li>
+            <li id="en-ref-6"><span class="ref-tag ref-tag--standard">Standard</span> NIST. <cite>Adversarial Machine Learning: A Taxonomy and Terminology of Attacks and Mitigations</cite>, NIST AI 100-2e2025. <a href="https://nvlpubs.nist.gov/nistpubs/ai/NIST.AI.100-2e2025.pdf">nvlpubs.nist.gov</a> — published March 2025 (approved 20 March 2025 · corrected file 1 April 2025 · still the current edition at the access date), accessed 2026-09-05. <span class="ref-supports">Supports: the GenAI attack taxonomy used to anchor all five tabletop scenarios — indirect prompt injection in section 3.4 with its three categories of attacker goal, availability in 3.4.1, integrity in 3.4.2, and the risks of tool-using agents in 3.5 · the sentence in 3.4.4 that current mitigations do not offer full protection against all techniques · section 4.1.2, that designing mitigations is an inherently ad hoc and fallible process · NIST's own boundary that the guidance is voluntary and does not supersede law · the mapping to the five rails is the author's; NIST has not endorsed this architecture</span></li>
+            <li id="en-ref-7"><span class="ref-tag ref-tag--study">Study</span> NIST. <cite>Mathematical Proof Supports Transition to a Continuous-Monitor-and-Update Security Model for AI Systems</cite>. <a href="https://www.nist.gov/news-events/news/2026/06/nist-mathematical-proof-supports-transition-continuous-monitor-and-update">nist.gov</a> — published 9 June 2026, accessed 2026-09-05. <span class="ref-supports">Supports: the proof that no finite set of guardrails is universally robust against adversarial prompts, and the recommendation to use continuous monitoring and updating in place of a fixed defensive posture, with NIST's own caveat that this will not completely solve the problem — used in support of operating principle 5 and of the sentence "no rail covers everything"</span></li>
+        </ol>
+    </section>
+    </div>
+
+    <div class="post-series-footer">
+      <span class="l-th">บทความจากซีรีส์ AI Transformation for Organizations 2026</span><span class="l-en" lang="en">From the AI Transformation for Organizations 2026 series</span>
+    </div>
+
+    <nav aria-label="AI Transformation for Organizations">
+    <div class="series-nav">
+      <h3>🧭 AI Transformation for Organizations 2026</h3>
+      <div class="series-links series-links--grouped">
+        <div class="series-links__group">
+          <p class="series-links__label">Reframe · เปลี่ยนกรอบคิด</p>
+          <a href="/blog/ai-transformation-layers">#1 Six Layers</a>
+          <a href="/blog/ai-transformation-prediction">#2 Prediction</a>
+          <a href="/blog/ai-transformation-learning-loop">#3 Learning Loop</a>
+          <a href="/blog/ai-transformation-maturity">#4 Maturity</a>
+          <a href="/blog/ai-transformation-portfolio">#5 Portfolio</a>
+        </div>
+        <div class="series-links__group">
+          <p class="series-links__label">Redesign · ออกแบบองค์กรใหม่</p>
+          <a href="/blog/ai-transformation-workflow">#6 Four Lanes</a>
+          <a href="/blog/ai-transformation-evidence-ladder">#7 Evidence Ladder</a>
+          <a href="/blog/ai-transformation-workforce">#8 Workforce</a>
+          <a href="/blog/ai-transformation-factory">#9 AI Factory</a>
+          <a href="/blog/ai-transformation-operating-model">#10 Operating Model</a>
+        </div>
+        <div class="series-links__group">
+          <p class="series-links__label">Engineer · วิศวกรรมแกนกลาง</p>
+          <a href="/blog/ai-transformation-ai-core">#11 AI-Core</a>
+          <a href="/blog/ai-transformation-contract">#12 Contract</a>
+          <span class="current" aria-current="page">#13 Five Rails</span>
+          <a href="/blog/ai-transformation-release-gate">#14 Release Gate</a>
+          <a href="/blog/ai-transformation-incident-loop">#15 Incident Loop</a>
+        </div>
+        <div class="series-links__group">
+          <p class="series-links__label">Lead · นำการเปลี่ยนผ่าน</p>
+          <a href="/blog/ai-transformation-obligations">#16 Obligations</a>
+          <a href="/blog/ai-transformation-suppliers-footprint">#17 Cost &amp; Footprint</a>
+          <a href="/blog/ai-transformation-first-90-days">#18 Days 0–90</a>
+          <a href="/blog/ai-transformation-days-91-180">#19 Days 91–180</a>
+          <a href="/blog/ai-transformation-eight-questions">#20 Eight Questions</a>
+        </div>
+      </div>
+    </div>
+    </nav>
+
+  </article>
+
+  </main>
+
+  <footer class="blog-footer">
+    <nav class="blog-footer__nav" aria-label="Site">
+      <a href="../index.html">Home</a>
+      <a href="./">Blog</a>
+      <a href="../publications/">Publications</a>
+      <a href="../books/">Books</a>
+      <a href="../projects/">Projects</a>
+      <a href="../news/">News</a>
+      <a href="../index.html#contact">Contact</a>
+    </nav>
+    <a href="./">← Back to Blog</a>
+    <span>© 2026 Anirach Mingkhwan — Associate Professor, KMUTNB</span>
+  </footer>
+
+</body>
+</html>

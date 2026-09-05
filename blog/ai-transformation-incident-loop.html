@@ -1,0 +1,1703 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Evidence Before Change — จากเหตุการณ์ผิดพลาดสู่ระบบที่ดีขึ้น | Anirach Mingkhwan</title>
+  <meta name="description" content="อย่าลดเหตุการณ์ผิดพลาดเหลือแค่ &quot;โมเดล hallucinate&quot; — วงจรแปดขั้นบนหลัก Evidence before change พร้อม Trace schema เก้ากลุ่มและกรณี CX-REFUND-01">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=Sarabun:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      color-scheme: light;
+      /* ink */
+      --navy: #11304b; --slate: #334155; --slate-light: #526174; --gray: #94a3b8;
+      /* ground */
+      --bg: #faf7f0; --white: #ffffff; --code-bg: #1e293b;
+      /* accent */
+      --blue: #226299; --blue-dark: #1a4d7a; --blue-light: #4992b9;
+      /* brand — sampled from the book covers. --gold is decorative on light grounds (2.2:1); --gold-dark is its text form. */
+      --gold: #c4a46c; --gold-dark: #7a5f22; --coral: #c2410c; --cloud: #dee7e6; --parchment: #e9e1c4; --focus: #226299;
+      /* status — use only these six, never invent a seventh */
+      --green: #22c55e; --red: #ef4444; --amber: #f59e0b;
+      --cyan: #06b6d4; --purple: #226299; --purple-dark: #1a4d7a;
+      /* type */
+      --font: 'Inter', 'Sarabun', -apple-system, BlinkMacSystemFont, sans-serif;
+      --mono: 'JetBrains Mono', 'Fira Code', 'Sarabun', monospace;
+      /* form */
+      --radius: 12px; --radius-sm: 8px; --radius-lg: 16px;
+      --measure: 720px; --wide: 860px;
+      --transition: 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+    html { scroll-behavior: smooth; }
+    body { font-family: var(--font); font-size: 17px; line-height: 1.8; color: var(--slate); background: var(--bg); -webkit-font-smoothing: antialiased; }
+    .blog-nav { position: fixed; top: 0; left: 0; right: 0; z-index: 100; background: rgba(248,250,252,0.85); backdrop-filter: blur(20px); border-bottom: 1px solid rgba(0,0,0,0.05); }
+    .blog-nav__inner { max-width: 860px; margin: 0 auto; padding: 0 2rem; height: 56px; display: flex; align-items: center; justify-content: space-between; }
+    .blog-nav__back { font-size: 0.85rem; font-weight: 500; color: var(--blue); text-decoration: none; }
+    .blog-nav__back:hover { color: #1a4d7a; }
+    .blog-nav__title { font-size: 0.85rem; font-weight: 600; color: var(--navy); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 50%; }
+    /* ── HERO ── house .post-hero on the approved Deep Blue gradient (page-design
+       §5 / INV-28). Ink is inverted for the dark ground: white title/meta, tag
+       pills white on 18% white — the openclaw-production treatment. The
+       background value must stay byte-identical to the approved string. */
+    .post-hero { padding: 8rem 2rem 3rem; background: linear-gradient(135deg, #11304b 0%, #1a4d7a 45%, #226299 100%); color: #fff; text-align: center; }
+    .post-hero__tags { display: flex; gap: 0.5rem; justify-content: center; margin-bottom: 1.25rem; flex-wrap: wrap; }
+    .post-hero__tag { display: inline-block; font-size: 0.72rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.1em; color: #fff; background: rgba(255,255,255,0.18); padding: 0.35rem 0.9rem; border-radius: 20px; }
+    .post-hero__title { font-size: clamp(1.8rem, 5vw, 3rem); font-weight: 800; color: #fff; line-height: 1.2; margin-bottom: 1rem; max-width: 720px; margin-left: auto; margin-right: auto; }
+    .post-hero__sub { font-size: 1.05rem; max-width: 640px; margin: 0 auto 1.5rem; line-height: 1.7; color: #fff; }
+    .post-hero__meta { font-size: 0.85rem; color: #fff; display: flex; align-items: center; justify-content: center; gap: 1.5rem; flex-wrap: wrap; }
+    .post-hero__series { font-weight: 600; color: #fff; }
+    /* the switch pill and the focus ring both sit on the dark hero: the pill is
+       a light chip so its labels keep their light-ground colours, and --focus
+       re-points to gold here (blue collapses on blue — the footer/pre
+       precedent). */
+    .post-hero { --focus: var(--gold); }
+    .post-hero__cover {
+      aspect-ratio: 1 / 1;
+      max-width: 380px;
+      margin: 2.5rem auto 0;
+      border-radius: var(--radius-lg, 16px);
+      overflow: hidden;
+      box-shadow: 0 20px 60px rgba(17,48,75,0.14);
+    }
+    .post-hero__cover img { width: 100%; height: 100%; object-fit: cover; display: block; }
+    .post-body { max-width: 720px; margin: 0 auto; padding: 3rem 2rem 6rem; }
+    .post-body h2 { font-size: 1.6rem; font-weight: 800; color: var(--navy); margin: 3rem 0 1rem; padding-bottom: 0.5rem; border-bottom: 2px solid rgba(34,98,153,0.15); }
+    .post-body h3 { font-size: 1.25rem; font-weight: 700; color: var(--navy); margin: 2.25rem 0 0.75rem; }
+    .post-body p { margin-bottom: 1.25rem; }
+    .post-body strong { font-weight: 700; color: var(--navy); }
+    .post-body a { color: var(--blue); text-decoration: underline; text-decoration-thickness: 1px; text-underline-offset: 2px; }
+    .post-body ul, .post-body ol { margin: 0.5rem 0 1.25rem 1.5rem; }
+    .post-body li { margin-bottom: 0.4rem; }
+    .post-body blockquote { background: rgba(34,98,153,0.06); border-left: 4px solid var(--blue); padding: 1rem 1.25rem; border-radius: 0 10px 10px 0; margin: 1.25rem 0; font-size: 0.95rem; color: var(--navy); }
+    .post-body hr { border: none; height: 1px; background: linear-gradient(90deg, transparent, rgba(34,98,153,0.2), transparent); margin: 3rem 0; }
+    /* ── CODE ── */
+    .post-body pre { background: var(--code-bg); border-radius: 12px; padding: 1.5rem; margin: 1.25rem 0 1.5rem; overflow-x: auto; border: 1px solid rgba(255,255,255,0.05); }
+    .post-body pre code { font-family: var(--mono); font-size: 0.85rem; color: #e2e8f0; line-height: 1.7; background: none; padding: 0; white-space: pre-wrap; }
+    .post-body code { font-family: var(--mono); font-size: 0.88em; background: rgba(34,98,153,0.08); color: var(--blue-dark); padding: 0.15em 0.45em; border-radius: 5px; }
+    /* ── TABLES ── */
+    .table-wrapper { overflow-x: auto; margin: 1.5rem 0; border-radius: 0.5rem; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1); }
+    table { width: 100%; border-collapse: collapse; background: white; }
+    th { background: #226299; color: white; padding: 1rem; text-align: left; font-weight: 600; }
+    td { padding: 1rem; border-bottom: 1px solid #e5e7eb; }
+    .post-body table { display: block; width: 100%; overflow-x: auto; }
+    /* ── ALERTS ── */
+    .alert { background: #fef3cd; border: 1px solid #facc15; border-radius: 0.5rem; padding: 1rem; margin: 1.5rem 0; }
+    .alert.danger { background: #fee2e2; border-color: #ef4444; }
+    .alert.info { background: #e0f2fe; border-color: #06b6d4; }
+    .alert.success { background: #d1fae5; border-color: #10b981; }
+    /* ── KEY TAKEAWAYS ── */
+    .key-takeaways { background: linear-gradient(135deg, #f3f4f6 0%, #e5e7eb 100%); border-radius: 1rem; padding: 2rem; margin: 3rem 0; }
+    .key-takeaways h3 { color: #226299; margin-bottom: 1.5rem; }
+    .post-series-footer { text-align: center; font-size: 0.85rem; color: var(--slate-light); font-style: italic; margin-top: 2rem; padding-top: 2rem; border-top: 1px solid #e2e8f0; }
+    .blog-footer { background: var(--navy); padding: 2rem 0; text-align: center; }
+    .blog-footer a { color: var(--gold); text-decoration: none; font-weight: 600; font-size: 0.9rem; }
+    .blog-footer span { color: var(--gray); font-size: 0.8rem; display: block; margin-top: 0.4rem; }
+    @media (max-width: 600px) {
+      .post-hero { padding: 7rem 1.25rem 2.5rem; }
+      .post-body { padding: 2rem 1.25rem 4rem; }
+      .post-hero__meta { flex-direction: column; gap: 0.4rem; }
+      .post-body h2 { font-size: 1.4rem; }
+      .post-body h3 { font-size: 1.15rem; }
+      .post-body pre { padding: 1rem; border-radius: 8px; }
+    }
+
+    :focus-visible { outline: 2px solid var(--focus); outline-offset: 3px; border-radius: 2px; }
+    /* the ring sits on the page ground (3px offset). Inside the navy footers
+       and code blocks var(--blue) collapses to 2.12:1, so those scopes
+       re-point --focus to gold (5.73:1 on navy). */
+    .footer, .blog-footer, pre { --focus: var(--gold); }
+    :focus:not(:focus-visible) { outline: none; }
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after {
+        animation-duration: .01ms !important; animation-iteration-count: 1 !important;
+        transition-duration: .01ms !important; scroll-behavior: auto !important;
+      }
+    }
+    h1, h2, h3, .post-hero__title, .card__title { text-wrap: balance; }
+
+    .post-body img, .post-body svg { max-width: 100%; height: auto; }
+
+    /* ── SKIP LINK ── a11y-perf R5: the link and the landmark it targets are a
+       pair — useless without both halves. Off-screen until focused, then the
+       first tab stop on every page. */
+    .skip-link { position: absolute; left: -9999px; }
+    .skip-link:focus {
+      left: 1rem; top: 1rem; z-index: 999;
+      background: var(--navy); color: #fff;
+      padding: 0.75rem 1.25rem; border-radius: var(--radius-sm);
+      font-weight: 600; text-decoration: none;
+    }
+
+    /* ── POST WAYFINDING ── the wordmark is the home link; the footer carries
+       the full destination row. */
+    .blog-nav__home {
+      font-size: 0.9rem; font-weight: 800; color: var(--navy);
+      text-decoration: none; margin-right: 1rem;
+    }
+    .blog-nav__home:hover { color: var(--blue); }
+    .blog-nav__inner > .blog-nav__back { margin-right: auto; }
+    .blog-footer__nav {
+      display: flex; flex-wrap: wrap; justify-content: center; gap: 0.35rem 1.25rem;
+      max-width: 860px; margin: 0 auto 1.25rem; padding: 0 2rem 1.25rem;
+      border-bottom: 1px solid rgba(255,255,255,0.12);
+    }
+    .blog-footer__nav a { color: var(--gold); font-size: 0.85rem; font-weight: 600; text-decoration: none; }
+    .blog-footer__nav a:hover { color: #fff; text-decoration: underline; }
+
+    html { scroll-padding-top: 5rem; }
+    [id] { scroll-margin-top: 5rem; }
+
+    /* Thai needs more room than Latin at the same nominal size. */
+    .post-body:lang(th) { font-size: 18px; line-height: 1.85; }
+    .post-body p, .post-body li, .post-body blockquote { text-wrap: pretty; }
+
+    /* ---- side-scroll affordance ----
+       pre blocks and tables can exceed 720px. These layers paint a shadow ONLY
+       where there is more content in that direction; when fully scrolled the
+       cover slides over the shadow and hides it. No JavaScript, no wrapper. */
+    .post-body pre, .post-body table {
+      overflow-x: auto;
+      background-image:
+        linear-gradient(to right, var(--code-bg, #0f172a) 30%, rgba(15,23,42,0)),
+        linear-gradient(to left, var(--code-bg, #0f172a) 30%, rgba(15,23,42,0)),
+        radial-gradient(farthest-side at 0 50%, rgba(0,0,0,.28), rgba(0,0,0,0)),
+        radial-gradient(farthest-side at 100% 50%, rgba(0,0,0,.28), rgba(0,0,0,0));
+      background-position: 0 0, 100% 0, 0 0, 100% 0;
+      background-repeat: no-repeat;
+      background-size: 40px 100%, 40px 100%, 14px 100%, 14px 100%;
+      background-attachment: local, local, scroll, scroll;
+    }
+    .post-body table {
+      background-image:
+        linear-gradient(to right, var(--white, #fff) 30%, rgba(255,255,255,0)),
+        linear-gradient(to left, var(--white, #fff) 30%, rgba(255,255,255,0)),
+        radial-gradient(farthest-side at 0 50%, rgba(17,48,75,.16), rgba(17,48,75,0)),
+        radial-gradient(farthest-side at 100% 50%, rgba(17,48,75,.16), rgba(17,48,75,0));
+      background-position: 0 0, 100% 0, 0 0, 100% 0;
+      background-repeat: no-repeat;
+      background-size: 40px 100%, 40px 100%, 14px 100%, 14px 100%;
+      background-attachment: local, local, scroll, scroll;
+    }
+
+    /* ---- table of contents ---- */
+    .post-toc {
+      max-width: 720px;
+      margin: 2rem auto 0;
+      padding: 1rem 1.25rem;
+      background: rgba(34,98,153,0.05);
+      border: 1px solid rgba(34,98,153,0.14);
+      border-left: 3px solid var(--gold, #c4a46c);
+      border-radius: 10px;
+      font-size: 0.92rem;
+    }
+    .post-toc > summary {
+      cursor: pointer;
+      font-weight: 700;
+      color: var(--navy);
+      list-style: none;
+    }
+    .post-toc > summary::-webkit-details-marker { display: none; }
+    .post-toc > summary::before {
+      content: "\25B8";
+      display: inline-block;
+      margin-right: 0.5rem;
+      transition: transform 0.2s ease;
+      color: var(--gold-dark, #7a5f22);
+    }
+    .post-toc[open] > summary::before { transform: rotate(90deg); }
+    .post-toc > summary:focus-visible { outline: 3px solid var(--focus, #226299); outline-offset: 3px; }
+    .post-toc ol { margin: 0.85rem 0 0.25rem; padding-left: 1.4rem; }
+    .post-toc li { margin-bottom: 0.4rem; line-height: 1.5; }
+    .post-toc a { color: var(--slate); text-decoration: none; }
+    .post-toc a:hover, .post-toc a:focus-visible { color: var(--blue-dark, #1a4d7a); text-decoration: underline; }
+    @media (max-width: 600px) { .post-toc { margin: 1.25rem 1rem 0; } }
+
+    /* ---- cross-document view transitions ---- */
+    @view-transition { navigation: auto; }
+    .nav, .blog-nav { view-transition-name: site-nav; }
+    .footer, .blog-footer { view-transition-name: site-footer; }
+    @media (prefers-reduced-motion: reduce) {
+      ::view-transition-group(*),
+      ::view-transition-old(*),
+      ::view-transition-new(*) { animation: none !important; }
+    }
+
+    /* ── SERIES STRIP — Hermes Agent in Practice ──
+       Same class and inner-wrapper shape as the OpenClaw strip because the
+       linter's RE_SNAV recognises exactly `series-nav` + a nested div; a
+       renamed strip would read as "no nav" and fail INV-08. All content
+       checks (INV-03 family) iterate the SERIES7 list only, so this strip's
+       labels are convention, not contract. House-styled, not the island CSS. */
+    .series-nav {
+      max-width: 720px; margin: 2rem auto 0; padding: 1.1rem 1.4rem;
+      background: rgba(255,255,255,0.75); border: 1px solid rgba(34,98,153,0.15);
+      border-left: 3px solid var(--gold); border-radius: 12px;
+    }
+    .series-nav h3 {
+      font-size: 0.78rem; font-weight: 700; text-transform: uppercase;
+      letter-spacing: 0.08em; color: var(--gold-dark); margin-bottom: 0.6rem;
+    }
+    .series-links { display: flex; flex-wrap: wrap; gap: 0.5rem; }
+    .series-links a, .series-links .current {
+      font-size: 0.82rem; font-weight: 600; padding: 0.35rem 0.8rem;
+      border-radius: 50px; text-decoration: none;
+    }
+    .series-links a { color: var(--blue-dark); background: rgba(34,98,153,0.08); }
+    .series-links a:hover { background: rgba(34,98,153,0.16); }
+    .series-links .current { color: #fff; background: var(--blue-dark); }
+    @media (max-width: 600px) { .series-nav { margin: 1.5rem 1rem 0; } }
+
+    /* ── FIGURE — the sanctioned diagram component (page-design §4 Content).
+       Diagrams are PNGs; this repo built them out of divs twice and reverted
+       twice. The image is wrapped in a link to itself so a phone can pinch a
+       1400px drawing without a line of JavaScript. */
+    .figure { margin: 2.5rem 0; }
+    .figure__img { width: 100%; height: auto; display: block;
+                   border-radius: var(--radius); border: 1px solid rgba(0,0,0,0.06); }
+    .figure__caption { font-size: 0.85rem; color: var(--slate-light);
+                       text-align: center; margin-top: 0.75rem; }
+
+    /* ── REFERENCES — every material number in this series carries its source.
+       The tags are the book's own four evidence labels. */
+    .references { margin-top: 3rem; padding-top: 2rem; border-top: 1px solid #e2e8f0; }
+    .references__note { font-size: 0.85rem; color: var(--slate-light); margin-bottom: 1rem; }
+    .references__list { padding-left: 1.4rem; font-size: 0.9rem; line-height: 1.75; }
+    .references__list li { margin-bottom: 0.7rem; }
+    .ref-tag { display: inline-block; font-size: 0.7rem; font-weight: 700;
+               letter-spacing: 0.06em; text-transform: uppercase; padding: 0.1rem 0.5rem;
+               border-radius: 50px; margin-right: 0.4rem; vertical-align: 0.05em;
+               background: rgba(34,98,153,0.1); color: var(--blue-dark); }
+    .ref-tag--law { background: rgba(239,68,68,0.12); color: #991b1b; }
+    .ref-tag--synthesis { background: rgba(196,164,108,0.22); color: var(--gold-dark); }
+    .ref-supports { display: block; color: var(--slate-light); font-size: 0.85rem; }
+
+    /* ── SERIES STRIP, GROUPED — twenty chips is four rows of noise unless they
+       are grouped, so the four parts of the book label their own rows. The
+       .series-nav and .series-links wrappers stay byte-literal because INV-08
+       recognises the strip by exactly those two, and the chips stay direct
+       children of a group because INV-03's item regex cannot see through a
+       nested tag. Grouping is a modifier plus two elements of .series-links —
+       the flat OpenClaw, Hermes and Life strips are untouched. */
+    .series-links--grouped { display: grid; gap: 0.9rem; }
+    .series-links__group { position: relative; display: flex; flex-wrap: wrap;
+                           gap: 0.5rem; padding-left: 8.25rem; min-height: 2rem; }
+    .series-links__label { position: absolute; left: 0; top: 0.45rem; width: 7.5rem;
+                           margin: 0; font-size: 0.72rem; font-weight: 700;
+                           text-transform: uppercase; letter-spacing: 0.08em;
+                           color: var(--slate-light); line-height: 1.3; }
+    @media (max-width: 600px) {
+      .series-links__group { padding-left: 0; }
+      .series-links__label { position: static; width: auto; flex-basis: 100%;
+                             margin-bottom: 0.1rem; }
+    }
+
+    /* ── LANGUAGE SWITCH — pure CSS, zero JavaScript (INV-38) ──
+       One visually-hidden checkbox as a direct child of body, BEFORE the main landmark,
+       so `#langSwitch:checked ~ main …` reaches every content block. The two
+       tracks are paired blocks: .l-th (default) and .l-en (hidden until
+       checked; display:revert restores block for divs, inline for spans).
+       Naming stays clear of INV-12's menu-token regex (hamburger|burger|
+       nav__toggle|nav-toggle|navtoggle|menu-toggle|menu__toggle) — verified.
+       No JS also means no persistence across posts; each post opens in Thai. */
+    .lang-switch-box { position: absolute; left: -9999px; }
+    .l-en { display: none; }
+    #langSwitch:checked ~ main .l-en { display: revert; }
+    #langSwitch:checked ~ main .l-th { display: none; }
+    .lang-switch {
+      display: inline-flex; align-items: center; gap: 0.55rem;
+      margin-top: 1.4rem; padding: 0.4rem 1.1rem; border-radius: 50px;
+      background: rgba(255,255,255,0.85); border: 1px solid rgba(255,255,255,0.4);
+      cursor: pointer; font-size: 0.85rem; user-select: none;
+    }
+    .lang-switch span { color: var(--slate-light); font-weight: 600; transition: color 0.2s; }
+    .lang-switch .lang-sep { color: var(--gray); font-weight: 400; }
+    .lang-switch .lang-th { color: var(--navy); font-weight: 800; }
+    #langSwitch:checked ~ main .lang-switch .lang-th { color: var(--slate-light); font-weight: 600; }
+    #langSwitch:checked ~ main .lang-switch .lang-en { color: var(--navy); font-weight: 800; }
+    .lang-switch:hover { border-color: #fff; }
+    #langSwitch:focus-visible ~ main .lang-switch {
+      outline: 2px solid var(--focus); outline-offset: 3px;
+    }
+  </style>
+  <!-- social -->
+  <link rel="canonical" href="https://anirach.com/blog/ai-transformation-incident-loop.html">
+  <meta property="og:type" content="article">
+  <meta property="og:url" content="https://anirach.com/blog/ai-transformation-incident-loop.html">
+  <meta property="og:site_name" content="Anirach Mingkhwan">
+  <meta property="og:locale" content="th_TH">
+  <meta property="og:locale:alternate" content="en_US">
+  <meta property="article:published_time" content="2026-09-05">
+  <meta property="article:author" content="https://anirach.com/">
+  <meta property="og:title" content="Evidence Before Change — จากเหตุการณ์ผิดพลาดสู่ระบบที่ดีขึ้น">
+  <meta property="og:description" content="อย่าลดเหตุการณ์ผิดพลาดเหลือแค่ &quot;โมเดล hallucinate&quot; — วงจรแปดขั้นบนหลัก Evidence before change พร้อม Trace schema เก้ากลุ่มและกรณี CX-REFUND-01">
+  <meta property="og:image" content="https://anirach.com/images/ai-transformation-incident-loop-og.jpg">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
+  <meta property="og:image:alt" content="Evidence Before Change — จากเหตุการณ์ผิดพลาดสู่ระบบที่ดีขึ้น">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:image" content="https://anirach.com/images/ai-transformation-incident-loop-og.jpg">
+  <meta name="twitter:image:alt" content="Evidence Before Change — จากเหตุการณ์ผิดพลาดสู่ระบบที่ดีขึ้น">
+  <meta name="robots" content="max-image-preview:large">
+  <meta name="theme-color" content="#11304b">
+  <link rel="icon" href="/favicon.ico" sizes="any">
+  <link rel="apple-touch-icon" href="/apple-touch-icon.png">
+  <!-- /social -->
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "BlogPosting",
+    "headline": "Evidence Before Change — จากเหตุการณ์ผิดพลาดสู่ระบบที่ดีขึ้น",
+    "author": {
+      "@type": "Person",
+      "@id": "https://anirach.com/#person",
+      "name": "Anirach Mingkhwan",
+      "url": "https://anirach.com/"
+    },
+    "datePublished": "2026-09-05",
+    "dateModified": "2026-09-05",
+    "image": "https://anirach.com/images/ai-transformation-incident-loop-og.jpg",
+    "inLanguage": [
+      "th",
+      "en"
+    ],
+    "mainEntityOfPage": "https://anirach.com/blog/ai-transformation-incident-loop.html"
+  }
+  </script>
+</head>
+<body>
+<a href="#main" class="skip-link">Skip to content</a>
+<input type="checkbox" id="langSwitch" class="lang-switch-box" aria-label="Switch language: Thai / English">
+
+  <nav class="blog-nav">
+    <div class="blog-nav__inner">
+      <a href="../index.html" class="blog-nav__home">Anirach</a>
+      <a href="./" class="blog-nav__back">‹ Blog</a>
+      <div class="blog-nav__title">Evidence Before Change</div>
+    </div>
+  </nav>
+
+  <main id="main">
+
+  <header class="post-hero">
+    <div class="post-hero__tags">
+      <span class="post-hero__tag">Incident Learning</span>
+      <span class="post-hero__tag">Reconstructable Trace</span>
+      <span class="post-hero__tag">Observability</span>
+    </div>
+    <h1 class="post-hero__title"><span class="l-th">Evidence Before Change — จากเหตุการณ์ผิดพลาดสู่ระบบที่ดีขึ้น</span><span class="l-en" lang="en">Evidence Before Change — From Incident to Improvement</span></h1>
+    <p class="post-hero__sub"><span class="l-th">อย่าลดเหตุการณ์ผิดพลาดของทั้งระบบเหลือแค่ &quot;โมเดล hallucinate&quot; — วงจรแปดขั้นจาก Detect ถึง Learn บนหลัก &quot;เก็บหลักฐานก่อนแก้ระบบ&quot; พร้อม trace schema เก้ากลุ่ม</span><span class="l-en" lang="en">Do not reduce a system incident to &quot;the model hallucinated&quot; — an eight-stage loop from Detect to Learn on the principle &quot;evidence before change&quot;, with a nine-group trace schema.</span></p>
+    <div class="post-hero__meta">
+      <span>By <strong>Anirach Mingkhwan</strong></span>
+      <span class="post-hero__series">AI Transformation for Organizations 2026 • Post #15</span>
+      <span><time datetime="2026-09-05">5 Sep 2026</time></span>
+      <span>37 min read</span>
+    </div>
+    <label for="langSwitch" class="lang-switch" title="สลับภาษา · Switch language"><span class="lang-th">ไทย</span><span class="lang-sep">·</span><span class="lang-en" lang="en">English</span></label>
+    <div class="post-hero__cover">
+      <img src="../images/ai-transformation-incident-loop-cover.jpg" alt="Evidence Before Change — จากเหตุการณ์ผิดพลาดสู่ระบบที่ดีขึ้น" width="800" height="800" loading="eager" fetchpriority="high" decoding="async">
+    </div>
+  </header>
+
+  <article class="post-body">
+
+    <details class="post-toc l-th" open>
+      <summary>ในบทความนี้</summary>
+      <ol>
+          <li><a href="#th-not-the-model-hallucinated">1. อย่าสรุปว่า "โมเดลหลอน" — Incident, Near miss และ Hazard ต่างกันตรงไหน</a></li>
+          <li><a href="#th-loop">2. วงจรแปดขั้นในรูปที่ 13 — จาก Detect ถึง Learn บนแกน "เก็บหลักฐานก่อนแก้ระบบ"</a></li>
+          <li><a href="#th-trace-schema">3. Artifact 6 — Trace schema เก้ากลุ่ม และแบบทดสอบเจ็ดข้อของผู้ตรวจอิสระ</a></li>
+          <li><a href="#th-worked-incident">4. CX-REFUND-01 — เดินครบทั้งวงจรกับเหตุการณ์หนึ่งกรณี</a></li>
+          <li><a href="#th-artifact-incident-loop">5. Artifact 8 — ใบงานแปดขั้น Action, Evidence, Owner และ Done-when</a></li>
+          <li><a href="#th-near-misses">6. Near miss, Override และ Correction คือหลักฐาน ไม่ใช่เรื่องน่าอาย</a></li>
+          <li><a href="#th-metrics-failures">7. ตัวชี้วัดของวงจรเรียนรู้ และรูปแบบความล้มเหลวที่พบซ้ำ</a></li>
+          <li><a href="#th-road-ahead">8. ก้าวต่อไป — จากหลักฐานของหนึ่งเหตุการณ์ สู่ระบบหลักฐานชุดเดียว</a></li>
+      </ol>
+    </details>
+    <details class="post-toc l-en" open>
+      <summary>In this post</summary>
+      <ol>
+          <li><a href="#en-not-the-model-hallucinated">1. Do Not Settle for "the Model Hallucinated" — Incident, Near Miss and Hazard</a></li>
+          <li><a href="#en-loop">2. Figure 13's eight-stage loop — from Detect to Learn on the axis "evidence before change"</a></li>
+          <li><a href="#en-trace-schema">3. Artifact 6 — the nine-group trace schema and the reviewer's seven-part test</a></li>
+          <li><a href="#en-worked-incident">4. CX-REFUND-01 — walking one incident through the whole loop</a></li>
+          <li><a href="#en-artifact-incident-loop">5. Artifact 8 — the eight-stage worksheet: Action, Evidence, Owner, Done-when</a></li>
+          <li><a href="#en-near-misses">6. Near misses, overrides and corrections are evidence, not embarrassments</a></li>
+          <li><a href="#en-metrics-failures">7. Metrics for the learning loop, and the failure patterns that keep coming back</a></li>
+          <li><a href="#en-road-ahead">8. The road ahead — from one incident's evidence to a single evidence system</a></li>
+      </ol>
+    </details>
+    <div class="l-th">
+
+    <p>🤔 <strong>ลูกค้าได้รับคำอธิบายสิทธิ์ที่ผิดจากหน้าโปรโมชันเก่าที่ยังค้างอยู่ใน allow-list — นี่คือความผิดของโมเดล ของ corpus ของรางควบคุม หรือของกระบวนการ?</strong></p>
+
+    <p>ตอนที่แล้ว — <a href="/blog/ai-transformation-release-gate">#14 Five Tracks, One Release Gate</a> — จบลงที่<strong>ด่านอนุมัติการนำระบบออกใช้</strong> (release gate) ตารางแปดแถวที่บังคับให้การปล่อยระบบกลายเป็นคำตัดสินที่เขียนลงกระดาษได้ ว่าเป็น Promote, Canary, Hold หรือ Reject และผมทิ้งท้ายไว้ด้วยประโยคที่ทุกทีมได้ยินแล้วพยักหน้า แต่แทบไม่มีทีมไหนซ้อมจริง คือ Production ไม่ใช่จุดจบของการประเมิน มันคือสภาพประเมินสุดท้าย<sup><a href="#th-ref-1">[1]</a></sup> คำถามที่ค้างอยู่จึงเป็นคำถามที่หลีกไม่พ้น: เมื่อสภาพประเมินสุดท้ายนั้นให้ผลออกมาเป็น "เกิดเรื่องแล้ว" นาทีแรกเราทำอะไร</p>
+
+    <p>คำตอบหนึ่งบรรทัดของบทที่ 9 สั้นและขัดสัญชาตญาณของวิศวกรทุกคน — <strong>เก็บหลักฐานก่อนแก้ระบบ</strong> เพราะการรีบ deploy patch ก่อนเก็บ Manifest และ Trace คือการทำลายพยานปากเดียวที่จะบอกได้ว่าอะไรทำให้มันเกิด และเพราะ "การเรียนรู้จะสมบูรณ์ก็ต่อเมื่อมาตรการแก้ผ่านการยืนยันผลและมีการติดตามการเกิดซ้ำ" ไม่ใช่ตอนที่ระบบกลับมาให้บริการ<sup><a href="#th-ref-1">[1]</a></sup> บทความนี้จะพาเดินจากนิยามที่คนสับสนที่สุดสามคำ ผ่านวงจรแปดขั้นในรูปที่ 13 ผ่าน Trace schema เก้ากลุ่มที่ทำให้การย้อนสร้างเหตุการณ์เป็นไปได้จริง ไปจบที่ใบงานที่กรอกได้ในห้องประชุมจริง พร้อมเดินกรณี CX-REFUND-01 ครบทั้งวงจรให้ดูทีละขั้น</p>
+
+    <h2 id="th-not-the-model-hallucinated">1. อย่าสรุปว่า "โมเดลหลอน" — Incident, Near miss และ Hazard ต่างกันตรงไหน</h2>
+
+    <p>ในการทบทวนเหตุการณ์ที่ผมเคยนั่งฟังมา ประโยคที่ปรากฏบ่อยที่สุดในสไลด์หน้าสรุปคือ "โมเดล hallucinate" และมันคือประโยคที่ปิดการเรียนรู้ได้เร็วที่สุดเท่าที่ผมเคยเห็น เพราะเมื่อสาเหตุรากถูกเขียนว่าเป็นธรรมชาติของโมเดล สิ่งที่เหลือให้ทำก็มีแค่ "เปลี่ยน prompt" หรือ "รอโมเดลรุ่นหน้า" ทั้งที่เหตุการณ์เดียวกันนั้นเดินผ่านราง เดินผ่านการค้นคืน เดินผ่านการตรวจ เดินผ่านการอนุมัติ และเดินผ่านมือคนมาแล้วหลายด่าน</p>
+
+    <p>คู่มือจึงปิดท้าย Artifact 8 ด้วยกฎที่ผมอยากให้ทุกทีมพิมพ์แปะไว้บนผนังห้อง war room<sup><a href="#th-ref-1">[1]</a></sup></p>
+
+    <blockquote><em>"Preserve the failed case before changing it. Do not reduce a system incident to 'the model hallucinated.' Ask which boundary admitted, trusted, authorized, released, or failed to observe the behavior."</em> — เก็บกรณีที่เสียไว้ก่อนแก้ และอย่าสรุปเพียงว่า "โมเดลหลอน" ต้องถามว่า Boundary ใดยอมรับ เชื่อ อนุญาต ปล่อย หรือมองไม่เห็นพฤติกรรมนั้น</blockquote>
+
+    <p>คำถามในประโยคสุดท้ายคือเครื่องมือวินิจฉัยจริง ๆ ไม่ใช่วาทศิลป์ เพราะกริยาห้าคำนั้นชี้ไปที่ห้าตำแหน่งที่ต่างกันในระบบ — <em>ยอมรับ</em> คือรางอินพุตหรือ allow-list ของแหล่งข้อมูล <em>เชื่อ</em> คือชั้นการค้นคืนและตัวให้คะแนนความสอดคล้อง <em>อนุญาต</em> คือด่านควบคุมก่อนเกิดผล <em>ปล่อย</em> คือรางเอาต์พุต และ <em>มองไม่เห็น</em> คือ<strong>ความสามารถในการสังเกตระบบ</strong> (observability) ที่บางลงจนสัญญาณไม่ถึงคน ถ้าคำตอบของคุณคือ "โมเดล" คุณยังไม่ได้ตอบคำถามนี้เลยสักข้อ</p>
+
+    <h3>สามคำที่ต้องแยกให้ออกตั้งแต่นาทีแรก</h3>
+
+    <p>ก่อนจะเริ่มวงจร ต้องแยกให้ออกว่าเรากำลังอยู่ในเหตุการณ์ประเภทไหน เพราะประเภทเป็นตัวกำหนดว่าองค์กรติดค้างอะไรกับใคร คู่มือให้นิยามไว้สองประโยค กระชับจนแทบเป็นสมการ<sup><a href="#th-ref-1">[1]</a></sup></p>
+
+    <blockquote><em>"An incident is a realized harm. A near miss or hazard reveals credible harm before full impact."</em> — Incident คือความเสียหายที่เกิดขึ้นจริง ส่วน Near miss หรือ Hazard คือสิ่งที่เปิดเผยอันตรายที่น่าเชื่อถือก่อนผลกระทบเต็มรูปแบบ</blockquote>
+
+    <p>ข้อสังเกตที่สำคัญและมักถูกอ่านข้าม คือคู่มือ<em>จับ Near miss กับ Hazard ไว้เป็นคู่เดียวกัน</em> ไม่ได้แยกเป็นสองหมวด ถ้าเราอยากแยกสามทางจริง ๆ ต้องไปหยิบนิยามจากที่อื่นมาช่วย และแหล่งที่ตรงที่สุดคือ AI Incidents and Hazards Monitor (AIM) ของ OECD.AI ซึ่งประกาศนิยามของตัวเองไว้เมื่อเดือนพฤษภาคม 2024 ว่า AI incident คือเหตุการณ์ที่การพัฒนา การใช้ หรือการทำงานผิดพลาดของระบบ AI <em>นำไปสู่</em> ความเสียหายในหมวดที่ระบุไว้ทั้งทางตรงและทางอ้อม ส่วน AI hazard คือเหตุการณ์ที่ <em>"could plausibly lead to"</em> ความเสียหายหมวดเดียวกัน<sup><a href="#th-ref-3">[3]</a></sup> ต้องย้ำว่านิยามชุดนี้เป็นนิยามที่ OECD ประกาศใช้กับเครื่องมือเฝ้าระวังของตัวเอง ไม่ใช่มาตรฐานที่บังคับใคร และไม่ใช่นิยามทางกฎหมาย</p>
+
+    <p>ฝั่งมาตรฐาน NIST AI 600-1 ซึ่งเป็น Generative AI Profile ของกรอบบริหารความเสี่ยง AI เผยแพร่เมื่อกรกฎาคม 2024<sup><a href="#th-ref-2">[2]</a></sup> ก็ <em>นำนิยามของ AI incident มาแสดงซ้ำ</em> ในภาคผนวก A.1.8 ไม่ได้บัญญัติขึ้นเอง โดยเขียนว่า AI incident "can be defined as" เหตุการณ์หรือชุดเหตุการณ์ที่นำไปสู่การบาดเจ็บหรือกระทบสุขภาพของบุคคลหรือกลุ่มบุคคล (รวมถึงผลกระทบทางจิตใจ) การหยุดชะงักของโครงสร้างพื้นฐานสำคัญ การละเมิดสิทธิมนุษยชนหรือหน้าที่ตามกฎหมายที่คุ้มครองสิทธิขั้นพื้นฐาน สิทธิแรงงานและทรัพย์สินทางปัญญา หรือความเสียหายต่อทรัพย์สิน ชุมชนและสิ่งแวดล้อม<sup><a href="#th-ref-2">[2]</a></sup> จุดที่ผมอยากให้สังเกตคือรายการนี้ไม่มีคำว่า "ระบบล่ม" อยู่เลย — มันเป็นรายการความเสียหายต่อคน ไม่ใช่รายการอาการของเครื่อง</p>
+
+    <div class="table-wrapper">
+        <table>
+            <thead>
+                <tr>
+                    <th>Category</th>
+                    <th>นิยามที่ใช้</th>
+                    <th>สิ่งที่องค์กรติดค้าง</th>
+                    <th>ที่มาของนิยาม</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td><strong>Incident</strong></td>
+                    <td>ความเสียหายที่เกิดขึ้นจริงแล้ว ทั้งทางตรงและทางอ้อม ต่อคน สิทธิ ทรัพย์สิน ชุมชน หรือโครงสร้างพื้นฐาน</td>
+                    <td>จำกัดผล เยียวยาผู้ได้รับผล แจ้งตามหน้าที่ที่มี เก็บหลักฐาน และเดินครบวงจรจนถึงการยืนยันมาตรการแก้</td>
+                    <td>คู่มือ บทที่ 9 · นิยามที่ NIST AI 600-1 นำมาแสดงซ้ำใน A.1.8</td>
+                </tr>
+                <tr>
+                    <td><strong>Near miss</strong></td>
+                    <td>เหตุที่เดินไปเกือบสุดทางแล้ว แต่มีตัวควบคุมหรือคนดักไว้ทัน จึงไม่เกิดผลเต็มรูปแบบ</td>
+                    <td>บันทึกเหมือน Incident เพราะเป็นหลักฐานคุณภาพสูงที่ได้มาโดยไม่มีใครเสียหาย</td>
+                    <td>คู่มือ บทที่ 9 (จับคู่กับ Hazard) · NIST มีการกระทำที่แนะนำให้บันทึกและติดตาม Near miss โดยเฉพาะ</td>
+                </tr>
+                <tr>
+                    <td><strong>Hazard</strong></td>
+                    <td>สภาพหรือเหตุการณ์ที่ "น่าเชื่อได้ว่าจะนำไปสู่" ความเสียหายหมวดเดียวกัน แม้ยังไม่มีใครเสียหาย</td>
+                    <td>ประเมินความเป็นไปได้ ปรับตัวควบคุมล่วงหน้า และนำเข้าชุดทดสอบก่อนที่มันจะกลายเป็น Incident</td>
+                    <td>นิยามแยกของ OECD.AI AIM ที่ประกาศเมื่อพฤษภาคม 2024 สำหรับเครื่องมือเฝ้าระวังของตัวเอง</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <p>ความต่างนี้ไม่ใช่เรื่องคำศัพท์ ในทางปฏิบัติมันเป็นตัวกำหนดสองอย่างพร้อมกัน — หนึ่ง องค์กรติดค้างการเยียวยาและการแจ้งกับใครบ้าง สอง ทีมจะได้เรียนรู้จากเหตุการณ์นี้ในราคาเท่าไร เพราะ Near miss คือหลักฐานคุณภาพเดียวกับ Incident ที่ได้มาฟรี และองค์กรจำนวนมากเลือกจ่ายราคาเต็มทั้งที่มีของฟรีวางอยู่ตรงหน้า เพียงเพราะไม่มีช่องให้บันทึกมัน</p>
+
+    <div class="alert">
+        <strong>ข้อเท็จจริงที่ต้องพูดตรง ๆ:</strong> ณ กรกฎาคม 2024 NIST AI 600-1 ระบุไว้เองว่า <em>"Formal channels do not currently exist to report and document AI incidents"</em> — ยังไม่มีช่องทางที่เป็นทางการสำหรับรายงานและบันทึกเหตุการณ์ AI มีเพียงฐานข้อมูลสาธารณะหลายแห่งที่ตัดสินใจกันเองแบบเฉพาะกิจว่าจะเก็บอะไร บางแห่งถึงขั้นคัดตามปริมาณข่าวที่รายงาน<sup><a href="#th-ref-2">[2]</a></sup> แปลว่าฐานข้อมูลภายในองค์กรของคุณคือแหล่งเรียนรู้หลัก ไม่ใช่ส่วนเสริม
+    </div>
+
+    <h2 id="th-loop">2. วงจรแปดขั้นในรูปที่ 13 — จาก Detect ถึง Learn บนแกน "เก็บหลักฐานก่อนแก้ระบบ"</h2>
+
+    <p>รูปที่ 13 ของคู่มือวาด<strong>วงจรเรียนรู้จากเหตุการณ์ผิดปกติ</strong> (incident-learning loop) ไว้เป็นวงกลมแปดโหนดหมุนรอบแกนกลางเดียว และแกนกลางนั้นไม่ใช่ขั้นตอน แต่เป็นหลักการที่กำกับทุกขั้น</p>
+
+    <figure class="figure">
+      <a href="../images/ai-transformation-fig-13-incident-loop.png">
+        <img class="figure__img" src="../images/ai-transformation-fig-13-incident-loop.png" alt="แผนภาพวงจรแปดขั้น ตรวจพบ จำกัดผล รักษาหลักฐาน วินิจฉัย แก้ไข ประเมินใหม่ กู้คืน เรียนรู้ หมุนรอบแกนกลางสีเข้ม EVIDENCE BEFORE CHANGE" width="1400" height="1000" loading="lazy" decoding="async">
+      </a>
+      <figcaption class="figure__caption">รูปที่ 13 · วงจรจากเหตุการณ์ผิดพลาดสู่การปรับปรุง — เก็บหลักฐานก่อนแก้ระบบเสมอ</figcaption>
+    </figure>
+
+    <p>วงจรในรูปมีแปดขั้น<sup><a href="#th-ref-1">[1]</a></sup> — Detect ตรวจพบ, Contain จำกัดผล, Preserve รักษาหลักฐาน, Diagnose วินิจฉัย, Remediate แก้ไข, Re-evaluate ประเมินใหม่, Recover กู้คืน และ Learn เรียนรู้ — หมุนรอบแกนกลางสีเข้มที่เขียนว่า EVIDENCE BEFORE CHANGE / เก็บหลักฐานก่อนแก้ระบบ</p>
+
+    <div class="alert info">
+        <strong>ระวังกับดักการนับ:</strong> คู่มือเล่มนี้ตั้งชื่อวงจรเดียวกันไว้ <em>สามแบบ</em> และตัวเลขไม่เท่ากัน — เนื้อความในบทที่ 9 ไล่กริยาไว้ <strong>เก้าคำ</strong> โดยมี <em>Scope</em> เพิ่มเข้ามาหลัง Preserve, รูปที่ 13 วาดไว้ <strong>แปดโหนด</strong> โดยตัด Scope ออก และคำนิยามในอภิธานศัพท์ภาคผนวก ค. ข้อ 36 เขียนไว้ <strong>เจ็ดกริยา</strong> (detect, contain, reconstruct, remedy, verify, communicate, update controls) ทั้งสามชุดคือของจริงทั้งหมด แต่ห้ามเอามาปนกันในรายการเดียว บทความนี้ใช้ชุดของรูปที่ 13 ในหัวข้อนี้ และใช้ชุดของ Artifact 8 ในใบงานหัวข้อที่ 5 — และจะเรียกชื่อเจ้าของชุดกำกับไว้ทุกครั้ง
+    </div>
+
+    <p>ประโยคที่คู่มือใช้ไล่ลำดับการตอบสนองในเนื้อความบท เขียนไว้แบบนี้ และผมยกมาทั้งประโยคเพราะครึ่งหลังมีค่ามากกว่าครึ่งแรก<sup><a href="#th-ref-1">[1]</a></sup></p>
+
+    <blockquote><em>"Respond by detecting, containing, preserving evidence, scoping, diagnosing, remediating, reevaluating, recovering, and learning. Bound effects first, preserve the manifest and traces before modification, inspect authoritative external state, and add both the actual case and hidden neighboring cases to evaluation."</em></blockquote>
+
+    <p>ครึ่งหลังคือคำสั่งสี่ข้อที่เรียงลำดับความสำคัญไว้แล้ว — <em>จำกัดผลก่อน</em> จากนั้น <em>เก็บ Manifest และ Trace ก่อนจะแก้อะไร</em> แล้วจึง <em>ตรวจสถานะจริงจากระบบที่เชื่อถือได้</em> และสุดท้าย <em>เพิ่มทั้งกรณีจริงและกรณีข้างเคียงที่ซ่อนอยู่เข้าไปในชุดประเมิน</em> สังเกตว่าคำสั่งข้อที่สองมาก่อนการวินิจฉัย ไม่ใช่หลัง เพราะการวินิจฉัยส่วนใหญ่ทำโดยการแก้ไขบางอย่างแล้วดูว่าอาการหายไหม ซึ่งเป็นการเขียนทับพยานหลักฐานโดยไม่ตั้งใจ</p>
+
+    <div class="table-wrapper">
+        <table>
+            <thead>
+                <tr>
+                    <th>Stage</th>
+                    <th>สิ่งที่ทำในขั้นนี้</th>
+                    <th>คำถามที่ต้องตอบก่อนไปขั้นถัดไป</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td><strong>Detect</strong> ตรวจพบ</td>
+                    <td>รับสัญญาณจากการเฝ้าระวัง จากข้อร้องเรียน จาก Override ของผู้ปฏิบัติงาน หรือจากการตรวจสอบภายใน แล้วประกาศเหตุการณ์อย่างเป็นทางการพร้อมตั้ง Commander</td>
+                    <td>เวลาที่เกิดคือเมื่อไร ขอบเขตผู้ได้รับผลกว้างแค่ไหน และใครเป็นเจ้าของเหตุการณ์นี้ตั้งแต่นาทีนี้</td>
+                </tr>
+                <tr>
+                    <td><strong>Contain</strong> จำกัดผล</td>
+                    <td>ปิด Capability, Traffic หรือ Slice ที่เกี่ยวข้อง พา Workflow กลับสู่<strong>ภาวะปลอดภัยเมื่อระบบล้มเหลว</strong> (fail-safe state) ส่งกรณีที่เหลือให้คน และเยียวยาผู้ได้รับผล</td>
+                    <td>ยังมีผู้ได้รับผลรายใหม่เกิดขึ้นอยู่หรือไม่ และเส้นทางที่เหลืออยู่ปลอดภัยพอให้ระบบเดินต่อได้จริงหรือ</td>
+                </tr>
+                <tr>
+                    <td><strong>Preserve</strong> รักษาหลักฐาน</td>
+                    <td>ตรึง Manifest, Trace, Context ที่ใช้จริง ณ เวลานั้น รวมถึงเวอร์ชันของ corpus, ตัวให้คะแนน และเกณฑ์ที่บังคับใช้ ก่อนแตะโค้ดหรือคอนฟิกใด ๆ</td>
+                    <td>ถ้าเรากด rollback ในนาทีถัดไป เรายังย้อนสร้างเหตุการณ์นี้ได้ครบทุกขั้นหรือไม่</td>
+                </tr>
+                <tr>
+                    <td><strong>Diagnose</strong> วินิจฉัย</td>
+                    <td>ไล่หาสาเหตุทั้งด้านเทคนิค ข้อมูล Workflow ความเป็นเจ้าของ และแรงจูงใจ พร้อมตอบว่าทำไมการตรวจจับหรือการรับมือถึงไม่ทัน</td>
+                    <td>Boundary ใดยอมรับ เชื่อ อนุญาต ปล่อย หรือมองไม่เห็นพฤติกรรมนั้น และเราตอบได้ด้วยหลักฐาน ไม่ใช่ด้วยการเดา</td>
+                </tr>
+                <tr>
+                    <td><strong>Remediate</strong> แก้ไข</td>
+                    <td>แยกมาตรการเฉพาะหน้าออกจากมาตรการถาวร กำหนดเจ้าของและวันครบกำหนด แล้วปรับ Contract, Manifest, Runbook และการฝึกอบรมให้สอดคล้อง</td>
+                    <td>มาตรการถาวรตัวไหนที่ทำให้กรณีนี้เกิดซ้ำไม่ได้ ไม่ใช่แค่ทำให้ตรวจพบเร็วขึ้น</td>
+                </tr>
+                <tr>
+                    <td><strong>Re-evaluate</strong> ประเมินใหม่</td>
+                    <td>เปลี่ยนกรณีที่พังให้เป็น Regression test ที่มีชื่อ แล้วรันร่วมกับชุด Hidden, Adaptive และกรณีข้างเคียงที่ยังไม่เคยถูกทดสอบ</td>
+                    <td>ชุดประเมินตอนนี้จะจับเหตุการณ์เดียวกันได้หรือไม่ ถ้าถูกปล่อยเข้ามาอีกครั้งวันนี้</td>
+                </tr>
+                <tr>
+                    <td><strong>Recover</strong> กู้คืน</td>
+                    <td>กลับมาให้บริการแบบเปิดรับทีละน้อย พร้อมกำหนดรอบทบทวนที่สั้นลง เพดาน exposure ที่ต่ำลง และเส้นทางหยุดที่ซ้อมแล้ว</td>
+                    <td>ถ้ามันกลับมาอีกในชั่วโมงหน้า เรารู้ตัวภายในกี่นาที และถอยกลับได้ในกี่นาที</td>
+                </tr>
+                <tr>
+                    <td><strong>Learn</strong> เรียนรู้</td>
+                    <td>สื่อสารกับผู้ได้รับผล ชดเชย เฝ้าการเกิดซ้ำ แชร์รูปแบบข้ามผลิตภัณฑ์ และปิดเหตุการณ์ด้วยหลักฐานเท่านั้น</td>
+                    <td>ผลิตภัณฑ์อื่นที่มีจุดอ่อนแบบเดียวกันได้รับการแก้ไปด้วยหรือยัง และเราปิดด้วยหลักฐานอะไร</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <p>ประโยคที่กำหนดว่าเมื่อไรถือว่าจบ คือประโยคปิดย่อหน้าเหตุการณ์ในบทที่ 9 และมันเข้มกว่าที่หลายองค์กรใช้อยู่มาก<sup><a href="#th-ref-1">[1]</a></sup></p>
+
+    <blockquote><em>"Learning is complete only when the corrective control or design change is verified and recurrence is monitored."</em> — การเรียนรู้สมบูรณ์เมื่อ Control หรือ Design ใหม่ผ่านการยืนยันและติดตามการเกิดซ้ำแล้วเท่านั้น</blockquote>
+
+    <p>คำที่ทำงานหนักที่สุดคือ <em>verified</em> และ <em>monitored</em> เพราะทั้งสองคำเป็นกริยาที่ต้องมีหลักฐานรองรับ ไม่ใช่สถานะที่ประกาศได้ในที่ประชุม การเขียนใน ticket ว่า "แก้แล้ว" ไม่ใช่การยืนยัน การมีมาตรการอยู่ในเอกสารก็ไม่ใช่ และการที่ไม่มีใครร้องเรียนเข้ามาอีกภายในสองวันก็ไม่ใช่การติดตามการเกิดซ้ำ</p>
+
+    <p>ฝั่งมาตรฐานเดินไปทางเดียวกัน NIST AI 600-1 มีการกระทำที่แนะนำ (Suggested Action) ให้จัดทำและปรับปรุงแผนตอบสนองและกู้คืนเหตุการณ์สำหรับระบบ GenAI โดยครอบคลุมถึงการใช้งานรูปแบบใหม่ที่ไม่ได้คาดไว้ และครอบคลุมทั้งห่วงโซ่คุณค่าพร้อมช่องทางติดต่อของผู้เกี่ยวข้องปลายทาง และอีกรายการหนึ่งให้ทำ <em>after-action assessment</em> เพื่อยืนยันว่ากระบวนการตอบสนองและกู้คืนถูกปฏิบัติตามจริงและได้ผลจริง<sup><a href="#th-ref-2">[2]</a></sup> ต้องย้ำให้ชัดว่าเอกสารฉบับนี้เป็นข้อเสนอโดยสมัครใจ ไม่ใช่ข้อบังคับ — คำว่า Suggested Actions คือคำของ NIST เอง องค์กรต้องเลือกและปรับให้เข้ากับกรณีใช้งานและระดับความเสี่ยงที่ตัวเองรับได้</p>
+
+    <h2 id="th-trace-schema">3. Artifact 6 — Trace schema เก้ากลุ่ม และแบบทดสอบเจ็ดข้อของผู้ตรวจอิสระ</h2>
+
+    <p>ขั้น Preserve จะทำไม่ได้เลยถ้าไม่มีอะไรให้เก็บ และนี่คือเหตุผลที่คู่มือวาง Artifact 6 ไว้ก่อน Artifact 8 — <strong>ร่องรอยที่สร้างเหตุการณ์ย้อนกลับได้</strong> (reconstructable trace) ไม่ใช่ของที่หาได้ตอนเกิดเรื่อง มันเป็นของที่ต้องออกแบบไว้ก่อนตั้งแต่ตอนที่ยังไม่มีเรื่องอะไรเกิดขึ้น คู่มือเขียนวัตถุประสงค์ของ Artifact นี้ไว้ประโยคเดียว และตามด้วยประโยคที่สั้นกว่าแต่คมกว่า<sup><a href="#th-ref-1">[1]</a></sup></p>
+
+    <blockquote><em>"Preserve enough evidence for a later authorized reviewer to reconstruct what the system knew, proposed, checked, did, released, and why it chose that route. Auditable means reconstructable, not safe."</em> — เก็บหลักฐานให้พอที่ผู้ตรวจซึ่งมีสิทธิ์ในภายหลังจะย้อนสร้างได้ว่าระบบรู้อะไร เสนออะไร ตรวจอะไร ทำอะไร ปล่อยอะไร และเลือก Route นั้นเพราะเหตุใด · Auditable แปลว่าย้อนสร้างได้ ไม่ได้แปลว่าปลอดภัย</blockquote>
+
+    <p>ประโยคหลังคือประโยคที่ผมอยากให้ทีม compliance อ่านช้า ๆ เพราะการมี log ครบไม่ได้แปลว่าระบบปลอดภัย มันแปลแค่ว่าถ้าเกิดเรื่อง เราจะรู้ว่าเกิดอะไร สองเรื่องนี้ต่างกันมากพอที่จะทำให้องค์กรที่สับสนระหว่างสองคำนี้ ลงทุนผิดทางไปทั้งปี</p>
+
+    <h3>เก้ากลุ่ม event ที่ต้องเก็บ</h3>
+
+    <p>Trace schema ของคู่มือมี<strong>เก้ากลุ่ม</strong> event<sup><a href="#th-ref-1">[1]</a></sup> — Identity, Release identity, Input and state, Context and retrieval, Checks, Generation, Effect, Release และ Operations ผมยึดโครงเก้ากลุ่มนี้ทั้งในฉบับภาษาไทยและฉบับภาษาอังกฤษ ทั้งที่ตารางภาษาไทยในเล่มบีบเหลือแปดแถวโดยยุบ Release กับ Operations เข้าด้วยกัน เพราะการยุบนั้นเป็นการย่อเพื่อจัดหน้า ไม่ใช่ schema คนละชุด และในทางปฏิบัติ Release กับ Operations ตอบคำถามคนละคำถามอย่างชัดเจน</p>
+
+    <div class="table-wrapper">
+        <table>
+            <thead>
+                <tr>
+                    <th>Event group</th>
+                    <th>Required fields</th>
+                    <th>What it lets a reviewer do</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td><strong>1. Identity</strong></td>
+                    <td>Trace/Request/Session ID, Principal ที่ยืนยันตัวตนแล้วและ Subject, เวลา, ภาษาและ locale, Channel, การอ้างอิงความยินยอมหรือฐานทางกฎหมาย</td>
+                    <td>รู้ว่าใครถาม ในนามของใคร ผ่านช่องทางไหน เมื่อไร และด้วยฐานอะไร</td>
+                </tr>
+                <tr>
+                    <td><strong>2. Release identity</strong></td>
+                    <td>Manifest, ID ของโมเดลและตัวประเมิน, ค่า decoding, เวอร์ชันของนโยบายและ Threshold</td>
+                    <td>ระบุได้ว่าเหตุการณ์นี้เกิดบนระบบรุ่นไหน — คำถามแรกที่ตอบไม่ได้แล้วทุกอย่างที่เหลือพัง</td>
+                </tr>
+                <tr>
+                    <td><strong>3. Input and state</strong></td>
+                    <td>คำขอเดิมหรือ Protected reference, สถานะก่อนหน้า, Dialog transition, ป้าย Trusted/Untrusted ของแต่ละชิ้นส่วน</td>
+                    <td>แยกได้ว่าอะไรมาจากผู้ใช้ อะไรมาจากระบบ และอะไรที่ระบบไม่ควรเชื่อตั้งแต่แรก</td>
+                </tr>
+                <tr>
+                    <td><strong>4. Context and retrieval</strong></td>
+                    <td>Assembly hash, บริบทที่ใช้จริงหรือ Replay reference, เวอร์ชันของ corpus และตัวจัดอันดับ, Query, ลำดับ Passage ID, Text hash และ<strong>ที่มาของข้อมูลและผลลัพธ์</strong> (provenance)</td>
+                    <td>ชี้ตัวเอกสารที่ทำให้ระบบตอบแบบนั้นได้ทีละชิ้น พร้อมรู้ว่ามันมาจากไหนและรุ่นไหน</td>
+                </tr>
+                <tr>
+                    <td><strong>5. Checks</strong></td>
+                    <td>รางตามลำดับที่เดินผ่าน, เวอร์ชันและคลาสของตัวควบคุม, Score, Threshold, รายการ Violation, Verdict และ Latency</td>
+                    <td>เห็นว่าด่านไหนตรวจแล้วผ่าน ด่านไหนตรวจแล้วไม่ผ่าน และผ่านด้วยคะแนนห่างจากเกณฑ์เท่าไร</td>
+                </tr>
+                <tr>
+                    <td><strong>6. Generation</strong></td>
+                    <td>Candidate hash และ payload ที่ป้องกันไว้, Citation, เครื่องมือและอาร์กิวเมนต์ที่ถูกเสนอ</td>
+                    <td>อ่าน <em>ข้อเสนอ</em> ของโมเดลได้ตรง ๆ โดยไม่ต้องเดาจากผลลัพธ์ปลายทาง</td>
+                </tr>
+                <tr>
+                    <td><strong>7. Effect</strong></td>
+                    <td>Identity binding, Authorization, Approval, Idempotency, Pre-state, Normalized call, Result, Post-state, Exception</td>
+                    <td>พิสูจน์ว่ามีผลจริงเกิดขึ้นหรือไม่ เกิดกี่ครั้ง และสถานะจริงเปลี่ยนจากอะไรเป็นอะไร</td>
+                </tr>
+                <tr>
+                    <td><strong>8. Release</strong></td>
+                    <td>Output hash และ payload reference, รายการ Redaction, Route ที่เลือก: release, withhold, escalate หรือ fail closed</td>
+                    <td>รู้ว่าอะไรถูกส่งถึงผู้ใช้จริง และระบบเลือกเส้นทางปลายทางแบบไหน</td>
+                </tr>
+                <tr>
+                    <td><strong>9. Operations</strong></td>
+                    <td>Cost/Token เท่าที่จำเป็น, Terminal time, Retention class, Access log, Integrity signature, Linked incident</td>
+                    <td>ตรวจได้ว่าใครเปิดดูหลักฐานชุดนี้ หลักฐานถูกแก้หรือไม่ และผูกกับเหตุการณ์ไหน</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <p>สังเกตว่าเก้ากลุ่มนี้ไม่ใช่การเรียงตามลำดับเวลาอย่างเดียว แต่เรียงตาม <em>คำถามที่ผู้ตรวจจะถาม</em> และจุดที่ผมเห็นทีมพลาดบ่อยที่สุดคือกลุ่มที่ 2 กับกลุ่มที่ 9 — ทีมส่วนใหญ่เก็บ input, output และ latency ครบถ้วน แต่เก็บ <strong>บัญชีรายการบริบทขณะทำงาน</strong> (runtime-context manifest) ไม่ครบ พอถึงเวลาย้อนสร้าง จึงตอบไม่ได้ว่าเหตุการณ์เกิดบน manifest ตัวไหน และการย้อนสร้างที่เหลือก็เป็นการเดาทั้งหมด</p>
+
+    <h3>แบบทดสอบเจ็ดข้อ</h3>
+
+    <p>คู่มือปิดตาราง schema ด้วยประโยคเดียวที่เป็นแบบทดสอบใช้งานได้จริง — ไม่ต้องรอผู้ตรวจมาถึงก็ทดสอบเองได้วันนี้ ผู้ตรวจอิสระต้องทำได้<strong>เจ็ดอย่าง</strong><sup><a href="#th-ref-1">[1]</a></sup> คือ ระบุ Release ที่เกิดเหตุ, สร้างหลักฐาน ณ เวลาตัดสินใจขึ้นมาใหม่, Replay hard check ได้, เห็นทั้ง Score และ Threshold คู่กัน, แยกข้อเสนอออกจากผลจริง, ยืนยัน Final state และอธิบาย Route ที่ระบบเลือก</p>
+
+    <p>ข้อที่คนตัดทิ้งบ่อยที่สุดคือข้อที่สี่ — เห็น Score โดยไม่เห็น Threshold ที่บังคับใช้อยู่ ณ ตอนนั้น เพราะเกณฑ์มักถูกเก็บไว้ในคอนฟิกที่เปลี่ยนได้ตลอดเวลาและไม่ถูกบันทึกลง trace เมื่อเกณฑ์ถูกปรับหลังเกิดเหตุ ตัวเลข 0.91 ในหลักฐานก็กลายเป็นตัวเลขที่ตีความไม่ได้อีกต่อไป และข้อที่ห้า — แยกข้อเสนอออกจากผลจริง — คือข้อที่แยกระบบที่ออกแบบด้วย<strong>การแยกข้อเสนอออกจากผลจริง</strong> (proposal–effect separation) ออกจากระบบที่ไม่ได้ออกแบบมาแบบนั้น เพราะถ้า trace ไม่แยกสองสิ่งนี้ ก็ไม่มีทางรู้ว่าด่านควบคุมทำงานหรือโมเดลบังเอิญเสนอถูก</p>
+
+    <p>คำศัพท์ที่ใช้อธิบายว่าสิ่งเหล่านี้ "เป็นอะไร" ในเชิงโครงสร้าง มีมาตรฐานกลางรองรับอยู่แล้ว PROV-O ของ W3C ให้คำศัพท์ตั้งต้นไว้ <strong>สามชนิด</strong><sup><a href="#th-ref-4">[4]</a></sup> — <em>entity</em> คือสิ่งที่ถูกกระทำ (เอกสารที่ค้นคืนมาหนึ่งชิ้น, payload หนึ่งก้อน), <em>activity</em> คือการกระทำที่กินเวลา (การตรวจของด่านหนึ่งครั้ง, การเรียกเครื่องมือหนึ่งครั้ง) และ <em>agent</em> คือผู้ที่แบกความรับผิดชอบต่อการกระทำนั้น (ผู้อนุมัติ, service owner, ระบบที่ทำงานแทน) PROV-O เป็น W3C Recommendation มาตั้งแต่ 30 เมษายน 2013 และ ณ วันที่เข้าถึงยังไม่มีประกาศยกเลิกหรือทดแทน แต่ขอบเขตของมันชัดเจนมาก: มันให้ <em>คำศัพท์</em> ไม่ได้ให้นโยบายการตรวจสอบหรือแบบการจัดเก็บ ดังนั้น schema เก้ากลุ่มข้างบนคือการนำคำศัพท์นั้นมาลงรายละเอียดในโดเมนของเรา ไม่ใช่สิ่งเดียวกันและใช้แทนกันไม่ได้</p>
+
+    <div class="alert">
+        <strong>"เก็บทุกอย่างตลอดไป" ไม่ใช่ Assurance:</strong> คู่มือเขียนกำกับไว้ตรง ๆ ว่า <em>"Encrypt, restrict, redact and limit retention; 'log everything forever' is not assurance."</em> — ต้องเข้ารหัส จำกัดสิทธิ์เข้าถึง แสดงผลแบบ Redact และเก็บตามวัตถุประสงค์<sup><a href="#th-ref-1">[1]</a></sup> คลังหลักฐานที่ใหญ่ขึ้นเรื่อย ๆ โดยไม่มีนโยบายอายุการเก็บ ไม่ได้แปลว่าตรวจสอบได้ดีขึ้น มันแปลว่าพื้นที่ผิวของความเสี่ยงด้านความเป็นส่วนตัวกว้างขึ้นทุกวัน ในขณะที่ความสามารถในการย้อนสร้างเหตุการณ์หนึ่งกรณีอาจไม่ได้ดีขึ้นเลย เกณฑ์ที่ถูกต้องคือ "พอสำหรับย้อนสร้าง" ไม่ใช่ "ทั้งหมดที่เก็บได้"
+    </div>
+
+    <p>คู่มือยังแบ่งความเป็นเจ้าของไว้สามฝ่ายอย่างชัดเจน ซึ่งเป็นการแบ่งที่ผมคิดว่าใช้ได้ทันทีในองค์กรไทย — SRE หรือ platform owner รับประกันว่าการเก็บทนทานและไม่หาย, ทีมคุ้มครองข้อมูลส่วนบุคคลเป็นเจ้าของเรื่องการลดข้อมูลและอายุการเก็บ ส่วนเจ้าของการตัดสินใจเป็นผู้ตรวจ<em>ความหมาย</em> ของสิ่งที่เก็บ<sup><a href="#th-ref-1">[1]</a></sup> การแบ่งนี้แก้ปัญหาคลาสสิกที่ trace ถูกออกแบบโดยวิศวกรฝ่ายเดียว แล้วกลายเป็นข้อมูลที่ครบทางเทคนิคแต่ตอบคำถามเชิงนโยบายไม่ได้สักข้อ</p>
+
+    <div class="alert info">
+        <strong>🇹🇭 บริบทไทย — ฟิลด์ที่คนไทยต้องเก็บเพิ่ม และ PDPA ในฐานะ "ข้อมูลนำเข้าการออกแบบ":</strong> ตัวอย่าง trace ในคู่มือบันทึกภาษาและ locale ไว้ตรง ๆ ว่า <code>Thai</code> คู่กับ <code>manifest rc4</code> และเวลา <code>10:42:16+07</code> — สามฟิลด์นี้คือความแตกต่างระหว่าง trace ที่ตรวจได้กับ trace ที่ตรวจไม่ได้ในองค์กรที่ให้บริการหลายภาษาและมี offset เวลาไม่ตรงกับสำนักงานใหญ่ ถ้าไม่บันทึก locale ก็แยกไม่ออกว่าคำตอบที่ผิดนั้นผิดเพราะนโยบาย หรือผิดเพราะการแปล และถ้าไม่บันทึก offset การเรียงลำดับเหตุการณ์ข้ามระบบจะคลาดกันเจ็ดชั่วโมงโดยไม่มีใครสังเกต<br><br>
+        ฝั่งกฎหมาย พ.ร.บ. คุ้มครองข้อมูลส่วนบุคคล พ.ศ. 2562 ให้<em>ข้อมูลนำเข้าการออกแบบ</em>อย่างน้อยสี่จุดกับ trace schema — มาตรา ๒๒ ให้เก็บรวบรวมข้อมูลส่วนบุคคลได้เท่าที่จำเป็นภายใต้วัตถุประสงค์อันชอบด้วยกฎหมาย, มาตรา ๓๓ (๑) ให้สิทธิเจ้าของข้อมูลขอให้ลบหรือทำลายเมื่อหมดความจำเป็นตามวัตถุประสงค์, มาตรา ๓๗ (๑) ให้จัดมาตรการรักษาความมั่นคงปลอดภัยที่เหมาะสมและทบทวนเมื่อเทคโนโลยีเปลี่ยน และมาตรา ๓๗ (๓) ให้จัดให้มี <em>ระบบตรวจสอบเพื่อลบหรือทำลาย</em> ข้อมูลเมื่อพ้นกำหนดระยะเวลาการเก็บรักษา — ข้อสุดท้ายนี้คือเหตุผลว่าทำไม Retention class จึงเป็นฟิลด์บังคับในกลุ่มที่ 9 ไม่ใช่ของแถม และมาตรา ๓๗ (๔) กำหนดให้แจ้งเหตุละเมิดข้อมูลส่วนบุคคลต่อสำนักงานโดยไม่ชักช้าภายใน <strong>72 ชั่วโมง</strong> (เจ็ดสิบสองชั่วโมง) นับแต่ทราบเหตุ เท่าที่จะสามารถกระทำได้ เว้นแต่การละเมิดนั้นไม่มีความเสี่ยงต่อสิทธิและเสรีภาพของบุคคล และถ้ามีความเสี่ยงสูงต้องแจ้งเจ้าของข้อมูลพร้อมแนวทางเยียวยาด้วย<sup><a href="#th-ref-5">[5]</a></sup> นาฬิกาเรือนนี้คือนาฬิกาเรือนเดียวในบทความนี้ที่มาจากภายนอกองค์กร และมันเดินทับขั้น Detect กับ Contain พอดี<br><br>
+        <em>ขอบเขตที่ต้องพูดให้ชัด:</em> ทั้งหมดนี้เป็นข้อมูลนำเข้าการออกแบบ Runbook <strong>ไม่ใช่คำแนะนำทางกฎหมาย</strong> บทความนี้ไม่ตีความว่าฟิลด์ใดเป็นหรือไม่เป็นข้อมูลส่วนบุคคล ไม่ตีความว่าเหตุการณ์ใดเข้าข่ายต้องแจ้ง และไม่ระบุระยะเวลาเก็บรักษาที่ "ถูกต้อง" เพราะกฎหมายไม่ได้กำหนดอายุการเก็บ trace ไว้ ทั้งวิธีการและหลักเกณฑ์ตามมาตรา ๓๗ (๑) และ ๓๗ (๔) ยังถูกมอบให้คณะกรรมการประกาศกำหนดเพิ่มเติม ตัวบทและที่ปรึกษากฎหมายไทยที่มีคุณสมบัติเท่านั้นที่เป็นผู้ชี้ขาด ตอน <a href="/blog/ai-transformation-obligations">#16 One Evidence System</a> จะแมปหน้าที่เหล่านี้เข้ากับหลักฐานชุดเดียวอย่างละเอียด
+    </div>
+
+    <h2 id="th-worked-incident">4. CX-REFUND-01 — เดินครบทั้งวงจรกับเหตุการณ์หนึ่งกรณี</h2>
+
+    <p>ทฤษฎีทั้งหมดข้างบนจะมีความหมายก็ต่อเมื่อมันเดินได้จริงกับเหตุการณ์หนึ่งเหตุการณ์ คู่มือจึงใช้กรณี <code>CX-REFUND-01</code> ผู้ช่วยงานบริการลูกค้าของ Luma Commerce Thailand <em>(กรณีสมมติจากหนังสือ)</em> เป็นตัวเดินเรื่องมาตั้งแต่ต้นเล่ม และเดินมันครบทั้งวงจรใน Artifact 8 ตัวเลขทุกตัวในหัวข้อนี้เป็นค่าประกอบของกรณีสมมติ ไม่ใช่เกณฑ์ ไม่ใช่ค่าเฉลี่ยอุตสาหกรรม และห้ามยกไปใส่ตารางตัวชี้วัดเป็นเป้าหมาย</p>
+
+    <h3>สิ่งที่เกิดขึ้น</h3>
+
+    <p>ที่ Rollout 25% ลูกค้าคนหนึ่งได้รับคำอธิบายว่าตนมีสิทธิ์ภายใน 60 วัน ซึ่งเป็นข้อความที่มาจากหน้าโปรโมชันเก่าที่หมดอายุไปแล้ว แต่ยังค้างอยู่ใน allow-list ของแหล่งข้อมูล จากนั้นโมเดลเสนอคืนเงิน 2,400 บาทในวันที่ 45 นับจากวันที่กำหนด — ซึ่งเกินสิทธิ์จริง<sup><a href="#th-ref-1">[1]</a></sup></p>
+
+    <p>สิ่งที่เกิดขึ้นถัดมาคือหัวใจของกรณีนี้ทั้งหมด และเป็นเหตุผลที่ผมเลือกเล่ามันซ้ำจากตอน <a href="/blog/ai-transformation-five-rails">#13 Five Rails and the Effect Guard</a> ในมุมใหม่ — <strong>Execution guard block การจ่ายเงินไว้ได้ แต่ Output rail ปล่อยคำอธิบายที่ผิดออกไป</strong> พูดอีกอย่างคือ เงินไม่ได้ออกจากบัญชีแม้แต่บาทเดียว แต่ลูกค้าได้รับคำสัญญาที่องค์กรทำตามไม่ได้ไปเรียบร้อยแล้ว</p>
+
+    <p>เมื่อ Stop condition ถูก trigger ทีมจึง Rollback กลับไปที่ manifest <code>rc4</code> และส่งกรณีที่เกี่ยวกับโปรโมชันทั้งหมดให้คนดูแลแทน<sup><a href="#th-ref-1">[1]</a></sup> สังเกตลำดับ: จำกัดผลก่อน แล้วค่อยเข้าสู่การย้อนสร้าง</p>
+
+    <h3>สิ่งที่ Trace บอก และการจำแนกที่ตามมา</h3>
+
+    <p>Trace ยืนยันว่า<em>ไม่มี</em> Financial effect เกิดขึ้นจริง และชี้ตำแหน่งได้ครบสามจุด — corpus ลงวันที่ <code>2026-09-01</code>, passage ที่เก่าและหมดอายุ, ตัวให้คะแนนความสอดคล้องที่ False accept และ payload ที่ถูกปล่อยออกไปแล้ว<sup><a href="#th-ref-1">[1]</a></sup> จากหลักฐานชุดนี้ ทีมจำแนกเหตุการณ์ว่าเป็น <strong>severe semantic policy escape บวก near miss</strong> โดยที่ <em>structural execution invariant ยังทำงานอยู่</em></p>
+
+    <p>ประโยคจำแนกประโยคเดียวนี้บรรจุแนวคิดสองคำที่ซีรีส์นี้พูดถึงมาตลอด และเป็นจุดที่ทีมส่วนใหญ่แยกไม่ออก — <strong>การรับประกันเชิงโครงสร้าง</strong> (structural guarantee) คือสิ่งที่พิสูจน์ได้แบบกำหนดแน่นอน เช่น "จะไม่มีการจ่ายเงินโดยไม่ผ่านการอนุมัติและไม่เกินวงเงิน" ส่วน<strong>ค่าประเมินเชิงความหมาย</strong> (semantic estimate) คือคะแนนความน่าจะเป็นว่าข้อความนี้สอดคล้องกับนโยบายแค่ไหน ในกรณีนี้ ตัวแรก<em>ยืน</em> ตัวหลัง<em>รั่ว</em> และการรายงานผลว่า "ระบบทำงานถูกต้อง" หรือ "ระบบล้มเหลว" เพียงคำเดียวจะทำให้ผู้บริหารเข้าใจผิดทั้งสองทาง</p>
+
+    <div class="table-wrapper">
+        <table>
+            <thead>
+                <tr>
+                    <th>Boundary</th>
+                    <th>ทำงานตามที่ออกแบบไว้หรือไม่</th>
+                    <th>หลักฐานจาก trace</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>Allow-list ของแหล่งข้อมูล</td>
+                    <td>ไม่ — ตรวจ ID ของแหล่ง แต่ไม่ตรวจวันที่มีผลบังคับใช้</td>
+                    <td>Passage จากหน้าโปรโมชันที่หมดอายุ ผ่านเข้าสู่บริบทได้ตามปกติ</td>
+                </tr>
+                <tr>
+                    <td>ตัวให้คะแนนความสอดคล้อง</td>
+                    <td>ไม่ — ตรวจ textual entailment แต่ไม่ตรวจความเป็นปัจจุบันของนโยบาย</td>
+                    <td>Support false accept: ข้อความสอดคล้องกับเอกสารจริง แต่เอกสารนั้นไม่ใช่นโยบายที่ใช้อยู่</td>
+                </tr>
+                <tr>
+                    <td>ด่านควบคุมก่อนเกิดผล (execution guard)</td>
+                    <td>ใช่ — Block การจ่ายเงินไว้ได้</td>
+                    <td>ไม่มี Financial effect ปรากฏใน Effect group ของ trace</td>
+                </tr>
+                <tr>
+                    <td>รางเอาต์พุต (output rail)</td>
+                    <td>ไม่ — ปล่อยคำอธิบายที่ผิดถึงมือลูกค้า</td>
+                    <td>Released payload ปรากฏใน Release group พร้อม Route เป็น release</td>
+                </tr>
+                <tr>
+                    <td>เส้นทางส่งต่อให้คน</td>
+                    <td>ใช่ (หลังจำกัดผล) — กรณีโปรโมชันถูกส่งให้คนดูแล</td>
+                    <td>บันทึกการเปลี่ยน manifest และการเปลี่ยนเส้นทางในขั้น Contain</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <p>ตารางข้างบนคือสิ่งที่ได้จากคำถาม "Boundary ใดยอมรับ เชื่อ อนุญาต ปล่อย หรือมองไม่เห็น" และผมอยากให้เปรียบเทียบกับสิ่งที่จะได้ถ้าสรุปว่า "โมเดลหลอน" — คือได้ศูนย์แถว การจำแนกที่ละเอียดขนาดนี้ทำได้เพราะ <strong>การควบคุมก่อนเกิดผล</strong> (effect mediation) ถูกออกแบบให้แยกออกจากการสร้างข้อความตั้งแต่ต้น trace จึงแยกข้อเสนอออกจากผลจริงได้</p>
+
+    <h3>วินิจฉัย แก้ไข และกลับมาให้บริการ</h3>
+
+    <p>การวินิจฉัยชี้สาเหตุสองชั้นที่ไม่ใช่ชั้นโมเดลเลยสักชั้น — allow-list ตรวจ ID แต่ไม่ตรวจ effective date และตัวให้คะแนนตรวจ entailment แต่ไม่ตรวจ policy currency<sup><a href="#th-ref-1">[1]</a></sup> มาตรการแก้จึงกระจายไปที่เจ้าของงานคนละคน: เจ้าของฐานความรู้ถอดหน้าเก่าออก บังคับ metadata ของ Owner, Effective date และ Expiry เพิ่มการตรวจความขัดแย้งของเอกสาร ส่วนทีม CX Quality เพิ่มการตรวจความถูกต้องตามเวลา (time-validity check) และเพิ่มการแก้ไขคำอธิบายให้ลูกค้า</p>
+
+    <p>จากนั้นจึงมาถึงขั้นที่ผมคิดว่าเป็นขั้นที่ถูกข้ามบ่อยที่สุดในองค์กรจริง — กรณีที่พังกลายเป็น Regression case ที่มี<em>ชื่อ</em> คือ <code>CXGS-241</code> แล้วรันร่วมกับกรณี Hidden, Adaptive, Bilingual และ Duplicate-state ที่เกี่ยวข้อง จนผ่านทั้งหมด จากนั้น Policy reviewer อิสระจึงอนุมัติ manifest ใหม่ <code>rc5</code> และเปิดกลับมาที่ 5% พร้อมรอบทบทวน 24 ชั่วโมง<sup><a href="#th-ref-1">[1]</a></sup></p>
+
+    <blockquote>💡 มุมมองของผม: ลำดับ "Regression ก่อน Restore" คือเส้นแบ่งระหว่างองค์กรที่เรียนรู้กับองค์กรที่แค่ซ่อมของ ถ้ากรณีที่พังยังไม่มีชื่อและยังไม่อยู่ในชุดทดสอบที่รันทุกครั้ง แปลว่าองค์กรกำลังพนันว่าคนที่แก้จะไม่ลืม และในระบบที่มี manifest หลายรุ่นและทีมหลายทีม การพนันแบบนั้นแพ้เสมอ</blockquote>
+
+    <p>ขั้นสุดท้ายคือการปิด และคู่มือกำหนดเงื่อนไขไว้ยาวกว่าที่ ticket ระบบไหนบังคับ — ปรับ Contract, Manifest schema, Workflow การเผยแพร่แหล่งข้อมูล และ Runbook, นำ Freshness check ชุดเดียวกันไปใช้กับผลิตภัณฑ์คืนสินค้าและการรับประกันด้วย แล้วปิดได้ก็ต่อเมื่อลูกค้าได้รับการเยียวยาแล้ว มีการเฝ้าการเกิดซ้ำเป็นเวลา <strong>เจ็ดวัน</strong> และมีการลงนามทบทวนหลักฐาน<sup><a href="#th-ref-1">[1]</a></sup> ประโยค "นำ Freshness check ไปใช้กับผลิตภัณฑ์อื่นด้วย" คือประโยคที่เปลี่ยนเหตุการณ์หนึ่งครั้งให้กลายเป็นการปรับปรุงที่นำกลับมาใช้ซ้ำได้ — และเป็นสิ่งที่ตัวชี้วัดในหัวข้อที่ 7 จะพยายามวัด</p>
+
+    <h2 id="th-artifact-incident-loop">5. Artifact 8 — ใบงานแปดขั้น Action, Evidence, Owner และ Done-when</h2>
+
+    <p>Artifact 8 คือรูปแบบใช้งานจริงของวงจรในหัวข้อที่ 2 คู่มือระบุวัตถุประสงค์ เงื่อนไขการใช้ และเจ้าของหลักไว้ครบสามบรรทัด<sup><a href="#th-ref-1">[1]</a></sup> — <em>วัตถุประสงค์</em> คือเปลี่ยนความล้มเหลวให้เป็นการจำกัดผล หลักฐาน การแก้ที่ยืนยันแล้ว และความจำขององค์กร <em>ใช้เมื่อ</em> เกิด Prohibited effect, Semantic escape ที่รุนแรงหรือเกิดซ้ำ, Trace loss, Privacy event, Control bypass, สัญญาณ Drift หรือ Near miss และ <em>เจ้าของหลัก</em> คือ Incident commander เป็นผู้ประสานงาน โดยเจ้าของด้านการตัดสินใจ วิศวกรรม ความมั่นคง ความเป็นส่วนตัว และคน ยังคงรับผิดชอบในขอบเขตของตนเหมือนเดิม</p>
+
+    <p>ชื่อขั้นของ Artifact 8 ไม่เหมือนชื่อโหนดในรูปที่ 13 เสียทีเดียว — ที่นี่ใช้ <em>Detect and declare, Contain, Reconstruct, Classify, Diagnose, Correct, Verify and restore, Learn</em> ซึ่งเป็นแปดขั้นเช่นกันแต่เป็นคนละชุดคำ ผมยึดชุดของ Artifact 8 ในใบงานนี้ทั้งหมด และไม่ผสมกับชุดของรูปที่ 13</p>
+
+    <p>คู่มือให้คอลัมน์เดียวคือ "Record and decide" ผมขยายเป็นสี่คอลัมน์ที่ใช้ได้ในห้องประชุมจริง — <em>Action</em> ทำอะไร, <em>Evidence</em> ต้องมีหลักฐานอะไรจึงจะถือว่าทำแล้ว, <em>Owner</em> ใครเป็นเจ้าของ และ <em>Done-when</em> เงื่อนไขที่ทำให้ขั้นนี้ปิดได้ คอลัมน์สุดท้ายคือคอลัมน์ที่ป้องกันโรคยอดฮิตที่สุดของการทบทวนเหตุการณ์ คือการเดินหน้าไปขั้นถัดไปทั้งที่ขั้นก่อนหน้ายังค้าง</p>
+
+    <h3>ใบงานเปล่า — พิมพ์ไปกรอกได้เลย</h3>
+
+    <div class="table-wrapper">
+        <table>
+            <thead>
+                <tr>
+                    <th>Stage</th>
+                    <th>Action</th>
+                    <th>Evidence</th>
+                    <th>Owner</th>
+                    <th>Done-when</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td><strong>1. Detect and declare</strong></td>
+                    <td>บันทึกสัญญาณ เวลา ขอบเขตผู้ได้รับผล และ Severity เบื้องต้น แล้วประกาศตั้ง Commander</td>
+                    <td>รายการสัญญาณพร้อม timestamp, ประมาณการขอบเขต, บันทึกการประกาศเหตุการณ์</td>
+                    <td>ผู้พบเหตุ → Incident commander</td>
+                    <td>มีชื่อ Commander และมี Severity เบื้องต้นที่บันทึกไว้เป็นลายลักษณ์อักษร</td>
+                </tr>
+                <tr>
+                    <td><strong>2. Contain</strong></td>
+                    <td>ปิด Capability, Traffic หรือ Slice ที่เกี่ยวข้อง, เยียวยาลูกค้า, Rollback และรักษาหลักฐาน</td>
+                    <td>บันทึกคำสั่งปิดพร้อมเวลา, รายการผู้ได้รับผลที่ติดต่อแล้ว, ID ของ manifest ที่ถอยกลับไป</td>
+                    <td>Service owner ร่วมกับ Incident commander</td>
+                    <td>ไม่มีผู้ได้รับผลรายใหม่ และหลักฐานถูกตรึงแล้วก่อนการแก้ไขใด ๆ</td>
+                </tr>
+                <tr>
+                    <td><strong>3. Reconstruct</strong></td>
+                    <td>ประกอบ Trace, Manifest, Context, Source, Checks, Proposal, Effect, Output และ Final state ขึ้นใหม่</td>
+                    <td>Trace ที่ผ่านแบบทดสอบเจ็ดข้อในหัวข้อที่ 3, สถานะจริงจากระบบต้นทางที่เชื่อถือได้</td>
+                    <td>SRE หรือ platform owner</td>
+                    <td>ผู้ตรวจที่ไม่ได้อยู่ในเหตุการณ์อ่านแล้วเล่าเรื่องซ้ำได้ครบโดยไม่ต้องถามทีม</td>
+                </tr>
+                <tr>
+                    <td><strong>4. Classify</strong></td>
+                    <td>จำแนก Harm และ Near miss, แยก Structural breach ออกจาก Semantic escape, ระบุผู้ได้รับผลและภาระหน้าที่ที่ตามมา</td>
+                    <td>ตารางจำแนกที่ชี้ Boundary ทีละด่านว่ายืนหรือรั่ว พร้อมหลักฐานอ้างอิงต่อแถว</td>
+                    <td>เจ้าของการตัดสินใจ ร่วมกับความเสี่ยงและความเป็นส่วนตัว</td>
+                    <td>มีคำจำแนกเดียวที่ทุกฝ่ายเห็นตรงกัน และรู้ว่าองค์กรติดค้างการแจ้งหรือเยียวยากับใคร</td>
+                </tr>
+                <tr>
+                    <td><strong>5. Diagnose</strong></td>
+                    <td>ไล่สาเหตุด้านเทคนิค ข้อมูล Workflow Ownership และ Incentive พร้อมตอบว่าทำไมตรวจหรือรับมือไม่ทัน</td>
+                    <td>เส้นเวลาเทียบสัญญาณกับการตอบสนอง, จุดที่หลักฐานขาด, เหตุผลที่เกณฑ์เดิมปล่อยผ่าน</td>
+                    <td>วิศวกรรม ร่วมกับเจ้าของกระบวนงาน</td>
+                    <td>ตอบคำถาม "Boundary ใดยอมรับ เชื่อ อนุญาต ปล่อย หรือมองไม่เห็น" ได้ทุกข้อด้วยหลักฐาน</td>
+                </tr>
+                <tr>
+                    <td><strong>6. Correct</strong></td>
+                    <td>แยกมาตรการเฉพาะหน้ากับมาตรการถาวร กำหนดเจ้าของและวันครบกำหนด แล้วปรับ Contract, Manifest, Runbook และการฝึกอบรม</td>
+                    <td>รายการมาตรการที่มีเจ้าของและวันครบกำหนด, diff ของ Contract และ Manifest, Runbook ฉบับปรับปรุง</td>
+                    <td>เจ้าของมาตรการแต่ละราย ภายใต้ Commander</td>
+                    <td>มีมาตรการถาวรอย่างน้อยหนึ่งข้อที่ทำให้กรณีนี้เกิดซ้ำไม่ได้ ไม่ใช่แค่ตรวจพบเร็วขึ้น</td>
+                </tr>
+                <tr>
+                    <td><strong>7. Verify and restore</strong></td>
+                    <td>เพิ่ม Regression case ใหม่ รันชุด Hidden และ Adaptive, ตรวจ State oracle, ให้ผู้ตรวจอิสระอนุมัติ แล้วเปิดกลับแบบจำกัด</td>
+                    <td>ID ของ Regression case, ผลรันชุดทดสอบ, บันทึกการอนุมัติของผู้ตรวจอิสระ, เพดาน exposure และรอบทบทวนที่กำหนด</td>
+                    <td>ทีมประเมิน ร่วมกับผู้ตรวจอิสระที่ไม่ได้อยู่ในทีมแก้</td>
+                    <td>กรณีที่พังมีชื่อและอยู่ในชุดที่รันทุกครั้ง และการเปิดกลับมีเพดานกับวันทบทวนที่บันทึกไว้</td>
+                </tr>
+                <tr>
+                    <td><strong>8. Learn</strong></td>
+                    <td>สื่อสาร ชดเชย เฝ้าการเกิดซ้ำ แชร์รูปแบบข้ามผลิตภัณฑ์ และปิดด้วยหลักฐานเท่านั้น</td>
+                    <td>บันทึกการสื่อสารกับผู้ได้รับผล, ผลการเฝ้าการเกิดซ้ำตามช่วงเวลาที่กำหนด, รายการผลิตภัณฑ์อื่นที่รับมาตรการเดียวกันไปใช้</td>
+                    <td>เจ้าของการตัดสินใจ ร่วมกับเจ้าของด้านคน</td>
+                    <td>ทีมอื่นที่มีจุดอ่อนแบบเดียวกันได้รับการแก้แล้ว และการปิดมีลายเซ็นทบทวนหลักฐานกำกับ</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <h3>ใบงานที่กรอกแล้ว — CX-REFUND-01</h3>
+
+    <p>ตารางถัดไปคือกรณีสมมติเดียวกันกับหัวข้อที่ 4 กรอกลงในใบงานแปดขั้น ในเล่ม คู่มือนำเสนอกรณีนี้แบบยุบเป็นห้าคู่ (Detect/Contain, Reconstruct/Classify, Diagnose/Correct, Verify/Restore, Learn/Close) ผมคลี่กลับเป็นแปดแถวเพื่อให้ตรงกับใบงานเปล่าข้างบน โดยไม่เพิ่มข้อเท็จจริงใดที่คู่มือไม่ได้ให้ไว้</p>
+
+    <div class="table-wrapper">
+        <table>
+            <thead>
+                <tr>
+                    <th>Stage</th>
+                    <th>Action</th>
+                    <th>Evidence</th>
+                    <th>Owner</th>
+                    <th>Done-when</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td><strong>1. Detect and declare</strong></td>
+                    <td>พบว่าที่ Rollout 25% ลูกค้าได้รับคำอธิบายสิทธิ์ 60 วันจากหน้าโปรโมชันเก่าที่ยังอยู่ใน allow-list</td>
+                    <td>ข้อความที่ถูกปล่อยออกไป, เวลาเกิดเหตุ, ขอบเขต 25% ของ traffic</td>
+                    <td>Incident commander</td>
+                    <td>ประกาศเหตุการณ์และตั้งเจ้าของแล้ว</td>
+                </tr>
+                <tr>
+                    <td><strong>2. Contain</strong></td>
+                    <td>Stop condition ถูก trigger, Rollback กลับไปที่ manifest <code>rc4</code> และส่งกรณีโปรโมชันทั้งหมดให้คนดูแล</td>
+                    <td>บันทึกการ Rollback, บันทึกการเปลี่ยนเส้นทางกรณีโปรโมชันไปยัง<strong>การกำกับดูแลโดยมนุษย์</strong> (human oversight)</td>
+                    <td>Service owner</td>
+                    <td>ไม่มีกรณีโปรโมชันใดเดินผ่านระบบอัตโนมัติอีก</td>
+                </tr>
+                <tr>
+                    <td><strong>3. Reconstruct</strong></td>
+                    <td>ประกอบ Trace ขึ้นใหม่จนเห็นทั้งเส้นทาง ตั้งแต่ passage ที่ถูกดึงมาจนถึง payload ที่ถูกปล่อย</td>
+                    <td>corpus ลงวันที่ <code>2026-09-01</code>, passage ที่เก่า, Support false accept, Released payload และการยืนยันว่าไม่มี Financial effect</td>
+                    <td>SRE หรือ platform owner</td>
+                    <td>Trace อธิบายได้ครบว่าระบบรู้ เสนอ ตรวจ ทำ และปล่อยอะไร</td>
+                </tr>
+                <tr>
+                    <td><strong>4. Classify</strong></td>
+                    <td>จำแนกเป็น Severe semantic policy escape บวก Near miss โดย Structural execution invariant ยังทำงาน</td>
+                    <td>หลักฐานว่า Execution guard block การจ่ายเงิน แต่ Output rail ปล่อยคำอธิบายผิดออกไป</td>
+                    <td>เจ้าของการตัดสินใจ ร่วมกับความเสี่ยง</td>
+                    <td>มีคำจำแนกเดียวที่แยกชั้นโครงสร้างออกจากชั้นความหมายได้ชัด</td>
+                </tr>
+                <tr>
+                    <td><strong>5. Diagnose</strong></td>
+                    <td>พบว่า allow-list ตรวจ ID แต่ไม่ตรวจ Effective date และตัวให้คะแนนตรวจ Entailment แต่ไม่ตรวจ Policy currency</td>
+                    <td>การเทียบเงื่อนไขของ allow-list กับ metadata ของเอกสาร และผลการทดสอบตัวให้คะแนนกับกรณีที่นโยบายเปลี่ยน</td>
+                    <td>วิศวกรรม ร่วมกับเจ้าของฐานความรู้</td>
+                    <td>สาเหตุถูกชี้ที่ Boundary ที่ระบุชื่อได้ ไม่ใช่ที่ "โมเดล"</td>
+                </tr>
+                <tr>
+                    <td><strong>6. Correct</strong></td>
+                    <td>เจ้าของฐานความรู้ถอดหน้าเก่าออก บังคับ metadata ของ Owner, Effective date และ Expiry เพิ่มการตรวจความขัดแย้ง ส่วน CX Quality เพิ่ม Time-validity check และการแก้ไขคำอธิบายให้ลูกค้า</td>
+                    <td>Diff ของ Contract, Manifest schema, Workflow การเผยแพร่แหล่งข้อมูล และ Runbook</td>
+                    <td>เจ้าของฐานความรู้ และทีม CX Quality</td>
+                    <td>มาตรการถาวรครอบคลุมทั้งชั้นแหล่งข้อมูลและชั้นการตรวจ ไม่ใช่ชั้นเดียว</td>
+                </tr>
+                <tr>
+                    <td><strong>7. Verify and restore</strong></td>
+                    <td>เปลี่ยนกรณีที่พังเป็น Regression <code>CXGS-241</code> รันร่วมกับ Hidden, Adaptive, Bilingual และ Duplicate-state จนผ่าน แล้วเปิดกลับที่ 5%</td>
+                    <td>ผลรันชุดทดสอบทั้งหมด, การอนุมัติ manifest <code>rc5</code> โดย Policy reviewer อิสระ, รอบทบทวน 24 ชั่วโมง</td>
+                    <td>ทีมประเมิน และ Policy reviewer อิสระ</td>
+                    <td>Manifest ใหม่ได้รับอนุมัติ และเปิดกลับแบบจำกัดพร้อมรอบทบทวนที่บันทึกไว้</td>
+                </tr>
+                <tr>
+                    <td><strong>8. Learn</strong></td>
+                    <td>ปรับ Contract, Manifest schema, Workflow และ Runbook แล้วนำ Freshness check ชุดเดียวกันไปใช้กับผลิตภัณฑ์คืนสินค้าและการรับประกัน</td>
+                    <td>บันทึกการเยียวยาลูกค้า, ผลการเฝ้าการเกิดซ้ำเจ็ดวัน, ลายเซ็นการทบทวนหลักฐาน</td>
+                    <td>เจ้าของการตัดสินใจ ร่วมกับเจ้าของผลิตภัณฑ์ที่รับมาตรการไปใช้</td>
+                    <td>ปิดได้หลังลูกค้าได้รับการเยียวยา ครบเจ็ดวันของการเฝ้าการเกิดซ้ำ และมีลายเซ็นกำกับ</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <div class="alert info">
+        <strong>ข้อสังเกตเรื่องเลขที่เหตุการณ์:</strong> คู่มือ<em>ไม่ได้</em>ให้เลขที่ incident record กับกรณีนี้ ID ทั้งหมดที่มีคือชื่อสถานการณ์ <code>CX-REFUND-01</code>, Regression case <code>CXGS-241</code> และ Manifest <code>rc4</code> / <code>rc5</code> (โดยมีตัวเต็มว่า <code>CX-REFUND-01.2026-09-rc4, parent 2026-08-prod2</code>) ถ้าองค์กรของคุณต้องการเลขที่เหตุการณ์ในใบงาน นั่นเป็นรูปแบบของคุณเอง ไม่ใช่ของคู่มือ — และผมแนะนำให้ตั้งรูปแบบที่ผูกกลับไปหา manifest ได้ เพราะคำถามแรกของผู้ตรวจคือ "เกิดบนรุ่นไหน" เสมอ
+    </div>
+
+    <h2 id="th-near-misses">6. Near miss, Override และ Correction คือหลักฐาน ไม่ใช่เรื่องน่าอาย</h2>
+
+    <p>บทที่ 9 ปิดด้วยหลักปฏิบัติห้าประการ และข้อที่ห้าคือข้อที่ผมคิดว่าองค์กรไทยละเมิดบ่อยที่สุดโดยไม่รู้ตัว เพราะมันไม่ได้ละเมิดด้วยการตัดสินใจ แต่ละเมิดด้วยการไม่มีช่องให้กรอก</p>
+
+    <blockquote>💡 มุมมองของผม: หลักข้อที่ 5 ของบทนี้เขียนไว้ว่า <em>"เก็บ Near Miss Override และ Correction เป็นหลักฐาน อย่ากดสัญญาณที่ช่วยสอนระบบ"</em><sup><a href="#th-ref-1">[1]</a></sup> ผมอยากขยายว่า สัญญาณสามอย่างนี้ถูกกดโดยระบบวัดผลของเราเองแทบทั้งหมด — ทีมที่ถูกวัดด้วยจำนวนเหตุการณ์ จะรายงานเหตุการณ์น้อยลง ไม่ใช่ทำผิดน้อยลง และ Override ของพนักงานหน้างานคือข้อมูลคุณภาพสูงที่สุดที่องค์กรมี เพราะมันคือช่วงเวลาที่ผู้เชี่ยวชาญตัวจริงบอกเราว่าระบบคิดผิด โดยไม่มีใครต้องเสียหายก่อน</blockquote>
+
+    <p>อีกสี่ข้อของบทนี้ประกอบเป็นกรอบเดียวกันและควรอ่านคู่กันเสมอ<sup><a href="#th-ref-1">[1]</a></sup> — ข้อ 1 <em>มีหลักฐานก่อนเพิ่ม Exposure</em> อย่าเพิ่มจำนวนผู้ได้รับผลล่วงหน้ากว่าการพิสูจน์ · ข้อ 2 <em>ประเมินระบบในบริบท</em> Model score ไม่ใช่ Workflow performance · ข้อ 3 <em>ใช้ Gate ตามผลกระทบและการย้อนกลับ</em> Consequence สูงต้อง Evidence สูง · ข้อ 4 <em>ทุก Release ต้องสังเกตและย้อนกลับได้</em> ระบบจริงต้องมี Service owner และ Kill path สังเกตว่าสี่ข้อแรกพูดถึงสิ่งที่ทำ<em>ก่อน</em>เกิดเรื่อง มีเพียงข้อที่ห้าที่พูดถึงสิ่งที่ทำ<em>หลัง</em> และนั่นคือข้อเดียวที่ต้องอาศัยวัฒนธรรมองค์กร ไม่ใช่สถาปัตยกรรม</p>
+
+    <h3>ทำไม Near miss ถึงหายไปจากระบบ</h3>
+
+    <p>จากประสบการณ์การทำงานกับทีมวิศวกรรมและทีมบริการลูกค้าในไทย ผมเห็นรูปแบบเดิมซ้ำ ๆ สามแบบ หนึ่ง — ไม่มีช่องให้กรอก ระบบ ticket มีสถานะ "เกิดเหตุ" กับ "ปกติ" แต่ไม่มี "เกือบเกิด" พนักงานที่ดักไว้ทันจึงไม่มีที่ให้บันทึกและกลับไปทำงานต่อ สอง — การรายงานมีต้นทุน แต่ไม่มีผลตอบแทน คนที่รายงาน Near miss ต้องเข้าประชุมเพิ่ม ส่วนคนที่เงียบไม่ต้อง สาม — Override ถูกมองว่าเป็นความล้มเหลวของโมเดล จึงถูกเก็บไว้ใน log ของระบบ ไม่ใช่ในคลังหลักฐานของการเรียนรู้ ทั้งสามแบบแก้ได้ด้วยการออกแบบ ไม่ใช่ด้วยการขอความร่วมมือ</p>
+
+    <p>ฝั่งมาตรฐานมีรายการที่แนะนำตรงจุดนี้อยู่แล้ว NIST AI 600-1 ระบุการกระทำที่แนะนำให้ <em>"Establish and maintain policies and procedures to record and track GAI system reported errors, near-misses, and negative impacts"</em> — จัดทำและรักษานโยบายกับขั้นตอนสำหรับบันทึกและติดตามข้อผิดพลาด <strong>Near miss</strong> และผลกระทบเชิงลบของระบบ GenAI<sup><a href="#th-ref-2">[2]</a></sup> คำว่า near-miss ปรากฏอยู่ในตัวบทของ NIST เอง ไม่ใช่การตีความของผม และเช่นเดิม มันเป็นข้อเสนอโดยสมัครใจที่องค์กรต้องเลือกและปรับตามบริบท ไม่ใช่ข้อบังคับ</p>
+
+    <h3>การมองออกไปข้างนอก — เมื่อข้อมูลของเรายังบางเกินไป</h3>
+
+    <p>ปัญหาเชิงสถิติของการเรียนรู้จากเหตุการณ์ คือองค์กรเดียวแทบไม่เคยมีเหตุการณ์มากพอที่จะเห็นรูปแบบ กว่าคุณจะเจอ Semantic escape แบบเดียวกันเป็นครั้งที่สาม อาจผ่านไปสองปีแล้ว ทางออกที่คู่มืออ้างถึงคือการสแกนภายนอกหารูปแบบที่เกิดกับคนอื่น และแหล่งที่ถูกระบุชื่อไว้คือ AI Incidents and Hazards Monitor (AIM) ของ OECD.AI</p>
+
+    <p>ณ วันที่ 5 กันยายน 2026 หน้ารายการของ AIM แบบไม่กรองช่วงเวลา แสดงรายการที่ติดป้ายว่า incidents &amp; hazards อยู่ราว <strong>17,392</strong> รายการ<sup><a href="#th-ref-3">[3]</a></sup> และตัวเลขนี้ต้องอ่านพร้อมคำเตือนสามข้อเสมอ หนึ่ง — มันคือจำนวน<em>เหตุการณ์ที่คัดมาจากข่าว</em> ระบบดึงบทความจาก Event Registry ซึ่งประมวลผลข่าวกว่า 150,000 ชิ้นต่อวัน แล้วใช้โมเดลภาษาจัดหมวดและเติม metadata สอง — หน้าเว็บระบุสถานะตัวเองว่าเป็น Beta และ OECD ประกาศชัดว่าไม่รับประกันและไม่ได้ตรวจสอบความถูกต้องของข้อมูลจากบุคคลที่สามด้วยตนเอง การถูกบรรจุในระบบไม่ใช่การชี้ขาดข้อเท็จจริงหรือความรับผิด สาม — หน้านั้นไม่มีตัวหารใด ๆ ไม่มีจำนวนระบบที่ใช้งานอยู่ ไม่มีค่าฐานเปรียบเทียบ ดังนั้นตัวเลขนี้ <em>ใช้บอกแนวโน้ม อัตราการเติบโต หรือความน่าจะเป็นต่อระบบไม่ได้เลย</em> ประโยชน์เดียวที่ชอบธรรมของมันคือการยืนยันว่ามีคลังภายนอกขนาดนี้ให้เราสแกนหารูปแบบได้</p>
+
+    <p>ที่น่าสนใจคือ NIST AI 600-1 เองก็เอ่ยชื่อ OECD AI incident monitor ไว้ในรายการแหล่งแบ่งปันข้อมูลภายนอก เคียงข้าง AI incident database, AVID, CVE และ NVD<sup><a href="#th-ref-2">[2]</a></sup> — นี่เป็นจุดเดียวที่แหล่งอ้างอิงสองชิ้นของบทความนี้แตะกันโดยตรง และเป็นเหตุผลที่ผมคิดว่าการสแกนภายนอกควรเป็นวาระประจำ ไม่ใช่กิจกรรมที่ทำเมื่อเกิดเรื่อง วิธีที่ผมแนะนำคือกำหนดรอบละหนึ่งไตรมาส ให้เจ้าของกระบวนงานอ่านรูปแบบที่เกิดกับผลิตภัณฑ์ประเภทเดียวกัน แล้วถามคำถามเดียวว่า "ถ้าเรื่องนี้เกิดกับเรา รางไหนของเราจะจับได้" คำถามนี้ผลิต Hazard ที่บันทึกได้ทันทีโดยไม่ต้องรอให้ใครเสียหาย</p>
+
+    <h2 id="th-metrics-failures">7. ตัวชี้วัดของวงจรเรียนรู้ และรูปแบบความล้มเหลวที่พบซ้ำ</h2>
+
+    <p>บทที่ 9 ให้รายการ "ตัวชี้วัดสำคัญ" ไว้ยาวหนึ่งประโยค ครอบคลุมทั้งการประเมินและการปล่อย<sup><a href="#th-ref-1">[1]</a></sup> — Quality-adjusted task success, Critical-error rate, Supported claims, Security escapes, Subgroup disparity, Override และ Reversal, Feedback latency, Drift, Cost per successful outcome, <strong>เวลาในการตรวจพบ จำกัดผล และกู้คืน</strong>, <strong>การรายงาน Near miss</strong>, <strong>การเกิดซ้ำ</strong> และ Release ที่มี Rollback ผ่านการทดสอบแล้ว สามตัวที่ผมทำตัวหนาคือตัวที่เป็นของวงจรเรียนรู้จากเหตุการณ์โดยตรง ที่เหลือเป็นของด่านอนุมัติในตอน #14</p>
+
+    <p>ตารางข้างล่างคือชุดที่ผมใช้จริง โดยสี่ตัวแรกมาจากคู่มือ และ<strong>สองตัวสุดท้ายเป็นตัวชี้วัดที่ผมเพิ่มเอง</strong> — ไม่ได้อยู่ในรายการ "ตัวชี้วัดสำคัญ" ของบทที่ 9 แต่อนุมานได้ตรง ๆ จากแถว Verify and restore และแถว Learn ของ Artifact 8 ผมแยกที่มาไว้ในคอลัมน์สุดท้ายเพื่อไม่ให้ใครเข้าใจผิดว่าคู่มือบังคับให้วัด</p>
+
+    <div class="table-wrapper">
+        <table>
+            <thead>
+                <tr>
+                    <th>Metric</th>
+                    <th>สิ่งที่วัด</th>
+                    <th>ความล้มเหลวที่มันเปิดโปง</th>
+                    <th>Scorecard</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td><strong>Time to detect / contain / recover</strong><br><em>(คู่มือ)</em></td>
+                    <td>ระยะเวลาสามช่วงแยกกัน — จากเกิดถึงรู้ตัว จากรู้ตัวถึงหยุดผล และจากหยุดผลถึงกลับมาให้บริการอย่างปลอดภัย</td>
+                    <td>องค์กรที่มีค่าที่หนึ่งสูงมากแต่ค่าที่สามต่ำ กำลังเก่งเรื่องซ่อมแต่ตาบอด — และตัวเลขรวมค่าเดียวจะกลบข้อเท็จจริงนี้เสมอ</td>
+                    <td><strong>Risk</strong></td>
+                </tr>
+                <tr>
+                    <td><strong>Recurrence</strong><br><em>(คู่มือ)</em></td>
+                    <td>สัดส่วนของเหตุการณ์ที่มีรูปแบบซ้ำกับเหตุการณ์ที่ปิดไปแล้ว ภายในช่วงเวลาที่กำหนด</td>
+                    <td>มาตรการแก้ที่ทำให้ตรวจพบเร็วขึ้นแต่ไม่ได้ปิดช่องทาง จะโผล่ที่ตัวเลขนี้ก่อนที่อื่น</td>
+                    <td><strong>Learning</strong></td>
+                </tr>
+                <tr>
+                    <td><strong>Near-miss reporting rate</strong><br><em>(คู่มือ)</em></td>
+                    <td>จำนวน Near miss, Override และ Correction ที่ถูกบันทึกต่อปริมาณงาน เทียบกับจำนวน Incident ที่เกิดจริง</td>
+                    <td>อัตราที่<em>ต่ำ</em> คือสัญญาณอันตราย ไม่ใช่ข่าวดี — มันแปลว่าช่องรายงานไม่มี หรือมีแต่คนไม่กล้าใช้</td>
+                    <td><strong>People</strong></td>
+                </tr>
+                <tr>
+                    <td><strong>Closure discipline</strong><br><em>(คู่มือ โดยกลับด้านจากรายการรูปแบบความล้มเหลว)</em></td>
+                    <td>สัดส่วนของเหตุการณ์ที่ปิดโดยมีหลักฐานยืนยันมาตรการแก้ครบ เทียบกับที่ปิดตอนระบบกลับมาให้บริการ</td>
+                    <td>เปิดโปงการปิดเหตุการณ์แบบ "บริการกลับมาแล้ว = จบ" ซึ่งคู่มือระบุเป็นรูปแบบความล้มเหลวโดยตรง</td>
+                    <td><strong>Quality</strong></td>
+                </tr>
+                <tr>
+                    <td><strong>Share of incidents with a named regression case</strong><br><em>(ตัวชี้วัดที่ผมเพิ่มเอง)</em></td>
+                    <td>สัดส่วนของเหตุการณ์ที่กรณีซึ่งพังถูกแปลงเป็น Regression case ที่มีชื่อและอยู่ในชุดที่รันทุกครั้ง</td>
+                    <td>วัดโดยตรงว่าองค์กรกำลังสะสมภูมิคุ้มกัน หรือแค่ปิด ticket ไปเรื่อย ๆ</td>
+                    <td><strong>Quality</strong></td>
+                </tr>
+                <tr>
+                    <td><strong>Time from verified incident to reusable control improvement</strong><br><em>(ตัวชี้วัดที่ผมเพิ่มเอง)</em></td>
+                    <td>ระยะเวลาจากที่มาตรการแก้ถูกยืนยันผล จนถึงที่ผลิตภัณฑ์อื่นซึ่งมีจุดอ่อนแบบเดียวกันได้รับมาตรการนั้นไปใช้</td>
+                    <td>เปิดโปงองค์กรที่แก้ได้ดีทีละทีม แต่ไม่มีกลไกส่งต่อ — บทเรียนตายอยู่ในทีมที่เจอเหตุการณ์</td>
+                    <td><strong>Learning</strong></td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <p>ข้อควรระวังที่ต้องพูดให้ชัด: ค่าตัวเลขทั้งหมดจากกรณี CX-REFUND-01 ในหัวข้อที่ 4 และ 5 เป็นค่าประกอบของกรณีสมมติ ห้ามนำมาตั้งเป็นเป้าหมายหรือเกณฑ์ในตารางนี้ ไม่ว่าจะเป็นเพดาน 5% รอบทบทวน 24 ชั่วโมง หรือการเฝ้าการเกิดซ้ำเจ็ดวัน สิ่งที่นำไปใช้ได้คือ <em>โครงสร้าง</em> ของการตัดสินใจ ไม่ใช่ตัวเลข</p>
+
+    <h3>รูปแบบความล้มเหลว</h3>
+
+    <ul>
+        <li><strong>ปิดเหตุการณ์เมื่อระบบกลับมาให้บริการ โดยยังไม่ตรวจว่ามาตรการแก้ได้ผลจริง</strong> — คู่มือระบุรูปแบบนี้ไว้ตรง ๆ ในรายการรูปแบบความล้มเหลวของบทที่ 9<sup><a href="#th-ref-1">[1]</a></sup> อาการที่สังเกตได้คือ ticket ปิดในวันเดียวกับที่บริการกลับมา และไม่มีเอกสารการยืนยันผลผูกอยู่กับ ticket นั้น</li>
+        <li><strong>กด Near miss</strong> — อีกหนึ่งรูปแบบที่คู่มือระบุไว้เอง อาการคือจำนวน Incident ที่รายงานลดลงในไตรมาสที่ความกดดันด้านผลงานสูงขึ้น ซึ่งเป็นความสัมพันธ์ที่ควรทำให้ทุกคนไม่สบายใจ</li>
+        <li><strong>เขียน "โมเดล hallucinate" เป็นสาเหตุราก</strong> — ขัดกับกฎปิดท้ายของ Artifact 8 โดยตรง สาเหตุรากต้องเป็นชื่อของ Boundary ที่ยอมรับ เชื่อ อนุญาต ปล่อย หรือมองไม่เห็น ไม่ใช่ชื่อของเทคโนโลยี</li>
+        <li><strong>แก้ Manifest ก่อนเก็บรักษามัน</strong> — ขัดกับคำสั่ง "preserve the manifest and traces before modification" ของบทที่ 9 และกฎ "Preserve the failed case before changing it" ของ Artifact 8 นี่คือรูปแบบที่แก้ยากที่สุด เพราะมันเกิดจากสัญชาตญาณที่ดีของวิศวกรที่อยากให้ผู้ใช้เดือดร้อนน้อยที่สุด ทางแก้จึงไม่ใช่การเตือน แต่คือการทำให้การตรึงหลักฐานเป็นขั้นตอนอัตโนมัติที่เกิดขึ้นพร้อมกับการ Rollback</li>
+    </ul>
+
+    <h2 id="th-road-ahead">8. ก้าวต่อไป — จากหลักฐานของหนึ่งเหตุการณ์ สู่ระบบหลักฐานชุดเดียว</h2>
+
+    <p>ถ้าจะสรุปบทนี้ให้เหลือประโยคเดียว ประโยคนั้นคือแกนกลางของรูปที่ 13 — เก็บหลักฐานก่อนแก้ระบบ และถ้าจะสรุปให้เหลือการกระทำเดียวที่ทำได้ในสัปดาห์นี้โดยไม่ต้องรองบประมาณ ผมขอเสนอสามอย่าง หนึ่ง — เอาแบบทดสอบเจ็ดข้อในหัวข้อที่ 3 ไปลองกับเหตุการณ์<em>ที่ปิดไปแล้ว</em> หนึ่งกรณี ข้อที่ตอบไม่ได้คือฟิลด์ที่ trace ของคุณยังไม่มี สอง — เปิดช่องบันทึก Near miss ใน ticket ที่ใช้อยู่วันนี้ แล้วดูว่ามีคนกรอกกี่รายการในสองสัปดาห์แรก สาม — ตรวจว่าการ Rollback ในระบบของคุณตรึงหลักฐานให้อัตโนมัติหรือยัง ถ้ายัง นั่นคืองานที่ควรทำก่อนงานอื่นทั้งหมดในรายการนี้</p>
+
+    <p>และมีคำถามหนึ่งที่บทนี้เปิดไว้โดยตั้งใจ Trace ทุกเส้น บันทึกเหตุการณ์ทุกฉบับ และใบงานทุกใบที่เรากรอกในบทความนี้ ไม่ได้ถูกใช้แค่ภายในทีม — มันคือหลักฐานชุดเดียวกันที่กฎหมาย มาตรฐาน และผู้ตรวจภายนอกหลายฉบับจะมาขอดู โดยแต่ละฉบับถามด้วยภาษาของตัวเอง คำถามคือเราจะสร้างหลักฐานคนละชุดให้แต่ละฉบับ หรือจะออกแบบชุดเดียวแล้วแมปมันเข้ากับทุกหน้าที่ คู่มือเลือกอย่างหลัง และเปิดส่วนที่สี่ด้วยประโยคที่ตั้งกรอบทั้งส่วนไว้<sup><a href="#th-ref-1">[1]</a></sup></p>
+
+    <blockquote><em>"Part four treats governance as an operating system rather than a committee, work redesign as a social choice rather than an afterthought, and the first 180 days as a proof of one complete learning loop rather than a competition to launch the most tools."</em> — ส่วนที่สี่มองธรรมาภิบาลเป็น<em>ระบบปฏิบัติการ</em> ไม่ใช่<em>คณะกรรมการ</em></blockquote>
+
+    <div class="alert info">
+        <strong>🧭 ชั้นที่บทความนี้ขยับ:</strong> ชั้น <strong>Learning loop</strong> (<strong>วงจรการเรียนรู้</strong>) โดยเฉพาะครึ่งที่เป็น<strong>วงจรเรียนรู้จากเหตุการณ์ผิดปกติ</strong> (incident-learning loop) · คำถามผู้นำข้อ <strong>Q6</strong> (ต้องมีหลักฐานอะไรบ้างก่อน Release และระหว่างใช้งานจริง) โดยบทนี้ตอบครึ่งหลังของคำถาม คือหลักฐานที่ต้องมี<em>หลัง</em>เกิดเรื่อง · บนกระดานคะแนนองค์กร บทนี้ขยับช่อง <strong>Learning</strong> เป็นหลัก (Recurrence, การรายงาน Near miss, เวลาจากเหตุการณ์ที่ยืนยันแล้วสู่มาตรการที่นำกลับมาใช้ซ้ำได้) โดยมีช่อง <strong>Risk</strong> (เวลาตรวจพบ จำกัดผล และกู้คืน) และช่อง <strong>Quality</strong> (สัดส่วนเหตุการณ์ที่ปิดด้วยหลักฐาน และที่มี Regression case ที่มีชื่อ) ขยับตามไปด้วย ตอนถัดไป <a href="/blog/ai-transformation-obligations">#16 One Evidence System — PDPA, ETDA และ EU AI Act บนหลักฐานชุดเดียว</a> จะพาเดินจากหลักฐานของเหตุการณ์เดียวไปสู่ระบบหลักฐานขององค์กร แล้วแมปหน้าที่ตามกฎหมายและมาตรฐานหลายฉบับเข้ากับ Artifact ชุดเดียวกันที่เราสร้างมาแล้วตลอดสิบห้าตอน
+    </div>
+
+    <div class="key-takeaways">
+        <h3>🎯 สิ่งสำคัญที่ต้องจำ</h3>
+        <ul>
+            <li><strong>Evidence before change</strong> = เก็บ Manifest และ Trace ให้ครบก่อนแก้อะไรทั้งสิ้น เพราะการวินิจฉัยด้วยการลองแก้คือการเขียนทับพยานหลักฐานโดยไม่ตั้งใจ</li>
+            <li><strong>Eight stages</strong> = ตรวจพบ จำกัดผล รักษาหลักฐาน วินิจฉัย แก้ไข ประเมินใหม่ กู้คืน เรียนรู้ — ชุดของรูปที่ 13 ส่วนใบงานใช้ชุดของ Artifact 8 และห้ามเอาสองชุดมาปนกันในรายการเดียว</li>
+            <li><strong>Reconstructable trace</strong> = <strong>ร่องรอยที่สร้างเหตุการณ์ย้อนกลับได้</strong> ต้องพอให้ผู้ตรวจในภายหลังรู้ว่าระบบรู้ เสนอ ตรวจ ทำ ปล่อยอะไร และเลือก Route นั้นเพราะอะไร — Auditable แปลว่าย้อนสร้างได้ ไม่ได้แปลว่าปลอดภัย</li>
+            <li><strong>Not "log everything"</strong> = เก็บเท่าที่สร้างเหตุการณ์ย้อนกลับได้ ภายใต้การเข้ารหัส การจำกัดสิทธิ์ การ Redact และ Retention ที่ออกแบบไว้ คลังที่ใหญ่ขึ้นไม่ได้แปลว่าตรวจสอบได้ดีขึ้น</li>
+            <li><strong>Regression before restore</strong> = กรณีที่พังต้องกลายเป็น Regression case ที่มีชื่อและอยู่ในชุดที่รันทุกครั้ง ก่อนที่ระบบจะกลับมาให้บริการ ไม่ใช่หลังจากนั้น</li>
+            <li><strong>Near misses are evidence</strong> = Near miss, Override และ Correction คือหลักฐานคุณภาพเดียวกับ Incident ที่ได้มาโดยไม่มีใครเสียหาย อัตราการรายงานที่ต่ำคือสัญญาณอันตราย ไม่ใช่ข่าวดี</li>
+            <li><strong>Structural held, semantic leaked</strong> = ต้องแยกให้ออกในการจำแนก ว่า<strong>การรับประกันเชิงโครงสร้าง</strong>ยังยืนอยู่ ขณะที่<strong>ค่าประเมินเชิงความหมาย</strong>รั่ว — เพราะสองอย่างนี้ต้องการมาตรการแก้คนละชนิดกันโดยสิ้นเชิง</li>
+        </ul>
+    </div>
+
+    <section class="references" aria-labelledby="references">
+        <h2 id="references">อ้างอิง</h2>
+        <p class="references__note">ทุกแหล่งอ้างอิงตรวจสอบและเข้าถึงเมื่อ 5 กันยายน 2569 (2026-09-05) ซีรีส์นี้ใช้ป้ายกำกับหลักฐานสี่แบบตามคู่มือต้นทาง — <strong>Law</strong> กฎหมายที่ผูกพันเมื่ออยู่ในขอบเขต · <strong>Standard</strong> มาตรฐานและแนวปฏิบัติที่เป็นความสมัครใจจนกว่าจะถูกผนวกเข้าเป็นข้อผูกพัน · <strong>Study</strong> หลักฐานเชิงประจักษ์หรือการเฝ้าระวังที่ระบุวิธีการไว้ชัด · <strong>Synthesis</strong> การสังเคราะห์ของผู้เขียน</p>
+        <ol class="references__list">
+            <li id="th-ref-1"><span class="ref-tag ref-tag--synthesis">Synthesis</span> Mingkhwan, A. <cite>AI Transformation as an Organizational Core — Bilingual Companion Playbook</cite>, บทที่ 9 "ประเมิน ปล่อย สังเกต และเรียนรู้" หน้า 38–41, Artifact 6 Reconstructable trace schema หน้า 77–78, Artifact 8 Incident learning loop หน้า 81–83, ภาคผนวก ค. อภิธานศัพท์สองภาษา และหน้าเปิดส่วนที่สี่ หน้า 42. ต้นฉบับของผู้เขียน 97 หน้า ไม่ได้เผยแพร่ออนไลน์จึงไม่มีลิงก์ · evidence snapshot 5 กันยายน 2026 — เข้าถึง 2026-09-05. <span class="ref-supports">รองรับ: นิยาม Incident กับ Near miss/Hazard · ประโยคลำดับการตอบสนองเก้ากริยารวม Scope · รูปที่ 13 และวงจรแปดโหนด · คำนิยามเจ็ดกริยาในอภิธานศัพท์ข้อ 36 · ประโยค "Learning is complete only when…" · Trace schema เก้ากลุ่มและแบบทดสอบเจ็ดข้อ · ประโยค "Auditable means reconstructable, not safe" และ "log everything forever is not assurance" · การแบ่งเจ้าของหลักฐานสามฝ่าย · หลักปฏิบัติห้าประการของบทที่ 9 · ตัวชี้วัดสำคัญและรูปแบบความล้มเหลว · Artifact 8 ทั้งฉบับพร้อมกฎปิดท้าย · และกรณี CX-REFUND-01 ทั้งหมดซึ่งเป็นกรณีสมมติ ค่าประกอบทุกตัวจึงไม่ใช่เกณฑ์หรือค่าเฉลี่ยอุตสาหกรรม</span></li>
+            <li id="th-ref-2"><span class="ref-tag ref-tag--standard">Standard</span> National Institute of Standards and Technology (U.S. Department of Commerce). <cite>Artificial Intelligence Risk Management Framework: Generative Artificial Intelligence Profile</cite>, NIST AI 600-1. <a href="https://doi.org/10.6028/NIST.AI.600-1">doi.org</a> — เผยแพร่ กรกฎาคม 2024, เข้าถึง 2026-09-05 (ยังไม่มีประกาศแก้ไขหรือฉบับปรับปรุงบน nvlpubs.nist.gov ณ วันที่เข้าถึง). <span class="ref-supports">รองรับ: นิยาม AI incident ที่เอกสารนำมาแสดงซ้ำใน A.1.8 พร้อมรายการความเสียหายสี่หมวด · ข้อความว่ายังไม่มีช่องทางที่เป็นทางการสำหรับรายงานเหตุการณ์ AI ณ กรกฎาคม 2024 · การกระทำที่แนะนำเรื่องแผนตอบสนองและกู้คืน (MG-2.3-001) · การทำ after-action assessment (MG-4.3-001) · การบันทึกและติดตาม near-miss (MG-4.3-002) · และการเอ่ยชื่อ OECD AI incident monitor ในรายการแหล่งแบ่งปันข้อมูลภายนอก · ขอบเขต: เนื้อหาเป็น Suggested Actions โดยสมัครใจ องค์กรต้องเลือกและปรับตามกรณีใช้งานและระดับความเสี่ยงที่รับได้ ไม่ใช่ข้อบังคับ</span></li>
+            <li id="th-ref-3"><span class="ref-tag ref-tag--study">Study</span> OECD.AI. <cite>AIM: AI Incidents and Hazards Monitor</cite> พร้อมหน้า <cite>Overview and methodology</cite>. <a href="https://oecd.ai/en/incidents/">oecd.ai</a> — นิยามเผยแพร่ พฤษภาคม 2024 และวิธีการจำแนกปรับปรุงล่าสุด พฤศจิกายน 2024, เข้าถึง 2026-09-05. <span class="ref-supports">รองรับ: นิยาม AI incident และ AI hazard ที่แยกกันด้วยวลี "could plausibly lead to" · จำนวนรายการราว 17,392 รายการบนหน้ารายการแบบไม่กรองช่วงเวลา ณ วันที่เข้าถึง · วิธีการที่ดึงข่าวผ่าน Event Registry ซึ่งประมวลผลบทความกว่า 150,000 ชิ้นต่อวันแล้วใช้โมเดลภาษาจัดหมวด · ขอบเขต: เครื่องมือระบุสถานะตัวเองเป็น Beta, OECD ไม่รับประกันและไม่ได้ตรวจสอบความถูกต้องของข้อมูลจากบุคคลที่สามด้วยตนเอง การถูกบรรจุไม่ใช่การชี้ขาดข้อเท็จจริงหรือความรับผิด และหน้าดังกล่าวไม่มีตัวหาร จึงใช้บอกแนวโน้มหรือความน่าจะเป็นต่อระบบไม่ได้</span></li>
+            <li id="th-ref-4"><span class="ref-tag ref-tag--standard">Standard</span> World Wide Web Consortium (W3C). <cite>PROV-O: The PROV Ontology</cite>. <a href="https://www.w3.org/TR/prov-o/">w3.org</a> — W3C Recommendation 30 เมษายน 2013, เข้าถึง 2026-09-05 (ไม่มีประกาศยกเลิกหรือทดแทน ณ วันที่เข้าถึง). <span class="ref-supports">รองรับ: คำศัพท์ตั้งต้นสามชนิด entity, activity และ agent ที่ใช้เรียกส่วนประกอบของ trace ในเชิงที่มาของข้อมูล · ขอบเขต: ออนโทโลจีให้ <em>คำศัพท์</em> เท่านั้น ไม่ใช่นโยบายการตรวจสอบหรือแบบการจัดเก็บ Trace schema เก้ากลุ่มในบทความนี้จึงเป็นการลงรายละเอียดในโดเมน ไม่ใช่สิ่งเดียวกันกับ PROV-O</span></li>
+            <li id="th-ref-5"><span class="ref-tag ref-tag--law">Law</span> ราชอาณาจักรไทย. <cite>พระราชบัญญัติคุ้มครองข้อมูลส่วนบุคคล พ.ศ. ๒๕๖๒</cite> (Personal Data Protection Act B.E. 2562). <a href="https://ratchakitcha.soc.go.th/documents/17082307.pdf">ratchakitcha.soc.go.th</a> — ประกาศในราชกิจจานุเบกษา เล่ม ๑๓๖ ตอนที่ ๖๙ ก วันที่ 27 พฤษภาคม 2019 หมวดที่เกี่ยวข้องมีผลใช้บังคับเมื่อพ้นหนึ่งปีนับแต่วันประกาศตามมาตรา ๒ และยังมีผลใช้บังคับ ณ วันที่ตรวจสอบ, เข้าถึง 2026-09-05. <span class="ref-supports">รองรับ: มาตรา ๒๒ การเก็บรวบรวมเท่าที่จำเป็น · มาตรา ๓๓ (๑) สิทธิขอให้ลบหรือทำลายเมื่อหมดความจำเป็น · มาตรา ๓๗ (๑) มาตรการรักษาความมั่นคงปลอดภัยที่ต้องทบทวนเมื่อเทคโนโลยีเปลี่ยน · มาตรา ๓๗ (๓) ระบบตรวจสอบเพื่อลบหรือทำลายเมื่อพ้นกำหนดระยะเวลาการเก็บรักษา · มาตรา ๓๗ (๔) การแจ้งเหตุละเมิดต่อสำนักงานภายใน 72 ชั่วโมงนับแต่ทราบเหตุเท่าที่จะสามารถกระทำได้ · ขอบเขต: อ้างเป็นข้อมูลนำเข้าการออกแบบเท่านั้น บทความนี้ไม่ให้การตีความทางกฎหมายใด ๆ ทั้งหลักเกณฑ์และวิธีการตามมาตรา ๓๗ (๑) และ ๓๗ (๔) ยังถูกมอบให้คณะกรรมการประกาศกำหนด ตัวบทและที่ปรึกษากฎหมายไทยที่มีคุณสมบัติเป็นผู้ชี้ขาด</span></li>
+        </ol>
+    </section>
+    </div>
+
+    <div class="l-en" lang="en">
+
+    <p>🤔 <strong>A customer received the wrong eligibility explanation, taken from an expired promotion page still sitting in the source allow-list — is that the fault of the model, of the corpus, of the rails, or of the process?</strong></p>
+
+    <p>The previous post — <a href="/blog/ai-transformation-release-gate">#14 Five Tracks, One Release Gate</a> — ended at the <strong>release gate</strong>, the eight-row table that forces a release to become a decision you can write down: Promote, Canary, Hold or Reject. And I left it with a sentence every team nods at and almost no team rehearses: production is not the end of evaluation, it is the final evaluation condition.<sup><a href="#en-ref-1">[1]</a></sup> Which leaves the question you cannot dodge: when that final evaluation condition returns the result "it has happened", what do you do in the first minute?</p>
+
+    <p>Chapter 9's one-line answer is short and cuts against every engineer's instinct — <strong>preserve the evidence before changing the system</strong>. Rushing a patch into production before capturing the manifest and the traces destroys the only witness that can say what caused this, and because "learning is complete only when the corrective control or design change is verified and recurrence is monitored" — not when service comes back.<sup><a href="#en-ref-1">[1]</a></sup> This post walks from the three definitions people confuse most, through the eight-stage loop in Figure 13, through the nine-group trace schema that makes reconstruction actually possible, to a worksheet you can fill in during a real meeting — and it walks the CX-REFUND-01 incident through the whole loop, one stage at a time.</p>
+
+    <h2 id="en-not-the-model-hallucinated">1. Do Not Settle for "the Model Hallucinated" — Incident, Near Miss and Hazard</h2>
+
+    <p>In the incident reviews I have sat through, the sentence that appears most often on the summary slide is "the model hallucinated" — and it is the fastest way to close down learning I have ever seen. Once the root cause is written as a property of the model, all that remains to do is "change the prompt" or "wait for the next model", even though the same incident walked past rails, past retrieval, past checks, past an approval, and past human hands at several gates on its way out.</p>
+
+    <p>So the playbook closes Artifact 8 with a rule I want every team to print and pin on the war-room wall.<sup><a href="#en-ref-1">[1]</a></sup></p>
+
+    <blockquote><em>"Preserve the failed case before changing it. Do not reduce a system incident to 'the model hallucinated.' Ask which boundary admitted, trusted, authorized, released, or failed to observe the behavior."</em></blockquote>
+
+    <p>The question in that last sentence is a real diagnostic instrument, not a rhetorical flourish, because those five verbs point at five different places in the system — <em>admitted</em> is the input rail or the source allow-list; <em>trusted</em> is the retrieval layer and the support scorer; <em>authorized</em> is the guard that stands in front of the effect; <em>released</em> is the output rail; and <em>failed to observe</em> is <strong>observability</strong> worn so thin that the signal never reaches a person. If your answer is "the model", you have not answered a single one of them.</p>
+
+    <h3>Three words to separate in the first minute</h3>
+
+    <p>Before the loop starts, you have to know which kind of event you are in, because the kind determines what the organisation owes and to whom. The playbook defines it in two sentences, compressed almost to an equation.<sup><a href="#en-ref-1">[1]</a></sup></p>
+
+    <blockquote><em>"An incident is a realized harm. A near miss or hazard reveals credible harm before full impact."</em></blockquote>
+
+    <p>The observation that matters here, and that is usually read straight past, is that the playbook <em>treats near miss and hazard as a single pair</em> rather than as two categories. If you genuinely want a three-way split you have to borrow a definition from elsewhere, and the closest fit is the AI Incidents and Hazards Monitor (AIM) run by OECD.AI, which published its own definitions in May 2024: an AI incident is an event where the development, use or malfunction of an AI system <em>leads to</em> one of the listed harms, directly or indirectly, while an AI hazard is an event that <em>"could plausibly lead to"</em> the same categories of harm.<sup><a href="#en-ref-3">[3]</a></sup> It has to be said plainly that this set of definitions is what the OECD publishes for its own monitoring tool — not a standard binding anyone, and not a legal definition.</p>
+
+    <p>On the standards side, NIST AI 600-1 — the Generative AI Profile of the AI Risk Management Framework, published in July 2024<sup><a href="#en-ref-2">[2]</a></sup> — <em>reproduces</em> a definition of AI incident in Appendix A.1.8 rather than coining one, writing that an AI incident "can be defined as" an event or series of events where the development, use or malfunction of AI systems contributes to injury or harm to the health of a person or a group (psychological harms included), disruption to the management and operation of critical infrastructure, violations of human rights or a breach of obligations under law protecting fundamental, labour and intellectual property rights, or harm to property, communities or the environment.<sup><a href="#en-ref-2">[2]</a></sup> The thing I want you to notice is that this list never says "the system went down" — it is a list of harms to people, not a list of symptoms in a machine.</p>
+
+    <div class="table-wrapper">
+        <table>
+            <thead>
+                <tr>
+                    <th>Category</th>
+                    <th>Definition in use</th>
+                    <th>What the organisation owes</th>
+                    <th>Where the definition comes from</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td><strong>Incident</strong></td>
+                    <td>Harm that has already been realised, directly or indirectly, to people, rights, property, communities or critical infrastructure</td>
+                    <td>Contain, remedy the affected people, notify where a duty exists, preserve evidence, and run the whole loop through to verified correction</td>
+                    <td>The playbook, Chapter 9 · the definition NIST AI 600-1 reproduces in A.1.8</td>
+                </tr>
+                <tr>
+                    <td><strong>Near miss</strong></td>
+                    <td>An event that ran almost the whole way, but a control or a person caught it in time, so the full impact never landed</td>
+                    <td>Record it exactly as you would an incident, because it is the same quality of evidence obtained without anyone being harmed</td>
+                    <td>The playbook, Chapter 9 (paired with hazard) · NIST carries a suggested action specifically about recording and tracking near misses</td>
+                </tr>
+                <tr>
+                    <td><strong>Hazard</strong></td>
+                    <td>A condition or event that "could plausibly lead to" the same categories of harm, even though nobody has been harmed yet</td>
+                    <td>Assess plausibility, adjust the controls ahead of time, and pull it into the evaluation set before it becomes an incident</td>
+                    <td>The separate OECD.AI AIM definition published in May 2024 for its own monitoring tool</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <p>This difference is not a matter of vocabulary. In practice it settles two things at once — first, whom the organisation owes remedy and notification to, and second, what price the team pays for the lesson. A near miss is the same quality of evidence as an incident, obtained for free, and a great many organisations pay full price while the free version sits in front of them, purely because there is no field in which to record it.</p>
+
+    <div class="alert">
+        <strong>A fact worth stating plainly:</strong> as of July 2024, NIST AI 600-1 says of the field itself that <em>"Formal channels do not currently exist to report and document AI incidents"</em> — there is no official channel for reporting and documenting AI incidents, only a number of public databases that decide ad hoc what to track, some of them selecting by the amount of media coverage an event received.<sup><a href="#en-ref-2">[2]</a></sup> Which means your own internal database is the primary source of learning, not a supplement to one.
+    </div>
+
+    <h2 id="en-loop">2. Figure 13's Eight-Stage Loop — from Detect to Learn on the Axis "Evidence Before Change"</h2>
+
+    <p>Figure 13 of the playbook draws the <strong>incident-learning loop</strong> as eight nodes turning around a single core, and that core is not a step — it is the principle that governs every step.</p>
+
+    <figure class="figure">
+      <a href="../images/ai-transformation-fig-13-incident-loop.png">
+        <img class="figure__img" src="../images/ai-transformation-fig-13-incident-loop.png" alt="An eight-stage loop — Detect, Contain, Preserve, Diagnose, Remediate, Re-evaluate, Recover, Learn — around a dark core reading EVIDENCE BEFORE CHANGE." width="1400" height="1000" loading="lazy" decoding="async">
+      </a>
+      <figcaption class="figure__caption">Figure 13 · The incident-to-improvement loop — preserve the evidence before changing the system.</figcaption>
+    </figure>
+
+    <p>The loop in the figure has eight stages<sup><a href="#en-ref-1">[1]</a></sup> — Detect, Contain, Preserve, Diagnose, Remediate, Re-evaluate, Recover and Learn — turning around a dark core that reads EVIDENCE BEFORE CHANGE.</p>
+
+    <div class="alert info">
+        <strong>Mind the counting trap:</strong> this playbook names the same loop <em>three ways</em>, and the numbers do not agree — the prose of Chapter 9 runs <strong>nine verbs</strong>, adding <em>Scope</em> after Preserve; Figure 13 draws <strong>eight nodes</strong>, dropping Scope; and the glossary definition at Appendix C entry 36 gives <strong>seven verbs</strong> (detect, contain, reconstruct, remedy, verify, communicate, update controls). All three sets are genuine, but they must never be mixed inside one list. This section uses Figure 13's set, and Artifact 8's set governs the worksheet in section 5 — and each time I will name which set is speaking.
+    </div>
+
+    <p>The sentence the playbook uses to order the response in the chapter prose reads like this, and I quote it whole because the second half is worth more than the first.<sup><a href="#en-ref-1">[1]</a></sup></p>
+
+    <blockquote><em>"Respond by detecting, containing, preserving evidence, scoping, diagnosing, remediating, reevaluating, recovering, and learning. Bound effects first, preserve the manifest and traces before modification, inspect authoritative external state, and add both the actual case and hidden neighboring cases to evaluation."</em></blockquote>
+
+    <p>That second half is four instructions already ranked in order of priority — <em>bound the effects first</em>, then <em>preserve the manifest and the traces before modifying anything</em>, then <em>inspect the authoritative external state</em>, and finally <em>add both the actual case and the hidden neighbouring cases to the evaluation set</em>. Notice that the second instruction comes before diagnosis, not after, because most diagnosis is done by changing something and seeing whether the symptom disappears — which is unintentionally overwriting the witness.</p>
+
+    <div class="table-wrapper">
+        <table>
+            <thead>
+                <tr>
+                    <th>Stage</th>
+                    <th>What happens at this stage</th>
+                    <th>The question to answer before moving on</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td><strong>Detect</strong></td>
+                    <td>Take the signal — from monitoring, from a complaint, from an operator's override, or from an internal review — then declare the incident formally and name a commander</td>
+                    <td>When did it start, how wide is the affected population, and who owns this incident from this minute on</td>
+                </tr>
+                <tr>
+                    <td><strong>Contain</strong></td>
+                    <td>Disable the capability, the traffic or the slice involved, return the workflow to its <strong>fail-safe state</strong>, route the remaining cases to people, and remedy those already affected</td>
+                    <td>Are new people still being affected, and is the path that remains genuinely safe enough for the system to keep running</td>
+                </tr>
+                <tr>
+                    <td><strong>Preserve</strong></td>
+                    <td>Freeze the manifest, the traces and the context actually in force at that moment, including the corpus version, the scorers and the thresholds being enforced, before touching any code or configuration</td>
+                    <td>If we press rollback in the next minute, can we still reconstruct every step of this incident</td>
+                </tr>
+                <tr>
+                    <td><strong>Diagnose</strong></td>
+                    <td>Trace the causes across technology, data, workflow, ownership and incentives, and answer why detection or response was too slow</td>
+                    <td>Which boundary admitted, trusted, authorized, released or failed to observe the behaviour — and can we answer with evidence rather than a guess</td>
+                </tr>
+                <tr>
+                    <td><strong>Remediate</strong></td>
+                    <td>Separate the immediate fix from the durable one, assign an owner and a due date to each, then update the contract, the manifest, the runbook and the training to match</td>
+                    <td>Which durable measure makes this case impossible to repeat, rather than merely faster to detect</td>
+                </tr>
+                <tr>
+                    <td><strong>Re-evaluate</strong></td>
+                    <td>Turn the failed case into a named regression test, then run it alongside the hidden and adaptive sets and the neighbouring cases nobody has tested yet</td>
+                    <td>Would today's evaluation set catch this same incident if it were released again right now</td>
+                </tr>
+                <tr>
+                    <td><strong>Recover</strong></td>
+                    <td>Return to service through staged exposure, with a shorter review cadence, a lower exposure ceiling and a stop path that has been rehearsed</td>
+                    <td>If it comes back within the hour, how many minutes until we know, and how many until we are rolled back</td>
+                </tr>
+                <tr>
+                    <td><strong>Learn</strong></td>
+                    <td>Communicate with the people affected, compensate, monitor recurrence, share the pattern across products, and close the incident on evidence alone</td>
+                    <td>Have the other products carrying the same weakness been fixed too, and what evidence are we closing on</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <p>The sentence that defines when it is over closes the incident paragraph in Chapter 9, and it is a good deal stricter than what most organisations run on.<sup><a href="#en-ref-1">[1]</a></sup></p>
+
+    <blockquote><em>"Learning is complete only when the corrective control or design change is verified and recurrence is monitored."</em></blockquote>
+
+    <p>The words doing the hardest work are <em>verified</em> and <em>monitored</em>, because both are verbs that require evidence behind them, not states you can declare in a meeting. Writing "fixed" in a ticket is not verification. Having the measure written in a document is not verification either. And nobody complaining again within two days is not monitoring recurrence.</p>
+
+    <p>The standards side walks the same road. NIST AI 600-1 carries a suggested action to develop and update incident response and recovery plans and procedures for GenAI systems, covering newly encountered and unanticipated uses, and covering the whole value chain along with points of contact for downstream actors; and another to conduct an <em>after-action assessment</em> verifying that the response and recovery processes were in fact followed and were in fact effective.<sup><a href="#en-ref-2">[2]</a></sup> It must be said clearly that this document is voluntary rather than binding — "Suggested Actions" is NIST's own wording, and organisations have to select and tailor them to their own use cases and risk tolerance.</p>
+
+    <h2 id="en-trace-schema">3. Artifact 6 — the Nine-Group Trace Schema and the Independent Reviewer's Seven-Part Test</h2>
+
+    <p>The Preserve stage is impossible if there is nothing there to preserve, and that is why the playbook places Artifact 6 ahead of Artifact 8 — a <strong>reconstructable trace</strong> is not something you can find once trouble starts. It is something you design in advance, while nothing is happening at all. The playbook states the artifact's purpose in a single sentence, followed by a shorter and sharper one.<sup><a href="#en-ref-1">[1]</a></sup></p>
+
+    <blockquote><em>"Preserve enough evidence for a later authorized reviewer to reconstruct what the system knew, proposed, checked, did, released, and why it chose that route. Auditable means reconstructable, not safe."</em></blockquote>
+
+    <p>That second sentence is the one I want compliance teams to read slowly, because having complete logs does not mean the system is safe. It means only that if something goes wrong, we will be able to find out what. Those two things differ by enough that an organisation which confuses them can invest in the wrong direction for a whole year.</p>
+
+    <h3>The nine event groups to capture</h3>
+
+    <p>The playbook's trace schema has <strong>nine groups</strong> of events<sup><a href="#en-ref-1">[1]</a></sup> — Identity, Release identity, Input and state, Context and retrieval, Checks, Generation, Effect, Release and Operations. I keep this nine-group structure in both the Thai and the English track, even though the book's Thai table compresses to eight rows by merging Release with Operations, because that merge is a page-layout compression rather than a different schema, and in practice Release and Operations answer plainly different questions.</p>
+
+    <div class="table-wrapper">
+        <table>
+            <thead>
+                <tr>
+                    <th>Event group</th>
+                    <th>Required fields</th>
+                    <th>What it lets a reviewer do</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td><strong>1. Identity</strong></td>
+                    <td>Trace, request and session IDs, the authenticated principal and the subject, time, language and locale, channel, and the consent or lawful-basis reference</td>
+                    <td>Know who asked, on whose behalf, through which channel, when, and on what basis</td>
+                </tr>
+                <tr>
+                    <td><strong>2. Release identity</strong></td>
+                    <td>Manifest, model and evaluator IDs, decoding parameters, policy and threshold versions</td>
+                    <td>Establish which build of the system this incident happened on — the first question whose absence breaks everything downstream</td>
+                </tr>
+                <tr>
+                    <td><strong>3. Input and state</strong></td>
+                    <td>The original request or a protected reference, prior state, dialogue transitions, and trusted/untrusted labels on each fragment</td>
+                    <td>Separate what came from the user, what came from the system, and what the system should never have trusted in the first place</td>
+                </tr>
+                <tr>
+                    <td><strong>4. Context and retrieval</strong></td>
+                    <td>Assembly hash, the context actually used or a replay reference, corpus and ranker versions, the query, ordered passage IDs, text hashes and <strong>provenance</strong></td>
+                    <td>Point at the individual documents that made the system answer that way, and know where each came from and in which version</td>
+                </tr>
+                <tr>
+                    <td><strong>5. Checks</strong></td>
+                    <td>The rails traversed in order, control versions and classes, scores, thresholds, the violation list, verdicts and latency</td>
+                    <td>See which gate checked and passed, which checked and failed, and by what margin each verdict cleared its threshold</td>
+                </tr>
+                <tr>
+                    <td><strong>6. Generation</strong></td>
+                    <td>Candidate hash and protected payload, citations, and the tools and arguments proposed</td>
+                    <td>Read the model's <em>proposal</em> directly, instead of inferring it backwards from the end result</td>
+                </tr>
+                <tr>
+                    <td><strong>7. Effect</strong></td>
+                    <td>Identity binding, authorization, approval, idempotency, pre-state, normalized call, result, post-state, exception</td>
+                    <td>Prove whether a real effect occurred, how many times, and what the authoritative state changed from and to</td>
+                </tr>
+                <tr>
+                    <td><strong>8. Release</strong></td>
+                    <td>Output hash and payload reference, the redaction list, and the route chosen: release, withhold, escalate or fail closed</td>
+                    <td>Know what actually reached the user, and which terminal path the system took</td>
+                </tr>
+                <tr>
+                    <td><strong>9. Operations</strong></td>
+                    <td>Cost and tokens where needed, terminal time, retention class, access log, integrity signature, linked incident</td>
+                    <td>Audit who opened this evidence, whether it was altered, and which incident it belongs to</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <p>Notice that these nine groups are not merely chronological — they are ordered by <em>the questions a reviewer will ask</em>. The place I see teams miss most often is groups 2 and 9: most teams capture input, output and latency in full, but capture the <strong>runtime-context manifest</strong> only partially, so when reconstruction time comes they cannot say which manifest the incident happened on, and everything reconstructed after that is guesswork.</p>
+
+    <h3>The seven-part test</h3>
+
+    <p>The playbook closes the schema table with a single sentence that works as a usable test — you do not have to wait for a reviewer to arrive to run it on yourself today. An independent reviewer must be able to do <strong>seven things</strong><sup><a href="#en-ref-1">[1]</a></sup>: identify the release, rebuild the decision-time evidence, replay the hard checks, see the scores together with their thresholds, distinguish the proposal from the effect, verify the final state, and explain the route the system chose.</p>
+
+    <p>The item cut most often is the fourth — seeing a score without the threshold that was in force at that moment — because thresholds tend to live in configuration that can change at any time and is not written into the trace. Once the threshold is adjusted after the incident, the 0.91 sitting in the evidence becomes a number nobody can interpret. And the fifth — distinguishing the proposal from the effect — is the item that separates a system designed with <strong>proposal–effect separation</strong> from one that was not, because if the trace does not separate the two, there is no way to tell whether the guard did its job or the model happened to propose the right thing.</p>
+
+    <p>The vocabulary for saying what these things <em>are</em> structurally already has a common standard behind it. W3C's PROV-O supplies <strong>three</strong> starting-point classes<sup><a href="#en-ref-4">[4]</a></sup> — an <em>entity</em> is a thing acted upon (one retrieved document, one payload), an <em>activity</em> is something that occurs over a period of time and acts on entities (one rail check, one tool call), and an <em>agent</em> is whatever bears responsibility for that activity (the approver, the service owner, the system acting on someone's behalf). PROV-O has been a W3C Recommendation since 30 April 2013 and carried no obsoletion or superseding notice on the access date, but its scope is very clearly bounded: it supplies a <em>vocabulary</em>, not an audit policy and not a storage design. The nine-group schema above is that vocabulary instantiated in our domain — related, but not the same artefact and not interchangeable.</p>
+
+    <div class="alert">
+        <strong>"Log everything forever" is not assurance:</strong> the playbook writes it into the artifact directly — <em>"Encrypt, restrict, redact and limit retention; 'log everything forever' is not assurance."</em><sup><a href="#en-ref-1">[1]</a></sup> An evidence store that grows without a retention policy does not mean you are auditable; it means your privacy risk surface widens every day while your ability to reconstruct any one incident may not have improved at all. The correct criterion is "enough to reconstruct", not "everything we could capture".
+    </div>
+
+    <p>The playbook also splits ownership three ways, and it is a split I think Thai organisations can adopt immediately — the SRE or platform owner guarantees that capture is durable and nothing is lost; the data-protection team owns minimisation and retention; and the decision owner reviews the <em>meaning</em> of what is captured.<sup><a href="#en-ref-1">[1]</a></sup> This split fixes the classic failure where the trace is designed by engineers alone and ends up technically complete while answering not one policy question.</p>
+
+    <div class="alert info">
+        <strong>🇹🇭 Thai context — the fields a Thai deployment has to add, and PDPA as a "design input":</strong> the playbook's sample trace records language and locale explicitly as <code>Thai</code>, alongside <code>manifest rc4</code> and the time <code>10:42:16+07</code> — those three fields are the difference between an auditable trace and an unauditable one in any organisation that serves several languages and sits at a different offset from head office. Without the locale you cannot tell whether a wrong answer was wrong on policy or wrong in translation; without the offset, event ordering across systems drifts by seven hours and nobody notices.<br><br>
+        On the legal side, the Personal Data Protection Act B.E. 2562 supplies at least four <em>design inputs</em> to a trace schema — section 22 permits collection of personal data only as necessary under the controller's lawful purpose; section 33(1) gives the data subject the right to request erasure or destruction once the data is no longer necessary for the purpose of collection; section 37(1) requires appropriate security measures, to be reviewed when technology changes; and section 37(3) requires <em>a system for examining and then deleting or destroying</em> data once the retention period has passed — that last one is why retention class is a mandatory field in group 9 rather than a nicety. Section 37(4) requires notification of a personal-data breach to the Office without delay and within <strong>72 hours</strong> (seventy-two hours) of becoming aware of it, as far as practicable, except where the breach carries no risk to a person's rights and freedoms; and where the risk is high, the data subject must be notified too, together with remedial guidance.<sup><a href="#en-ref-5">[5]</a></sup> That clock is the only clock in this post imposed from outside the organisation, and it lands squarely on top of the Detect and Contain stages.<br><br>
+        <em>The boundary, stated plainly:</em> all of this is design input to a runbook and <strong>not legal advice</strong>. This post offers no interpretation of which fields are or are not personal data, of which events are notifiable, and of what retention period is "correct" — the Act fixes no retention period for traces, and the method and criteria under sections 37(1) and 37(4) are both delegated to committee announcements. The official text and qualified Thai counsel control. Post <a href="/blog/ai-transformation-obligations">#16 One Evidence System</a> maps these duties onto a single evidence set in detail.
+    </div>
+
+    <h2 id="en-worked-incident">4. CX-REFUND-01 — Walking One Incident Through the Whole Loop</h2>
+
+    <p>All the theory above only means something once it walks through a single real event. So the playbook uses <code>CX-REFUND-01</code>, the customer-service assistant of Luma Commerce Thailand <em>(a fictional case from the playbook)</em>, as its running example from the opening chapters, and walks it through the entire loop in Artifact 8. Every number in this section is a composed value inside a fictional case — not a threshold, not an industry average, and never to be lifted into a metrics table as a target.</p>
+
+    <h3>What happened</h3>
+
+    <p>At a 25% rollout, a customer received an explanation stating they were eligible within 60 days — wording that came from an expired promotion page still sitting in the source allow-list. The model then proposed a refund of THB 2,400 on day 45 from the qualifying date, which exceeded the actual entitlement.<sup><a href="#en-ref-1">[1]</a></sup></p>
+
+    <p>What happened next is the heart of the whole case, and the reason I am retelling it from <a href="/blog/ai-transformation-five-rails">#13 Five Rails and the Effect Guard</a> at a new angle — <strong>the execution guard blocked the payment, but the output rail released the wrong explanation</strong>. Put another way: not one baht left the account, and yet the customer had already received a promise the organisation could not keep.</p>
+
+    <p>When the stop condition triggered, the team rolled back to manifest <code>rc4</code> and routed every promotion-related case to human handling.<sup><a href="#en-ref-1">[1]</a></sup> Note the order: contain first, then reconstruct.</p>
+
+    <h3>What the trace said, and the classification that followed</h3>
+
+    <p>The trace confirmed that <em>no</em> financial effect had occurred, and located the problem at three points — a corpus dated <code>2026-09-01</code>, an old and expired passage, a support scorer that false-accepted, and a payload that had already been released.<sup><a href="#en-ref-1">[1]</a></sup> On that evidence the team classified the event as a <strong>severe semantic policy escape plus a near miss</strong>, with the <em>structural execution invariant still holding</em>.</p>
+
+    <p>That one classification sentence carries two ideas this series has returned to throughout, and it is exactly where most teams fail to separate them — a <strong>structural guarantee</strong> is something provable deterministically, such as "no payment executes without approval and above the limit", while a <strong>semantic estimate</strong> is a probabilistic score of how well a piece of text matches policy. In this case the first <em>held</em> and the second <em>leaked</em>, and reporting either "the system worked correctly" or "the system failed" as a single verdict misleads the executive in both directions.</p>
+
+    <div class="table-wrapper">
+        <table>
+            <thead>
+                <tr>
+                    <th>Boundary</th>
+                    <th>Did it behave as designed?</th>
+                    <th>Evidence from the trace</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>Source allow-list</td>
+                    <td>No — it checked the source ID but not the effective date</td>
+                    <td>A passage from an expired promotion page entered the context normally</td>
+                </tr>
+                <tr>
+                    <td>Support scorer</td>
+                    <td>No — it checked textual entailment but not whether the policy was current</td>
+                    <td>Support false accept: the text did match a real document, but that document was not the policy in force</td>
+                </tr>
+                <tr>
+                    <td>Execution guard</td>
+                    <td>Yes — it blocked the payment</td>
+                    <td>No financial effect appears in the trace's Effect group</td>
+                </tr>
+                <tr>
+                    <td>Output rail</td>
+                    <td>No — it released the wrong explanation to the customer</td>
+                    <td>The released payload appears in the Release group with the route set to release</td>
+                </tr>
+                <tr>
+                    <td>Route to human handling</td>
+                    <td>Yes (after containment) — promotion cases were routed to people</td>
+                    <td>The manifest change and the re-routing are recorded in the Contain stage</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <p>The table above is what the question "which boundary admitted, trusted, authorized, released or failed to observe" produces, and I would like you to compare it with what "the model hallucinated" produces — zero rows. A classification this granular is possible only because <strong>effect mediation</strong> was designed as something separate from text generation from the start, so the trace can tell a proposal apart from an effect.</p>
+
+    <h3>Diagnose, correct and return to service</h3>
+
+    <p>The diagnosis identified two causal layers, neither of them the model layer — the allow-list checked IDs but not effective dates, and the scorer checked entailment but not policy currency.<sup><a href="#en-ref-1">[1]</a></sup> The corrections therefore landed with different owners: the knowledge-base owner removed the stale page, made Owner, Effective date and Expiry metadata mandatory, and added a document-conflict check, while the CX Quality team added a time-validity check and a customer-facing correction to the explanation.</p>
+
+    <p>Then comes the stage I think real organisations skip most often — the failed case became a <em>named</em> regression case, <code>CXGS-241</code>, run alongside the related hidden, adaptive, bilingual and duplicate-state cases until all of them passed. Only then did an independent policy reviewer approve the new manifest <code>rc5</code>, restored at 5% with a 24-hour review cadence.<sup><a href="#en-ref-1">[1]</a></sup></p>
+
+    <blockquote>💡 My view: the order "regression before restore" is the line between an organisation that learns and one that merely repairs things. If the failed case still has no name and is still not in the suite that runs every time, the organisation is betting that whoever fixed it will not forget — and in a system with several manifest versions and several teams, that bet always loses.</blockquote>
+
+    <p>The final stage is closure, and the playbook sets conditions longer than any ticket system enforces — update the contract, the manifest schema, the source-publication workflow and the runbook; carry the same freshness check across to the returns and warranty products; and close only once the customer has been remedied, recurrence has been monitored for <strong>seven days</strong>, and an evidence review has been signed off.<sup><a href="#en-ref-1">[1]</a></sup> The line "carry the freshness check across to the other products" is what turns a single incident into a reusable improvement — and it is what the metrics in section 7 are trying to measure.</p>
+
+    <h2 id="en-artifact-incident-loop">5. Artifact 8 — the Eight-Stage Worksheet: Action, Evidence, Owner and Done-when</h2>
+
+    <p>Artifact 8 is the working form of the loop in section 2. The playbook states its purpose, its trigger and its accountable owner in three lines<sup><a href="#en-ref-1">[1]</a></sup> — the <em>purpose</em> is to turn a failure into containment, evidence, verified correction and organisational memory; <em>use it when</em> a prohibited effect, a severe or repeated semantic escape, trace loss, a privacy event, a control bypass, a drift signal or a near miss occurs; and the <em>accountable owner</em> is the incident commander as coordinator, with the decision, engineering, security, privacy and people owners retaining their own domain obligations.</p>
+
+    <p>Artifact 8's stage names are not quite the node names in Figure 13 — here they are <em>Detect and declare, Contain, Reconstruct, Classify, Diagnose, Correct, Verify and restore, Learn</em>, which is also eight stages but a different set of words. I use Artifact 8's set throughout this worksheet and do not blend it with Figure 13's.</p>
+
+    <p>The playbook gives one column, "Record and decide". I expand it into four that work in a real meeting — <em>Action</em>, what to do; <em>Evidence</em>, what must exist before the action counts as done; <em>Owner</em>, who holds it; and <em>Done-when</em>, the condition that lets the stage close. That last column is what prevents the most popular disease of incident review: moving to the next stage while the previous one is still open.</p>
+
+    <h3>The blank worksheet — print it and fill it in</h3>
+
+    <div class="table-wrapper">
+        <table>
+            <thead>
+                <tr>
+                    <th>Stage</th>
+                    <th>Action</th>
+                    <th>Evidence</th>
+                    <th>Owner</th>
+                    <th>Done-when</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td><strong>1. Detect and declare</strong></td>
+                    <td>Record the signal, the time, the affected scope and a provisional severity, then declare the incident and name a commander</td>
+                    <td>The signal list with timestamps, a scope estimate, the incident declaration record</td>
+                    <td>Whoever found it → incident commander</td>
+                    <td>A commander is named and a provisional severity is recorded in writing</td>
+                </tr>
+                <tr>
+                    <td><strong>2. Contain</strong></td>
+                    <td>Disable the capability, traffic or slice involved, remedy the customer, roll back, and preserve the evidence</td>
+                    <td>The disable commands with times, the list of affected people contacted, the ID of the manifest rolled back to</td>
+                    <td>Service owner with the incident commander</td>
+                    <td>No new people are being affected, and the evidence is frozen before any fix</td>
+                </tr>
+                <tr>
+                    <td><strong>3. Reconstruct</strong></td>
+                    <td>Rebuild the trace, manifest, context, sources, checks, proposal, effect, output and final state</td>
+                    <td>A trace that passes the seven-part test in section 3, plus the authoritative state from the systems of record</td>
+                    <td>SRE or platform owner</td>
+                    <td>A reviewer who was not in the incident can read it and retell the story without asking the team</td>
+                </tr>
+                <tr>
+                    <td><strong>4. Classify</strong></td>
+                    <td>Classify harm and near miss, separate structural breach from semantic escape, and identify the affected people and the obligations that follow</td>
+                    <td>A classification table naming each boundary as held or leaked, with a per-row evidence reference</td>
+                    <td>Decision owner with risk and privacy</td>
+                    <td>There is one classification everyone agrees on, and it is clear whom the organisation owes notification or remedy</td>
+                </tr>
+                <tr>
+                    <td><strong>5. Diagnose</strong></td>
+                    <td>Trace technical, data, workflow, ownership and incentive causes, and answer why detection or response was too slow</td>
+                    <td>A timeline of signal against response, the points where evidence is missing, the reason the existing thresholds let it through</td>
+                    <td>Engineering with the process owner</td>
+                    <td>Every part of "which boundary admitted, trusted, authorized, released or failed to observe" is answered with evidence</td>
+                </tr>
+                <tr>
+                    <td><strong>6. Correct</strong></td>
+                    <td>Separate the immediate fix from the durable control, assign owners and due dates, then update the contract, manifest, runbook and training</td>
+                    <td>The measure list with owners and due dates, the contract and manifest diffs, the revised runbook</td>
+                    <td>Each measure's owner, under the commander</td>
+                    <td>At least one durable measure makes this case impossible to repeat, not merely faster to detect</td>
+                </tr>
+                <tr>
+                    <td><strong>7. Verify and restore</strong></td>
+                    <td>Add the new regression case, run the hidden and adaptive sets, check the state oracle, obtain independent review, then restore through staged exposure</td>
+                    <td>The regression case ID, the suite results, the independent reviewer's approval record, the exposure ceiling and review cadence set</td>
+                    <td>The evaluation team with an independent reviewer from outside the fixing team</td>
+                    <td>The failed case is named and in the suite that runs every time, and the restore carries a recorded ceiling and review date</td>
+                </tr>
+                <tr>
+                    <td><strong>8. Learn</strong></td>
+                    <td>Communicate, compensate, monitor recurrence, share the pattern across products, and close on evidence alone</td>
+                    <td>The communications record with those affected, the recurrence-monitoring result over the defined window, the list of other products that adopted the same measure</td>
+                    <td>Decision owner with the people owner</td>
+                    <td>Other teams carrying the same weakness have been fixed, and the closure carries an evidence-review signature</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <h3>The completed worksheet — CX-REFUND-01</h3>
+
+    <p>The next table is the same fictional case as section 4, filled into the eight-stage worksheet. In the book, the case is presented compressed into five pairs (Detect/Contain, Reconstruct/Classify, Diagnose/Correct, Verify/Restore, Learn/Close); I unfold it back to eight rows so it lines up with the blank worksheet above, without adding any fact the playbook did not supply.</p>
+
+    <div class="table-wrapper">
+        <table>
+            <thead>
+                <tr>
+                    <th>Stage</th>
+                    <th>Action</th>
+                    <th>Evidence</th>
+                    <th>Owner</th>
+                    <th>Done-when</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td><strong>1. Detect and declare</strong></td>
+                    <td>Found that at a 25% rollout a customer received a 60-day eligibility explanation from an expired promotion page still in the allow-list</td>
+                    <td>The released text, the time of the event, the 25%-of-traffic scope</td>
+                    <td>Incident commander</td>
+                    <td>The incident is declared and an owner is named</td>
+                </tr>
+                <tr>
+                    <td><strong>2. Contain</strong></td>
+                    <td>The stop condition triggered, rollback to manifest <code>rc4</code>, and every promotion case routed to people</td>
+                    <td>The rollback record, and the record of re-routing promotion cases to <strong>human oversight</strong></td>
+                    <td>Service owner</td>
+                    <td>No promotion case runs through the automated path any more</td>
+                </tr>
+                <tr>
+                    <td><strong>3. Reconstruct</strong></td>
+                    <td>Rebuild the trace until the whole path is visible, from the retrieved passage to the released payload</td>
+                    <td>Corpus dated <code>2026-09-01</code>, the stale passage, the support false accept, the released payload, and confirmation that no financial effect occurred</td>
+                    <td>SRE or platform owner</td>
+                    <td>The trace fully explains what the system knew, proposed, checked, did and released</td>
+                </tr>
+                <tr>
+                    <td><strong>4. Classify</strong></td>
+                    <td>Classified as a severe semantic policy escape plus a near miss, with the structural execution invariant still holding</td>
+                    <td>Evidence that the execution guard blocked the payment while the output rail released the wrong explanation</td>
+                    <td>Decision owner with risk</td>
+                    <td>There is one classification that cleanly separates the structural layer from the semantic one</td>
+                </tr>
+                <tr>
+                    <td><strong>5. Diagnose</strong></td>
+                    <td>Found that the allow-list checked IDs but not effective dates, and the scorer checked entailment but not policy currency</td>
+                    <td>The allow-list conditions compared against document metadata, and the scorer's results on cases where the policy had changed</td>
+                    <td>Engineering with the knowledge-base owner</td>
+                    <td>The cause is located at a boundary that can be named, not at "the model"</td>
+                </tr>
+                <tr>
+                    <td><strong>6. Correct</strong></td>
+                    <td>The knowledge-base owner removed the stale page, made Owner, Effective date and Expiry metadata mandatory and added a conflict check, while CX Quality added a time-validity check and a customer-facing correction</td>
+                    <td>Diffs of the contract, the manifest schema, the source-publication workflow and the runbook</td>
+                    <td>Knowledge-base owner and the CX Quality team</td>
+                    <td>The durable measures cover both the source layer and the checking layer, not only one</td>
+                </tr>
+                <tr>
+                    <td><strong>7. Verify and restore</strong></td>
+                    <td>Turned the failed case into regression <code>CXGS-241</code>, ran it with the hidden, adaptive, bilingual and duplicate-state cases until all passed, then restored at 5%</td>
+                    <td>The full suite results, the approval of manifest <code>rc5</code> by an independent policy reviewer, the 24-hour review cadence</td>
+                    <td>The evaluation team and an independent policy reviewer</td>
+                    <td>The new manifest is approved, and the restore is staged with a recorded review cadence</td>
+                </tr>
+                <tr>
+                    <td><strong>8. Learn</strong></td>
+                    <td>Updated the contract, manifest schema, workflow and runbook, then carried the same freshness check across to the returns and warranty products</td>
+                    <td>The customer-remedy record, the seven-day recurrence-monitoring result, the evidence-review signature</td>
+                    <td>Decision owner with the owners of the products adopting the measure</td>
+                    <td>Closure follows the customer being remedied, seven full days of recurrence monitoring, and a signature</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <div class="alert info">
+        <strong>A note on incident-record numbers:</strong> the playbook does <em>not</em> give this case an incident-record number. The only IDs it supplies are the scenario name <code>CX-REFUND-01</code>, the regression case <code>CXGS-241</code> and the manifests <code>rc4</code> / <code>rc5</code> (whose full form reads <code>CX-REFUND-01.2026-09-rc4, parent 2026-08-prod2</code>). If your organisation wants an incident number in the worksheet, that is your own convention and not the playbook's — and I would recommend a convention that ties back to the manifest, because a reviewer's first question is always "which build did it happen on".
+    </div>
+
+    <h2 id="en-near-misses">6. Near Misses, Overrides and Corrections Are Evidence, Not Embarrassments</h2>
+
+    <p>Chapter 9 closes with five operating principles, and the fifth is the one I think organisations violate most often without noticing — because they do not violate it by decision, they violate it by having no field to fill in.</p>
+
+    <blockquote>💡 My view: principle 5 of this chapter reads <em>"Treat near misses overrides and corrections as evidence. Do not suppress the signals that teach the system."</em><sup><a href="#en-ref-1">[1]</a></sup> I would add that these three signals are suppressed almost entirely by our own measurement systems — a team measured on incident count will report fewer incidents, not commit fewer errors. And a frontline operator's override is the highest-quality data an organisation owns, because it is the moment a real expert tells us the system is wrong, before anyone has been harmed.</blockquote>
+
+    <p>The chapter's other four principles form one frame with it and should always be read together<sup><a href="#en-ref-1">[1]</a></sup> — principle 1, <em>evidence before exposure</em>: do not increase the affected population ahead of proof · principle 2, <em>evaluate the system in context</em>: a model score is not workflow performance · principle 3, <em>match gates to impact and reversibility</em>: stronger consequence demands stronger evidence · principle 4, <em>make every release observable and reversible</em>: a live system needs a service owner and a kill path. Notice that the first four are about what you do <em>before</em> anything goes wrong, and only the fifth is about what you do <em>after</em> — and that is the one requiring culture rather than architecture.</p>
+
+    <h3>Why near misses disappear from the system</h3>
+
+    <p>From working with engineering and customer-service teams in Thailand, I keep seeing the same three patterns. One — there is no field to fill in: the ticket system has "incident" and "normal" but no "almost", so the person who caught it in time has nowhere to record it and goes back to work. Two — reporting has a cost and no return: whoever reports a near miss gets an extra meeting, whoever stays quiet does not. Three — an override is read as a failure of the model, so it is kept in the system's logs rather than in the organisation's evidence store for learning. All three are fixable by design, not by asking people to cooperate.</p>
+
+    <p>The standards side already has an item aimed exactly here. NIST AI 600-1 lists a suggested action to <em>"Establish and maintain policies and procedures to record and track GAI system reported errors, near-misses, and negative impacts"</em> — establish and maintain policies and procedures for recording and tracking a GenAI system's reported errors, <strong>near misses</strong> and negative impacts.<sup><a href="#en-ref-2">[2]</a></sup> The term "near-miss" appears in NIST's own text; it is not my gloss. And as before, it is a voluntary suggestion that organisations must select and tailor to context, not a requirement.</p>
+
+    <h3>Looking outward — when your own data is still too thin</h3>
+
+    <p>The statistical problem with learning from incidents is that a single organisation almost never has enough of them to see a pattern. By the time you meet the same semantic escape for the third time, two years may have passed. The way out the playbook points to is external scanning for patterns that happened to other people, and the source it names is the AI Incidents and Hazards Monitor (AIM) run by OECD.AI.</p>
+
+    <p>On 5 September 2026, the AIM listing with an unfiltered all-time date range showed roughly <strong>17,392</strong> entries labelled incidents &amp; hazards.<sup><a href="#en-ref-3">[3]</a></sup> That number has to be read with three warnings attached, always. One — it is a count of <em>events selected from news reporting</em>: the system pulls articles via Event Registry, which processes over 150,000 articles a day, then uses language models to classify events and enrich them with metadata. Two — the page labels itself Beta, and the OECD states explicitly that it cannot guarantee and does not independently verify the accuracy of third-party information; inclusion is not an adjudication of fact or of liability. Three — the page carries no denominator at all: no count of deployed systems, no comparison baseline. So this number <em>cannot be used to express a trend, a growth rate, or a per-system probability</em>. Its one legitimate use is to confirm that an external corpus of this size exists to scan against.</p>
+
+    <p>What is interesting is that NIST AI 600-1 itself names the OECD AI incident monitor in its list of external information-sharing resources, alongside the AI incident database, AVID, CVE and NVD.<sup><a href="#en-ref-2">[2]</a></sup> That is the one place where two of this post's sources touch directly, and it is why I think external scanning should be a standing agenda item rather than something you do after trouble. The way I recommend running it is a quarterly cadence in which process owners read the patterns that hit products of the same type and ask one question: "if this happened to us, which of our rails would have caught it?" That question produces a recordable hazard immediately, without waiting for anyone to be harmed.</p>
+
+    <h2 id="en-metrics-failures">7. Metrics for the Learning Loop, and the Failure Patterns That Keep Coming Back</h2>
+
+    <p>Chapter 9 gives its "metrics that matter" list as a single sentence covering both evaluation and release<sup><a href="#en-ref-1">[1]</a></sup> — quality-adjusted task success, critical-error rate, supported claims, security escapes, subgroup disparity, override and reversal, feedback latency, drift, cost per successful outcome, <strong>time to detect, contain and recover</strong>, <strong>near-miss reporting</strong>, <strong>recurrence</strong>, and releases with a tested rollback. The three I have set in bold are the ones belonging directly to the incident-learning loop; the rest belong to the release gate in post #14.</p>
+
+    <p>The table below is the set I actually use. The first four come from the playbook, and <strong>the last two are measures I add myself</strong> — they are not in Chapter 9's "metrics that matter" list, but they follow directly from Artifact 8's Verify and restore row and its Learn row. I mark the provenance in the last column so nobody mistakes them for something the playbook requires.</p>
+
+    <div class="table-wrapper">
+        <table>
+            <thead>
+                <tr>
+                    <th>Metric</th>
+                    <th>What it measures</th>
+                    <th>The failure it exposes</th>
+                    <th>Scorecard</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td><strong>Time to detect / contain / recover</strong><br><em>(playbook)</em></td>
+                    <td>Three separate intervals — from occurrence to awareness, from awareness to effects stopped, and from effects stopped to safe return to service</td>
+                    <td>An organisation with a very high first value and a low third one is good at repairing and blind at seeing — and a single combined number always hides that</td>
+                    <td><strong>Risk</strong></td>
+                </tr>
+                <tr>
+                    <td><strong>Recurrence</strong><br><em>(playbook)</em></td>
+                    <td>The share of incidents whose pattern repeats one already closed, within a defined window</td>
+                    <td>A correction that detects faster without closing the path shows up here before anywhere else</td>
+                    <td><strong>Learning</strong></td>
+                </tr>
+                <tr>
+                    <td><strong>Near-miss reporting rate</strong><br><em>(playbook)</em></td>
+                    <td>Near misses, overrides and corrections recorded per unit of workload, set against the number of incidents actually realised</td>
+                    <td>A <em>low</em> rate is a danger signal, not good news — it means there is no reporting channel, or there is one and nobody dares use it</td>
+                    <td><strong>People</strong></td>
+                </tr>
+                <tr>
+                    <td><strong>Closure discipline</strong><br><em>(playbook, inverted from its failure-pattern list)</em></td>
+                    <td>The share of incidents closed with complete evidence of verified correction, against those closed when service came back</td>
+                    <td>Exposes closing on "service is back = done", which the playbook names as a failure pattern outright</td>
+                    <td><strong>Quality</strong></td>
+                </tr>
+                <tr>
+                    <td><strong>Share of incidents with a named regression case</strong><br><em>(a measure I add myself)</em></td>
+                    <td>The share of incidents whose failed case became a named regression case sitting in the suite that runs every time</td>
+                    <td>Measures directly whether the organisation is accumulating immunity or merely closing tickets</td>
+                    <td><strong>Quality</strong></td>
+                </tr>
+                <tr>
+                    <td><strong>Time from verified incident to reusable control improvement</strong><br><em>(a measure I add myself)</em></td>
+                    <td>The interval from a correction being verified to the point where other products carrying the same weakness have adopted it</td>
+                    <td>Exposes organisations that fix well one team at a time but have no transfer mechanism — the lesson dies inside the team that met the incident</td>
+                    <td><strong>Learning</strong></td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <p>A caveat that has to be stated plainly: every number from the CX-REFUND-01 case in sections 4 and 5 is a composed value inside a fictional case, and none of them may be set as a target or a threshold in this table — not the 5% ceiling, not the 24-hour review cadence, not the seven-day recurrence monitor. What transfers is the <em>structure</em> of the decision, not the numbers.</p>
+
+    <h3>Failure patterns</h3>
+
+    <ul>
+        <li><strong>Closing the incident when service comes back, without checking that the correction worked</strong> — the playbook names this pattern outright in Chapter 9's failure-pattern list.<sup><a href="#en-ref-1">[1]</a></sup> The observable symptom is a ticket closed on the same day service returned, with no verification document attached to it.</li>
+        <li><strong>Suppressing near misses</strong> — another pattern the playbook names itself. The symptom is reported incident counts falling in the quarter where performance pressure rose, a correlation that ought to make everyone uncomfortable.</li>
+        <li><strong>Writing "the model hallucinated" as the root cause</strong> — a direct contradiction of Artifact 8's closing rule. A root cause has to be the name of a boundary that admitted, trusted, authorized, released or failed to observe, not the name of a technology.</li>
+        <li><strong>Modifying the manifest before preserving it</strong> — a direct contradiction of Chapter 9's instruction to "preserve the manifest and traces before modification" and Artifact 8's rule "Preserve the failed case before changing it". This is the hardest pattern to fix, because it comes from an engineer's good instinct to minimise harm to users. The remedy is therefore not a warning but making evidence-freezing an automatic step that fires together with the rollback.</li>
+    </ul>
+
+    <h2 id="en-road-ahead">8. The Road Ahead — from One Incident's Evidence to a Single Evidence System</h2>
+
+    <p>If this chapter had to be reduced to one sentence, it would be the core of Figure 13 — preserve the evidence before changing the system. And if it had to be reduced to actions you can take this week without waiting for budget, I would offer three. One — take the seven-part test in section 3 and run it against one incident you have <em>already closed</em>; the items you cannot answer are the fields your trace does not yet have. Two — open a near-miss field in whichever ticket system you use today, and watch how many entries arrive in the first two weeks. Three — check whether a rollback in your system freezes the evidence automatically; if it does not, that is the work to do before everything else on this list.</p>
+
+    <p>And there is one question this chapter deliberately leaves open. Every trace, every incident record and every worksheet we filled in through this post is not used only inside the team — it is the same body of evidence that several laws, standards and external reviewers will come and ask to see, each asking in its own language. The question is whether we build a separate evidence set for each of them, or design one and map it onto every duty. The playbook chooses the latter, and opens part four with the sentence that frames the whole part.<sup><a href="#en-ref-1">[1]</a></sup></p>
+
+    <blockquote><em>"Part four treats governance as an operating system rather than a committee, work redesign as a social choice rather than an afterthought, and the first 180 days as a proof of one complete learning loop rather than a competition to launch the most tools."</em></blockquote>
+
+    <div class="alert info">
+        <strong>🧭 Layer this post advances:</strong> the <strong>Learning loop</strong> layer, and specifically the half of it that is the <strong>incident-learning loop</strong> · leadership question <strong>Q6</strong> (what evidence must exist before release and during live operation), of which this post answers the second half — the evidence you need <em>after</em> something has gone wrong · on the organisational scorecard, this post moves the <strong>Learning</strong> column above all (recurrence, near-miss reporting, time from a verified incident to a reusable measure), with the <strong>Risk</strong> column (time to detect, contain and recover) and the <strong>Quality</strong> column (share of incidents closed on evidence, and share with a named regression case) moving alongside it. Next: <a href="/blog/ai-transformation-obligations">#16 One Evidence System — PDPA, ETDA and the EU AI Act on a single body of evidence</a> walks from one incident's evidence to the organisation's evidence system, then maps duties from several laws and standards onto the same set of artifacts we have been building across fifteen posts.
+    </div>
+
+    <div class="key-takeaways">
+        <h3>🎯 Key Takeaways</h3>
+        <ul>
+            <li><strong>Evidence before change</strong> = capture the manifest and the traces in full before changing anything at all, because diagnosing by trying fixes is unintentionally overwriting the witness</li>
+            <li><strong>Eight stages</strong> = detect, contain, preserve, diagnose, remediate, re-evaluate, recover, learn — that is Figure 13's set; the worksheet uses Artifact 8's, and the two sets must never be mixed inside one list</li>
+            <li><strong>Reconstructable trace</strong> = enough for a later authorized reviewer to know what the system knew, proposed, checked, did and released, and why it chose that route — auditable means reconstructable, not safe</li>
+            <li><strong>Not "log everything"</strong> = keep what makes reconstruction possible, under encryption, access restriction, redaction and a designed retention policy; a bigger store does not mean better auditability</li>
+            <li><strong>Regression before restore</strong> = the failed case must become a named regression case sitting in the suite that runs every time, before the system returns to service, not after</li>
+            <li><strong>Near misses are evidence</strong> = near misses, overrides and corrections are the same quality of evidence as an incident, obtained without anyone being harmed; a low reporting rate is a danger signal, not good news</li>
+            <li><strong>Structural held, semantic leaked</strong> = the classification has to separate a <strong>structural guarantee</strong> still standing from a <strong>semantic estimate</strong> that leaked — because the two demand entirely different kinds of correction</li>
+        </ul>
+    </div>
+
+    <section class="references" aria-labelledby="references">
+        <h2 id="references">References</h2>
+        <p class="references__note">Every source below was checked and accessed on 5 September 2026 (2026-09-05). This series uses the four evidence labels of the source playbook — <strong>Law</strong>, binding where it applies · <strong>Standard</strong>, standards and guidance that are voluntary until incorporated into an obligation · <strong>Study</strong>, empirical evidence or monitoring with a stated method · <strong>Synthesis</strong>, the author's own synthesis.</p>
+        <ol class="references__list">
+            <li id="en-ref-1"><span class="ref-tag ref-tag--synthesis">Synthesis</span> Mingkhwan, A. <cite>AI Transformation as an Organizational Core — Bilingual Companion Playbook</cite>, Chapter 9 "Evaluate release observe and learn" pp. 38–41, Artifact 6 Reconstructable trace schema pp. 77–78, Artifact 8 Incident learning loop pp. 81–83, Appendix C bilingual glossary, and the Part four opener p. 42. The author's own 97-page manuscript, not published online and therefore unlinked · evidence snapshot 5 September 2026 — accessed 2026-09-05. <span class="ref-supports">Supports: the definitions of incident and of near miss/hazard · the nine-verb response sequence including Scope · Figure 13 and its eight-node loop · the seven-verb glossary definition at entry 36 · the sentence "Learning is complete only when…" · the nine-group trace schema and the seven-part test · the sentences "Auditable means reconstructable, not safe" and "log everything forever is not assurance" · the three-way split of evidence ownership · Chapter 9's five operating principles · the metrics that matter and the failure patterns · Artifact 8 in full including its closing rule · and the whole CX-REFUND-01 case, which is fictional, so every composed value in it is neither a threshold nor an industry average.</span></li>
+            <li id="en-ref-2"><span class="ref-tag ref-tag--standard">Standard</span> National Institute of Standards and Technology (U.S. Department of Commerce). <cite>Artificial Intelligence Risk Management Framework: Generative Artificial Intelligence Profile</cite>, NIST AI 600-1. <a href="https://doi.org/10.6028/NIST.AI.600-1">doi.org</a> — published July 2024, accessed 2026-09-05 (no erratum or revised edition posted on nvlpubs.nist.gov as of the access date). <span class="ref-supports">Supports: the AI incident definition the document reproduces in A.1.8 along with its four categories of harm · the statement that formal channels for reporting AI incidents did not exist as of July 2024 · the suggested action on incident response and recovery plans (MG-2.3-001) · the after-action assessment (MG-4.3-001) · the recording and tracking of near misses (MG-4.3-002) · and the naming of the OECD AI incident monitor in the list of external information-sharing resources · Boundary: the content consists of voluntary Suggested Actions that organisations must select and tailor to their use case and risk tolerance; it is not a requirement.</span></li>
+            <li id="en-ref-3"><span class="ref-tag ref-tag--study">Study</span> OECD.AI. <cite>AIM: AI Incidents and Hazards Monitor</cite>, with its <cite>Overview and methodology</cite> page. <a href="https://oecd.ai/en/incidents/">oecd.ai</a> — definitions published May 2024, classification methodology last updated November 2024, accessed 2026-09-05. <span class="ref-supports">Supports: the definitions of AI incident and AI hazard, separated by the phrase "could plausibly lead to" · the count of roughly 17,392 entries on the listing page with an unfiltered date range as of the access date · the method of retrieving news via Event Registry, which processes over 150,000 articles daily, then classifying with language models · Boundary: the tool labels itself Beta, the OECD does not guarantee or independently verify the accuracy of third-party information, inclusion is not an adjudication of fact or liability, and the page carries no denominator, so it cannot express a trend or a per-system probability.</span></li>
+            <li id="en-ref-4"><span class="ref-tag ref-tag--standard">Standard</span> World Wide Web Consortium (W3C). <cite>PROV-O: The PROV Ontology</cite>. <a href="https://www.w3.org/TR/prov-o/">w3.org</a> — W3C Recommendation of 30 April 2013, accessed 2026-09-05 (no obsoletion or superseding notice as of the access date). <span class="ref-supports">Supports: the three starting-point classes entity, activity and agent, used to name the components of a trace in provenance terms · Boundary: the ontology supplies a <em>vocabulary</em> only, not an audit policy or a storage design, so the nine-group trace schema in this post is a domain instantiation of it and not the same artefact as PROV-O.</span></li>
+            <li id="en-ref-5"><span class="ref-tag ref-tag--law">Law</span> Kingdom of Thailand. <cite>Personal Data Protection Act B.E. 2562</cite> (2019). <a href="https://ratchakitcha.soc.go.th/documents/17082307.pdf">ratchakitcha.soc.go.th</a> — published in the Royal Gazette, vol. 136, part 69 Kor, on 27 May 2019; the relevant chapters took effect one year after publication under section 2 and remained in force as checked, accessed 2026-09-05. <span class="ref-supports">Supports: section 22, collection only as necessary · section 33(1), the right to request erasure or destruction once the purpose has ended · section 37(1), security measures to be reviewed when technology changes · section 37(3), a system for examining and deleting or destroying data once the retention period has passed · section 37(4), notification of a breach to the Office within 72 hours of becoming aware, as far as practicable · Boundary: cited as design input only; this post offers no legal interpretation, the criteria and method under sections 37(1) and 37(4) are both delegated to committee announcements, and the official text together with qualified Thai counsel controls.</span></li>
+        </ol>
+    </section>
+    </div>
+
+    <div class="post-series-footer">
+      <span class="l-th">บทความจากซีรีส์ AI Transformation for Organizations 2026</span><span class="l-en" lang="en">From the AI Transformation for Organizations 2026 series</span>
+    </div>
+
+    <nav aria-label="AI Transformation for Organizations">
+    <div class="series-nav">
+      <h3>🧭 AI Transformation for Organizations 2026</h3>
+      <div class="series-links series-links--grouped">
+        <div class="series-links__group">
+          <p class="series-links__label">Reframe · เปลี่ยนกรอบคิด</p>
+          <a href="/blog/ai-transformation-layers">#1 Six Layers</a>
+          <a href="/blog/ai-transformation-prediction">#2 Prediction</a>
+          <a href="/blog/ai-transformation-learning-loop">#3 Learning Loop</a>
+          <a href="/blog/ai-transformation-maturity">#4 Maturity</a>
+          <a href="/blog/ai-transformation-portfolio">#5 Portfolio</a>
+        </div>
+        <div class="series-links__group">
+          <p class="series-links__label">Redesign · ออกแบบองค์กรใหม่</p>
+          <a href="/blog/ai-transformation-workflow">#6 Four Lanes</a>
+          <a href="/blog/ai-transformation-evidence-ladder">#7 Evidence Ladder</a>
+          <a href="/blog/ai-transformation-workforce">#8 Workforce</a>
+          <a href="/blog/ai-transformation-factory">#9 AI Factory</a>
+          <a href="/blog/ai-transformation-operating-model">#10 Operating Model</a>
+        </div>
+        <div class="series-links__group">
+          <p class="series-links__label">Engineer · วิศวกรรมแกนกลาง</p>
+          <a href="/blog/ai-transformation-ai-core">#11 AI-Core</a>
+          <a href="/blog/ai-transformation-contract">#12 Contract</a>
+          <a href="/blog/ai-transformation-five-rails">#13 Five Rails</a>
+          <a href="/blog/ai-transformation-release-gate">#14 Release Gate</a>
+          <span class="current" aria-current="page">#15 Incident Loop</span>
+        </div>
+        <div class="series-links__group">
+          <p class="series-links__label">Lead · นำการเปลี่ยนผ่าน</p>
+          <a href="/blog/ai-transformation-obligations">#16 Obligations</a>
+          <a href="/blog/ai-transformation-suppliers-footprint">#17 Cost &amp; Footprint</a>
+          <a href="/blog/ai-transformation-first-90-days">#18 Days 0–90</a>
+          <a href="/blog/ai-transformation-days-91-180">#19 Days 91–180</a>
+          <a href="/blog/ai-transformation-eight-questions">#20 Eight Questions</a>
+        </div>
+      </div>
+    </div>
+    </nav>
+
+  </article>
+
+  </main>
+
+  <footer class="blog-footer">
+    <nav class="blog-footer__nav" aria-label="Site">
+      <a href="../index.html">Home</a>
+      <a href="./">Blog</a>
+      <a href="../publications/">Publications</a>
+      <a href="../books/">Books</a>
+      <a href="../projects/">Projects</a>
+      <a href="../news/">News</a>
+      <a href="../index.html#contact">Contact</a>
+    </nav>
+    <a href="./">← Back to Blog</a>
+    <span>© 2026 Anirach Mingkhwan — Associate Professor, KMUTNB</span>
+  </footer>
+
+</body>
+</html>

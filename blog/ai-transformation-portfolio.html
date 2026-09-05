@@ -1,0 +1,1895 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Decision Portfolio — เลิกเขียน Use-Case List | Anirach Mingkhwan</title>
+  <meta name="description" content="Use-case list บอกว่าเทคโนโลยีอยู่ตรงไหน แต่ Decision portfolio บอกว่าอำนาจและความเสี่ยงสะสมที่ใด — จำแนกสามมิติ แล้วเลือก Scale, Contain, Redesign, Retire">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=Sarabun:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      color-scheme: light;
+      /* ink */
+      --navy: #11304b; --slate: #334155; --slate-light: #526174; --gray: #94a3b8;
+      /* ground */
+      --bg: #faf7f0; --white: #ffffff; --code-bg: #1e293b;
+      /* accent */
+      --blue: #226299; --blue-dark: #1a4d7a; --blue-light: #4992b9;
+      /* brand — sampled from the book covers. --gold is decorative on light grounds (2.2:1); --gold-dark is its text form. */
+      --gold: #c4a46c; --gold-dark: #7a5f22; --coral: #c2410c; --cloud: #dee7e6; --parchment: #e9e1c4; --focus: #226299;
+      /* status — use only these six, never invent a seventh */
+      --green: #22c55e; --red: #ef4444; --amber: #f59e0b;
+      --cyan: #06b6d4; --purple: #226299; --purple-dark: #1a4d7a;
+      /* type */
+      --font: 'Inter', 'Sarabun', -apple-system, BlinkMacSystemFont, sans-serif;
+      --mono: 'JetBrains Mono', 'Fira Code', 'Sarabun', monospace;
+      /* form */
+      --radius: 12px; --radius-sm: 8px; --radius-lg: 16px;
+      --measure: 720px; --wide: 860px;
+      --transition: 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+    html { scroll-behavior: smooth; }
+    body { font-family: var(--font); font-size: 17px; line-height: 1.8; color: var(--slate); background: var(--bg); -webkit-font-smoothing: antialiased; }
+    .blog-nav { position: fixed; top: 0; left: 0; right: 0; z-index: 100; background: rgba(248,250,252,0.85); backdrop-filter: blur(20px); border-bottom: 1px solid rgba(0,0,0,0.05); }
+    .blog-nav__inner { max-width: 860px; margin: 0 auto; padding: 0 2rem; height: 56px; display: flex; align-items: center; justify-content: space-between; }
+    .blog-nav__back { font-size: 0.85rem; font-weight: 500; color: var(--blue); text-decoration: none; }
+    .blog-nav__back:hover { color: #1a4d7a; }
+    .blog-nav__title { font-size: 0.85rem; font-weight: 600; color: var(--navy); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 50%; }
+    /* ── HERO ── house .post-hero on the approved Deep Blue gradient (page-design
+       §5 / INV-28). Ink is inverted for the dark ground: white title/meta, tag
+       pills white on 18% white — the openclaw-production treatment. The
+       background value must stay byte-identical to the approved string. */
+    .post-hero { padding: 8rem 2rem 3rem; background: linear-gradient(135deg, #11304b 0%, #1a4d7a 45%, #226299 100%); color: #fff; text-align: center; }
+    .post-hero__tags { display: flex; gap: 0.5rem; justify-content: center; margin-bottom: 1.25rem; flex-wrap: wrap; }
+    .post-hero__tag { display: inline-block; font-size: 0.72rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.1em; color: #fff; background: rgba(255,255,255,0.18); padding: 0.35rem 0.9rem; border-radius: 20px; }
+    .post-hero__title { font-size: clamp(1.8rem, 5vw, 3rem); font-weight: 800; color: #fff; line-height: 1.2; margin-bottom: 1rem; max-width: 720px; margin-left: auto; margin-right: auto; }
+    .post-hero__sub { font-size: 1.05rem; max-width: 640px; margin: 0 auto 1.5rem; line-height: 1.7; color: #fff; }
+    .post-hero__meta { font-size: 0.85rem; color: #fff; display: flex; align-items: center; justify-content: center; gap: 1.5rem; flex-wrap: wrap; }
+    .post-hero__series { font-weight: 600; color: #fff; }
+    /* the switch pill and the focus ring both sit on the dark hero: the pill is
+       a light chip so its labels keep their light-ground colours, and --focus
+       re-points to gold here (blue collapses on blue — the footer/pre
+       precedent). */
+    .post-hero { --focus: var(--gold); }
+    .post-hero__cover {
+      aspect-ratio: 1 / 1;
+      max-width: 380px;
+      margin: 2.5rem auto 0;
+      border-radius: var(--radius-lg, 16px);
+      overflow: hidden;
+      box-shadow: 0 20px 60px rgba(17,48,75,0.14);
+    }
+    .post-hero__cover img { width: 100%; height: 100%; object-fit: cover; display: block; }
+    .post-body { max-width: 720px; margin: 0 auto; padding: 3rem 2rem 6rem; }
+    .post-body h2 { font-size: 1.6rem; font-weight: 800; color: var(--navy); margin: 3rem 0 1rem; padding-bottom: 0.5rem; border-bottom: 2px solid rgba(34,98,153,0.15); }
+    .post-body h3 { font-size: 1.25rem; font-weight: 700; color: var(--navy); margin: 2.25rem 0 0.75rem; }
+    .post-body p { margin-bottom: 1.25rem; }
+    .post-body strong { font-weight: 700; color: var(--navy); }
+    .post-body a { color: var(--blue); text-decoration: underline; text-decoration-thickness: 1px; text-underline-offset: 2px; }
+    .post-body ul, .post-body ol { margin: 0.5rem 0 1.25rem 1.5rem; }
+    .post-body li { margin-bottom: 0.4rem; }
+    .post-body blockquote { background: rgba(34,98,153,0.06); border-left: 4px solid var(--blue); padding: 1rem 1.25rem; border-radius: 0 10px 10px 0; margin: 1.25rem 0; font-size: 0.95rem; color: var(--navy); }
+    .post-body hr { border: none; height: 1px; background: linear-gradient(90deg, transparent, rgba(34,98,153,0.2), transparent); margin: 3rem 0; }
+    /* ── CODE ── */
+    .post-body pre { background: var(--code-bg); border-radius: 12px; padding: 1.5rem; margin: 1.25rem 0 1.5rem; overflow-x: auto; border: 1px solid rgba(255,255,255,0.05); }
+    .post-body pre code { font-family: var(--mono); font-size: 0.85rem; color: #e2e8f0; line-height: 1.7; background: none; padding: 0; white-space: pre-wrap; }
+    .post-body code { font-family: var(--mono); font-size: 0.88em; background: rgba(34,98,153,0.08); color: var(--blue-dark); padding: 0.15em 0.45em; border-radius: 5px; }
+    /* ── TABLES ── */
+    .table-wrapper { overflow-x: auto; margin: 1.5rem 0; border-radius: 0.5rem; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1); }
+    table { width: 100%; border-collapse: collapse; background: white; }
+    th { background: #226299; color: white; padding: 1rem; text-align: left; font-weight: 600; }
+    td { padding: 1rem; border-bottom: 1px solid #e5e7eb; }
+    .post-body table { display: block; width: 100%; overflow-x: auto; }
+    /* ── ALERTS ── */
+    .alert { background: #fef3cd; border: 1px solid #facc15; border-radius: 0.5rem; padding: 1rem; margin: 1.5rem 0; }
+    .alert.danger { background: #fee2e2; border-color: #ef4444; }
+    .alert.info { background: #e0f2fe; border-color: #06b6d4; }
+    .alert.success { background: #d1fae5; border-color: #10b981; }
+    /* ── KEY TAKEAWAYS ── */
+    .key-takeaways { background: linear-gradient(135deg, #f3f4f6 0%, #e5e7eb 100%); border-radius: 1rem; padding: 2rem; margin: 3rem 0; }
+    .key-takeaways h3 { color: #226299; margin-bottom: 1.5rem; }
+    .post-series-footer { text-align: center; font-size: 0.85rem; color: var(--slate-light); font-style: italic; margin-top: 2rem; padding-top: 2rem; border-top: 1px solid #e2e8f0; }
+    .blog-footer { background: var(--navy); padding: 2rem 0; text-align: center; }
+    .blog-footer a { color: var(--gold); text-decoration: none; font-weight: 600; font-size: 0.9rem; }
+    .blog-footer span { color: var(--gray); font-size: 0.8rem; display: block; margin-top: 0.4rem; }
+    @media (max-width: 600px) {
+      .post-hero { padding: 7rem 1.25rem 2.5rem; }
+      .post-body { padding: 2rem 1.25rem 4rem; }
+      .post-hero__meta { flex-direction: column; gap: 0.4rem; }
+      .post-body h2 { font-size: 1.4rem; }
+      .post-body h3 { font-size: 1.15rem; }
+      .post-body pre { padding: 1rem; border-radius: 8px; }
+    }
+
+    :focus-visible { outline: 2px solid var(--focus); outline-offset: 3px; border-radius: 2px; }
+    /* the ring sits on the page ground (3px offset). Inside the navy footers
+       and code blocks var(--blue) collapses to 2.12:1, so those scopes
+       re-point --focus to gold (5.73:1 on navy). */
+    .footer, .blog-footer, pre { --focus: var(--gold); }
+    :focus:not(:focus-visible) { outline: none; }
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after {
+        animation-duration: .01ms !important; animation-iteration-count: 1 !important;
+        transition-duration: .01ms !important; scroll-behavior: auto !important;
+      }
+    }
+    h1, h2, h3, .post-hero__title, .card__title { text-wrap: balance; }
+
+    .post-body img, .post-body svg { max-width: 100%; height: auto; }
+
+    /* ── SKIP LINK ── a11y-perf R5: the link and the landmark it targets are a
+       pair — useless without both halves. Off-screen until focused, then the
+       first tab stop on every page. */
+    .skip-link { position: absolute; left: -9999px; }
+    .skip-link:focus {
+      left: 1rem; top: 1rem; z-index: 999;
+      background: var(--navy); color: #fff;
+      padding: 0.75rem 1.25rem; border-radius: var(--radius-sm);
+      font-weight: 600; text-decoration: none;
+    }
+
+    /* ── POST WAYFINDING ── the wordmark is the home link; the footer carries
+       the full destination row. */
+    .blog-nav__home {
+      font-size: 0.9rem; font-weight: 800; color: var(--navy);
+      text-decoration: none; margin-right: 1rem;
+    }
+    .blog-nav__home:hover { color: var(--blue); }
+    .blog-nav__inner > .blog-nav__back { margin-right: auto; }
+    .blog-footer__nav {
+      display: flex; flex-wrap: wrap; justify-content: center; gap: 0.35rem 1.25rem;
+      max-width: 860px; margin: 0 auto 1.25rem; padding: 0 2rem 1.25rem;
+      border-bottom: 1px solid rgba(255,255,255,0.12);
+    }
+    .blog-footer__nav a { color: var(--gold); font-size: 0.85rem; font-weight: 600; text-decoration: none; }
+    .blog-footer__nav a:hover { color: #fff; text-decoration: underline; }
+
+    html { scroll-padding-top: 5rem; }
+    [id] { scroll-margin-top: 5rem; }
+
+    /* Thai needs more room than Latin at the same nominal size. */
+    .post-body:lang(th) { font-size: 18px; line-height: 1.85; }
+    .post-body p, .post-body li, .post-body blockquote { text-wrap: pretty; }
+
+    /* ---- side-scroll affordance ----
+       pre blocks and tables can exceed 720px. These layers paint a shadow ONLY
+       where there is more content in that direction; when fully scrolled the
+       cover slides over the shadow and hides it. No JavaScript, no wrapper. */
+    .post-body pre, .post-body table {
+      overflow-x: auto;
+      background-image:
+        linear-gradient(to right, var(--code-bg, #0f172a) 30%, rgba(15,23,42,0)),
+        linear-gradient(to left, var(--code-bg, #0f172a) 30%, rgba(15,23,42,0)),
+        radial-gradient(farthest-side at 0 50%, rgba(0,0,0,.28), rgba(0,0,0,0)),
+        radial-gradient(farthest-side at 100% 50%, rgba(0,0,0,.28), rgba(0,0,0,0));
+      background-position: 0 0, 100% 0, 0 0, 100% 0;
+      background-repeat: no-repeat;
+      background-size: 40px 100%, 40px 100%, 14px 100%, 14px 100%;
+      background-attachment: local, local, scroll, scroll;
+    }
+    .post-body table {
+      background-image:
+        linear-gradient(to right, var(--white, #fff) 30%, rgba(255,255,255,0)),
+        linear-gradient(to left, var(--white, #fff) 30%, rgba(255,255,255,0)),
+        radial-gradient(farthest-side at 0 50%, rgba(17,48,75,.16), rgba(17,48,75,0)),
+        radial-gradient(farthest-side at 100% 50%, rgba(17,48,75,.16), rgba(17,48,75,0));
+      background-position: 0 0, 100% 0, 0 0, 100% 0;
+      background-repeat: no-repeat;
+      background-size: 40px 100%, 40px 100%, 14px 100%, 14px 100%;
+      background-attachment: local, local, scroll, scroll;
+    }
+
+    /* ---- table of contents ---- */
+    .post-toc {
+      max-width: 720px;
+      margin: 2rem auto 0;
+      padding: 1rem 1.25rem;
+      background: rgba(34,98,153,0.05);
+      border: 1px solid rgba(34,98,153,0.14);
+      border-left: 3px solid var(--gold, #c4a46c);
+      border-radius: 10px;
+      font-size: 0.92rem;
+    }
+    .post-toc > summary {
+      cursor: pointer;
+      font-weight: 700;
+      color: var(--navy);
+      list-style: none;
+    }
+    .post-toc > summary::-webkit-details-marker { display: none; }
+    .post-toc > summary::before {
+      content: "\25B8";
+      display: inline-block;
+      margin-right: 0.5rem;
+      transition: transform 0.2s ease;
+      color: var(--gold-dark, #7a5f22);
+    }
+    .post-toc[open] > summary::before { transform: rotate(90deg); }
+    .post-toc > summary:focus-visible { outline: 3px solid var(--focus, #226299); outline-offset: 3px; }
+    .post-toc ol { margin: 0.85rem 0 0.25rem; padding-left: 1.4rem; }
+    .post-toc li { margin-bottom: 0.4rem; line-height: 1.5; }
+    .post-toc a { color: var(--slate); text-decoration: none; }
+    .post-toc a:hover, .post-toc a:focus-visible { color: var(--blue-dark, #1a4d7a); text-decoration: underline; }
+    @media (max-width: 600px) { .post-toc { margin: 1.25rem 1rem 0; } }
+
+    /* ---- cross-document view transitions ---- */
+    @view-transition { navigation: auto; }
+    .nav, .blog-nav { view-transition-name: site-nav; }
+    .footer, .blog-footer { view-transition-name: site-footer; }
+    @media (prefers-reduced-motion: reduce) {
+      ::view-transition-group(*),
+      ::view-transition-old(*),
+      ::view-transition-new(*) { animation: none !important; }
+    }
+
+    /* ── SERIES STRIP — Hermes Agent in Practice ──
+       Same class and inner-wrapper shape as the OpenClaw strip because the
+       linter's RE_SNAV recognises exactly `series-nav` + a nested div; a
+       renamed strip would read as "no nav" and fail INV-08. All content
+       checks (INV-03 family) iterate the SERIES7 list only, so this strip's
+       labels are convention, not contract. House-styled, not the island CSS. */
+    .series-nav {
+      max-width: 720px; margin: 2rem auto 0; padding: 1.1rem 1.4rem;
+      background: rgba(255,255,255,0.75); border: 1px solid rgba(34,98,153,0.15);
+      border-left: 3px solid var(--gold); border-radius: 12px;
+    }
+    .series-nav h3 {
+      font-size: 0.78rem; font-weight: 700; text-transform: uppercase;
+      letter-spacing: 0.08em; color: var(--gold-dark); margin-bottom: 0.6rem;
+    }
+    .series-links { display: flex; flex-wrap: wrap; gap: 0.5rem; }
+    .series-links a, .series-links .current {
+      font-size: 0.82rem; font-weight: 600; padding: 0.35rem 0.8rem;
+      border-radius: 50px; text-decoration: none;
+    }
+    .series-links a { color: var(--blue-dark); background: rgba(34,98,153,0.08); }
+    .series-links a:hover { background: rgba(34,98,153,0.16); }
+    .series-links .current { color: #fff; background: var(--blue-dark); }
+    @media (max-width: 600px) { .series-nav { margin: 1.5rem 1rem 0; } }
+
+    /* ── FIGURE — the sanctioned diagram component (page-design §4 Content).
+       Diagrams are PNGs; this repo built them out of divs twice and reverted
+       twice. The image is wrapped in a link to itself so a phone can pinch a
+       1400px drawing without a line of JavaScript. */
+    .figure { margin: 2.5rem 0; }
+    .figure__img { width: 100%; height: auto; display: block;
+                   border-radius: var(--radius); border: 1px solid rgba(0,0,0,0.06); }
+    .figure__caption { font-size: 0.85rem; color: var(--slate-light);
+                       text-align: center; margin-top: 0.75rem; }
+
+    /* ── REFERENCES — every material number in this series carries its source.
+       The tags are the book's own four evidence labels. */
+    .references { margin-top: 3rem; padding-top: 2rem; border-top: 1px solid #e2e8f0; }
+    .references__note { font-size: 0.85rem; color: var(--slate-light); margin-bottom: 1rem; }
+    .references__list { padding-left: 1.4rem; font-size: 0.9rem; line-height: 1.75; }
+    .references__list li { margin-bottom: 0.7rem; }
+    .ref-tag { display: inline-block; font-size: 0.7rem; font-weight: 700;
+               letter-spacing: 0.06em; text-transform: uppercase; padding: 0.1rem 0.5rem;
+               border-radius: 50px; margin-right: 0.4rem; vertical-align: 0.05em;
+               background: rgba(34,98,153,0.1); color: var(--blue-dark); }
+    .ref-tag--law { background: rgba(239,68,68,0.12); color: #991b1b; }
+    .ref-tag--synthesis { background: rgba(196,164,108,0.22); color: var(--gold-dark); }
+    .ref-supports { display: block; color: var(--slate-light); font-size: 0.85rem; }
+
+    /* ── SERIES STRIP, GROUPED — twenty chips is four rows of noise unless they
+       are grouped, so the four parts of the book label their own rows. The
+       .series-nav and .series-links wrappers stay byte-literal because INV-08
+       recognises the strip by exactly those two, and the chips stay direct
+       children of a group because INV-03's item regex cannot see through a
+       nested tag. Grouping is a modifier plus two elements of .series-links —
+       the flat OpenClaw, Hermes and Life strips are untouched. */
+    .series-links--grouped { display: grid; gap: 0.9rem; }
+    .series-links__group { position: relative; display: flex; flex-wrap: wrap;
+                           gap: 0.5rem; padding-left: 8.25rem; min-height: 2rem; }
+    .series-links__label { position: absolute; left: 0; top: 0.45rem; width: 7.5rem;
+                           margin: 0; font-size: 0.72rem; font-weight: 700;
+                           text-transform: uppercase; letter-spacing: 0.08em;
+                           color: var(--slate-light); line-height: 1.3; }
+    @media (max-width: 600px) {
+      .series-links__group { padding-left: 0; }
+      .series-links__label { position: static; width: auto; flex-basis: 100%;
+                             margin-bottom: 0.1rem; }
+    }
+
+    /* ── LANGUAGE SWITCH — pure CSS, zero JavaScript (INV-38) ──
+       One visually-hidden checkbox as a direct child of body, BEFORE the main landmark,
+       so `#langSwitch:checked ~ main …` reaches every content block. The two
+       tracks are paired blocks: .l-th (default) and .l-en (hidden until
+       checked; display:revert restores block for divs, inline for spans).
+       Naming stays clear of INV-12's menu-token regex (hamburger|burger|
+       nav__toggle|nav-toggle|navtoggle|menu-toggle|menu__toggle) — verified.
+       No JS also means no persistence across posts; each post opens in Thai. */
+    .lang-switch-box { position: absolute; left: -9999px; }
+    .l-en { display: none; }
+    #langSwitch:checked ~ main .l-en { display: revert; }
+    #langSwitch:checked ~ main .l-th { display: none; }
+    .lang-switch {
+      display: inline-flex; align-items: center; gap: 0.55rem;
+      margin-top: 1.4rem; padding: 0.4rem 1.1rem; border-radius: 50px;
+      background: rgba(255,255,255,0.85); border: 1px solid rgba(255,255,255,0.4);
+      cursor: pointer; font-size: 0.85rem; user-select: none;
+    }
+    .lang-switch span { color: var(--slate-light); font-weight: 600; transition: color 0.2s; }
+    .lang-switch .lang-sep { color: var(--gray); font-weight: 400; }
+    .lang-switch .lang-th { color: var(--navy); font-weight: 800; }
+    #langSwitch:checked ~ main .lang-switch .lang-th { color: var(--slate-light); font-weight: 600; }
+    #langSwitch:checked ~ main .lang-switch .lang-en { color: var(--navy); font-weight: 800; }
+    .lang-switch:hover { border-color: #fff; }
+    #langSwitch:focus-visible ~ main .lang-switch {
+      outline: 2px solid var(--focus); outline-offset: 3px;
+    }
+  </style>
+  <!-- social -->
+  <link rel="canonical" href="https://anirach.com/blog/ai-transformation-portfolio.html">
+  <meta property="og:type" content="article">
+  <meta property="og:url" content="https://anirach.com/blog/ai-transformation-portfolio.html">
+  <meta property="og:site_name" content="Anirach Mingkhwan">
+  <meta property="og:locale" content="th_TH">
+  <meta property="og:locale:alternate" content="en_US">
+  <meta property="article:published_time" content="2026-09-05">
+  <meta property="article:author" content="https://anirach.com/">
+  <meta property="og:title" content="Decision Portfolio — เลิกเขียน Use-Case List">
+  <meta property="og:description" content="Use-case list บอกว่าเทคโนโลยีอยู่ตรงไหน แต่ Decision portfolio บอกว่าอำนาจและความเสี่ยงสะสมที่ใด — จำแนกสามมิติ แล้วเลือก Scale, Contain, Redesign, Retire">
+  <meta property="og:image" content="https://anirach.com/images/ai-transformation-portfolio-og.jpg">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
+  <meta property="og:image:alt" content="Decision Portfolio — เลิกเขียน Use-Case List">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:image" content="https://anirach.com/images/ai-transformation-portfolio-og.jpg">
+  <meta name="twitter:image:alt" content="Decision Portfolio — เลิกเขียน Use-Case List">
+  <meta name="robots" content="max-image-preview:large">
+  <meta name="theme-color" content="#11304b">
+  <link rel="icon" href="/favicon.ico" sizes="any">
+  <link rel="apple-touch-icon" href="/apple-touch-icon.png">
+  <!-- /social -->
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "BlogPosting",
+    "headline": "Decision Portfolio — เลิกเขียน Use-Case List",
+    "author": {
+      "@type": "Person",
+      "@id": "https://anirach.com/#person",
+      "name": "Anirach Mingkhwan",
+      "url": "https://anirach.com/"
+    },
+    "datePublished": "2026-09-05",
+    "dateModified": "2026-09-05",
+    "image": "https://anirach.com/images/ai-transformation-portfolio-og.jpg",
+    "inLanguage": [
+      "th",
+      "en"
+    ],
+    "mainEntityOfPage": "https://anirach.com/blog/ai-transformation-portfolio.html"
+  }
+  </script>
+</head>
+<body>
+<a href="#main" class="skip-link">Skip to content</a>
+<input type="checkbox" id="langSwitch" class="lang-switch-box" aria-label="Switch language: Thai / English">
+
+  <nav class="blog-nav">
+    <div class="blog-nav__inner">
+      <a href="../index.html" class="blog-nav__home">Anirach</a>
+      <a href="./" class="blog-nav__back">‹ Blog</a>
+      <div class="blog-nav__title">Decision Portfolio</div>
+    </div>
+  </nav>
+
+  <main id="main">
+
+  <header class="post-hero">
+    <div class="post-hero__tags">
+      <span class="post-hero__tag">Decision Portfolio</span>
+      <span class="post-hero__tag">Decision Inventory</span>
+      <span class="post-hero__tag">Triage</span>
+    </div>
+    <h1 class="post-hero__title"><span class="l-th">Decision Portfolio — เลิกเขียน Use-Case List</span><span class="l-en" lang="en">Decision Portfolio — Stop Writing Use-Case Lists</span></h1>
+    <p class="post-hero__sub"><span class="l-th">Use-case list บอกว่าเทคโนโลยีไปอยู่ตรงไหน แต่ Decision portfolio บอกว่าอำนาจ การพึ่งพา คุณค่า และความเสี่ยงสะสมอยู่ที่ใด — จำแนกสามมิติ แล้วเลือก Scale, Contain, Redesign หรือ Retire สำหรับ 90 วันข้างหน้า</span><span class="l-en" lang="en">A use-case list shows where technology appears; a decision portfolio shows where authority, dependency, value and exposure accumulate — classify on three dimensions, then choose Scale, Contain, Redesign or Retire for the next 90 days.</span></p>
+    <div class="post-hero__meta">
+      <span>By <strong>Anirach Mingkhwan</strong></span>
+      <span class="post-hero__series">AI Transformation for Organizations 2026 • Post #5</span>
+      <span><time datetime="2026-09-05">5 Sep 2026</time></span>
+      <span>29 min read</span>
+    </div>
+    <label for="langSwitch" class="lang-switch" title="สลับภาษา · Switch language"><span class="lang-th">ไทย</span><span class="lang-sep">·</span><span class="lang-en" lang="en">English</span></label>
+    <div class="post-hero__cover">
+      <img src="../images/ai-transformation-portfolio-cover.jpg" alt="Decision Portfolio — เลิกเขียน Use-Case List" width="800" height="800" loading="eager" fetchpriority="high" decoding="async">
+    </div>
+  </header>
+
+  <article class="post-body">
+
+    <details class="post-toc l-th" open>
+      <summary>ในบทความนี้</summary>
+      <ol>
+          <li><a href="#th-same-chat-different-obligations">ทำไม use-case list ถึงจัดลำดับผิด — หน้าจอเดียวกันแต่ภาระผูกพันคนละโลก</a></li>
+          <li><a href="#th-decision-inventory">บัญชีรายการการตัดสินใจ — เริ่มจากการตัดสินใจที่เกิดซ้ำ ไม่ใช่จากที่ที่โมเดลใส่ลงไปได้</a></li>
+          <li><a href="#th-three-dimensions">สามมิติที่ต้องวัดแยกกัน — อำนาจตัดสินใจ ความขาดไม่ได้ และระดับผลกระทบ</a></li>
+          <li><a href="#th-value-learnability">คุณค่า × ความพร้อมในการเรียนรู้ — 2×2 ที่บอกว่าควรลงแรงตรงไหนก่อน</a></li>
+          <li><a href="#th-four-moves">สี่ทางเลือกของพอร์ต — ขยาย จำกัดขอบเขต ออกแบบใหม่ ยุติ และกรณี HarborLight</a></li>
+          <li><a href="#th-triage">เวิร์กช็อป Decision portfolio triage หกขั้น และการออกแบบ removal test</a></li>
+          <li><a href="#th-metrics-failures">ตัวชี้วัดสำคัญพร้อมช่อง Scorecard และรูปแบบความล้มเหลวหกแบบ</a></li>
+          <li><a href="#th-road-ahead">ก้าวต่อไป — จากการตัดสินใจที่เลือกแล้ว สู่การออกแบบกระบวนงานใหม่ทั้งสาย</a></li>
+      </ol>
+    </details>
+    <details class="post-toc l-en" open>
+      <summary>In this post</summary>
+      <ol>
+          <li><a href="#en-same-chat-different-obligations">Why a use-case list ranks the wrong things — the same screen, obligations from different worlds</a></li>
+          <li><a href="#en-decision-inventory">The decision inventory — start from recurring decisions, not from where a model could be dropped in</a></li>
+          <li><a href="#en-three-dimensions">Three dimensions that must be measured separately — authority, indispensability and consequence</a></li>
+          <li><a href="#en-value-learnability">Value × learnability — the 2×2 that says where to spend effort first</a></li>
+          <li><a href="#en-four-moves">The four portfolio moves — Scale, Contain, Redesign, Retire, and the HarborLight case</a></li>
+          <li><a href="#en-triage">The six-step Decision portfolio triage workshop, and how to design a removal test</a></li>
+          <li><a href="#en-metrics-failures">The metrics that matter, with a Scorecard column, and six failure patterns</a></li>
+          <li><a href="#en-road-ahead">The road ahead — from a chosen decision to redesigning the whole workflow</a></li>
+      </ol>
+    </details>
+    <div class="l-th">
+
+    <p>🤔 <strong>แอปสองตัวหน้าตาเป็น chat เหมือนกัน ทำไมภาระผูกพันต่างกันคนละโลก?</strong></p>
+
+    <p>ตอนที่แล้ว <a href="/blog/ai-transformation-maturity">Five Maturity Levels</a> จบด้วยประโยคที่ค้างไว้ว่า ระดับวุฒิภาวะที่ "ถูก" ของ workflow หนึ่ง ๆ ไม่ได้ขึ้นกับความทะเยอทะยานขององค์กร แต่ขึ้นกับว่าการตัดสินใจนั้นให้อำนาจ AI ไว้แค่ไหน ขาดโมเดลแล้วยังทำงานได้หรือไม่ และถ้าพลาดขึ้นมาความเสียหายกว้างและย้อนกลับยากเพียงใด ตอนนี้คือเครื่องมือที่ตอบสามคำถามนั้นพร้อมกัน — และเป็นเครื่องมือที่ผมใช้แทน use-case list มาหลายปีแล้ว</p>
+
+    <p>คำตอบสั้น ๆ ของทั้งบทความคือ เลิกทำ use-case list แล้วทำ <strong>พอร์ตโฟลิโอการตัดสินใจ</strong> (decision portfolio) แทน — จำแนกทุกงานด้วยสามมิติที่ห้ามรวมเป็นคะแนนเดียว แล้วตัดสินหนึ่งในสี่ทาง คือ ขยาย จำกัดขอบเขต ออกแบบใหม่ หรือ ยุติ สำหรับ 90 วันข้างหน้า พร้อมระบุไว้ล่วงหน้าว่าหลักฐานแบบไหนจะทำให้คำตัดสินนั้นเปลี่ยน</p>
+
+    <h2 id="th-same-chat-different-obligations">1. หน้าจอเดียวกัน ภาระผูกพันคนละโลก</h2>
+
+    <p>บทที่ 3 ของหนังสือ <em>AI Transformation as an Organizational Core</em> เปิดด้วยประโยคที่ผมคิดว่าควรถูกแปะไว้หน้าห้องประชุมคณะกรรมการดิจิทัลทุกองค์กร: <em>"A use case list tells where technology appears. A decision portfolio shows where authority dependency value and exposure accumulate."</em> — รายการ use case บอกว่าเทคโนโลยีไปโผล่ตรงไหน แต่พอร์ตโฟลิโอการตัดสินใจบอกว่า <strong>อำนาจ การพึ่งพา คุณค่า และความเสี่ยง</strong> ไปสะสมอยู่ที่ใด</p>
+
+    <p>ความต่างนี้ไม่ใช่เรื่องคำพูด หนังสือวางตัวอย่างไว้ให้เห็นภาพภายในสองบรรทัด: ระบบสองตัวที่มีหน้าจอแชตคล้ายกันอาจสร้างภาระต่างกันอย่างสิ้นเชิง เครื่องมือสรุปเอกสารที่นักวิเคราะห์ตรวจทุกครั้งไม่เท่ากับ Agent ที่คืนเงินให้ลูกค้าได้จริง แม้ทั้งคู่จะเรียกโมเดลตัวเดียวกัน ผ่าน API เดียวกัน และถูกนำเสนอในสไลด์แผ่นเดียวกันภายใต้หัวข้อ "AI สำหรับงานบริการลูกค้า"</p>
+
+    <p>ที่มันไม่เท่ากันเพราะสิ่งที่ระบบ <em>ปล่อยออกไป</em> ต่างกัน เครื่องมือสรุปปล่อยข้อความให้คนหนึ่งคนอ่านและคนนั้นรับผิดชอบต่อ ส่วน Agent คืนเงินปล่อย <em>ผลจริงทางการเงิน</em> ออกไปสู่โลกภายนอกโดยไม่มีใครขวางกลางทาง โมเดลเดียวกันไม่ได้ทำให้สิทธิ์เท่ากัน ไม่ได้ทำให้จำนวนผู้ได้รับผลเท่ากัน และไม่ได้ทำให้ต้นทุนการกู้คืนเท่ากัน</p>
+
+    <h3>use-case list เกิดขึ้นได้อย่างไร และมันซ่อนอะไร</h3>
+
+    <p>รูปแบบที่ผมเห็นซ้ำแล้วซ้ำอีกคือ องค์กรตั้งคณะทำงาน AI แล้วส่งแบบฟอร์มไปทุกหน่วยงานว่า "ช่วยเสนอ use case ที่หน่วยงานอยากใช้ AI" ไม่นานก็ได้รายการกลับมาเป็นตั้ง เรียงตามผลประหยัดที่แต่ละหน่วยงานประเมินกันเอง แล้วที่ประชุมก็หยิบอันดับต้น ๆ ไปทำ pilot</p>
+
+    <p>กระบวนการนี้ดูเป็นระเบียบ แต่มันเลือกผิดอย่างเป็นระบบด้วยเหตุผลสามข้อ ข้อแรก มันจัดลำดับด้วยตัวเลขที่ยังไม่มีใครพิสูจน์ — ผลประหยัดที่ "คาดการณ์" คือคำสัญญา ไม่ใช่หลักฐาน ข้อสอง มันเป็นการแข่งขันภายในระหว่างหน่วยงาน หน่วยที่เขียนข้อเสนอเก่งจะชนะ ไม่ใช่หน่วยที่มีการตัดสินใจซึ่งมีมูลค่าสูงสุด และข้อสาม มันมองไม่เห็นการตัดสินใจเล็ก ๆ ที่เกิดวันละหลายพันครั้ง เพราะไม่มีใครคิดว่ามันเป็น "use case" ทั้งที่ปริมาณสะสมของมันมหาศาลกว่าการตัดสินใจระดับผู้บริหารหลายเท่า</p>
+
+    <div class="table-wrapper">
+        <table>
+            <thead>
+                <tr>
+                    <th></th>
+                    <th>Use-case list</th>
+                    <th>Decision portfolio</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td><strong>หน่วยของรายการ</strong></td>
+                    <td>ระบบหรือเครื่องมือหนึ่งตัว</td>
+                    <td>การตัดสินใจที่เกิดซ้ำหนึ่งรายการ</td>
+                </tr>
+                <tr>
+                    <td><strong>คำถามที่ตอบ</strong></td>
+                    <td>เราจะเอาโมเดลไปใส่ตรงไหนได้บ้าง</td>
+                    <td>อำนาจ การพึ่งพา คุณค่า และความเสี่ยงสะสมอยู่ที่ใด</td>
+                </tr>
+                <tr>
+                    <td><strong>จัดลำดับด้วย</strong></td>
+                    <td>ผลประหยัดที่คาดการณ์ไว้</td>
+                    <td>สามมิติที่วัดแยกกัน แล้วจึงดูคุณค่าและหลักฐาน</td>
+                </tr>
+                <tr>
+                    <td><strong>สิ่งที่มองไม่เห็น</strong></td>
+                    <td>สิทธิ์จริงของระบบ จำนวนผู้ได้รับผล และการย้อนกลับ</td>
+                    <td>— เพราะทั้งสามข้อคือคอลัมน์บังคับ</td>
+                </tr>
+                <tr>
+                    <td><strong>ผลลัพธ์ของการประชุม</strong></td>
+                    <td>รายชื่อ pilot สิบตัวที่ไม่มีเงื่อนไขจบ</td>
+                    <td>คำตัดสินหนึ่งในสี่ทางต่อหนึ่งงาน พร้อมกำหนดทบทวน</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <p>ข้อสังเกตที่สำคัญที่สุดของตารางนี้อยู่แถวสุดท้าย: use-case list จบลงด้วย <em>รายชื่อ</em> ส่วนพอร์ตโฟลิโอการตัดสินใจจบลงด้วย <em>คำตัดสิน</em> รายชื่อไม่มีวันหมดอายุด้วยตัวเอง จึงเป็นเหตุผลที่ pilot ในหลายองค์กรอยู่ยาวเป็นปีโดยไม่มีใครกล้าปิด — ไม่มีใครเคยตกลงกันไว้ตั้งแต่แรกว่าเงื่อนไขปิดคืออะไร</p>
+
+    <h3>การจำแนกตามบริบทไม่ใช่ความเห็นเฉพาะของหนังสือเล่มนี้</h3>
+
+    <p>ก่อนจะไปดูเครื่องมือ ผมอยากปักหมุดไว้ว่าหลักการ "จำแนกตามบริบท ไม่ใช่ตามหน้าตาเทคโนโลยี" มีแหล่งอ้างอิงระดับสากลรองรับอยู่แล้ว กรอบจำแนกระบบ AI ของ OECD (ฉบับกุมภาพันธ์ 2022) จำแนกระบบตามบริบทด้วยห้ามิติ — People &amp; Planet, Economic Context, Data &amp; Input, AI Model และ Task &amp; Output — เพื่อใช้ในเชิงนโยบายสำหรับผู้กำหนดนโยบายและผู้กำกับดูแล ไม่ได้ให้คะแนนความเสี่ยงรวมเป็นตัวเลขเดียว<sup><a href="#th-ref-1">[1]</a></sup> เอกสารฉบับนั้นยังระบุเองด้วยว่า "actionable AI system risk methodology" เป็นงานเฟสถัดไป ไม่ใช่สิ่งที่กรอบปี 2022 ให้</p>
+
+    <p>ฝั่ง NIST ก็เดินทางเดียวกัน AI RMF 1.0 (26 มกราคม 2023) มีสี่ฟังก์ชันหลักคือ Govern, Map, Measure และ Manage โดยฟังก์ชัน Map คือการ "สร้างบริบทเพื่อกำหนดกรอบความเสี่ยงของระบบ AI" และจบด้วยการตัดสินใจ go/no-go ครั้งแรกว่าจะออกแบบ พัฒนา หรือนำระบบขึ้นใช้หรือไม่<sup><a href="#th-ref-2">[2]</a></sup> ขอย้ำให้ชัดว่ากรอบนี้ NIST ระบุเองว่า "intended for voluntary use" — เป็นกรอบสมัครใจ ไม่ใช่กฎหมาย<sup><a href="#th-ref-3">[3]</a></sup> การใช้งานจริงในบริบทไทยยังต้องผ่านการทบทวนตามกฎหมายและตามภาคอุตสาหกรรมของตัวเองอยู่ดี</p>
+
+    <p>พูดอีกแบบคือ ทั้งสองกรอบเริ่มจาก "บริบท" ก่อนเสมอ ในขณะที่ use-case list เริ่มจาก "เทคโนโลยี" ก่อนเสมอ นั่นคือความผิดพลาดเชิงลำดับที่บทความนี้พยายามแก้ รายละเอียดว่าหนังสือย่อสองกรอบนี้ลงเหลือสามมิติได้อย่างไร อยู่ในหัวข้อ <a href="#th-three-dimensions">3. สามมิติที่ต้องวัดแยกกัน</a></p>
+
+    <h2 id="th-decision-inventory">2. บัญชีรายการการตัดสินใจ — เริ่มจากการตัดสินใจ ไม่ใช่จากเทคโนโลยี</h2>
+
+    <p>ขั้นก่อนพอร์ตโฟลิโอคือการทำ <strong>บัญชีรายการการตัดสินใจ</strong> (decision inventory) ซึ่งภาคผนวกของหนังสือให้นิยามไว้ว่าเป็น "ทะเบียนการตัดสินใจที่เกิดซ้ำ ระบุเจ้าของ ข้อมูลนำเข้า เวลา ผลกระทบ ผลงานปัจจุบัน และรูปแบบแบ่งงานระหว่างคนกับ AI ที่เป็นไปได้" สังเกตว่าคำนิยามนี้ไม่มีคำว่าโมเดล ไม่มีคำว่า use case และไม่มีคำว่าเทคโนโลยีอยู่เลยแม้แต่คำเดียว</p>
+
+    <p>ความต่างระหว่างการค้นหาสองแบบสรุปได้สั้น ๆ ว่า การค้นแบบเทคโนโลยีนำถามว่า "เราแทรกโมเดลเข้าไปตรงไหนได้" ส่วนการค้นแบบการตัดสินใจนำถามว่า "การเลือกที่เกิดซ้ำแบบใดเป็นตัวกำหนดคุณค่า ต้นทุน ความเสี่ยง ประสบการณ์ลูกค้า หรือผลสัมฤทธิ์ตามพันธกิจ" คำถามแรกได้คำตอบเป็นรายการเครื่องมือ คำถามที่สองได้คำตอบเป็นรายการที่องค์กรควบคุมได้จริง</p>
+
+    <h3>สี่คุณสมบัติของผู้สมัครที่ดี</h3>
+
+    <p>การตัดสินใจที่เป็นผู้สมัครที่ดีมักมีสี่คุณสมบัติพร้อมกัน — เกิดบ่อย มีผลสูง มีข้อมูลเพียงพอ และมี Feedback ให้รู้ผล<sup><a href="#th-ref-4">[4]</a></sup> ทั้งสี่ข้อต้องมาด้วยกัน ไม่ใช่เลือกได้สามในสี่ เพราะแต่ละข้อทำหน้าที่คนละอย่าง:</p>
+
+    <ul>
+        <li><strong>เกิดบ่อย (high frequency)</strong> — ปริมาณคือสิ่งที่ทำให้การปรับปรุงเล็ก ๆ คุ้มค่า และเป็นสิ่งที่ทำให้เก็บหลักฐานได้เร็วพอจะเรียนรู้ทัน การตัดสินใจปีละครั้งเรียนรู้ไม่ได้ในรอบชีวิตโครงการ</li>
+        <li><strong>มีผลสูง (high value)</strong> — ถ้าทำถูกหรือทำผิดแล้วไม่มีอะไรเปลี่ยน มันไม่คุ้มกับต้นทุนการกำกับดูแลที่ตามมา</li>
+        <li><strong>มีข้อมูลเพียงพอ (data richness)</strong> — ต้องมีข้อมูลนำเข้าที่บันทึกไว้จริง ไม่ใช่ความรู้ที่อยู่ในหัวคนเดียวและไม่เคยถูกเขียนลงที่ไหน</li>
+        <li><strong>มี Feedback ให้รู้ผล (available feedback)</strong> — ต้องรู้ในเวลาที่ยอมรับได้ว่าการตัดสินใจนั้นให้ผลอย่างไร ข้อนี้เป็นข้อที่ถูกมองข้ามบ่อยที่สุด และเป็นข้อที่กำหนดแกนนอนของ 2×2 ในหัวข้อ <a href="#th-value-learnability">4</a></li>
+    </ul>
+
+    <p>เมื่อได้รายการแล้ว ให้บันทึกโครงสร้างของการตัดสินใจแต่ละรายการเป็นห้าส่วน คือ <strong>Prediction</strong> ที่ต้องใช้ <strong>Judgment</strong> ที่ใช้ตีความ <strong>Action</strong> ที่เกิดขึ้นจริง <strong>Outcome</strong> ที่สังเกตได้ และข้อจำกัดด้านจริยธรรมหรือความเป็นธรรมที่ครอบทั้งหมดอยู่<sup><a href="#th-ref-4">[4]</a></sup> การแยกห้าส่วนนี้มีประโยชน์ทันทีเพราะมันชี้ว่า AI เข้าไปช่วยได้ที่ส่วนไหน — โดยมากคือ Prediction — และส่วนไหนยังเป็นของคนอยู่</p>
+
+    <div class="alert info">
+        <strong>เครื่องมือใกล้เคียงที่มีมาก่อน:</strong> ถ้าคุณเคยเห็นการแยกโครงสร้างการตัดสินใจแบบนี้มาก่อน ไม่ใช่ความบังเอิญ Ajay Agrawal, Joshua Gans และ Avi Goldfarb เสนอ AI canvas ไว้ใน <em>Harvard Business Review</em> เมื่อเดือนเมษายน 2018 เป็นตารางช่วยแยกส่วนประกอบของการตัดสินใจที่ใช้เครื่องจักรช่วย และเริ่มจากช่อง prediction เป็นช่องแรกเช่นกัน<sup><a href="#th-ref-5">[5]</a></sup> ผมยกมาเพื่อบอกว่าแนวคิดนี้ผ่านการสอนในห้องเรียน MBA มาหลายปีแล้ว ไม่ใช่ของใหม่ที่เพิ่งคิดกันตอนโมเดลภาษาเป็นกระแส
+    </div>
+
+    <h3>ทะเบียนเจ็ดคอลัมน์</h3>
+
+    <p>ทะเบียนที่หนังสือกำหนดมีเจ็ดคอลัมน์ตายตัว ผมแนะนำให้เปิดสเปรดชีตเดียวสำหรับทั้งองค์กร ไม่ใช่ให้แต่ละหน่วยงานทำของตัวเอง เพราะประโยชน์ครึ่งหนึ่งของทะเบียนนี้คือการเห็นว่าการตัดสินใจแบบเดียวกันเกิดซ้ำอยู่ในสามหน่วยงานโดยไม่มีใครรู้</p>
+
+    <div class="table-wrapper">
+        <table>
+            <thead>
+                <tr>
+                    <th>Register column</th>
+                    <th>สิ่งที่ต้องบันทึก</th>
+                    <th>ถือว่าครบเมื่อ</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td><strong>Decision</strong></td>
+                    <td>ชื่อการตัดสินใจที่เกิดซ้ำ เขียนเป็นกริยาที่มีผลจริง เช่น "อนุมัติวงเงินคืนสินค้า" ไม่ใช่ "ระบบช่วยงานฝ่ายบริการ"</td>
+                    <td>คนนอกหน่วยงานอ่านแล้วรู้ว่าเกิดอะไรขึ้นกับใคร</td>
+                </tr>
+                <tr>
+                    <td><strong>Owner</strong></td>
+                    <td>ชื่อคน ไม่ใช่ชื่อฝ่าย คนที่ต้องตอบคำถามเมื่อผลออกมาผิด</td>
+                    <td>มีชื่อเดียว และคนนั้นรู้ตัวว่าถูกใส่ชื่อ</td>
+                </tr>
+                <tr>
+                    <td><strong>Inputs</strong></td>
+                    <td>ข้อมูลนำเข้าที่ใช้จริงในวันนี้ พร้อมที่มาและความถี่ในการอัปเดต</td>
+                    <td>ระบุแหล่งได้ทุกตัว และรู้ว่าตัวไหนยังอยู่ในหัวคน</td>
+                </tr>
+                <tr>
+                    <td><strong>Timing</strong></td>
+                    <td>ความถี่ที่เกิดขึ้น เวลาที่ต้องตัดสินให้เสร็จ และเวลาที่ผลจริงกลับมา</td>
+                    <td>มีทั้งความถี่และระยะเวลารอ Feedback ไม่ใช่แค่ความถี่</td>
+                </tr>
+                <tr>
+                    <td><strong>Consequence</strong></td>
+                    <td>ถ้าตัดสินผิดหนึ่งครั้งเกิดอะไรขึ้น ใครได้รับผล กี่คน แก้กลับได้ไหม ใช้เวลาเท่าไร</td>
+                    <td>ตอบได้ครบทั้งความรุนแรง ขนาด และการย้อนกลับ</td>
+                </tr>
+                <tr>
+                    <td><strong>Current performance</strong></td>
+                    <td>ค่าฐานวันนี้ที่ยังไม่มี AI — ความแม่นยำ เวลา ต้นทุน หรืออัตราการแก้งาน</td>
+                    <td>เป็นตัวเลขที่วัดจากงานจริง ไม่ใช่ค่าประมาณจากความทรงจำ</td>
+                </tr>
+                <tr>
+                    <td><strong>Candidate human&ndash;AI allocation</strong></td>
+                    <td>รูปแบบแบ่งงานที่เป็นไปได้ระหว่างคนกับ AI พร้อมระดับอำนาจที่ตั้งใจให้</td>
+                    <td>ระบุระดับอำนาจชัด และยังไม่ผูกกับผลิตภัณฑ์ยี่ห้อใด</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <p>คอลัมน์ <strong>Current performance</strong> คือคอลัมน์ที่ล้มโครงการมากที่สุดในประสบการณ์ผม เพราะหลายองค์กรพบว่าตัวเองไม่รู้ค่าฐานของงานที่ทำอยู่ทุกวัน แล้วสิ่งที่เกิดขึ้นตามมาคือเมื่อระบบขึ้นใช้จริงไปสักพัก ไม่มีใครพิสูจน์ได้ว่า AI ทำให้ดีขึ้นจริงหรือไม่ ถ้าคอลัมน์นี้ว่าง ให้ถือว่างานนั้นยังไม่พร้อมเข้าพอร์ต — ไปเก็บค่าฐานก่อน</p>
+
+    <p>อีกข้อที่ต้องระวังคือคอลัมน์สุดท้าย มันคือ <em>candidate</em> allocation ไม่ใช่ข้อสรุป ตอนทำทะเบียนเรายังไม่ตัดสินอะไร เราแค่บันทึกว่ารูปแบบที่เป็นไปได้มีอะไรบ้าง การตัดสินเกิดขึ้นหลังจำแนกสามมิติเสร็จแล้วเท่านั้น</p>
+
+    <div class="alert">
+        <strong>คำถามสำหรับผู้นำ:</strong> การตัดสินใจที่เกิดซ้ำห้ารายการใดในองค์กรของคุณมีทั้งความถี่ คุณค่า หลักฐาน และ Feedback สูงพร้อมกัน — และรายการใดควรถูกตัดออกจากพอร์ตตั้งแต่ต้นเพราะผลกระทบยอมรับไม่ได้ ไม่ว่าตัวเลขผลประหยัดจะสวยแค่ไหน
+    </div>
+
+    <p>หมายเหตุด้านหลักฐาน: เนื้อหาเรื่องบัญชีรายการการตัดสินใจในหัวข้อนี้มาจากภาคผนวกของหนังสือ ซึ่งระบุตัวเองว่าเป็นการเรียบเรียงเชิงบรรณาธิการจากคำบรรยาย ไม่ใช่การถอดความคำต่อคำ ผมจึงเขียนเป็นการสรุปความ ไม่ใช่การอ้างคำพูด และไม่ควรอ่านว่าเป็นผลการศึกษาที่มีกลุ่มควบคุม</p>
+
+    <h2 id="th-three-dimensions">3. สามมิติที่ต้องวัดแยกกัน</h2>
+
+    <p>เมื่อมีทะเบียนแล้ว ขั้นถัดไปคือจำแนก และหัวใจของทั้งบทอยู่ตรงนี้ — หนังสือแยกการจำแนกออกเป็นสามมิติ และย้ำว่าห้ามยุบรวมเป็นคะแนนเดียว เพราะแต่ละมิติอธิบายความจำเป็นในการควบคุมคนละแบบ</p>
+
+    <div class="table-wrapper">
+        <table>
+            <thead>
+                <tr>
+                    <th>Dimension</th>
+                    <th>คำถามที่มิตินี้ถาม</th>
+                    <th>หลักฐานที่ตอบได้</th>
+                    <th>Control ที่ตามมา</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td><strong>อำนาจตัดสินใจ</strong><br>Decision authority</td>
+                    <td>AI ทำได้แค่เสนอ ร่าง กระทำเมื่ออนุมัติ หรืออัตโนมัติ</td>
+                    <td>สิทธิ์จริงในระบบ ไม่ใช่ระดับที่เขียนไว้ในเอกสาร</td>
+                    <td>ด่านอนุมัติ ขอบเขตสิทธิ์ และการควบคุมก่อนเกิดผล</td>
+                </tr>
+                <tr>
+                    <td><strong>ความขาดไม่ได้</strong><br>Model indispensability</td>
+                    <td>ถ้าแทนโมเดลด้วย Fallback แบบไม่ใช้โมเดล ผลงานตกต่ำกว่าเกณฑ์หรือไม่</td>
+                    <td>ผลการทดสอบถอดโมเดลบนชุดงานที่ประกาศไว้ล่วงหน้า</td>
+                    <td>ความต่อเนื่องของบริการ แผนสำรอง และการลงทุน</td>
+                </tr>
+                <tr>
+                    <td><strong>ระดับผลกระทบ</strong><br>Consequence</td>
+                    <td>ข้อความหรือการกระทำที่ปล่อยออกไปสร้างอะไรได้บ้าง</td>
+                    <td>ความรุนแรง การย้อนกลับ การตรวจพบ ขนาด สิทธิ์ ต้นทุนกู้คืน</td>
+                    <td>ปริมาณ Assurance และความเข้มของการตรวจ</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <h3>มิติที่ 1 — อำนาจตัดสินใจ: บันไดสี่ขั้น</h3>
+
+    <p>อำนาจตัดสินใจถามว่า AI ทำได้แค่ไหน คำตอบมีสี่ขั้นตายตัว และควรเขียนกำกับไว้ในทะเบียนทุกแถว</p>
+
+    <div class="table-wrapper">
+        <table>
+            <thead>
+                <tr>
+                    <th>Rung</th>
+                    <th>AI ทำอะไรได้</th>
+                    <th>สิ่งที่ต้องเป็นจริงก่อนขึ้นขั้นนี้</th>
+                    <th>หลักฐานที่ต้องเก็บ</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td><strong>เสนอแนะ</strong> (Suggest)</td>
+                    <td>ให้ตัวเลือกหรือข้อมูลประกอบ คนตัดสินทั้งหมด</td>
+                    <td>คนมีเวลาพอจะอ่านและเห็นที่มาของข้อเสนอ</td>
+                    <td>อัตราที่คนเลือกตามข้อเสนอ และเหตุผลเมื่อไม่เลือก</td>
+                </tr>
+                <tr>
+                    <td><strong>ร่าง</strong> (Draft)</td>
+                    <td>ผลิตชิ้นงานที่คนจะแก้แล้วส่งต่อในชื่อของคน</td>
+                    <td>ผู้แก้มีความสามารถตรวจเนื้อหานั้นได้จริง</td>
+                    <td>นาทีที่ใช้แก้ต่อชิ้น และประเภทของสิ่งที่ต้องแก้</td>
+                </tr>
+                <tr>
+                    <td><strong>กระทำเมื่ออนุมัติ</strong> (Act with approval)</td>
+                    <td>เตรียมการกระทำจริงไว้ แต่ต้องมีคนกดอนุมัติก่อนเกิดผล</td>
+                    <td>ผู้อนุมัติปฏิเสธได้จริง และคิวไม่ยาวจนกลายเป็นการกดผ่าน</td>
+                    <td>อัตราการปฏิเสธ เวลารออนุมัติ และร่องรอยว่าใครอนุมัติ</td>
+                </tr>
+                <tr>
+                    <td><strong>อัตโนมัติในขอบเขต</strong> (Act autonomously)</td>
+                    <td>ก่อผลจริงได้เองภายในขอบเขตที่ประกาศไว้</td>
+                    <td>ขอบเขตถูกบังคับด้วยซอฟต์แวร์ ไม่ใช่ด้วยความตั้งใจของคน</td>
+                    <td>อัตราการกระทำนอกสิทธิ์ เวลาตรวจพบ และเวลากู้คืน</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <p>ข้อผิดพลาดที่พบบ่อยคือการอ่านชื่อผลิตภัณฑ์แทนการอ่านสิทธิ์ ระบบที่ถูกเรียกว่า "copilot" อาจอยู่ขั้นที่สี่ก็ได้ ถ้ามันเรียก tool ที่เขียนข้อมูลลงระบบหลังบ้านได้เอง ในทางกลับกัน ระบบที่ชื่อดุดันว่า "autonomous agent" อาจอยู่ขั้นที่หนึ่ง ถ้าทุกอย่างที่มันเสนอต้องผ่านคนก่อนเสมอ <strong>ให้จำแนกจากสิ่งที่ระบบปล่อยออกไปได้จริง ไม่ใช่จากชื่อบนสไลด์</strong></p>
+
+    <h3>มิติที่ 2 — ความขาดไม่ได้: ทดสอบด้วยการถอดโมเดล</h3>
+
+    <p>มิตินี้เป็นมิติที่ผมคิดว่ามีค่ามากที่สุด และเป็นมิติที่แทบไม่มีใครวัด คำถามคือ ถ้าเราแทนโมเดลที่ประกาศไว้ด้วย Fallback แบบไม่ใช้โมเดล — กฎเกณฑ์เดิม ตารางค้นหา หรือกระบวนการที่คนทำมือ — ผลงานบนชุดงานที่กำหนดไว้ล่วงหน้าจะตกต่ำกว่า Threshold หรือไม่ ถ้าตก แปลว่าโมเดลเป็นส่วนที่ขาดไม่ได้จริง ถ้าไม่ตก แปลว่าเรากำลังจ่ายค่าโมเดลเพื่อความสะดวก ไม่ใช่เพื่อความสามารถ</p>
+
+    <p>จุดที่ต้องระวังเป็นพิเศษคือ <strong>ความสำคัญต่อธุรกิจไม่เท่ากับความขาดไม่ได้ของโมเดล</strong> ระบบออกใบแจ้งหนี้เป็นระบบที่ขาดไม่ได้ต่อธุรกิจอย่างแน่นอน แต่ถ้าส่วนที่ใช้โมเดลคือการจัดหมวดหมู่รายการซึ่งกฎเกณฑ์เดิมทำได้ที่ความแม่นยำใกล้เคียงกัน โมเดลก็ไม่ใช่ส่วนที่ขาดไม่ได้ในระบบนั้น สองคำนี้อยู่คนละแกนและต้องบันทึกแยกกันในทะเบียน</p>
+
+    <p>การทดสอบนี้จะเชื่อถือได้ก็ต่อเมื่อประกาศเงื่อนไขไว้ <em>ก่อน</em> ทดสอบ ทั้ง <strong>ขอบเขตชุดงาน</strong> (task set) ที่จะใช้วัด และ Threshold ที่ถือว่าตก มิฉะนั้นการทดสอบจะกลายเป็นการหาเหตุผลสนับสนุนสิ่งที่เราตัดสินใจไว้แล้ว วิธีออกแบบการทดสอบอยู่ในหัวข้อ <a href="#th-triage">6</a></p>
+
+    <h3>มิติที่ 3 — ระดับผลกระทบ: หกคุณลักษณะ</h3>
+
+    <p>มิติที่สามถามว่า ข้อความหรือการกระทำที่ระบบปล่อยออกไปสร้างอะไรได้บ้าง โดยดูหกคุณลักษณะ ซึ่งต้องบันทึกแยกกันเช่นกัน เพราะสองงานที่ "ความเสียหายเท่ากัน" อาจต้องการการควบคุมคนละแบบสิ้นเชิง</p>
+
+    <ul>
+        <li><strong>ความรุนแรง (severity)</strong> — ถ้าผิดหนึ่งครั้ง ผลเสียหนักแค่ไหนต่อคนที่ได้รับผล</li>
+        <li><strong>การย้อนกลับ (reversibility)</strong> — แก้กลับได้ไหม ด้วยต้นทุนเท่าไร และภายในเวลาเท่าไร</li>
+        <li><strong>การตรวจพบ (detectability)</strong> — เรารู้ได้อย่างไรว่ามันผิด และรู้ช้าแค่ไหน ความผิดที่ไม่มีใครเห็นคือความผิดที่แพงที่สุด</li>
+        <li><strong>ขนาดผู้ได้รับผล (scale)</strong> — หนึ่งคน ร้อยคน หรือลูกค้าทุกคนที่เปิดหน้าเว็บวันนั้น</li>
+        <li><strong>สิทธิ์ (permissions)</strong> — ระบบแตะอะไรได้บ้าง อ่านอย่างเดียวหรือเขียนได้ ย้ายเงินได้ไหม</li>
+        <li><strong>ต้นทุนกู้คืน (recovery cost)</strong> — เมื่อเกิดแล้วต้องใช้คนกี่คน กี่ชั่วโมง และเสียชื่อเสียงเท่าไรเพื่อกลับสู่สภาพเดิม</li>
+    </ul>
+
+    <p>คุณลักษณะที่ผมให้น้ำหนักที่สุดคือ <em>การตรวจพบ</em> เพราะมันเป็นตัวคูณของอีกห้าข้อ ระบบที่ผิดแล้วรู้ทันทีจัดการได้ ระบบที่ผิดแล้วรู้อีกสามเดือนถัดมาสะสมความเสียหายไปเรียบร้อยแล้วก่อนที่ใครจะเริ่มแก้</p>
+
+    <h3>ทำไมสามมิติ ไม่ใช่คะแนนเดียว</h3>
+
+    <p>ความแตกต่างระหว่างอำนาจกับการขาดไม่ได้มาจากงาน r8 ของผมเอง ซึ่งแยกผลกระทบออกเป็นอีกมิติหนึ่งต่างหาก<sup><a href="#th-ref-6">[6]</a></sup> เอกสารฉบับนั้นเป็นงานที่ยังไม่ตีพิมพ์และไม่มี URL สาธารณะ ผมจึงอ้างในฐานะการสังเคราะห์ของผู้เขียน ไม่ใช่ในฐานะงานที่ผ่าน peer review</p>
+
+    <p>ส่วนกรอบภายนอกที่หนังสืออ้างถึงทำหน้าที่หนุนหลักการ ไม่ใช่ให้สูตร กรอบจำแนกของ OECD ย้ำว่าการจำแนกต้องดูบริบท<sup><a href="#th-ref-1">[1]</a></sup> และ NIST AI RMF แนะนำให้จัดลำดับการจัดการความเสี่ยงตามผลกระทบ ความน่าจะเป็น และทรัพยากรหรือวิธีการที่มีอยู่<sup><a href="#th-ref-2">[2]</a></sup> จุดสำคัญที่ต้องเขียนให้ตรง: ระดับความเสี่ยงที่ยอมรับได้ (risk tolerance) กรอบนี้ไม่ได้กำหนดให้ — องค์กรต้องนิยามเอง<sup><a href="#th-ref-2">[2]</a></sup> ไม่มีแหล่งใดในสามแหล่งนี้ให้ตัวเลขพอร์ตที่ใช้ได้สากล และหนังสือระบุตรง ๆ ว่าการหลีกเลี่ยงความแม่นยำเทียมเป็นความตั้งใจ</p>
+
+    <div class="alert danger">
+        <strong>อย่าสร้างตัวเลขเดียว:</strong> สิ่งที่ผมเห็นทีมทำผิดบ่อยที่สุดหลังอ่านบทนี้คือกลับไปสร้างสูตร เช่น ให้คะแนนอำนาจแล้วคูณด้วยคะแนนผลกระทบ จนได้ "คะแนนพอร์ต" ออกมาหนึ่งตัว นั่นทำลายประโยชน์ทั้งหมดของการแยกสามมิติ เพราะงานที่อำนาจต่ำแต่ผลกระทบสูงกับงานที่อำนาจสูงแต่ผลกระทบต่ำจะได้คะแนนเท่ากัน ทั้งที่ต้องการการควบคุมคนละชนิด ให้เก็บเป็นสามค่าแยกกันเสมอ และให้ที่ประชุมอ่านทั้งสามค่า
+    </div>
+
+    <blockquote>💡 มุมมองของผม: หลักปฏิบัติข้อที่สองของบทนี้เขียนไว้สั้นที่สุดแต่แพงที่สุด — <strong>"แยกอำนาจ การขาดไม่ได้ และผลกระทบ — แต่ละมิติอธิบาย Control คนละแบบ"</strong> ผมเคยนั่งอยู่ในห้องที่คณะกรรมการเถียงกันทั้งบ่ายว่างานหนึ่งควรได้คะแนนความเสี่ยงเท่าไร ทั้งที่ถ้าแยกสามมิติออกมาวางบนโต๊ะ คำตอบจะโผล่ภายในไม่กี่นาที: อำนาจอยู่ขั้น "กระทำเมื่ออนุมัติ" การขาดไม่ได้ยังไม่เคยทดสอบ และผลกระทบย้อนกลับได้ภายในวันเดียว — สิ่งที่ต้องทำต่อคือไปทดสอบการถอดโมเดล ไม่ใช่ไปเถียงเรื่องตัวเลข</blockquote>
+
+    <h2 id="th-value-learnability">4. คุณค่า × ความพร้อมในการเรียนรู้</h2>
+
+    <p>สามมิติในหัวข้อที่แล้วบอกว่างานหนึ่งต้องการการควบคุมแบบใด แต่ยังไม่ได้บอกว่าควรลงแรงกับงานไหนก่อน หนังสือจึงวางแผนภาพที่สองซ้อนเข้ามา เป็น 2×2 ที่ใช้แกนคนละคู่กับสามมิติ คือ <strong>คุณค่า</strong> (value) กับ <strong>ความพร้อมในการเรียนรู้จากผลลัพธ์</strong> (learnability)</p>
+
+    <figure class="figure">
+      <a href="../images/ai-transformation-fig-03-decision-portfolio.png">
+        <img class="figure__img" src="../images/ai-transformation-fig-03-decision-portfolio.png" alt="แผนภาพ 2×2 แกนตั้งคุณค่า แกนนอนความสามารถในการเรียนรู้ สี่ช่อง RESEARCH, TRANSFORM, DEFER, AUTOMATE ฟองกลมขนาดต่างกันแทนผลกระทบต่อปี" width="1400" height="1000" loading="lazy" decoding="async">
+      </a>
+      <figcaption class="figure__caption">รูปที่ 3 · พอร์ตโฟลิโอการตัดสินใจ — ขนาดฟองคือผลกระทบต่อปี</figcaption>
+    </figure>
+
+    <p>แกนตั้งคือคุณค่า ตรงไปตรงมา แกนนอนคือความพร้อมในการเรียนรู้ ซึ่งต้องอธิบายหน่อยเพราะคนมักเข้าใจเป็น "ความยากทางเทคนิค" ซึ่งไม่ใช่ ความพร้อมในการเรียนรู้หมายถึง <em>ผลลัพธ์จริงกลับมาถึงเราเร็วแค่ไหนและสะอาดแค่ไหน</em> — งานที่รู้ผลภายในไม่กี่นาทีและรู้ชัดว่าถูกหรือผิด มีความพร้อมสูง ส่วนงานที่ผลจริงปรากฏอีกหลายเดือนหรือหลายปีถัดมา และปนอยู่กับปัจจัยอื่นอีกนับไม่ถ้วน มีความพร้อมต่ำ แม้ตัวโมเดลจะสร้างง่ายก็ตาม สังเกตว่าแกนนี้คือคุณสมบัติข้อที่สี่ของผู้สมัครที่ดีในหัวข้อ <a href="#th-decision-inventory">2</a> นั่นเอง</p>
+
+    <p>ขนาดของฟองในรูปคือ <strong>ผลกระทบต่อปี</strong> ไม่ใช่ขนาดของโครงการหรือขนาดของงบประมาณ นี่เป็นรายละเอียดที่เปลี่ยนบทสนทนาได้จริง เพราะการตัดสินใจเล็ก ๆ ที่เกิดวันละพันครั้งจะกลายเป็นฟองใหญ่ ในขณะที่การตัดสินใจระดับผู้บริหารที่เกิดปีละสองครั้งจะเป็นฟองเล็ก แม้เงินต่อครั้งจะสูงกว่ามาก</p>
+
+    <div class="table-wrapper">
+        <table>
+            <thead>
+                <tr>
+                    <th>Quadrant</th>
+                    <th>ความหมาย</th>
+                    <th>สิ่งที่ควรทำต่อ</th>
+                    <th>ตัวอย่างในรูป</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td><strong>RESEARCH</strong><br>วิจัยและจัดการข้อจำกัด</td>
+                    <td>คุณค่าสูง แต่เรียนรู้จากผลลัพธ์ได้ยาก</td>
+                    <td>ลงทุนกับการสร้างสัญญาณ Outcome ก่อน อย่าเพิ่งขยายระบบ</td>
+                    <td>Executive acquisition — การตัดสินใจซื้อกิจการ</td>
+                </tr>
+                <tr>
+                    <td><strong>TRANSFORM</strong><br>ออกแบบใหม่และลงทุนก่อน</td>
+                    <td>คุณค่าสูงและเรียนรู้ได้เร็ว</td>
+                    <td>ที่ที่ควรลงแรงออกแบบกระบวนงานใหม่ทั้งสาย ไม่ใช่แค่แทรกเครื่องมือ</td>
+                    <td>Refund eligibility — สิทธิ์การคืนเงิน · Case routing — การจ่ายงาน</td>
+                </tr>
+                <tr>
+                    <td><strong>DEFER</strong><br>ชะลอหรือไม่ทำ</td>
+                    <td>คุณค่าต่ำและเรียนรู้ได้ยาก</td>
+                    <td>บันทึกไว้ในทะเบียนแล้วปล่อยผ่าน อย่าให้กินเวลาประชุม</td>
+                    <td>Rare report — รายงานที่ทำนาน ๆ ครั้ง</td>
+                </tr>
+                <tr>
+                    <td><strong>AUTOMATE SELECTIVELY</strong><br>ทำเมื่อใช้ความสามารถร่วมได้</td>
+                    <td>คุณค่าต่ำแต่เรียนรู้ได้เร็ว</td>
+                    <td>ทำก็ต่อเมื่อใช้ส่วนประกอบร่วมกับงานอื่นได้ ไม่คุ้มถ้าต้องสร้างของใหม่ทั้งชุด</td>
+                    <td>FAQ draft — ร่างคำตอบคำถามพบบ่อย</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <p>ช่องที่ผมอยากให้ระวังที่สุดคือช่องขวาล่าง คำว่า <em>selectively</em> ในชื่อช่องมีความหมาย งานคุณค่าต่ำที่เรียนรู้ง่ายเป็นงานที่ทีมชอบทำมากเพราะมันสำเร็จเร็วและได้สไลด์สวย แต่ถ้าแต่ละชิ้นต้องสร้างท่อข้อมูล ระบบตรวจ และกระบวนการดูแลของตัวเองแยกกัน ต้นทุนรวมจะเกินคุณค่าอย่างเงียบ ๆ เกณฑ์คือ ทำเมื่อมันใช้ความสามารถที่มีอยู่แล้วร่วมกันได้เท่านั้น</p>
+
+    <div class="alert info">
+        <strong>อย่าสับสนสองชุดสี่:</strong> ชื่อสี่ช่องในรูปนี้ (Research, Transform, Defer, Automate) <em>ไม่ใช่</em> สี่ทางเลือกของพอร์ต (Scale, Contain, Redesign, Retire) ในหัวข้อ <a href="#th-four-moves">5</a> ทั้งสองชุดอยู่คนละแกนและตอบคนละคำถาม — 2×2 นี้ตอบว่า "ควรลงแรงตรงไหนก่อน" ส่วนสี่ทางเลือกตอบว่า "งานที่จำแนกสามมิติแล้วควรได้คำตัดสินอะไรใน 90 วันข้างหน้า" หนังสือไม่เคยจับสองชุดนี้มาแมปกัน และผมก็ไม่แนะนำให้ทำ เพราะงานในช่อง TRANSFORM อาจได้คำตัดสินว่า Contain ก็ได้ ถ้าผลกระทบยังสูงเกินกว่าที่หลักฐานวันนี้รองรับ
+    </div>
+
+    <p>วิธีใช้รูปนี้ในทางปฏิบัติที่ผมชอบที่สุดคือให้ทีมวางฟองก่อน <em>โดยยังไม่พูดถึงเทคโนโลยีเลย</em> ห้ามเอ่ยชื่อโมเดล ผู้ให้บริการ หรือผลิตภัณฑ์ใด ๆ จนกว่าฟองทั้งหมดจะอยู่บนกระดาน เพราะทันทีที่มีชื่อผลิตภัณฑ์เข้ามา การสนทนาจะไหลกลับไปเป็น use-case list ภายในไม่ถึงห้านาที</p>
+
+    <h2 id="th-four-moves">5. สี่ทางเลือกของพอร์ต</h2>
+
+    <p>เมื่อจำแนกแล้ว ผู้บริหารมีสี่ทางเลือกเท่านั้น ไม่มีทางเลือกที่ห้าชื่อว่า "ทำต่อไปเรื่อย ๆ แล้วค่อยดู" ซึ่งเป็นสิ่งที่เกิดขึ้นจริงในองค์กรส่วนใหญ่<sup><a href="#th-ref-7">[7]</a></sup></p>
+
+    <div class="table-wrapper">
+        <table>
+            <thead>
+                <tr>
+                    <th>Move</th>
+                    <th>เงื่อนไขที่ต้องเป็นจริง</th>
+                    <th>สิ่งที่ต้องมาพร้อมกันเสมอ</th>
+                    <th>สัญญาณว่าเลือกผิด</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td><strong>ขยาย</strong><br>Scale</td>
+                    <td>หลักฐานแข็ง คุณค่ามีนัยสำคัญ และความเสี่ยงคงเหลือยอมรับได้</td>
+                    <td>Fallback, Rollback และเงื่อนไขยุติที่เขียนไว้พร้อมกับคำขออนุมัติงบ</td>
+                    <td>หลักฐานมาจาก demo ไม่ใช่จากงานจริง หรือยังไม่เคยทดสอบถอดโมเดล</td>
+                </tr>
+                <tr>
+                    <td><strong>จำกัดขอบเขต</strong><br>Contain</td>
+                    <td>มีคุณค่าจริง แต่ต้องคุมสิทธิ์หรือจำนวนผู้ได้รับผลไว้</td>
+                    <td>เพดานที่บังคับด้วยซอฟต์แวร์ ไม่ใช่ด้วยนโยบายบนกระดาษ</td>
+                    <td>ขอบเขตถูกขยายทีละนิดโดยไม่มีการทบทวน จนไม่เหลือขอบเขต</td>
+                </tr>
+                <tr>
+                    <td><strong>ออกแบบใหม่</strong><br>Redesign</td>
+                    <td>ข้อมูล Fallback หรือกำลังผู้ตรวจยังไม่พอจะขยายอย่างปลอดภัย</td>
+                    <td>ระบุให้ชัดว่าอะไรคือสิ่งที่ขาด และใครรับผิดชอบทำให้ครบ</td>
+                    <td>"ออกแบบใหม่" กลายเป็นคำสุภาพของการเลื่อนออกไปไม่มีกำหนด</td>
+                </tr>
+                <tr>
+                    <td><strong>ยุติ</strong><br>Retire</td>
+                    <td>ชนะค่าฐานไม่ได้ หรือใช้ต้นทุน Assurance มากเกินคุณค่าที่ได้</td>
+                    <td>แผนย้ายผู้ใช้กลับไปกระบวนการเดิม และการเก็บบทเรียนก่อนปิด</td>
+                    <td>ไม่มีงานใดถูกยุติเลยตลอดทั้งปี — แปลว่าเกณฑ์ยังไม่ได้ถูกใช้จริง</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <p>คอลัมน์ที่สามคือคอลัมน์ที่คนข้ามบ่อยที่สุด หลักปฏิบัติข้อห้าของบทนี้ระบุว่าให้ทุนขยายต้องมาพร้อมทางออกเสมอ — ทุกข้อเสนอต้องมี Fallback, Rollback และเงื่อนไขยุติ ผมใช้กฎง่าย ๆ ในคณะกรรมการที่ผมนั่งอยู่ว่า <em>เอกสารขออนุมัติงบที่ไม่มีหน้าเงื่อนไขยุติ จะไม่ถูกบรรจุเข้าวาระ</em> ไม่ใช่เพราะเราคาดว่ามันจะล้มเหลว แต่เพราะการเขียนเงื่อนไขยุติบังคับให้ผู้เสนอบอกว่าอะไรคือความสำเร็จตั้งแต่วันแรก</p>
+
+    <h3>HarborLight Retail — ระบบสี่ตัว คำตัดสินคนละแบบ</h3>
+
+    <p>หนังสือใช้กรณี HarborLight Retail <em>(กรณีสมมติจากหนังสือ)</em> เป็นตัวอย่างเดียวที่ครอบคลุมทั้งบท<sup><a href="#th-ref-7">[7]</a></sup> บริษัทนี้เรียกระบบสี่ตัวรวมกันในสไลด์เดียวว่า "AI สำหรับลูกค้า" — ซึ่งเป็นชื่อที่ทำให้ทุกอย่างดูเหมือนกันหมด ทั้งที่ภาระผูกพันของทั้งสี่ตัวต่างกันคนละโลก</p>
+
+    <div class="table-wrapper">
+        <table>
+            <thead>
+                <tr>
+                    <th>System</th>
+                    <th>Decision authority</th>
+                    <th>Model indispensability</th>
+                    <th>Consequence</th>
+                    <th>Move</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>เครื่องมือร่างคำบรรยายสินค้า</td>
+                    <td>แนะนำ — คนแก้และเป็นผู้ส่ง</td>
+                    <td>ไม่จำเป็น มีทางทำแบบเดิมได้</td>
+                    <td>ต่ำ แก้กลับได้ทันที</td>
+                    <td><strong>ขยาย</strong> Scale</td>
+                </tr>
+                <tr>
+                    <td>ผู้ช่วยข้อมูลสินค้าบนเว็บ</td>
+                    <td>แนะนำ — ไม่มี Tool ที่ก่อผลจริง</td>
+                    <td><strong>ขาดไม่ได้</strong> เพราะข้อความถึงลูกค้าโดยตรงในปริมาณมาก</td>
+                    <td>สูงจากขนาด ไม่ใช่จากสิทธิ์</td>
+                    <td><strong>ออกแบบใหม่</strong> Redesign — เริ่มที่ Retrieval</td>
+                </tr>
+                <tr>
+                    <td>ระบบปรับสต็อกระหว่างสาขา</td>
+                    <td>เสนอการย้ายสินค้าให้ผู้จัดการอนุมัติ</td>
+                    <td>หนังสือไม่ระบุ</td>
+                    <td>ย้อนกลับได้ อยู่ในระบบภายใน</td>
+                    <td>หนังสือไม่ระบุคำตัดสิน</td>
+                </tr>
+                <tr>
+                    <td>Agent คืนเงิน</td>
+                    <td>ก่อผลทางการเงินจริงต่อภายนอก</td>
+                    <td>ขึ้นกับการออกแบบ</td>
+                    <td>สูง — เป็นเงินจริงและถึงลูกค้าโดยตรง</td>
+                    <td><strong>จำกัดขอบเขต</strong> Contain — วงเงินต่ำ นโยบายชัด Hard Approval</td>
+                </tr>
+                <tr>
+                    <td>เครื่องมือสรุปการประชุม</td>
+                    <td>แนะนำ</td>
+                    <td>ไม่จำเป็น</td>
+                    <td>ต่ำ</td>
+                    <td><strong>ยุติ</strong> Retire — แทบไม่มีคนใช้</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <p>ผมตั้งใจปล่อยแถวที่สามให้ว่าง เพราะหนังสือบรรยายระบบปรับสต็อกไว้ว่าเป็นแบบเสนอให้ผู้จัดการอนุมัติและย้อนกลับได้ แต่<strong>ไม่ได้ระบุ</strong>ว่ามันได้คำตัดสินใด การเติมช่องนั้นเองจะเป็นการแต่งข้อมูลลงในกรณีตัวอย่าง ซึ่งเป็นสิ่งที่ผมพยายามหลีกเลี่ยงตลอดซีรีส์นี้ — ช่องว่างที่ซื่อสัตย์มีค่ามากกว่าช่องที่เต็มแต่แต่งขึ้น</p>
+
+    <p>แถวที่น่าสนใจที่สุดคือแถวที่สอง ผู้ช่วยข้อมูลสินค้าบนเว็บมี <em>อำนาจต่ำที่สุด</em> ในบรรดาทั้งสี่ตัว เพราะมันทำได้แค่ตอบข้อความ ไม่มี Tool ที่ก่อผลจริงเลย แต่มันกลับเป็นตัวที่ <em>ขาดไม่ได้ในเชิงปฏิบัติการ</em> เพราะข้อความของมันถึงลูกค้าจำนวนมากทุกวัน ถ้าปิดวันนี้ หน้าเว็บก็จะว่าง ถ้าองค์กรใช้คะแนนความเสี่ยงตัวเดียว ระบบนี้จะได้คะแนนต่ำและถูกจัดว่า "ปลอดภัย" ทั้งที่มันคือระบบที่มีขนาดผู้ได้รับผลสูงที่สุดในพอร์ต</p>
+
+    <p>บทเรียนของกรณีนี้ถูกสรุปไว้หนึ่งประโยค: <strong>ผลประหยัดที่คาดการณ์จึงไม่ใช่คำตอบทั้งหมด</strong> — เพราะภาระผูกพันของแต่ละระบบต่างกัน ถ้า HarborLight เรียงงานทั้งสี่ตามผลประหยัด ลำดับที่ได้จะไม่ตรงกับลำดับที่ปลอดภัยเลยแม้แต่แถวเดียว</p>
+
+    <h3>หลักปฏิบัติห้าประการ</h3>
+
+    <p>ข้อที่สองผมยกไปไว้ในหัวข้อ <a href="#th-three-dimensions">3</a> แล้ว อีกสี่ข้อที่เหลือคือ:</p>
+
+    <ul>
+        <li><strong>จำแนกจากการตัดสินใจที่ปล่อย</strong> — หน้าตาแชตอาจซ่อนการกระทำอัตโนมัติ ให้ดูสิ่งที่ระบบปล่อยออกไปได้จริง ไม่ใช่หน้าจอที่ผู้ใช้เห็น</li>
+        <li><strong>ทดสอบการพึ่งพาด้วยการถอดโมเดล</strong> — หาก Fallback เพียงพอ อย่าลงทุนเสมือนโมเดลเป็นแกน นี่คือหลักที่ประหยัดงบได้มากที่สุดในบทนี้</li>
+        <li><strong>จัดสรร Assurance ตาม Exposure และการกู้คืน</strong> — ปริมาณมากกับย้อนกลับไม่ได้มีภาระต่างกัน สองงานที่ "ความเสี่ยงเท่ากัน" อาจต้องการงบตรวจสอบต่างกันหลายเท่า</li>
+        <li><strong>ให้ทุนขยายมาพร้อมทางออก</strong> — ทุกข้อเสนอต้องมี Fallback, Rollback และเงื่อนไขยุติ</li>
+    </ul>
+
+    <h2 id="th-triage">6. เวิร์กช็อป Decision portfolio triage</h2>
+
+    <p>ทั้งหมดข้างต้นจะเป็นแค่ทฤษฎีถ้าไม่มีเวทีที่คำตัดสินเกิดขึ้นจริง หนังสือกำหนดเวิร์กช็อปหกขั้นไว้ให้ ผมใช้เวลาราวครึ่งวันต่อรอบ กับงานชุดที่คัดมาแล้วจากทะเบียน และให้เจ้าของงานทุกรายการอยู่ในห้องเดียวกัน ไม่ใช่ส่งแบบฟอร์มกลับไปกรอกทีหลัง</p>
+
+    <div class="table-wrapper">
+        <table>
+            <thead>
+                <tr>
+                    <th>Step</th>
+                    <th>Question</th>
+                    <th>Output</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td><strong>1</strong></td>
+                    <td>ตกลงนิยามและวันที่อ้างอิง</td>
+                    <td>เอกสารหนึ่งหน้าที่นิยามสี่ขั้นของอำนาจ เกณฑ์การขาดไม่ได้ และหกคุณลักษณะของผลกระทบ พร้อมวันที่ที่ข้อมูลทุกช่องอ้างถึง</td>
+                </tr>
+                <tr>
+                    <td><strong>2</strong></td>
+                    <td>วางแต่ละ Workflow ตามอำนาจและการขาดไม่ได้ พร้อมทำเครื่องหมายข้อมูลที่ยังไม่รู้</td>
+                    <td>กระดานที่ทุกงานมีตำแหน่ง และช่องที่ยังไม่รู้ถูกทำเครื่องหมายไว้ชัด ไม่ใช่เดาให้เต็ม</td>
+                </tr>
+                <tr>
+                    <td><strong>3</strong></td>
+                    <td>เติมผลกระทบ สิทธิ์ จำนวนผู้ได้รับผล การตรวจพบ และเวลากู้คืน</td>
+                    <td>ทะเบียนที่หกคุณลักษณะของผลกระทบครบทุกแถว โดยเวลากู้คืนเป็นตัวเลขที่มีคนยืนยัน</td>
+                </tr>
+                <tr>
+                    <td><strong>4</strong></td>
+                    <td>ซ้อนความแข็งของหลักฐาน คุณค่าจริง ภาระตรวจ และต้นทุน Assurance</td>
+                    <td>ชั้นข้อมูลเศรษฐศาสตร์ทับลงบนกระดานเดิม ทำให้เห็นงานที่คุ้มบนกระดาษแต่แพงเมื่อรวมค่าตรวจ</td>
+                </tr>
+                <tr>
+                    <td><strong>5</strong></td>
+                    <td>ตัดสิน Scale, Contain, Redesign หรือ Retire สำหรับ 90 วันข้างหน้า</td>
+                    <td>คำตัดสินหนึ่งคำต่อหนึ่งงาน มีชื่อเจ้าของกำกับ และมีวันทบทวนที่ลงปฏิทินแล้ว</td>
+                </tr>
+                <tr>
+                    <td><strong>6</strong></td>
+                    <td>ระบุหลักฐานที่จะทำให้คำตัดสินเปลี่ยน</td>
+                    <td>ต่อหนึ่งคำตัดสิน มีอย่างน้อยหนึ่งบรรทัดว่า "ถ้าเห็นสิ่งนี้ เราจะเปลี่ยนใจ" พร้อมผู้รับผิดชอบไปหาหลักฐานนั้น</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <p>หนังสือให้ตัดสิน Scale, Contain, Redesign หรือ Retire สำหรับ 90 วันข้างหน้า แล้วระบุหลักฐานที่จะทำให้คำตัดสินนั้นเปลี่ยน ขอให้อ่านตัวเลข 90 วันตามที่มันเป็น — มันคือ <em>จังหวะที่หนังสือกำหนดไว้สำหรับเวิร์กช็อปนี้</em> ไม่ใช่ค่าที่วัดได้จากงานวิจัย ไม่ใช่มาตรฐานอุตสาหกรรม และไม่ใช่ข้อค้นพบ องค์กรที่รอบธุรกิจสั้นกว่านั้นอาจตั้งรอบให้สั้นลง องค์กรที่งานมีรอบยาวอาจต้องยืดออกไป สิ่งที่สำคัญไม่ใช่ตัวเลข แต่คือการที่คำตัดสินมี <em>วันหมดอายุ</em></p>
+
+    <p>ขั้นที่หกคือขั้นที่แยกเวิร์กช็อปนี้ออกจากการประชุมทั่วไป การเขียนล่วงหน้าว่า "หลักฐานอะไรจะทำให้เราเปลี่ยนใจ" ทำสองอย่างพร้อมกัน — มันบังคับให้เราซื่อสัตย์ว่าคำตัดสินวันนี้ตั้งอยู่บนอะไร และมันเปลี่ยนการเปลี่ยนใจในอนาคตจาก "การยอมรับว่าเราคิดผิด" เป็น "การทำตามที่ตกลงกันไว้" ซึ่งเป็นความต่างทางการเมืองภายในองค์กรที่ใหญ่กว่าที่หลายคนคิด</p>
+
+    <h3>ออกแบบ removal test ให้เชื่อถือได้</h3>
+
+    <p>ขั้นที่สองของเวิร์กช็อปจะติดทันทีถ้ายังไม่มีผลทดสอบการถอดโมเดล เพราะไม่มีใครตอบได้ว่างานไหน "ขาดโมเดลไม่ได้" จริง ตารางข้างล่างคือห้าสิ่งที่ต้องประกาศให้ครบ <em>ก่อน</em> เริ่มทดสอบ ผมแนะนำให้เขียนลงเอกสารและให้เจ้าของงานเซ็นรับ ก่อนจะรันอะไรทั้งสิ้น</p>
+
+    <div class="table-wrapper">
+        <table>
+            <thead>
+                <tr>
+                    <th>Design field</th>
+                    <th>สิ่งที่ต้องประกาศล่วงหน้า</th>
+                    <th>เหตุผลที่ต้องประกาศก่อน</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td><strong>Task set</strong><br>ขอบเขตชุดงาน</td>
+                    <td>ชุดงานตัวอย่างที่จะใช้วัด ระบุจำนวน ที่มา ช่วงเวลา และสัดส่วนของกรณียาก</td>
+                    <td>ถ้าเลือกชุดงานหลังเห็นผล เราจะเลือกชุดที่ให้คำตอบที่เราอยากได้เสมอ</td>
+                </tr>
+                <tr>
+                    <td><strong>Threshold</strong></td>
+                    <td>ตัวเลขที่ถือว่า "ตก" เขียนเป็นเกณฑ์เดียวและเทียบกับค่าฐาน</td>
+                    <td>เกณฑ์ที่กำหนดทีหลังคือการเล่าเรื่องให้เข้ากับผล ไม่ใช่การทดสอบ</td>
+                </tr>
+                <tr>
+                    <td><strong>Fallback</strong></td>
+                    <td>สิ่งที่จะใช้แทนโมเดล ต้องเป็นแบบไม่ใช้โมเดล เช่น กฎเกณฑ์ ตารางค้นหา หรือขั้นตอนที่คนทำ</td>
+                    <td>ถ้า Fallback คือโมเดลตัวเล็กกว่า การทดสอบจะวัดคุณภาพโมเดล ไม่ได้วัดการพึ่งพา</td>
+                </tr>
+                <tr>
+                    <td><strong>Who runs it</strong></td>
+                    <td>ผู้รันการทดสอบ ซึ่งไม่ควรเป็นทีมเดียวกับที่ขอทุนขยายระบบนั้น</td>
+                    <td>ผลประโยชน์ทับซ้อนทำให้การทดสอบสูญเสียความหมาย แม้ทุกคนตั้งใจดี</td>
+                </tr>
+                <tr>
+                    <td><strong>Evidence date</strong></td>
+                    <td>วันที่ที่ผลนี้ถือว่าใช้ได้ และวันที่ต้องทดสอบซ้ำ</td>
+                    <td>โมเดล ข้อมูล และปริมาณงานเปลี่ยนตลอด ผลเมื่อปีที่แล้วไม่ใช่หลักฐานของวันนี้</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <p>ผลลัพธ์ของการทดสอบมีสามแบบและทั้งสามแบบมีประโยชน์ แบบแรก ผลตกต่ำกว่าเกณฑ์อย่างชัดเจน — โมเดลขาดไม่ได้จริง ให้ลงทุนกับความต่อเนื่อง เช่น ผู้ให้บริการสำรองและการตรวจการถดถอย แบบที่สอง ผลไม่ต่างอย่างมีนัยสำคัญ — โมเดลไม่ใช่ส่วนที่ขาดไม่ได้ ให้ทบทวนงบที่จ่ายอยู่ทันที และแบบที่สาม ผลอยู่ก้ำกึ่ง — ซึ่งมักแปลว่าชุดงานที่เลือกยังไม่สะท้อนงานจริง ให้กลับไปแก้ Task set ก่อน อย่าเพิ่งสรุป</p>
+
+    <h2 id="th-metrics-failures">7. ตัวชี้วัดสำคัญ</h2>
+
+    <p>พอร์ตที่ไม่มีตัวชี้วัดจะกลายเป็นความเห็นภายในหนึ่งไตรมาส หนังสือให้รายการไว้สิบสองตัว ผมเติมช่อง Scorecard เข้าไปตามธรรมเนียมของซีรีส์นี้ เพื่อให้เห็นว่าตัวชี้วัดแต่ละตัวไปเข้าช่องไหนของกระดานคะแนนองค์กร และเพื่อไม่ให้ทั้งพอร์ตถูกวัดด้วยมิติเดียวคือเงิน</p>
+
+    <div class="table-wrapper">
+        <table>
+            <thead>
+                <tr>
+                    <th>Metric</th>
+                    <th>สิ่งที่บอกเรา</th>
+                    <th>สัญญาณเตือน</th>
+                    <th>Scorecard</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>สัดส่วนงานที่ยืนยันการจำแนกแล้ว</td>
+                    <td>องค์กรรู้จริงแค่ไหนว่ามีอะไรอยู่ในพอร์ตของตัวเอง</td>
+                    <td>ต่ำกว่าครึ่ง แปลว่ากำลังบริหารสิ่งที่ยังไม่รู้จัก</td>
+                    <td>Learning</td>
+                </tr>
+                <tr>
+                    <td>คุณค่าจริงเทียบค่าฐาน</td>
+                    <td>ผลที่วัดได้จริงเทียบกับวิธีทำงานเดิม ไม่ใช่เทียบกับที่คาดไว้</td>
+                    <td>รายงานเป็นผลประหยัดที่ประมาณการ ไม่มีค่าฐานให้เทียบ</td>
+                    <td>Value</td>
+                </tr>
+                <tr>
+                    <td>นาทีตรวจต่อชิ้นงาน</td>
+                    <td>ภาระจริงที่ตกอยู่กับผู้ตรวจ และเวลาที่หายไปจากงานอื่น</td>
+                    <td>ลดลงเรื่อย ๆ พร้อมปริมาณงานที่เพิ่ม — คือการกดผ่าน ไม่ใช่ประสิทธิภาพ</td>
+                    <td>People</td>
+                </tr>
+                <tr>
+                    <td>ความสำเร็จของ Fallback</td>
+                    <td>เมื่อถอดโมเดลออก ระบบยังทำงานได้ตามเกณฑ์หรือไม่</td>
+                    <td>ไม่เคยวัดเลย หรือวัดครั้งเดียวตอนขึ้นระบบ</td>
+                    <td>Quality</td>
+                </tr>
+                <tr>
+                    <td>อัตราการกระทำนอกสิทธิ์ที่หลุดออกไป</td>
+                    <td>ระบบเคยก่อผลจริงเกินขอบเขตที่ประกาศไว้กี่ครั้ง</td>
+                    <td>ค่าเป็นศูนย์แต่ไม่มีเครื่องมือที่จะตรวจพบได้เลย</td>
+                    <td>Risk</td>
+                </tr>
+                <tr>
+                    <td>อัตราผลรุนแรงที่หลุดถึงผู้รับ</td>
+                    <td>ผลลัพธ์ที่รุนแรงหลุดผ่านด่านตรวจไปถึงคนจริงกี่ครั้ง</td>
+                    <td>นับเฉพาะที่ลูกค้าร้องเรียน ซึ่งคือปลายภูเขาน้ำแข็ง</td>
+                    <td>Quality</td>
+                </tr>
+                <tr>
+                    <td>เวลาตรวจพบ</td>
+                    <td>ช่วงเวลาตั้งแต่เกิดจนมีคนรู้ว่าเกิด</td>
+                    <td>วัดเป็นวันหรือสัปดาห์ในงานที่ปล่อยผลจริงทุกนาที</td>
+                    <td>Risk</td>
+                </tr>
+                <tr>
+                    <td>เวลากู้คืน</td>
+                    <td>ช่วงเวลาตั้งแต่รู้จนกลับสู่สภาพที่ยอมรับได้</td>
+                    <td>ไม่เคยซ้อม จึงเป็นค่าประมาณที่ไม่มีใครเคยพิสูจน์</td>
+                    <td>Risk</td>
+                </tr>
+                <tr>
+                    <td>ปริมาณ Escalation</td>
+                    <td>งานที่ถูกส่งต่อให้คนจัดการ และแนวโน้มของมัน</td>
+                    <td>ลดลงเพราะคนเลิกส่งต่อ ไม่ใช่เพราะปัญหาน้อยลง</td>
+                    <td>People</td>
+                </tr>
+                <tr>
+                    <td>ต้นทุนหลักฐาน</td>
+                    <td>เงินและเวลาที่ใช้ไปกับการพิสูจน์ว่าระบบทำงานถูก</td>
+                    <td>สูงกว่าคุณค่าที่ระบบสร้าง — สัญญาณของการ Retire</td>
+                    <td>Economics</td>
+                </tr>
+                <tr>
+                    <td>ความกระจุกตัวของ Provider</td>
+                    <td>สัดส่วนของพอร์ตที่พึ่งผู้ให้บริการหรือโมเดลรายเดียว</td>
+                    <td>งานที่ขาดไม่ได้ทั้งหมดอยู่บนผู้ให้บริการรายเดียวกัน</td>
+                    <td>Risk</td>
+                </tr>
+                <tr>
+                    <td>สัดส่วนงบตามสี่ทางเลือก</td>
+                    <td>เงินถูกแบ่งไปที่ Scale, Contain, Redesign และ Retire อย่างไร</td>
+                    <td>ไม่มีงบในช่อง Retire เลย แปลว่าไม่มีใครวางแผนจะปิดอะไร</td>
+                    <td>Economics</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <div class="alert">
+        <strong>กฎข้อเดียวที่ผมอยากให้จำจากบทนี้:</strong> การเพิ่มอำนาจต้องทบทวนเข้มเท่าการเพิ่มงบ ถ้าองค์กรของคุณมีกระบวนการอนุมัติงบหลายชั้นสำหรับเงินก้อนใหญ่ แต่การเลื่อนระบบจาก "กระทำเมื่ออนุมัติ" เป็น "อัตโนมัติในขอบเขต" ทำได้ด้วยการแก้ค่าคอนฟิกหนึ่งบรรทัดโดยไม่มีใครทบทวน นั่นคือช่องโหว่ที่ใหญ่กว่าเรื่องงบมาก
+    </div>
+
+    <p>ตัวชี้วัดที่ถูกละเลยมากที่สุดในรายการนี้คือ <strong>ความกระจุกตัวของ Provider</strong> ทุกทีมประเมินความเสี่ยงของระบบตัวเองแยกกัน แล้วสรุปว่าความเสี่ยงของแต่ละตัวยอมรับได้ แต่ไม่มีใครถามว่าถ้างานที่ขาดไม่ได้ทุกตัวในองค์กรอยู่บนผู้ให้บริการรายเดียวกัน ความเสี่ยงระดับพอร์ตคือเท่าไร นี่เป็นความเสี่ยงที่มองเห็นได้จากมุมพอร์ตเท่านั้น ไม่มีทางเห็นจากมุมโครงการเดี่ยว และมันคือเหตุผลสำคัญข้อหนึ่งที่ทำให้พอร์ตโฟลิโอการตัดสินใจคุ้มค่าที่จะทำ</p>
+
+    <h3>รูปแบบความล้มเหลว</h3>
+
+    <ul>
+        <li><strong>เรียงตามผลประหยัดเพียงอย่างเดียว</strong> — ตัวเลขที่ยังไม่มีใครพิสูจน์กลายเป็นตัวจัดลำดับทั้งพอร์ต และงานที่มีภาระผูกพันสูงจะถูกดันขึ้นบนสุดเพราะมันมีตัวเลขที่ใหญ่ที่สุด</li>
+        <li><strong>คิดว่าคำว่า Copilot แปลว่าอำนาจต่ำ</strong> — จำแนกจากชื่อผลิตภัณฑ์แทนที่จะจำแนกจากสิทธิ์จริงและสิ่งที่ระบบปล่อยออกไปได้</li>
+        <li><strong>สับสนความสำคัญต่อธุรกิจกับการขาดโมเดลไม่ได้</strong> — สองสิ่งนี้อยู่คนละแกน และการรวมกันทำให้จ่ายค่าโมเดลในที่ที่ Fallback ทำงานได้ดีอยู่แล้ว</li>
+        <li><strong>ใช้คะแนนเดียวกับความเสียหายต่างชนิด</strong> — ยุบความรุนแรง การย้อนกลับ และขนาดผู้ได้รับผลเป็นเลขตัวเดียว แล้วเปรียบเทียบสิ่งที่เปรียบเทียบกันไม่ได้</li>
+        <li><strong>มองข้ามความเสี่ยงจากโมเดลเดียวทั้งพอร์ต</strong> — ประเมินทีละระบบจนครบ แต่ไม่เคยรวมภาพว่าทั้งพอร์ตแขวนอยู่กับใคร</li>
+        <li><strong>ปล่อย Pilot อยู่ถาวรโดยไม่ตัดสินขยายหรือหยุด</strong> — รูปแบบที่แพงที่สุด เพราะ pilot กินต้นทุนดูแลเต็มจำนวนแต่ให้คุณค่าระดับการทดลองไปเรื่อย ๆ</li>
+    </ul>
+
+    <p>ห้าข้อแรกเป็นความผิดพลาดของการจำแนก แก้ได้ด้วยเครื่องมือในหัวข้อ <a href="#th-three-dimensions">3</a> แต่ข้อสุดท้ายเป็นความผิดพลาดเชิงการบริหาร และแก้ได้ด้วยสิ่งเดียวเท่านั้น คือการที่ทุกงานมีคำตัดสินและมีวันหมดอายุของคำตัดสินนั้น</p>
+
+    <h2 id="th-road-ahead">8. ก้าวต่อไป</h2>
+
+    <p>ถ้าจะสรุปทั้งบทเป็นการเปลี่ยนวิธีทำงานอย่างเดียว ผมจะเลือกข้อนี้: เปลี่ยนคำถามในห้องประชุมจาก "เราจะใช้ AI ตรงไหนได้อีก" เป็น "การตัดสินใจที่เกิดซ้ำรายการไหนสมควรได้รับคำตัดสินใหม่ในไตรมาสนี้ และคำตัดสินนั้นคือขยาย จำกัดขอบเขต ออกแบบใหม่ หรือยุติ" คำถามแรกผลิตรายการ คำถามที่สองผลิตการเปลี่ยนแปลง</p>
+
+    <p>สิ่งที่ทำได้ทันทีสัปดาห์หน้ามีสามอย่าง หนึ่ง เปิดสเปรดชีตเดียวสำหรับทั้งองค์กรแล้วเติมทะเบียนเจ็ดคอลัมน์ให้ครบสิบรายการแรก สอง เลือกงานที่ใช้โมเดลอยู่แล้วหนึ่งงานแล้วออกแบบ removal test ให้ครบห้าช่องก่อนรัน และสาม ตรวจดูว่าเอกสารขออนุมัติงบ AI ฉบับล่าสุดขององค์กรมีหน้าเงื่อนไขยุติหรือไม่ — ถ้าไม่มี นั่นคืองานชิ้นแรกที่ควรแก้</p>
+
+    <p>หนังสือเปิด <strong>ส่วนที่สอง ออกแบบองค์กรใหม่</strong> ด้วยประโยคที่ผมคิดว่าเป็นสะพานที่ดีที่สุดจากบทนี้ไปบทหน้า: <em>"The unit of scale is not another pilot. It is a reusable organizational capability connected to an accountable value stream."</em><sup><a href="#th-ref-7">[7]</a></sup> — หน่วยของการขยายไม่ใช่ pilot อีกตัวหนึ่ง แต่คือความสามารถขององค์กรที่นำกลับมาใช้ซ้ำได้และผูกอยู่กับสายคุณค่าที่มีผู้รับผิดชอบ พูดอีกอย่างคือ พอร์ตที่จำแนกเสร็จแล้วยังไม่ใช่การเปลี่ยนผ่าน มันเป็นแค่รายการงานที่เราตัดสินใจถูกขึ้น ส่วนการเปลี่ยนผ่านจริงเริ่มเมื่อเราลงมือรื้อกระบวนงานรอบการตัดสินใจนั้น</p>
+
+    <div class="alert info">
+        <strong>🧭 ชั้นที่บทความนี้ขยับ:</strong> ชั้น <strong>Decisions</strong> — บทความนี้ตอบคำถามผู้นำข้อ <strong>Q2</strong> ("Which recurring decisions create that outcome" — การตัดสินใจที่เกิดซ้ำรายการใดเป็นตัวสร้างผลลัพธ์นั้น) และข้อ <strong>Q8</strong> ("What deserves to scale reshape pause or stop" — อะไรสมควรขยาย ปรับรูป ชะลอ หรือหยุด) โดยหนังสือพิมพ์คำถามทั้งแปดข้อไว้เป็นภาษาอังกฤษเท่านั้น คำแปลไทยในวงเล็บเป็นของผมเอง ไม่ใช่ถ้อยคำของหนังสือ บนกระดานคะแนนองค์กร บทนี้ขยับช่อง <strong>Value</strong> (คุณค่าจริงเทียบค่าฐาน) <strong>Risk</strong> (การกระทำนอกสิทธิ์ เวลาตรวจพบและกู้คืน ความกระจุกตัวของ Provider) และ <strong>Economics</strong> (ต้นทุนหลักฐาน และสัดส่วนงบตามสี่ทางเลือก) เป็นหลัก ตอนถัดไป <a href="/blog/ai-transformation-workflow">#6 Four Lanes — สี่เลนของกระบวนงานคนกับ AI</a> เปิดส่วนที่สองของซีรีส์: เลือกการตัดสินใจได้แล้ว ต้องออกแบบกระบวนงานรอบมันใหม่ทั้งสาย ไม่ใช่แค่ใส่ AI ลงในขั้นตอนเดิม
+    </div>
+
+    <div class="key-takeaways">
+        <h3>🎯 สิ่งสำคัญที่ต้องจำ</h3>
+        <ul>
+            <li><strong>Decision inventory</strong> = บัญชีรายการการตัดสินใจ — ทะเบียนการตัดสินใจที่เกิดซ้ำ พร้อมเจ้าของ ข้อมูลนำเข้า เวลา ผลกระทบ ผลงานปัจจุบัน และรูปแบบแบ่งงานคนกับ AI</li>
+            <li><strong>Three dimensions</strong> = อำนาจตัดสินใจ × ความขาดไม่ได้ × ระดับผลกระทบ — วัดแยกกันเสมอ ห้ามยุบเป็นคะแนนเดียว</li>
+            <li><strong>Removal test</strong> = ถอดโมเดลออก ใช้ Fallback แบบไม่ใช้โมเดลบนชุดงานเดียวกัน แล้วเทียบกับ Threshold ที่ประกาศไว้ล่วงหน้า</li>
+            <li><strong>Four moves</strong> = ขยาย จำกัดขอบเขต ออกแบบใหม่ ยุติ — หนึ่งคำตัดสินต่อหนึ่งงาน สำหรับ 90 วันข้างหน้า</li>
+            <li><strong>Authority ≈ budget</strong> = การเพิ่มอำนาจต้องผ่านการทบทวนเข้มเท่ากับการเพิ่มงบประมาณ</li>
+            <li><strong>Provider concentration</strong> = ความเสี่ยงระดับพอร์ตที่มองเห็นได้จากมุมพอร์ตเท่านั้น และมักถูกมองข้ามจนสายเกินไป</li>
+            <li><strong>Evidence that changes the call</strong> = ทุกคำตัดสินต้องมาพร้อมบรรทัดว่าหลักฐานแบบไหนจะทำให้เราเปลี่ยนใจ</li>
+        </ul>
+    </div>
+
+    <section class="references" aria-labelledby="references">
+        <h2 id="references">อ้างอิง</h2>
+        <p class="references__note">ตรวจสอบทุกแหล่งเมื่อ 5 กันยายน 2026 (เวลาประเทศไทย) · ป้ายหลักฐานสี่แบบ: <strong>Law</strong> ตัวบทกฎหมายหรือประกาศทางการ · <strong>Standard</strong> มาตรฐานหรือกรอบทางการที่เผยแพร่แล้ว · <strong>Study</strong> งานวิจัยหรือสัญญาณภาคสนาม · <strong>Synthesis</strong> การสังเคราะห์ของผู้เขียนหรือแหล่งที่ไม่ใช่งานวิจัย</p>
+        <ol class="references__list">
+            <li id="th-ref-1"><span class="ref-tag ref-tag--standard">Standard</span> OECD. <cite>OECD Framework for the Classification of AI Systems</cite> — OECD Digital Economy Papers No. 323 (กุมภาพันธ์ 2022, ref. DSTI/CDEP(2020)13/FINAL). <a href="https://www.oecd.org/content/dam/oecd/en/publications/reports/2022/02/oecd-framework-for-the-classification-of-ai-systems_336a8b57/cb6d9eca-en.pdf">oecd.org</a> — เข้าถึง 2026-09-05. <span class="ref-supports">รองรับ: การจำแนกระบบ AI ตามบริบทด้วยห้ามิติเพื่อใช้เชิงนโยบาย และข้อเท็จจริงที่ว่ากรอบฉบับนี้ไม่ได้ให้คะแนนความเสี่ยงรวมเป็นตัวเลขเดียว</span></li>
+            <li id="th-ref-2"><span class="ref-tag ref-tag--standard">Standard</span> NIST (U.S. Department of Commerce). <cite>Artificial Intelligence Risk Management Framework (AI RMF 1.0)</cite> — NIST AI 100-1, 26 มกราคม 2023. <a href="https://nvlpubs.nist.gov/nistpubs/ai/nist.ai.100-1.pdf">nvlpubs.nist.gov</a> — เข้าถึง 2026-09-05. <span class="ref-supports">รองรับ: สี่ฟังก์ชันหลัก บทบาทของฟังก์ชัน Map และการตัดสิน go/no-go ครั้งแรก ถ้อยคำการจัดลำดับใน MANAGE 1.2 และข้อความที่ว่ากรอบนี้ไม่ได้กำหนดระดับความเสี่ยงที่ยอมรับได้</span></li>
+            <li id="th-ref-3"><span class="ref-tag ref-tag--standard">Standard</span> NIST. <cite>AI Risk Management Framework</cite> — หน้าหลักของกรอบ AI RMF 1.0. <a href="https://www.nist.gov/itl/ai-risk-management-framework">nist.gov</a> — เข้าถึง 2026-09-05. <span class="ref-supports">รองรับ: ข้อความว่ากรอบนี้ "intended for voluntary use" เป็นกรอบสมัครใจ ไม่ใช่กฎหมาย และรายชื่อสี่ฟังก์ชัน Govern · Map · Measure · Manage</span></li>
+            <li id="th-ref-4"><span class="ref-tag ref-tag--synthesis">Synthesis</span> The Foundation (th). <cite>AI Transformation: จากการใช้ AI สู่องค์กรที่เรียนรู้เร็วที่สุด | The Masterclass EP01</cite> — เผยแพร่ 28 สิงหาคม 2026. <a href="https://www.youtube.com/watch?v=n_IwUYevRZo">youtube.com</a> — เข้าถึง 2026-09-05. <span class="ref-supports">รองรับ: การค้นหาแบบการตัดสินใจนำ แนวคิดบัญชีรายการการตัดสินใจ สี่คุณสมบัติของผู้สมัครที่ดี และโครงสร้าง Prediction · Judgment · Action · Outcome — สรุปความ ไม่ใช่การถอดคำพูด</span></li>
+            <li id="th-ref-5"><span class="ref-tag ref-tag--synthesis">Synthesis</span> Ajay Agrawal, Joshua Gans &amp; Avi Goldfarb. <cite>A Simple Tool to Start Making Decisions with the Help of AI</cite> — Harvard Business Review, 17 เมษายน 2018. <a href="https://hbr.org/2018/04/a-simple-tool-to-start-making-decisions-with-the-help-of-ai">hbr.org</a> — เข้าถึง 2026-09-05. <span class="ref-supports">รองรับ: การมีอยู่ของ AI canvas ซึ่งสอนที่ Rotman และเริ่มจากช่อง prediction เป็นช่องแรก — อ้างเพื่อระบุที่มาเท่านั้น เนื้อหาเต็มอยู่หลังกำแพงสมาชิก</span></li>
+            <li id="th-ref-6"><span class="ref-tag ref-tag--synthesis">Synthesis</span> Anirach Mingkhwan. <cite>Engineering AI-Core Systems: A Reference Architecture and Assurance Contract for Software 3.0</cite> — revision 8, กันยายน 2026. เอกสารที่ผู้เขียนจัดหาให้ ยังไม่ตีพิมพ์ ไม่มี URL สาธารณะ จึงไม่มีลิงก์และไม่มีวันเข้าถึง. <span class="ref-supports">รองรับ: การแยกอำนาจตัดสินใจออกจากความขาดไม่ได้ของโมเดล โดยถือระดับผลกระทบเป็นมิติที่สามต่างหาก</span></li>
+            <li id="th-ref-7"><span class="ref-tag ref-tag--synthesis">Synthesis</span> Anirach Mingkhwan. <cite>AI Transformation as an Organizational Core — Bilingual Companion Playbook</cite> — บทที่ 3 และภาคผนวก A, C, D. ต้นฉบับของผู้เขียน ไม่มี URL สาธารณะ; ข้อมูลหลักฐาน ณ 5 กันยายน 2026. <span class="ref-supports">รองรับ: สามมิติตามที่ตั้งคำถาม สี่ทางเลือกของพอร์ต หลักปฏิบัติห้าประการ เวิร์กช็อป triage หกขั้น รายการตัวชี้วัด รูปแบบความล้มเหลว รูปที่ 3 กรณีสมมติ HarborLight Retail และประโยคเปิดส่วนที่สอง</span></li>
+        </ol>
+    </section>
+    </div>
+
+    <div class="l-en" lang="en">
+
+    <p>🤔 <strong>Two applications look like the same chat box. Why are their obligations from different worlds?</strong></p>
+
+    <p>The previous post, <a href="/blog/ai-transformation-maturity">Five Maturity Levels</a>, ended on a sentence left deliberately hanging: the "right" maturity level for a workflow does not follow from how ambitious the organisation is, but from how much authority that decision hands to AI, whether the work still runs without the model, and how wide and how irreversible the damage is when it goes wrong. This post is the instrument that answers all three questions at once — and it is the instrument I have used instead of a use-case list for years.</p>
+
+    <p>The short answer to the whole article is this: stop building use-case lists and build a <strong>decision portfolio</strong> instead — classify every workflow on three dimensions that must never be collapsed into one score, then take one of four decisions, Scale, Contain, Redesign or Retire, for the next 90 days, and write down in advance what evidence would change that decision.</p>
+
+    <h2 id="en-same-chat-different-obligations">1. The Same Screen, Obligations from Different Worlds</h2>
+
+    <p>Chapter 3 of <em>AI Transformation as an Organizational Core</em> opens with a sentence I think ought to be pinned outside every digital steering committee room: <em>"A use case list tells where technology appears. A decision portfolio shows where authority dependency value and exposure accumulate."</em> A list of use cases tells you where the technology surfaces; a decision portfolio tells you where <strong>authority, dependency, value and exposure</strong> pile up.</p>
+
+    <p>The difference is not rhetorical. The book makes it visible within two lines: two systems with much the same chat interface can create radically different obligations. A summarising tool that an analyst reviews every time is not equivalent to an agent that can actually issue a customer refund, even when both call the same model, through the same API, and appear on the same slide under the heading "AI for customer service".</p>
+
+    <p>They are not equivalent because what each system <em>releases</em> is different. The summariser releases text for one person to read, and that person carries the responsibility for it. The refund agent releases a <em>real financial effect</em> into the outside world with nobody standing in the way. The same model does not equalise permissions, does not equalise how many people are affected, and does not equalise the cost of putting things right.</p>
+
+    <h3>How a use-case list happens, and what it hides</h3>
+
+    <p>The pattern I have watched repeat is this: the organisation forms an AI working group, then circulates a form to every department asking them to "propose a use case where your team would like to apply AI". Before long a stack of entries comes back, sorted by the savings each department estimated for itself, and the meeting picks the top few for pilots.</p>
+
+    <p>The process looks orderly, but it selects wrongly, and it does so systematically, for three reasons. First, it ranks by numbers nobody has yet proved — "projected" savings are a promise, not evidence. Second, it is an internal competition between departments, so the unit that writes the best proposal wins, not the unit that owns the most valuable decision. Third, it cannot see the small decisions that happen thousands of times a day, because nobody thinks of those as a "use case" at all — even though their cumulative volume dwarfs executive decisions many times over.</p>
+
+    <div class="table-wrapper">
+        <table>
+            <thead>
+                <tr>
+                    <th></th>
+                    <th>Use-case list</th>
+                    <th>Decision portfolio</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td><strong>Unit of the entry</strong></td>
+                    <td>One system or one tool</td>
+                    <td>One recurring decision</td>
+                </tr>
+                <tr>
+                    <td><strong>Question it answers</strong></td>
+                    <td>Where could we drop a model in</td>
+                    <td>Where do authority, dependency, value and exposure accumulate</td>
+                </tr>
+                <tr>
+                    <td><strong>Ranked by</strong></td>
+                    <td>Projected savings</td>
+                    <td>Three dimensions measured separately, then value and evidence</td>
+                </tr>
+                <tr>
+                    <td><strong>What it cannot see</strong></td>
+                    <td>The system's real permissions, how many people are affected, and reversibility</td>
+                    <td>— because all three are mandatory columns</td>
+                </tr>
+                <tr>
+                    <td><strong>Output of the meeting</strong></td>
+                    <td>Ten pilots with no stopping condition</td>
+                    <td>One of four decisions per workflow, with a review date</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <p>The most important observation in that table sits in the last row: a use-case list ends in a <em>list</em>, while a decision portfolio ends in a <em>decision</em>. A list never expires on its own, which is exactly why pilots in so many organisations survive for years with nobody willing to close them — nobody ever agreed at the outset what the closing condition would be.</p>
+
+    <h3>Classifying by context is not this book's private opinion</h3>
+
+    <p>Before we reach the instrument, I want to pin down that the principle "classify by context, not by what the technology looks like" already has international backing. The OECD's Framework for the Classification of AI Systems (February 2022) sorts a system by context across five dimensions — People &amp; Planet, Economic Context, Data &amp; Input, AI Model and Task &amp; Output — for policy use, by policymakers and regulators, and it does not return one aggregate risk number.<sup><a href="#en-ref-1">[1]</a></sup> That report also says of itself that an "actionable AI system risk methodology" was the next phase of work, not something the 2022 framework delivers.</p>
+
+    <p>NIST travels the same road. AI RMF 1.0 (26 January 2023) has four core functions — Govern, Map, Measure and Manage — where the Map function "establishes the context to frame risks related to an AI system" and ends in a first go/no-go decision about whether to design, develop or deploy the system at all.<sup><a href="#en-ref-2">[2]</a></sup> Let me be explicit about one thing: NIST states that this framework is "intended for voluntary use" — it is voluntary, not law.<sup><a href="#en-ref-3">[3]</a></sup> Real deployment in a Thai context still has to pass its own legal and sector-specific review regardless.</p>
+
+    <p>Put another way, both frameworks start from "context" every time, whereas a use-case list starts from "technology" every time. That is the ordering mistake this article is trying to correct. How the book compresses those two frameworks down to three dimensions is the subject of <a href="#en-three-dimensions">3. Three dimensions that must be measured separately</a>.</p>
+
+    <h2 id="en-decision-inventory">2. The Decision Inventory — Start from Decisions, Not from Technology</h2>
+
+    <p>The step before the portfolio is building a <strong>decision inventory</strong>, which the book's appendix defines as "a structured register of recurring decisions, owners, inputs, timing, consequences, current performance, and candidate human–AI allocation". Notice that this definition contains no mention of a model, no mention of a use case, and not a single mention of technology.</p>
+
+    <p>The difference between the two kinds of search is easy to state. A technology-first search asks "where can we insert a model?" A decision-first search asks "which recurring choices determine value, cost, risk, customer experience or mission performance?" The first question returns a list of tools; the second returns a list of things the organisation can actually control.</p>
+
+    <h3>Four properties of a good candidate</h3>
+
+    <p>A good candidate decision usually carries four properties at once — high frequency, high value, data richness and available feedback.<sup><a href="#en-ref-4">[4]</a></sup> All four have to arrive together; you cannot take three out of four, because each does a different job:</p>
+
+    <ul>
+        <li><strong>High frequency</strong> — volume is what makes a small improvement worth having, and what lets evidence accumulate fast enough to learn from. A decision taken once a year cannot be learned from within the life of the project.</li>
+        <li><strong>High value</strong> — if getting it right or wrong changes nothing, it is not worth the governance cost that follows.</li>
+        <li><strong>Data richness</strong> — the inputs have to be genuinely recorded somewhere, not lodged in one person's head and never written down.</li>
+        <li><strong>Available feedback</strong> — you have to learn, within a tolerable time, how the decision turned out. This is the property skipped most often, and it is the one that defines the horizontal axis of the 2×2 in <a href="#en-value-learnability">section 4</a>.</li>
+    </ul>
+
+    <p>Once you have the list, record the anatomy of each decision in five parts: the <strong>prediction</strong> required, the <strong>judgment</strong> applied to interpret it, the <strong>action</strong> actually taken, the <strong>outcome</strong> observed, and the ethical or fairness constraints that sit over all of it.<sup><a href="#en-ref-4">[4]</a></sup> Splitting it five ways pays off immediately, because it shows where AI can help — usually the prediction — and which parts remain human.</p>
+
+    <div class="alert info">
+        <strong>A close relative that came first:</strong> if this way of taking a decision apart looks familiar, that is no accident. Ajay Agrawal, Joshua Gans and Avi Goldfarb proposed the AI canvas in <em>Harvard Business Review</em> in April 2018 — a grid for separating the components of a machine-assisted decision, and it too starts with the prediction box.<sup><a href="#en-ref-5">[5]</a></sup> I raise it to make the point that this idea has been taught in MBA classrooms for years; it is not something invented when language models became fashionable.
+    </div>
+
+    <h3>The seven-column register</h3>
+
+    <p>The register the book prescribes has seven fixed columns. My advice is to open a single spreadsheet for the whole organisation rather than letting each department keep its own, because half the value of this register is discovering that the same decision recurs in three departments and nobody knew.</p>
+
+    <div class="table-wrapper">
+        <table>
+            <thead>
+                <tr>
+                    <th>Register column</th>
+                    <th>What to record</th>
+                    <th>Counts as complete when</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td><strong>Decision</strong></td>
+                    <td>The name of the recurring decision, written as a verb with a real effect — "approve a refund amount", not "system to assist the service team"</td>
+                    <td>Someone outside the department can read it and know what happens, and to whom</td>
+                </tr>
+                <tr>
+                    <td><strong>Owner</strong></td>
+                    <td>A person's name, not a department's; the person who answers when the outcome is wrong</td>
+                    <td>There is exactly one name, and that person knows their name is on it</td>
+                </tr>
+                <tr>
+                    <td><strong>Inputs</strong></td>
+                    <td>The inputs genuinely used today, with their source and update frequency</td>
+                    <td>Every input has an identified source, and you know which ones live only in someone's head</td>
+                </tr>
+                <tr>
+                    <td><strong>Timing</strong></td>
+                    <td>How often it happens, the deadline for deciding, and when the real outcome comes back</td>
+                    <td>Both frequency and feedback delay are recorded, not just frequency</td>
+                </tr>
+                <tr>
+                    <td><strong>Consequence</strong></td>
+                    <td>What happens on one wrong call, who is affected, how many, whether it can be undone, and how long that takes</td>
+                    <td>Severity, scale and reversibility are all answered</td>
+                </tr>
+                <tr>
+                    <td><strong>Current performance</strong></td>
+                    <td>Today's baseline without AI — accuracy, time, cost, or rework rate</td>
+                    <td>It is a number measured from real work, not an estimate from memory</td>
+                </tr>
+                <tr>
+                    <td><strong>Candidate human&ndash;AI allocation</strong></td>
+                    <td>The possible splits of work between people and AI, with the level of authority intended</td>
+                    <td>The authority level is explicit, and it is still tied to no vendor's product</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <p>The <strong>Current performance</strong> column is, in my experience, the column that kills the most projects, because many organisations discover they do not know the baseline of work they do every single day. What follows is that once the system has been live for a while, nobody can prove whether AI made anything better. If that column is empty, treat the workflow as not yet ready for the portfolio — go and measure the baseline first.</p>
+
+    <p>The other thing to watch is the last column. It records a <em>candidate</em> allocation, not a conclusion. At register time we decide nothing; we only record which splits are possible. The decision comes only after the three-dimension classification is done.</p>
+
+    <div class="alert">
+        <strong>A question for leaders:</strong> which five recurring decisions in your organisation have the strongest combination of frequency, value, evidence and feedback — and which should be excluded from the portfolio from the outset because the consequences are unacceptable, however handsome the savings estimate looks?
+    </div>
+
+    <p>A note on evidence: the decision-inventory material in this section comes from the book's appendix, which states of itself that it is an editorial paraphrase of a talk rather than a word-for-word transcript. I have therefore written it as a summary rather than as quotation, and it should not be read as a controlled study.</p>
+
+    <h2 id="en-three-dimensions">3. Three Dimensions That Must Be Measured Separately</h2>
+
+    <p>With the register in hand, the next step is classification, and the heart of the whole chapter is here — the book splits classification into three dimensions and insists they must never be collapsed into a single score, because each explains a different kind of control need.</p>
+
+    <div class="table-wrapper">
+        <table>
+            <thead>
+                <tr>
+                    <th>Dimension</th>
+                    <th>The question it asks</th>
+                    <th>The evidence that answers it</th>
+                    <th>The control that follows</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td><strong>Decision authority</strong></td>
+                    <td>May the AI only suggest, draft, act with approval, or act autonomously</td>
+                    <td>The system's real permissions, not the level written in a document</td>
+                    <td>Approval gates, permission scopes, and mediation before an effect lands</td>
+                </tr>
+                <tr>
+                    <td><strong>Model indispensability</strong></td>
+                    <td>If the model is replaced by a non-model fallback, does performance fall below threshold</td>
+                    <td>The result of a removal test against a predeclared task set</td>
+                    <td>Service continuity, contingency plans, and investment</td>
+                </tr>
+                <tr>
+                    <td><strong>Consequence</strong></td>
+                    <td>What could the released output or mediated action actually cause</td>
+                    <td>Severity, reversibility, detectability, scale, permissions, recovery cost</td>
+                    <td>How much assurance, and how hard the review</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <h3>Dimension 1 — decision authority: a four-rung ladder</h3>
+
+    <p>Decision authority asks how far the AI may go. The answer has four fixed rungs, and it should be written against every row of the register.</p>
+
+    <div class="table-wrapper">
+        <table>
+            <thead>
+                <tr>
+                    <th>Rung</th>
+                    <th>What the AI may do</th>
+                    <th>What must be true before you climb to it</th>
+                    <th>Evidence to keep</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td><strong>Suggest</strong></td>
+                    <td>Offers options or supporting information; the human decides everything</td>
+                    <td>The human has time enough to read it and can see where the suggestion came from</td>
+                    <td>How often people follow the suggestion, and the reasons when they do not</td>
+                </tr>
+                <tr>
+                    <td><strong>Draft</strong></td>
+                    <td>Produces work a human edits and then sends on under their own name</td>
+                    <td>The editor is genuinely competent to check that content</td>
+                    <td>Minutes spent editing per item, and the kinds of things that need fixing</td>
+                </tr>
+                <tr>
+                    <td><strong>Act with approval</strong></td>
+                    <td>Prepares a real action, but a person must approve before the effect lands</td>
+                    <td>The approver can genuinely refuse, and the queue is not so long that approval becomes rubber-stamping</td>
+                    <td>Refusal rate, waiting time for approval, and a trace of who approved</td>
+                </tr>
+                <tr>
+                    <td><strong>Act autonomously</strong></td>
+                    <td>Creates real effects on its own, within a declared boundary</td>
+                    <td>The boundary is enforced by software, not by human intention</td>
+                    <td>Rate of out-of-permission actions, time to detect, and time to recover</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <p>The common mistake is to read the product name instead of the permissions. A system called a "copilot" may sit on the fourth rung if it can call tools that write to back-office systems on its own. Conversely, a system with a fierce name like "autonomous agent" may sit on the first rung if everything it proposes must pass a human first. <strong>Classify by what the system can actually release, not by the name on the slide.</strong></p>
+
+    <h3>Dimension 2 — indispensability: test it by removing the model</h3>
+
+    <p>This is the dimension I consider most valuable, and almost nobody measures it. The question is: if we replace the declared model with a non-model fallback — the old rules, a lookup table, or a manual process — does performance on a predeclared task set fall below the threshold? If it does, the model is genuinely load-bearing. If it does not, we are paying for the model to buy convenience rather than capability.</p>
+
+    <p>The point to guard hardest is that <strong>business criticality is not the same as model indispensability</strong>. An invoicing system is unquestionably critical to the business, but if the part that uses the model is line categorisation, and the old rules achieve much the same accuracy, the model is not the load-bearing part of that system. The two live on different axes and must be recorded separately in the register.</p>
+
+    <p>The test is only credible if the conditions are declared <em>before</em> it runs — both the <strong>task set</strong> that will be used to measure and the threshold that counts as failing. Otherwise the test becomes an exercise in finding reasons for a decision already taken. How to design the test is in <a href="#en-triage">section 6</a>.</p>
+
+    <h3>Dimension 3 — consequence: six attributes</h3>
+
+    <p>The third dimension asks what the output or action the system releases could cause, looking at six attributes, which likewise have to be recorded separately, because two workflows with "the same damage" may need entirely different controls.</p>
+
+    <ul>
+        <li><strong>Severity</strong> — on one wrong call, how badly is the affected person harmed</li>
+        <li><strong>Reversibility</strong> — can it be undone, at what cost, and within what time</li>
+        <li><strong>Detectability</strong> — how do we know it was wrong, and how late do we find out? The error nobody sees is the most expensive error there is</li>
+        <li><strong>Scale</strong> — one person, a hundred people, or every customer who opened the site that day</li>
+        <li><strong>Permissions</strong> — what can the system touch? Read only, or write? Can it move money?</li>
+        <li><strong>Recovery cost</strong> — once it has happened, how many people, how many hours, and how much reputation does it take to get back to normal</li>
+    </ul>
+
+    <p>The attribute I weight most heavily is <em>detectability</em>, because it multiplies the other five. A system that fails and is noticed at once can be handled. A system that fails and is noticed three months later has already accumulated the damage before anyone starts to fix it.</p>
+
+    <h3>Why three dimensions, not one score</h3>
+
+    <p>The distinction between authority and indispensability comes from my own r8 paper, which treats consequence as a separate dimension of its own.<sup><a href="#en-ref-6">[6]</a></sup> That document is unpublished and has no public URL, so I cite it as author synthesis rather than as peer-reviewed work.</p>
+
+    <p>The external frameworks the book invokes reinforce the principle rather than supply a formula. The OECD classification framework insists that classification must follow context,<sup><a href="#en-ref-1">[1]</a></sup> and NIST AI RMF prioritises risk treatment "based on impact, likelihood, and available resources or methods".<sup><a href="#en-ref-2">[2]</a></sup> One point has to be stated precisely: risk tolerance the framework deliberately does not prescribe — the organisation has to define that itself.<sup><a href="#en-ref-2">[2]</a></sup> None of these three sources supplies a universal portfolio number, and the book says outright that avoiding false precision is deliberate.</p>
+
+    <div class="alert danger">
+        <strong>Do not manufacture a single number:</strong> the mistake I see teams make most often after reading this chapter is to go away and build a formula — score the authority, multiply by the consequence score, and out comes one "portfolio score". That destroys the entire benefit of keeping the three dimensions apart, because a low-authority high-consequence workflow and a high-authority low-consequence one land on the same number while needing completely different controls. Keep three separate values, always, and make the meeting read all three.
+    </div>
+
+    <blockquote>💡 My view: the second operating principle of this chapter is written the most briefly and costs the most — <strong>"Keep authority indispensability and consequence separate — each explains a different control need."</strong> I have sat in a room where a committee argued all afternoon about what risk score a workflow deserved, when laying the three dimensions on the table would have produced the answer in minutes: authority sits at "act with approval", indispensability has never been tested, and consequence is reversible within a day — so the next thing to do is run the removal test, not argue about a number.</blockquote>
+
+    <h2 id="en-value-learnability">4. Value × Learnability</h2>
+
+    <p>The three dimensions in the previous section tell you what kind of control a workflow needs, but not which workflow to spend effort on first. So the book overlays a second diagram — a 2×2 on a different pair of axes: <strong>value</strong> against <strong>learnability</strong>, meaning how readily you can learn from the outcome.</p>
+
+    <figure class="figure">
+      <a href="../images/ai-transformation-fig-03-decision-portfolio.png">
+        <img class="figure__img" src="../images/ai-transformation-fig-03-decision-portfolio.png" alt="A value-by-learnability 2×2 — Research, Transform, Defer, Automate — with bubble size showing annual consequence." width="1400" height="1000" loading="lazy" decoding="async">
+      </a>
+      <figcaption class="figure__caption">Figure 3 · The decision portfolio — bubble size is annual consequence.</figcaption>
+    </figure>
+
+    <p>The vertical axis is value, which is straightforward. The horizontal axis is learnability, which needs a word of explanation because people usually read it as "technical difficulty", which it is not. Learnability means <em>how fast and how cleanly the real outcome comes back to us</em> — a workflow whose result arrives within minutes and is unambiguously right or wrong has high learnability, while one whose real outcome shows up months or years later, tangled with countless other factors, has low learnability even if the model itself is trivial to build. Note that this axis is exactly the fourth property of a good candidate from <a href="#en-decision-inventory">section 2</a>.</p>
+
+    <p>The size of each bubble in the figure is <strong>annual consequence</strong>, not the size of the project or the size of the budget. That detail genuinely changes the conversation, because a small decision taken a thousand times a day becomes a large bubble, while an executive decision taken twice a year stays a small one, however much money rides on each instance.</p>
+
+    <div class="table-wrapper">
+        <table>
+            <thead>
+                <tr>
+                    <th>Quadrant</th>
+                    <th>What it means</th>
+                    <th>What to do next</th>
+                    <th>Example in the figure</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td><strong>RESEARCH</strong><br>Research and manage the constraint</td>
+                    <td>High value, but hard to learn from the outcome</td>
+                    <td>Invest in building an outcome signal first; do not scale the system yet</td>
+                    <td>Executive acquisition — the decision to buy a company</td>
+                </tr>
+                <tr>
+                    <td><strong>TRANSFORM</strong><br>Redesign and invest first</td>
+                    <td>High value and fast to learn from</td>
+                    <td>This is where to spend effort redesigning the whole workflow, not just inserting a tool</td>
+                    <td>Refund eligibility · Case routing</td>
+                </tr>
+                <tr>
+                    <td><strong>DEFER</strong><br>Defer or decline</td>
+                    <td>Low value and hard to learn from</td>
+                    <td>Record it in the register and let it pass; do not let it consume meeting time</td>
+                    <td>Rare report — the report produced once in a long while</td>
+                </tr>
+                <tr>
+                    <td><strong>AUTOMATE SELECTIVELY</strong><br>Do it when capability can be shared</td>
+                    <td>Low value but fast to learn from</td>
+                    <td>Do it only when it reuses components shared with other work; it is not worth building a whole new stack</td>
+                    <td>FAQ draft — drafting answers to frequent questions</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <p>The quadrant I most want you to be careful with is the bottom right. The word <em>selectively</em> in its name is doing work. Low-value, easy-to-learn tasks are the ones teams love, because they finish fast and produce a handsome slide — but if each one needs its own data pipeline, its own evaluation harness and its own maintenance process, the total cost quietly overtakes the value. The criterion is: do it only when it reuses capability that already exists.</p>
+
+    <div class="alert info">
+        <strong>Do not confuse the two sets of four:</strong> the four quadrant names in this figure (Research, Transform, Defer, Automate) are <em>not</em> the four portfolio moves (Scale, Contain, Redesign, Retire) in <a href="#en-four-moves">section 5</a>. The two sets sit on different axes and answer different questions — this 2×2 answers "where should we spend effort first", while the four moves answer "what decision should a workflow receive for the next 90 days once it has been classified on the three dimensions". The book never maps one onto the other, and I do not recommend doing so either, because a workflow in TRANSFORM may still receive the decision Contain if its consequence is higher than today's evidence can carry.
+    </div>
+
+    <p>My favourite way to use this figure in practice is to have the team place the bubbles <em>without mentioning technology at all</em>. No model names, no providers, no products, until every bubble is on the board — because the moment a product name enters the room, the conversation drifts back to a use-case list within five minutes.</p>
+
+    <h2 id="en-four-moves">5. The Four Portfolio Moves</h2>
+
+    <p>Once classified, leaders have exactly four moves. There is no fifth move called "carry on and see how it goes", which is nonetheless what happens in most organisations.<sup><a href="#en-ref-7">[7]</a></sup></p>
+
+    <div class="table-wrapper">
+        <table>
+            <thead>
+                <tr>
+                    <th>Move</th>
+                    <th>What must be true</th>
+                    <th>What must always come with it</th>
+                    <th>The sign you chose wrong</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td><strong>Scale</strong></td>
+                    <td>Evidence is strong, value is material, and residual risk is acceptable</td>
+                    <td>Fallback, rollback and retirement conditions written alongside the funding request</td>
+                    <td>The evidence comes from a demo rather than live work, or the removal test has never been run</td>
+                </tr>
+                <tr>
+                    <td><strong>Contain</strong></td>
+                    <td>Real value exists, but permissions or the affected population must stay bounded</td>
+                    <td>A ceiling enforced by software, not by policy on paper</td>
+                    <td>The boundary is widened a little at a time with no review, until there is no boundary left</td>
+                </tr>
+                <tr>
+                    <td><strong>Redesign</strong></td>
+                    <td>Data, fallback or review capacity is not yet sufficient to scale safely</td>
+                    <td>An explicit statement of what is missing, and who is accountable for supplying it</td>
+                    <td>"Redesign" becomes the polite word for an indefinite postponement</td>
+                </tr>
+                <tr>
+                    <td><strong>Retire</strong></td>
+                    <td>It cannot beat its baseline, or it consumes more assurance effort than the value it returns</td>
+                    <td>A plan to move users back to the old process, and lessons captured before shutdown</td>
+                    <td>Nothing was retired all year — which means the criteria have never actually been applied</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <p>The third column is the one people skip most. The fifth operating principle of this chapter says that funding scale must always come with an exit — every proposal needs a fallback, a rollback and retirement conditions. I use a simple rule on the boards I sit on: <em>a funding request without a retirement-conditions page is not admitted to the agenda</em>. Not because we expect it to fail, but because writing the retirement conditions forces the proposer to say what success is from day one.</p>
+
+    <h3>HarborLight Retail — four systems, four different decisions</h3>
+
+    <p>The book uses HarborLight Retail <em>(a fictional case from the playbook)</em> as its single worked example across the chapter.<sup><a href="#en-ref-7">[7]</a></sup> This company called four systems "customer AI" on one slide — a label that makes everything look alike, when the obligations of the four are from different worlds.</p>
+
+    <div class="table-wrapper">
+        <table>
+            <thead>
+                <tr>
+                    <th>System</th>
+                    <th>Decision authority</th>
+                    <th>Model indispensability</th>
+                    <th>Consequence</th>
+                    <th>Move</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>Product-description drafting tool</td>
+                    <td>Advisory — a human edits and sends</td>
+                    <td>Not required; the old way still works</td>
+                    <td>Low, undone immediately</td>
+                    <td><strong>Scale</strong></td>
+                </tr>
+                <tr>
+                    <td>Public product assistant on the site</td>
+                    <td>Advisory — no tool that creates a real effect</td>
+                    <td><strong>Indispensable</strong>, because its text reaches customers directly and at volume</td>
+                    <td>High from scale, not from permissions</td>
+                    <td><strong>Redesign</strong> — starting with retrieval</td>
+                </tr>
+                <tr>
+                    <td>Inventory rebalancing between branches</td>
+                    <td>Proposes transfers for a manager to approve</td>
+                    <td>The book does not say</td>
+                    <td>Reversible, internal to the system</td>
+                    <td>The book names no move</td>
+                </tr>
+                <tr>
+                    <td>Refund agent</td>
+                    <td>Creates a real external financial effect</td>
+                    <td>Depends on the design</td>
+                    <td>High — real money, straight to the customer</td>
+                    <td><strong>Contain</strong> — low value, policy-clear, hard approval</td>
+                </tr>
+                <tr>
+                    <td>Meeting summariser</td>
+                    <td>Advisory</td>
+                    <td>Not required</td>
+                    <td>Low</td>
+                    <td><strong>Retire</strong> — barely used</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <p>I have deliberately left the third row incomplete, because the book describes the rebalancing system as advisory, manager-approved and reversible, but <strong>does not say</strong> which decision it received. Filling that cell myself would be inventing data inside a worked example, which is the thing I try hardest to avoid across this series — an honest gap is worth more than a cell that is full but fabricated.</p>
+
+    <p>The most interesting row is the second. The public product assistant has the <em>lowest authority</em> of all four, because all it can do is answer with text; it has no tool that creates a real effect at all. Yet it is the one that is <em>operationally indispensable</em>, because its text reaches large numbers of customers every day. Switch it off today and the page is blank. If the organisation used one composite risk score, this system would score low and be filed as "safe" — when it is in fact the system with the largest affected population in the portfolio.</p>
+
+    <p>The lesson of the case is compressed into a single sentence: <strong>projected savings did not decide the portfolio</strong> — because the obligations differed. If HarborLight had ranked its four systems by projected savings, the order it got would not have matched the safe order in a single row.</p>
+
+    <h3>The five operating principles</h3>
+
+    <p>I have already taken the second into <a href="#en-three-dimensions">section 3</a>. The remaining four are:</p>
+
+    <ul>
+        <li><strong>Classify the released decision</strong> — a chat surface can hide autonomous effects, so look at what the system can actually release, not at the screen the user sees.</li>
+        <li><strong>Test dependency with removal</strong> — do not fund a model as load-bearing when the fallback is adequate. This is the principle that saves the most budget in the chapter.</li>
+        <li><strong>Allocate assurance by exposure and recoverability</strong> — volume and irreversibility create different obligations. Two workflows at "the same risk" may need review budgets that differ several times over.</li>
+        <li><strong>Fund scale and exit together</strong> — every investment needs fallback, rollback and retirement conditions.</li>
+    </ul>
+
+    <h2 id="en-triage">6. The Decision Portfolio Triage Workshop</h2>
+
+    <p>All of the above stays theory unless there is a forum where the decision actually gets made. The book supplies a six-step working session. I run it in about half a day per round, with a set of workflows already filtered out of the register, and with the owner of every one of them in the same room rather than filling in a form afterwards.</p>
+
+    <div class="table-wrapper">
+        <table>
+            <thead>
+                <tr>
+                    <th>Step</th>
+                    <th>Question</th>
+                    <th>Output</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td><strong>1</strong></td>
+                    <td>Agree classification definitions and one reporting date</td>
+                    <td>A one-page document defining the four rungs of authority, the indispensability criterion and the six attributes of consequence, plus the date every cell of data refers to</td>
+                </tr>
+                <tr>
+                    <td><strong>2</strong></td>
+                    <td>Place each workflow by authority and indispensability, and mark the unknowns</td>
+                    <td>A board where every workflow has a position, and unknown cells are clearly marked as unknown rather than guessed full</td>
+                </tr>
+                <tr>
+                    <td><strong>3</strong></td>
+                    <td>Add consequence, permissions, affected population, detectability and recovery time</td>
+                    <td>A register in which all six consequence attributes are complete on every row, with recovery time a number somebody will stand behind</td>
+                </tr>
+                <tr>
+                    <td><strong>4</strong></td>
+                    <td>Overlay evidence strength, realised value, review load and assurance cost</td>
+                    <td>An economic layer over the same board, exposing the workflows that look worthwhile on paper but are expensive once review is priced in</td>
+                </tr>
+                <tr>
+                    <td><strong>5</strong></td>
+                    <td>Decide Scale, Contain, Redesign or Retire for the next 90 days</td>
+                    <td>One decision per workflow, with an owner's name against it and a review date already in the calendar</td>
+                </tr>
+                <tr>
+                    <td><strong>6</strong></td>
+                    <td>Name the evidence that would change the decision</td>
+                    <td>For each decision, at least one line saying "if we see this, we will change our minds", with someone accountable for going to find that evidence</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <p>The book asks you to decide Scale, Contain, Redesign or Retire for the next 90 days, then name the evidence that would change that decision. Please read the number 90 for what it is — it is the <em>cadence the book prescribes for this session</em>, not a figure measured by research, not an industry standard, and not a finding. Organisations with shorter business cycles may want a shorter round; organisations whose work has long cycles may need to stretch it. What matters is not the number but the fact that the decision has an <em>expiry date</em>.</p>
+
+    <p>Step six is what separates this workshop from an ordinary meeting. Writing down in advance "what evidence would change our minds" does two things at once — it forces us to be honest about what today's decision rests on, and it turns a future change of mind from "admitting we were wrong" into "doing what we agreed". That is a bigger difference in internal politics than most people expect.</p>
+
+    <h3>Designing a removal test you can trust</h3>
+
+    <p>Step two of the workshop stalls immediately if there is no removal-test result yet, because nobody can say which workflows genuinely cannot run without the model. The table below is the five things that must be declared in full <em>before</em> the test begins. My advice is to write them into a document and have the workflow owner sign it off before anything is run at all.</p>
+
+    <div class="table-wrapper">
+        <table>
+            <thead>
+                <tr>
+                    <th>Design field</th>
+                    <th>What must be declared in advance</th>
+                    <th>Why it has to be declared first</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td><strong>Task set</strong></td>
+                    <td>The sample of work used to measure — its size, provenance, time window, and the share of hard cases in it</td>
+                    <td>If the task set is chosen after the result is seen, we will always choose the set that gives the answer we wanted</td>
+                </tr>
+                <tr>
+                    <td><strong>Threshold</strong></td>
+                    <td>The number that counts as "failing", written as a single criterion and referenced to the baseline</td>
+                    <td>A criterion set afterwards is storytelling to fit the result, not a test</td>
+                </tr>
+                <tr>
+                    <td><strong>Fallback</strong></td>
+                    <td>What replaces the model, which must be non-model — rules, a lookup table, or a human procedure</td>
+                    <td>If the fallback is a smaller model, the test measures model quality, not dependency</td>
+                </tr>
+                <tr>
+                    <td><strong>Who runs it</strong></td>
+                    <td>Who executes the test, which should not be the same team requesting funding to scale that system</td>
+                    <td>A conflict of interest empties the test of meaning, however good everyone's intentions</td>
+                </tr>
+                <tr>
+                    <td><strong>Evidence date</strong></td>
+                    <td>The date on which this result is considered valid, and the date it must be re-run</td>
+                    <td>Models, data and volumes change constantly; last year's result is not today's evidence</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <p>The test has three possible outcomes and all three are useful. First, performance falls clearly below threshold — the model genuinely is load-bearing, so invest in continuity: a backup provider, regression testing. Second, performance is not meaningfully different — the model is not the load-bearing part, so review what you are currently paying, immediately. And third, the result is borderline — which usually means the chosen task set does not yet reflect real work, so go back and fix the task set before concluding anything.</p>
+
+    <h2 id="en-metrics-failures">7. The Metrics That Matter</h2>
+
+    <p>A portfolio without metrics becomes opinion within one quarter. The book lists twelve. I have added a Scorecard column, as this series does throughout, so you can see which cell of the organisational scorecard each metric belongs to, and so the whole portfolio is not measured on a single dimension called money.</p>
+
+    <div class="table-wrapper">
+        <table>
+            <thead>
+                <tr>
+                    <th>Metric</th>
+                    <th>What it tells us</th>
+                    <th>Warning sign</th>
+                    <th>Scorecard</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>Share of workflows with verified classification</td>
+                    <td>How well the organisation really knows what is in its own portfolio</td>
+                    <td>Below half, meaning you are managing something you have not identified</td>
+                    <td>Learning</td>
+                </tr>
+                <tr>
+                    <td>Realised value against baseline</td>
+                    <td>Measured results compared with the old way of working, not with what was projected</td>
+                    <td>Reported as estimated savings, with no baseline to compare against</td>
+                    <td>Value</td>
+                </tr>
+                <tr>
+                    <td>Review minutes per item</td>
+                    <td>The real load falling on reviewers, and the time it takes from other work</td>
+                    <td>Falling steadily while volume rises — that is rubber-stamping, not efficiency</td>
+                    <td>People</td>
+                </tr>
+                <tr>
+                    <td>Fallback success</td>
+                    <td>Whether the system still meets the criterion with the model removed</td>
+                    <td>Never measured, or measured once at go-live</td>
+                    <td>Quality</td>
+                </tr>
+                <tr>
+                    <td>Unauthorised-effect escape rate</td>
+                    <td>How often the system created a real effect beyond its declared boundary</td>
+                    <td>The value is zero, but there is no instrument that could have detected one</td>
+                    <td>Risk</td>
+                </tr>
+                <tr>
+                    <td>Severe-output escape rate</td>
+                    <td>How often a severe output slipped past review and reached a real person</td>
+                    <td>Counting only what customers complained about, which is the tip of the iceberg</td>
+                    <td>Quality</td>
+                </tr>
+                <tr>
+                    <td>Time to detect</td>
+                    <td>The interval from the event happening to somebody knowing it happened</td>
+                    <td>Measured in days or weeks for work that releases real effects every minute</td>
+                    <td>Risk</td>
+                </tr>
+                <tr>
+                    <td>Time to recover</td>
+                    <td>The interval from knowing to being back in an acceptable state</td>
+                    <td>Never rehearsed, so it is an estimate nobody has ever tested</td>
+                    <td>Risk</td>
+                </tr>
+                <tr>
+                    <td>Escalation volume</td>
+                    <td>Work handed off to people, and where the trend is going</td>
+                    <td>Falling because people stopped escalating, not because there are fewer problems</td>
+                    <td>People</td>
+                </tr>
+                <tr>
+                    <td>Evidence cost</td>
+                    <td>The money and time spent proving the system works correctly</td>
+                    <td>Higher than the value the system creates — a signal to retire</td>
+                    <td>Economics</td>
+                </tr>
+                <tr>
+                    <td>Provider concentration</td>
+                    <td>The share of the portfolio depending on a single provider or model</td>
+                    <td>Every indispensable workflow sitting on the same provider</td>
+                    <td>Risk</td>
+                </tr>
+                <tr>
+                    <td>Portfolio spend across the four moves</td>
+                    <td>How money is split across Scale, Contain, Redesign and Retire</td>
+                    <td>No budget in the Retire column at all, meaning nobody plans to close anything</td>
+                    <td>Economics</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <div class="alert">
+        <strong>The single rule I want you to take from this chapter:</strong> review an increase in authority as closely as an increase in budget. If your organisation has a multi-stage approval process for large sums, but promoting a system from "act with approval" to "act autonomously" takes one line of configuration and no review at all, that is a far bigger hole than anything in the budget process.
+    </div>
+
+    <p>The most neglected metric on this list is <strong>provider concentration</strong>. Every team assesses the risk of its own system separately and concludes that each one is acceptable, but nobody asks what the portfolio-level risk is when every indispensable workflow in the organisation sits on the same provider. This is a risk visible only from the portfolio view — there is no way to see it from inside a single project — and it is one of the strongest reasons a decision portfolio is worth building at all.</p>
+
+    <h3>Failure patterns</h3>
+
+    <ul>
+        <li><strong>Ranking only by projected savings</strong> — an unproven number becomes the sort order for the whole portfolio, and the workflows with the heaviest obligations get pushed to the top because their numbers are the biggest.</li>
+        <li><strong>Assuming the label copilot implies low authority</strong> — classifying by product name instead of by real permissions and by what the system can release.</li>
+        <li><strong>Confusing business criticality with model indispensability</strong> — the two live on different axes, and merging them means paying for models where the fallback already works well.</li>
+        <li><strong>Using one risk score for incomparable harms</strong> — collapsing severity, reversibility and affected population into a single number, then comparing things that cannot be compared.</li>
+        <li><strong>Ignoring shared-model concentration across the portfolio</strong> — assessing every system one by one, but never assembling the picture of who the whole portfolio hangs on.</li>
+        <li><strong>Allowing pilots to persist without a scale-or-stop decision</strong> — the most expensive pattern of all, because a pilot carries the full maintenance cost while returning experimental value indefinitely.</li>
+    </ul>
+
+    <p>The first five are classification errors, fixable with the instruments in <a href="#en-three-dimensions">section 3</a>. The last is a management error, and it is fixable by one thing only: every workflow having a decision, and that decision having an expiry date.</p>
+
+    <h2 id="en-road-ahead">8. The Road Ahead</h2>
+
+    <p>If the whole chapter had to reduce to one change of practice, I would choose this: change the question in the meeting room from "where else can we use AI?" to "which recurring decision deserves a new decision this quarter, and is that decision Scale, Contain, Redesign or Retire?" The first question produces a list; the second produces change.</p>
+
+    <p>Three things can be done next week. One, open a single spreadsheet for the whole organisation and complete the seven-column register for the first ten entries. Two, take one workflow that already uses a model and design its removal test across all five fields before running it. And three, check whether your organisation's most recent AI funding request has a retirement-conditions page — if it does not, that is the first thing to fix.</p>
+
+    <p>The book opens <strong>Part two, Redesign the Organisation</strong>, with a sentence I think is the best bridge from this chapter to the next: <em>"The unit of scale is not another pilot. It is a reusable organizational capability connected to an accountable value stream."</em><sup><a href="#en-ref-7">[7]</a></sup> Put another way: a classified portfolio is not yet a transformation. It is only a list of workflows we now decide about better. The transformation starts when we begin rebuilding the workflow around the decision.</p>
+
+    <div class="alert info">
+        <strong>🧭 Layer this post advances:</strong> the <strong>Decisions</strong> layer — this post answers leader question <strong>Q2</strong> ("Which recurring decisions create that outcome") and question <strong>Q8</strong> ("What deserves to scale reshape pause or stop"), both quoted as the playbook prints them, which is in English only. On the organisational scorecard it mainly moves <strong>Value</strong> (realised value against baseline), <strong>Risk</strong> (unauthorised effects, time to detect and recover, provider concentration) and <strong>Economics</strong> (evidence cost, and portfolio spend across the four moves). Next up, <a href="/blog/ai-transformation-workflow">#6 Four Lanes — the four lanes of a human–AI workflow</a> opens Part two of the series: once the decision is chosen, the workflow around it has to be redesigned end to end, not merely have AI inserted into the existing steps.
+    </div>
+
+    <div class="key-takeaways">
+        <h3>🎯 Key Takeaways</h3>
+        <ul>
+            <li><strong>Decision inventory</strong> = a structured register of recurring decisions, with owners, inputs, timing, consequence, current performance and the candidate human–AI allocation</li>
+            <li><strong>Three dimensions</strong> = decision authority × indispensability × consequence — always measured separately, never collapsed into one score</li>
+            <li><strong>Removal test</strong> = take the model out, run a non-model fallback on the same task set, then compare against a threshold declared in advance</li>
+            <li><strong>Four moves</strong> = Scale, Contain, Redesign, Retire — one decision per workflow, for the next 90 days</li>
+            <li><strong>Authority ≈ budget</strong> = an increase in authority must be reviewed as closely as an increase in budget</li>
+            <li><strong>Provider concentration</strong> = a portfolio-level risk visible only from the portfolio view, and usually noticed too late</li>
+            <li><strong>Evidence that changes the call</strong> = every decision arrives with a line saying what evidence would change our minds</li>
+        </ul>
+    </div>
+
+    <section class="references" aria-labelledby="references">
+        <h2 id="references">References</h2>
+        <p class="references__note">Every source checked on 5 September 2026 (Asia/Bangkok) · Four evidence labels: <strong>Law</strong> statute or official notice · <strong>Standard</strong> a published official standard or framework · <strong>Study</strong> research or a field signal · <strong>Synthesis</strong> author synthesis or a non-research source</p>
+        <ol class="references__list">
+            <li id="en-ref-1"><span class="ref-tag ref-tag--standard">Standard</span> OECD. <cite>OECD Framework for the Classification of AI Systems</cite> — OECD Digital Economy Papers No. 323 (February 2022, ref. DSTI/CDEP(2020)13/FINAL). <a href="https://www.oecd.org/content/dam/oecd/en/publications/reports/2022/02/oecd-framework-for-the-classification-of-ai-systems_336a8b57/cb6d9eca-en.pdf">oecd.org</a> — accessed 2026-09-05. <span class="ref-supports">Supports: the classification of AI systems by context across five dimensions for policy use, and the fact that this framework returns no single aggregate risk score</span></li>
+            <li id="en-ref-2"><span class="ref-tag ref-tag--standard">Standard</span> NIST (U.S. Department of Commerce). <cite>Artificial Intelligence Risk Management Framework (AI RMF 1.0)</cite> — NIST AI 100-1, 26 January 2023. <a href="https://nvlpubs.nist.gov/nistpubs/ai/nist.ai.100-1.pdf">nvlpubs.nist.gov</a> — accessed 2026-09-05. <span class="ref-supports">Supports: the four core functions, the role of the Map function and the initial go/no-go decision, the prioritisation wording in MANAGE 1.2, and the statement that the framework does not prescribe risk tolerance</span></li>
+            <li id="en-ref-3"><span class="ref-tag ref-tag--standard">Standard</span> NIST. <cite>AI Risk Management Framework</cite> — the landing page for AI RMF 1.0. <a href="https://www.nist.gov/itl/ai-risk-management-framework">nist.gov</a> — accessed 2026-09-05. <span class="ref-supports">Supports: the statement that the framework is "intended for voluntary use" — voluntary, not law — and the list of the four functions Govern · Map · Measure · Manage</span></li>
+            <li id="en-ref-4"><span class="ref-tag ref-tag--synthesis">Synthesis</span> The Foundation (th). <cite>AI Transformation: From Using AI to the Fastest-Learning Organisation | The Masterclass EP01</cite> — published 28 August 2026; a Thai-language episode, title rendered in English here. <a href="https://www.youtube.com/watch?v=n_IwUYevRZo">youtube.com</a> — accessed 2026-09-05. <span class="ref-supports">Supports: the decision-first search, the decision-inventory idea, the four properties of a good candidate, and the prediction · judgment · action · outcome anatomy — paraphrased, never quoted</span></li>
+            <li id="en-ref-5"><span class="ref-tag ref-tag--synthesis">Synthesis</span> Ajay Agrawal, Joshua Gans &amp; Avi Goldfarb. <cite>A Simple Tool to Start Making Decisions with the Help of AI</cite> — Harvard Business Review, 17 April 2018. <a href="https://hbr.org/2018/04/a-simple-tool-to-start-making-decisions-with-the-help-of-ai">hbr.org</a> — accessed 2026-09-05. <span class="ref-supports">Supports: the existence of the AI canvas, taught at Rotman and beginning with the prediction box — cited for attribution only; the body is behind a paywall</span></li>
+            <li id="en-ref-6"><span class="ref-tag ref-tag--synthesis">Synthesis</span> Anirach Mingkhwan. <cite>Engineering AI-Core Systems: A Reference Architecture and Assurance Contract for Software 3.0</cite> — revision 8, September 2026. Author-supplied, unpublished, no public URL, so no link and no access date. <span class="ref-supports">Supports: the separation of decision authority from model indispensability, with consequence treated as a third and separate dimension</span></li>
+            <li id="en-ref-7"><span class="ref-tag ref-tag--synthesis">Synthesis</span> Anirach Mingkhwan. <cite>AI Transformation as an Organizational Core — Bilingual Companion Playbook</cite> — Chapter 3 and Appendices A, C, D. Author's manuscript, no public URL; evidence snapshot 5 September 2026. <span class="ref-supports">Supports: the three dimensions as posed, the four portfolio moves, the five operating principles, the six-step triage session, the metrics list, the failure patterns, Figure 3, the fictional HarborLight Retail case, and the Part-two opening sentence</span></li>
+        </ol>
+    </section>
+    </div>
+
+    <div class="post-series-footer">
+      <span class="l-th">บทความจากซีรีส์ AI Transformation for Organizations 2026</span><span class="l-en" lang="en">From the AI Transformation for Organizations 2026 series</span>
+    </div>
+
+    <nav aria-label="AI Transformation for Organizations">
+    <div class="series-nav">
+      <h3>🧭 AI Transformation for Organizations 2026</h3>
+      <div class="series-links series-links--grouped">
+        <div class="series-links__group">
+          <p class="series-links__label">Reframe · เปลี่ยนกรอบคิด</p>
+          <a href="/blog/ai-transformation-layers">#1 Six Layers</a>
+          <a href="/blog/ai-transformation-prediction">#2 Prediction</a>
+          <a href="/blog/ai-transformation-learning-loop">#3 Learning Loop</a>
+          <a href="/blog/ai-transformation-maturity">#4 Maturity</a>
+          <span class="current" aria-current="page">#5 Portfolio</span>
+        </div>
+        <div class="series-links__group">
+          <p class="series-links__label">Redesign · ออกแบบองค์กรใหม่</p>
+          <a href="/blog/ai-transformation-workflow">#6 Four Lanes</a>
+          <a href="/blog/ai-transformation-evidence-ladder">#7 Evidence Ladder</a>
+          <a href="/blog/ai-transformation-workforce">#8 Workforce</a>
+          <a href="/blog/ai-transformation-factory">#9 AI Factory</a>
+          <a href="/blog/ai-transformation-operating-model">#10 Operating Model</a>
+        </div>
+        <div class="series-links__group">
+          <p class="series-links__label">Engineer · วิศวกรรมแกนกลาง</p>
+          <a href="/blog/ai-transformation-ai-core">#11 AI-Core</a>
+          <a href="/blog/ai-transformation-contract">#12 Contract</a>
+          <a href="/blog/ai-transformation-five-rails">#13 Five Rails</a>
+          <a href="/blog/ai-transformation-release-gate">#14 Release Gate</a>
+          <a href="/blog/ai-transformation-incident-loop">#15 Incident Loop</a>
+        </div>
+        <div class="series-links__group">
+          <p class="series-links__label">Lead · นำการเปลี่ยนผ่าน</p>
+          <a href="/blog/ai-transformation-obligations">#16 Obligations</a>
+          <a href="/blog/ai-transformation-suppliers-footprint">#17 Cost &amp; Footprint</a>
+          <a href="/blog/ai-transformation-first-90-days">#18 Days 0–90</a>
+          <a href="/blog/ai-transformation-days-91-180">#19 Days 91–180</a>
+          <a href="/blog/ai-transformation-eight-questions">#20 Eight Questions</a>
+        </div>
+      </div>
+    </div>
+    </nav>
+
+  </article>
+
+  </main>
+
+  <footer class="blog-footer">
+    <nav class="blog-footer__nav" aria-label="Site">
+      <a href="../index.html">Home</a>
+      <a href="./">Blog</a>
+      <a href="../publications/">Publications</a>
+      <a href="../books/">Books</a>
+      <a href="../projects/">Projects</a>
+      <a href="../news/">News</a>
+      <a href="../index.html#contact">Contact</a>
+    </nav>
+    <a href="./">← Back to Blog</a>
+    <span>© 2026 Anirach Mingkhwan — Associate Professor, KMUTNB</span>
+  </footer>
+
+</body>
+</html>

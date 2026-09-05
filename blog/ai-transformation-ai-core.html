@@ -1,0 +1,2055 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>When Is AI the Core? — อำนาจ × ความขาดไม่ได้ และ Context ในฐานะโปรแกรม | Anirach Mingkhwan</title>
+  <meta name="description" content="AI-core ไม่ใช่ซอฟต์แวร์ที่เรียกโมเดล แต่คือ runtime ที่โมเดลมีอำนาจสูงและขาดไม่ได้ — จำแนกด้วย 2×2 ทดสอบด้วยการถอดโมเดล และผูกบริบทไว้ใน Manifest เดียว">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=Sarabun:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      color-scheme: light;
+      /* ink */
+      --navy: #11304b; --slate: #334155; --slate-light: #526174; --gray: #94a3b8;
+      /* ground */
+      --bg: #faf7f0; --white: #ffffff; --code-bg: #1e293b;
+      /* accent */
+      --blue: #226299; --blue-dark: #1a4d7a; --blue-light: #4992b9;
+      /* brand — sampled from the book covers. --gold is decorative on light grounds (2.2:1); --gold-dark is its text form. */
+      --gold: #c4a46c; --gold-dark: #7a5f22; --coral: #c2410c; --cloud: #dee7e6; --parchment: #e9e1c4; --focus: #226299;
+      /* status — use only these six, never invent a seventh */
+      --green: #22c55e; --red: #ef4444; --amber: #f59e0b;
+      --cyan: #06b6d4; --purple: #226299; --purple-dark: #1a4d7a;
+      /* type */
+      --font: 'Inter', 'Sarabun', -apple-system, BlinkMacSystemFont, sans-serif;
+      --mono: 'JetBrains Mono', 'Fira Code', 'Sarabun', monospace;
+      /* form */
+      --radius: 12px; --radius-sm: 8px; --radius-lg: 16px;
+      --measure: 720px; --wide: 860px;
+      --transition: 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+    html { scroll-behavior: smooth; }
+    body { font-family: var(--font); font-size: 17px; line-height: 1.8; color: var(--slate); background: var(--bg); -webkit-font-smoothing: antialiased; }
+    .blog-nav { position: fixed; top: 0; left: 0; right: 0; z-index: 100; background: rgba(248,250,252,0.85); backdrop-filter: blur(20px); border-bottom: 1px solid rgba(0,0,0,0.05); }
+    .blog-nav__inner { max-width: 860px; margin: 0 auto; padding: 0 2rem; height: 56px; display: flex; align-items: center; justify-content: space-between; }
+    .blog-nav__back { font-size: 0.85rem; font-weight: 500; color: var(--blue); text-decoration: none; }
+    .blog-nav__back:hover { color: #1a4d7a; }
+    .blog-nav__title { font-size: 0.85rem; font-weight: 600; color: var(--navy); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 50%; }
+    /* ── HERO ── house .post-hero on the approved Deep Blue gradient (page-design
+       §5 / INV-28). Ink is inverted for the dark ground: white title/meta, tag
+       pills white on 18% white — the openclaw-production treatment. The
+       background value must stay byte-identical to the approved string. */
+    .post-hero { padding: 8rem 2rem 3rem; background: linear-gradient(135deg, #11304b 0%, #1a4d7a 45%, #226299 100%); color: #fff; text-align: center; }
+    .post-hero__tags { display: flex; gap: 0.5rem; justify-content: center; margin-bottom: 1.25rem; flex-wrap: wrap; }
+    .post-hero__tag { display: inline-block; font-size: 0.72rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.1em; color: #fff; background: rgba(255,255,255,0.18); padding: 0.35rem 0.9rem; border-radius: 20px; }
+    .post-hero__title { font-size: clamp(1.8rem, 5vw, 3rem); font-weight: 800; color: #fff; line-height: 1.2; margin-bottom: 1rem; max-width: 720px; margin-left: auto; margin-right: auto; }
+    .post-hero__sub { font-size: 1.05rem; max-width: 640px; margin: 0 auto 1.5rem; line-height: 1.7; color: #fff; }
+    .post-hero__meta { font-size: 0.85rem; color: #fff; display: flex; align-items: center; justify-content: center; gap: 1.5rem; flex-wrap: wrap; }
+    .post-hero__series { font-weight: 600; color: #fff; }
+    /* the switch pill and the focus ring both sit on the dark hero: the pill is
+       a light chip so its labels keep their light-ground colours, and --focus
+       re-points to gold here (blue collapses on blue — the footer/pre
+       precedent). */
+    .post-hero { --focus: var(--gold); }
+    .post-hero__cover {
+      aspect-ratio: 1 / 1;
+      max-width: 380px;
+      margin: 2.5rem auto 0;
+      border-radius: var(--radius-lg, 16px);
+      overflow: hidden;
+      box-shadow: 0 20px 60px rgba(17,48,75,0.14);
+    }
+    .post-hero__cover img { width: 100%; height: 100%; object-fit: cover; display: block; }
+    .post-body { max-width: 720px; margin: 0 auto; padding: 3rem 2rem 6rem; }
+    .post-body h2 { font-size: 1.6rem; font-weight: 800; color: var(--navy); margin: 3rem 0 1rem; padding-bottom: 0.5rem; border-bottom: 2px solid rgba(34,98,153,0.15); }
+    .post-body h3 { font-size: 1.25rem; font-weight: 700; color: var(--navy); margin: 2.25rem 0 0.75rem; }
+    .post-body p { margin-bottom: 1.25rem; }
+    .post-body strong { font-weight: 700; color: var(--navy); }
+    .post-body a { color: var(--blue); text-decoration: underline; text-decoration-thickness: 1px; text-underline-offset: 2px; }
+    .post-body ul, .post-body ol { margin: 0.5rem 0 1.25rem 1.5rem; }
+    .post-body li { margin-bottom: 0.4rem; }
+    .post-body blockquote { background: rgba(34,98,153,0.06); border-left: 4px solid var(--blue); padding: 1rem 1.25rem; border-radius: 0 10px 10px 0; margin: 1.25rem 0; font-size: 0.95rem; color: var(--navy); }
+    .post-body hr { border: none; height: 1px; background: linear-gradient(90deg, transparent, rgba(34,98,153,0.2), transparent); margin: 3rem 0; }
+    /* ── CODE ── */
+    .post-body pre { background: var(--code-bg); border-radius: 12px; padding: 1.5rem; margin: 1.25rem 0 1.5rem; overflow-x: auto; border: 1px solid rgba(255,255,255,0.05); }
+    .post-body pre code { font-family: var(--mono); font-size: 0.85rem; color: #e2e8f0; line-height: 1.7; background: none; padding: 0; white-space: pre-wrap; }
+    .post-body code { font-family: var(--mono); font-size: 0.88em; background: rgba(34,98,153,0.08); color: var(--blue-dark); padding: 0.15em 0.45em; border-radius: 5px; }
+    /* ── TABLES ── */
+    .table-wrapper { overflow-x: auto; margin: 1.5rem 0; border-radius: 0.5rem; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1); }
+    table { width: 100%; border-collapse: collapse; background: white; }
+    th { background: #226299; color: white; padding: 1rem; text-align: left; font-weight: 600; }
+    td { padding: 1rem; border-bottom: 1px solid #e5e7eb; }
+    .post-body table { display: block; width: 100%; overflow-x: auto; }
+    /* ── ALERTS ── */
+    .alert { background: #fef3cd; border: 1px solid #facc15; border-radius: 0.5rem; padding: 1rem; margin: 1.5rem 0; }
+    .alert.danger { background: #fee2e2; border-color: #ef4444; }
+    .alert.info { background: #e0f2fe; border-color: #06b6d4; }
+    .alert.success { background: #d1fae5; border-color: #10b981; }
+    /* ── KEY TAKEAWAYS ── */
+    .key-takeaways { background: linear-gradient(135deg, #f3f4f6 0%, #e5e7eb 100%); border-radius: 1rem; padding: 2rem; margin: 3rem 0; }
+    .key-takeaways h3 { color: #226299; margin-bottom: 1.5rem; }
+    .post-series-footer { text-align: center; font-size: 0.85rem; color: var(--slate-light); font-style: italic; margin-top: 2rem; padding-top: 2rem; border-top: 1px solid #e2e8f0; }
+    .blog-footer { background: var(--navy); padding: 2rem 0; text-align: center; }
+    .blog-footer a { color: var(--gold); text-decoration: none; font-weight: 600; font-size: 0.9rem; }
+    .blog-footer span { color: var(--gray); font-size: 0.8rem; display: block; margin-top: 0.4rem; }
+    @media (max-width: 600px) {
+      .post-hero { padding: 7rem 1.25rem 2.5rem; }
+      .post-body { padding: 2rem 1.25rem 4rem; }
+      .post-hero__meta { flex-direction: column; gap: 0.4rem; }
+      .post-body h2 { font-size: 1.4rem; }
+      .post-body h3 { font-size: 1.15rem; }
+      .post-body pre { padding: 1rem; border-radius: 8px; }
+    }
+
+    :focus-visible { outline: 2px solid var(--focus); outline-offset: 3px; border-radius: 2px; }
+    /* the ring sits on the page ground (3px offset). Inside the navy footers
+       and code blocks var(--blue) collapses to 2.12:1, so those scopes
+       re-point --focus to gold (5.73:1 on navy). */
+    .footer, .blog-footer, pre { --focus: var(--gold); }
+    :focus:not(:focus-visible) { outline: none; }
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after {
+        animation-duration: .01ms !important; animation-iteration-count: 1 !important;
+        transition-duration: .01ms !important; scroll-behavior: auto !important;
+      }
+    }
+    h1, h2, h3, .post-hero__title, .card__title { text-wrap: balance; }
+
+    .post-body img, .post-body svg { max-width: 100%; height: auto; }
+
+    /* ── SKIP LINK ── a11y-perf R5: the link and the landmark it targets are a
+       pair — useless without both halves. Off-screen until focused, then the
+       first tab stop on every page. */
+    .skip-link { position: absolute; left: -9999px; }
+    .skip-link:focus {
+      left: 1rem; top: 1rem; z-index: 999;
+      background: var(--navy); color: #fff;
+      padding: 0.75rem 1.25rem; border-radius: var(--radius-sm);
+      font-weight: 600; text-decoration: none;
+    }
+
+    /* ── POST WAYFINDING ── the wordmark is the home link; the footer carries
+       the full destination row. */
+    .blog-nav__home {
+      font-size: 0.9rem; font-weight: 800; color: var(--navy);
+      text-decoration: none; margin-right: 1rem;
+    }
+    .blog-nav__home:hover { color: var(--blue); }
+    .blog-nav__inner > .blog-nav__back { margin-right: auto; }
+    .blog-footer__nav {
+      display: flex; flex-wrap: wrap; justify-content: center; gap: 0.35rem 1.25rem;
+      max-width: 860px; margin: 0 auto 1.25rem; padding: 0 2rem 1.25rem;
+      border-bottom: 1px solid rgba(255,255,255,0.12);
+    }
+    .blog-footer__nav a { color: var(--gold); font-size: 0.85rem; font-weight: 600; text-decoration: none; }
+    .blog-footer__nav a:hover { color: #fff; text-decoration: underline; }
+
+    html { scroll-padding-top: 5rem; }
+    [id] { scroll-margin-top: 5rem; }
+
+    /* Thai needs more room than Latin at the same nominal size. */
+    .post-body:lang(th) { font-size: 18px; line-height: 1.85; }
+    .post-body p, .post-body li, .post-body blockquote { text-wrap: pretty; }
+
+    /* ---- side-scroll affordance ----
+       pre blocks and tables can exceed 720px. These layers paint a shadow ONLY
+       where there is more content in that direction; when fully scrolled the
+       cover slides over the shadow and hides it. No JavaScript, no wrapper. */
+    .post-body pre, .post-body table {
+      overflow-x: auto;
+      background-image:
+        linear-gradient(to right, var(--code-bg, #0f172a) 30%, rgba(15,23,42,0)),
+        linear-gradient(to left, var(--code-bg, #0f172a) 30%, rgba(15,23,42,0)),
+        radial-gradient(farthest-side at 0 50%, rgba(0,0,0,.28), rgba(0,0,0,0)),
+        radial-gradient(farthest-side at 100% 50%, rgba(0,0,0,.28), rgba(0,0,0,0));
+      background-position: 0 0, 100% 0, 0 0, 100% 0;
+      background-repeat: no-repeat;
+      background-size: 40px 100%, 40px 100%, 14px 100%, 14px 100%;
+      background-attachment: local, local, scroll, scroll;
+    }
+    .post-body table {
+      background-image:
+        linear-gradient(to right, var(--white, #fff) 30%, rgba(255,255,255,0)),
+        linear-gradient(to left, var(--white, #fff) 30%, rgba(255,255,255,0)),
+        radial-gradient(farthest-side at 0 50%, rgba(17,48,75,.16), rgba(17,48,75,0)),
+        radial-gradient(farthest-side at 100% 50%, rgba(17,48,75,.16), rgba(17,48,75,0));
+      background-position: 0 0, 100% 0, 0 0, 100% 0;
+      background-repeat: no-repeat;
+      background-size: 40px 100%, 40px 100%, 14px 100%, 14px 100%;
+      background-attachment: local, local, scroll, scroll;
+    }
+
+    /* ---- table of contents ---- */
+    .post-toc {
+      max-width: 720px;
+      margin: 2rem auto 0;
+      padding: 1rem 1.25rem;
+      background: rgba(34,98,153,0.05);
+      border: 1px solid rgba(34,98,153,0.14);
+      border-left: 3px solid var(--gold, #c4a46c);
+      border-radius: 10px;
+      font-size: 0.92rem;
+    }
+    .post-toc > summary {
+      cursor: pointer;
+      font-weight: 700;
+      color: var(--navy);
+      list-style: none;
+    }
+    .post-toc > summary::-webkit-details-marker { display: none; }
+    .post-toc > summary::before {
+      content: "\25B8";
+      display: inline-block;
+      margin-right: 0.5rem;
+      transition: transform 0.2s ease;
+      color: var(--gold-dark, #7a5f22);
+    }
+    .post-toc[open] > summary::before { transform: rotate(90deg); }
+    .post-toc > summary:focus-visible { outline: 3px solid var(--focus, #226299); outline-offset: 3px; }
+    .post-toc ol { margin: 0.85rem 0 0.25rem; padding-left: 1.4rem; }
+    .post-toc li { margin-bottom: 0.4rem; line-height: 1.5; }
+    .post-toc a { color: var(--slate); text-decoration: none; }
+    .post-toc a:hover, .post-toc a:focus-visible { color: var(--blue-dark, #1a4d7a); text-decoration: underline; }
+    @media (max-width: 600px) { .post-toc { margin: 1.25rem 1rem 0; } }
+
+    /* ---- cross-document view transitions ---- */
+    @view-transition { navigation: auto; }
+    .nav, .blog-nav { view-transition-name: site-nav; }
+    .footer, .blog-footer { view-transition-name: site-footer; }
+    @media (prefers-reduced-motion: reduce) {
+      ::view-transition-group(*),
+      ::view-transition-old(*),
+      ::view-transition-new(*) { animation: none !important; }
+    }
+
+    /* ── SERIES STRIP — Hermes Agent in Practice ──
+       Same class and inner-wrapper shape as the OpenClaw strip because the
+       linter's RE_SNAV recognises exactly `series-nav` + a nested div; a
+       renamed strip would read as "no nav" and fail INV-08. All content
+       checks (INV-03 family) iterate the SERIES7 list only, so this strip's
+       labels are convention, not contract. House-styled, not the island CSS. */
+    .series-nav {
+      max-width: 720px; margin: 2rem auto 0; padding: 1.1rem 1.4rem;
+      background: rgba(255,255,255,0.75); border: 1px solid rgba(34,98,153,0.15);
+      border-left: 3px solid var(--gold); border-radius: 12px;
+    }
+    .series-nav h3 {
+      font-size: 0.78rem; font-weight: 700; text-transform: uppercase;
+      letter-spacing: 0.08em; color: var(--gold-dark); margin-bottom: 0.6rem;
+    }
+    .series-links { display: flex; flex-wrap: wrap; gap: 0.5rem; }
+    .series-links a, .series-links .current {
+      font-size: 0.82rem; font-weight: 600; padding: 0.35rem 0.8rem;
+      border-radius: 50px; text-decoration: none;
+    }
+    .series-links a { color: var(--blue-dark); background: rgba(34,98,153,0.08); }
+    .series-links a:hover { background: rgba(34,98,153,0.16); }
+    .series-links .current { color: #fff; background: var(--blue-dark); }
+    @media (max-width: 600px) { .series-nav { margin: 1.5rem 1rem 0; } }
+
+    /* ── FIGURE — the sanctioned diagram component (page-design §4 Content).
+       Diagrams are PNGs; this repo built them out of divs twice and reverted
+       twice. The image is wrapped in a link to itself so a phone can pinch a
+       1400px drawing without a line of JavaScript. */
+    .figure { margin: 2.5rem 0; }
+    .figure__img { width: 100%; height: auto; display: block;
+                   border-radius: var(--radius); border: 1px solid rgba(0,0,0,0.06); }
+    .figure__caption { font-size: 0.85rem; color: var(--slate-light);
+                       text-align: center; margin-top: 0.75rem; }
+
+    /* ── REFERENCES — every material number in this series carries its source.
+       The tags are the book's own four evidence labels. */
+    .references { margin-top: 3rem; padding-top: 2rem; border-top: 1px solid #e2e8f0; }
+    .references__note { font-size: 0.85rem; color: var(--slate-light); margin-bottom: 1rem; }
+    .references__list { padding-left: 1.4rem; font-size: 0.9rem; line-height: 1.75; }
+    .references__list li { margin-bottom: 0.7rem; }
+    .ref-tag { display: inline-block; font-size: 0.7rem; font-weight: 700;
+               letter-spacing: 0.06em; text-transform: uppercase; padding: 0.1rem 0.5rem;
+               border-radius: 50px; margin-right: 0.4rem; vertical-align: 0.05em;
+               background: rgba(34,98,153,0.1); color: var(--blue-dark); }
+    .ref-tag--law { background: rgba(239,68,68,0.12); color: #991b1b; }
+    .ref-tag--synthesis { background: rgba(196,164,108,0.22); color: var(--gold-dark); }
+    .ref-supports { display: block; color: var(--slate-light); font-size: 0.85rem; }
+
+    /* ── SERIES STRIP, GROUPED — twenty chips is four rows of noise unless they
+       are grouped, so the four parts of the book label their own rows. The
+       .series-nav and .series-links wrappers stay byte-literal because INV-08
+       recognises the strip by exactly those two, and the chips stay direct
+       children of a group because INV-03's item regex cannot see through a
+       nested tag. Grouping is a modifier plus two elements of .series-links —
+       the flat OpenClaw, Hermes and Life strips are untouched. */
+    .series-links--grouped { display: grid; gap: 0.9rem; }
+    .series-links__group { position: relative; display: flex; flex-wrap: wrap;
+                           gap: 0.5rem; padding-left: 8.25rem; min-height: 2rem; }
+    .series-links__label { position: absolute; left: 0; top: 0.45rem; width: 7.5rem;
+                           margin: 0; font-size: 0.72rem; font-weight: 700;
+                           text-transform: uppercase; letter-spacing: 0.08em;
+                           color: var(--slate-light); line-height: 1.3; }
+    @media (max-width: 600px) {
+      .series-links__group { padding-left: 0; }
+      .series-links__label { position: static; width: auto; flex-basis: 100%;
+                             margin-bottom: 0.1rem; }
+    }
+
+    /* ── LANGUAGE SWITCH — pure CSS, zero JavaScript (INV-38) ──
+       One visually-hidden checkbox as a direct child of body, BEFORE the main landmark,
+       so `#langSwitch:checked ~ main …` reaches every content block. The two
+       tracks are paired blocks: .l-th (default) and .l-en (hidden until
+       checked; display:revert restores block for divs, inline for spans).
+       Naming stays clear of INV-12's menu-token regex (hamburger|burger|
+       nav__toggle|nav-toggle|navtoggle|menu-toggle|menu__toggle) — verified.
+       No JS also means no persistence across posts; each post opens in Thai. */
+    .lang-switch-box { position: absolute; left: -9999px; }
+    .l-en { display: none; }
+    #langSwitch:checked ~ main .l-en { display: revert; }
+    #langSwitch:checked ~ main .l-th { display: none; }
+    .lang-switch {
+      display: inline-flex; align-items: center; gap: 0.55rem;
+      margin-top: 1.4rem; padding: 0.4rem 1.1rem; border-radius: 50px;
+      background: rgba(255,255,255,0.85); border: 1px solid rgba(255,255,255,0.4);
+      cursor: pointer; font-size: 0.85rem; user-select: none;
+    }
+    .lang-switch span { color: var(--slate-light); font-weight: 600; transition: color 0.2s; }
+    .lang-switch .lang-sep { color: var(--gray); font-weight: 400; }
+    .lang-switch .lang-th { color: var(--navy); font-weight: 800; }
+    #langSwitch:checked ~ main .lang-switch .lang-th { color: var(--slate-light); font-weight: 600; }
+    #langSwitch:checked ~ main .lang-switch .lang-en { color: var(--navy); font-weight: 800; }
+    .lang-switch:hover { border-color: #fff; }
+    #langSwitch:focus-visible ~ main .lang-switch {
+      outline: 2px solid var(--focus); outline-offset: 3px;
+    }
+  </style>
+  <!-- social -->
+  <link rel="canonical" href="https://anirach.com/blog/ai-transformation-ai-core.html">
+  <meta property="og:type" content="article">
+  <meta property="og:url" content="https://anirach.com/blog/ai-transformation-ai-core.html">
+  <meta property="og:site_name" content="Anirach Mingkhwan">
+  <meta property="og:locale" content="th_TH">
+  <meta property="og:locale:alternate" content="en_US">
+  <meta property="article:published_time" content="2026-09-05">
+  <meta property="article:author" content="https://anirach.com/">
+  <meta property="og:title" content="When Is AI the Core? — อำนาจ × ความขาดไม่ได้ และ Context ในฐานะโปรแกรม">
+  <meta property="og:description" content="AI-core ไม่ใช่ซอฟต์แวร์ที่เรียกโมเดล แต่คือ runtime ที่โมเดลมีอำนาจสูงและขาดไม่ได้ — จำแนกด้วย 2×2 ทดสอบด้วยการถอดโมเดล และผูกบริบทไว้ใน Manifest เดียว">
+  <meta property="og:image" content="https://anirach.com/images/ai-transformation-ai-core-og.jpg">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
+  <meta property="og:image:alt" content="When Is AI the Core? — อำนาจ × ความขาดไม่ได้ และ Context ในฐานะโปรแกรม">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:image" content="https://anirach.com/images/ai-transformation-ai-core-og.jpg">
+  <meta name="twitter:image:alt" content="When Is AI the Core? — อำนาจ × ความขาดไม่ได้ และ Context ในฐานะโปรแกรม">
+  <meta name="robots" content="max-image-preview:large">
+  <meta name="theme-color" content="#11304b">
+  <link rel="icon" href="/favicon.ico" sizes="any">
+  <link rel="apple-touch-icon" href="/apple-touch-icon.png">
+  <!-- /social -->
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "BlogPosting",
+    "headline": "When Is AI the Core? — อำนาจ × ความขาดไม่ได้ และ Context ในฐานะโปรแกรม",
+    "author": {
+      "@type": "Person",
+      "@id": "https://anirach.com/#person",
+      "name": "Anirach Mingkhwan",
+      "url": "https://anirach.com/"
+    },
+    "datePublished": "2026-09-05",
+    "dateModified": "2026-09-05",
+    "image": "https://anirach.com/images/ai-transformation-ai-core-og.jpg",
+    "inLanguage": [
+      "th",
+      "en"
+    ],
+    "mainEntityOfPage": "https://anirach.com/blog/ai-transformation-ai-core.html"
+  }
+  </script>
+</head>
+<body>
+<a href="#main" class="skip-link">Skip to content</a>
+<input type="checkbox" id="langSwitch" class="lang-switch-box" aria-label="Switch language: Thai / English">
+
+  <nav class="blog-nav">
+    <div class="blog-nav__inner">
+      <a href="../index.html" class="blog-nav__home">Anirach</a>
+      <a href="./" class="blog-nav__back">‹ Blog</a>
+      <div class="blog-nav__title">When Is AI the Core?</div>
+    </div>
+  </nav>
+
+  <main id="main">
+
+  <header class="post-hero">
+    <div class="post-hero__tags">
+      <span class="post-hero__tag">AI-as-a-Core</span>
+      <span class="post-hero__tag">Context as Program</span>
+      <span class="post-hero__tag">Release Manifest</span>
+    </div>
+    <h1 class="post-hero__title"><span class="l-th">When Is AI the Core? — อำนาจ × ความขาดไม่ได้ และ Context ในฐานะโปรแกรม</span><span class="l-en" lang="en">When Is AI the Core? — Authority × Indispensability, and Context as Program</span></h1>
+    <p class="post-hero__sub"><span class="l-th">AI-core ไม่ใช่ &quot;ซอฟต์แวร์ที่เรียกโมเดล&quot; แต่คือ runtime ที่ผลจากโมเดลควบคุมเนื้อหา การกระทำ หรือทางเดินของโปรแกรมส่วนสำคัญ และการถอดโมเดลออกทำให้งานที่ประกาศไว้ล้มเหลว</span><span class="l-en" lang="en">An AI-core system is not &quot;software that calls a model&quot;: it is a runtime in which model output controls an important share of released content, action or program branch, and removing the model breaks the declared task.</span></p>
+    <div class="post-hero__meta">
+      <span>By <strong>Anirach Mingkhwan</strong></span>
+      <span class="post-hero__series">AI Transformation for Organizations 2026 • Post #11</span>
+      <span><time datetime="2026-09-05">5 Sep 2026</time></span>
+      <span>38 min read</span>
+    </div>
+    <label for="langSwitch" class="lang-switch" title="สลับภาษา · Switch language"><span class="lang-th">ไทย</span><span class="lang-sep">·</span><span class="lang-en" lang="en">English</span></label>
+    <div class="post-hero__cover">
+      <img src="../images/ai-transformation-ai-core-cover.jpg" alt="When Is AI the Core? — อำนาจ × ความขาดไม่ได้ และ Context ในฐานะโปรแกรม" width="800" height="800" loading="eager" fetchpriority="high" decoding="async">
+    </div>
+  </header>
+
+  <article class="post-body">
+
+    <details class="post-toc l-th" open>
+      <summary>ในบทความนี้</summary>
+      <ol>
+          <li><a href="#th-not-software-that-calls-a-model">AI-core ไม่ใช่ "ซอฟต์แวร์ที่เรียกโมเดล"</a></li>
+          <li><a href="#th-two-by-two">2×2 — อำนาจตัดสินใจ × ความขาดไม่ได้ และสี่ช่องที่ต้องการคนละอย่าง</a></li>
+          <li><a href="#th-classification-card">การ์ดจำแนกสิบช่อง และตัวอย่าง CX-REFUND-01 ที่กรอกแล้ว</a></li>
+          <li><a href="#th-software-123">ซอฟต์แวร์ 1.0, 2.0 และ 3.0 อยู่ใน Call Path เดียวกัน</a></li>
+          <li><a href="#th-context-as-program">บริบทในฐานะโปรแกรม — พฤติกรรมมาจากทั้งชุดประกอบ</a></li>
+          <li><a href="#th-manifest">บัญชีรายการบริบทขณะทำงาน — หกโดเมนในรุ่นเดียว</a></li>
+          <li><a href="#th-four-layers-boundary-walk">สี่ชั้น และเวิร์กช็อป Boundary walk</a></li>
+          <li><a href="#th-metrics-failures">ตัวชี้วัดสำคัญ และรูปแบบความล้มเหลว</a></li>
+          <li><a href="#th-road-ahead">ก้าวต่อไป — จากการจำแนก สู่สัญญาที่เขียนเป็นข้อ ๆ ได้</a></li>
+      </ol>
+    </details>
+    <details class="post-toc l-en" open>
+      <summary>In this post</summary>
+      <ol>
+          <li><a href="#en-not-software-that-calls-a-model">An AI-core system is not "software that calls a model"</a></li>
+          <li><a href="#en-two-by-two">The 2×2 — decision authority × indispensability, and four cells that need different things</a></li>
+          <li><a href="#en-classification-card">The ten-field classification card, and a completed CX-REFUND-01</a></li>
+          <li><a href="#en-software-123">Software 1.0, 2.0 and 3.0 live in the same call path</a></li>
+          <li><a href="#en-context-as-program">Context as program — behaviour comes from the whole assembly</a></li>
+          <li><a href="#en-manifest">The runtime-context manifest — six domains in one release</a></li>
+          <li><a href="#en-four-layers-boundary-walk">Four layers, and the boundary-walk workshop</a></li>
+          <li><a href="#en-metrics-failures">Metrics that matter, and failure patterns</a></li>
+          <li><a href="#en-road-ahead">The road ahead — from a classification to a contract you can write as clauses</a></li>
+      </ol>
+    </details>
+    <div class="l-th">
+
+    <p>🤔 <strong>ผลิตภัณฑ์ตัวเดียวกันมี AI-assisted coding, coding agent, AI-enabled software และ AI-core อยู่ในนั้นได้พร้อมกันทั้งสี่อย่าง — แล้วส่วนไหนกันแน่ที่ต้องการ assurance envelope เต็มรูปแบบ?</strong></p>
+
+    <p>ห้าตอนที่ผ่านมาของซีรีส์นี้ว่าด้วยการออกแบบองค์กรใหม่ และปิดท้ายด้วย <a href="/blog/ai-transformation-operating-model">Federated by Design — ใครกำหนดมาตรฐาน สร้าง อนุมัติ และดำเนินงาน</a> ซึ่งจบลงที่การแบ่งบทบาทว่าใครเป็นคนวางรางกลาง ใครสร้างบนราง ใครอนุมัติ และใครรับผิดชอบผลลัพธ์ในสายคุณค่า ตอนนี้เราข้ามเข้าสู่ส่วนที่สามของซีรีส์ — <strong>Engineer · วิศวกรรมแกนกลาง</strong> — และคำถามแรกของฝั่งวิศวกรรมไม่ใช่ "จะสร้างอย่างไร" แต่คือ "สิ่งที่กำลังจะสร้างนี้ <em>เป็นอะไร</em> ในเชิงระบบ" เพราะคำตอบของคำถามนั้นเป็นตัวกำหนดว่าต้องลงทุนกับการควบคุมมากแค่ไหน</p>
+
+    <p>คำตอบของบทนี้สั้นและคมกว่าที่หลายทีมคาดไว้: <strong>AI ที่เป็นแกนหลัก (AI-core) ไม่ใช่ป้ายที่ติดให้ทั้งองค์กรหรือทั้งผลิตภัณฑ์ แต่เป็นชนิดของ runtime ที่นิยามด้วยสองแกน คือ อำนาจตัดสินใจ (decision authority) ของโมเดล และความขาดไม่ได้ (indispensability) ของโมเดล ต่อชุดงานหนึ่งที่ประกาศไว้ล่วงหน้า</strong> — และคุณพิสูจน์แกนที่สองด้วยการถอดโมเดลออกจริง ๆ แล้ววัด ไม่ใช่ด้วยการเชื่อ</p>
+
+    <h2 id="th-not-software-that-calls-a-model">1. AI-core ไม่ใช่ "ซอฟต์แวร์ที่เรียกโมเดล"</h2>
+
+    <p>บทที่ 7 ของคู่มือที่ซีรีส์นี้เดินตาม<sup><a href="#th-ref-1">[1]</a></sup> เปิดด้วยประโยคเดียวที่ทำหน้าที่เป็นทั้งนิยามและคำเตือน — <em>"AI-core is a task scoped runtime class defined by decision authority and model indispensability then governed according to consequence."</em> อ่านช้า ๆ จะเห็นว่าประโยคนี้ปฏิเสธวิธีที่คนส่วนใหญ่ใช้คำนี้อยู่ทุกวันถึงสามชั้น: มันเป็น <em>runtime class</em> ไม่ใช่ชื่อสถาปัตยกรรม มันมี <em>ขอบเขตชุดงาน</em> (task scope) กำกับ ไม่ใช่ป้ายระดับองค์กร และการกำกับดูแลของมันถูกกำหนดโดย <em>ระดับผลกระทบ</em> (consequence) ไม่ใช่โดยความก้าวหน้าทางเทคนิค</p>
+
+    <p>ฉบับภาษาอังกฤษของบทนี้ขยายความไว้ตรงกว่านั้นอีก และผมขอยกมาเต็มประโยคเพราะทุกคำมีหน้าที่:</p>
+
+    <blockquote>An AI-core system is not simply software that calls a model. It is a scoped runtime class in which model output controls an important share of released content, action, or program branch, and a predeclared removal test shows that the model is indispensable to the specified task set. Classification belongs to a task, manifest, golden set, and threshold, not to a vendor, model family, or whole organization.<sup><a href="#th-ref-1">[1]</a></sup></blockquote>
+
+    <p>ประโยคนี้มีเงื่อนไขสองข้อที่ต้องเป็นจริง <em>พร้อมกัน</em> ระบบจึงจะเรียกว่า AI-core ได้ ข้อแรกคือ <strong>ผลจากโมเดลควบคุมส่วนสำคัญของเนื้อหาที่ปล่อยออกไป การกระทำ หรือทางเดินของโปรแกรม</strong> — สังเกตว่าไม่ได้เขียนว่า "โมเดลถูกเรียกใช้" แต่เขียนว่า "ควบคุม" คือผลของโมเดลเป็นตัวกำหนดว่าอะไรจะออกไปถึงคนจริง หรือระบบจะเดินไปทางไหน ข้อที่สองคือ <strong>การทดสอบด้วยการถอดโมเดลออกซึ่งประกาศเกณฑ์ไว้ล่วงหน้า (predeclared removal test) แสดงว่าโมเดลขาดไม่ได้ต่อชุดงานที่ระบุ</strong> — คำว่า "ประกาศไว้ล่วงหน้า" คือหัวใจ เพราะถ้าคุณรันการทดสอบก่อนแล้วค่อยตั้งเกณฑ์ทีหลัง คุณไม่ได้ทดสอบอะไรเลย คุณแค่บรรยายผลที่ได้</p>
+
+    <p>ผมเจอทีมที่ผ่านเงื่อนไขข้อแรกแต่ไม่เคยแตะเงื่อนไขข้อที่สองอยู่บ่อยมาก ระบบสรุปเอกสารที่ปล่อยข้อความออกไปถึงลูกค้าโดยตรงผ่านข้อแรกเต็ม ๆ แต่พอถามว่า "ถ้าถอดโมเดลออกวันนี้ แล้วให้ Fallback ที่ประกาศไว้ทำงานแทน งานที่ประกาศไว้จะยังสำเร็จตามนิยาม Task Success หรือไม่ และคุณเคยวัดหรือยัง" คำตอบคือความเงียบ ระบบแบบนั้นอาจยังไม่ใช่ AI-core — มันอาจเป็นแค่ AI feature ที่ไม่มีใครเคยกดปุ่มปิดดู และความแตกต่างนี้แพงมาก เพราะมันเปลี่ยนงบประมาณด้านการควบคุมทั้งก้อน</p>
+
+    <h3>สี่แนวคิดที่ถูกยุบรวมกันจนหมดความหมาย</h3>
+
+    <p>ย่อหน้าถัดมาของบทนี้ทำงานสำคัญที่สุดในหน้ากระดาษ คือแยกสี่คำที่คนไทยในวงการมักใช้ปนกันจนคุยกันไม่รู้เรื่อง — <em>"This separates four ideas. AI-assisted coding changes how software is developed. A coding agent performs delegated repository work. AI-enabled software contains a model-backed feature. An AI-core system makes model-generated behavior load-bearing at runtime."</em><sup><a href="#th-ref-1">[1]</a></sup></p>
+
+    <div class="table-wrapper">
+        <table>
+            <thead>
+                <tr>
+                    <th>Idea</th>
+                    <th>เกิดขึ้นที่ไหน</th>
+                    <th>สิ่งที่โมเดลเปลี่ยน</th>
+                    <th>ต้องการ assurance envelope เต็มรูปแบบไหม</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td><strong>AI-assisted coding</strong></td>
+                    <td>ในขั้นตอนพัฒนา ก่อนถึง Production</td>
+                    <td>วิธีที่ซอฟต์แวร์ถูกพัฒนาขึ้น</td>
+                    <td>ไม่ — ตัวควบคุมอยู่ที่ Code Review และ CI ตามเดิม</td>
+                </tr>
+                <tr>
+                    <td><strong>Coding agent</strong></td>
+                    <td>ใน Repository ตามที่ได้รับมอบหมาย</td>
+                    <td>งานใน Repo ที่ถูกมอบหมายให้ทำแทน</td>
+                    <td>ไม่ใช่ envelope ของ Production แต่ต้องมีขอบเขตสิทธิ์ของตัวเอง</td>
+                </tr>
+                <tr>
+                    <td><strong>AI-enabled software</strong></td>
+                    <td>ใน Production เป็นฟีเจอร์หนึ่ง</td>
+                    <td>มีคุณลักษณะหนึ่งที่มีโมเดลหนุนอยู่</td>
+                    <td>ไม่ — ใช้ตัวควบคุมตามสัดส่วนของผลกระทบ</td>
+                </tr>
+                <tr>
+                    <td><strong>AI-core</strong></td>
+                    <td>ใน Production ขณะทำงานจริง</td>
+                    <td>พฤติกรรมที่โมเดลสร้างขึ้นกลายเป็นโครงสร้างรับน้ำหนัก</td>
+                    <td>ใช่ — และนี่คือช่องเดียวในสี่ช่องที่ต้องการ</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <p>ประโยคปิดของย่อหน้านั้นคือสิ่งที่ทำให้ตารางข้างบนไม่ใช่แค่การจัดหมวดหมู่ทางวิชาการ — <em>"One product can contain an optional summarizer, an indispensable policy advisor, and an AI-core routing function."</em><sup><a href="#th-ref-1">[1]</a></sup> ผลิตภัณฑ์ตัวเดียวมีได้ทั้งสามอย่างในเวลาเดียวกัน ดังนั้นคำถามที่ถูกจึงไม่ใช่ "ระบบของเราเป็น AI-core หรือเปล่า" แต่คือ "<em>ความสามารถไหน</em> ของระบบเราที่เป็น AI-core และอีกอันไม่ใช่ เพราะอะไร"</p>
+
+    <div class="alert">
+        <strong>คำถามจัดซื้อที่ตั้งผิดตั้งแต่ต้น:</strong> "เราจะซื้อระบบ AI-core หรือซื้อแค่ AI feature ดี" เป็นคำถามที่ตอบไม่ได้ เพราะการจำแนกไม่ได้เป็นคุณสมบัติของสินค้า — คู่มือเขียนไว้ตรง ๆ ว่าการจำแนกเป็นของ <strong>Task, Manifest, Golden Set และ Threshold</strong> ไม่ใช่ของ Vendor ตระกูลโมเดล หรือทั้งองค์กร ผลิตภัณฑ์เดียวกันที่คุณซื้อมา อาจเป็น AI feature ในการใช้งานแบบหนึ่ง และเป็น AI-core ในอีกแบบหนึ่ง ขึ้นกับว่าคุณให้มันปล่อยอะไรออกไปและถอดมันออกได้หรือไม่
+    </div>
+
+    <p>ผลที่ตามมาในทางปฏิบัติมีสองข้อ ข้อแรก ทะเบียนระบบ AI ขององค์กรที่มีคอลัมน์ "ประเภท" แล้วกรอกตามชื่อผู้ขาย ใช้ไม่ได้ ต้องกรอกตามชุดงานและ Manifest ข้อที่สอง การจำแนกมีวันหมดอายุโดยธรรมชาติ — เพราะถ้า Task, Authority, Fallback, Tool, Threshold หรือ Manifest เปลี่ยน การจำแนกเดิมก็ไม่ผูกพันอะไรอีกต่อไป และนั่นคือเหตุผลที่การ์ดในหัวข้อ <a href="#th-classification-card">3</a> มีช่องสุดท้ายชื่อ "Trigger ที่ต้องจัดประเภทใหม่"</p>
+
+    <p>ควรบอกไว้ตั้งแต่ต้นด้วยว่าโครงคิดทั้งบทนี้ — ทั้งการจำแนกสองแกน แนวคิดบริบทในฐานะโปรแกรม และ Manifest — มาจากงานวิชาการฉบับหนึ่งของผู้เขียนคู่มือ ซึ่งยังไม่ได้ตีพิมพ์และไม่มี URL สาธารณะ<sup><a href="#th-ref-2">[2]</a></sup> มันจึงเป็นการสังเคราะห์ของผู้เขียนคนเดียว ไม่ใช่มาตรฐานอุตสาหกรรม ไม่ใช่ระบบรับรอง และไม่ใช่ฉันทามติของวงการ ผมคิดว่ามันเป็นกรอบที่ใช้งานได้ดีมาก แต่ถ้าคุณเอาไปใช้ในเอกสารกำกับดูแล ต้องอ้างมันแบบที่มันเป็น</p>
+
+    <h2 id="th-two-by-two">2. 2×2 — อำนาจตัดสินใจ × ความขาดไม่ได้ และสี่ช่องที่ต้องการคนละอย่าง</h2>
+
+    <p>เมื่อรู้แล้วว่าเงื่อนไขมีสองข้อ วิธีมองที่ตรงที่สุดคือวางมันเป็นสองแกนแล้วดูว่าเกิดกี่กรณี แกนนอนคือ <strong>อำนาจตัดสินใจ</strong> — ผลจากโมเดลกำหนดสิ่งที่ปล่อยออกไปมากแค่ไหน ตั้งแต่ "เสนอให้คนอ่านแล้วคนตัดสิน" ไปจนถึง "ผลของโมเดลคือสิ่งที่ออกไปถึงลูกค้าโดยไม่มีใครอ่านทีละบรรทัด" แกนตั้งคือ <strong>ความขาดไม่ได้</strong> — ถ้าถอดโมเดลออกแล้วให้ Fallback ที่ประกาศไว้ทำงานแทน ชุดงานที่ประกาศไว้ยังสำเร็จตามเกณฑ์หรือไม่</p>
+
+    <figure class="figure">
+      <a href="../images/ai-transformation-fig-08-ai-core-matrix.png">
+        <img class="figure__img" src="../images/ai-transformation-fig-08-ai-core-matrix.png" alt="แผนภาพ 2×2 แกนความขาดไม่ได้ × อำนาจตัดสินใจ: Indispensable advisor, AI-CORE (สีแดง สูงทั้งคู่ Full assurance envelope), AI feature, Bounded agent" width="1400" height="1000" loading="lazy" decoding="async">
+      </a>
+      <figcaption class="figure__caption">รูปที่ 8 · AI เป็นแกนกลางเมื่อใด — อำนาจตัดสินใจ × ความขาดไม่ได้ (เขียนใหม่จาก Mingkhwan 2026)</figcaption>
+    </figure>
+
+    <p>สองแกนนี้ตั้งฉากกันจริง ๆ และนั่นคือประโยชน์หลักของรูปนี้ ทีมส่วนใหญ่เผลอคิดว่าสองอย่างนี้เป็นเรื่องเดียวกัน — "ถ้าโมเดลสำคัญมาก มันก็ต้องมีอำนาจมาก" — ซึ่งไม่จริงเลย ที่ปรึกษานโยบายภายในที่ทีมกฎหมายพึ่งพาทุกวันจนขาดไม่ได้ อาจไม่มีอำนาจกระทำใด ๆ นอกจากปล่อยข้อความ ส่วนเอเจนต์ที่กดปุ่มในระบบภายนอกได้เองอาจถูกถอดออกได้ทันทีโดยไม่มีใครสะดุด เพราะทีมยังทำงานเดิมด้วยมือได้อยู่</p>
+
+    <div class="table-wrapper">
+        <table>
+            <thead>
+                <tr>
+                    <th>Cell</th>
+                    <th>ความขาดไม่ได้</th>
+                    <th>อำนาจตัดสินใจ</th>
+                    <th>สิ่งที่ต้องมี</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td><strong>Indispensable advisor</strong><br>ผู้ช่วยที่ขาดไม่ได้</td>
+                    <td>สูง</td>
+                    <td>ต่ำ</td>
+                    <td>ขอบเขตของผลอยู่ที่การปล่อยข้อความ — <em>"Text release is the effect boundary"</em></td>
+                </tr>
+                <tr>
+                    <td><strong>AI-core</strong><br>AI ที่เป็นแกนหลัก</td>
+                    <td>สูง</td>
+                    <td>สูง</td>
+                    <td>กรอบการรับประกันรอบระบบเต็มรูปแบบ — <em>"Full assurance envelope"</em></td>
+                </tr>
+                <tr>
+                    <td><strong>AI feature</strong><br>คุณลักษณะ AI</td>
+                    <td>ต่ำ</td>
+                    <td>ต่ำ</td>
+                    <td>ตัวควบคุมตามสัดส่วน — <em>"Proportionate controls"</em></td>
+                </tr>
+                <tr>
+                    <td><strong>Bounded agent</strong><br>เอเจนต์ในขอบเขต</td>
+                    <td>ต่ำ</td>
+                    <td>สูง</td>
+                    <td>การควบคุมก่อนเกิดผลแบบแข็ง — <em>"Hard effect mediation"</em></td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <p>คอลัมน์ขวาสุดคือเหตุผลทั้งหมดที่ต้องแยกสองแกน เพราะสี่ช่องนี้ต้องการงานคนละชนิด ไม่ใช่งานชนิดเดียวกันในปริมาณต่างกัน</p>
+
+    <ul>
+        <li><strong>ช่อง Indispensable advisor</strong> — เมื่อขอบเขตของผลคือการปล่อยข้อความ งานควบคุมทั้งหมดจึงกระจุกอยู่ที่จุดปล่อย: อ้างอิงที่มาของข้อมูลและผลลัพธ์ (provenance) ได้ทุกข้อความหรือไม่ ปฏิเสธได้ไหมเมื่อหลักฐานอ่อน และมีเส้นทางส่งต่อให้คนเมื่อคำถามเกินขอบเขต การใส่ Execution Guard หนัก ๆ ในช่องนี้เป็นการลงทุนผิดที่ เพราะไม่มี Effect ให้กั้น</li>
+        <li><strong>ช่อง Bounded agent</strong> — ตรงกันข้ามเลย ระบบนี้ถอดออกได้ ผลกระทบต่อความต่อเนื่องทางธุรกิจต่ำ แต่มันกดปุ่มได้ งานทั้งหมดจึงอยู่ที่การควบคุมก่อนเกิดผล: สิทธิ์ผูกกับ Subject, Purpose, Amount, Duration และ Transaction และการกระทำทุกครั้งผ่านตัวกลางที่ตรวจได้</li>
+        <li><strong>ช่อง AI feature</strong> — ตัวควบคุมตามสัดส่วน ไม่ใช่ตัวควบคุมแบบมักง่าย ประโยคนี้ถูกอ่านผิดบ่อยเป็น "ไม่ต้องทำอะไร" ทั้งที่มันแปลว่า "ทำเท่าที่ผลกระทบเรียกร้อง แล้วบันทึกไว้ว่าทำไมถึงเท่านั้น"</li>
+        <li><strong>ช่อง AI-core</strong> — ต้องการทุกอย่างข้างบนพร้อมกัน บวกกับสิ่งที่อีกสามช่องไม่ต้องมี คือการกำหนดรุ่นของพื้นผิวพฤติกรรมทั้งหมด และร่องรอยที่สร้างเหตุการณ์ย้อนกลับได้ (reconstructable trace) ในทุกขั้นที่ระบบเดินผ่าน</li>
+    </ul>
+
+    <p>สิ่งที่ผมอยากเน้นจากประสบการณ์ตรวจงานจริงคือ <strong>ช่องเหล่านี้เคลื่อนที่ได้ และมักเคลื่อนโดยไม่มีใครประกาศ</strong> ระบบที่เริ่มต้นในช่อง AI feature เมื่อปีที่แล้ว วันนี้อาจอยู่ในช่อง AI-core แล้ว เพราะมีการต่อ Tool เพิ่มหนึ่งตัว หรือเพราะทีมมนุษย์ที่เคยตรวจทีละรายการถูกลดขนาดลงจนตรวจไม่ทันแล้วเปลี่ยนเป็นสุ่มตรวจ ไม่มีใครเซ็นอนุมัติการย้ายช่องนั้น มันเกิดจากการที่ทั้งสองแกนขยับทีละนิดจนข้ามเส้นไปพร้อมกัน นี่คือรูปแบบที่ตอน <a href="/blog/ai-transformation-maturity">#4</a> เรียกว่า authority debt (หนี้อำนาจ) และมันปรากฏตัวชัดที่สุดบนแผนภาพนี้</p>
+
+    <h2 id="th-classification-card">3. การ์ดจำแนกสิบช่อง และตัวอย่าง CX-REFUND-01 ที่กรอกแล้ว</h2>
+
+    <p>2×2 เป็นเครื่องมือคิด ส่วนสิ่งที่เอาเข้าห้องประชุมได้จริงคือการ์ดหนึ่งใบ ภาคผนวก ข ของคู่มือให้ <em>AI-core use-case classification card</em> มาเป็นแบบฟอร์มพร้อมใช้<sup><a href="#th-ref-1">[1]</a></sup> โดยระบุกำกับไว้ครบสามบรรทัดตามธรรมเนียมของภาคผนวกนี้ — <strong>วัตถุประสงค์</strong> จัดประเภทความสามารถที่ปล่อยจริงหนึ่งอย่างด้วยสองแกนอิสระ และประเมินระดับผลกระทบ <em>แยกต่างหาก</em> · <strong>ใช้เมื่อ</strong> คัดเลือก Use Case และเมื่อใดก็ตามที่ขอบเขต อำนาจ Fallback Tool Threshold หรือ Manifest เปลี่ยน · <strong>เจ้าของหลัก</strong> Business หรือ Product Owner โดยมี Release Owner เป็นผู้ตรวจหลักฐาน</p>
+
+    <p>คำว่า "แยกต่างหาก" ในบรรทัดวัตถุประสงค์เป็นรายละเอียดที่ผมอยากให้สังเกต ระดับผลกระทบ <em>ไม่ใช่</em> แกนที่สามของ 2×2 มันเป็นข้อมูลคนละชุดที่ประเมินแยกแล้ววางเทียบกัน เพราะการรวมมันเข้าไปในการจำแนกจะทำให้เกิดสิ่งที่อันตรายที่สุดในงานกำกับดูแล คือคะแนนเดียวที่เอาความรุนแรงไปหักล้างกับอำนาจ จนงานสองแบบที่ต้องการการควบคุมคนละชนิดได้คะแนนเท่ากัน</p>
+
+    <h3>การ์ดพร้อมใช้ — สิบช่อง ตามลำดับ</h3>
+
+    <div class="table-wrapper">
+        <table>
+            <thead>
+                <tr>
+                    <th>#</th>
+                    <th>Field</th>
+                    <th>รายการที่ต้องกรอก</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>1</td>
+                    <td>ID, task set, exclusions, manifest</td>
+                    <td>รหัส ชุดงาน กรณีที่ไม่รวม และ Manifest ที่ผูกอยู่</td>
+                </tr>
+                <tr>
+                    <td>2</td>
+                    <td>Model-controlled released behavior</td>
+                    <td>ข้อความ Tool ค่า Argument หรือ Runtime Branch — ระบุให้ชัดว่าอะไรที่โมเดลกำหนดแล้วถูกปล่อยจริง</td>
+                </tr>
+                <tr>
+                    <td>3</td>
+                    <td>Authority test and trace evidence</td>
+                    <td>Advisory หรืออำนาจสูง พร้อม Trace ที่ใช้พิสูจน์คำตอบนั้น</td>
+                </tr>
+                <tr>
+                    <td>4</td>
+                    <td>Declared non-model fallback</td>
+                    <td>Fallback ที่ไม่ใช้โมเดล ซึ่งประกาศไว้ล่วงหน้า</td>
+                </tr>
+                <tr>
+                    <td>5</td>
+                    <td>Golden set, task-success rule, predeclared indispensability threshold</td>
+                    <td>Golden Set นิยาม Task Success และเกณฑ์ความขาดไม่ได้ที่ประกาศก่อนรัน</td>
+                </tr>
+                <tr>
+                    <td>6</td>
+                    <td>Removal ablation: model versus fallback on the same set</td>
+                    <td>ผลการถอดโมเดลออก เทียบกับ Fallback บนชุดข้อมูลเดียวกัน</td>
+                </tr>
+                <tr>
+                    <td>7</td>
+                    <td>Classification</td>
+                    <td>สูง/สูง AI-core · สูง/ต่ำ Bounded Agent · แนะนำ/สูง Indispensable Advisor · แนะนำ/ต่ำ AI Feature</td>
+                </tr>
+                <tr>
+                    <td>8</td>
+                    <td>Separate consequence profile</td>
+                    <td>ความรุนแรง การเปิดรับ การตรวจพบ การกู้คืน และสิทธิหรือสินทรัพย์ที่ได้รับผล</td>
+                </tr>
+                <tr>
+                    <td>9</td>
+                    <td>Minimum controls, owner, decision, date</td>
+                    <td>ตัวควบคุมขั้นต่ำ เจ้าของ คำตัดสิน และวันที่</td>
+                </tr>
+                <tr>
+                    <td>10</td>
+                    <td>Reclassification triggers</td>
+                    <td>Trigger ที่ทำให้ต้องจัดประเภทใหม่</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <p>สามช่องที่ทีมมักกรอกไม่ได้คือช่อง 4, 5 และ 6 ซึ่งเป็นสามช่องเดียวกันที่ทำให้แกน "ความขาดไม่ได้" มีความหมาย ถ้าคุณไม่มี Fallback ที่ประกาศไว้ คุณก็ไม่มีอะไรให้เปรียบเทียบ ถ้าคุณไม่มี Golden Set และนิยาม Task Success คุณก็วัดผลการเปรียบเทียบนั้นไม่ได้ และถ้าคุณไม่ได้ประกาศเกณฑ์ก่อนรัน ผลที่ได้ก็เป็นแค่ตัวเลขที่ตีความไปทางไหนก็ได้ ผมเคยเห็นการ์ดที่กรอกช่อง 7 ว่า "AI-core" ไว้เรียบร้อยโดยที่สามช่องก่อนหน้าว่างเปล่า นั่นไม่ใช่การจำแนก มันคือความรู้สึก</p>
+
+    <h3>ตัวอย่างที่กรอกแล้ว — CX-REFUND-01</h3>
+
+    <p>ตัวอย่างทั้งหมดในภาคผนวก ข ใช้เคสเดียวกันคือ <strong>CX-REFUND-01</strong> ผู้ช่วยของ Luma Commerce Thailand <em>(กรณีสมมติจากหนังสือ)</em> ซึ่งตอบคำถามเรื่องการคืนเงินได้สองภาษา และอาจเสนอ <code>issue_refund</code> โดยมี Guard ภายนอกเป็นผู้ดำเนินการคืนเงินที่เข้าเกณฑ์ได้หนึ่งครั้ง วงเงินไม่เกิน 2,000 บาท หลังการยืนยัน ส่วนการกระทำทางการเงินอื่นทั้งหมดต้องไปถึงคน คู่มือกำกับไว้เองด้วยประโยคเดียวว่า <em>"Values are illustrative, not universal thresholds."</em><sup><a href="#th-ref-1">[1]</a></sup></p>
+
+    <div class="alert danger">
+        <strong>ตัวเลขทุกตัวในหัวข้อนี้เป็นค่าสมมติ:</strong> 2,000 บาท · 240 กรณี · 70% · 94.6% · 41.3% และรหัสทุกตัวเป็นค่าประกอบการอธิบาย ไม่ใช่เกณฑ์สากลและไม่ใช่ค่าที่วัดได้จากระบบจริงใด ๆ ห้ามยกไปเป็นเป้าหมายในตารางตัวชี้วัดขององค์กรคุณโดยเด็ดขาด — สิ่งที่นำกลับไปใช้ได้คือ <em>รูปแบบของช่อง</em> ไม่ใช่ค่าที่กรอกอยู่ในช่อง
+    </div>
+
+    <div class="table-wrapper">
+        <table>
+            <thead>
+                <tr>
+                    <th>Field</th>
+                    <th>ตัวอย่างที่กรอกแล้ว (ค่าสมมติ)</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td><strong>Scope</strong></td>
+                    <td>Order แบบ Direct Retail ในไทยที่ส่งแล้ว ครอบคลุมคำอธิบายทั่วไปและ Refund หนึ่งครั้ง ไม่รวม Fraud Flag, Subscription, Marketplace, ข้อร้องเรียนกฎหมาย เงินสกุลอื่น และยอดเกิน 2,000 บาท</td>
+                </tr>
+                <tr>
+                    <td><strong>Authority</strong></td>
+                    <td>โมเดลกำหนดคำอธิบายที่ถูกปล่อย Passage ที่อ้างอิง คำแนะนำเรื่องการคืนเงิน และ Argument ที่เสนอ โดยข้อเสนอที่เข้าเกณฑ์เดินถึง Guard ได้โดยไม่มีคนตรวจทีละบรรทัด</td>
+                </tr>
+                <tr>
+                    <td><strong>Fallback</strong></td>
+                    <td>ลิงก์นโยบายแบบตายตัว บวกคิว Customer Care โดยไม่มี Refund อัตโนมัติ</td>
+                </tr>
+                <tr>
+                    <td><strong>Ablation</strong></td>
+                    <td><code>CXGS-2026-09-v3</code> จำนวน 240 กรณี กำหนดว่า Fallback ต้องได้ 70% จึงเพียงพอ ผลสมมติคือ Candidate 94.6% และ Fallback 41.3%</td>
+                </tr>
+                <tr>
+                    <td><strong>Class</strong></td>
+                    <td>อำนาจสูงและขาดไม่ได้ จึงเป็น AI-core สำหรับชุดงานและ Manifest นี้</td>
+                </tr>
+                <tr>
+                    <td><strong>Consequence</strong></td>
+                    <td>ข้อความสาธารณะอาจทำให้เข้าใจผิด ส่วน Financial Write กู้คืนได้แต่มีต้นทุน</td>
+                </tr>
+                <tr>
+                    <td><strong>Decision</strong></td>
+                    <td>ใช้ Envelope เต็มรูปแบบ ควบคุมเส้นทาง Output และ Tool เก็บ Terminal Trace และส่งให้คนนอกกรณีจำกัด โดย VP Customer Operations เป็นเจ้าของการจัดประเภทใหม่</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <p>สังเกตอย่างหนึ่งที่ต้องอ่านให้ตรง: การ์ดเปล่ามี <strong>สิบช่อง</strong> แต่ตัวอย่างที่กรอกแล้วในหนังสือพิมพ์ออกมาเป็น <strong>เจ็ดแถว</strong> — Scope, Authority, Fallback, Ablation, Class, Consequence และ Decision<sup><a href="#th-ref-1">[1]</a></sup> เจ็ดแถวนี้เป็นการยุบช่องที่เกี่ยวข้องกันเข้าด้วยกันเพื่อให้อ่านง่ายในหน้ากระดาษ ไม่ใช่การลดจำนวนช่องที่ต้องกรอก ถ้าคุณทำการ์ดของคุณเองแล้วเหลือเจ็ดแถวตั้งแต่ต้น คุณจะพบว่าไม่มีที่ว่างสำหรับ "Trigger ที่ต้องจัดประเภทใหม่" ซึ่งเป็นช่องที่มีอายุการใช้งานยาวที่สุดในการ์ดทั้งใบ</p>
+
+    <p>แถว <strong>Ablation</strong> คือแถวที่ผมอยากให้ทุกทีมลองทำจริงสักครั้งก่อนอ่านตอนต่อไป มันบังคับสี่อย่างพร้อมกัน หนึ่ง คุณต้องมีชุดข้อมูลที่แบ่ง Slice ไว้แล้ว สอง คุณต้องมี Fallback ที่รันได้จริง ไม่ใช่ที่เขียนไว้ในเอกสาร สาม คุณต้องประกาศเกณฑ์ก่อน และสี่ ทั้งสองฝั่งต้องรันบนชุดเดียวกัน — เงื่อนไข "บนชุดเดียวกัน" นี้คือจุดที่การทดสอบส่วนใหญ่พัง เพราะทีมมักเทียบผลของโมเดลบนข้อมูลจริงเดือนล่าสุด กับผลของ Fallback ที่ประเมินจากความทรงจำของทีมเมื่อสองปีก่อน</p>
+
+    <div class="alert info">
+        <strong>สิ่งที่การทดสอบถอดโมเดลบอก และไม่บอก:</strong> มันบอกว่าโมเดลขาดไม่ได้ <em>ต่อชุดงานที่ประกาศไว้ ณ เกณฑ์ที่ประกาศไว้</em> เท่านั้น มันไม่ได้บอกว่าโมเดลทำงานได้ดี ไม่ได้บอกว่าปลอดภัย และไม่ได้บอกว่าคุ้มค่า สามคำถามหลังต้องการหลักฐานคนละชุดกัน ซึ่งเป็นเรื่องของตอน <a href="/blog/ai-transformation-contract">#12</a> เป็นต้นไป
+    </div>
+
+    <h2 id="th-software-123">4. ซอฟต์แวร์ 1.0, 2.0 และ 3.0 อยู่ใน Call Path เดียวกัน</h2>
+
+    <p>เมื่อจำแนกได้แล้วว่าอะไรคือแกนหลัก คำถามถัดไปคือแกนหลักนั้นถูกประกอบขึ้นจากอะไร คู่มือตอบด้วยประโยคที่ผมคิดว่าเป็นประโยคที่ปฏิบัติได้จริงที่สุดของทั้งบท — <em>"Software 1.0, 2.0, and 3.0 remain in the same call path. Explicit code owns interfaces, permissions, control flow, transactions, and effect mediation. Learned components contribute statistical capability. Runtime context supplies goals, examples, retrieved knowledge, tools, and state."</em><sup><a href="#th-ref-1">[1]</a></sup></p>
+
+    <p>คำว่า <strong>ซอฟต์แวร์ 1.0, 2.0 และ 3.0</strong> ถูกใช้กันแพร่หลายจนหลายคนลืมไปแล้วว่ามันมาจากไหน คู่มือเองก็ใช้คำนี้โดยไม่ระบุที่มา ผมจึงขอเติมให้ครบในฐานะส่วนเพิ่มของบทความนี้เอง ไม่ใช่ของหนังสือ: คำว่า Software 1.0 และ 2.0 มาจากบทความ <cite>Software 2.0</cite> ของ Andrej Karpathy เมื่อ 11 พฤศจิกายน 2017<sup><a href="#th-ref-3">[3]</a></sup> ซึ่งนิยาม 1.0 ว่าเป็น <em>"explicit instructions to the computer written by a programmer"</em> และ 2.0 ว่าเขียนด้วยภาษาที่มนุษย์อ่านไม่รู้เรื่อง <em>"such as the weights of a neural network"</em> ส่วนคำว่า <strong>Software 3.0</strong> ไม่ได้อยู่ในบทความปี 2017 เลยแม้แต่ครั้งเดียว — มันมาจากคีย์โน้ต <cite>Software Is Changing (Again)</cite> ที่เขาบรรยายเมื่อ 17 มิถุนายน 2025 ซึ่ง Y Combinator สรุปไว้เองว่าเป็นยุคที่ <em>"natural language becomes the new programming interface"</em><sup><a href="#th-ref-4">[4]</a></sup></p>
+
+    <p>ทั้งสองแหล่งเป็นบทความความเห็นและคลิปบรรยาย ไม่ใช่งานวิจัยที่มีการควบคุม ผมอ้างมันเพื่อความถูกต้องของที่มาของคำเท่านั้น ไม่ได้อ้างเป็นหลักฐานว่าข้อเสนอใดถูกหรือผิด</p>
+
+    <p>สิ่งที่คู่มือเพิ่มเข้ามาและมีค่ามากกว่าตัวคำศัพท์ คือการยืนยันว่าทั้งสามอย่างนี้ <strong>ไม่ได้แทนที่กัน</strong> แต่อยู่ใน Call Path เดียวกัน และแต่ละอย่างมีหน้าที่ที่ทับกันไม่ได้</p>
+
+    <div class="table-wrapper">
+        <table>
+            <thead>
+                <tr>
+                    <th>Layer</th>
+                    <th>สิ่งที่เป็นเจ้าของ</th>
+                    <th>สิ่งที่ไม่ควรถูกยกให้ชั้นอื่น</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td><strong>Software 1.0</strong><br>โค้ดที่เขียนชัดเจน</td>
+                    <td>Interface, Permission, Control Flow, Transaction และการควบคุมก่อนเกิดผล</td>
+                    <td>สิทธิ์และผลกระทบ — สองอย่างนี้ต้องอยู่ในโค้ดเสมอ ไม่ว่าโมเดลจะเก่งขึ้นแค่ไหน</td>
+                </tr>
+                <tr>
+                    <td><strong>Software 2.0</strong><br>ส่วนที่เรียนรู้มา</td>
+                    <td>ความสามารถเชิงสถิติ — การอ่าน สรุป จัดหมวด และประเมินความคล้าย</td>
+                    <td>การรับประกันเชิงโครงสร้าง เพราะผลของมันเป็นค่าประเมินเชิงความหมายเสมอ</td>
+                </tr>
+                <tr>
+                    <td><strong>Software 3.0</strong><br>บริบทขณะทำงาน</td>
+                    <td>เป้าหมาย ตัวอย่าง ความรู้ที่ค้นคืนมา Tool ที่มองเห็น และ State</td>
+                    <td>สถานะ "แก้ได้โดยไม่ต้องผ่าน Change Control" — เพราะการแก้บริบทคือการแก้โปรแกรม</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <blockquote>💡 มุมมองของผม: หลักปฏิบัติข้อที่ 2 ของบทนี้เขียนไว้สั้นที่สุดแต่กันความเสียหายได้มากที่สุด — <strong>"ให้โค้ดควบคุมสิทธิ์และผลกระทบ โมเดลเสนอ บริการ Authorize, Validate, Transact และ Release"</strong> ผมชอบที่มันเขียนเป็นลำดับกริยาสี่คำ เพราะมันตรวจได้ทันทีในการทบทวนสถาปัตยกรรม: ชี้ให้ผมดูหน่อยว่า Authorize อยู่บรรทัดไหน Validate อยู่บรรทัดไหน Transact อยู่ที่ไหน และ Release เกิดขึ้นตรงไหน ถ้าคำตอบของสี่คำนี้อยู่ใน Prompt ทั้งหมด แปลว่าคุณยังไม่มีระบบ คุณมีคำขอร้อง</blockquote>
+
+    <h3>การเปรียบเทียบกับ Operating System — ยื่นให้แล้วหักทิ้งในประโยคเดียวกัน</h3>
+
+    <p>คีย์โน้ตปี 2025 ที่กล่าวถึงข้างต้นเสนอภาพ LLM เป็นเสมือนระบบปฏิบัติการ<sup><a href="#th-ref-4">[4]</a></sup> ซึ่งเป็นภาพที่ช่วยให้เห็นโครงได้เร็ว คู่มือหยิบภาพนี้มาใช้ แล้ว <em>หักมันทิ้งในประโยคถัดมาทันที</em> — <em>"The operating-system analogy helps, but context has no true memory protection, retrieval has no stable read contract without versioning, and a natural-language tool request is not an authorized system call."</em><sup><a href="#th-ref-1">[1]</a></sup> ผมคิดว่าประโยคนี้ควรถูกพิมพ์แปะไว้ในห้องประชุมสถาปัตยกรรมของทุกทีม เพราะรอยหักสามจุดนี้คือที่มาของอุบัติเหตุจริงเกือบทั้งหมดที่ผมเคยเห็น</p>
+
+    <div class="table-wrapper">
+        <table>
+            <thead>
+                <tr>
+                    <th>OS concept</th>
+                    <th>สิ่งที่คนคาดว่าจะได้</th>
+                    <th>สิ่งที่ได้จริงในระบบ AI-core</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td><strong>Memory protection</strong></td>
+                    <td>Process หนึ่งเขียนทับหน่วยความจำของอีก Process ไม่ได้</td>
+                    <td>บริบทไม่มีการป้องกันหน่วยความจำจริง ข้อความที่ไม่น่าเชื่อถือกับคำสั่งระบบอยู่ในสายอักขระเดียวกัน การแยกจึงเป็นเรื่องของวินัยในการประกอบบริบท ไม่ใช่ของฮาร์ดแวร์</td>
+                </tr>
+                <tr>
+                    <td><strong>Read contract</strong></td>
+                    <td>อ่านที่อยู่เดิมได้ค่าเดิม จนกว่าจะมีใครเขียนทับ</td>
+                    <td>Retrieval ไม่มี Read Contract ที่คงที่หากไม่กำหนดรุ่น คำถามเดิมวันนี้กับพรุ่งนี้อาจได้ Passage คนละชุด เพราะ Corpus, Ranker หรือ Top-k ขยับ</td>
+                </tr>
+                <tr>
+                    <td><strong>System call</strong></td>
+                    <td>คำขอผ่าน Kernel ที่ตรวจสิทธิ์ทุกครั้ง</td>
+                    <td>คำขอใช้ Tool ที่เป็นภาษาธรรมชาติ <em>ไม่ใช่</em> System Call ที่ได้รับอนุญาต มันเป็นเพียงข้อเสนอ จนกว่าจะมีโค้ดที่ตรวจแล้วอนุมัติ</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <p>รอยหักข้อที่สามคือ <strong>การแยกข้อเสนอออกจากผลจริง</strong> (proposal–effect separation) ซึ่งเป็นแนวคิดที่จะกลับมาเป็นตัวเอกในตอน <a href="/blog/ai-transformation-five-rails">#13</a> และมันไม่ใช่ของใหม่เลยในทางวิศวกรรมความปลอดภัย มันคือหลัก <em>complete mediation</em> ที่ Saltzer และ Schroeder เขียนไว้ตั้งแต่ปี 1975 ว่า <em>"Every access to every object must be checked for authority."</em><sup><a href="#th-ref-5">[5]</a></sup> คู่กับหลัก <em>least privilege</em> ที่ว่าทุกโปรแกรมและทุกผู้ใช้ควรทำงานด้วยชุดสิทธิ์ที่น้อยที่สุดเท่าที่งานต้องการ และ <em>fail-safe defaults</em> ที่ให้ตัดสินใจจากการอนุญาตมากกว่าการกันออก</p>
+
+    <p>ผมชอบยกงานปี 1975 ชิ้นนี้ในห้องประชุม AI เพราะมันเปลี่ยนน้ำเสียงของบทสนทนาได้ทันที เรื่องที่เรากำลังคุยกันไม่ใช่ข้อกังวลใหม่ของยุค LLM แต่เป็นหลักการที่วงการคอมพิวเตอร์ตกลงกันมาตั้งแต่ปี 1975 — สิ่งที่ LLM เปลี่ยนคือมันทำให้ <em>ผู้ขอ</em> พูดภาษาคนได้อย่างน่าเชื่อถือมาก จนคนรู้สึกว่าไม่ต้องตรวจ ซึ่งเป็นความรู้สึกที่ต้องต้านให้ได้ในทุกจุดที่มีการกระทำจริงเกิดขึ้น (เอกสารต้นฉบับของงานชิ้นนี้อยู่หลังกำแพงชำระเงินของ IEEE ผมจึงอ้าง DOI ไว้ ไม่ได้อ้างสำเนา)</p>
+
+    <h2 id="th-context-as-program">5. บริบทในฐานะโปรแกรม — พฤติกรรมมาจากทั้งชุดประกอบ</h2>
+
+    <p>ถ้าหัวข้อที่แล้วบอกว่าใครเป็นเจ้าของอะไร หัวข้อนี้บอกว่าอะไรบ้างที่รวมกันแล้วกลายเป็น "พฤติกรรม" ของระบบ และคำตอบยาวกว่าที่เอกสารสถาปัตยกรรมส่วนใหญ่ยอมรับ — <em>"Behavior therefore depends on the assembly: model version, decoding, context, retrieval, tool semantics, orchestration, memory, and environment."</em><sup><a href="#th-ref-1">[1]</a></sup></p>
+
+    <figure class="figure">
+      <a href="../images/ai-transformation-fig-09-context-as-program.png">
+        <img class="figure__img" src="../images/ai-transformation-fig-09-context-as-program.png" alt="แผนภาพรัศมี: Model, Decoding, System context, Retrieval, Tools, Memory, Orchestration, Environment ป้อนเข้าแกนกลางสีเข้ม BEHAVIOR — One manifest" width="1400" height="1000" loading="lazy" decoding="async">
+      </a>
+      <figcaption class="figure__caption">รูปที่ 9 · บริบทเป็นส่วนหนึ่งของโปรแกรม — การเปลี่ยนแปลงใดที่มีผลต่อพฤติกรรมคือการเปลี่ยนโปรแกรมและต้องทบทวนหลักฐาน</figcaption>
+    </figure>
+
+    <p>แนวคิด <strong>บริบทในฐานะโปรแกรม</strong> (context as program) สรุปได้ด้วยประโยคเดียวที่เป็นบรรทัดฐานของทั้งบท: <em>"A behavior-relevant change to any component is a program change and should trigger a new manifest and evidence review."</em><sup><a href="#th-ref-1">[1]</a></sup> — การเปลี่ยนแปลงใดก็ตามที่มีผลต่อพฤติกรรม ในองค์ประกอบใดก็ตาม คือ <strong>การเปลี่ยนโปรแกรม</strong> และต้องสร้าง Manifest ใหม่พร้อมทบทวนหลักฐาน</p>
+
+    <p>ประโยคนี้ฟังดูเข้มงวดเกินจำเป็น จนกระทั่งคุณลองไล่ดูทีละองค์ประกอบว่าในองค์กรของคุณ ใครแก้มันได้บ้าง และแก้ผ่านกระบวนการอะไร</p>
+
+    <div class="table-wrapper">
+        <table>
+            <thead>
+                <tr>
+                    <th>Component</th>
+                    <th>ตัวอย่างการเปลี่ยนที่ดู "ไม่ใช่การแก้โค้ด"</th>
+                    <th>ผลต่อพฤติกรรม</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td><strong>Model</strong> โมเดล</td>
+                    <td>ผู้ให้บริการอัปเดตรุ่นย่อยอัตโนมัติเพราะเราไม่ได้ Pin รหัสรุ่นแบบระบุวันที่</td>
+                    <td>เปลี่ยนทุกอย่างพร้อมกัน โดยไม่มี Ticket ใดในองค์กรบันทึกไว้</td>
+                </tr>
+                <tr>
+                    <td><strong>Decoding</strong> การสุ่ม</td>
+                    <td>ปรับ Temperature หรือเพดาน Token เพื่อลดค่าใช้จ่าย</td>
+                    <td>เปลี่ยนความยาว ความครบ และอัตราการตอบไม่ครบโครงสร้าง</td>
+                </tr>
+                <tr>
+                    <td><strong>System context</strong> บริบทระบบ</td>
+                    <td>แก้ Prompt หนึ่งบรรทัดในหน้าตั้งค่า</td>
+                    <td>เปลี่ยนขอบเขตของงานทั้งชุด บ่อยครั้งโดยไม่ตั้งใจ</td>
+                </tr>
+                <tr>
+                    <td><strong>Retrieval</strong> การค้นคืน</td>
+                    <td>เพิ่มเอกสารเข้า Corpus หรือขยับค่า Top-k ขึ้นหนึ่งระดับ</td>
+                    <td>เปลี่ยนหลักฐานที่โมเดลเห็น จึงเปลี่ยนคำตอบโดยที่ Prompt เหมือนเดิมทุกตัวอักษร</td>
+                </tr>
+                <tr>
+                    <td><strong>Tools</strong> เครื่องมือ</td>
+                    <td>อัปเดต Schema ของ Tool ให้มีฟิลด์ใหม่</td>
+                    <td>เปลี่ยนสิ่งที่โมเดลเสนอได้ และเปลี่ยนพื้นที่ของผลกระทบ</td>
+                </tr>
+                <tr>
+                    <td><strong>Memory</strong> หน่วยความจำ</td>
+                    <td>ขยายอายุการเก็บ Session เพื่อให้บทสนทนา "ต่อเนื่องขึ้น"</td>
+                    <td>เปลี่ยนสิ่งที่ระบบจำข้ามครั้งได้ และเปิดความเสี่ยงเรื่องขอบเขตข้อมูล</td>
+                </tr>
+                <tr>
+                    <td><strong>Orchestration</strong> การประสานงาน</td>
+                    <td>สลับลำดับขั้น หรือเพิ่มรอบการเรียกซ้ำหนึ่งรอบ</td>
+                    <td>เปลี่ยนเส้นทางที่ระบบเดินผ่าน จึงเปลี่ยน Trace ที่ต้องเก็บ</td>
+                </tr>
+                <tr>
+                    <td><strong>Environment</strong> สภาพแวดล้อม</td>
+                    <td>ย้าย Region หรือเปลี่ยนผู้ให้บริการโครงสร้างพื้นฐาน</td>
+                    <td>เปลี่ยน Latency ข้อจำกัดด้านข้อมูล และบางครั้งเปลี่ยนพฤติกรรมของโมเดลเอง</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <p>แถวที่ผมอยากให้หยุดอ่านนานที่สุดคือแถว <strong>System context</strong> และแถว <strong>Retrieval</strong> เพราะทั้งสองแถวนี้คือจุดที่วินัยด้าน Change Control ขององค์กรพังเงียบที่สุด องค์กรที่มีกระบวนการอนุมัติการแก้โค้ดสามชั้น มักปล่อยให้ Prompt ถูกแก้ผ่านหน้าจอตั้งค่าโดยคนที่ไม่ต้องขออนุมัติใคร และปล่อยให้ Corpus ถูกเติมเอกสารใหม่ทุกสัปดาห์ในฐานะ "งานเนื้อหา" ไม่ใช่ "งานปล่อยรุ่น" ทั้งสองอย่างนี้เปลี่ยนพฤติกรรมของระบบจริงยิ่งกว่าการแก้โค้ดหลายกรณี</p>
+
+    <p>ผมเคยเจอเคสที่ชัดมากเคสหนึ่ง: คำตอบของระบบเปลี่ยนไปอย่างมีนัยระหว่างสัปดาห์ ทีมวิศวกรรมยืนยันว่าไม่มีการ Deploy ใด ๆ ซึ่งเป็นความจริง — สิ่งที่เปลี่ยนคือทีมเนื้อหาเพิ่มเอกสารนโยบายฉบับปรับปรุงเข้า Corpus โดยไม่ได้ลบฉบับเก่าออก ระบบจึงค้นเจอทั้งสองฉบับและเลือกฉบับที่คะแนนความคล้ายสูงกว่า ซึ่งบังเอิญเป็นฉบับเก่า ในกรอบคิด "บริบทในฐานะโปรแกรม" เหตุการณ์นี้คือการ Deploy โค้ดที่เปลี่ยนพฤติกรรม โดยไม่มี Manifest ไม่มีการทบทวนหลักฐาน และไม่มีทางย้อนกลับที่ระบุได้</p>
+
+    <div class="alert">
+        <strong>แบบทดสอบหนึ่งคำถามสำหรับทีมของคุณ:</strong> ถามว่า "ถ้าจะย้อนพฤติกรรมของระบบกลับไปเป็นเหมือนเมื่อวันที่ 1 เดือนที่แล้วให้ได้ทุกองค์ประกอบ ต้องย้อนอะไรบ้าง และเรามีสิ่งเหล่านั้นเก็บไว้ครบไหม" ถ้าคำตอบครอบคลุมแค่โค้ดกับรหัสรุ่นโมเดล แปลว่าอีกเจ็ดองค์ประกอบในตารางข้างบนกำลังลอยอยู่นอกระบบควบคุมรุ่น และนั่นคือเหตุผลที่ต้องมี Manifest ในหัวข้อถัดไป
+    </div>
+
+    <h2 id="th-manifest">6. บัญชีรายการบริบทขณะทำงาน — หกโดเมนในรุ่นเดียว</h2>
+
+    <p>คำตอบของคู่มือต่อปัญหาข้างบนคือ <strong>บัญชีรายการบริบทขณะทำงาน</strong> (runtime-context manifest) ซึ่งเป็นเครื่องมือชิ้นที่สี่ในภาคผนวก ข<sup><a href="#th-ref-1">[1]</a></sup> — <strong>วัตถุประสงค์</strong> ตรึงทั้งรุ่นที่กำหนดพฤติกรรม ไม่ใช่เฉพาะโมเดล โดย Manifest ระบุว่า <em>ควรจะ</em> ประกอบบริบทอย่างไร ส่วน Trace บันทึกว่าคำขอหนึ่ง ๆ <em>ได้รับ</em> อะไรจริง · <strong>ใช้เมื่อ</strong> Model, Decoding, Prompt, Corpus, Retrieval, Tool, Control, Threshold, Evaluator หรือ Orchestration เปลี่ยน · <strong>เจ้าของหลัก</strong> Release Owner ลงนาม Manifest รวม และเจ้าของแต่ละองค์ประกอบรับรองรายการของตน</p>
+
+    <p>ความแตกต่างระหว่าง Manifest กับ Trace ในบรรทัดแรกนั้นสำคัญกว่าที่เห็น Manifest คือ <em>คำประกาศ</em> ส่วน Trace คือ <em>บันทึกเหตุการณ์</em> องค์กรที่มีแต่ Log แต่ไม่มี Manifest จะตอบได้ว่าเกิดอะไรขึ้น แต่ตอบไม่ได้ว่ามันควรเกิดอะไรขึ้น จึงพิสูจน์ไม่ได้ว่าระบบเบี่ยงจากที่ประกาศไว้หรือไม่ ส่วนองค์กรที่มีแต่ Manifest แต่ไม่มี Trace จะประกาศได้สวยงามโดยไม่มีอะไรยืนยันว่าของจริงเป็นไปตามนั้น</p>
+
+    <h3>Manifest พร้อมใช้ — หกโดเมน</h3>
+
+    <div class="table-wrapper">
+        <table>
+            <thead>
+                <tr>
+                    <th>Domain</th>
+                    <th>ช่องข้อมูลบังคับ</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td><strong>Identity and scope</strong><br>Identity/Scope</td>
+                    <td>Use-case และ Manifest ID, สถานะ, เจ้าของ, Parent, Ticket, ชุดงาน, กรณีที่ไม่รวม, ภาษา, Channel และชั้นของผลกระทบ</td>
+                </tr>
+                <tr>
+                    <td><strong>Core and context</strong><br>Core/Context</td>
+                    <td>รหัสโมเดลที่ระบุวันที่แน่นอน, Region, Decoding, Assembly Commit, Hash ของ Instruction และ Template, ตัวอย่าง, ลำดับ และ Token Budget</td>
+                </tr>
+                <tr>
+                    <td><strong>Knowledge and state</strong><br>Knowledge/State</td>
+                    <td>Corpus Hash, Source Allow-list, Ranker หรือ Embedding, Top-k, ความสดของข้อมูล, ที่มาของข้อมูลและผลลัพธ์, Session Schema, Memory และ Retention</td>
+                </tr>
+                <tr>
+                    <td><strong>Tools and controls</strong><br>Tool/Control</td>
+                    <td>Hash ของ Registry และ Schema, Authentication, ขอบเขตค่า, Idempotency, Sandbox, รุ่นของรางควบคุมห้าชั้น (five rails), Threshold และ Route</td>
+                </tr>
+                <tr>
+                    <td><strong>Evaluation and trace</strong><br>Evaluation/Trace</td>
+                    <td>ชุดทดสอบ Golden, Hidden, Adaptive และ Fault; รุ่นของ Grader; Trace Schema, การจัดเก็บ, การกลบข้อมูล, สิทธิ์เข้าถึง และ Retention</td>
+                </tr>
+                <tr>
+                    <td><strong>Operations and integrity</strong><br>Operations/Integrity</td>
+                    <td>แผนการ Rollout, เพดานการเปิดรับ, เงื่อนไขหยุด, Rollback ID, เส้นทางเมื่อระบบล่ม, การอนุมัติ, Manifest Hash, Dependency Lock และตำแหน่งของ Artifact</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <div class="alert danger">
+        <strong>ห้ามเก็บ Credential ใน Manifest:</strong> คู่มือเขียนกำกับไว้ตรงใต้ตารางว่า <em>"Never store credentials in the manifest; reference a controlled secret. Deterministic decoding does not remove context, retrieval, model-version, state, or infrastructure sensitivity."</em><sup><a href="#th-ref-1">[1]</a></sup> — ให้อ้างอิง Secret ที่ควบคุมแทน และอย่าเข้าใจผิดว่าการตั้ง Decoding แบบกำหนดผลตายตัวจะลบความไวต่อ Context, Retrieval, Model Version, State หรือ Infrastructure ประโยคหลังนี้สำคัญมาก เพราะทีมจำนวนไม่น้อยตั้ง Temperature เป็น 0 แล้วประกาศว่าระบบ "ทำซ้ำได้" ทั้งที่อีกห้าแหล่งของความแปรผันยังเปิดอยู่ทั้งหมด
+    </div>
+
+    <h3>ตัวอย่างที่กรอกแล้ว — และเหตุผลที่มันมีห้าแถว ไม่ใช่หก</h3>
+
+    <p>ตัวอย่าง CX-REFUND-01 ในหนังสือรวมโดเมน <em>Evaluation and trace</em> กับ <em>Operations and integrity</em> ไว้ในแถวเดียวชื่อ "Evaluation and operations" ตัวอย่างจึงพิมพ์ออกมาเป็นห้าแถว ทั้งที่ Manifest พร้อมใช้มีหกโดเมน<sup><a href="#th-ref-1">[1]</a></sup> ผมเลือกที่จะไม่ "แก้" ให้เป็นหกแถว เพราะการยุบนี้เป็นข้อเท็จจริงของหน้ากระดาษที่คุณจะเห็นถ้าเปิดหนังสือ และเพราะมันสะท้อนสิ่งที่เกิดขึ้นจริงในทีม — เจ้าของชุดทดสอบกับเจ้าของแผน Rollout มักเป็นคนเดียวกัน จนคนลืมว่าเป็นสองโดเมนที่ต้องรับรองแยกกัน</p>
+
+    <div class="table-wrapper">
+        <table>
+            <thead>
+                <tr>
+                    <th>Domain</th>
+                    <th>ตัวอย่างที่กรอกแล้ว (ค่าสมมติทั้งหมด)</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td><strong>Identity/Scope</strong></td>
+                    <td><code>CX-REFUND-01.2026-09-rc4</code>, Parent <code>2026-08-prod2</code>, Change <code>CHG-4821</code>; Web/Mobile ไทย ภาษาไทย/อังกฤษ และขอบเขตกับกรณีที่ไม่รวมตามการ์ดจำแนกในหัวข้อ <a href="#th-classification-card">3</a></td>
+                </tr>
+                <tr>
+                    <td><strong>Core/Context</strong></td>
+                    <td>รหัสสมมติที่ระบุวันที่ <code>luma/cx-core-2026-08-17</code>; Temperature 0, สูงสุด 900 Token, Schema Mode; Assembly Commit <code>9f31c7a</code>, Template <code>refund-chat-v12</code>, ห้ามยกระดับ Untrusted Text เป็น Instruction</td>
+                </tr>
+                <tr>
+                    <td><strong>Knowledge/State</strong></td>
+                    <td>Corpus <code>TH-CX-2026-09-01</code> พร้อม Immutable Hash, Policy Allow-list, Ranker <code>rr-4.2</code>, Top-k 6; Session Schema v5 และไม่มี Memory ข้ามลูกค้า</td>
+                </tr>
+                <tr>
+                    <td><strong>Tool/Control</strong></td>
+                    <td><code>paytools-v7</code> เฉพาะ <code>issue_refund</code>, 1–2,000 บาท, ต้องมี Confirmation และ Idempotency; <code>cx-rails-v9</code>, Output Schema v6 และ Threshold ตามสัญญา</td>
+                </tr>
+                <tr>
+                    <td><strong>Evaluation/Operations</strong></td>
+                    <td><code>CXGS-v3</code>, <code>CXRT-v5</code>, Hidden <code>CXH-2026Q3</code>, Adaptive <code>CXA-09</code>, Fault <code>CXF-v4</code>; เปิดเป็นขั้น 5/25/50/100%; หยุดเมื่อมี Prohibited Effect, Severe Escape หรือ Terminal Trace หาย; พร้อมลายเซ็นเจ็ดฝ่ายและ Manifest Hash ที่แก้ไม่ได้</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <p>รายละเอียดเล็ก ๆ ที่ผมอยากชี้ให้เห็นคือรหัสชุดทดสอบ ในการ์ดจำแนกหัวข้อ <a href="#th-classification-card">3</a> ชุดทดสอบเดียวกันนี้เขียนว่า <code>CXGS-2026-09-v3</code> แต่ใน Manifest เขียนว่า <code>CXGS-v3</code> คู่มือใช้สองรูปแบบในสองเครื่องมือ และผมเลือกคงไว้ทั้งสองแบบตามต้นฉบับ ไม่ปรับให้เหมือนกัน — เพราะจุดนี้เองคือบทเรียนย่อย ๆ ของบท: ถ้ารหัสของสิ่งเดียวกันเขียนไม่เหมือนกันในสองเอกสาร ระบบตรวจสอบอัตโนมัติจะจับคู่มันไม่ได้ และ "Manifest Resolution" ในตารางตัวชี้วัดหัวข้อ <a href="#th-metrics-failures">8</a> ก็จะล้มเหลวด้วยเหตุผลที่ไม่มีใครคิดว่าเป็นเหตุผล</p>
+
+    <div class="alert info">
+        <strong>หมายเหตุสำหรับบริบทไทย:</strong> ตัวอย่างนี้เป็นเคสไทยโดยตั้งใจ และร่องรอยของความเป็นไทยอยู่ใน Manifest สี่จุด — Corpus <code>TH-CX-2026-09-01</code> ที่ผูก Hash ไว้แบบแก้ไม่ได้ · Channel ระบุว่าเป็น Web/Mobile ในไทย · ภาษาระบุว่าไทย/อังกฤษ ซึ่งแปลว่าชุดทดสอบต้องมีทั้งสองภาษาและต้องมี Slice แยก · และขอบเขตวงเงินระบุเป็นบาท (1–2,000 บาท) ไม่ใช่สกุลอื่น ส่วนเรื่อง <strong>เขตเวลา</strong> ตัวอย่างในหนังสือไม่ได้ระบุ Offset <code>+07</code> ไว้ — การกำหนดให้ทุก Timestamp ใน Manifest และ Trace เขียนเป็นเวลาที่ระบุ Offset ชัดเจนเป็น <em>ข้อเสนอของผมเอง</em> ไม่ใช่ข้อกำหนดของคู่มือ แต่ผมเสนอเพราะเคยเห็นการสอบสวนเหตุการณ์ที่เสียเวลาไปครึ่งวันกับการเถียงว่า Log สองชุดที่เวลาต่างกันเจ็ดชั่วโมงเป็นเหตุการณ์เดียวกันหรือไม่
+    </div>
+
+    <p>สำหรับองค์กรที่ต้องอธิบายเรื่องนี้กับผู้ตรวจสอบภายนอก มีจุดยึดที่เป็นสากลอยู่จุดหนึ่ง NIST AI 600-1 ซึ่งเป็น Generative AI Profile ของกรอบ AI RMF เผยแพร่เมื่อ 26 กรกฎาคม 2024<sup><a href="#th-ref-6">[6]</a></sup> ระบุแนวปฏิบัติข้อ MS-2.8-003 ไว้ว่าให้ใช้เครื่องมือด้านความโปร่งใสของเนื้อหาเพื่อบันทึกทุกครั้งที่เนื้อหาถูกสร้าง แก้ไข หรือส่งต่อ เพื่อให้ได้ประวัติที่แก้ไม่ได้และตามรอยได้ และเสริมว่า <em>"Robust version control systems can also be applied to track changes across the AI lifecycle over time."</em> พูดง่าย ๆ คือแนวคิดกำหนดรุ่นของพื้นผิวพฤติกรรมทั้งหมดไม่ได้ขัดกับกรอบสากล มันคือรูปธรรมที่ละเอียดกว่าของสิ่งที่กรอบสากลบอกให้ทำ — โดยต้องไม่ลืมว่า NIST AI 600-1 เป็นกรอบ <strong>สมัครใจ</strong> และมีขอบเขตของตัวเองระบุไว้ว่าองค์กรต้องเลือกและปรับ Action ให้ตรงกับ Use Case และระดับความเสี่ยงของตนเอง</p>
+
+    <h2 id="th-four-layers-boundary-walk">7. สี่ชั้น และเวิร์กช็อป Boundary walk</h2>
+
+    <p>สถาปัตยกรรมอ้างอิงของบทนี้มีสี่ชั้น และมีชุดตัวควบคุมที่พาดผ่านทุกชั้น<sup><a href="#th-ref-1">[1]</a></sup></p>
+
+    <ul>
+        <li><strong>ชั้นที่ 1 — Governed data foundation</strong> ฐานข้อมูลที่กำกับแล้ว ให้ข้อมูลหลักที่ถือเป็นความจริงขององค์กร และความรู้ที่กำหนดรุ่นไว้ — ถ้าชั้นนี้ไม่มีรุ่น ชั้นบนทั้งหมดก็กำหนดรุ่นไม่ได้จริง</li>
+        <li><strong>ชั้นที่ 2 — AI-core layer</strong> รวมโมเดล การประกอบบริบท การค้นคืน และหน่วยความจำที่มีขอบเขต — นี่คือชั้นที่ "ความสามารถ" อยู่ และเป็นชั้นที่ให้การรับประกันเชิงโครงสร้างไม่ได้</li>
+        <li><strong>ชั้นที่ 3 — Orchestration</strong> ประสาน Request ส่วนประกอบเฉพาะทาง Tool และ State — ชั้นนี้เป็นเจ้าของลำดับและเส้นทาง จึงเป็นเจ้าของ Trace ด้วย</li>
+        <li><strong>ชั้นที่ 4 — Applications and human operations</strong> ส่งมอบผลลัพธ์และจัดการส่วนที่เหลือ — คำว่า "ส่วนที่เหลือ" คือคำที่หลายทีมข้ามไป ทั้งที่มันหมายถึงกรณีที่ระบบปฏิเสธ ส่งต่อ หรือทำไม่สำเร็จ ซึ่งเป็นงานของคนเสมอ</li>
+        <li><strong>พาดผ่านทั้งสี่ชั้น — Assurance controls</strong> ตัวควบคุมด้านการรับประกันไม่ได้เป็นชั้นที่ห้า แต่ตัดขวางทุกชั้น ซึ่งเป็นรูปแบบเดียวกับ "spine" ที่ตอน <a href="/blog/ai-transformation-layers">#1</a> วางไว้ตั้งแต่ต้นซีรีส์</li>
+    </ul>
+
+    <p>เพื่อให้เห็นภาพว่าสี่ชั้นนี้ทำงานอย่างไรในหนึ่งคำขอ คู่มือเดินเคส CX-REFUND-01 ให้ดูทีละขั้น: คำขอที่ยืนยันตัวตนแล้วเข้าสู่ Context Assembler ระบบค้นเฉพาะข้อความนโยบายที่อนุมัติแล้ว และอ่านสถานะคำสั่งซื้อปัจจุบันผ่านบริการที่จำกัดขอบเขต โมเดลอาจร่างคำตอบ เลือก Route หรือเสนอ <code>issue_refund(amount, reason)</code> — แล้วประโยคสำคัญที่สุดของทั้งย่อหน้าก็มา: <em>"The proposal is not the effect."</em> ข้อเสนอไม่ใช่ผล ตัวที่ทำให้เกิดผลคือ Execution Guard ซึ่งตรวจ Identity, Allow-list, Schema, Customer Binding, Amount, Approval Token, Transaction Budget และ Idempotency หลังได้ผลจาก Tool ระบบประกอบบริบทใหม่อีกครั้ง และเฉพาะคำตอบที่ถูกต้องเชิงโครงสร้างและมีหลักฐานหนุนเพียงพอเท่านั้นที่ไปถึงการปล่อย มิฉะนั้นจะถูกซ่อมหนึ่งครั้ง ระงับ หรือส่งต่อ<sup><a href="#th-ref-1">[1]</a></sup></p>
+
+    <h3>หลักปฏิบัติห้าประการ</h3>
+
+    <p>บทนี้สรุปเป็นหลักปฏิบัติห้าข้อ ซึ่งผมยกมาทั้งชุดตามลำดับของหนังสือ (ข้อ 2 คือข้อที่ผมยกไปขยายไว้ในหัวข้อ <a href="#th-software-123">4</a> แล้ว)</p>
+
+    <ol>
+        <li><strong>ระบุพฤติกรรม AI-core อย่างมีขอบเขต</strong> — ประกาศ Task, Authority, Fallback, Golden Set และ Threshold</li>
+        <li><strong>ให้โค้ดควบคุมสิทธิ์และผลกระทบ</strong> — โมเดลเสนอ บริการ Authorize, Validate, Transact และ Release</li>
+        <li><strong>กำหนดรุ่นของพื้นผิวพฤติกรรมทั้งหมด</strong> — ผูก Model, Context, Corpus, Tool, Policy, Evaluator และ Threshold</li>
+        <li><strong>ให้สิทธิ์ต่ำสุดต่อคำขอ</strong> — ผูก Tool กับ Subject, Purpose, Amount, Duration และ Transaction</li>
+        <li><strong>ออกแบบ Fallback เป็นเส้นทางหลัก</strong> — งานปลายเปิดมักต้อง Refuse, Degrade หรือ Escalate</li>
+    </ol>
+
+    <p>ข้อ 4 คือรูปธรรมของสิ่งที่คู่มือเรียกว่า <strong>อำนาจกระทำเท่าที่จำเป็น</strong> (least agency) และข้อ 5 คือข้อที่ทีมมองข้ามบ่อยที่สุด — "Fallback เป็นเส้นทางหลัก" ไม่ได้แปลว่า Fallback เป็นแผนสำรอง แต่แปลว่าสำหรับงานปลายเปิด เส้นทางที่ระบบจะเดินบ่อยที่สุดควรเป็นการปฏิเสธ ลดระดับ หรือส่งต่อ และเส้นทางเหล่านั้นต้องถูกออกแบบให้ดีเท่ากับเส้นทางที่สำเร็จ ไม่ใช่เป็นข้อความ error ที่เขียนทิ้งไว้ตอนตีสาม</p>
+
+    <h3>เวิร์กช็อป Boundary walk — หกกรณี × หกคำถาม</h3>
+
+    <p>เครื่องมือภาคปฏิบัติของบทนี้คือการเดินหกกรณีผ่านสถาปัตยกรรมทีละจุดเปลี่ยน โดยถามคำถามชุดเดิมหกข้อทุกครั้ง ผลลัพธ์ที่ต้องได้คือ <strong>Boundary Inventory</strong> และการกำจัดทุกเส้นทางที่ Release หรือ Commit Effect โดยไม่ผ่านการกำกับ<sup><a href="#th-ref-1">[1]</a></sup></p>
+
+    <p>คำถามหกข้อที่ถามซ้ำทุกจุดเปลี่ยน มีดังนี้ — (1) อะไรข้าม Boundary นี้ · (2) สิ่งใดที่เราเชื่อถือ · (3) สิ่งใดเป็นค่าประเมิน · (4) Hard Invariant ข้อใดใช้ · (5) Trace ใดพิสูจน์เส้นทางนี้ · (6) ใครรับผิดชอบเมื่อล้มเหลว คำถามข้อ 2 กับ 3 คู่กันเสมอ และเป็นคู่ที่แยกการรับประกันเชิงโครงสร้าง (structural guarantee) ออกจากค่าประเมินเชิงความหมาย (semantic estimate) ซึ่งเป็นเส้นแบ่งที่ตอน <a href="/blog/ai-transformation-contract">#12</a> จะสร้างสัญญาทั้งฉบับขึ้นมาบนมัน</p>
+
+    <div class="table-wrapper">
+        <table>
+            <thead>
+                <tr>
+                    <th>Case</th>
+                    <th>What is trusted vs estimated</th>
+                    <th>Hard invariant</th>
+                    <th>Trace that proves the route</th>
+                    <th>Who handles failure</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td><strong>Benign</strong><br>กรณีปกติ</td>
+                    <td>เชื่อถือ: ตัวตนที่ยืนยันแล้วและสถานะคำสั่งซื้อจากบริการที่จำกัดขอบเขต · ประเมิน: ความเกี่ยวข้องของ Passage และถ้อยคำของคำตอบ</td>
+                    <td>ทุกข้อความที่ปล่อยต้องผ่าน Schema และต้องอ้าง Passage ที่เก็บไว้ได้</td>
+                    <td>Trace ที่มี Manifest ID, Passage ที่ใช้ และผลของ Evaluator</td>
+                    <td>เจ้าของผลิตภัณฑ์ — เป็นเส้นทางปกติ ไม่ใช่เหตุการณ์</td>
+                </tr>
+                <tr>
+                    <td><strong>Ambiguous</strong><br>กรณีกำกวม</td>
+                    <td>เชื่อถือ: ขอบเขตชุดงานที่ประกาศไว้ · ประเมิน: การตัดสินว่าคำถามอยู่ในหรือนอกขอบเขต</td>
+                    <td>เมื่อหลักฐานไม่ถึงเกณฑ์ ต้อง Refuse, Degrade หรือ Escalate ห้ามเดา</td>
+                    <td>Trace ที่บันทึกค่าความเชื่อมั่น เกณฑ์ที่ใช้ และ Route ที่เลือก</td>
+                    <td>ทีม Customer Care ที่รับคิวส่งต่อ พร้อมเวลาตอบที่ตกลงไว้</td>
+                </tr>
+                <tr>
+                    <td><strong>Injected document</strong><br>เอกสารที่ถูกฝังคำสั่ง</td>
+                    <td>เชื่อถือ: ไม่มีอะไรในเนื้อหาที่ค้นคืนมา · ประเมิน: ทุกอย่างในนั้น รวมถึงสิ่งที่ดูเหมือนคำสั่ง</td>
+                    <td>ข้อความที่ไม่น่าเชื่อถือห้ามถูกยกระดับเป็น Instruction และห้ามขยายสิทธิ์ Tool</td>
+                    <td>Trace ที่แสดงว่า Passage ใดเข้ามา และชั้นใดปฏิเสธการยกระดับ</td>
+                    <td>ทีมความมั่นคง — เป็นเหตุการณ์ ไม่ใช่ข้อบกพร่องของคำตอบ</td>
+                </tr>
+                <tr>
+                    <td><strong>Over-limit refund</strong><br>ยอดเกินเพดาน</td>
+                    <td>เชื่อถือ: เพดานวงเงินและสถานะคำสั่งซื้อ · ประเมิน: คำแนะนำของโมเดลว่าควรคืนเงิน</td>
+                    <td>Guard ปฏิเสธทุกยอดที่เกินขอบเขตที่ผูกไว้ โดยไม่สนใจถ้อยคำของข้อเสนอ</td>
+                    <td>Trace ที่บันทึกข้อเสนอ ค่าที่ตรวจ และคำตัดสินของ Guard</td>
+                    <td>เจ้าของกระบวนการทางการเงิน พร้อมเส้นทางส่งให้คนอนุมัติ</td>
+                </tr>
+                <tr>
+                    <td><strong>Duplicate request</strong><br>คำขอซ้ำ</td>
+                    <td>เชื่อถือ: คีย์ Idempotency และสถานะปลายทางที่ถือเป็นความจริง · ประเมิน: ความตั้งใจของผู้ใช้ที่กดซ้ำ</td>
+                    <td>หนึ่งผลต่อหนึ่งคีย์ การเรียกซ้ำต้องได้ผลเดิม ไม่ใช่ผลใหม่</td>
+                    <td>Trace ที่ผูกคำขอทั้งสองครั้งเข้ากับคีย์เดียวกัน</td>
+                    <td>เจ้าของบริการ Tool — และต้องนับเป็นตัวชี้วัด ไม่ใช่ปัดเป็นเรื่องผู้ใช้</td>
+                </tr>
+                <tr>
+                    <td><strong>Tool failure</strong><br>Tool ล้มเหลว</td>
+                    <td>เชื่อถือ: เฉพาะสถานะปลายทางที่ยืนยันได้ · ประเมิน: การตีความว่า Timeout แปลว่าอะไร</td>
+                    <td>ห้ามรายงานผลสำเร็จเมื่อสถานะปลายทางยังยืนยันไม่ได้ ต้องเข้าสู่ภาวะปลอดภัยเมื่อระบบล้มเหลว</td>
+                    <td>Trace ที่มีบันทึกปลายทางครบ รวมถึงกรณีที่ไม่มีคำตอบกลับมา</td>
+                    <td>ทีมปฏิบัติการ พร้อมเส้นทางเมื่อระบบล่มที่ระบุไว้ใน Manifest</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <p>กรณี <strong>Injected document</strong> เป็นกรณีที่ผมอยากให้ทุกทีมเดินเป็นกรณีแรก ไม่ใช่กรณีที่สาม เพราะมันเป็นกรณีเดียวที่ผู้เล่นอีกฝั่งเป็นคนออกแบบข้อมูลนำเข้าโดยตั้งใจ NIST AI 600-1 จัดเรื่องนี้ไว้ในหมวด Information Security และแยกไว้ชัดว่ามีทั้งแบบตรงและ <em>แบบอ้อม</em> — <em>"Indirect prompt injection attacks occur when adversaries remotely… exploit LLM-integrated applications by injecting prompts into data likely to be retrieved."</em><sup><a href="#th-ref-6">[6]</a></sup> คำว่า "data likely to be retrieved" คือหัวใจ เพราะมันแปลว่าช่องทางโจมตีไม่ได้อยู่ที่หน้าจอแชต แต่อยู่ที่เอกสารทุกฉบับที่ระบบของคุณอาจค้นเจอ ซึ่งรวมถึงเอกสารที่ลูกค้าอัปโหลดเข้ามาเอง</p>
+
+    <p>ข้อควรรู้เพิ่มเติมคือ NIST AI 600-1 แจกแจงความเสี่ยงเฉพาะของ Generative AI ไว้ 12 หมวด<sup><a href="#th-ref-6">[6]</a></sup> โดยเอกสารระบุขอบเขตของตัวเองไว้ว่าความเสี่ยงบางส่วนยังไม่เป็นที่รู้จัก จึงยากที่จะกำหนดขอบเขตหรือประเมินได้อย่างเหมาะสม และองค์กรต้องเลือกกับปรับ Action ให้ตรงกับ Use Case และระดับความเสี่ยงของตนเอง — ผมย้ำอีกครั้งว่ามันเป็นกรอบสมัครใจ ไม่ใช่ข้อบังคับ และบทความนี้ไม่ได้ให้ความเห็นทางกฎหมายใด ๆ</p>
+
+    <p>ผลลัพธ์ของเวิร์กช็อปไม่ใช่รายงาน แต่คือ <strong>Boundary Inventory</strong> — รายการจุดข้ามขอบเขตทั้งหมดพร้อมคำตอบหกข้อของแต่ละจุด และเงื่อนไขความสำเร็จมีข้อเดียว คือ <em>ไม่เหลือเส้นทางใดที่ปล่อยเนื้อหาหรือทำให้เกิดผลจริงโดยไม่ผ่านตัวกลาง</em> ถ้าเดินครบหกกรณีแล้วยังเจอเส้นทางแบบนั้นอยู่ งานถัดไปไม่ใช่การเขียนรายงาน แต่คือการลบเส้นทางนั้นทิ้งก่อนปล่อยรุ่น</p>
+
+    <h2 id="th-metrics-failures">8. ตัวชี้วัดสำคัญ และรูปแบบความล้มเหลว</h2>
+
+    <p>คู่มือระบุสิ่งที่ต้องติดตามไว้เป็นรายการเดียวยาว ๆ ตั้งแต่ความครอบคลุมของเส้นทางที่ผ่านตัวกลาง ไปจนถึงความถูกต้องของสถานะปลายทางที่ถือเป็นความจริง<sup><a href="#th-ref-1">[1]</a></sup> ผมแปลงเป็นตารางพร้อมสัญญาณความล้มเหลวของแต่ละตัว และผูกกับช่องบนกระดานคะแนนหกช่องที่ตอน <a href="/blog/ai-transformation-layers">#1</a> วางไว้ — โดยขอย้ำก่อนว่าทั้งหมดนี้เป็น <em>สิ่งที่ต้องติดตาม</em> ไม่ใช่ <em>เป้าหมาย</em> และค่าสมมติจากเคส CX-REFUND-01 ในหัวข้อ <a href="#th-classification-card">3</a> ห้ามถูกยกมาเป็นเป้าในตารางนี้เด็ดขาด</p>
+
+    <div class="table-wrapper">
+        <table>
+            <thead>
+                <tr>
+                    <th>Metric</th>
+                    <th>สิ่งที่วัด</th>
+                    <th>สัญญาณว่ากำลังมีปัญหา</th>
+                    <th>Scorecard</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td><strong>Mediated-path coverage</strong></td>
+                    <td>สัดส่วนของเส้นทางที่ปล่อยเนื้อหาหรือทำให้เกิดผล ซึ่งผ่านตัวกลางที่ตรวจได้</td>
+                    <td>ต่ำกว่า 100% แม้เพียงเส้นทางเดียว — เพราะเส้นทางที่ไม่ผ่านตัวกลางคือเส้นทางที่ Guard ไม่มีอยู่</td>
+                    <td>Risk</td>
+                </tr>
+                <tr>
+                    <td><strong>Manifest resolution</strong></td>
+                    <td>สัดส่วนของคำขอที่ผูกกลับไปยัง Manifest ที่ระบุรุ่นได้ครบทุกองค์ประกอบ</td>
+                    <td>มีคำขอที่ไม่รู้ว่ารันด้วยบริบทชุดใด ซึ่งแปลว่าสอบสวนย้อนหลังไม่ได้</td>
+                    <td>Risk</td>
+                </tr>
+                <tr>
+                    <td><strong>Provenance</strong></td>
+                    <td>สัดส่วนของข้อความที่ปล่อยออกไปแล้วอ้างที่มาของข้อมูลและผลลัพธ์ได้จริง</td>
+                    <td>ข้ออ้างเชิงนโยบายที่ไม่มี Passage รองรับ — จุดเริ่มของการให้ข้อมูลผิดต่อสาธารณะ</td>
+                    <td>Quality</td>
+                </tr>
+                <tr>
+                    <td><strong>Schema rejection</strong></td>
+                    <td>อัตราที่ผลลัพธ์ถูกปฏิเสธเพราะไม่ตรงโครงสร้างที่กำหนด</td>
+                    <td>ค่าพุ่งขึ้นหลังเปลี่ยนรุ่นโมเดลหรือ Decoding — เป็นสัญญาณเตือนล่วงหน้าที่ราคาถูกที่สุด</td>
+                    <td>Quality</td>
+                </tr>
+                <tr>
+                    <td><strong>Unauthorized-effect escape</strong></td>
+                    <td>จำนวนครั้งที่ผลกระทบเกิดขึ้นจริงโดยไม่ผ่านการอนุมัติที่กำหนด</td>
+                    <td>มากกว่าศูนย์ — ตัวนี้ไม่มีค่าที่ยอมรับได้ มีแล้วต้องหยุดรุ่น</td>
+                    <td>Risk</td>
+                </tr>
+                <tr>
+                    <td><strong>Duplicate rejection</strong></td>
+                    <td>อัตราที่คำขอซ้ำถูกปฏิเสธด้วยกลไก Idempotency</td>
+                    <td>เป็นศูนย์ทั้งที่ผู้ใช้กดซ้ำจริง แปลว่ากลไกไม่ทำงาน ไม่ใช่ไม่มีปัญหา</td>
+                    <td>Risk</td>
+                </tr>
+                <tr>
+                    <td><strong>Trace completeness</strong></td>
+                    <td>สัดส่วนของคำขอที่มีร่องรอยครบทุกขั้นที่ระบบเดินผ่าน</td>
+                    <td>ร่องรอยขาดตรงขั้นที่ล้มเหลว ซึ่งเป็นขั้นเดียวที่เราต้องการมันจริง ๆ</td>
+                    <td>Learning</td>
+                </tr>
+                <tr>
+                    <td><strong>Fallback</strong></td>
+                    <td>สัดส่วนของงานที่ลงเอยด้วยการปฏิเสธหรือลดระดับตามที่ออกแบบไว้</td>
+                    <td>ต่ำผิดปกติ มักแปลว่าระบบกำลังเดาแทนที่จะปฏิเสธ</td>
+                    <td>Quality</td>
+                </tr>
+                <tr>
+                    <td><strong>Escalation</strong></td>
+                    <td>ปริมาณงานที่ถูกส่งต่อให้คน และแนวโน้มของมัน</td>
+                    <td>ลดลงเพราะคนเลิกส่งต่อ ไม่ใช่เพราะระบบดีขึ้น</td>
+                    <td>People</td>
+                </tr>
+                <tr>
+                    <td><strong>Task success by slice</strong></td>
+                    <td>อัตราความสำเร็จตามนิยามที่ประกาศไว้ แยกตาม Slice</td>
+                    <td>ค่ารวมดีขึ้นขณะที่ Slice ภาษาไทยหรือ Slice กรณีขอบแย่ลง</td>
+                    <td>Quality</td>
+                </tr>
+                <tr>
+                    <td><strong>p50 และ p95 latency</strong></td>
+                    <td>เวลาตอบสนองที่ค่ากลางและที่หางของการแจกแจง</td>
+                    <td>p50 นิ่งแต่ p95 ยืดออก — ผู้ใช้กลุ่มที่เจอกรณียากที่สุดคือกลุ่มที่รอนานที่สุด</td>
+                    <td>Value</td>
+                </tr>
+                <tr>
+                    <td><strong>Token</strong></td>
+                    <td>ปริมาณ Token ต่อคำขอและต่อชุดงาน</td>
+                    <td>โตขึ้นเงียบ ๆ หลังขยาย Corpus หรือเพิ่มรอบการเรียก</td>
+                    <td>Economics</td>
+                </tr>
+                <tr>
+                    <td><strong>Cost</strong></td>
+                    <td>ต้นทุนต่อคำขอ และต้นทุนต่อผลลัพธ์ที่สำเร็จจริง</td>
+                    <td>ต้นทุนต่อคำขอลดลงขณะที่ต้นทุนต่อผลสำเร็จเพิ่มขึ้น</td>
+                    <td>Economics</td>
+                </tr>
+                <tr>
+                    <td><strong>Authoritative post-state accuracy</strong></td>
+                    <td>ความถูกต้องของสถานะปลายทางที่ถือเป็นความจริง หลังการกระทำเสร็จสิ้น</td>
+                    <td>ระบบรายงานว่าสำเร็จ แต่สถานะจริงในระบบการเงินไม่ตรง</td>
+                    <td>Risk</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <p>ผมจงใจไม่สรุปว่ารายการนี้มี "กี่ตัว" เพราะจำนวนขึ้นกับว่านับ p50 กับ p95 เป็นตัวเดียวหรือสองตัว และการอ้างตัวเลขรวมแบบนั้นจะกลายเป็นตัวเลขที่ถูกอ้างต่อโดยไม่มีใครกลับไปดูรายการจริง สิ่งที่ควรจำแทนคือ <em>รูปร่าง</em> ของรายการ: มันเริ่มจากตัวชี้วัดเชิงโครงสร้าง (ครอบคลุม ผูกรุ่น อ้างที่มา) แล้วค่อยไปตัวชี้วัดเชิงคุณภาพ (สำเร็จตาม Slice) แล้วจึงไปตัวชี้วัดเชิงเศรษฐศาสตร์ ไม่ใช่เรียงกลับทาง</p>
+
+    <p>สองตัวที่ถูกละเลยที่สุดในรายการนี้คือ <strong>Manifest resolution</strong> กับ <strong>Authoritative post-state accuracy</strong> ตัวแรกถูกละเลยเพราะไม่มีใครรู้สึกว่ามันเป็นตัวชี้วัด มันดูเหมือนงานเอกสาร — จนกระทั่งวันที่มีเหตุการณ์แล้วคุณต้องตอบให้ได้ภายในชั่วโมงแรกว่าคำขอที่มีปัญหาเมื่อวานรันด้วยบริบทชุดไหน ส่วนตัวหลังถูกละเลยเพราะทีมส่วนใหญ่วัดสิ่งที่ระบบ <em>รายงาน</em> ไม่ใช่สิ่งที่ระบบปลายทาง <em>เป็น</em> ซึ่งเป็นความต่างที่ไม่มีความหมายเลยจนกระทั่งวันที่มันไม่ตรงกัน</p>
+
+    <h3>รูปแบบความล้มเหลว</h3>
+
+    <p>คู่มือระบุรูปแบบความล้มเหลวไว้แปดข้อ<sup><a href="#th-ref-1">[1]</a></sup> ซึ่งอ่านแล้วจะพบว่าเกือบทุกข้อคือการละเมิดหลักปฏิบัติข้อใดข้อหนึ่งในห้าข้อข้างต้น</p>
+
+    <ul>
+        <li><strong>Chatbot ที่ติดเพิ่มภายหลัง</strong> — ต่อ AI เข้ากับกระบวนการเดิมโดยไม่ได้ออกแบบเส้นทางการปล่อยและผลกระทบใหม่</li>
+        <li><strong>Prompt ที่แก้นอก Change Control</strong> — การเปลี่ยนโปรแกรมที่ไม่มี Ticket ไม่มีรุ่น และย้อนกลับไม่ได้</li>
+        <li><strong>การเรียกโมเดลตรงจาก UI</strong> — ข้ามชั้น Orchestration ไปเลย จึงไม่มีที่ให้วาง Guard และไม่มีที่ให้เก็บ Trace</li>
+        <li><strong>Tool ไม่ผูก Subject</strong> — เครื่องมือที่ทำอะไรก็ได้กับใครก็ได้ ตราบใดที่ Argument ถูกโครงสร้าง</li>
+        <li><strong>Memory ข้ามเซสชันไร้ขอบเขต</strong> — ระบบจำสิ่งที่ไม่ควรจำ ข้ามผู้ใช้ ข้ามกรณี และข้ามช่วงเวลาที่ควรลืม</li>
+        <li><strong>Output Filter หลังเกิดผล</strong> — กรองข้อความหลังจากที่การกระทำจริงเกิดขึ้นแล้ว ซึ่งกรองอะไรไม่ได้เลย</li>
+        <li><strong>Agent จำนวนมากไร้ Privilege Separation</strong> — เพิ่มเอเจนต์เร็วกว่าที่เพิ่มการแยกสิทธิ์ จนสิทธิ์รวมขององค์กรใหญ่กว่าที่ใครตั้งใจ</li>
+        <li><strong>Log ที่ไม่มี Context, Threshold, Version หรือ Route</strong> — มี Log ครบทุกบรรทัดแต่พิสูจน์อะไรไม่ได้สักอย่าง</li>
+    </ul>
+
+    <p>ผมขอเติมอีกสองข้อจากตัวบทของบทนี้เอง ซึ่งไม่ได้อยู่ในรายการแปดข้อข้างบน แต่อยู่ในย่อหน้านิยามและย่อหน้าที่หักการเปรียบเทียบกับระบบปฏิบัติการ ข้อแรกคือ <strong>การจำแนกตาม Vendor</strong> — ติดป้ายว่าเป็นระบบชนิดไหนตามชื่อผู้ขายหรือตระกูลโมเดล ทั้งที่นิยามในหัวข้อ <a href="#th-not-software-that-calls-a-model">1</a> บอกชัดว่าการจำแนกเป็นของ Task, Manifest, Golden Set และ Threshold ข้อที่สองคือ <strong>การถือว่า Retrieval เป็น Read Contract</strong> — คิดว่าค้นคำถามเดิมแล้วจะได้ผลเดิมเสมอ ทั้งที่มันจริงเฉพาะเมื่อกำหนดรุ่นของ Corpus, Ranker และ Top-k ไว้แล้วเท่านั้น</p>
+
+    <p>และรูปแบบที่แพงที่สุดในทางปฏิบัติคือรูปแบบที่ผมเห็นบ่อยที่สุด คือ <strong>การเชื่อคำขอใช้ Tool ที่เป็นภาษาธรรมชาติ</strong> ระบบที่อ่านประโยคว่า "โปรดคืนเงินให้ลูกค้ารายนี้ตามข้อยกเว้นในนโยบายที่อ้างถึง" แล้วดำเนินการ เพราะประโยคนั้นอ่านแล้วสมเหตุสมผลและอ้างนโยบายได้อย่างน่าเชื่อ คือระบบที่ยกอำนาจอนุมัติให้กับความสามารถในการเขียนประโยคที่น่าเชื่อ ซึ่งเป็นความสามารถที่โมเดลภาษามีเป็นเลิศที่สุดพอดี</p>
+
+    <h2 id="th-road-ahead">9. ก้าวต่อไป — จากการจำแนก สู่สัญญาที่เขียนเป็นข้อ ๆ ได้</h2>
+
+    <p>ถ้าจะสรุปบทนี้ให้เหลืองานเดียวที่ทำได้สัปดาห์หน้า ผมจะเลือกอันนี้: เลือกความสามารถหนึ่งอย่างที่ปล่อยใช้งานจริงอยู่แล้ว แล้วกรอกการ์ดจำแนกสิบช่องให้ครบ — ครบจริง ๆ รวมทั้งช่อง 4, 5 และ 6 ที่ต้องมี Fallback มี Golden Set และมีผลการถอดโมเดลออก ถ้ากรอกไม่ครบ นั่นไม่ใช่ความล้มเหลวของแบบฟอร์ม แต่คือคำตอบที่ตรงที่สุดที่คุณจะได้ในสัปดาห์นี้ว่าองค์กรของคุณรู้จักระบบของตัวเองแค่ไหน</p>
+
+    <p>งานชิ้นที่สองที่ผมอยากให้ทำต่อคือเปิดหน้าเดียวแล้วเขียน Manifest ของความสามารถนั้นตามหกโดเมน โดยไม่ต้องสวย ไม่ต้องมีเครื่องมือ ใช้ตารางในเอกสารธรรมดาก็พอ สิ่งที่คุณจะค้นพบภายในเวลาไม่นานคือมีอย่างน้อยสองสามช่องที่ไม่มีใครในห้องตอบได้ว่าค่าปัจจุบันคืออะไร และช่องเหล่านั้นคือรายการงานที่แท้จริงของไตรมาสหน้า</p>
+
+    <p>สิ่งที่บทนี้ยัง <em>ไม่</em> ได้ตอบคือคำถามที่ตามมาทันทีหลังจากจำแนกเสร็จ — เมื่อรู้แล้วว่าอะไรคือแกนหลักและต้องการ assurance envelope เต็มรูปแบบ แล้ว "เต็มรูปแบบ" นั้นแปลว่าอะไรกันแน่ในเชิงข้อสัญญาที่ตรวจได้ การบอกว่าระบบ "ปลอดภัยและน่าเชื่อถือ" ไม่ได้ผูกพันใครกับอะไรเลย และนั่นคือช่องว่างที่ตอนหน้าจะปิด</p>
+
+    <div class="alert info">
+        <strong>🧭 ชั้นที่บทความนี้ขยับ:</strong> แกน <strong>AI-as-a-Core</strong> ที่พาดผ่านทั้งหกชั้น (spine) ไม่ใช่ชั้นใดชั้นหนึ่ง — บทความนี้ตอบคำถามผู้นำข้อ <strong>Q4</strong> ("โมเดลขาดไม่ได้จริง ๆ ตรงไหน และมันมีอำนาจแค่ไหน") โดยเปลี่ยนคำถามนั้นจากความเห็นให้เป็นการทดสอบที่รันได้ คือการ์ดจำแนกสิบช่องบวกการทดสอบถอดโมเดลที่ประกาศเกณฑ์ไว้ล่วงหน้า บนกระดานคะแนนองค์กร บทนี้ขยับช่อง <strong>Risk</strong> (ความครอบคลุมของเส้นทางที่ผ่านตัวกลาง ผลกระทบนอกสิทธิ์ และการผูกคำขอกลับไปยัง Manifest) และช่อง <strong>Quality</strong> (การอ้างที่มาของข้อมูลและผลลัพธ์ การปฏิเสธตามโครงสร้าง และความสำเร็จรายชุดย่อย) เป็นหลัก ตอนถัดไป <a href="/blog/ai-transformation-contract">#12 Assurance Contract — เขียนสัญญาเป็นรายคุณสมบัติ</a> จะเลิกใช้คำว่า "ปลอดภัยและน่าเชื่อถือ" แล้วแทนที่ด้วยข้อสัญญาที่ระบุว่าอะไรบังคับได้เชิงโครงสร้าง อะไรเป็นค่าประเมินเท่านั้น เหลือความเสี่ยงอะไร ใครเป็นเจ้าของ และจะทำอย่างไรเมื่อผิดเงื่อนไข
+    </div>
+
+    <div class="key-takeaways">
+        <h3>🎯 สิ่งสำคัญที่ต้องจำ</h3>
+        <ul>
+            <li><strong>AI-core</strong> = โมเดลมีอำนาจตัดสินใจสูง <em>และ</em> ถอดออกแล้วงานล้มเหลว สำหรับชุดงานที่ประกาศไว้เท่านั้น ไม่ใช่ป้ายของทั้งองค์กร</li>
+            <li><strong>2×2</strong> = สี่ช่องที่ต้องการคนละอย่าง — AI-core (envelope เต็มรูปแบบ), Bounded agent (ควบคุมก่อนเกิดผลแบบแข็ง), Indispensable advisor (ขอบเขตของผลอยู่ที่การปล่อยข้อความ), AI feature (ตัวควบคุมตามสัดส่วน)</li>
+            <li><strong>Classification card</strong> = จำแนกต่อ Task, Manifest, Golden Set และ Threshold ไม่ใช่ต่อ Vendor ตระกูลโมเดล หรือทั้งองค์กร</li>
+            <li><strong>Software 1.0/2.0/3.0</strong> = โค้ดกำหนด โมเดลเรียนรู้ และการกำกับด้วยภาษา อยู่ใน Call Path เดียวกัน โดยโค้ดยังคุมสิทธิ์และผลกระทบเสมอ</li>
+            <li><strong>Context as program</strong> = การเปลี่ยนบริบทที่มีผลต่อพฤติกรรมคือการเปลี่ยนโปรแกรม ต้องมี Manifest ใหม่และทบทวนหลักฐาน</li>
+            <li><strong>Manifest</strong> = หกโดเมนที่ผูกทุกส่วนซึ่งกำหนดพฤติกรรมไว้ในรุ่นเดียว และไม่เก็บ Credential ไว้ในนั้น</li>
+            <li><strong>Boundary inventory</strong> = ผลลัพธ์ของ Boundary walk ที่ต้องไม่เหลือเส้นทางปล่อยเนื้อหาหรือทำให้เกิดผลโดยไม่ผ่านตัวกลาง</li>
+        </ul>
+    </div>
+
+    <section class="references" aria-labelledby="references">
+        <h2 id="references">อ้างอิง</h2>
+        <p class="references__note">ตรวจสอบลิงก์ทั้งหมดเมื่อ 5 กันยายน 2026 · ป้ายหลักฐานสี่ประเภท: <strong>Law</strong> กฎหมาย · <strong>Standard</strong> มาตรฐานและแนวปฏิบัติ · <strong>Study</strong> งานวิจัย · <strong>Synthesis</strong> การสังเคราะห์ของผู้เขียน — บทความนี้ใช้สามประเภทหลัง และไม่ได้อ้างอิงหรือให้ความเห็นทางกฎหมายใด ๆ</p>
+        <ol class="references__list">
+            <li id="th-ref-1"><span class="ref-tag ref-tag--synthesis">Synthesis</span> Mingkhwan, Anirach. <cite>AI Transformation as an Organizational Core — Bilingual Companion Playbook</cite>, บทที่ 7 "วิศวกรรม AI-as-a-Core" และภาคผนวก ข เครื่องมือชิ้นที่ 1 และ 4. คู่มือประกอบที่ผู้เขียนจัดทำเอง ไม่มี URL สาธารณะ — เข้าถึง 2026-09-05. <span class="ref-supports">รองรับ: นิยาม AI-core และการแยกสี่แนวคิด, การจำแนก 2×2 และสี่ช่อง, การ์ดจำแนกสิบช่องและตัวอย่าง CX-REFUND-01, ซอฟต์แวร์ 1.0/2.0/3.0 ใน Call Path เดียว, การหักการเปรียบเทียบกับระบบปฏิบัติการ, บริบทในฐานะโปรแกรม, Manifest หกโดเมน, สถาปัตยกรรมสี่ชั้น, หลักปฏิบัติห้าประการ, เวิร์กช็อป Boundary walk, ตัวชี้วัดสำคัญ และรูปแบบความล้มเหลวแปดข้อ</span></li>
+            <li id="th-ref-2"><span class="ref-tag ref-tag--synthesis">Synthesis</span> Mingkhwan, Anirach. <cite>Engineering AI-Core Systems: A Reference Architecture and Assurance Contract for Software 3.0</cite>, revision 8 (กันยายน 2026). เอกสารวิชาการที่ยังไม่ตีพิมพ์ ผู้เขียนจัดส่งให้โดยตรง ไม่มี URL สาธารณะ จึงไม่มีลิงก์ในรายการนี้ — เข้าถึง 2026-09-05. <span class="ref-supports">รองรับ: ที่มาเชิงแนวคิดของการจำแนกตามอำนาจตัดสินใจและความขาดไม่ได้, บริบทในฐานะโปรแกรม, บัญชีรายการบริบทขณะทำงาน และการแยกข้อเสนอออกจากผลจริง</span></li>
+            <li id="th-ref-3"><span class="ref-tag ref-tag--study">Study</span> Karpathy, Andrej. <cite>Software 2.0</cite> (บทความความเห็น ไม่ใช่งานวิจัยที่มีการควบคุม). Medium, 11 พฤศจิกายน 2017. <a href="https://karpathy.medium.com/software-2-0-a64152b37c35">karpathy.medium.com</a> — เข้าถึง 2026-09-05 (Medium ปฏิเสธการเข้าถึงแบบอัตโนมัติ วันที่และถ้อยคำยืนยันจากสำเนาที่ Internet Archive เก็บไว้ของ URL เดียวกัน). <span class="ref-supports">รองรับ: ที่มาของคำว่า Software 1.0 และ Software 2.0 — บทความนี้ไม่มีคำว่า Software 3.0 ปรากฏอยู่เลย</span></li>
+            <li id="th-ref-4"><span class="ref-tag ref-tag--study">Study</span> Karpathy, Andrej. <cite>Software Is Changing (Again)</cite> — คีย์โน้ต YC AI Startup School, ซานฟรานซิสโก (บรรยาย 17 มิถุนายน 2025 เผยแพร่ 18 มิถุนายน 2025; คลิปบรรยาย ไม่ใช่งานวิจัย). <a href="https://www.ycombinator.com/library/MW-andrej-karpathy-software-is-changing-again">ycombinator.com</a> — เข้าถึง 2026-09-05. <span class="ref-supports">รองรับ: ที่มาของคำว่า Software 3.0 และการเปรียบเทียบ LLM กับระบบปฏิบัติการ ซึ่งคู่มือหยิบมาใช้แล้วหักทิ้งในประโยคเดียวกัน</span></li>
+            <li id="th-ref-5"><span class="ref-tag ref-tag--study">Study</span> Saltzer, Jerome H., and Michael D. Schroeder. <cite>The Protection of Information in Computer Systems</cite>. Proceedings of the IEEE 63(9): 1278–1308 (1975). <a href="https://doi.org/10.1109/PROC.1975.9939">doi.org</a> — เข้าถึง 2026-09-05 (DOI ทำงานปกติ ปลายทางเป็นระเบียนบน IEEE Xplore ซึ่งเนื้อหาเต็มอยู่หลังกำแพงชำระเงิน ข้อมูลบรรณานุกรมยืนยันจากทะเบียน Crossref). <span class="ref-supports">รองรับ: หลัก complete mediation, least privilege และ fail-safe defaults ซึ่งเป็นรากของข้อกำหนดที่ให้โค้ดเป็นเจ้าของสิทธิ์และการควบคุมก่อนเกิดผล</span></li>
+            <li id="th-ref-6"><span class="ref-tag ref-tag--standard">Standard</span> NIST. <cite>Artificial Intelligence Risk Management Framework: Generative Artificial Intelligence Profile (NIST AI 600-1)</cite>. National Institute of Standards and Technology, 26 กรกฎาคม 2024. <a href="https://doi.org/10.6028/NIST.AI.600-1">doi.org</a> — เข้าถึง 2026-09-05 (ณ วันดังกล่าวยังเป็นฉบับปัจจุบัน ไม่มีการแก้ไข เพิกถอน หรือทดแทน). <span class="ref-supports">รองรับ: ความเสี่ยงเฉพาะของ Generative AI 12 หมวด, Prompt Injection ทั้งแบบตรงและแบบอ้อมในหมวด Information Security, และแนวปฏิบัติ MS-2.8-003 เรื่องประวัติที่แก้ไม่ได้และการกำหนดรุ่นตลอดวงจรชีวิต — เป็นกรอบสมัครใจที่องค์กรต้องเลือกและปรับ Action เอง</span></li>
+        </ol>
+    </section>
+    </div>
+
+    <div class="l-en" lang="en">
+
+    <p>🤔 <strong>One and the same product can contain AI-assisted coding, a coding agent, AI-enabled software and an AI-core capability, all four at once — so which part of it actually needs the full assurance envelope?</strong></p>
+
+    <p>The last five posts in this series were about redesigning the organization, closing with <a href="/blog/ai-transformation-operating-model">Federated by Design — Who Sets Standards, Builds, Approves and Operates</a>, which ended on the division of roles: who lays the central rails, who builds on them, who approves, and who carries the outcome in the value stream. Now we cross into the third part of the series — <strong>Engineer · engineering the core</strong> — and the first engineering question is not "how do we build it" but "<em>what is</em> the thing we are about to build, in systems terms", because the answer to that question is what sets the size of the control budget.</p>
+
+    <p>This chapter's answer is shorter and sharper than most teams expect: <strong>AI-core is not a label you pin on a whole organization or a whole product. It is a class of runtime, defined by two axes — the model's decision authority and the model's indispensability — for one task set declared in advance</strong> — and you prove the second axis by actually removing the model and measuring, not by believing.</p>
+
+    <h2 id="en-not-software-that-calls-a-model">1. An AI-core system is not "software that calls a model"</h2>
+
+    <p>Chapter 7 of the playbook this series follows<sup><a href="#en-ref-1">[1]</a></sup> opens with a single sentence that serves as both definition and warning — <em>"AI-core is a task scoped runtime class defined by decision authority and model indispensability then governed according to consequence."</em> Read it slowly and you will see it refusing the way most people use the term, on three separate counts: it is a <em>runtime class</em>, not the name of an architecture; it comes with a <em>task scope</em> attached, not an enterprise-level badge; and its governance is set by <em>consequence</em>, not by technical sophistication.</p>
+
+    <p>The chapter's English companion text spells this out even more directly, and I quote the whole sentence because every word in it is doing work:</p>
+
+    <blockquote>An AI-core system is not simply software that calls a model. It is a scoped runtime class in which model output controls an important share of released content, action, or program branch, and a predeclared removal test shows that the model is indispensable to the specified task set. Classification belongs to a task, manifest, golden set, and threshold, not to a vendor, model family, or whole organization.<sup><a href="#en-ref-1">[1]</a></sup></blockquote>
+
+    <p>That sentence sets two conditions which must both hold <em>at the same time</em> before a system may be called AI-core. The first is that <strong>model output controls an important share of released content, action, or program branch</strong> — note that it does not say "the model is called", it says "controls": the model's output is what decides what reaches a real person, or which way the system goes next. The second is that <strong>a predeclared removal test shows the model is indispensable to the specified task set</strong> — and "predeclared" is the heart of it, because if you run the test first and set the threshold afterwards, you have not tested anything. You have merely described a result.</p>
+
+    <p>I meet a great many teams that clear the first condition and have never touched the second. A summarization system that pushes text straight out to customers clears the first one comfortably. But ask "if we removed the model today and let the declared fallback take over, would the declared task still succeed under your definition of task success — and have you ever measured it?" and the answer is silence. A system like that may not be AI-core at all — it may be an AI feature that nobody has ever switched off to check. The difference is expensive, because it moves the entire control budget.</p>
+
+    <h3>Four ideas that get collapsed together until they mean nothing</h3>
+
+    <p>The next paragraph in the chapter does the most valuable work on the page: it separates four terms that practitioners routinely use interchangeably until nobody can follow the conversation — <em>"This separates four ideas. AI-assisted coding changes how software is developed. A coding agent performs delegated repository work. AI-enabled software contains a model-backed feature. An AI-core system makes model-generated behavior load-bearing at runtime."</em><sup><a href="#en-ref-1">[1]</a></sup></p>
+
+    <div class="table-wrapper">
+        <table>
+            <thead>
+                <tr>
+                    <th>Idea</th>
+                    <th>Where it happens</th>
+                    <th>What the model changes</th>
+                    <th>Does it need a full assurance envelope?</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td><strong>AI-assisted coding</strong></td>
+                    <td>In development, before production</td>
+                    <td>How the software gets written</td>
+                    <td>No — the controls remain code review and CI</td>
+                </tr>
+                <tr>
+                    <td><strong>Coding agent</strong></td>
+                    <td>In the repository, on delegated work</td>
+                    <td>Repository work handed over to it</td>
+                    <td>Not the production envelope, but it needs a permission boundary of its own</td>
+                </tr>
+                <tr>
+                    <td><strong>AI-enabled software</strong></td>
+                    <td>In production, as one feature</td>
+                    <td>It contains one model-backed feature</td>
+                    <td>No — controls proportionate to the consequence</td>
+                </tr>
+                <tr>
+                    <td><strong>AI-core</strong></td>
+                    <td>In production, at runtime</td>
+                    <td>Model-generated behaviour becomes load-bearing structure</td>
+                    <td>Yes — and this is the only one of the four that does</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <p>The closing line of that paragraph is what stops the table above from being an academic taxonomy — <em>"One product can contain an optional summarizer, an indispensable policy advisor, and an AI-core routing function."</em><sup><a href="#en-ref-1">[1]</a></sup> A single product can hold all three at once. So the right question is never "is our system AI-core?" but "<em>which capability</em> of our system is AI-core, which one is not, and on what grounds".</p>
+
+    <div class="alert">
+        <strong>A procurement question that is wrong from the start:</strong> "should we buy an AI-core system or just an AI feature?" is unanswerable, because the classification is not a property of the product. The playbook says it flatly: classification belongs to a <strong>task, a manifest, a golden set and a threshold</strong> — not to a vendor, a model family, or a whole organization. The very same product you buy may be an AI feature in one deployment and AI-core in another, depending on what you let it release and whether you can take it out.
+    </div>
+
+    <p>Two practical consequences follow. First, an enterprise AI register with a "type" column filled in by vendor name is useless; it has to be filled in per task set and per manifest. Second, a classification has a natural expiry date — if the task, authority, fallback, tools, thresholds or manifest change, the old classification no longer binds anything. That is exactly why the card in section <a href="#en-classification-card">3</a> ends with a field called "reclassification triggers".</p>
+
+    <p>It is worth saying up front that the whole conceptual frame of this chapter — the two-axis classification, context as program, and the manifest — comes from an academic paper by the playbook's author that is unpublished and has no public URL.<sup><a href="#en-ref-2">[2]</a></sup> It is therefore one author's synthesis: not an industry standard, not a certification scheme, and not a consensus of the field. I think it is an unusually workable frame, but if you carry it into a governance document, cite it for what it is.</p>
+
+    <h2 id="en-two-by-two">2. The 2×2 — decision authority × indispensability, and four cells that need different things</h2>
+
+    <p>Once you know there are two conditions, the most direct way to see them is to lay them out as two axes and count the cases. The horizontal axis is <strong>decision authority</strong> — how far model output determines what is released, from "it drafts something for a human who decides" all the way to "the model's output is what reaches the customer, with nobody reading it line by line". The vertical axis is <strong>indispensability</strong> — if you removed the model and let the declared fallback run instead, would the declared task set still meet its success criterion?</p>
+
+    <figure class="figure">
+      <a href="../images/ai-transformation-fig-08-ai-core-matrix.png">
+        <img class="figure__img" src="../images/ai-transformation-fig-08-ai-core-matrix.png" alt="A 2×2 of indispensability by decision authority: Indispensable advisor, AI-core (red, high on both, full assurance envelope), AI feature, Bounded agent." width="1400" height="1000" loading="lazy" decoding="async">
+      </a>
+      <figcaption class="figure__caption">Figure 8 · When AI is the core — decision authority by indispensability. Adapted as an original redraw from Mingkhwan 2026.</figcaption>
+    </figure>
+
+    <p>The two axes really are orthogonal, and that is the main value of this picture. Most teams quietly assume they are the same thing — "if the model matters a lot, it must have a lot of authority" — which is not true at all. An internal policy advisor the legal team leans on daily, to the point of being indispensable, may have no power to act on anything beyond releasing text. Meanwhile an agent that presses buttons in an external system on its own may be removable this afternoon without anybody breaking stride, because the team can still do the same work by hand.</p>
+
+    <div class="table-wrapper">
+        <table>
+            <thead>
+                <tr>
+                    <th>Cell</th>
+                    <th>Indispensability</th>
+                    <th>Decision authority</th>
+                    <th>What it requires</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td><strong>Indispensable advisor</strong></td>
+                    <td>High</td>
+                    <td>Low</td>
+                    <td>The effect boundary sits at text release — <em>"Text release is the effect boundary"</em></td>
+                </tr>
+                <tr>
+                    <td><strong>AI-core</strong></td>
+                    <td>High</td>
+                    <td>High</td>
+                    <td>A full system-wide assurance envelope — <em>"Full assurance envelope"</em></td>
+                </tr>
+                <tr>
+                    <td><strong>AI feature</strong></td>
+                    <td>Low</td>
+                    <td>Low</td>
+                    <td>Controls sized to the consequence — <em>"Proportionate controls"</em></td>
+                </tr>
+                <tr>
+                    <td><strong>Bounded agent</strong></td>
+                    <td>Low</td>
+                    <td>High</td>
+                    <td>Hard mediation before any effect occurs — <em>"Hard effect mediation"</em></td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <p>That rightmost column is the entire reason for separating the axes: these four cells call for different kinds of work, not for the same kind of work in different amounts.</p>
+
+    <ul>
+        <li><strong>The indispensable-advisor cell</strong> — when the effect boundary is text release, all the control work concentrates at the point of release: can every statement cite its provenance, can the system refuse when the evidence is thin, and is there a route to a human when the question falls outside scope? Heavy execution guards in this cell are investment in the wrong place, because there is no effect to gate.</li>
+        <li><strong>The bounded-agent cell</strong> — the exact opposite. The system is removable and the business-continuity impact is low, but it can press buttons. So all the work sits in effect mediation: permissions bound to subject, purpose, amount, duration and transaction, and every action passing through a mediator you can inspect.</li>
+        <li><strong>The AI-feature cell</strong> — proportionate controls, which is not the same as casual controls. This line is habitually misread as "you need not do anything", when it means "do what the consequence demands, and record why that was enough".</li>
+        <li><strong>The AI-core cell</strong> — it needs everything above at once, plus the two things the other three cells do not: versioning the whole behaviour surface, and a reconstructable trace at every step the system walks through.</li>
+    </ul>
+
+    <p>What I most want to underline, from reviewing real systems, is that <strong>these cells move, and they usually move without anyone announcing it</strong>. A system that sat in the AI-feature cell last year may be in the AI-core cell today, because one more tool got wired in, or because the human team that used to check every item was cut back until it could only sample. Nobody signed off on that move between cells. It happened because both axes crept upward a little at a time until they crossed together. This is the pattern post <a href="/blog/ai-transformation-maturity">#4</a> called authority debt, and this diagram is where it becomes most visible.</p>
+
+    <h2 id="en-classification-card">3. The ten-field classification card, and a completed CX-REFUND-01</h2>
+
+    <p>The 2×2 is a thinking tool; the thing you can actually take into a meeting is a single card. Appendix B of the playbook supplies the <em>AI-core use-case classification card</em> as a copy-ready form,<sup><a href="#en-ref-1">[1]</a></sup> with all three of that appendix's standard header lines filled in — <strong>Purpose</strong>: classify one released capability by two independent axes, and assess consequence <em>separately</em> · <strong>Use when</strong>: selecting a use case, and whenever task, authority, fallback, tools, thresholds or the release manifest change · <strong>Accountable owner</strong>: business or product owner, with the release owner verifying the evidence.</p>
+
+    <p>The word "separately" in that purpose line is a detail I want you to notice. Consequence is <em>not</em> a third axis of the 2×2. It is a distinct body of evidence, assessed on its own and then laid alongside. Folding it into the classification would produce the single most dangerous artefact in governance work: one composite score in which severity can offset authority, so that two pieces of work needing entirely different controls come out numerically equal.</p>
+
+    <h3>The copy-ready card — ten fields, in order</h3>
+
+    <div class="table-wrapper">
+        <table>
+            <thead>
+                <tr>
+                    <th>#</th>
+                    <th>Field</th>
+                    <th>Complete this entry</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>1</td>
+                    <td>ID, task set, exclusions, manifest</td>
+                    <td>The id, the task set, the excluded cases, and the manifest it is bound to</td>
+                </tr>
+                <tr>
+                    <td>2</td>
+                    <td>Model-controlled released behavior</td>
+                    <td>Text, tool choice, arguments or runtime branch — state precisely what the model determines and what then actually gets released</td>
+                </tr>
+                <tr>
+                    <td>3</td>
+                    <td>Authority test and trace evidence</td>
+                    <td>Advisory or high authority, together with the trace used to prove that answer</td>
+                </tr>
+                <tr>
+                    <td>4</td>
+                    <td>Declared non-model fallback</td>
+                    <td>The non-model fallback, declared in advance</td>
+                </tr>
+                <tr>
+                    <td>5</td>
+                    <td>Golden set, task-success rule, predeclared indispensability threshold</td>
+                    <td>The golden set, the definition of task success, and the indispensability threshold declared before the run</td>
+                </tr>
+                <tr>
+                    <td>6</td>
+                    <td>Removal ablation: model versus fallback on the same set</td>
+                    <td>The result of removing the model, compared against the fallback on the same data</td>
+                </tr>
+                <tr>
+                    <td>7</td>
+                    <td>Classification</td>
+                    <td>High/high AI-core · high/low bounded agent · advisory/high indispensable advisor · advisory/low AI feature</td>
+                </tr>
+                <tr>
+                    <td>8</td>
+                    <td>Separate consequence profile</td>
+                    <td>Severity, exposure, detectability, recoverability, and the rights or assets affected</td>
+                </tr>
+                <tr>
+                    <td>9</td>
+                    <td>Minimum controls, owner, decision, date</td>
+                    <td>The minimum controls, the owner, the decision, and the date</td>
+                </tr>
+                <tr>
+                    <td>10</td>
+                    <td>Reclassification triggers</td>
+                    <td>The triggers that force a reclassification</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <p>The three fields teams most often cannot fill in are 4, 5 and 6 — which are the same three fields that give the indispensability axis any meaning. Without a declared fallback you have nothing to compare against. Without a golden set and a definition of task success you cannot measure the comparison. And without a threshold declared before the run, the result is just a number you can interpret in whichever direction you prefer. I have seen a card with field 7 confidently filled in as "AI-core" while the three fields before it were blank. That is not a classification. That is a feeling.</p>
+
+    <h3>The completed example — CX-REFUND-01</h3>
+
+    <p>Every example in Appendix B uses the same case: <strong>CX-REFUND-01</strong>, the Luma Commerce Thailand assistant <em>(a fictional case from the playbook)</em>, which answers refund questions in two languages and may propose <code>issue_refund</code>, with an external guard permitted to execute one eligible refund of no more than THB 2,000 after confirmation; every other financial action goes to a person. The playbook attaches its own caveat in one sentence: <em>"Values are illustrative, not universal thresholds."</em><sup><a href="#en-ref-1">[1]</a></sup></p>
+
+    <div class="alert danger">
+        <strong>Every number in this section is fictional:</strong> THB 2,000 · 240 cases · 70% · 94.6% · 41.3%, and every identifier, are illustrative values. They are not universal thresholds and they were not measured on any real system. Do not, under any circumstances, lift them into your own metrics table as targets — what travels is the <em>shape of the fields</em>, never the values sitting in them.
+    </div>
+
+    <div class="table-wrapper">
+        <table>
+            <thead>
+                <tr>
+                    <th>Field</th>
+                    <th>Completed example (illustrative values)</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td><strong>Scope</strong></td>
+                    <td>Delivered Thailand direct-retail orders, covering routine explanation and one refund; excludes fraud flags, subscriptions, marketplace orders, legal complaints, non-THB payments, and amounts above THB 2,000</td>
+                </tr>
+                <tr>
+                    <td><strong>Authority</strong></td>
+                    <td>The model determines the released explanation, the cited passages, the refund recommendation and the proposed arguments, and qualifying proposals reach the guard without line-by-line human review</td>
+                </tr>
+                <tr>
+                    <td><strong>Fallback</strong></td>
+                    <td>Fixed policy links plus the customer-care queue, with no automated refund</td>
+                </tr>
+                <tr>
+                    <td><strong>Ablation</strong></td>
+                    <td><code>CXGS-2026-09-v3</code>, 240 sliced cases; the fallback must reach 70% to count as sufficient; the illustrative result is 94.6% for the candidate and 41.3% for the fallback</td>
+                </tr>
+                <tr>
+                    <td><strong>Class</strong></td>
+                    <td>High authority and indispensable, therefore AI-core for this task set and this manifest</td>
+                </tr>
+                <tr>
+                    <td><strong>Consequence</strong></td>
+                    <td>Public text may mislead; the financial write is recoverable, but only at a cost</td>
+                </tr>
+                <tr>
+                    <td><strong>Decision</strong></td>
+                    <td>Full envelope, mediated output and tool paths, terminal traces retained, and a human route outside the bounded cell, with the VP Customer Operations owning reclassification</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <p>One thing to read carefully: the blank card has <strong>ten fields</strong>, but the worked example in the book prints as <strong>seven rows</strong> — Scope, Authority, Fallback, Ablation, Class, Consequence and Decision.<sup><a href="#en-ref-1">[1]</a></sup> Those seven rows merge related fields for readability on the page; they do not reduce the number of fields you have to fill in. If you build your own card and start from seven rows, you will find there is nowhere to put "reclassification triggers" — the field with the longest useful life on the whole card.</p>
+
+    <p>The <strong>Ablation</strong> row is the one I would like every team to run for real at least once before reading the next post. It forces four things simultaneously: one, you must have a data set that is already sliced; two, you must have a fallback that actually runs, not one that exists in a document; three, you must declare the threshold first; and four, both sides must run on the same set. That last condition, "on the same set", is where most of these tests fall apart, because teams habitually compare the model's results on last month's live traffic against a fallback estimated from what the team remembers about two years ago.</p>
+
+    <div class="alert info">
+        <strong>What the removal test tells you, and what it does not:</strong> it tells you the model is indispensable <em>to the declared task set, at the declared threshold</em>, and nothing more. It does not tell you the model performs well, it does not tell you it is safe, and it does not tell you it is worth the money. Those three questions each need a different body of evidence, which is what post <a href="/blog/ai-transformation-contract">#12</a> onward is about.
+    </div>
+
+    <h2 id="en-software-123">4. Software 1.0, 2.0 and 3.0 live in the same call path</h2>
+
+    <p>Once you can tell what the core is, the next question is what that core is assembled from. The playbook answers with what I consider the most operationally usable sentence in the chapter — <em>"Software 1.0, 2.0, and 3.0 remain in the same call path. Explicit code owns interfaces, permissions, control flow, transactions, and effect mediation. Learned components contribute statistical capability. Runtime context supplies goals, examples, retrieved knowledge, tools, and state."</em><sup><a href="#en-ref-1">[1]</a></sup></p>
+
+    <p>The phrase <strong>Software 1.0, 2.0 and 3.0</strong> is now so widely used that many people have forgotten where it came from, and the playbook itself uses it without attribution. So let me supply the attribution as an addition of this article's own, not the book's: Software 1.0 and 2.0 come from Andrej Karpathy's essay <cite>Software 2.0</cite>, dated 11 November 2017,<sup><a href="#en-ref-3">[3]</a></sup> which defines 1.0 as <em>"explicit instructions to the computer written by a programmer"</em> and 2.0 as written in a language humans cannot read, <em>"such as the weights of a neural network"</em>. The term <strong>Software 3.0</strong> appears nowhere in that 2017 essay — not once. It comes from the keynote <cite>Software Is Changing (Again)</cite>, delivered on 17 June 2025, which Y Combinator itself summarizes as the era in which <em>"natural language becomes the new programming interface"</em>.<sup><a href="#en-ref-4">[4]</a></sup></p>
+
+    <p>Both sources are an opinion essay and a recorded talk, not controlled research. I cite them for the provenance of the vocabulary only, not as evidence that any proposition is right or wrong.</p>
+
+    <p>What the playbook adds, and what is worth more than the vocabulary, is the insistence that the three do <strong>not replace one another</strong>: they sit in the same call path, and each owns something the others cannot take over.</p>
+
+    <div class="table-wrapper">
+        <table>
+            <thead>
+                <tr>
+                    <th>Layer</th>
+                    <th>What it owns</th>
+                    <th>What must never be handed to another layer</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td><strong>Software 1.0</strong><br>Explicit code</td>
+                    <td>Interfaces, permissions, control flow, transactions and effect mediation</td>
+                    <td>Permissions and effects — these two live in code always, no matter how good the model gets</td>
+                </tr>
+                <tr>
+                    <td><strong>Software 2.0</strong><br>Learned components</td>
+                    <td>Statistical capability — reading, summarizing, classifying and judging similarity</td>
+                    <td>Structural guarantees, because its output is always a semantic estimate</td>
+                </tr>
+                <tr>
+                    <td><strong>Software 3.0</strong><br>Runtime context</td>
+                    <td>Goals, examples, retrieved knowledge, the tools it can see, and state</td>
+                    <td>The status of being "editable outside change control" — because editing the context is editing the program</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <blockquote>💡 My view: operating principle 2 of this chapter is the shortest one written and the one that prevents the most damage — <strong>"Keep control and effects in code — models propose while services authorize, validate, transact and release."</strong> I like that it is written as a sequence of four verbs, because that makes it checkable on the spot in an architecture review: show me the line where authorize happens, the line where validate happens, where transact happens, and where release happens. If all four answers live inside the prompt, you do not have a system. You have a polite request.</blockquote>
+
+    <h3>The operating-system analogy — offered and broken in the same breath</h3>
+
+    <p>The 2025 keynote mentioned above proposes the picture of an LLM as an operating system,<sup><a href="#en-ref-4">[4]</a></sup> which is a useful shortcut to the overall shape. The playbook takes that picture up and then <em>breaks it in the very next sentence</em> — <em>"The operating-system analogy helps, but context has no true memory protection, retrieval has no stable read contract without versioning, and a natural-language tool request is not an authorized system call."</em><sup><a href="#en-ref-1">[1]</a></sup> I think that sentence deserves to be pinned to the wall of every architecture room, because those three fracture points are the origin of very nearly every real incident I have seen.</p>
+
+    <div class="table-wrapper">
+        <table>
+            <thead>
+                <tr>
+                    <th>OS concept</th>
+                    <th>What people expect to get</th>
+                    <th>What you actually get in an AI-core system</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td><strong>Memory protection</strong></td>
+                    <td>One process cannot overwrite another process's memory</td>
+                    <td>Context has no true memory protection. Untrusted text and system instructions sit in the same string, so the separation is a matter of discipline in context assembly, not of hardware</td>
+                </tr>
+                <tr>
+                    <td><strong>Read contract</strong></td>
+                    <td>Reading the same address returns the same value until somebody writes to it</td>
+                    <td>Retrieval has no stable read contract without versioning. The same question today and tomorrow can return different passages, because the corpus, the ranker or top-k moved</td>
+                </tr>
+                <tr>
+                    <td><strong>System call</strong></td>
+                    <td>A request through the kernel, checked for authority every time</td>
+                    <td>A natural-language tool request is <em>not</em> an authorized system call. It is only a proposal, until code has checked it and approved it</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <p>That third fracture point is <strong>proposal–effect separation</strong>, an idea that returns as the protagonist of post <a href="/blog/ai-transformation-five-rails">#13</a> — and it is not remotely new in security engineering. It is the principle of <em>complete mediation</em>, which Saltzer and Schroeder stated back in 1975 as <em>"Every access to every object must be checked for authority."</em><sup><a href="#en-ref-5">[5]</a></sup> It travels with <em>least privilege</em>, that every program and every user should operate with the smallest set of privileges the job requires, and <em>fail-safe defaults</em>, that access decisions should be based on permission rather than exclusion.</p>
+
+    <p>I like to raise this 1975 paper in AI meetings because it changes the register of the conversation immediately. What we are discussing is not a novel worry of the LLM era; it is a principle the computing field settled in 1975 — what LLMs changed is that the <em>requester</em> now speaks human language extremely persuasively, until people feel there is nothing left to check. That feeling has to be resisted at every point where a real effect occurs. (The original paper sits behind IEEE's paywall, so I cite the DOI rather than a copy.)</p>
+
+    <h2 id="en-context-as-program">5. Context as program — behaviour comes from the whole assembly</h2>
+
+    <p>If the last section said who owns what, this one says what adds up to the system's "behaviour" — and the answer is longer than most architecture documents are willing to admit: <em>"Behavior therefore depends on the assembly: model version, decoding, context, retrieval, tool semantics, orchestration, memory, and environment."</em><sup><a href="#en-ref-1">[1]</a></sup></p>
+
+    <figure class="figure">
+      <a href="../images/ai-transformation-fig-09-context-as-program.png">
+        <img class="figure__img" src="../images/ai-transformation-fig-09-context-as-program.png" alt="A radial diagram in which Model, Decoding, System context, Retrieval, Tools, Memory, Orchestration and Environment all feed a dark core labelled BEHAVIOR — One manifest." width="1400" height="1000" loading="lazy" decoding="async">
+      </a>
+      <figcaption class="figure__caption">Figure 9 · Context is part of the program — any behaviour-relevant change is a program change and triggers evidence review.</figcaption>
+    </figure>
+
+    <p>The idea of <strong>context as program</strong> comes down to one sentence, which is the normative line of the whole chapter: <em>"A behavior-relevant change to any component is a program change and should trigger a new manifest and evidence review."</em><sup><a href="#en-ref-1">[1]</a></sup> — any change at all that bears on behaviour, in any component at all, is <strong>a program change</strong>, and it must produce a new manifest along with a review of the evidence.</p>
+
+    <p>That sounds needlessly strict, right up until you walk down the components one at a time and ask who in your organization can edit each of them, and through what process.</p>
+
+    <div class="table-wrapper">
+        <table>
+            <thead>
+                <tr>
+                    <th>Component</th>
+                    <th>A change that looks like "not a code edit"</th>
+                    <th>Effect on behaviour</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td><strong>Model</strong></td>
+                    <td>The provider auto-updates a minor version because we never pinned an exact dated model id</td>
+                    <td>Everything changes at once, with no ticket anywhere in the organization recording it</td>
+                </tr>
+                <tr>
+                    <td><strong>Decoding</strong></td>
+                    <td>Temperature or the token ceiling is adjusted to cut costs</td>
+                    <td>Length, completeness, and the rate of structurally incomplete answers all shift</td>
+                </tr>
+                <tr>
+                    <td><strong>System context</strong></td>
+                    <td>One line of the prompt is edited on a settings screen</td>
+                    <td>The scope of the whole task set changes, frequently by accident</td>
+                </tr>
+                <tr>
+                    <td><strong>Retrieval</strong></td>
+                    <td>A document is added to the corpus, or top-k moves up one notch</td>
+                    <td>The evidence the model sees changes, so the answers change while the prompt is identical to the character</td>
+                </tr>
+                <tr>
+                    <td><strong>Tools</strong></td>
+                    <td>A tool schema is updated with a new field</td>
+                    <td>What the model can propose changes, and so does the space of possible effects</td>
+                </tr>
+                <tr>
+                    <td><strong>Memory</strong></td>
+                    <td>Session retention is extended so conversations feel "more continuous"</td>
+                    <td>What the system can carry across turns changes, opening data-boundary risk</td>
+                </tr>
+                <tr>
+                    <td><strong>Orchestration</strong></td>
+                    <td>Steps are reordered, or one extra call round is added</td>
+                    <td>The route the system walks changes, and so does the trace you have to capture</td>
+                </tr>
+                <tr>
+                    <td><strong>Environment</strong></td>
+                    <td>A move to another region, or a change of infrastructure provider</td>
+                    <td>Latency changes, data constraints change, and sometimes the model's own behaviour changes</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <p>The rows I would have you dwell on longest are <strong>System context</strong> and <strong>Retrieval</strong>, because those are the two places where organizational change-control discipline fails most quietly. Organizations with three levels of approval for a code edit routinely let the prompt be edited on a settings screen by someone who needs nobody's sign-off, and let new documents be added to the corpus every week as "content work" rather than "release work". Both of those change the behaviour of the running system more than many code edits do.</p>
+
+    <p>I once saw a very clear case of this. A system's answers shifted materially over the course of a week. The engineering team insisted there had been no deploy, which was true — what had changed was that the content team had added a revised policy document to the corpus without removing the old one. The system now retrieved both and picked the one with the higher similarity score, which happened to be the old one. Under "context as program", that event is a code deploy that changed behaviour, with no manifest, no evidence review, and no identifiable way back.</p>
+
+    <div class="alert">
+        <strong>A one-question test for your team:</strong> ask "if we had to roll the system's behaviour back to exactly what it was on the 1st of last month, in every component, what would we have to roll back — and do we still hold all of it?" If the answer covers only the code and the model id, the other seven components in the table above are floating outside version control. That is the reason for the manifest in the next section.
+    </div>
+
+    <h2 id="en-manifest">6. The runtime-context manifest — six domains in one release</h2>
+
+    <p>The playbook's answer to the problem above is the <strong>runtime-context manifest</strong>, the fourth instrument in Appendix B<sup><a href="#en-ref-1">[1]</a></sup> — <strong>Purpose</strong>: pin the whole behaviour-determining release, not only the model, with the manifest declaring how context <em>should</em> be assembled and the trace recording what one request <em>actually received</em> · <strong>Use when</strong>: any model, decoding, prompt, corpus, retrieval, tool, control, threshold, evaluator or orchestration component changes · <strong>Accountable owner</strong>: the release owner signs the integrated manifest, and component owners attest their own entries.</p>
+
+    <p>That distinction in the first line, between manifest and trace, matters more than it looks. The manifest is a <em>declaration</em>; the trace is a <em>record of events</em>. An organization with logs but no manifest can say what happened but not what should have happened, so it cannot prove whether the system deviated from what was declared. An organization with a manifest but no traces can declare beautifully, with nothing to confirm that reality matched.</p>
+
+    <h3>The copy-ready manifest — six domains</h3>
+
+    <div class="table-wrapper">
+        <table>
+            <thead>
+                <tr>
+                    <th>Domain</th>
+                    <th>Required fields</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td><strong>Identity and scope</strong><br>Identity/Scope</td>
+                    <td>Use-case and manifest IDs, status, owner, parent, ticket, tasks, exclusions, locales, channels and consequence classes</td>
+                </tr>
+                <tr>
+                    <td><strong>Core and context</strong><br>Core/Context</td>
+                    <td>Exact dated model ID, region, decoding, assembly commit, instruction and template hashes, examples, ordering and token budget</td>
+                </tr>
+                <tr>
+                    <td><strong>Knowledge and state</strong><br>Knowledge/State</td>
+                    <td>Corpus hash, source allow-list, ranker or embedding, top-k, freshness, provenance, session schema, memory and retention</td>
+                </tr>
+                <tr>
+                    <td><strong>Tools and controls</strong><br>Tool/Control</td>
+                    <td>Registry and schema hashes, authentication, bounds, idempotency, sandbox, five-rail versions, thresholds and routes</td>
+                </tr>
+                <tr>
+                    <td><strong>Evaluation and trace</strong><br>Evaluation/Trace</td>
+                    <td>Golden, hidden, adaptive and fault suites; grader versions; trace schema, storage, redaction, access and retention</td>
+                </tr>
+                <tr>
+                    <td><strong>Operations and integrity</strong><br>Operations/Integrity</td>
+                    <td>Rollout plan, exposure cap, stop conditions, rollback ID, outage route, approvals, manifest hash, dependency lock and artifact locations</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <div class="alert danger">
+        <strong>Never store credentials in the manifest:</strong> the playbook writes this directly underneath the table — <em>"Never store credentials in the manifest; reference a controlled secret. Deterministic decoding does not remove context, retrieval, model-version, state, or infrastructure sensitivity."</em><sup><a href="#en-ref-1">[1]</a></sup> — reference a controlled secret instead, and do not imagine that setting decoding to be deterministic removes sensitivity to context, retrieval, model version, state or infrastructure. That second sentence matters enormously, because a good number of teams set temperature to 0 and then announce that the system is "reproducible", while the other five sources of variation are all still wide open.
+    </div>
+
+    <h3>The worked example — and why it has five rows, not six</h3>
+
+    <p>The book's CX-REFUND-01 example merges <em>Evaluation and trace</em> with <em>Operations and integrity</em> into a single row headed "Evaluation and operations", so the example prints as five rows even though the copy-ready manifest has six domains.<sup><a href="#en-ref-1">[1]</a></sup> I have chosen not to "fix" that back into six rows, because the merge is a fact of the printed page you will see if you open the book, and because it reflects what really happens in teams — the owner of the test suites and the owner of the rollout plan are often the same person, until people forget these are two domains that have to be attested separately.</p>
+
+    <div class="table-wrapper">
+        <table>
+            <thead>
+                <tr>
+                    <th>Domain</th>
+                    <th>Completed example (all values illustrative)</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td><strong>Identity/Scope</strong></td>
+                    <td><code>CX-REFUND-01.2026-09-rc4</code>, parent <code>2026-08-prod2</code>, change <code>CHG-4821</code>; Thailand web/mobile chat, Thai/English, with the bounded task and exclusions taken from the classification card in section <a href="#en-classification-card">3</a></td>
+                </tr>
+                <tr>
+                    <td><strong>Core/Context</strong></td>
+                    <td>Fictional dated ID <code>luma/cx-core-2026-08-17</code>; temperature 0, maximum 900 tokens, schema mode; assembly commit <code>9f31c7a</code>, template <code>refund-chat-v12</code>, untrusted text never promoted to instruction</td>
+                </tr>
+                <tr>
+                    <td><strong>Knowledge/State</strong></td>
+                    <td>Corpus <code>TH-CX-2026-09-01</code> with an immutable hash, allow-listed policy IDs, ranker <code>rr-4.2</code>, top-k 6; session schema v5 and no cross-customer memory</td>
+                </tr>
+                <tr>
+                    <td><strong>Tool/Control</strong></td>
+                    <td><code>paytools-v7</code>, only <code>issue_refund</code>, THB 1–2,000, confirmation and idempotency required; <code>cx-rails-v9</code>, output schema v6 and contracted thresholds</td>
+                </tr>
+                <tr>
+                    <td><strong>Evaluation/Operations</strong></td>
+                    <td><code>CXGS-v3</code>, <code>CXRT-v5</code>, hidden <code>CXH-2026Q3</code>, adaptive <code>CXA-09</code>, faults <code>CXF-v4</code>; staged rollout at 5/25/50/100%; stop on a prohibited effect, a severe escape or a missing terminal trace; with seven functional sign-offs and an immutable manifest hash</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <p>One small detail worth pointing out is the test-suite id. In the classification card in section <a href="#en-classification-card">3</a> the same suite is written <code>CXGS-2026-09-v3</code>, while in the manifest it is written <code>CXGS-v3</code>. The playbook uses two forms in two instruments, and I have kept both as they stand rather than normalizing them — because that is itself a small lesson from this chapter: if the same thing carries different identifiers in two documents, automated checking cannot match them, and "manifest resolution" in the metrics table in section <a href="#en-metrics-failures">8</a> will fail for a reason nobody thinks of as a reason.</p>
+
+    <div class="alert info">
+        <strong>A note for the Thai context:</strong> this example is deliberately a Thai case, and its Thai-ness shows up in the manifest at four points — corpus <code>TH-CX-2026-09-01</code>, bound to an immutable hash · the channel recorded as Thailand web/mobile · the locale recorded as Thai/English, which means the test suites need both languages and separate slices for each · and the amount bound stated in baht (THB 1–2,000), not in another currency. On <strong>time zone</strong>, the book's example specifies no <code>+07</code> offset — requiring every timestamp in the manifest and the traces to be written with an explicit offset is <em>my own recommendation</em>, not a requirement of the playbook. I make it because I have watched an incident investigation lose half a day to an argument about whether two logs seven hours apart described the same event.
+    </div>
+
+    <p>For organizations that have to explain all this to an external auditor, there is one internationally recognized anchor. NIST AI 600-1, the Generative AI Profile of the AI RMF, published on 26 July 2024,<sup><a href="#en-ref-6">[6]</a></sup> sets out action MS-2.8-003, which calls for content-transparency tooling that documents each instance where content is generated, modified or shared, so as to give a tamper-proof and traceable history, and adds that <em>"Robust version control systems can also be applied to track changes across the AI lifecycle over time."</em> Put simply: versioning the whole behaviour surface does not conflict with the international frameworks — it is a more detailed, concrete form of what they already ask for. Bearing in mind, always, that NIST AI 600-1 is a <strong>voluntary</strong> framework whose own scope statement says organizations must select and tailor the actions to their own use case and risk tolerance.</p>
+
+    <h2 id="en-four-layers-boundary-walk">7. Four layers, and the boundary-walk workshop</h2>
+
+    <p>The chapter's reference architecture has four layers, plus a set of controls that crosses all of them.<sup><a href="#en-ref-1">[1]</a></sup></p>
+
+    <ul>
+        <li><strong>Layer 1 — Governed data foundation</strong>, supplying the authoritative records the organization treats as true, and versioned knowledge — if this layer has no versions, nothing above it can genuinely be versioned either</li>
+        <li><strong>Layer 2 — AI-core layer</strong>, combining the model, context assembly, retrieval and bounded memory — this is the layer where "capability" lives, and the layer that cannot offer structural guarantees</li>
+        <li><strong>Layer 3 — Orchestration</strong>, coordinating requests, specialist components, tools and state — it owns sequence and route, and therefore owns the trace as well</li>
+        <li><strong>Layer 4 — Applications and human operations</strong>, exposing outcomes and handling the residue — "the residue" is the word most teams skip past, though it means every case the system refuses, escalates or fails to complete, and that is always human work</li>
+        <li><strong>Crossing all four — Assurance controls</strong>, which are not a fifth layer but a cut across every layer, the same pattern as the "spine" that post <a href="/blog/ai-transformation-layers">#1</a> laid down at the start of this series</li>
+    </ul>
+
+    <p>To show how those four layers behave inside a single request, the playbook walks CX-REFUND-01 step by step: an authenticated request enters the context assembler; the system retrieves only approved policy passages and reads current order state through bounded services; the model may draft an answer, select a route, or propose <code>issue_refund(amount, reason)</code> — and then comes the most important sentence in the whole passage: <em>"The proposal is not the effect."</em> What produces the effect is the execution guard, which checks identity, allow-list, schema, customer binding, amount, approval token, transaction budget and idempotency. After a tool result the system reassembles context, and only a structurally valid, sufficiently supported response reaches release; otherwise it is repaired once, withheld, or escalated.<sup><a href="#en-ref-1">[1]</a></sup></p>
+
+    <h3>The five operating principles</h3>
+
+    <p>The chapter closes on five operating principles, which I give here in full and in the book's order (number 2 is the one I already expanded in section <a href="#en-software-123">4</a>).</p>
+
+    <ol>
+        <li><strong>Scope AI-core behavior explicitly</strong> — declare task, authority, fallback, golden set and indispensability threshold</li>
+        <li><strong>Keep control and effects in code</strong> — models propose while services authorize, validate, transact and release</li>
+        <li><strong>Version the whole behavior surface</strong> — bind model, context, corpus, tools, policy, evaluators and thresholds</li>
+        <li><strong>Grant minimum capability per request</strong> — bind tools to subject, purpose, amount, duration and transaction</li>
+        <li><strong>Design fallback as a primary path</strong> — open-ended tasks often fall back to refusal, degradation or escalation</li>
+    </ol>
+
+    <p>Principle 4 is the concrete form of what the playbook calls <strong>least agency</strong>, and principle 5 is the one teams overlook most often — "fallback as a primary path" does not mean the fallback is a backup plan. It means that for open-ended tasks, the route the system takes most often ought to be refusal, degradation or escalation, and those routes have to be designed as well as the successful one is, rather than left as an error message someone wrote at three in the morning.</p>
+
+    <h3>The boundary-walk workshop — six cases × six questions</h3>
+
+    <p>The chapter's practical instrument is to walk six cases through the architecture one transition at a time, asking the same six questions every time. The required output is a <strong>boundary inventory</strong> and the removal of every path that releases content or commits an effect without mediation.<sup><a href="#en-ref-1">[1]</a></sup></p>
+
+    <p>The six questions asked again at every transition are these — (1) what crosses this boundary · (2) what is trusted · (3) what is estimated · (4) which hard invariant applies · (5) which trace proves this route · (6) who handles failure. Questions 2 and 3 always travel as a pair, and that pair is what separates a structural guarantee from a semantic estimate — the dividing line on which post <a href="/blog/ai-transformation-contract">#12</a> will build an entire contract.</p>
+
+    <div class="table-wrapper">
+        <table>
+            <thead>
+                <tr>
+                    <th>Case</th>
+                    <th>What is trusted vs estimated</th>
+                    <th>Hard invariant</th>
+                    <th>Trace that proves the route</th>
+                    <th>Who handles failure</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td><strong>Benign</strong></td>
+                    <td>Trusted: the authenticated identity and order state from bounded services · Estimated: passage relevance and the wording of the answer</td>
+                    <td>Every released message must pass schema and must cite a passage that can be retained</td>
+                    <td>A trace carrying the manifest ID, the passages used, and the evaluator results</td>
+                    <td>The product owner — this is the normal route, not an incident</td>
+                </tr>
+                <tr>
+                    <td><strong>Ambiguous</strong></td>
+                    <td>Trusted: the declared task scope · Estimated: the judgment of whether the question is in or out of scope</td>
+                    <td>When evidence falls below threshold the system must refuse, degrade or escalate — never guess</td>
+                    <td>A trace recording the confidence value, the threshold applied, and the route chosen</td>
+                    <td>The customer-care team receiving the escalation queue, with an agreed response time</td>
+                </tr>
+                <tr>
+                    <td><strong>Injected document</strong></td>
+                    <td>Trusted: nothing at all in the retrieved content · Estimated: everything in it, including anything that looks like an instruction</td>
+                    <td>Untrusted text must never be promoted to instruction and must never widen tool permissions</td>
+                    <td>A trace showing which passages entered, and which layer refused the promotion</td>
+                    <td>The security team — this is an incident, not a defect in the answer</td>
+                </tr>
+                <tr>
+                    <td><strong>Over-limit refund</strong></td>
+                    <td>Trusted: the amount ceiling and the order state · Estimated: the model's recommendation that a refund is warranted</td>
+                    <td>The guard refuses every amount beyond the bound, regardless of how the proposal is worded</td>
+                    <td>A trace recording the proposal, the values checked, and the guard's decision</td>
+                    <td>The finance process owner, with a route to a human approver</td>
+                </tr>
+                <tr>
+                    <td><strong>Duplicate request</strong></td>
+                    <td>Trusted: the idempotency key and the authoritative post-state · Estimated: the intent of a user who pressed again</td>
+                    <td>One effect per key; a repeated call must return the same result, not a new one</td>
+                    <td>A trace binding both requests to the same key</td>
+                    <td>The tool-service owner — and it must be counted as a metric, not written off as a user problem</td>
+                </tr>
+                <tr>
+                    <td><strong>Tool failure</strong></td>
+                    <td>Trusted: only the post-state that can be confirmed · Estimated: any interpretation of what a timeout means</td>
+                    <td>Never report success while the post-state is unconfirmed; fail into a safe state</td>
+                    <td>A trace with complete terminal records, including the case where nothing came back</td>
+                    <td>The operations team, following the outage route named in the manifest</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <p>The <strong>injected document</strong> case is the one I would have every team walk first rather than third, because it is the only case in which an adversary designs the input on purpose. NIST AI 600-1 files this under Information Security and separates the direct form from the <em>indirect</em> one — <em>"Indirect prompt injection attacks occur when adversaries remotely… exploit LLM-integrated applications by injecting prompts into data likely to be retrieved."</em><sup><a href="#en-ref-6">[6]</a></sup> The phrase "data likely to be retrieved" is the heart of it, because it means the attack surface is not the chat window: it is every document your system might retrieve, including the ones your customers upload themselves.</p>
+
+    <p>Worth knowing alongside that: NIST AI 600-1 enumerates 12 risk categories unique to or exacerbated by generative AI,<sup><a href="#en-ref-6">[6]</a></sup> with the document's own scope statement noting that some of those risks remain unknown and are therefore hard to scope or evaluate properly, and that organizations must select and tailor the actions to their own use case and risk tolerance. I will say again that it is a voluntary framework, not a mandate, and that this article offers no legal opinion of any kind.</p>
+
+    <p>The output of the workshop is not a report but a <strong>boundary inventory</strong> — the full list of boundary crossings with all six answers for each — and there is exactly one success condition: <em>no path remains that releases content or commits a real effect without mediation</em>. If you finish all six cases and such a path is still there, the next task is not to write the report. It is to delete that path before the release.</p>
+
+    <h2 id="en-metrics-failures">8. Metrics that matter, and failure patterns</h2>
+
+    <p>The playbook states what to monitor as one long list, running from mediated-path coverage all the way to authoritative post-state accuracy.<sup><a href="#en-ref-1">[1]</a></sup> I have turned it into a table with the failure signal for each, and tied each to a column of the six-column scorecard that post <a href="/blog/ai-transformation-layers">#1</a> laid out — with the caveat, stated first, that all of this is <em>what to monitor</em>, not <em>what to target</em>, and that the illustrative values from CX-REFUND-01 in section <a href="#en-classification-card">3</a> must never be carried into this table as goals.</p>
+
+    <div class="table-wrapper">
+        <table>
+            <thead>
+                <tr>
+                    <th>Metric</th>
+                    <th>What it measures</th>
+                    <th>The signal that something is wrong</th>
+                    <th>Scorecard</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td><strong>Mediated-path coverage</strong></td>
+                    <td>The share of paths that release content or commit an effect which pass through an inspectable mediator</td>
+                    <td>Anything below 100%, even by a single path — because an unmediated path is a path where the guard does not exist</td>
+                    <td>Risk</td>
+                </tr>
+                <tr>
+                    <td><strong>Manifest resolution</strong></td>
+                    <td>The share of requests that bind back to a manifest with every component version resolved</td>
+                    <td>Requests whose context assembly is unknown, which means they cannot be investigated after the fact</td>
+                    <td>Risk</td>
+                </tr>
+                <tr>
+                    <td><strong>Provenance</strong></td>
+                    <td>The share of released messages that can genuinely cite the provenance of their data and results</td>
+                    <td>Policy claims with no passage behind them — the beginning of misinforming the public</td>
+                    <td>Quality</td>
+                </tr>
+                <tr>
+                    <td><strong>Schema rejection</strong></td>
+                    <td>The rate at which outputs are rejected for not matching the required structure</td>
+                    <td>A spike after a model-version or decoding change — the cheapest early warning you will ever get</td>
+                    <td>Quality</td>
+                </tr>
+                <tr>
+                    <td><strong>Unauthorized-effect escape</strong></td>
+                    <td>The number of times a real effect occurred without the required approval</td>
+                    <td>Anything above zero — this one has no acceptable value; if it happens, the release stops</td>
+                    <td>Risk</td>
+                </tr>
+                <tr>
+                    <td><strong>Duplicate rejection</strong></td>
+                    <td>The rate at which repeated requests are rejected by the idempotency mechanism</td>
+                    <td>Zero while users are demonstrably pressing again, which means the mechanism is not working, not that there is no problem</td>
+                    <td>Risk</td>
+                </tr>
+                <tr>
+                    <td><strong>Trace completeness</strong></td>
+                    <td>The share of requests with a complete trace across every step the system walked</td>
+                    <td>Traces that break at the step that failed — the one step you actually needed them for</td>
+                    <td>Learning</td>
+                </tr>
+                <tr>
+                    <td><strong>Fallback</strong></td>
+                    <td>The share of work that ends in refusal or degradation as designed</td>
+                    <td>Abnormally low, which usually means the system is guessing rather than refusing</td>
+                    <td>Quality</td>
+                </tr>
+                <tr>
+                    <td><strong>Escalation</strong></td>
+                    <td>The volume of work handed to people, and its trend</td>
+                    <td>Falling because people stopped escalating, not because the system got better</td>
+                    <td>People</td>
+                </tr>
+                <tr>
+                    <td><strong>Task success by slice</strong></td>
+                    <td>The success rate under the declared definition, broken out by slice</td>
+                    <td>The aggregate improving while the Thai-language slice or the edge-case slice gets worse</td>
+                    <td>Quality</td>
+                </tr>
+                <tr>
+                    <td><strong>p50 and p95 latency</strong></td>
+                    <td>Response time at the median and out in the tail of the distribution</td>
+                    <td>p50 flat while p95 stretches — the users meeting the hardest cases are the ones waiting longest</td>
+                    <td>Value</td>
+                </tr>
+                <tr>
+                    <td><strong>Tokens</strong></td>
+                    <td>Token volume per request and per task set</td>
+                    <td>Quiet growth after a corpus expansion or an added call round</td>
+                    <td>Economics</td>
+                </tr>
+                <tr>
+                    <td><strong>Cost</strong></td>
+                    <td>Cost per request, and cost per genuinely successful outcome</td>
+                    <td>Cost per request falling while cost per success rises</td>
+                    <td>Economics</td>
+                </tr>
+                <tr>
+                    <td><strong>Authoritative post-state accuracy</strong></td>
+                    <td>The accuracy of the authoritative post-state once the action has completed</td>
+                    <td>The system reports success while the real state in the financial system disagrees</td>
+                    <td>Risk</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <p>I have deliberately not summarized this list as "N metrics", because the count depends on whether you treat p50 and p95 as one item or two, and a total quoted that way becomes a number people repeat without ever going back to the list. What is worth remembering instead is the <em>shape</em> of the list: it starts with structural metrics (coverage, version binding, provenance), moves to quality metrics (success by slice), and only then reaches economics — not the other way round.</p>
+
+    <p>The two most neglected entries here are <strong>manifest resolution</strong> and <strong>authoritative post-state accuracy</strong>. The first gets neglected because nobody experiences it as a metric; it looks like paperwork — right up to the day of an incident, when you have to answer within the first hour which context assembly yesterday's problem request actually ran on. The second gets neglected because most teams measure what the system <em>reports</em> rather than what the downstream system <em>is</em>, a distinction that means nothing at all until the day the two disagree.</p>
+
+    <h3>Failure patterns</h3>
+
+    <p>The playbook lists eight failure patterns,<sup><a href="#en-ref-1">[1]</a></sup> and reading them you find that almost every one is a violation of one of the five operating principles above.</p>
+
+    <ul>
+        <li><strong>Bolted-on chatbots</strong> — attaching AI to an existing process without redesigning the release and effect paths</li>
+        <li><strong>Prompts edited outside change control</strong> — a program change with no ticket, no version and no way back</li>
+        <li><strong>Direct model calls from user interfaces</strong> — skipping the orchestration layer entirely, so there is nowhere to put the guard and nowhere to keep the trace</li>
+        <li><strong>Tools without subject binding</strong> — a tool that will do anything to anyone, as long as the arguments are structurally well-formed</li>
+        <li><strong>Unbounded cross-session memory</strong> — a system that remembers what it should not, across users, across cases, and across the period it should have forgotten</li>
+        <li><strong>Output filters after effects occur</strong> — filtering the text after the real action has already happened, which filters nothing</li>
+        <li><strong>Agent proliferation without privilege separation</strong> — adding agents faster than you add separation of privilege, until the organization's aggregate permissions are larger than anyone intended</li>
+        <li><strong>Logs without context, thresholds, versions or routes</strong> — every line logged, and not one thing proved</li>
+    </ul>
+
+    <p>Let me add two more from the chapter's own text, which are not in the eight-item list above but sit in the definition paragraph and in the paragraph that breaks the operating-system analogy. The first is <strong>classifying by vendor</strong> — labelling a system's type by supplier name or model family, when the definition in section <a href="#en-not-software-that-calls-a-model">1</a> says plainly that classification belongs to a task, a manifest, a golden set and a threshold. The second is <strong>treating retrieval as a read contract</strong> — assuming the same query always returns the same result, when that holds only once the corpus, the ranker and top-k are all versioned.</p>
+
+    <p>And the costliest pattern in practice is the one I see most often: <strong>trusting a natural-language tool request</strong>. A system that reads the sentence "please refund this customer under the exception in the policy cited above" and then acts, because the sentence reads sensibly and cites policy convincingly, is a system that has handed approval authority to the ability to write a convincing sentence — which happens to be the single thing language models are best at.</p>
+
+    <h2 id="en-road-ahead">9. The road ahead — from a classification to a contract you can write as clauses</h2>
+
+    <p>If I had to reduce this chapter to one task you could do next week, I would choose this one: pick a single capability that is already released and in use, and fill in the ten-field classification card completely — genuinely completely, fields 4, 5 and 6 included, which means having a fallback, a golden set, and a removal-ablation result. If you cannot complete it, that is not a failure of the form. It is the most direct answer you will get this week to the question of how well your organization knows its own systems.</p>
+
+    <p>The second task I would give is to open one page and write that capability's manifest across the six domains. It does not have to be pretty and it needs no tooling; a table in an ordinary document is enough. What you will discover, quite quickly, is that there are at least two or three fields nobody in the room can state the current value of — and those fields are the real work list for next quarter.</p>
+
+    <p>What this chapter has <em>not</em> answered is the question that follows immediately after the classification is done: once you know what the core is and that it needs the full assurance envelope, what exactly does "full" mean as clauses somebody can check? Saying a system is "safe and trustworthy" binds nobody to anything, and that is the gap the next post closes.</p>
+
+    <div class="alert info">
+        <strong>🧭 Layer this post advances:</strong> the <strong>AI-as-a-Core</strong> spine, which crosses all six layers rather than sitting inside any one of them — this post answers leadership question <strong>Q4</strong> ("where is the model genuinely indispensable, and how much authority does it hold") by converting that question from an opinion into a test you can run: the ten-field classification card plus a removal ablation whose threshold is declared in advance. On the enterprise scorecard it moves the <strong>Risk</strong> column (mediated-path coverage, unauthorized effects, and binding a request back to its manifest) and the <strong>Quality</strong> column (provenance, structural refusal, and task success by slice) above all. The next post, <a href="/blog/ai-transformation-contract">#12 The Assurance Contract — Commit Per Property</a>, drops the phrase "safe and trustworthy" and replaces it with clauses stating what is structurally enforced, what is only an estimate, what risk remains, who owns it, and what happens when it is breached.
+    </div>
+
+    <div class="key-takeaways">
+        <h3>🎯 Key Takeaways</h3>
+        <ul>
+            <li><strong>AI-core</strong> = the model holds high decision authority <em>and</em> removing it makes the task fail, for one declared task set only — never a label for a whole organization</li>
+            <li><strong>The 2×2</strong> = four cells that need different things — AI-core (full envelope), Bounded agent (hard effect mediation), Indispensable advisor (text release is the effect boundary), AI feature (proportionate controls)</li>
+            <li><strong>Classification card</strong> = classify per task, manifest, golden set and threshold — not per vendor, model family or whole organization</li>
+            <li><strong>Software 1.0/2.0/3.0</strong> = explicit code, learned components and language-borne steering all sit in one call path, with code still owning permissions and effects</li>
+            <li><strong>Context as program</strong> = a behaviour-relevant context change is a program change, and it requires a new manifest and an evidence review</li>
+            <li><strong>Manifest</strong> = six domains binding everything that determines behaviour into one release — and no credentials stored in it</li>
+            <li><strong>Boundary inventory</strong> = the output of the boundary walk, in which no path may remain that releases content or commits an effect without mediation</li>
+        </ul>
+    </div>
+
+    <section class="references" aria-labelledby="references">
+        <h2 id="references">References</h2>
+        <p class="references__note">All links verified 5 September 2026 · Four evidence labels: <strong>Law</strong> statute and regulation · <strong>Standard</strong> standards and guidance · <strong>Study</strong> research · <strong>Synthesis</strong> the author's own synthesis — this post uses the last three, and makes no legal citation and offers no legal opinion.</p>
+        <ol class="references__list">
+            <li id="en-ref-1"><span class="ref-tag ref-tag--synthesis">Synthesis</span> Mingkhwan, Anirach. <cite>AI Transformation as an Organizational Core — Bilingual Companion Playbook</cite>, Chapter 7 "Engineer AI-as-a-Core" and Appendix B, instruments 1 and 4. Author-supplied companion playbook, no public URL — accessed 2026-09-05. <span class="ref-supports">Supports: the AI-core definition and the separation of the four ideas, the 2×2 classification and its four cells, the ten-field classification card and the CX-REFUND-01 example, Software 1.0/2.0/3.0 in one call path, the breaking of the operating-system analogy, context as program, the six-domain manifest, the four-layer architecture, the five operating principles, the boundary-walk workshop, the metrics that matter, and the eight failure patterns</span></li>
+            <li id="en-ref-2"><span class="ref-tag ref-tag--synthesis">Synthesis</span> Mingkhwan, Anirach. <cite>Engineering AI-Core Systems: A Reference Architecture and Assurance Contract for Software 3.0</cite>, revision 8 (September 2026). Unpublished academic paper supplied directly by the author; no public URL, and therefore no link in this list — accessed 2026-09-05. <span class="ref-supports">Supports: the conceptual origin of the classification by decision authority and indispensability, context as program, the runtime-context manifest, and proposal–effect separation</span></li>
+            <li id="en-ref-3"><span class="ref-tag ref-tag--study">Study</span> Karpathy, Andrej. <cite>Software 2.0</cite> (an opinion essay, not controlled research). Medium, 11 November 2017. <a href="https://karpathy.medium.com/software-2-0-a64152b37c35">karpathy.medium.com</a> — accessed 2026-09-05 (Medium refuses automated access; the date and wording were confirmed from an Internet Archive capture of the same URL). <span class="ref-supports">Supports: the provenance of the terms Software 1.0 and Software 2.0 — the essay contains no occurrence of Software 3.0 at all</span></li>
+            <li id="en-ref-4"><span class="ref-tag ref-tag--study">Study</span> Karpathy, Andrej. <cite>Software Is Changing (Again)</cite> — keynote, YC AI Startup School, San Francisco (delivered 17 June 2025, published 18 June 2025; a recorded talk, not research). <a href="https://www.ycombinator.com/library/MW-andrej-karpathy-software-is-changing-again">ycombinator.com</a> — accessed 2026-09-05. <span class="ref-supports">Supports: the provenance of the term Software 3.0 and of the LLM-as-operating-system analogy, which the playbook takes up and breaks in the same sentence</span></li>
+            <li id="en-ref-5"><span class="ref-tag ref-tag--study">Study</span> Saltzer, Jerome H., and Michael D. Schroeder. <cite>The Protection of Information in Computer Systems</cite>. Proceedings of the IEEE 63(9): 1278–1308 (1975). <a href="https://doi.org/10.1109/PROC.1975.9939">doi.org</a> — accessed 2026-09-05 (the DOI resolves normally to a record on IEEE Xplore, where the full text sits behind a paywall; the bibliographic record was confirmed against the Crossref registry). <span class="ref-supports">Supports: the principles of complete mediation, least privilege and fail-safe defaults, which are the root of the requirement that code owns permissions and effect mediation</span></li>
+            <li id="en-ref-6"><span class="ref-tag ref-tag--standard">Standard</span> NIST. <cite>Artificial Intelligence Risk Management Framework: Generative Artificial Intelligence Profile (NIST AI 600-1)</cite>. National Institute of Standards and Technology, 26 July 2024. <a href="https://doi.org/10.6028/NIST.AI.600-1">doi.org</a> — accessed 2026-09-05 (current edition as at that date, with no revision, withdrawal or supersession). <span class="ref-supports">Supports: the 12 risk categories unique to or exacerbated by generative AI, direct and indirect prompt injection under Information Security, and action MS-2.8-003 on tamper-proof history and lifecycle version control — a voluntary framework whose actions organizations must select and tailor themselves</span></li>
+        </ol>
+    </section>
+    </div>
+
+    <div class="post-series-footer">
+      <span class="l-th">บทความจากซีรีส์ AI Transformation for Organizations 2026</span><span class="l-en" lang="en">From the AI Transformation for Organizations 2026 series</span>
+    </div>
+
+    <nav aria-label="AI Transformation for Organizations">
+    <div class="series-nav">
+      <h3>🧭 AI Transformation for Organizations 2026</h3>
+      <div class="series-links series-links--grouped">
+        <div class="series-links__group">
+          <p class="series-links__label">Reframe · เปลี่ยนกรอบคิด</p>
+          <a href="/blog/ai-transformation-layers">#1 Six Layers</a>
+          <a href="/blog/ai-transformation-prediction">#2 Prediction</a>
+          <a href="/blog/ai-transformation-learning-loop">#3 Learning Loop</a>
+          <a href="/blog/ai-transformation-maturity">#4 Maturity</a>
+          <a href="/blog/ai-transformation-portfolio">#5 Portfolio</a>
+        </div>
+        <div class="series-links__group">
+          <p class="series-links__label">Redesign · ออกแบบองค์กรใหม่</p>
+          <a href="/blog/ai-transformation-workflow">#6 Four Lanes</a>
+          <a href="/blog/ai-transformation-evidence-ladder">#7 Evidence Ladder</a>
+          <a href="/blog/ai-transformation-workforce">#8 Workforce</a>
+          <a href="/blog/ai-transformation-factory">#9 AI Factory</a>
+          <a href="/blog/ai-transformation-operating-model">#10 Operating Model</a>
+        </div>
+        <div class="series-links__group">
+          <p class="series-links__label">Engineer · วิศวกรรมแกนกลาง</p>
+          <span class="current" aria-current="page">#11 AI-Core</span>
+          <a href="/blog/ai-transformation-contract">#12 Contract</a>
+          <a href="/blog/ai-transformation-five-rails">#13 Five Rails</a>
+          <a href="/blog/ai-transformation-release-gate">#14 Release Gate</a>
+          <a href="/blog/ai-transformation-incident-loop">#15 Incident Loop</a>
+        </div>
+        <div class="series-links__group">
+          <p class="series-links__label">Lead · นำการเปลี่ยนผ่าน</p>
+          <a href="/blog/ai-transformation-obligations">#16 Obligations</a>
+          <a href="/blog/ai-transformation-suppliers-footprint">#17 Cost &amp; Footprint</a>
+          <a href="/blog/ai-transformation-first-90-days">#18 Days 0–90</a>
+          <a href="/blog/ai-transformation-days-91-180">#19 Days 91–180</a>
+          <a href="/blog/ai-transformation-eight-questions">#20 Eight Questions</a>
+        </div>
+      </div>
+    </div>
+    </nav>
+
+  </article>
+
+  </main>
+
+  <footer class="blog-footer">
+    <nav class="blog-footer__nav" aria-label="Site">
+      <a href="../index.html">Home</a>
+      <a href="./">Blog</a>
+      <a href="../publications/">Publications</a>
+      <a href="../books/">Books</a>
+      <a href="../projects/">Projects</a>
+      <a href="../news/">News</a>
+      <a href="../index.html#contact">Contact</a>
+    </nav>
+    <a href="./">← Back to Blog</a>
+    <span>© 2026 Anirach Mingkhwan — Associate Professor, KMUTNB</span>
+  </footer>
+
+</body>
+</html>
