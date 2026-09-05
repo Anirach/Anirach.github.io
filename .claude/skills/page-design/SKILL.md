@@ -20,12 +20,12 @@ description: The house visual system for anirach.com (this repo) — canonical :
 
 ## 0. Correct your mental model first
 
-This looks like 37 hand-written blog posts that must be uniformly messy. It is not. It is **four
+This looks like 76 hand-written blog posts that must be uniformly messy. It is not. It is **four
 self-consistent families plus one hybrid**, and every design decision starts by classifying the
 file you are about to touch.
 
 ```
-67 HTML files
+87 HTML files
   = index.html            (landing — the only page with <script> and the only one
                            with no embedded <style>; its CSS is all style.css)
   + 5 LISTING pages       blog/index.html, books/index.html, news/index.html,
@@ -34,18 +34,21 @@ file you are about to touch.
   + 404.html              (root; LISTING chrome and type, but NOT a section index —
                            it is noindex, carries no social block, and is excluded
                            from sitemap.xml. check_site.py does not enumerate it,
-                           which is why every count below still reads 47.)
+                           which is why the enumerated total is 86 against a tree of
+                           87 — and why the older counts below still read 46/47.)
   + 4 DETAIL pages        books/three-old-men.html, books/a-pocketful-of-questions.html,
                            books/the-thirteenth-seal.html, books/one-day-of-light.html
                            — same .nav chrome and type
                            as LISTING, one subject per page, carded from books/index.html
                            (check_site.py INV-26 enforces that link)
-  + 56 posts in blog/     = 45 HOUSE + 11 ISLAND (the 9 Life + 10 Hermes bilingual posts are HOUSE)
+  + 76 posts in blog/     = 65 HOUSE + 11 ISLAND (the 20 AI Transformation, 9 Life and
+                           10 Hermes bilingual posts are all HOUSE)
                            (one of the 11, obsidian-ai-jarvis, is a HYBRID)
 ```
 
 ```bash
-find . -name '*.html' -not -path './.git/*' -not -path './.claude/*' | wc -l   # → 67
+find . -name '*.html' -not -path './.git/*' -not -path './.claude/*' \
+     -not -path './.bilingual/*' | wc -l                                  # → 87
 for f in blog/*.html; do grep -q 'class="blog-nav"' "$f" || basename "$f"; done # → 12
 ```
 
@@ -161,6 +164,14 @@ diff <(awk '/^    :root \{/,/^    \}/' .claude/skills/page-design/assets/post-te
      <(awk '/^:root \{/,/^\}/' style.css | sed 's/^ *//')      # → no output
 ```
 
+**`--coral: #c2410c` is a 29th token, and it is series-scoped.** The 20 AI Transformation posts
+declare it beside `--gold-dark` in their own `:root`, and it is what their covers and figures are
+drawn in (`scripts/make_cover.py`, `scripts/make_figure.py`, both hard-coding `(194, 65, 12)`).
+It is a brand token like `--gold`, **not** a seventh status colour. Contrast: **5.2:1 on white**,
+so it passes as text there — but only **~4.1–4.3:1 on the light tints** those pages lay it over,
+which is below 4.5:1. On a tint it is **large-text-or-graphics only** (WCAG 1.4.3 large text,
+1.4.11 non-text contrast); never body copy.
+
 The three pure aliases this section used to list for deletion — `--indigo`, `--muted`, `--violet` —
 are **gone** (0 occurrences). What is left off-canon is 7 genuine extras (`--emerald`,
 `--emerald-dark`, `--orange`, `--sky`, `--teal`, `--teal2`, `--purple-light`) plus 5 legitimate
@@ -269,7 +280,13 @@ Chrome     .blog-nav  .blog-nav__inner  .blog-nav__back  .blog-nav__title      (
 Header     .post-hero  .post-hero__tags  .post-hero__tag  .post-hero__title
            .post-hero__meta  .post-hero__series  .post-hero__cover
 Body       .post-body                       (max-width: var(--measure))
-Footers    .post-series-footer  .post-nav  .series-nav
+Footers    .post-series-footer  .post-nav  .series-nav  .series-links
+           .series-links--grouped  .series-links__group  .series-links__label
+                                          (the 20 AI Transformation posts split their
+                                          20 chips into four labelled fives — a modifier
+                                          plus two elements of the existing .series-links
+                                          noun, never a new noun. INV-03d is the linter's
+                                          own guard that its parser survives the nesting.)
 Listing    .card  .card__image|__body|__tags|__tag|__title|__excerpt|__footer|__author|__read
            .card__image--pair               (dual-jacket plate — every card on books/index.html
                                           since the 2026-08-24 dual-cover sweep; 7daf3a4 introduced it)
@@ -284,8 +301,14 @@ Content    .callout  .callout--info|--warn|--good|--bad    [defined in the templ
            .figure  .figure__img  .figure__caption          [live since ea3c8e8 — the 4
                                           books/ DETAIL pages use it for their cover figure]
            .figure--qr                 (reservation QR, books/one-day-of-light.html #event)
+           .references  .references__note  .references__list  .ref-supports
+           .ref-tag  .ref-tag--law|--standard|--study|--synthesis
+                                          (the sourced references block closing every AI
+                                          Transformation post; the tag says what KIND of
+                                          evidence a source is, .ref-supports says which
+                                          claim it carries)
 Language   .lang-switch-box  .lang-switch  .lang-th  .lang-sep  .lang-en
-           .l-th  .l-en                    (the TH ⇄ EN switch — all 56 posts. Pure CSS:
+           .l-th  .l-en                    (the TH ⇄ EN switch — all 76 posts. Pure CSS:
                                           a hidden checkbox before <main>, two content
                                           tracks. The short .l-* names are the TRACKS;
                                           .lang-* are the pill. Never rename to anything

@@ -4,7 +4,7 @@
 
 🌐 **Live: [anirach.com](https://anirach.com)**
 
-A hand-written static site — six top-level pages, four per-book detail pages, and 37 self-contained blog posts. No build system, no package manager, no dependencies, no JavaScript framework. Push to `main` and GitHub Pages publishes it.
+A hand-written static site — six top-level pages, four per-book detail pages, and 76 self-contained blog posts. No build system, no package manager, no dependencies, no JavaScript framework. Push to `main` and GitHub Pages publishes it.
 
 ---
 
@@ -13,18 +13,18 @@ A hand-written static site — six top-level pages, four per-book detail pages, 
 | | |
 |---|---|
 | **Pages** | Home · Blog · Publications · Books · Projects & Apps · News & Updates |
-| **Blog** | **56 posts** in 4 series, every one bilingual Thai/English |
+| **Blog** | **76 posts** in 5 series, every one bilingual Thai/English |
 | **Stack** | Plain HTML5 + CSS3, zero JavaScript. Google Fonts is the only external dependency |
 | **Hosting** | GitHub Pages (classic Jekyll build) on the custom domain `anirach.com`, fronted by Cloudflare |
 | **Build step** | None |
-| **Tests** | `.claude/skills/site-check/scripts/check_site.py` — 58 cross-file integrity checks. This is the test suite |
+| **Tests** | `.claude/skills/site-check/scripts/check_site.py` — 61 cross-file integrity checks. This is the test suite |
 
 ## The six pages
 
 | Page | What it holds |
 |---|---|
 | [`index.html`](index.html) | Single-scroll editorial portfolio: hero, about, latest-news strip, six research areas, featured book, curated live apps, contact |
-| [`blog/`](blog/) | 56 bilingual posts in four series — see below |
+| [`blog/`](blog/) | 76 bilingual posts in five series — see below |
 | [`publications/`](publications/) | The academic record: the Springer book *Libraries in Transformation*, 8 book chapters, and a selected-publications table |
 | [`books/`](books/) | Books & writing (nav label "Books"): four works — *One Day of Light* (the free last-lecture event book, EN/TH editions with free PDF downloads served from `books/`), the published novel *Three Old Men: The Last Conversation*, and two complete bilingual manuscripts — each with its own detail page (`books/one-day-of-light.html`, `books/three-old-men.html`, `books/a-pocketful-of-questions.html`, `books/the-thirteenth-seal.html`) |
 | [`projects/`](projects/) | Live apps (each verified working before it ships) and research-code repositories |
@@ -32,32 +32,32 @@ A hand-written static site — six top-level pages, four per-book detail pages, 
 
 `books/` was one "Books & Writing" page until 2026-08-23, when it split: academic content moved to the new `publications/`, and `books/` became the fiction section with one detail page per book. On 2026-08-24 it gained a fourth work, the Last Lecture companion book *One Day of Light*, whose EN/TH PDFs are downloadable for free from `books/`.
 
-`script.js` (one IIFE, zero dependencies) drives five behaviours — nav scroll state, the mobile hamburger, an `IntersectionObserver` scroll-reveal with a 120 ms stagger, smooth anchor scrolling, and a hero-watermark parallax. **It runs on the landing page only.** The other nine pages (five section indexes and the four book detail pages) carry no JavaScript at all, by design; their mobile menu is a pure-CSS checkbox toggle.
+`script.js` is gone — deleted 2026-08-26. **The site loads no executable JavaScript at all**, and `check_site.py` INV-38 fails the build on any `<script>` that is not `application/ld+json` (schema.org metadata, which the browser parses as data and never executes). Each of the script's four jobs has a CSS replacement in `style.css`: the scroll-reveal and the nav scroll state are scroll-driven CSS animations (`animation-timeline: view()` / `scroll(root)`), the landing page's mobile menu is `.nav__links:target`, and anchor scrolling is native `scroll-behavior: smooth`. The other pages' mobile menu is a pure-CSS checkbox toggle — a second mechanism, also without JavaScript.
 
 ## The blog
 
-`blog/index.html` is a static, zero-JavaScript listing: one featured post and four series. There is no filtering, sorting or search UI.
+`blog/index.html` is a static, zero-JavaScript listing: one featured post and five series, with a chip strip in the hero that jumps to each. There is no filtering, sorting or search UI.
 
+- **🧭 AI Transformation for Organizations** — 20 posts, all numbered, linked by a chip strip grouped into four labelled blocks of five (Reframe · Redesign · Engineer · Lead). The one series generated rather than hand-written: `scripts/build_series.py` emits all 20 from a manifest plus per-post content sheets.
 - **⚡ Hermes Agent in Practice** — 10 posts, all numbered, linked by a chip strip.
 - **🤖 OpenClaw for Organizations** — 13 posts, seven of them a numbered series linked by a chip strip.
 - **🔧 DevOps & Vibe Coding** — 24 posts, a single prev/next chain.
 - **🌅 Life Thought & Philosophy** — 9 essays, linked by a chip strip.
 
-**Every post is bilingual.** All 56 carry a pure-CSS Thai ⇄ English switch: a `ไทย · English` pill in the hero swaps between two complete tracks of the same article. Thai is the default, there is no JavaScript, and the page-level `<html lang="th">` never changes — the English track is `lang="en"` inside it. The six top-level pages and the four book detail pages are `lang="en"` chrome and wrap their Thai passages in `<span lang="th">`.
+**Every post is bilingual.** All 76 carry a pure-CSS Thai ⇄ English switch: a `ไทย · English` pill in the hero swaps between two complete tracks of the same article. Thai is the default, there is no JavaScript, and the page-level `<html lang="th">` never changes — the English track is `lang="en"` inside it. The six top-level pages and the four book detail pages are `lang="en"` chrome and wrap their Thai passages in `<span lang="th">`.
 
 ## Repository structure
 
 ```
 .
-├── index.html          # Landing page — the ONLY file that loads style.css or script.js
+├── index.html          # Landing page — the ONLY file that loads style.css
 ├── style.css           # Landing-page styles; carries the canonical :root token block
-├── script.js           # 83 lines, one IIFE, five behaviours, zero dependencies
 ├── _config.yml         # Jekyll: keeps internal working docs out of the published site
 ├── CNAME               # anirach.com
-├── blog/               # index.html (3 categories, 37 cards) + 37 self-contained posts
+├── blog/               # index.html (1 featured post + 5 series, 76 cards) + 76 self-contained posts
 ├── books/              # Books & writing: index.html + 4 per-book detail pages + 2 free PDFs (EN/TH), all self-contained
 ├── publications/  projects/  news/   # one self-contained index.html each
-├── images/             # 58 files — covers, diagrams, posters, profile photo
+├── images/             # 195 files — covers, share cards, diagrams, series figures, posters, profile photo
 ├── docs/               # design spec, implementation plan, OpenClaw runbook (not published)
 └── .claude/skills/     # the four maintenance skills (not published)
 ```
@@ -67,14 +67,14 @@ A hand-written static site — six top-level pages, four per-book detail pages, 
 The single most important fact before editing:
 
 ```
-index.html ──▶ style.css + script.js     (the ONLY consumer of either)
+index.html ──▶ style.css                 (the ONLY consumer of it)
 
 blog/index.html   ──▶ its own <style> block, no JS
-blog/<post>.html  ──▶ its own <style> block, no JS     × 37
+blog/<post>.html  ──▶ its own <style> block, no JS     × 76
 books/ (index + 4 detail) publications/ projects/ news/ ──▶ same   × 8
 ```
 
-Every page embeds its complete stylesheet. There is no shared partial, template engine or token file, so a "global" change means editing N files by hand — and nothing tells you when file 23 of 47 got missed. That is what the linter is for. The compensating upside: blast radius is exactly one file.
+Every page embeds its complete stylesheet. There is no shared partial, template engine or token file, so a "global" change means editing N files by hand — and nothing tells you when file 23 of 87 got missed. That is what the linter is for. The compensating upside: blast radius is exactly one file.
 
 ## Local development
 
@@ -86,14 +86,14 @@ python3 -m http.server 8000     # → http://localhost:8000
 
 > **Serve the root, not `blog/`.** Every blog page references images as `../images/…`.
 
-> **Known local-dev trap.** The seven numbered OpenClaw posts link to each other with root-absolute, extensionless URLs (`/blog/openclaw-101`). GitHub Pages resolves those; `http.server` does not and returns 404. That is not a regression.
+> **Known local-dev trap.** The four chip-strip series — OpenClaw's seven numbered posts, Hermes' ten, Life's nine and AI Transformation's twenty — link to each other with root-absolute, extensionless URLs (`/blog/openclaw-101`). GitHub Pages resolves those; `http.server` does not and returns 404. That is not a regression.
 
 ## Verification
 
 Run all three from the repo root before pushing. All must pass:
 
 ```bash
-python3 .claude/skills/site-check/scripts/check_site.py      # 58 cross-file integrity checks
+python3 .claude/skills/site-check/scripts/check_site.py      # 61 cross-file integrity checks
 python3 docs/openclaw/check-news-sync.py                     # news↔homepage sync, provenance, 4 counters
 python3 .claude/skills/blog-post/assets/verify-wiring.py     # blog post wiring
 ```

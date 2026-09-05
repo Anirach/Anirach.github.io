@@ -1,6 +1,6 @@
 ---
 name: a11y-perf
-description: Accessibility and performance rules for the anirach.com static site (66 hand-written HTML files, no build step, per-file embedded CSS). Use this whenever you touch any .html file in this repo, add or edit a blog post under blog/, add or swap an image in images/, edit a :root palette or a .post-hero gradient, change nav markup, or are asked about contrast, alt text, focus states, keyboard access, page weight, image size, fonts, or Lighthouse/Core Web Vitals — even if the user does not mention accessibility or performance at all, and even for a "just add a card to blog/index.html" request. It carries this site's real measured numbers (blog/index.html is 2.47 MB referenced and fully lazy-loaded (2026-09-01: cover redesign + the 9-post Life series + the 10-post Hermes series); the palette was re-keyed to the book covers 2026-08-26 so --blue #226299 now PASSES as text, while --blue-light is borders-only and the focus ring is scoped; the :focus-visible/reduced-motion/color-scheme baseline is landed in 66/66 pages; .post-hero__meta and .post-series-footer contrast are both DONE as of 2026-08-26) plus verified drop-in fixes, so use it instead of deriving generic WCAG advice.
+description: Accessibility and performance rules for the anirach.com static site (86 hand-written HTML files, no build step, per-file embedded CSS). Use this whenever you touch any .html file in this repo, add or edit a blog post under blog/, add or swap an image in images/, edit a :root palette or a .post-hero gradient, change nav markup, or are asked about contrast, alt text, focus states, keyboard access, page weight, image size, fonts, or Lighthouse/Core Web Vitals — even if the user does not mention accessibility or performance at all, and even for a "just add a card to blog/index.html" request. It carries this site's real measured numbers (blog/index.html is 3.43 MB referenced across 153 img tags, every one lazy except the featured LCP card (2026-09-05: the 20-post AI Transformation series); the palette was re-keyed to the book covers 2026-08-26 so --blue #226299 now PASSES as text, while --blue-light is borders-only and the focus ring is scoped; the :focus-visible/reduced-motion/color-scheme baseline is landed in 86/86 pages; .post-hero__meta and .post-series-footer contrast are both DONE as of 2026-08-26) plus verified drop-in fixes, so use it instead of deriving generic WCAG advice.
 ---
 
 # Accessibility & performance for anirach.com
@@ -47,14 +47,14 @@ nothing.
 
 `ec2827b` re-encoded the 15 oversized PNG covers to JPG and `21c8a55` re-ran the four
 that still cleared 200 KB at `formatOptions 70`; the three 2026-08-23 book covers shipped
-compliant. Today there are **0 PNG covers and 44
-JPG covers (47 `*-cover.jpg` + 8 suffixed), average 51 KB, largest 174 KB, none over 200 KB.**
+compliant. Today there are **0 PNG covers and 85
+JPG covers (77 `*-cover.jpg` + 8 suffixed), average 46 KB, largest 174 KB, none over 200 KB.**
 
 ```bash
 ls images/*-cover.png 2>/dev/null | wc -l                     # → 0
 find images -name '*-cover.*' -size +200k                     # → nothing
 ls -l images/*-cover.jpg | awk '{s+=$5;n++} END {print n" jpg, avg "int(s/n/1024)" KB"}'
-# → 36 jpg, avg 112 KB   (unsuffixed only — see the blind spot below)
+# → 77 jpg, avg 42 KB    (unsuffixed only — see the blind spot below)
 ```
 
 Before adding a cover, run `ls -lS images/ | head` and compare. Hard-fail any cover
@@ -85,8 +85,8 @@ removes its PDFs in the same commit.
 
 ### 2. Every `<img>` gets `width`, `height`, `loading` and `decoding`. **[DONE — hold the line]**
 
-**137 of 137 `<img>` tags carry all four**, since `e8da9da` (the books/publications pages
-and `books/one-day-of-light.html` shipped compliant). 42 also carry
+**299 of 299 `<img>` tags carry all four**, since `e8da9da` (the books/publications pages
+and `books/one-day-of-light.html` shipped compliant). 83 also carry
 `fetchpriority`. This and `alt` coverage are the only two 100%-complete practices on the
 site; a new post that omits them is a regression, not a gap.
 
@@ -98,18 +98,20 @@ for p in pathlib.Path('.').rglob('*.html'):
     if '.claude' in p.parts or '.git' in p.parts: continue
     for m in re.finditer(r'<img\b[^>]*>', p.read_text(encoding='utf-8'), re.S):
         n+=1; ok+= all(a+'=' in m.group(0) for a in ('loading','decoding','width','height'))
-print(ok, "/", n)          # → 137 / 137
+print(ok, "/", n)          # → 299 / 336
 EOF
 ```
 
 **Use that multiline parse, not `grep -oh "<img[^>]*>"`** — the line-based grep reports
-120 because seventeen `<img>` are written across multiple lines (all on the books/publications
-pages). Quoting 120 where the answer is 137
-is exactly the kind of small wrongness that makes a reader stop trusting this file.
+316 against the parse's 336, because 20 `<img>` are written across multiple lines (mostly on the
+books/publications pages). Both totals also count a literal `<img>` written inside a CSS comment in
+37 posts, which is not a tag: **the real tag count is 299, and all 299 are compliant.** Quoting
+316, or 336, where the answer is 299 is exactly the kind of small wrongness that makes a reader
+stop trusting this file.
 
 Card images in `blog/index.html` sit in a 352×220 CSS px slot (1200px section −
 2×2.5rem padding = 1120; `repeat(auto-fill, minmax(340px,1fr))` with `gap:2rem` →
-3 cols of 352px; `.card__image { aspect-ratio: 16/10 }` → 220px). Source covers are **800×800 on all 37** as of 2026-08-26 — the drawn cover
+3 cols of 352px; `.card__image { aspect-ratio: 16/10 }` → 220px). Source covers are **800×800 on all 76 post covers** (the 77th `*-cover.jpg` is the Springer jacket, `libraries-in-transformation-cover.jpg` at 306×461) as of 2026-08-26 — the drawn cover
 system (`scripts/make_cover.py` + `scripts/covers.tsv`) replaced 35 AI clip-art
 images at mixed canvases (1024×1024, 1024×680, 800×446, …) with one. `object-fit:
 cover` into the 16:10 slot throws away 37.5% of a square source, which is why the
@@ -315,11 +317,12 @@ These are right; flagging them wastes the user's time:
 
 ### 10. State the file count before starting, and script the edit.
 
-There are no partials. **The site is 67 HTML files** — 66 enumerated by `check_site.py` plus `404.html`, which it deliberately skips. Before proposing a sitewide change,
+There are no partials. **The site is 87 HTML files** — 86 enumerated by `check_site.py` plus `404.html`, which it deliberately skips. Before proposing a sitewide change,
 count and say the number out loud so the user can judge scope:
 
 ```bash
-find . -name "*.html" -not -path "./.git/*" -not -path "./.claude/*" | wc -l   # → 47
+find . -name "*.html" -not -path "./.git/*" -not -path "./.claude/*" \
+     -not -path "./.bilingual/*" | wc -l                                    # → 87
 ```
 
 | Change | Files still needing it |
@@ -351,9 +354,10 @@ not.** Loops and verification commands: `references/n-file-edits.md`.
 
 ### R1. `blog/index.html` page weight — **[DONE]**
 
-Was 18.41 MB, then 4.07 MB. Now **2.47 MB of referenced bytes, all of it lazy** —
-the drawn covers (2026-08-26) took the image half from 4.27 MB to 1.59 MB, and the
-2026-09-01 per-post redesign added 0.21 MB of real drawing back.
+Was 18.41 MB, then 4.07 MB, then 2.47 MB. Now **3.43 MB of referenced bytes, every one of
+the 153 `<img>` tags lazy except one** — the 20-post AI Transformation series (2026-09-05)
+added 20 drawn covers and a share card, and the featured card at the top of the page is
+deliberately `loading="eager" fetchpriority="high"`, because it is the LCP element.
 
 ```bash
 python3 - <<'EOF'
@@ -368,20 +372,20 @@ h=os.path.getsize('blog/index.html')
 print(f"img tags {len(tags)}  unique {len(u)}  lazy {sum('loading=\"lazy\"' in t for t in tags)}")
 print(f"html {h:,}  images {sum(u.values()):,}  total {h+sum(u.values()):,}")
 EOF
-# → img tags 74  unique 38  lazy 74
-#   html 87,033  images 1,955,297  total 2,042,330   (1.95 MB)
+# → img tags 153  unique 78  lazy 152
+#   html 149,637  images 3,444,584  total 3,594,221   (3.43 MiB)
 ```
 
 Three numbers matter and they are not the same number — quote the right one:
 
 | Figure | Value | Meaning |
 |---|---|---|
-| referenced total | **2.47 MB** | every byte the page can eventually pull. Was 18.41 MB, then 4.07 MB, then 1.59 MB. |
-| eager payload | **67 KB** | the HTML. **All 74 `<img>` tags are `loading="lazy"`**, so nothing else is fetched up front. |
-| realistic first viewport | **≈0.5 MB** | HTML + the first ~10 cards' covers, which a browser fetches because lazy images near the viewport still load. |
+| referenced total | **3.43 MB** | every byte the page can eventually pull. Was 18.41 MB, then 4.07 MB, then 1.59 MB, then 2.47 MB. |
+| eager payload | **206 KB** | the HTML (146 KB) plus the single eager image, the featured share card (60 KB). **The other 152 `<img>` tags are `loading="lazy"`**, so nothing else is fetched up front. |
+| realistic first viewport | **≈0.65 MB** | HTML + the feature + the first ~10 cards' covers, which a browser fetches because lazy images near the viewport still load. |
 
-Saying "the blog index is 1.6 MB" overstates what a visitor downloads by ~3×; saying
-"74 KB" understates it. Say 2.47 MB referenced / ≈0.5 MB first viewport.
+Saying "the blog index is 3.4 MB" overstates what a visitor downloads by ~5×; saying
+"146 KB" understates it. Say 3.43 MB referenced / ≈0.65 MB first viewport.
 
 `ec2827b` + `21c8a55` did the cover re-encode; `e8da9da` added the attributes. Heaviest
 posts now: `blog/idle-self-improvement.html`, `openclaw-migration.html`,

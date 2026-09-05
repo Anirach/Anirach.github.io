@@ -17,14 +17,15 @@ description: End-to-end recipe for adding, editing, or removing a post in blog/ 
 > reporting CLEAN while `check_site.py` independently found 8 stale nav titles.
 >
 > **Last full re-measure: 2026-08-26 against `21d5cfc`.** Headline counts re-measured
-> 2026-09-01 after the Life (9 posts) and Hermes (10 posts) launches: **56 posts, 4 series**;
+> 2026-09-05 after the AI Transformation launch (20 posts, built by `scripts/build_series.py`),
+> on top of the 2026-09-01 Life (9) and Hermes (10) launches: **76 posts, 5 series**;
 > granular tables below that still say 37 reflect the 2026-08-26 census — re-derive before acting.
 
-This site has **no build step, no templating, no partials**. Each of the 57 files in
-`blog/` — 56 posts plus `index.html` — embeds its own `<style>`, its own copy of the nav
-markup, and its own footer. (The wider site is 47 HTML files: these 38 plus `index.html`,
-the five section indexes `books/`, `news/`, `projects/`, `publications/`, and the four
-`books/*.html` per-book detail pages.)
+This site has **no build step, no templating, no partials**. Each of the 77 files in
+`blog/` — 76 posts plus `index.html` — embeds its own `<style>`, its own copy of the nav
+markup, and its own footer. (The wider site is 87 HTML files: these 77 plus `index.html`,
+the four section indexes `books/`, `news/`, `projects/`, `publications/`, the four
+`books/*.html` per-book detail pages, and `404.html`.)
 Nothing validates the wiring between them. A post is not "a file" — it is a file plus a
 card plus two counters plus two neighbours' nav links, and every one of those is edited
 by hand.
@@ -43,10 +44,10 @@ Stdlib-only, no deps. On a clean checkout it prints `CLEAN` with no `known:` and
 was clean, and after every file you touch. Anything that appears as `FAIL:` or `warn:`
 was caused by your change.
 
-Baseline on a clean `main` (2026-08-26, `21d5cfc`):
+Baseline on a clean `main` (2026-09-05, after the AI Transformation launch):
 
 ```
-posts=56  cards=56  series-nav=26  post-nav=24  no-nav=6
+posts=76  cards=76  series-nav=46  post-nav=24  no-nav=6
 
 CLEAN — no new wiring breakage (0 warn).
 ```
@@ -175,11 +176,11 @@ Then fill every `{{PLACEHOLDER}}`. The skeleton, in order, is:
 
 Non-negotiables, each because something on disk got them wrong:
 
-- **`lang="th"`.** All 56 posts are `th`; `index.html` and `blog/index.html` are `en`.
+- **`lang="th"`.** All 76 posts are `th`; `index.html` and `blog/index.html` are `en`.
 - **Exactly one `<h1>`**, the `.post-hero__title`. Do not repeat the title in the body —
   `deployment-hosting.html` did, and the duplicate was removed on 2026-08-26; every post
   has exactly one now, and INV-11 carries no baseline entry, so a regression will fail.
-- **`<meta name="description">` in Thai.** All 66 pages carry one since the 2026-08-26
+- **`<meta name="description">` in Thai.** All 86 pages carry one since the 2026-08-26
   metadata sweep (the 6 that did not are fixed). `check_site.py` **INV-27** now fails the
   build on a missing or empty one — this is no longer a warning you can defer.
 - **The `<!-- social -->` block.** Every page has one — canonical, `og:*`,
@@ -302,7 +303,7 @@ prose, so any automated check would be noise. Apply them while writing, not in a
 
 ## Step 4b — the English track
 
-**All 56 posts are bilingual, so a new one is not finished until it has an English
+**All 76 posts are bilingual, so a new one is not finished until it has an English
 track.** Write the Thai article first and get it right; the English track is a faithful
 mirror of finished prose, not a parallel draft.
 
@@ -546,7 +547,8 @@ not make worse. (They *do* have the canonical `:root` now, and
 their 14 broken links were fixed in `b9fb125`.)
 
 Because there are no shared partials, a request to change styling "everywhere" means
-editing up to 38 `<style>` blocks in `blog/` — 47 for the whole site. Say so and get
+editing up to 77 `<style>` blocks in `blog/` — 86 for the whole site (`index.html` is the
+exception: its CSS lives in `style.css`). Say so and get
 confirmation before starting; do not change one post and call it done.
 
 ## When something looks broken

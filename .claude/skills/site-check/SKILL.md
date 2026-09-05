@@ -1,6 +1,6 @@
 ---
 name: site-check
-description: Runs the cross-file integrity linter for the anirach.com static site (46 self-contained posts in blog/, no build step, no tests, no CI) and explains how to repair every failure it reports. This repo has zero tooling — this skill IS the test suite. Use it before any push, and immediately after ANY edit under blog/, images/, index.html, style.css, or script.js — every page carries its own copy of the nav, the CSS and the counters, so even a one-line edit silently desynchronises blog/index.html card counts, the post-nav prev/next chain, the 7-entry OpenClaw series strip, or a cover image. Also use it when adding or renaming a blog post, when the user says "check the site", "did I break anything", "is the blog consistent", "verify before deploy", "run the tests", or when reviewing a diff that touches blog/index.html. Run it BEFORE the edit too, to confirm the tree is green (0 new, 0 known since 2026-08-26), so any violation the run after your edit reports is yours.
+description: Runs the cross-file integrity linter for the anirach.com static site (76 self-contained posts in blog/, no build step, no tests, no CI) and explains how to repair every failure it reports. This repo has zero tooling — this skill IS the test suite. Use it before any push, and immediately after ANY edit under blog/, images/, index.html, style.css, or script.js — every page carries its own copy of the nav, the CSS and the counters, so even a one-line edit silently desynchronises blog/index.html card counts, the post-nav prev/next chain, the 7-entry OpenClaw series strip, or a cover image. Also use it when adding or renaming a blog post, when the user says "check the site", "did I break anything", "is the blog consistent", "verify before deploy", "run the tests", or when reviewing a diff that touches blog/index.html. Run it BEFORE the edit too, to confirm the tree is green (0 new, 0 known since 2026-08-26), so any violation the run after your edit reports is yours.
 ---
 
 # site-check — the site's only test suite
@@ -8,7 +8,7 @@ description: Runs the cross-file integrity linter for the anirach.com static sit
 `/Users/anirach/Documents/Anirach.github.io` has no package manager, no build step, no CI, and no
 tests. Every file in `blog/` is self-contained: its own `<style>` block, its own copy of the nav
 markup, its own footer. There are no shared partials, so a "global" change means editing N files by
-hand, and nothing tells you when file 23 of 37 got missed. The bundled script is what tells you.
+hand, and nothing tells you when file 23 of 76 got missed. The bundled script is what tells you.
 
 ## Run it
 
@@ -64,9 +64,9 @@ change the exit code, so read the per-check status lines, not just the exit stat
 
 ## Expected `[known]` on today's tree — none
 
-A clean checkout **exits 0 with 0 violations**: `checks run 58 / clean 58 / known baseline 0 /
-violations 0 new, 0 known`. Verified 2026-08-26 at `21d5cfc` (2026-09-01: now 66 enumerated files, 56 posts, 4 series after the Life + Hermes launches) — then 47 HTML files, 37 posts, `books/`
-holding four detail pages; 58 checks, 39 fail / 17 warn / 2 info. `BASELINE = {}` holds only
+A clean checkout **exits 0 with 0 violations**: `checks run 61 / clean 61 / known baseline 0 /
+violations 0 new, 0 known`. Verified 2026-08-26 at `21d5cfc` (2026-09-05: now 86 enumerated files, 76 posts, 5 series after the AI Transformation launch, which brought INV-02f, INV-03c and INV-03d with it; 2026-09-01 was 66 files, 56 posts, 4 series after Life + Hermes) — then 47 HTML files, 37 posts, `books/`
+holding four detail pages; 61 checks, 42 fail / 17 warn / 2 info. `BASELINE = {}` holds only
 retirement comments. There is no table of expected debt to compare against any more: **any
 violation the script prints is new**, and any fail-severity one blocks the push.
 
@@ -120,6 +120,19 @@ adding a post — recompute:
 grep -c 'class="card"' blog/index.html
 ```
 
+### INV-02f — the `.blog-jump` chips match the sections they anchor
+
+Each chip in the hero's `<nav class="blog-jump">` must anchor a real `.series-section`, its
+trailing `· N` must equal that section's card count, and there must be exactly one chip per
+section (the `/feed.xml` chip is not a section chip and is ignored).
+
+**Failure means** you added a series and forgot its chip, renamed a section id, or let a chip's
+count drift the way the hero stat used to. Nothing policed this strip until 2026-09-05 — the
+Life launch forgot its chip twice, and no check noticed either time.
+
+**Repair:** edit the strip in `blog/index.html` to match the sections; the counts come from the
+same recompute INV-02a/c use.
+
 ### INV-03 — the 7-entry OpenClaw series strip
 
 Each of the 7 numbered posts (`openclaw-101`, `-agent-teams`, `-memory`, `-security`,
@@ -134,6 +147,32 @@ sibling).
 **Repair:** copy `assets/series-nav.html` into the file and swap exactly one `<a href="/blog/X">`
 for `<span class="current">`. The strip is a fixed literal duplicated 7×, so adding an 8th post
 means editing all 7 existing files plus the new one. See `references/adding-a-post.md`.
+
+### INV-03c — every OTHER `.series-nav` strip is internally consistent
+
+INV-03, INV-03b and INV-20a all iterate the hardcoded `SERIES7` (OpenClaw) list, so the Hermes
+(10), Life (9) and AI Transformation (20) strips shipped with **no content check at all**.
+INV-03c closes that: for every non-SERIES7 series, the strip must be identical across its
+members, each member must mark exactly itself `current`, and the strip may link only to members
+of its own series.
+
+**Failure means** you edited one member's strip and not the rest, left the copied post marking a
+sibling `current`, or linked a post outside the series.
+
+**Repair:** for AI Transformation do not hand-edit 20 strips — `python3 scripts/build_series.py
+--restrip` rewrites all of them from the manifest and touches nothing else. For Hermes and Life,
+copy the strip from a sibling and move the `<span class="current">`.
+
+### INV-03d — the linter's own parser survives a grouped strip
+
+A self-check, not a content check. `Site._parse_navs` used `RE_SNAV`, which ended a strip at the
+first `</div></div>`; the AI Transformation strip nests four `.series-links__group` divs inside
+`.series-links--grouped`, so that parser would have silently read five chips of twenty and every
+strip check above it would have passed on a fifth of the evidence. The parser now walks div depth
+(`series_nav_body()`), and INV-03d fault-injects a grouped strip to prove it.
+
+**Failure means** somebody replaced the depth walker with a regex again. **Repair:** restore
+`series_nav_body()`; do not "simplify" it back into `RE_SNAV`.
 
 ### INV-04a — prev/next symmetry (`A.next == B` ⟺ `B.prev == A`)
 
@@ -379,7 +418,7 @@ automatically; INV-26 is the one check that ties them to their index.
 ## Warn-level checks (real drift, never blocks a push)
 
 Surface these; fix them deliberately, not opportunistically. A linter that fails the build on
-cosmetics gets switched off. The real split is 39 fail / 17 warn / 2 info across 58 checks —
+cosmetics gets switched off. The real split is 42 fail / 17 warn / 2 info across 61 checks —
 `--list` prints each check's severity. Every row below reads 0 today; the "repair" column is
 what to keep it at 0.
 
