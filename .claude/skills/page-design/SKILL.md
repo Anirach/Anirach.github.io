@@ -214,7 +214,20 @@ The naive line-diff this section used to print reported a false positive for exa
 once the template grew a comment. The whole-site audit that proves the 87 blocks agree is in
 `references/tokens.md` §0.
 
-**`--coral: #c2410c` is a 30th token, and it is series-scoped.** The 20 AI Transformation posts
+**`--coral: #c2410c` is a 30th token, and it is series-scoped.** Count it before you write the
+ordinal: the canonical block parses to **29** tokens (`style.css`, `assets/post-template.html` and
+every non-AI post) and the 20 AI Transformation posts parse to **30**. Writing "29th" here by
+conflating the two is an easy slip and has already been made once.
+
+```bash
+python3 -c "
+import re
+for f in ['style.css','blog/api-request-lifecycle.html','blog/ai-transformation-layers.html']:
+    m=re.search(r':root\s*\{(.*?)\}', open(f).read(), re.S)
+    print(f, len(re.findall(r'--[a-zA-Z0-9-]+\s*:', m.group(1))))"   # → 29, 29, 30
+```
+
+The 20 AI Transformation posts
 declare it **inside** the brand group of their own `:root`, between `--gold-dark` and `--cloud`:
 
 ```css
@@ -973,7 +986,9 @@ Leave these alone unless the user explicitly asks:
 - the glassy nav: `background: rgba(248,250,252,0.85); backdrop-filter: blur(20px)` — 87 files use
   `backdrop-filter` somewhere
 - the `/* ── SECTION ── */` CSS comment convention (87 files, 726 uses)
-- the canonical 29-token `:root`, byte-identical in 87/87 blocks (`references/tokens.md`)
+- the canonical 29-token `:root`: identical values in 87/87 blocks, and a byte-identical paste
+  everywhere except the brand line of the 20 AI Transformation posts, which splices `--coral` in
+  (`references/tokens.md` §0 and §4a)
 - the 4-line a11y block (`:focus-visible`, reduced-motion, `color-scheme`, `text-wrap`) in 86
   embedded `<style>` blocks + `style.css` — including its `outline: none`, which is scoped to
   `:focus:not(:focus-visible)` and is correct

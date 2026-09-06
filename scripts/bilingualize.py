@@ -410,6 +410,12 @@ def verify(slug):
 
     # ids: one th- and one en- per section, and every anchor resolves
     ids = re.findall(r'id="([^"]+)"', s)
+    # A duplicate id is invisible to the th/en set comparison below, because an
+    # id carrying neither prefix lands in neither set.  That is exactly how the
+    # references <h2> shipped twice in all 20 AI Transformation posts.
+    dupes = sorted({i for i in ids if ids.count(i) > 1})
+    if dupes:
+        bad.append("duplicate id(s): %s" % dupes[:4])
     th = {i[3:] for i in ids if i.startswith("th-")}
     en = {i[3:] for i in ids if i.startswith("en-")}
     if th != en:

@@ -736,8 +736,9 @@ Keep the existing comment convention — now 87 files, 726 uses:
 Order inside every `<style>` block, matching the house files:
 
 1. `*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }`
-2. `:root { … }` (canonical 29-token block, byte-identical across files; brand tokens after —
-   the AI Transformation posts append `--coral` here, last, after `--gold-dark`)
+2. `:root { … }` (canonical 29-token block, byte-identical across files; product brand tokens
+   after it. The one exception is `--coral`, which the 20 AI Transformation posts splice **into**
+   the brand line between `--gold-dark` and `--cloud` — see `tokens.md` §4a)
 3. `html { scroll-behavior: smooth; }` and `body { … }`
 4. `.skip-link`, `.lang-switch-box` / `.lang-switch`, `.l-th` / `.l-en`
 5. `.blog-nav` …

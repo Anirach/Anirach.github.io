@@ -149,7 +149,13 @@ EXTRA_CSS = """
                letter-spacing: 0.06em; text-transform: uppercase; padding: 0.1rem 0.5rem;
                border-radius: 50px; margin-right: 0.4rem; vertical-align: 0.05em;
                background: rgba(34,98,153,0.1); color: var(--blue-dark); }
+    /* All four labels get a rule.  --standard and --study shipped without one
+       on 2026-09-05, so 158 of 306 tags fell through to the base blue and the
+       two labels were indistinguishable.  Ratios on --bg: 6.70 / 6.92 / 7.36 /
+       4.81:1, all AA at this size. */
     .ref-tag--law { background: rgba(239,68,68,0.12); color: #991b1b; }
+    .ref-tag--standard { background: rgba(34,98,153,0.12); color: var(--blue-dark); }
+    .ref-tag--study { background: rgba(34,197,94,0.18); color: #14532d; }
     .ref-tag--synthesis { background: rgba(196,164,108,0.22); color: var(--gold-dark); }
     .ref-supports { display: block; color: var(--slate-light); font-size: 0.85rem; }
 
@@ -229,9 +235,20 @@ def figure_markup(fig, lang, pad):
 
 def namespace(text, prefix, ids):
     """th-/en- the heading ids and the anchors that point at them.  The writer
-    writes bare ids; which track a section lands in is the builder's problem."""
+    writes bare ids; which track a section lands in is the builder's problem.
+
+    `ids` is the section-marker list, but a writer can give an id to something
+    that is not a section -- the references <h2> did exactly that, and shipped
+    the same id in both tracks of all 20 posts before anyone noticed.  So scan
+    the track for ids too rather than trusting the caller to have listed them.
+    """
+    found = set(re.findall(r'<(?:h[1-6]|section)\b[^>]*\bid="([A-Za-z][\w-]*)"',
+                           text))
+    ids = sorted((set(ids) | found) - {"main"}, key=len, reverse=True)
     out = text
     for hid in ids:
+        if hid.startswith(("th-", "en-")):
+            continue
         out = re.sub(r'(<h[1-6][^>]*\bid=")%s(")' % re.escape(hid),
                      r"\g<1>%s-%s\g<2>" % (prefix, hid), out)
         out = re.sub(r'(<section[^>]*\bid=")%s(")' % re.escape(hid),
