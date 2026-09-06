@@ -1,0 +1,906 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Automation &amp; Agents — งานที่รันเองและตรวจเอง | Anirach Mingkhwan</title>
+  <meta name="description" content="ให้ Hermes ทำงานเองตามเวลาและตรวจงานเอง — Routines/cron, delegate_task, /agents, Command Center และ verify-on-stop ทีละขั้น">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=Sarabun:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      color-scheme: light;
+      /* ink */
+      --navy: #11304b; --slate: #334155; --slate-light: #526174; --gray: #94a3b8;
+      /* ground */
+      --bg: #faf7f0; --white: #ffffff; --code-bg: #1e293b;
+      /* accent */
+      --blue: #226299; --blue-dark: #1a4d7a; --blue-light: #4992b9;
+      /* brand — sampled from the book covers. --gold is decorative on light grounds (2.2:1); --gold-dark is its text form. */
+      --gold: #c4a46c; --gold-dark: #7a5f22; --cloud: #dee7e6; --parchment: #e9e1c4; --focus: #226299;
+      /* status — use only these six, never invent a seventh */
+      --green: #22c55e; --red: #ef4444; --amber: #f59e0b;
+      --cyan: #06b6d4; --purple: #226299; --purple-dark: #1a4d7a;
+      /* type */
+      --font: 'Inter', 'Sarabun', -apple-system, BlinkMacSystemFont, sans-serif;
+      --mono: 'JetBrains Mono', 'Fira Code', 'Sarabun', monospace;
+      /* form */
+      --radius: 12px; --radius-sm: 8px; --radius-lg: 16px;
+      --measure: 720px; --wide: 860px;
+      --transition: 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+    html { scroll-behavior: smooth; }
+    body { font-family: var(--font); font-size: 17px; line-height: 1.8; color: var(--slate); background: var(--bg); -webkit-font-smoothing: antialiased; }
+    .blog-nav { position: fixed; top: 0; left: 0; right: 0; z-index: 100; background: rgba(248,250,252,0.85); backdrop-filter: blur(20px); border-bottom: 1px solid rgba(0,0,0,0.05); }
+    .blog-nav__inner { max-width: 860px; margin: 0 auto; padding: 0 2rem; height: 56px; display: flex; align-items: center; justify-content: space-between; }
+    .blog-nav__back { font-size: 0.85rem; font-weight: 500; color: var(--blue); text-decoration: none; }
+    .blog-nav__back:hover { color: #1a4d7a; }
+    .blog-nav__title { font-size: 0.85rem; font-weight: 600; color: var(--navy); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 50%; }
+    /* ── HERO ── house .post-hero on the approved Deep Blue gradient (page-design
+       §5 / INV-28). Ink is inverted for the dark ground: white title/meta, tag
+       pills white on 18% white — the openclaw-production treatment. The
+       background value must stay byte-identical to the approved string. */
+    .post-hero { padding: 8rem 2rem 3rem; background: linear-gradient(135deg, #11304b 0%, #1a4d7a 45%, #226299 100%); color: #fff; text-align: center; }
+    .post-hero__tags { display: flex; gap: 0.5rem; justify-content: center; margin-bottom: 1.25rem; flex-wrap: wrap; }
+    .post-hero__tag { display: inline-block; font-size: 0.72rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.1em; color: #fff; background: rgba(255,255,255,0.18); padding: 0.35rem 0.9rem; border-radius: 20px; }
+    .post-hero__title { font-size: clamp(1.8rem, 5vw, 3rem); font-weight: 800; color: #fff; line-height: 1.2; margin-bottom: 1rem; max-width: 720px; margin-left: auto; margin-right: auto; }
+    .post-hero__sub { font-size: 1.05rem; max-width: 640px; margin: 0 auto 1.5rem; line-height: 1.7; color: #fff; }
+    .post-hero__meta { font-size: 0.85rem; color: #fff; display: flex; align-items: center; justify-content: center; gap: 1.5rem; flex-wrap: wrap; }
+    .post-hero__series { font-weight: 600; color: #fff; }
+    /* the switch pill and the focus ring both sit on the dark hero: the pill is
+       a light chip so its labels keep their light-ground colours, and --focus
+       re-points to gold here (blue collapses on blue — the footer/pre
+       precedent). */
+    .post-hero { --focus: var(--gold); }
+    .post-hero__cover {
+      aspect-ratio: 1 / 1;
+      max-width: 380px;
+      margin: 2.5rem auto 0;
+      border-radius: var(--radius-lg, 16px);
+      overflow: hidden;
+      box-shadow: 0 20px 60px rgba(17,48,75,0.14);
+    }
+    .post-hero__cover img { width: 100%; height: 100%; object-fit: cover; display: block; }
+    .post-body { max-width: 720px; margin: 0 auto; padding: 3rem 2rem 6rem; }
+    .post-body h2 { font-size: 1.6rem; font-weight: 800; color: var(--navy); margin: 3rem 0 1rem; padding-bottom: 0.5rem; border-bottom: 2px solid rgba(34,98,153,0.15); }
+    .post-body h3 { font-size: 1.25rem; font-weight: 700; color: var(--navy); margin: 2.25rem 0 0.75rem; }
+    .post-body p { margin-bottom: 1.25rem; }
+    .post-body strong { font-weight: 700; color: var(--navy); }
+    .post-body a { color: var(--blue); text-decoration: underline; text-decoration-thickness: 1px; text-underline-offset: 2px; }
+    .post-body ul, .post-body ol { margin: 0.5rem 0 1.25rem 1.5rem; }
+    .post-body li { margin-bottom: 0.4rem; }
+    .post-body blockquote { background: rgba(34,98,153,0.06); border-left: 4px solid var(--blue); padding: 1rem 1.25rem; border-radius: 0 10px 10px 0; margin: 1.25rem 0; font-size: 0.95rem; color: var(--navy); }
+    .post-body hr { border: none; height: 1px; background: linear-gradient(90deg, transparent, rgba(34,98,153,0.2), transparent); margin: 3rem 0; }
+    /* ── CODE ── */
+    .post-body pre { background: var(--code-bg); border-radius: 12px; padding: 1.5rem; margin: 1.25rem 0 1.5rem; overflow-x: auto; border: 1px solid rgba(255,255,255,0.05); }
+    .post-body pre code { font-family: var(--mono); font-size: 0.85rem; color: #e2e8f0; line-height: 1.7; background: none; padding: 0; white-space: pre-wrap; }
+    .post-body code { font-family: var(--mono); font-size: 0.88em; background: rgba(34,98,153,0.08); color: var(--blue-dark); padding: 0.15em 0.45em; border-radius: 5px; }
+    /* ── TABLES ── */
+    .table-wrapper { overflow-x: auto; margin: 1.5rem 0; border-radius: 0.5rem; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1); }
+    table { width: 100%; border-collapse: collapse; background: white; }
+    th { background: #226299; color: white; padding: 1rem; text-align: left; font-weight: 600; }
+    td { padding: 1rem; border-bottom: 1px solid #e5e7eb; }
+    .post-body table { display: block; width: 100%; overflow-x: auto; }
+    /* ── ALERTS ── */
+    .alert { background: #fef3cd; border: 1px solid #facc15; border-radius: 0.5rem; padding: 1rem; margin: 1.5rem 0; }
+    .alert.danger { background: #fee2e2; border-color: #ef4444; }
+    .alert.info { background: #e0f2fe; border-color: #06b6d4; }
+    .alert.success { background: #d1fae5; border-color: #10b981; }
+    /* ── KEY TAKEAWAYS ── */
+    .key-takeaways { background: linear-gradient(135deg, #f3f4f6 0%, #e5e7eb 100%); border-radius: 1rem; padding: 2rem; margin: 3rem 0; }
+    .key-takeaways h3 { color: #226299; margin-bottom: 1.5rem; }
+    .post-series-footer { text-align: center; font-size: 0.85rem; color: var(--slate-light); font-style: italic; margin-top: 2rem; padding-top: 2rem; border-top: 1px solid #e2e8f0; }
+    .blog-footer { background: var(--navy); padding: 2rem 0; text-align: center; }
+    .blog-footer a { color: var(--gold); text-decoration: none; font-weight: 600; font-size: 0.9rem; }
+    .blog-footer span { color: var(--gray); font-size: 0.8rem; display: block; margin-top: 0.4rem; }
+    @media (max-width: 600px) {
+      .post-hero { padding: 7rem 1.25rem 2.5rem; }
+      .post-body { padding: 2rem 1.25rem 4rem; }
+      .post-hero__meta { flex-direction: column; gap: 0.4rem; }
+      .post-body h2 { font-size: 1.4rem; }
+      .post-body h3 { font-size: 1.15rem; }
+      .post-body pre { padding: 1rem; border-radius: 8px; }
+    }
+
+    :focus-visible { outline: 2px solid var(--focus); outline-offset: 3px; border-radius: 2px; }
+    /* the ring sits on the page ground (3px offset). Inside the navy footers
+       and code blocks var(--blue) collapses to 2.12:1, so those scopes
+       re-point --focus to gold (5.73:1 on navy). */
+    .footer, .blog-footer, pre { --focus: var(--gold); }
+    :focus:not(:focus-visible) { outline: none; }
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after {
+        animation-duration: .01ms !important; animation-iteration-count: 1 !important;
+        transition-duration: .01ms !important; scroll-behavior: auto !important;
+      }
+    }
+    h1, h2, h3, .post-hero__title, .card__title { text-wrap: balance; }
+
+    .post-body img, .post-body svg { max-width: 100%; height: auto; }
+
+    /* ── SKIP LINK ── a11y-perf R5: the link and the landmark it targets are a
+       pair — useless without both halves. Off-screen until focused, then the
+       first tab stop on every page. */
+    .skip-link { position: absolute; left: -9999px; }
+    .skip-link:focus {
+      left: 1rem; top: 1rem; z-index: 999;
+      background: var(--navy); color: #fff;
+      padding: 0.75rem 1.25rem; border-radius: var(--radius-sm);
+      font-weight: 600; text-decoration: none;
+    }
+
+    /* ── POST WAYFINDING ── the wordmark is the home link; the footer carries
+       the full destination row. */
+    .blog-nav__home {
+      font-size: 0.9rem; font-weight: 800; color: var(--navy);
+      text-decoration: none; margin-right: 1rem;
+    }
+    .blog-nav__home:hover { color: var(--blue); }
+    .blog-nav__inner > .blog-nav__back { margin-right: auto; }
+    .blog-footer__nav {
+      display: flex; flex-wrap: wrap; justify-content: center; gap: 0.35rem 1.25rem;
+      max-width: 860px; margin: 0 auto 1.25rem; padding: 0 2rem 1.25rem;
+      border-bottom: 1px solid rgba(255,255,255,0.12);
+    }
+    .blog-footer__nav a { color: var(--gold); font-size: 0.85rem; font-weight: 600; text-decoration: none; }
+    .blog-footer__nav a:hover { color: #fff; text-decoration: underline; }
+
+    html { scroll-padding-top: 5rem; }
+    [id] { scroll-margin-top: 5rem; }
+
+    /* Thai needs more room than Latin at the same nominal size. */
+    .post-body:lang(th) { font-size: 18px; line-height: 1.85; }
+    .post-body p, .post-body li, .post-body blockquote { text-wrap: pretty; }
+
+    /* ---- side-scroll affordance ----
+       pre blocks and tables can exceed 720px. These layers paint a shadow ONLY
+       where there is more content in that direction; when fully scrolled the
+       cover slides over the shadow and hides it. No JavaScript, no wrapper. */
+    .post-body pre, .post-body table {
+      overflow-x: auto;
+      background-image:
+        linear-gradient(to right, var(--code-bg, #0f172a) 30%, rgba(15,23,42,0)),
+        linear-gradient(to left, var(--code-bg, #0f172a) 30%, rgba(15,23,42,0)),
+        radial-gradient(farthest-side at 0 50%, rgba(0,0,0,.28), rgba(0,0,0,0)),
+        radial-gradient(farthest-side at 100% 50%, rgba(0,0,0,.28), rgba(0,0,0,0));
+      background-position: 0 0, 100% 0, 0 0, 100% 0;
+      background-repeat: no-repeat;
+      background-size: 40px 100%, 40px 100%, 14px 100%, 14px 100%;
+      background-attachment: local, local, scroll, scroll;
+    }
+    .post-body table {
+      background-image:
+        linear-gradient(to right, var(--white, #fff) 30%, rgba(255,255,255,0)),
+        linear-gradient(to left, var(--white, #fff) 30%, rgba(255,255,255,0)),
+        radial-gradient(farthest-side at 0 50%, rgba(17,48,75,.16), rgba(17,48,75,0)),
+        radial-gradient(farthest-side at 100% 50%, rgba(17,48,75,.16), rgba(17,48,75,0));
+      background-position: 0 0, 100% 0, 0 0, 100% 0;
+      background-repeat: no-repeat;
+      background-size: 40px 100%, 40px 100%, 14px 100%, 14px 100%;
+      background-attachment: local, local, scroll, scroll;
+    }
+
+    /* ---- table of contents ---- */
+    .post-toc {
+      max-width: 720px;
+      margin: 2rem auto 0;
+      padding: 1rem 1.25rem;
+      background: rgba(34,98,153,0.05);
+      border: 1px solid rgba(34,98,153,0.14);
+      border-left: 3px solid var(--gold, #c4a46c);
+      border-radius: 10px;
+      font-size: 0.92rem;
+    }
+    .post-toc > summary {
+      cursor: pointer;
+      font-weight: 700;
+      color: var(--navy);
+      list-style: none;
+    }
+    .post-toc > summary::-webkit-details-marker { display: none; }
+    .post-toc > summary::before {
+      content: "\25B8";
+      display: inline-block;
+      margin-right: 0.5rem;
+      transition: transform 0.2s ease;
+      color: var(--gold-dark, #7a5f22);
+    }
+    .post-toc[open] > summary::before { transform: rotate(90deg); }
+    .post-toc > summary:focus-visible { outline: 3px solid var(--focus, #226299); outline-offset: 3px; }
+    .post-toc ol { margin: 0.85rem 0 0.25rem; padding-left: 1.4rem; }
+    .post-toc li { margin-bottom: 0.4rem; line-height: 1.5; }
+    .post-toc a { color: var(--slate); text-decoration: none; }
+    .post-toc a:hover, .post-toc a:focus-visible { color: var(--blue-dark, #1a4d7a); text-decoration: underline; }
+    @media (max-width: 600px) { .post-toc { margin: 1.25rem 1rem 0; } }
+
+    /* ---- cross-document view transitions ---- */
+    @view-transition { navigation: auto; }
+    .nav, .blog-nav { view-transition-name: site-nav; }
+    .footer, .blog-footer { view-transition-name: site-footer; }
+    @media (prefers-reduced-motion: reduce) {
+      ::view-transition-group(*),
+      ::view-transition-old(*),
+      ::view-transition-new(*) { animation: none !important; }
+    }
+
+    /* ── SERIES STRIP — Hermes Agent in Practice ──
+       Same class and inner-wrapper shape as the OpenClaw strip because the
+       linter's RE_SNAV recognises exactly `series-nav` + a nested div; a
+       renamed strip would read as "no nav" and fail INV-08. All content
+       checks (INV-03 family) iterate the SERIES7 list only, so this strip's
+       labels are convention, not contract. House-styled, not the island CSS. */
+    .series-nav {
+      max-width: 720px; margin: 2rem auto 0; padding: 1.1rem 1.4rem;
+      background: rgba(255,255,255,0.75); border: 1px solid rgba(34,98,153,0.15);
+      border-left: 3px solid var(--gold); border-radius: 12px;
+    }
+    .series-nav h3 {
+      font-size: 0.78rem; font-weight: 700; text-transform: uppercase;
+      letter-spacing: 0.08em; color: var(--gold-dark); margin-bottom: 0.6rem;
+    }
+    .series-links { display: flex; flex-wrap: wrap; gap: 0.5rem; }
+    .series-links a, .series-links .current {
+      font-size: 0.82rem; font-weight: 600; padding: 0.35rem 0.8rem;
+      border-radius: 50px; text-decoration: none;
+    }
+    .series-links a { color: var(--blue-dark); background: rgba(34,98,153,0.08); }
+    .series-links a:hover { background: rgba(34,98,153,0.16); }
+    .series-links .current { color: #fff; background: var(--blue-dark); }
+    @media (max-width: 600px) { .series-nav { margin: 1.5rem 1rem 0; } }
+
+    /* ── FIGURE — the sanctioned diagram component (page-design §4 Content).
+       Diagrams are PNGs; this repo built them out of divs twice and reverted
+       twice. The image is wrapped in a link to itself so a phone can pinch a
+       1400px drawing without a line of JavaScript. */
+    .figure { margin: 2.5rem 0; }
+    .figure__img { width: 100%; height: auto; display: block;
+                   border-radius: var(--radius); border: 1px solid rgba(0,0,0,0.06); }
+    .figure__caption { font-size: 0.85rem; color: var(--slate-light);
+                       text-align: center; margin-top: 0.75rem; }
+
+    /* ── REFERENCES — every material number in this series carries its source.
+       The tags are the book's own four evidence labels. */
+    .references { margin-top: 3rem; padding-top: 2rem; border-top: 1px solid #e2e8f0; }
+    .references__note { font-size: 0.85rem; color: var(--slate-light); margin-bottom: 1rem; }
+    .references__list { padding-left: 1.4rem; font-size: 0.9rem; line-height: 1.75; }
+    .references__list li { margin-bottom: 0.7rem; }
+    .ref-tag { display: inline-block; font-size: 0.7rem; font-weight: 700;
+               letter-spacing: 0.06em; text-transform: uppercase; padding: 0.1rem 0.5rem;
+               border-radius: 50px; margin-right: 0.4rem; vertical-align: 0.05em;
+               background: rgba(34,98,153,0.1); color: var(--blue-dark); }
+    /* All four labels get a rule.  --standard and --study shipped without one
+       on 2026-09-05, so 158 of 306 tags fell through to the base blue and the
+       two labels were indistinguishable.  Ratios on --bg: 6.70 / 6.92 / 7.36 /
+       4.81:1, all AA at this size. */
+    .ref-tag--law { background: rgba(239,68,68,0.12); color: #991b1b; }
+    .ref-tag--standard { background: rgba(34,98,153,0.12); color: var(--blue-dark); }
+    .ref-tag--study { background: rgba(34,197,94,0.18); color: #14532d; }
+    .ref-tag--synthesis { background: rgba(196,164,108,0.22); color: var(--gold-dark); }
+    .ref-supports { display: block; color: var(--slate-light); font-size: 0.85rem; }
+
+    /* ── LANGUAGE SWITCH — pure CSS, zero JavaScript (INV-38) ──
+       One visually-hidden checkbox as a direct child of body, BEFORE the main landmark,
+       so `#langSwitch:checked ~ main …` reaches every content block. The two
+       tracks are paired blocks: .l-th (default) and .l-en (hidden until
+       checked; display:revert restores block for divs, inline for spans).
+       Naming stays clear of INV-12's menu-token regex (hamburger|burger|
+       nav__toggle|nav-toggle|navtoggle|menu-toggle|menu__toggle) — verified.
+       No JS also means no persistence across posts; each post opens in Thai. */
+    .lang-switch-box { position: absolute; left: -9999px; }
+    .l-en { display: none; }
+    #langSwitch:checked ~ main .l-en { display: revert; }
+    #langSwitch:checked ~ main .l-th { display: none; }
+    .lang-switch {
+      display: inline-flex; align-items: center; gap: 0.55rem;
+      margin-top: 1.4rem; padding: 0.4rem 1.1rem; border-radius: 50px;
+      background: rgba(255,255,255,0.85); border: 1px solid rgba(255,255,255,0.4);
+      cursor: pointer; font-size: 0.85rem; user-select: none;
+    }
+    .lang-switch span { color: var(--slate-light); font-weight: 600; transition: color 0.2s; }
+    .lang-switch .lang-sep { color: var(--gray); font-weight: 400; }
+    .lang-switch .lang-th { color: var(--navy); font-weight: 800; }
+    #langSwitch:checked ~ main .lang-switch .lang-th { color: var(--slate-light); font-weight: 600; }
+    #langSwitch:checked ~ main .lang-switch .lang-en { color: var(--navy); font-weight: 800; }
+    .lang-switch:hover { border-color: #fff; }
+    #langSwitch:focus-visible ~ main .lang-switch {
+      outline: 2px solid var(--focus); outline-offset: 3px;
+    }
+  </style>
+  <!-- social -->
+  <link rel="canonical" href="https://anirach.com/blog/hermes-desktop-automation.html">
+  <meta property="og:type" content="article">
+  <meta property="og:url" content="https://anirach.com/blog/hermes-desktop-automation.html">
+  <meta property="og:site_name" content="Anirach Mingkhwan">
+  <meta property="og:locale" content="th_TH">
+  <meta property="og:locale:alternate" content="en_US">
+  <meta property="article:published_time" content="2026-09-07">
+  <meta property="article:author" content="https://anirach.com/">
+  <meta property="og:title" content="Automation &amp; Agents — งานที่รันเองและตรวจเอง">
+  <meta property="og:description" content="ให้ Hermes ทำงานเองตามเวลาและตรวจงานเอง — Routines/cron, delegate_task, /agents, Command Center และ verify-on-stop ทีละขั้น">
+  <meta property="og:image" content="https://anirach.com/images/hermes-desktop-automation-og.jpg">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
+  <meta property="og:image:alt" content="Automation &amp; Agents — งานที่รันเองและตรวจเอง">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:image" content="https://anirach.com/images/hermes-desktop-automation-og.jpg">
+  <meta name="twitter:image:alt" content="Automation &amp; Agents — งานที่รันเองและตรวจเอง">
+  <meta name="robots" content="max-image-preview:large">
+  <meta name="theme-color" content="#11304b">
+  <link rel="icon" href="/favicon.ico" sizes="any">
+  <link rel="apple-touch-icon" href="/apple-touch-icon.png">
+  <!-- /social -->
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "BlogPosting",
+    "headline": "Automation & Agents — งานที่รันเองและตรวจเอง",
+    "author": {
+      "@type": "Person",
+      "@id": "https://anirach.com/#person",
+      "name": "Anirach Mingkhwan",
+      "url": "https://anirach.com/"
+    },
+    "datePublished": "2026-09-07",
+    "dateModified": "2026-09-07",
+    "image": "https://anirach.com/images/hermes-desktop-automation-og.jpg",
+    "inLanguage": [
+      "th",
+      "en"
+    ],
+    "mainEntityOfPage": "https://anirach.com/blog/hermes-desktop-automation.html"
+  }
+  </script>
+</head>
+<body>
+<a href="#main" class="skip-link">Skip to content</a>
+<input type="checkbox" id="langSwitch" class="lang-switch-box" aria-label="Switch language: Thai / English">
+
+  <nav class="blog-nav">
+    <div class="blog-nav__inner">
+      <a href="../index.html" class="blog-nav__home">Anirach</a>
+      <a href="./" class="blog-nav__back">‹ Blog</a>
+      <div class="blog-nav__title">Automation &amp; Agents</div>
+    </div>
+  </nav>
+
+  <main id="main">
+
+  <header class="post-hero">
+    <div class="post-hero__tags">
+      <span class="post-hero__tag">Hermes Desktop</span>
+      <span class="post-hero__tag">Cron</span>
+      <span class="post-hero__tag">Subagents</span>
+    </div>
+    <h1 class="post-hero__title"><span class="l-th">Automation &amp; Agents — งานที่รันเองและตรวจเอง</span><span class="l-en" lang="en">Automation &amp; Agents — Work That Runs and Checks Itself</span></h1>
+    <p class="post-hero__sub"><span class="l-th">ตั้ง Routine ให้ Bot รันตามเวลาและจำงานครั้งก่อนได้, ส่ง subagent ไปทำงานคู่ขนานแล้วดู/สั่ง/หยุดจาก /agents และ Command Center — และเปิด verify-on-stop ให้ agent ห้ามตอบว่า &quot;เสร็จ&quot; โดยไม่มีหลักฐาน ⏱️</span><span class="l-en" lang="en">Give a Bot a Routine that runs on schedule and remembers its last run, send subagents to work in parallel and watch, steer or stop them from /agents and the Command Center — and switch on verify-on-stop so the agent cannot say &quot;done&quot; without evidence ⏱️</span></p>
+    <div class="post-hero__meta">
+      <span>By <strong>Anirach Mingkhwan</strong></span>
+      <span class="post-hero__series">Hermes Desktop Hands-On 2026 • Post #6</span>
+      <span><time datetime="2026-09-07">7 Sep 2026</time></span>
+      <span>20 min read</span>
+    </div>
+    <label for="langSwitch" class="lang-switch" title="สลับภาษา · Switch language"><span class="lang-th">ไทย</span><span class="lang-sep">·</span><span class="lang-en" lang="en">English</span></label>
+    <div class="post-hero__cover">
+      <img src="../images/hermes-desktop-automation-cover.jpg" alt="Automation &amp; Agents — งานที่รันเองและตรวจเอง" width="800" height="800" loading="eager" fetchpriority="high" decoding="async">
+    </div>
+  </header>
+
+  <article class="post-body">
+
+    <details class="post-toc l-th" open>
+      <summary>ในบทความนี้</summary>
+      <ol>
+          <li><a href="#th-three-surfaces">1. What Runs When You Are Not Typing</a></li>
+          <li><a href="#th-schedule-a-routine">2. Procedure A — Schedule a Routine</a></li>
+          <li><a href="#th-delegate-and-watch">3. Procedure B — Delegate and Watch</a></li>
+          <li><a href="#th-gates">4. Gates for Unattended Work</a></li>
+          <li><a href="#th-surfaces-table">5. Reference — Every Door That Can Start Work</a></li>
+          <li><a href="#th-limits">6. Limits to Know</a></li>
+          <li><a href="#th-summary">7. สรุป</a></li>
+      </ol>
+    </details>
+    <details class="post-toc l-en" open>
+      <summary>In this post</summary>
+      <ol>
+          <li><a href="#en-three-surfaces">1. What Runs When You Are Not Typing</a></li>
+          <li><a href="#en-schedule-a-routine">2. Procedure A — Schedule a Routine</a></li>
+          <li><a href="#en-delegate-and-watch">3. Procedure B — Delegate and Watch</a></li>
+          <li><a href="#en-gates">4. Gates for Unattended Work</a></li>
+          <li><a href="#en-surfaces-table">5. Reference — Every Door That Can Start Work</a></li>
+          <li><a href="#en-limits">6. Limits to Know</a></li>
+          <li><a href="#en-summary">7. Summary</a></li>
+      </ol>
+    </details>
+    <div class="l-th">
+
+    <p>🤔 <strong>ถ้าคุณปิดฝาโน้ตบุ๊กแล้วเดินออกจากโต๊ะ — Hermes ที่คุณเพิ่งตั้งค่ามาห้าตอน ยังทำงานอะไรให้คุณอยู่บ้าง?</strong></p>
+
+    <p>ตอนที่แล้ว — <a href="/blog/hermes-desktop-skills-mcp">#5 Skills, MCP &amp; Memory</a> — เราเติมวัตถุดิบให้ agent: skill ที่โหลดเมื่อต้องใช้, MCP server ที่ต่อเครื่องมือภายนอก และไฟล์ความจำสองไฟล์ที่แก้ได้จากหน้าจอ ตอนนั้นผมทิ้งท้ายไว้ว่าตัวเลขในมิเตอร์ context จะกลับมาอีกครั้ง เพราะทุก cron job และทุก subagent มี context ของตัวเองที่ต้องจ่าย ตอนนี้คือตอนที่มันกลับมา</p>
+
+    <p>คำตอบหนึ่งบรรทัด: งานที่รันเองใน Hermes Desktop เข้ามาได้จาก<strong>สามพื้นผิว</strong> — <strong>Routine</strong> (cron job ที่ Bot เป็นเจ้าของ) ที่นาฬิกาปลุก, <strong>subagent</strong> ที่ agent เรียกเองด้วย <code>delegate_task</code> เพื่อแตกงานคู่ขนาน และ<strong>บาน Agents กับ Command Center</strong> ที่เป็นหน้าจอสำหรับดูทั้งสองอย่างนั้น จากนั้นบทความนี้จะปิดด้วยด่านที่สำคัญที่สุดของงานไร้คนเฝ้า — <code>verify_on_stop</code> ที่ห้าม agent ตอบว่า "เสร็จ" ในเทิร์นที่มันแก้โค้ดแล้วไม่มีหลักฐานการตรวจสอบใหม่</p>
+
+    <h2 id="th-three-surfaces" lang="en">1. What Runs When You Are Not Typing</h2>
+
+    <p>ตอบตรง ๆ ก่อน: ใน Hermes Desktop (Hermes Agent v0.21.0, tag <code>v2026.8.31</code>) มีสามพื้นผิวที่เริ่มงานได้โดยคุณไม่ต้องพิมพ์ — <strong>cron job</strong> ซึ่งปรากฏเป็น <strong>Routines</strong> เมื่อ Bot เป็นเจ้าของมัน, <strong>subagent</strong> ที่ agent สร้างเองผ่านเครื่องมือ <code>delegate_task</code> และบาน <strong>Agents</strong> กับ <strong>Command Center</strong> ที่เอกสารเรียกว่า "orchestration surfaces for multi-agent work"<sup><a href="#th-ref-3">[3]</a></sup> สองอย่างแรกคือกลไก อย่างที่สามคือหน้าต่างมอง</p>
+
+    <p>ความแตกต่างที่ต้องแยกให้ออกตั้งแต่ต้น คือ<strong>ใครเป็นคนกดปุ่มเริ่ม</strong> cron job ถูกปลุกโดยตัวจับเวลาของ gateway ตามตารางที่<em>คุณ</em>ตั้ง มันไปสร้าง session ใหม่ทั้งอัน แล้วส่งผลไปยังปลายทางที่กำหนดไว้ ส่วน subagent ถูกสร้างโดย<em>ตัว agent เอง</em>ระหว่างที่มันกำลังทำงานให้คุณ — มันคือการแตกงานภายในหนึ่งบทสนทนา ไม่ใช่ตารางเวลา เอกสาร delegation เขียนไว้ชัดว่า "Each child gets a fresh conversation and works independently — only its final summary enters the parent's context."<sup><a href="#th-ref-4">[4]</a></sup></p>
+
+    <figure class="figure">
+      <a href="../images/hermes-desktop-fig-06-automation-agents.png">
+        <img class="figure__img" src="../images/hermes-desktop-fig-06-automation-agents.png" alt="แผนภาพจากซ้ายไปขวา นาฬิกาชี้ไปยังกล่อง agent run ที่แตกลงเป็นสาม subagent จากนั้นผ่านประตูกรอบสีเขียวน้ำทะเลเข้ม verify-on-stop ไปยังกล่องสีเขียวอ่อน done" width="1400" height="700" loading="lazy" decoding="async">
+      </a>
+      <figcaption class="figure__caption">รูปที่ 1 · งานที่รันเอง — Routine ปลุก agent ที่จำครั้งก่อนได้ แตกงานให้ subagent แล้วต้องผ่านประตูตรวจหลักฐานก่อนจะบอกว่าเสร็จ</figcaption>
+    </figure>
+
+    <p>Routine คือชื่อที่ Bot Mode ใช้เรียก cron job ของตัวเอง และมันไม่ใช่ของใหม่ในระบบ — เอกสาร Bot Mode บอกตรง ๆ ว่า "Routines are plain Hermes cron jobs namespaced <code>[bot:&lt;name&gt;] &lt;routine&gt;</code> — they also show up in <code>hermes cron list</code> and the core Cron page."<sup><a href="#th-ref-2">[2]</a></sup> นี่คือคุณสมบัติที่ผมชอบที่สุดของดีไซน์นี้: หน้าจอสวยไม่ได้สร้าง primitive ใหม่ให้เราต้องเรียนเพิ่ม สิ่งที่คุณคลิกในบาน Routines คือแถวเดียวกับที่ <code>hermes cron list</code> พิมพ์ออกมาในเทอร์มินัล และเป็นไฟล์เดียวกันที่ <code>~/.hermes/cron/jobs.json</code><sup><a href="#th-ref-1">[1]</a></sup></p>
+
+    <p>บทความนี้เป็นภาคลงมือทำ ไม่ใช่ภาคทฤษฎี ถ้าคุณอยากได้ชั้นปฏิบัติการเต็ม ๆ ของ cron — โครงไฟล์ <code>executions.db</code>, ledger ของแต่ละรอบ, วง incidents/doctor/runs, webhook ขาเข้าที่ตรวจลายเซ็นก่อนเชื่อ, blueprint และ API server — ผมเขียนไว้แล้วใน <a href="/blog/hermes-automation">Hermes #8 Automation</a> และแผนที่ multi-agent ทั้งสี่ชั้น (subagent, Kanban, Bot Mode/A2A, multi-profile) อยู่ใน <a href="/blog/hermes-agent-teams">Hermes #2 Agent Teams</a> ตอนนี้ผมจะไม่เล่าซ้ำ แต่จะพาคลิกและพิมพ์จริงบนหน้าจอ Desktop แล้วชี้กลับไปที่สองตอนนั้นเมื่อคุณอยากลงลึก</p>
+
+    <div class="alert info">
+        <strong>หมายเหตุเรื่องขอบเขต:</strong> cron และ <code>delegate_task</code> เป็นความสามารถของ <strong>Hermes Agent</strong> ไม่ใช่ของ Desktop โดยเฉพาะ — มันทำงานเหมือนกันจาก CLI, TUI และ gateway สิ่งที่ Desktop เพิ่มคือ<em>หน้าจอ</em>: บาน Cron, บาน Routines ที่ผูกกับ Bot, บาน Agents และ Command Center ผมจะระบุทุกครั้งที่ข้อความใดเป็นของ Desktop เท่านั้น
+    </div>
+
+    <h2 id="th-schedule-a-routine" lang="en">2. Procedure A — Schedule a Routine</h2>
+
+    <p>ตอบก่อนว่าจะได้อะไร: จบขั้นตอนนี้คุณจะมี Routine หนึ่งตัวที่ผูกกับ Bot ตัวหนึ่ง มีตารางเวลาของตัวเอง ทดสอบยิงได้ทันทีโดยไม่ต้องรอถึงเวลาจริง และผลลัพธ์ไปโผล่ในห้องแชตของ Bot ตัวนั้นเอง — ที่ที่คุณจะคุยกับมันอยู่แล้ว<sup><a href="#th-ref-2">[2]</a></sup></p>
+
+    <ol>
+        <li>ในแถบด้านซ้ายของ Desktop สลับจากแท็บ <strong>Sessions</strong> ไปแท็บ <strong>Bots</strong> แล้วเลือก Bot ที่จะเป็นเจ้าของงานนี้ บาน <strong>Routines</strong> (ในบางบิลด์เรียกว่า <strong>Cronjobs</strong>) จะเข้ามาเทียบข้างห้องแชต — เอกสารระบุว่ามันโผล่เฉพาะตอนแท็บ Bots ทำงานอยู่ และหลบไปเมื่อคุณสลับกลับไป Sessions ส่วนบิลด์เก่ากว่านั้นจะปักมันไว้ตลอด<sup><a href="#th-ref-3">[3]</a></sup></li>
+        <li>ถ้าอยากได้ภาพรวมทั้งเครื่องแทนที่จะดูทีละ Bot ให้ไปที่บาน <strong>Cron</strong> ในกลุ่ม management panes ของแถบซ้าย ซึ่งเอกสาร Desktop อธิบายไว้สั้น ๆ ว่า "Cron — view and manage scheduled jobs"<sup><a href="#th-ref-3">[3]</a></sup> ที่นี่คือที่ที่ Routine ของทุก Bot มารวมกับ cron job ที่คุณสร้างจากเทอร์มินัล</li>
+        <li>สร้างงานใหม่จากบาน Routines เอกสารอธิบายตัวเลือกตารางเวลาไว้ว่าเป็น "a structured schedule picker … (frequency first, then only the detail that matters), with an Advanced field exposing the raw Hermes schedule string"<sup><a href="#th-ref-2">[2]</a></sup> — แปลว่าคุณเลือกความถี่ก่อน แล้วค่อยกรอกรายละเอียดที่จำเป็น หรือกดเข้า Advanced เพื่อพิมพ์สตริงตารางเวลาดิบลงไปตรง ๆ</li>
+        <li>ในช่อง Advanced ใช้รูปแบบที่เอกสาร cron รับรอง ได้แก่ ครั้งเดียวแบบหน่วงเวลา (<code>in 30m</code>), ช่วงซ้ำ (<code>every 2h</code>), ภาษาวัน–เวลา (<code>every monday 9am</code>, <code>daily at 7am</code>, <code>weekdays at 9am</code>), cron expression ห้าช่อง (<code>0 9 * * *</code>) และ ISO timestamp (<code>2026-03-15T09:00:00</code>)<sup><a href="#th-ref-1">[1]</a></sup> ผมแนะนำ cron expression สำหรับงานที่ต้องพึ่งพาได้จริง เพราะมันไม่มีที่ให้ตีความ</li>
+        <li>ใส่ prompt ที่<strong>อธิบายตัวเองได้ครบ</strong> จำไว้ว่าแต่ละรอบเป็น session ใหม่ที่ไม่มีบทสนทนาเดิมติดมา และถ้างานนั้นต้องใช้ความสามารถเฉพาะ ให้ผูก skill เข้าไปด้วย — job หนึ่งตัวผูกได้ศูนย์ หนึ่ง หรือหลาย skill<sup><a href="#th-ref-1">[1]</a></sup></li>
+        <li>บันทึกแล้วยิงทดสอบทันที ปุ่มนี้ชื่อ <strong>Trigger now</strong> — PR #70638 ที่ merge เมื่อ 15 สิงหาคม 2026 มีชื่อว่า "make Trigger now execute immediately and safely" และแก้ทั้งเส้นทาง Dashboard และ Desktop ให้การยิงทันทีวิ่งผ่าน scheduler provider จริง ๆ แทนที่จะแค่ขยับ <code>next_run_at</code><sup><a href="#th-ref-12">[12]</a></sup></li>
+        <li>อ่านผล ถ้า Routine เป็นของ Bot ผลจะลงในประวัติแชตของ Bot ตัวนั้น<sup><a href="#th-ref-2">[2]</a></sup> และไม่ว่าปลายทางจะเป็นอะไร ทุกรอบจะถูกเขียนลงไฟล์เสมอที่ <code>~/.hermes/cron/output/{job_id}/{timestamp}.md</code><sup><a href="#th-ref-1">[1]</a></sup> — นี่คือหลักฐานที่ย้อนอ่านได้เมื่อผลไม่มาถึงคุณ</li>
+    </ol>
+
+    <h3>ฝาแฝดฝั่ง CLI</h3>
+
+    <p>ทุกอย่างข้างบนมีคำสั่งเทอร์มินัลคู่กัน และผมมักสร้างจากตรงนี้เพราะมันเขียนลง runbook ได้ คำสั่งต่อไปนี้คัดมาจากหน้าเอกสาร cron และหน้าอ้างอิง CLI ตรง ๆ:</p>
+
+    <pre><code># สร้างงานซ้ำทุกสองชั่วโมง — ตัวอย่างตรงจากเอกสาร
+hermes cron create "every 2h" "Check server status"
+
+# ผูก skill เข้ากับงาน (ใส่ --skill ซ้ำได้หลายอัน)
+hermes cron create "every 1h" "Summarize new feed items" --skill blogwatcher
+
+# ให้แต่ละรอบเห็นผลของรอบก่อนหน้าตัวเอง
+hermes cron create "every 6h" "Scan for news" --continuity
+
+# ดูรายการทั้งหมด — Routine ของ Bot จะโผล่ที่นี่ด้วย ชื่อขึ้นต้น [bot:&lt;name&gt;]
+hermes cron list
+
+# วงจรชีวิตที่เหลือ
+hermes cron &lt;pause|resume|run|remove|status|doctor|tick&gt; &lt;job_id_or_name&gt;</code></pre>
+
+    <p>สองรายละเอียดที่ประหยัดเวลาได้มาก อย่างแรก คำกริยาที่เปลี่ยนสถานะทั้งหมด (<code>pause</code>, <code>resume</code>, <code>run</code>, <code>remove</code>, <code>edit</code>) รับ<strong>ชื่องาน</strong>แทนรหัสฐานสิบหกได้ โดยไม่สนตัวพิมพ์เล็กใหญ่ และถ้ามีชื่อซ้ำกันหลายงาน ระบบจะปฏิเสธพร้อมแสดงรหัสผู้สมัครทั้งหมดให้เลือกเอง แทนที่จะเดา<sup><a href="#th-ref-1">[1]</a></sup> อย่างที่สอง <code>hermes cron doctor</code> เป็นการตรวจสุขภาพฝูงงานแบบอ่านอย่างเดียว — รอบที่ล้มเหลว การส่งที่ล้มเหลว <code>next_run_at</code> ที่เลยกำหนดหรือหายไป สคริปต์และโฟลเดอร์ที่ไม่มีอยู่จริง — และมัน<strong>คืนค่าออกไม่เป็นศูนย์เมื่อพบปัญหา</strong> ซึ่งแปลว่าคุณเอาไปแขวนใน CI หรือ cron ของระบบปฏิบัติการได้เลย<sup><a href="#th-ref-9">[9]</a></sup></p>
+
+    <blockquote><strong>💡 ตั้งแต่ v0.21.0 งานตามเวลาไม่ใช่ปลาทองอีกต่อไป:</strong> release note ของ v0.21.0 เขียนไว้ว่า "Scheduled jobs stopped being goldfish. Cron agents now load and update persistent memory like every other agent, <code>continuity=true</code> carries each run's output into the next (so a monitor can dedupe against what it already reported), every job gets a durable notepad scratchpad, monitor-mode jobs skip the LLM entirely when nothing changed"<sup><a href="#th-ref-11">[11]</a></sup> ข้อควรทราบที่ผมตรวจเองในวันที่เขียน: <strong>หน้าเอกสาร cron ยังตามไม่ทัน</strong> — มันอธิบาย <code>continuity</code> และ <code>context_from</code> ไว้ครบ แต่ไม่มีประโยคใดพูดถึง persistent memory ของ cron เลย<sup><a href="#th-ref-1">[1]</a></sup> ผมจึงแนะนำให้ยึด <code>continuity</code> เป็นกลไกที่เอกสารรับรอง และถือ persistent memory เป็นพฤติกรรมที่ release note ประกาศ แต่ยังไม่มีหน้าเอกสารกำกับว่ามันแตะไฟล์ความจำไฟล์ไหนบ้าง</blockquote>
+
+    <p>เรื่องจากชุมชนที่ผมคิดว่าคุ้มค่ากับการอ่าน: คำบ่นที่พบบ่อยที่สุดเรื่อง cron ไม่ใช่ "มันทำผิด" แต่คือ<strong>"มันรันครั้งเดียวแล้วไม่รันอีกเลย"</strong> วิดีโอเดินสาย Hermes Desktop ของ Greg Isenberg กับ Alex Finn (6 มิถุนายน 2026) สรุปทางแก้ไว้ในประโยคเดียวว่า Finn "praises the Cron section for giving one-click confirmation that scheduled tasks truly exist"<sup><a href="#th-ref-14">[14]</a></sup> — พูดอีกอย่างคือ งานที่สั่งผ่านแชตหรือผ่าน Telegram แล้วไม่เคยเปิดดูในบาน Cron คืองานที่คุณไม่รู้ว่ามันมีอยู่จริงหรือเปล่า บาน Cron จึงไม่ใช่ของประดับ มันคือใบยืนยัน และ <code>hermes cron list</code> คือใบเดียวกันในเทอร์มินัล</p>
+
+    <div class="alert">
+        <strong>ข้อควรระวัง — งานที่ไม่มีคนเฝ้าเจอคำสั่งอันตราย:</strong> เอกสารความปลอดภัยกำหนดค่า <code>approvals.cron_mode</code> ไว้ที่ <code>deny</code> เป็นค่าเริ่มต้น หมายความว่าเมื่อ cron job ชนคำสั่งที่ถูกจัดว่าอันตราย ระบบจะบล็อกทันที (agent ต้องหาทางอื่น) ไม่ใช่รอคำอนุมัติที่ไม่มีใครมากด<sup><a href="#th-ref-8">[8]</a></sup> อย่าเปลี่ยนเป็น <code>approve</code> เพียงเพราะงานหนึ่งงานติดขัด — ผมเก็บเรื่องโหมด approvals ทั้งชุดไว้ที่ <a href="/blog/hermes-desktop-safety">#7 Safety, Remote &amp; Recovery</a>
+    </div>
+
+    <h2 id="th-delegate-and-watch" lang="en">3. Procedure B — Delegate and Watch</h2>
+
+    <p>ตอบก่อน: คุณไม่ได้ "กด" ปุ่มสร้าง subagent เอง คุณ<strong>ขอ</strong>ให้ agent แตกงาน แล้วมันเรียก <code>delegate_task</code> เอง หน้าที่ของคุณคือดูว่ามันแตกไปกี่ตัว กำลังทำอะไร และเมื่อมันเดินผิดทาง คุณสั่งแก้ทิศระหว่างทางได้โดยไม่ต้องทิ้งงานที่ทำมาแล้ว</p>
+
+    <ol>
+        <li>ในห้องแชตปกติของ Desktop สั่งงานที่<strong>แตกเป็นชิ้นอิสระได้จริง</strong> เช่น "ช่วยรีวิว PR สามอันนี้พร้อมกัน แล้วสรุปมาให้ผมทีละอัน" ถ้างานย่อยไม่ขึ้นต่อกัน agent จะเลือกส่งเป็น batch เอง</li>
+        <li>รู้ว่า agent ส่งอะไรออกไป — พารามิเตอร์ของ <code>delegate_task</code> ที่เอกสารระบุคือ <code>goal</code> (สิ่งที่ต้องทำ), <code>context</code> (ทุกอย่างที่ลูกต้องรู้ เพราะมันเริ่มจากบทสนทนาว่างเปล่า), <code>tasks</code> (อาเรย์สำหรับ batch คู่ขนาน, ใส่ <code>group</code> ได้ถ้าต้องการให้ผลรวมกลับมาเป็นก้อนเดียว), <code>role</code> ที่เป็น <code>"leaf"</code> โดยปริยายหรือ <code>"orchestrator"</code>, <code>max_iterations</code> (จำนวนเทิร์นเรียกเครื่องมือของลูกหนึ่งตัว), <code>background</code> และ <code>output_schema</code><sup><a href="#th-ref-4">[4]</a></sup><sup><a href="#th-ref-11">[11]</a></sup></li>
+        <li>ถ้างานต้องการคำตอบที่มีรูปทรงแน่นอน ให้ขอ <code>output_schema</code> PR #81144 ที่ merge เมื่อ 7 สิงหาคม 2026 อธิบายพฤติกรรมไว้ว่าลูกจะได้รับ schema เป็น "an explicit OUTPUT CONTRACT block in its context" แล้วพ่อแม่ตรวจคำตอบสุดท้ายด้วย jsonschema ถ้าไม่ผ่านจะส่งกลับไปแก้<strong>หนึ่งเทิร์นเท่านั้น</strong> พร้อมข้อความ error ตามจริง<sup><a href="#th-ref-12">[12]</a></sup></li>
+        <li>ดูว่าใครกำลังวิ่งอยู่ด้วย <code>/agents</code> (ชื่อพ้อง <code>/tasks</code>) เอกสารระบุว่ามันแสดงต้นไม้สดของ subagent ที่กำลังรันและที่เพิ่งจบ จัดกลุ่มตามพ่อแม่ พร้อมยอดรวมค่าใช้จ่าย โทเคน และไฟล์ที่ถูกแตะต่อกิ่ง และมีปุ่ม kill กับ pause ที่ยกเลิก subagent ตัวเดียวได้โดยไม่กระทบพี่น้อง<sup><a href="#th-ref-4">[4]</a></sup></li>
+        <li>สั่งแก้ทิศแทนที่จะฆ่าทิ้ง — พ่อแม่คุมลูกด้วยเครื่องมือตัวเดียวกับที่ใช้สร้าง โดยส่ง action สามแบบตามบล็อกโค้ดข้างล่าง เอกสารเตือนไว้ตรง ๆ ว่า "Interrupting a child throws away its in-flight work; often you just want to redirect it."<sup><a href="#th-ref-4">[4]</a></sup></li>
+        <li>อ่านค่าใช้จ่าย v0.21.0 เพิ่ม "per-delegation cost surfaced in results" เข้ามา<sup><a href="#th-ref-11">[11]</a></sup> ทำให้คุณเห็นราคาของการแตกงานเป็นรายครั้ง ไม่ใช่แค่ยอดรวมของ session</li>
+    </ol>
+
+    <pre><code>{"action": "list"}
+{"action": "steer", "subagent_id": "sa-0-1a2b3c4d", "message": "focus on pricing instead"}
+{"action": "stop",  "subagent_id": "sa-0-1a2b3c4d"}</code></pre>
+
+    <p>สามคำสั่งนี้อ่านง่ายแต่มีข้อละเอียดที่ควรรู้ก่อนพึ่งพา <code>list</code> คืนลูกที่ยังมีชีวิตของบทสนทนานี้ พร้อม <code>subagent_id</code>, goal, สถานะ, <code>running_seconds</code>, <code>accepting_steer</code> และเส้นทางไฟล์ transcript สด <code>steer</code> ต่อคิวคำสั่งแก้ทิศเข้าไปโดยไม่หยุดลูก และ <code>stop</code> จบลูกที่ขอบรอบถัดไป โดย<strong>ผลบางส่วนยังกลับเข้าบทสนทนาตามปกติ</strong> ไม่ได้หายไปเปล่า ๆ ทั้งสาม action ทำงานแบบซิงโครนัสในเทิร์น ผูกอยู่กับต้นไม้ของผู้เรียกเท่านั้น (บทสนทนาหนึ่งมองไม่เห็นและคุมลูกของ session อื่นไม่ได้) และไม่กิน spawn cap ต่อเทิร์น ดังนั้น <code>stop</code> ยังใช้ได้แม้ cap เต็มแล้ว<sup><a href="#th-ref-4">[4]</a></sup></p>
+
+    <p>มีกับดักหนึ่งที่ผมอยากให้จำ: <strong>"queued" ไม่ได้แปลว่า "delivered"</strong> เอกสารอธิบายว่าคำตอบ <code>"queued"</code> หมายถึงข้อความถูกรับก่อนขอบเวลาจบของลูก ไม่ได้แปลว่าลูกเห็นแล้ว ถ้าลูกรับ steer ไว้แต่ผลิตคำตอบสุดท้ายไปก่อน รายการที่พ่อแม่ได้รับจะเก็บมันไว้เป็น <code>missed_steer</code> พร้อมหมายเหตุต่อท้ายสรุปว่า <code>[steer did not land — the subagent finished before it could be delivered: …]</code> — ออกแบบมาเพื่อให้คุณแยกลูกที่ถูกแก้ทิศออกจากลูกที่จบไปตามคำสั่งเดิมได้<sup><a href="#th-ref-4">[4]</a></sup></p>
+
+    <div class="alert info">
+        <strong>เรื่อง Command Center — สิ่งที่เอกสารบอกและไม่บอก:</strong> เอกสาร Desktop นับ <strong>Agents</strong> และ <strong>Command Center</strong> ไว้ในกลุ่ม management panes ด้วยคำอธิบายบรรทัดเดียวว่า "orchestration surfaces for multi-agent work" และบอกปุ่มลัด <strong>Cmd/Ctrl+.</strong> สำหรับเปิด Command Center รวมทั้งบอกว่าคุณเลือกให้มันโผล่ในแถบสถานะได้จากการคลิกขวา → <strong>Show in status bar</strong><sup><a href="#th-ref-3">[3]</a></sup> นอกเหนือจากนี้เอกสารไม่ได้ระบุว่าข้างในมีอะไร ผมจึงไม่เขียนรายการเนื้อหาของมัน — และขอเตือนว่าคำว่า "MCP command center" ที่ปรากฏใน release note v0.21.0 หมายถึงหน้า MCP ที่ถูกรวมใหม่ ไม่ใช่บาน Command Center อันนี้<sup><a href="#th-ref-11">[11]</a></sup>
+    </div>
+
+    <h2 id="th-gates" lang="en">4. Gates for Unattended Work</h2>
+
+    <p>ตอบตรง ๆ: ปุ่มที่คุณต้องการชื่อ <code>agent.verify_on_stop</code> เอกสาร configuration อธิบายไว้ว่า "When enabled, Hermes refuses to accept a final answer on a turn where the agent edited code in a workspace but produced no fresh verification evidence (a passing test run, build, lint, etc.) — it injects a synthetic follow-up asking the agent to verify or explain why it can't."<sup><a href="#th-ref-5">[5]</a></sup> การแก้ไฟล์เอกสาร markdown หรือ skill ล้วน ๆ ไม่ทำให้ด่านนี้ทำงาน และวงจรมีขอบเขตจึงขังตัว agent ไม่ได้</p>
+
+    <p>ค่าเริ่มต้นคือ <strong>ปิด</strong> และนี่คือจุดที่คนตกม้าตายบ่อยที่สุด เพราะหลายคนคิดว่ามันเปิดมาให้แล้ว บล็อก config มีสามคีย์:</p>
+
+    <pre><code>agent:
+  verify_on_stop: false        # true | false | "auto" (surface-aware: on for CLI/TUI/desktop, off for messaging)
+  verify_guidance: true        # Append creative-UI / clean-diff guidance to the missing-evidence nudge
+  max_verify_nudges: 3         # Cap on consecutive continue nudges per turn (built-in + pre_verify hooks)</code></pre>
+
+    <p>สามค่าที่ <code>verify_on_stop</code> รับคือ <code>true</code> (เปิดทุกพื้นผิว), <code>false</code> (ปิด — ค่าเริ่มต้น) และ <code>"auto"</code> ซึ่งเป็นพฤติกรรมรู้พื้นผิวแบบเดิม: เปิดสำหรับพื้นผิวเขียนโค้ดที่มีคนนั่งอยู่ — CLI, TUI, desktop — และผู้เรียกเชิงโปรแกรม แต่ปิดสำหรับพื้นผิวข้อความอย่าง Telegram หรือ Discord ที่เรื่องเล่าการตรวจสอบกลายเป็นเสียงรบกวน<sup><a href="#th-ref-5">[5]</a></sup> เอกสารยังระบุว่าตัวติดตั้งใหม่มาพร้อม <code>false</code> และการย้ายค่า config ก็ปิดมันในเครื่องที่ติดตั้งไว้ก่อนแล้ว การเปิดจึงเป็นการเลือกอย่างตั้งใจเสมอ และมีตัวแปรสภาพแวดล้อม <code>HERMES_VERIFY_ON_STOP</code> ทับค่าใน config ได้ ผมยืนยันค่าเริ่มต้นนี้จากไฟล์ต้นฉบับด้วย: <code>hermes_cli/config_defaults.py</code> มี <code>"verify_on_stop": False</code> และ <code>"max_verify_nudges": 3</code><sup><a href="#th-ref-10">[10]</a></sup></p>
+
+    <h3>ด่านที่สอง — hook <code>pre_verify</code></h3>
+
+    <p>ถ้ากฎของทีมคุณเฉพาะเจาะจงกว่า "ต้องมีหลักฐาน" ให้เขียน plugin hook เอกสาร hooks ระบุว่า <code>pre_verify</code> "Fires <strong>once per turn when the agent edited code</strong>, just before it finishes (after the built-in verify-on-stop guard)" และเรียกมันว่า "a user/plugin policy gate"<sup><a href="#th-ref-6">[6]</a></sup> payload ที่ callback ได้รับมีเจ็ดตัว:</p>
+
+    <ul>
+        <li><code>session_id</code> — รหัสประจำ session ปัจจุบัน</li>
+        <li><code>platform</code> — พื้นผิวที่ session รันอยู่ (<code>"cli"</code>, <code>"telegram"</code>, …)</li>
+        <li><code>model</code> — ตัวระบุโมเดล</li>
+        <li><code>coding</code> — เทิร์นนี้อยู่ในท่าทางเขียนโค้ดหรือไม่ ใช้จำกัดขอบเขต hook ของคุณ</li>
+        <li><code>attempt</code> — เทิร์นนี้ถูกสะกิดไปแล้วกี่ครั้ง (ครั้งแรกเป็น 0) ใช้กันตัวเองไม่ให้สะกิดวน</li>
+        <li><code>final_response</code> — คำตอบที่ agent กำลังจะส่ง</li>
+        <li><code>changed_paths</code> — ไฟล์ที่ agent แก้ในเทิร์นนี้ (เรียงแล้ว และในบริบทนี้ไม่เคยว่าง)</li>
+    </ul>
+
+    <p>คืนค่า <code>{"action": "continue", "message": "…"}</code> เพื่อส่ง agent กลับไปทำงานต่อ — ข้อความจะถูกต่อเป็นเทิร์นผู้ใช้สังเคราะห์แล้ววนใหม่ เอกสารบอกด้วยว่ารูปแบบ Stop ของ Claude Code (<code>{"decision": "block", "reason": "…"}</code> ซึ่งการบล็อกการหยุดแปลว่า<em>ให้ทำต่อ</em>) ก็รับได้เช่นกัน คืนค่าอย่างอื่นหรือคืนคำสั่งที่ไม่มีข้อความ = ปล่อยให้เทิร์นจบ<sup><a href="#th-ref-6">[6]</a></sup> คำสั่ง continue ที่ต่อเนื่องกันในหนึ่งเทิร์นถูกจำกัดโดย <code>agent.max_verify_nudges</code> (ค่าเริ่มต้น 3) ดังนั้น hook ที่พูดว่า continue ตลอดเวลาก็ขังลูปไม่ได้<sup><a href="#th-ref-6">[6]</a></sup></p>
+
+    <p>โครงสร้าง plugin ที่เล็กที่สุดที่ทำงานได้ ตามที่หน้าเอกสาร plugins วางไว้ คือโฟลเดอร์ใน <code>~/.hermes/plugins/</code> ที่มี <code>plugin.yaml</code> กับ <code>__init__.py</code> ซึ่งมีฟังก์ชัน <code>register(ctx)</code> เรียก <code>ctx.register_hook(...)</code>:</p>
+
+    <pre><code># ~/.hermes/plugins/verify-gate/__init__.py
+# ตัวอย่างนี้ยึดโครง register(ctx) + ctx.register_hook จากหน้าเอกสาร plugins
+# และลายเซ็น pre_verify จากหน้าเอกสาร hooks
+
+def require_changelog(coding, attempt, changed_paths, **kwargs):
+    if attempt or not coding:
+        return None                      # ทำครั้งเดียว และเฉพาะงานเขียนโค้ด
+    if any(p.endswith("CHANGELOG.md") for p in changed_paths):
+        return None                      # มี changelog แล้ว ปล่อยจบ
+    return {
+        "action": "continue",
+        "message": "Add a CHANGELOG.md entry for this change before finishing.",
+    }
+
+
+def register(ctx):
+    ctx.register_hook("pre_verify", require_changelog)</code></pre>
+
+    <p>สองบรรทัดแรกของฟังก์ชันคือคำแนะนำของเอกสารเอง: กำหนดขอบเขตด้วย <code>coding</code> และทำให้เป็น one-shot ด้วย <code>attempt</code> เพราะ hook จะยิงซ้ำหลังทุกครั้งที่สะกิด — ถ้าไม่ปิดประตูด้วย <code>if attempt: return None</code> มันจะสะกิดจนชนเพดานพอดี<sup><a href="#th-ref-6">[6]</a></sup> อีกอย่างที่ควรรู้ก่อนวางไฟล์: plugin ที่อยู่ในโปรเจกต์ (<code>./.hermes/plugins/</code>) ถูกปิดไว้เป็นค่าเริ่มต้น ต้องตั้ง <code>HERMES_ENABLE_PROJECT_PLUGINS=true</code> ก่อนเริ่ม Hermes และเอกสารแนะนำให้เปิดเฉพาะกับ repository ที่คุณไว้ใจ<sup><a href="#th-ref-7">[7]</a></sup></p>
+
+    <blockquote><strong>💡 ด่านสำหรับงานที่คุณนั่งดูอยู่ อยู่คนละที่:</strong> <code>verify_on_stop</code> และ <code>pre_verify</code> ออกแบบมาสำหรับ<em>เทิร์นที่แก้โค้ด</em> ถ้าสิ่งที่คุณอยากตรวจคือ<em>คุณภาพของคำตอบ</em> ในงานที่คุณเฝ้าอยู่ ให้ใช้เครื่องมือชุดอื่น — Mixture of Agents preset ที่ให้หลายโมเดลตอบแยกกันก่อนสังเคราะห์, <code>/review</code> ที่ส่ง reviewer อิสระเข้ามาตรวจ และ <code>/goal</code> ที่ทำให้ judge ยอมรับคำว่าเสร็จเมื่อมีหลักฐานจริงเท่านั้น ทั้งสามอยู่ใน <a href="/blog/hermes-desktop-council">#4 The Council</a> ครบทุกคำสั่ง</blockquote>
+
+    <h2 id="th-surfaces-table" lang="en">5. Reference — Every Door That Can Start Work</h2>
+
+    <p>ตารางนี้คือแผ่นเดียวที่ผมเปิดดูเวลาต้องตัดสินใจว่า "งานนี้ควรเข้าประตูไหน" สองแถวแรกคือเนื้อหาของบทความนี้ สี่แถวที่เหลืออยู่ในตอนอื่นและอยู่ที่นี่เพื่อให้คุณเห็นทั้งภาพ:</p>
+
+    <div class="table-wrapper">
+        <table>
+            <thead>
+                <tr><th>Surface</th><th>Trigger</th><th>Runs where</th><th>Memory</th><th>Output lands</th><th>Deep dive</th></tr>
+            </thead>
+            <tbody>
+                <tr><td><strong>Routine / cron job</strong></td><td>ตารางเวลาที่คุณตั้ง หรือ <strong>Trigger now</strong></td><td>session ใหม่ทั้งอันที่ scheduler สร้างขึ้น</td><td>โหลดและอัปเดต persistent memory ตั้งแต่ v0.21.0 + <code>continuity</code> + notepad ต่องาน</td><td>ปลายทาง <code>deliver:</code> และเสมอที่ <code>~/.hermes/cron/output/{job_id}/{timestamp}.md</code></td><td><a href="/blog/hermes-automation">Hermes #8</a></td></tr>
+                <tr><td><strong><code>delegate_task</code> subagent</strong></td><td>agent เรียกเครื่องมือเองระหว่างเทิร์น</td><td>ลูกที่มี terminal session ของตัวเอง ในต้นไม้ของ session ที่เรียก</td><td>ไม่มี — เริ่มจากบทสนทนาว่างเปล่า และ leaf ถูกบล็อกเครื่องมือ <code>memory</code></td><td>เฉพาะสรุปสุดท้ายเข้าบทสนทนาพ่อแม่ + transcript สดหนึ่งไฟล์ต่องาน</td><td><a href="/blog/hermes-agent-teams">Hermes #2</a></td></tr>
+                <tr><td><strong>Bot group chat</strong></td><td>ข้อความของคุณในห้องกลุ่ม (2–6 Bots)</td><td>รอบเดินโดยตัว Desktop; สมาชิกแต่ละตัวมี session <code>Group: &lt;name&gt;</code> ของตัวเอง</td><td>session ของสมาชิกแต่ละตัวคงอยู่เหมือนบทสนทนาอื่น</td><td>ในห้อง; ประวัติล่าสุดถูกมิเรอร์ไปยัง gateway ทุกตัวที่ต่ออยู่</td><td><a href="/blog/hermes-desktop-council">#4 Council</a></td></tr>
+                <tr><td><strong>Inbound webhook</strong></td><td>HTTP POST ไปที่ <code>:8644/webhooks/&lt;route&gt;</code> พร้อมลายเซ็น HMAC ที่ถูกต้อง</td><td>webhook adapter ของ gateway เปิด agent run ใหม่</td><td>ไม่มีบริบทเดิม; payload ถูกแปลงเป็น prompt</td><td>กลับไปยังต้นทาง หรือไปยังแพลตฟอร์มอื่นที่ตั้งค่าไว้</td><td><a href="/blog/hermes-automation">Hermes #8</a></td></tr>
+                <tr><td><strong>API server</strong></td><td>คำขอแบบ OpenAI-compatible ที่ <code>:8642/v1</code></td><td>gateway เดียวกัน พร้อมชุดเครื่องมือเต็ม</td><td>Responses API เก็บสถานะบทสนทนาฝั่งเซิร์ฟเวอร์ผ่าน <code>previous_response_id</code></td><td>เป็น HTTP response; แบบสตรีมจะแทรกความคืบหน้าของเครื่องมือมาด้วย</td><td><a href="/blog/hermes-automation">Hermes #8</a></td></tr>
+                <tr><td><strong>Kanban</strong></td><td>แถวงานบนบอร์ด + รอบกวาดของ dispatcher</td><td>worker ที่เป็น OS process เต็มตัว มีตัวตนของตัวเอง</td><td>ถาวร — ทุกงานเป็นแถวใน <code>~/.hermes/kanban.db</code></td><td>แถวบนบอร์ดที่ทั้งคนและ agent อ่านเขียนได้</td><td><a href="/blog/hermes-agent-teams">Hermes #2</a></td></tr>
+            </tbody>
+        </table>
+    </div>
+
+    <p>อ่านตารางนี้ตามคอลัมน์ <strong>Memory</strong> แล้วคุณจะเห็นเหตุผลของการเลือกเกือบทั้งหมด งานที่ต้อง "จำว่าเมื่อวานบอกอะไรไปแล้ว" ควรเป็น Routine ไม่ใช่ subagent เพราะ subagent เริ่มจากศูนย์ทุกครั้งโดยตั้งใจ ส่วนงานที่ต้องอยู่ข้ามการรีสตาร์ตและมีร่องรอยให้คนเข้าไปแทรกได้ ควรเป็น Kanban ไม่ใช่ทั้งสองอย่าง — เอกสาร delegation เองก็ชี้ทางนี้ไว้ ว่าถ้าต้องการ durable execution ที่รอดจากการปิด session หรือรีสตาร์ตโปรเซส ให้ใช้ <code>cronjob</code> หรือ <code>terminal(background=True, notify_on_complete=True)</code> แทน <code>delegate_task</code><sup><a href="#th-ref-4">[4]</a></sup></p>
+
+    <h2 id="th-limits" lang="en">6. Limits to Know</h2>
+
+    <p>สามข้อจำกัดต่อไปนี้เป็นของจริงในวันที่ 7 กันยายน 2026 และทั้งสามข้อจะเปลี่ยนวิธีที่คุณออกแบบงานอัตโนมัติ ผมเรียงจากข้อที่กระทบการใช้งานประจำวันมากที่สุด:</p>
+
+    <ul>
+        <li><strong>ห้องกลุ่มของ Bot ผูกกับตัว Desktop ที่เปิดค้างอยู่</strong> — issue #95163 (เปิดตั้งแต่ 26 สิงหาคม 2026 อัปเดตล่าสุด 6 กันยายน 2026 ยัง <code>open</code>) อธิบายว่ารอบของห้องกลุ่มถูกขับโดย renderer ของ Desktop ทั้งหมด และผลที่ตามมาข้อแรกคือ "Rooms stall when the driving client goes away. Backgrounding or closing the desktop mid-round stops turn delivery until it returns."<sup><a href="#th-ref-13">[13]</a></sup> issue #97681 "Bot Group Chats should keep working after Desktop closes" (เปิด 29 สิงหาคม 2026 อัปเดตล่าสุด 6 กันยายน 2026 ยัง <code>open</code>) เป็นเส้นทางแก้ที่ยังเดินอยู่ และตัว issue เองระบุว่า "Work continues without Desktop only while the authority gateway is reachable" กับ "Passive history retention is not safe automatic takeover, which remains disabled."<sup><a href="#th-ref-13">[13]</a></sup> สรุปเชิงปฏิบัติ: อย่าออกแบบงานที่ต้องเสร็จข้ามคืนให้อยู่ในห้องกลุ่ม ใช้ Routine หรือ Kanban แทน</li>
+        <li><strong>โมเดลของ subagent เป็นค่าเดียวทั้งระบบ ไม่ใช่ต่อการเรียก</strong> — เอกสาร delegation เขียนไว้ตรงตัวว่า "the pin is global: <code>delegate_task</code> has no per-task model parameter, so every child in a batch runs on the configured delegation model" ปุ่มที่มีคือ <code>delegation.model</code> กับ <code>delegation.provider</code> ใน <code>config.yaml</code> และถ้างานย่อยชิ้นหนึ่งต้องการโมเดลแรงกว่า ทางออกที่เอกสารเสนอคือปล่อย <code>delegation.model</code> ว่างสำหรับ session นั้น หรือส่งงานให้บอร์ด Kanban ซึ่งรองรับการกำหนดโมเดลต่องาน<sup><a href="#th-ref-4">[4]</a></sup> กลยุทธ์ต้นทุนที่เอกสารแนะนำจึงเป็น "frontier planner, inexpensive workers": พ่อแม่อยู่บนโมเดลแรง ลูกทั้งฝูงอยู่บนโมเดลถูก เพราะโทเคนส่วนใหญ่ไปตกที่ลูก<sup><a href="#th-ref-4">[4]</a></sup></li>
+        <li><strong>ค่าเริ่มต้นของ delegation ยังขัดกันเองระหว่างเอกสารกับโค้ด</strong> — ผมตรวจสามแหล่งในวันเดียวกัน หน้าเอกสาร delegation บอกว่า <code>max_iterations</code> เริ่มต้นที่ <strong>50</strong> และคู่ขนานได้ <strong>3</strong> งาน แต่ <code>hermes_cli/config_defaults.py</code> บน <code>main</code> อ่านได้ <code>"max_iterations": 250</code> กับ <code>"max_concurrent_children": 10</code> และ <code>cli-config.yaml.example</code> ก็ให้ตัวเลขชุดเดียวกัน<sup><a href="#th-ref-4">[4]</a></sup><sup><a href="#th-ref-10">[10]</a></sup> release note ของ v0.21.0 ตัดสินข้อพิพาทนี้ให้เอง ด้วยประโยคที่บอกว่า delegation ได้ "raised defaults (250 iterations, 10 concurrent children)"<sup><a href="#th-ref-11">[11]</a></sup> — ดังนั้นตัวเลขที่ทำงานจริงคือ 250/10 และหน้าเอกสารคือฝ่ายที่ยังไม่อัปเดต อย่าตั้งงบประมาณต้นทุนจากเลข 3 เด็ดขาด และถ้าจะยืนยันบนเครื่องของคุณเอง ให้อ่านค่าจริงด้วย <code>hermes config get delegation.max_concurrent_children</code><sup><a href="#th-ref-9">[9]</a></sup></li>
+    </ul>
+
+    <div class="alert danger">
+        <strong>อย่าตั้ง <code>max_spawn_depth</code> ลึกโดยไม่คิด:</strong> เอกสารเตือนด้วยการคูณเลขให้ดูเลยว่า "With <code>max_spawn_depth: 3</code> and <code>max_concurrent_children: 3</code>, the tree can reach 3×3×3 = 27 concurrent leaf agents. Each extra level multiplies spend"<sup><a href="#th-ref-4">[4]</a></sup> และเมื่อค่าคู่ขนานจริงบนเครื่องคือ 10 ไม่ใช่ 3 ตัวเลขที่แท้จริงจะสูงกว่าตัวอย่างในเอกสารมาก ค่าเริ่มต้น <code>max_spawn_depth: 1</code> คือ "แบน" — ลูกสร้างหลานไม่ได้ — และผมแนะนำให้คงไว้จนกว่าคุณจะมีเหตุผลที่เขียนเป็นตัวเลขได้
+    </div>
+
+    <h2 id="th-summary">7. สรุป</h2>
+
+    <p>เราเริ่มจากคำถามว่าเครื่องทำอะไรอยู่ตอนคุณไม่ได้พิมพ์ แล้วพบสามพื้นผิว: Routine ที่นาฬิกาปลุกและตั้งแต่ v0.21.0 จำงานครั้งก่อนได้, subagent ที่ agent แตกเองและคุณสั่งแก้ทิศระหว่างทางได้จาก <code>/agents</code> และบานที่ไว้มองทั้งสองอย่างนั้น จากนั้นเราปิดประตูด้วย <code>verify_on_stop</code> ที่ห้ามคำว่า "เสร็จ" เมื่อไม่มีหลักฐาน และ hook <code>pre_verify</code> ที่ทำให้กฎของทีมคุณเป็นเงื่อนไขจริงในโค้ด สุดท้ายเราวางทุกประตูลงในตารางเดียวและยอมรับข้อจำกัดสามข้อที่ยังไม่หายไปในวันนี้ ตอนถัดไป <a href="/blog/hermes-desktop-safety">#7 Safety, Remote &amp; Recovery</a> จะจัดการกับคำถามที่เหลืออยู่คำถามเดียว — แล้วเมื่อมันพัง เราจะกู้กลับมาอย่างไร</p>
+
+    <div class="key-takeaways">
+        <h3>🎯 สิ่งสำคัญที่ต้องจำ</h3>
+        <ul>
+            <li><strong>Routine = cron job</strong> ที่ Bot เป็นเจ้าของ ชื่อขึ้นต้น <code>[bot:&lt;name&gt;]</code> โผล่ใน <code>hermes cron list</code> และในบาน Cron เหมือนกัน — หน้าจอไม่ได้สร้าง primitive ใหม่</li>
+            <li><strong>Trigger now</strong> = ปุ่มยืนยันว่างานมีอยู่จริงและรันได้ ก่อนจะปล่อยให้มันรอถึงเวลาเอง; ทุกรอบเขียนไฟล์ไว้ที่ <code>~/.hermes/cron/output/{job_id}/{timestamp}.md</code> เสมอ</li>
+            <li><strong>continuity</strong> = กลไกที่เอกสารรับรองว่าแต่ละรอบเห็นผลของรอบก่อนหน้าตัวเอง; persistent memory ของ cron ประกาศใน release note v0.21.0 แต่หน้าเอกสาร cron ยังไม่พูดถึง</li>
+            <li><strong>delegate_task</strong> = <code>goal</code>, <code>context</code>, <code>tasks</code>, <code>role</code> (leaf | orchestrator), <code>max_iterations</code>, <code>background</code>, <code>output_schema</code> — และ<strong>ไม่มี</strong>พารามิเตอร์ <code>model</code> ต่อการเรียก</li>
+            <li><strong>steer &gt; stop</strong> = แก้ทิศลูกที่กำลังวิ่งด้วย <code>{"action":"steer", …}</code> แทนการฆ่าทิ้ง แต่ <code>"queued"</code> ไม่ได้แปลว่าลูกเห็นแล้ว — ดู <code>missed_steer</code> ในผลลัพธ์</li>
+            <li><strong>verify_on_stop: false</strong> = ค่าเริ่มต้นคือปิด; ตั้ง <code>true</code> หรือ <code>"auto"</code> เองเสมอ ถ้าคุณอยากได้ด่านห้ามตอบว่าเสร็จโดยไม่มีหลักฐาน</li>
+            <li><strong>pre_verify</strong> = hook ที่ยิงครั้งเดียวต่อเทิร์นที่แก้โค้ด รับ payload เจ็ดตัว คืน <code>{"action":"continue"}</code> เพื่อสั่งทำต่อ และถูกจำกัดด้วย <code>max_verify_nudges: 3</code></li>
+            <li><strong>ห้องกลุ่มไม่ใช่ที่ของงานข้ามคืน</strong> = รอบถูกขับโดย Desktop; issue #95163 และ #97681 ยังเปิดอยู่ ณ วันที่เขียน</li>
+        </ul>
+    </div>
+
+    <section class="references" aria-labelledby="th-references">
+        <h2 id="th-references">อ้างอิง</h2>
+        <p class="references__note">ทุกแหล่งอ้างอิงตรวจสอบและเข้าถึงเมื่อ 7 กันยายน 2026 (2026-09-07) ซีรีส์นี้ใช้ป้ายกำกับหลักฐานสี่แบบ — <strong>Docs</strong> เอกสารทางการของ Hermes Agent · <strong>Release</strong> บันทึกการออกรุ่นหรือ commit/PR ที่ merge แล้ว · <strong>Issue</strong> issue หรือ PR ที่ยังเปิดอยู่ · <strong>Community</strong> แหล่งจากชุมชนที่ไม่ใช่ทางการ</p>
+        <ol class="references__list">
+            <li id="th-ref-1"><span class="ref-tag ref-tag--standard">Docs</span> Nous Research. <cite>Scheduled Tasks (Cron)</cite>, Hermes Agent User Guide. <a href="https://hermes-agent.nousresearch.com/docs/user-guide/features/cron">hermes-agent.nousresearch.com</a> — เข้าถึง 2026-09-07. <span class="ref-supports">รองรับ: <code>hermes cron create</code> และรูปแบบ <code>--skill</code> / <code>--continuity</code> · รูปแบบตารางเวลาทั้งห้าแบบ · คำกริยาวงจรชีวิตและการค้นด้วยชื่องาน · <code>~/.hermes/cron/jobs.json</code> และ <code>~/.hermes/cron/output/{job_id}/{timestamp}.md</code> · job ผูก skill ได้ศูนย์/หนึ่ง/หลายอัน · รอบใหม่เป็น session ใหม่ · ตารางปลายทาง <code>deliver:</code> รวม <code>bot-chat</code> · การไม่มีประโยคใดกล่าวถึง persistent memory ของ cron (ข้อค้นพบเชิงลบ)</span></li>
+            <li id="th-ref-2"><span class="ref-tag ref-tag--standard">Docs</span> Nous Research. <cite>Bot Mode: A Roster of Agents</cite>, Hermes Agent User Guide. <a href="https://hermes-agent.nousresearch.com/docs/user-guide/bot-mode">hermes-agent.nousresearch.com</a> — เข้าถึง 2026-09-07. <span class="ref-supports">รองรับ: ประโยค "Routines are plain Hermes cron jobs namespaced <code>[bot:&lt;name&gt;] &lt;routine&gt;</code>" และการโผล่ใน <code>hermes cron list</code> · ผลลงในประวัติแชตของ Bot · structured schedule picker กับช่อง Advanced · ตาราง CLI parity · ห้องกลุ่ม 2–6 Bots สามรอบต่อเนื่อง และ session <code>Group: &lt;name&gt;</code> ของสมาชิก · การมิเรอร์ประวัติล่าสุดไปยังทุก gateway</span></li>
+            <li id="th-ref-3"><span class="ref-tag ref-tag--standard">Docs</span> Nous Research. <cite>Hermes Desktop</cite>, Hermes Agent User Guide. <a href="https://hermes-agent.nousresearch.com/docs/user-guide/desktop">hermes-agent.nousresearch.com</a> — เข้าถึง 2026-09-07. <span class="ref-supports">รองรับ: บาน Cron ("view and manage scheduled jobs") · "Agents and Command Center — orchestration surfaces for multi-agent work" · ปุ่มลัด Cmd/Ctrl+. และรายการ Show in status bar · แท็บ Sessions | Bots และการที่บาน Routines/Cronjobs โผล่เฉพาะตอนแท็บ Bots ทำงาน</span></li>
+            <li id="th-ref-4"><span class="ref-tag ref-tag--standard">Docs</span> Nous Research. <cite>Subagent Delegation</cite>, Hermes Agent User Guide. <a href="https://hermes-agent.nousresearch.com/docs/user-guide/features/delegation">hermes-agent.nousresearch.com</a> — เข้าถึง 2026-09-07. <span class="ref-supports">รองรับ: ประโยค "Each child gets a fresh conversation…" · พารามิเตอร์ <code>goal</code>/<code>context</code>/<code>tasks</code>/<code>group</code>/<code>role</code>/<code>max_iterations</code>/<code>background</code> · <code>/agents</code> และสิ่งที่มันแสดง · บล็อก JSON list/steer/stop และความหมายของแต่ละ action · <code>"queued"</code> กับ <code>missed_steer</code> · ประโยค "the pin is global…no per-task model parameter" และทางออก Kanban · กลยุทธ์ frontier planner / inexpensive workers · คำเตือน 3×3×3 = 27 และ <code>max_spawn_depth: 1</code> · leaf ถูกบล็อก <code>memory</code> · คำแนะนำให้ใช้ <code>cronjob</code> หรือ <code>terminal(background=True…)</code> สำหรับ durable execution · ค่าเริ่มต้นที่หน้านี้พิมพ์ไว้ (50 iterations, 3 concurrent)</span></li>
+            <li id="th-ref-5"><span class="ref-tag ref-tag--standard">Docs</span> Nous Research. <cite>Configuration</cite> (หัวข้อ Verify-on-Stop), Hermes Agent User Guide. <a href="https://hermes-agent.nousresearch.com/docs/user-guide/configuration">hermes-agent.nousresearch.com</a> — เข้าถึง 2026-09-07. <span class="ref-supports">รองรับ: คำนิยาม verify-on-stop ที่ยกมาทั้งประโยค · บล็อก YAML สามคีย์ <code>verify_on_stop</code>/<code>verify_guidance</code>/<code>max_verify_nudges</code> · ความหมายของ <code>true</code>/<code>false</code>/<code>"auto"</code> · การที่ตัวติดตั้งใหม่มาพร้อม <code>false</code> · ตัวแปร <code>HERMES_VERIFY_ON_STOP</code> · การที่การแก้เอกสาร/skill ไม่ทำให้ด่านทำงาน</span></li>
+            <li id="th-ref-6"><span class="ref-tag ref-tag--standard">Docs</span> Nous Research. <cite>Hooks</cite> (หัวข้อ <code>pre_verify</code>), Hermes Agent User Guide. <a href="https://hermes-agent.nousresearch.com/docs/user-guide/features/hooks">hermes-agent.nousresearch.com</a> — เข้าถึง 2026-09-07. <span class="ref-supports">รองรับ: ประโยค "Fires once per turn when the agent edited code…" · ตาราง payload เจ็ดตัวและคำอธิบายรายตัว · รูปแบบคืนค่า <code>{"action": "continue", "message": …}</code> และรูปแบบ Stop ของ Claude Code · ขอบเขต <code>max_verify_nudges</code> ค่าเริ่มต้น 3 · คำแนะนำ scope ด้วย <code>coding</code> และ one-shot ด้วย <code>attempt</code></span></li>
+            <li id="th-ref-7"><span class="ref-tag ref-tag--standard">Docs</span> Nous Research. <cite>Plugins</cite>, Hermes Agent User Guide. <a href="https://hermes-agent.nousresearch.com/docs/user-guide/features/plugins">hermes-agent.nousresearch.com</a> — เข้าถึง 2026-09-07. <span class="ref-supports">รองรับ: โครงโฟลเดอร์ <code>~/.hermes/plugins/&lt;name&gt;/</code> กับ <code>plugin.yaml</code> และ <code>__init__.py</code> · รูปแบบ <code>def register(ctx)</code> และ <code>ctx.register_hook("&lt;hook&gt;", callback)</code> · plugin ระดับโปรเจกต์ปิดไว้เป็นค่าเริ่มต้นและต้องใช้ <code>HERMES_ENABLE_PROJECT_PLUGINS=true</code></span></li>
+            <li id="th-ref-8"><span class="ref-tag ref-tag--standard">Docs</span> Nous Research. <cite>Security</cite> (ตาราง <code>approvals</code>), Hermes Agent User Guide. <a href="https://hermes-agent.nousresearch.com/docs/user-guide/security">hermes-agent.nousresearch.com</a> — เข้าถึง 2026-09-07. <span class="ref-supports">รองรับ: <code>approvals.cron_mode</code> ค่าเริ่มต้น <code>deny</code> และความหมายของ <code>deny</code>/<code>approve</code> สำหรับงานที่รันแบบไม่มีคนเฝ้า · <code>unattended_mode</code> ที่ครอบ webhook และ API server</span></li>
+            <li id="th-ref-9"><span class="ref-tag ref-tag--standard">Docs</span> Nous Research. <cite>CLI Commands</cite> และ <cite>Slash Commands</cite>, Hermes Agent Reference. <a href="https://hermes-agent.nousresearch.com/docs/reference/cli-commands">cli-commands</a> · <a href="https://hermes-agent.nousresearch.com/docs/reference/slash-commands">slash-commands</a> — เข้าถึง 2026-09-07. <span class="ref-supports">รองรับ: รายการ subcommand ของ <code>hermes cron</code> · คำอธิบาย <code>doctor</code> ว่าเป็น read-only fleet health check ที่ "Exits non-zero when issues are found" · <code>/agents</code> (ชื่อพ้อง <code>/tasks</code>) และการที่ <code>/cron</code> ถูกจัดเป็นคำสั่งฝั่ง CLI</span></li>
+            <li id="th-ref-10"><span class="ref-tag ref-tag--standard">Docs</span> Nous Research. <cite>hermes_cli/config_defaults.py</cite> และ <cite>cli-config.yaml.example</cite> (ไฟล์ต้นฉบับบน <code>main</code>). <a href="https://raw.githubusercontent.com/NousResearch/hermes-agent/main/hermes_cli/config_defaults.py">config_defaults.py</a> · <a href="https://raw.githubusercontent.com/NousResearch/hermes-agent/main/cli-config.yaml.example">cli-config.yaml.example</a> — เข้าถึง 2026-09-07. <span class="ref-supports">รองรับ: <code>"verify_on_stop": False</code>, <code>"verify_guidance": True</code>, <code>"max_verify_nudges": 3</code> · <code>"max_iterations": 250</code>, <code>"max_concurrent_children": 10</code>, <code>"max_spawn_depth": 1</code>, <code>"orchestrator_enabled": True</code> · บล็อก <code>delegation:</code> ในไฟล์ตัวอย่างที่ให้ตัวเลขชุดเดียวกัน</span></li>
+            <li id="th-ref-11"><span class="ref-tag ref-tag--study">Release</span> Nous Research. <cite>Hermes Agent v0.21.0 (v2026.8.31) — The Pantheon Release</cite>. <a href="https://github.com/NousResearch/hermes-agent/releases/tag/v2026.8.31">github.com</a> — เผยแพร่ 2026-08-31, เข้าถึง 2026-09-07. <span class="ref-supports">รองรับ: ย่อหน้า "Scheduled jobs stopped being goldfish…" ทั้งประโยค · "Steer your subagents while they run" พร้อม <code>output_schema</code>, per-delegation cost และ "raised defaults (250 iterations, 10 concurrent children)" · การที่ "MCP command center" หมายถึงหน้า MCP ไม่ใช่บาน Command Center</span></li>
+            <li id="th-ref-12"><span class="ref-tag ref-tag--study">Release</span> NousResearch. <cite>PR #81144 feat(delegation): optional structured-output schema on delegate_task</cite> (merge 2026-08-07) และ <cite>PR #70638 fix(cron): make Trigger now execute immediately and safely</cite> (merge 2026-08-15). <a href="https://github.com/NousResearch/hermes-agent/pull/81144">github.com/…/pull/81144</a> · <a href="https://github.com/NousResearch/hermes-agent/pull/70638">github.com/…/pull/70638</a> — เข้าถึง 2026-09-07. <span class="ref-supports">รองรับ: ชื่อพารามิเตอร์ <code>output_schema</code> เป็น JSON Schema ต่อ task และบนรูปแบบ goal เดี่ยว · "an explicit OUTPUT CONTRACT block in its context" และการตรวจด้วย jsonschema พร้อม retry หนึ่งเทิร์น · ชื่อปุ่ม "Trigger now" และการที่การยิงทันทีถูกทำให้วิ่งผ่าน scheduler provider จริงทั้งบน Dashboard และ Desktop</span></li>
+            <li id="th-ref-13"><span class="ref-tag ref-tag--law">Issue</span> angel12; dokterdok. <cite>Issue #95163 Opt-in backend-hosted group rooms — gateway-side round driver + authoritative room log</cite> (เปิด 2026-08-26) และ <cite>Issue #97681 Bot Group Chats should keep working after Desktop closes</cite> (เปิด 2026-08-29). <a href="https://github.com/NousResearch/hermes-agent/issues/95163">github.com/…/issues/95163</a> · <a href="https://github.com/NousResearch/hermes-agent/issues/97681">github.com/…/issues/97681</a> — เข้าถึง 2026-09-07. <span class="ref-supports">รองรับ: ประโยค "Rooms stall when the driving client goes away…" · การที่รอบถูกขับโดย renderer ของ Desktop · ประโยค "Work continues without Desktop only while the authority gateway is reachable" และ "Passive history retention is not safe automatic takeover, which remains disabled." · สถานะ <code>open</code> ของทั้งสอง issue พร้อมวันที่อัปเดตล่าสุด 2026-09-06</span></li>
+            <li id="th-ref-14"><span class="ref-tag ref-tag--synthesis">Community</span> Greg Isenberg (ร่วมกับ Alex Finn). <cite>Hermes Agent Desktop: Full Setup + Real Use Cases</cite> (วิดีโอ 43 นาที) และ Wanderloots. <cite>Full Hermes Agent Tutorial (Desktop)</cite> (วิดีโอ 28 นาที). <a href="https://www.youtube.com/watch?v=EJm8Ka-gVOc">youtube.com/…EJm8Ka-gVOc</a> · <a href="https://www.youtube.com/watch?v=GL67DEf2nyI">youtube.com/…GL67DEf2nyI</a> — เผยแพร่ 2026-06-06 และ 2026-07-01, เข้าถึง 2026-09-07. <span class="ref-supports">รองรับ: ประโยคสรุปของวิดีโอแรกว่า Finn "praises the Cron section for giving one-click confirmation that scheduled tasks truly exist" และการแยก sub-agent ออกจาก profile · วิดีโอที่สองมีบทว่าด้วย cron และ automation tips เป็นบทของตัวเอง ซึ่งยืนยันว่าการตั้ง cron เป็นขั้นตอนที่ผู้ใช้ต้องลองซ้ำจริง</span></li>
+        </ol>
+    </section>
+    </div>
+
+    <div class="l-en" lang="en">
+
+    <p>🤔 <strong>If you close the lid and walk away from the desk — what is the Hermes you have spent five posts configuring still doing for you?</strong></p>
+
+    <p>The previous post — <a href="/blog/hermes-desktop-skills-mcp">#5 Skills, MCP &amp; Memory</a> — stocked the agent's shelves: skills loaded on demand, MCP servers wiring in external tools, and the two memory files you can edit from the screen. I ended it by saying the numbers on the context meter would come back, because every cron job and every subagent has a context of its own to pay for. This is where they come back.</p>
+
+    <p>The one-line answer: work that runs itself in Hermes Desktop arrives through <strong>three surfaces</strong> — a <strong>Routine</strong> (a cron job a Bot owns) woken by the clock, a <strong>subagent</strong> the agent spawns for itself with <code>delegate_task</code> to fan work out in parallel, and the <strong>Agents and Command Center</strong> panes, which are the screens you watch those two from. Then this post closes with the gate that matters most for unattended work — <code>verify_on_stop</code>, which forbids the agent from saying "done" on a turn where it edited code and produced no fresh verification evidence.</p>
+
+    <h2 id="en-three-surfaces">1. What Runs When You Are Not Typing</h2>
+
+    <p>The direct answer first: in Hermes Desktop (Hermes Agent v0.21.0, tag <code>v2026.8.31</code>) three surfaces can start work without you typing — <strong>cron jobs</strong>, which appear as <strong>Routines</strong> when a Bot owns them; <strong>subagents</strong>, which the agent creates for itself through the <code>delegate_task</code> tool; and the <strong>Agents</strong> and <strong>Command Center</strong> panes, which the docs describe as "orchestration surfaces for multi-agent work".<sup><a href="#en-ref-3">[3]</a></sup> The first two are mechanisms; the third is a window onto them.</p>
+
+    <p>The distinction to get straight from the outset is <strong>who presses start</strong>. A cron job is woken by the gateway's own ticker on a schedule <em>you</em> set; it builds a whole new session and delivers its result to a configured target. A subagent is created by <em>the agent itself</em> while it is already working for you — it is work being split inside one conversation, not a schedule. The delegation docs put it plainly: "Each child gets a fresh conversation and works independently — only its final summary enters the parent's context."<sup><a href="#en-ref-4">[4]</a></sup></p>
+
+    <figure class="figure">
+      <a href="../images/hermes-desktop-fig-06-automation-agents.png">
+        <img class="figure__img" src="../images/hermes-desktop-fig-06-automation-agents.png" alt="Left-to-right diagram: a clock points to an agent-run box that fans down into three subagents, then passes through a dark-teal-outlined verify-on-stop gate to a light-green done box." width="1400" height="700" loading="lazy" decoding="async">
+      </a>
+      <figcaption class="figure__caption">Figure 1 · Work that runs itself — a Routine wakes an agent that remembers its last run, fans work out to subagents, and must pass an evidence gate before it may say done.</figcaption>
+    </figure>
+
+    <p>A Routine is simply what Bot Mode calls a Bot's own cron job, and it is not a new thing in the system — the Bot Mode docs say so outright: "Routines are plain Hermes cron jobs namespaced <code>[bot:&lt;name&gt;] &lt;routine&gt;</code> — they also show up in <code>hermes cron list</code> and the core Cron page."<sup><a href="#en-ref-2">[2]</a></sup> That is my favourite property of this design: the pretty screen did not invent a primitive we have to learn twice. What you click in the Routines pane is the same row <code>hermes cron list</code> prints in a terminal, and the same file at <code>~/.hermes/cron/jobs.json</code>.<sup><a href="#en-ref-1">[1]</a></sup></p>
+
+    <p>This post is the hands-on half, not the theory. If you want the full operations layer of cron — the <code>executions.db</code> file layout, the per-run ledger, the incidents/doctor/runs loop, inbound webhooks that verify a signature before believing anything, blueprints and the API server — I wrote it up in <a href="/blog/hermes-automation">Hermes #8 Automation</a>, and the four-layer multi-agent map (subagents, Kanban, Bot Mode/A2A, multi-profile serving) is in <a href="/blog/hermes-agent-teams">Hermes #2 Agent Teams</a>. I will not repeat either of them here; I will click and type on the Desktop screen, and point back to those two posts when you want the depth.</p>
+
+    <div class="alert info">
+        <strong>A note on scope:</strong> cron and <code>delegate_task</code> are <strong>Hermes Agent</strong> capabilities, not Desktop-only ones — they behave identically from the CLI, the TUI and a gateway. What Desktop adds is the <em>screen</em>: the Cron pane, the Routines pane bound to a Bot, the Agents pane and the Command Center. I flag every claim that is Desktop-only where it matters.
+    </div>
+
+    <h2 id="en-schedule-a-routine">2. Procedure A — Schedule a Routine</h2>
+
+    <p>What you will have at the end: one Routine attached to one Bot, with a schedule of its own, testable immediately without waiting for the real hour, and its result landing in that Bot's own chat — where you would be talking to it anyway.<sup><a href="#en-ref-2">[2]</a></sup></p>
+
+    <ol>
+        <li>In Desktop's left sidebar, switch from the <strong>Sessions</strong> tab to the <strong>Bots</strong> tab and pick the Bot that should own this job. The <strong>Routines</strong> pane (called <strong>Cronjobs</strong> in some builds) docks beside the chat — the docs note it appears only while the Bots tab is active and steps aside when you switch back to Sessions, while older builds keep it always visible.<sup><a href="#en-ref-3">[3]</a></sup></li>
+        <li>If you want the whole machine's view rather than one Bot at a time, open the <strong>Cron</strong> pane in the sidebar's management panes, which the Desktop docs describe in one line as "Cron — view and manage scheduled jobs".<sup><a href="#en-ref-3">[3]</a></sup> This is where every Bot's Routines meet the cron jobs you created from a terminal.</li>
+        <li>Create the job from the Routines pane. The docs describe the schedule control as "a structured schedule picker … (frequency first, then only the detail that matters), with an Advanced field exposing the raw Hermes schedule string"<sup><a href="#en-ref-2">[2]</a></sup> — so you choose the frequency first, fill in only the detail that matters, or open Advanced and type the raw schedule string yourself.</li>
+        <li>In the Advanced field use one of the forms the cron docs accept: a one-shot delay (<code>in 30m</code>), an interval (<code>every 2h</code>), a natural day/time (<code>every monday 9am</code>, <code>daily at 7am</code>, <code>weekdays at 9am</code>), a five-field cron expression (<code>0 9 * * *</code>) or an ISO timestamp (<code>2026-03-15T09:00:00</code>).<sup><a href="#en-ref-1">[1]</a></sup> For anything you actually need to depend on I would use the cron expression, because it leaves nothing to interpret.</li>
+        <li>Write a prompt that <strong>stands on its own</strong>. Remember that each run is a fresh session with none of the earlier conversation attached — and if the job needs a specific capability, attach a skill: one job can carry zero, one, or several skills.<sup><a href="#en-ref-1">[1]</a></sup></li>
+        <li>Save it and fire a test immediately. The button is <strong>Trigger now</strong> — PR #70638, merged on 15 August 2026, is titled "make Trigger now execute immediately and safely" and fixed both the Dashboard and Desktop paths so that an immediate fire really goes through the scheduler provider instead of merely moving <code>next_run_at</code>.<sup><a href="#en-ref-12">[12]</a></sup></li>
+        <li>Read the output. If the Routine belongs to a Bot, the result lands in that Bot's chat history,<sup><a href="#en-ref-2">[2]</a></sup> and whatever the delivery target is, every run is always written to a file at <code>~/.hermes/cron/output/{job_id}/{timestamp}.md</code><sup><a href="#en-ref-1">[1]</a></sup> — the evidence you can re-read when the result never reached you.</li>
+    </ol>
+
+    <h3>The CLI twin</h3>
+
+    <p>Everything above has a terminal equivalent, and I usually create jobs from here because it can be written into a runbook. These commands are lifted straight from the cron feature page and the CLI reference:</p>
+
+    <pre><code># a recurring job every two hours — the docs' own example
+hermes cron create "every 2h" "Check server status"
+
+# attach a skill to the job (repeat --skill for several)
+hermes cron create "every 1h" "Summarize new feed items" --skill blogwatcher
+
+# let each run see its own previous output
+hermes cron create "every 6h" "Scan for news" --continuity
+
+# list everything — a Bot's Routines appear here too, named [bot:&lt;name&gt;] …
+hermes cron list
+
+# the rest of the lifecycle
+hermes cron &lt;pause|resume|run|remove|status|doctor|tick&gt; &lt;job_id_or_name&gt;</code></pre>
+
+    <p>Two details save a lot of time. First, every mutating verb (<code>pause</code>, <code>resume</code>, <code>run</code>, <code>remove</code>, <code>edit</code>) accepts a job <strong>name</strong> in place of the hex id, case-insensitively; when several jobs share a name the command refuses and lists the candidate ids so you pick one explicitly rather than having it guess.<sup><a href="#en-ref-1">[1]</a></sup> Second, <code>hermes cron doctor</code> is a read-only fleet health check — failed runs, failed deliveries, overdue or missing <code>next_run_at</code>, missing scripts or workdirs — and it <strong>exits non-zero when issues are found</strong>, which means you can hang it off CI or an OS-level cron directly.<sup><a href="#en-ref-9">[9]</a></sup></p>
+
+    <blockquote><strong>💡 Since v0.21.0 scheduled jobs are no longer goldfish:</strong> the v0.21.0 release note reads "Scheduled jobs stopped being goldfish. Cron agents now load and update persistent memory like every other agent, <code>continuity=true</code> carries each run's output into the next (so a monitor can dedupe against what it already reported), every job gets a durable notepad scratchpad, monitor-mode jobs skip the LLM entirely when nothing changed".<sup><a href="#en-ref-11">[11]</a></sup> A caveat I checked myself on the day of writing: <strong>the cron docs page has not caught up</strong> — it documents <code>continuity</code> and <code>context_from</code> fully, but contains no sentence about cron persistent memory at all.<sup><a href="#en-ref-1">[1]</a></sup> So I would treat <code>continuity</code> as the documented mechanism and treat persistent memory as behaviour the release note announces but no docs page yet governs, including which memory files a cron run touches.</blockquote>
+
+    <p>One community observation worth reading: the most common complaint about cron is not "it did the wrong thing" but <strong>"it ran once and never again"</strong>. Greg Isenberg's Hermes Desktop walkthrough with Alex Finn (6 June 2026) summarises the fix in one line, noting that Finn "praises the Cron section for giving one-click confirmation that scheduled tasks truly exist".<sup><a href="#en-ref-14">[14]</a></sup> Put another way: a job you asked for in chat or over Telegram and never opened in the Cron pane is a job you do not know exists. The Cron pane is not decoration, it is the receipt — and <code>hermes cron list</code> is the same receipt in a terminal.</p>
+
+    <div class="alert">
+        <strong>Caution — unattended work meeting a dangerous command:</strong> the security docs set <code>approvals.cron_mode</code> to <code>deny</code> by default, meaning that when a cron job hits a command classified as dangerous it is blocked instantly (the agent must find another path) rather than waiting on an approval nobody is there to give.<sup><a href="#en-ref-8">[8]</a></sup> Do not flip it to <code>approve</code> just because one job is stuck — I keep the whole approvals-mode story for <a href="/blog/hermes-desktop-safety">#7 Safety, Remote &amp; Recovery</a>.
+    </div>
+
+    <h2 id="en-delegate-and-watch">3. Procedure B — Delegate and Watch</h2>
+
+    <p>The answer first: you do not press a button to create a subagent. You <strong>ask</strong> the agent to split the work, and it calls <code>delegate_task</code> itself. Your job is to see how many children it spawned and what they are doing — and, when one drifts off course, to redirect it mid-flight instead of throwing away the work it has already done.</p>
+
+    <ol>
+        <li>In an ordinary Desktop chat, give it work that <strong>genuinely splits into independent pieces</strong> — "review these three PRs in parallel and report each one back to me separately". If the sub-tasks do not depend on each other, the agent will choose the batch form on its own.</li>
+        <li>Know what the agent is sending. The <code>delegate_task</code> parameters the docs describe are <code>goal</code> (what to do), <code>context</code> (everything the child needs, because it starts from an empty conversation), <code>tasks</code> (the array for a parallel batch, with an optional <code>group</code> when results should come back consolidated), <code>role</code> — <code>"leaf"</code> by default or <code>"orchestrator"</code> — <code>max_iterations</code> (tool-calling turns for one child), <code>background</code> and <code>output_schema</code>.<sup><a href="#en-ref-4">[4]</a></sup><sup><a href="#en-ref-11">[11]</a></sup></li>
+        <li>When the answer needs a fixed shape, ask for an <code>output_schema</code>. PR #81144, merged 7 August 2026, describes the behaviour: the child receives the schema as "an explicit OUTPUT CONTRACT block in its context", the parent then validates the final answer with jsonschema, and on failure sends <strong>exactly one</strong> bounded retry turn carrying the validation errors verbatim.<sup><a href="#en-ref-12">[12]</a></sup></li>
+        <li>See who is running with <code>/agents</code> (alias <code>/tasks</code>). The docs say it shows a live tree of running and recently-finished subagents grouped by parent, with per-branch cost, token and file-touched rollups, plus kill and pause controls that cancel one subagent mid-flight without interrupting its siblings.<sup><a href="#en-ref-4">[4]</a></sup></li>
+        <li>Redirect rather than kill — the parent orchestrates its children with the same tool it spawned them with, sending the three actions in the code block below. The docs state the reason plainly: "Interrupting a child throws away its in-flight work; often you just want to redirect it."<sup><a href="#en-ref-4">[4]</a></sup></li>
+        <li>Read the cost. v0.21.0 added "per-delegation cost surfaced in results",<sup><a href="#en-ref-11">[11]</a></sup> so you can see the price of one fan-out rather than only the session total.</li>
+    </ol>
+
+    <pre><code>{"action": "list"}
+{"action": "steer", "subagent_id": "sa-0-1a2b3c4d", "message": "focus on pricing instead"}
+{"action": "stop",  "subagent_id": "sa-0-1a2b3c4d"}</code></pre>
+
+    <p>Three simple calls, with details worth knowing before you depend on them. <code>list</code> returns the conversation's live children with <code>subagent_id</code>, goal, status, <code>running_seconds</code>, <code>accepting_steer</code> and the live transcript path. <code>steer</code> queues a course correction into a running child without stopping it, and <code>stop</code> ends a child at its next iteration boundary — with <strong>the partial result still re-entering the conversation</strong> as a normal completion rather than being lost. All three actions run synchronously in-turn, are scoped to the caller's own spawn tree (a conversation can never see or control another session's children), and never consume the per-turn spawn cap, so <code>stop</code> keeps working even after the cap is hit.<sup><a href="#en-ref-4">[4]</a></sup></p>
+
+    <p>One trap to remember: <strong>"queued" is not "delivered"</strong>. The docs explain that a <code>"queued"</code> response means the text was accepted before the child's completion boundary, not that the child has seen it. If a child accepted the steer but had already produced its final answer, the completion entry the parent receives retains it as <code>missed_steer</code>, with a note appended to the summary — <code>[steer did not land — the subagent finished before it could be delivered: …]</code> — so you can tell a steered child from one that finished on the old instructions.<sup><a href="#en-ref-4">[4]</a></sup></p>
+
+    <div class="alert info">
+        <strong>On the Command Center — what the docs say and do not say:</strong> the Desktop docs list <strong>Agents</strong> and <strong>Command Center</strong> among the management panes with a single line of description, "orchestration surfaces for multi-agent work", give <strong>Cmd/Ctrl+.</strong> as the Command Center shortcut, and note that you can choose to show it in the status bar via right-click → <strong>Show in status bar</strong>.<sup><a href="#en-ref-3">[3]</a></sup> Beyond that the docs do not say what is inside it, so I will not itemise its contents — and a warning: the phrase "MCP command center" in the v0.21.0 release note refers to the reworked MCP page, not to this Command Center pane.<sup><a href="#en-ref-11">[11]</a></sup>
+    </div>
+
+    <h2 id="en-gates">4. Gates for Unattended Work</h2>
+
+    <p>Directly: the switch you want is <code>agent.verify_on_stop</code>. The configuration docs describe it as follows — "When enabled, Hermes refuses to accept a final answer on a turn where the agent edited code in a workspace but produced no fresh verification evidence (a passing test run, build, lint, etc.) — it injects a synthetic follow-up asking the agent to verify or explain why it can't."<sup><a href="#en-ref-5">[5]</a></sup> Doc, markdown or skill-only edits never trigger it, and the loop is bounded so it can never trap the agent.</p>
+
+    <p>The default is <strong>off</strong>, and this is where most people are caught out, because they assume it ships on. The config block has three keys:</p>
+
+    <pre><code>agent:
+  verify_on_stop: false        # true | false | "auto" (surface-aware: on for CLI/TUI/desktop, off for messaging)
+  verify_guidance: true        # Append creative-UI / clean-diff guidance to the missing-evidence nudge
+  max_verify_nudges: 3         # Cap on consecutive continue nudges per turn (built-in + pre_verify hooks)</code></pre>
+
+    <p>The three values <code>verify_on_stop</code> accepts are <code>true</code> (on everywhere), <code>false</code> (off — the default) and <code>"auto"</code>, the legacy surface-aware behaviour: on for interactive coding surfaces — CLI, TUI, desktop — and programmatic callers, off for messaging surfaces such as Telegram or Discord where the verification narrative reads as chat noise.<sup><a href="#en-ref-5">[5]</a></sup> The docs add that fresh installs ship <code>false</code> and that the config migration turned it off on existing installs, so enabling it is always a deliberate opt-in; the <code>HERMES_VERIFY_ON_STOP</code> environment variable overrides the config value. I confirmed the default in the source too: <code>hermes_cli/config_defaults.py</code> carries <code>"verify_on_stop": False</code> and <code>"max_verify_nudges": 3</code>.<sup><a href="#en-ref-10">[10]</a></sup></p>
+
+    <h3>The second gate — the <code>pre_verify</code> hook</h3>
+
+    <p>If your team's rule is more specific than "there must be evidence", write a plugin hook. The hooks docs say <code>pre_verify</code> "Fires <strong>once per turn when the agent edited code</strong>, just before it finishes (after the built-in verify-on-stop guard)" and call it "a user/plugin policy gate".<sup><a href="#en-ref-6">[6]</a></sup> The payload the callback receives has seven fields:</p>
+
+    <ul>
+        <li><code>session_id</code> — unique identifier for the current session</li>
+        <li><code>platform</code> — where the session is running (<code>"cli"</code>, <code>"telegram"</code>, …)</li>
+        <li><code>model</code> — the model identifier</li>
+        <li><code>coding</code> — whether the turn is in the coding posture; scope your hook on this</li>
+        <li><code>attempt</code> — how many times this turn has already been nudged (0 on the first); self-throttle on this</li>
+        <li><code>final_response</code> — the answer the agent is about to deliver</li>
+        <li><code>changed_paths</code> — the files the agent edited this turn (sorted, and never empty in this context)</li>
+    </ul>
+
+    <p>Return <code>{"action": "continue", "message": "…"}</code> to send the agent back to work — the message is appended as a synthetic user turn and the loop runs again. The docs note that Claude Code's Stop shape (<code>{"decision": "block", "reason": "…"}</code>, where blocking the stop means <em>keep going</em>) is accepted too; any other return, or a directive with no message, lets the turn finish.<sup><a href="#en-ref-6">[6]</a></sup> Consecutive continue directives in one turn are capped by <code>agent.max_verify_nudges</code> (default 3), so a hook that always says continue can never trap the loop.<sup><a href="#en-ref-6">[6]</a></sup></p>
+
+    <p>The smallest plugin that works, following the layout the plugins page lays out, is a directory under <code>~/.hermes/plugins/</code> holding a <code>plugin.yaml</code> and an <code>__init__.py</code> with a <code>register(ctx)</code> function that calls <code>ctx.register_hook(...)</code>:</p>
+
+    <pre><code># ~/.hermes/plugins/verify-gate/__init__.py
+# the register(ctx) + ctx.register_hook skeleton comes from the plugins page,
+# the pre_verify signature from the hooks page
+
+def require_changelog(coding, attempt, changed_paths, **kwargs):
+    if attempt or not coding:
+        return None                      # one-shot, coding turns only
+    if any(p.endswith("CHANGELOG.md") for p in changed_paths):
+        return None                      # a changelog entry exists, let it finish
+    return {
+        "action": "continue",
+        "message": "Add a CHANGELOG.md entry for this change before finishing.",
+    }
+
+
+def register(ctx):
+    ctx.register_hook("pre_verify", require_changelog)</code></pre>
+
+    <p>The first two lines of that function are the docs' own advice: scope on <code>coding</code> and make it one-shot with <code>attempt</code>, because the hook re-fires after each nudge — without the <code>if attempt: return None</code> door it will simply nudge until it hits the cap.<sup><a href="#en-ref-6">[6]</a></sup> One more thing to know before you drop files anywhere: project-local plugins (<code>./.hermes/plugins/</code>) are disabled by default and need <code>HERMES_ENABLE_PROJECT_PLUGINS=true</code> before starting Hermes, which the docs say to enable only for repositories you trust.<sup><a href="#en-ref-7">[7]</a></sup></p>
+
+    <blockquote><strong>💡 The gates for work you ARE watching live somewhere else:</strong> <code>verify_on_stop</code> and <code>pre_verify</code> are built for <em>turns that edit code</em>. If what you want to check is <em>the quality of an answer</em> in work you are supervising, reach for a different set of tools — a Mixture of Agents preset where several models answer separately before one synthesises, <code>/review</code> to dispatch an independent reviewer, and <code>/goal</code>, whose judge only accepts "done" against real evidence. All three are in <a href="/blog/hermes-desktop-council">#4 The Council</a>, command by command.</blockquote>
+
+    <h2 id="en-surfaces-table">5. Reference — Every Door That Can Start Work</h2>
+
+    <p>This is the one sheet I open when deciding "which door should this work come through". The first two rows are this post's subject; the other four live in other posts and are here so you can see the whole picture:</p>
+
+    <div class="table-wrapper">
+        <table>
+            <thead>
+                <tr><th>Surface</th><th>Trigger</th><th>Runs where</th><th>Memory</th><th>Output lands</th><th>Deep dive</th></tr>
+            </thead>
+            <tbody>
+                <tr><td><strong>Routine / cron job</strong></td><td>the schedule you set, or <strong>Trigger now</strong></td><td>a whole fresh session built by the scheduler</td><td>loads and updates persistent memory since v0.21.0 + <code>continuity</code> + a per-job notepad</td><td>the <code>deliver:</code> target, and always <code>~/.hermes/cron/output/{job_id}/{timestamp}.md</code></td><td><a href="/blog/hermes-automation">Hermes #8</a></td></tr>
+                <tr><td><strong><code>delegate_task</code> subagent</strong></td><td>the agent calls the tool itself, mid-turn</td><td>a child with its own terminal session, inside the calling session's tree</td><td>none — it starts from an empty conversation, and leaf children are blocked from the <code>memory</code> tool</td><td>only the final summary enters the parent's conversation, plus one live transcript per task</td><td><a href="/blog/hermes-agent-teams">Hermes #2</a></td></tr>
+                <tr><td><strong>Bot group chat</strong></td><td>your message in a group room (2–6 Bots)</td><td>rounds are driven by the Desktop itself; each member keeps its own <code>Group: &lt;name&gt;</code> session</td><td>each member's session persists like any other conversation</td><td>in the room; recent history is mirrored to every connected gateway</td><td><a href="/blog/hermes-desktop-council">#4 Council</a></td></tr>
+                <tr><td><strong>Inbound webhook</strong></td><td>an HTTP POST to <code>:8644/webhooks/&lt;route&gt;</code> with a valid HMAC signature</td><td>the gateway's webhook adapter opens a new agent run</td><td>no prior context; the payload is transformed into a prompt</td><td>back to the source, or to another configured platform</td><td><a href="/blog/hermes-automation">Hermes #8</a></td></tr>
+                <tr><td><strong>API server</strong></td><td>an OpenAI-compatible request to <code>:8642/v1</code></td><td>the same gateway, with its full toolset</td><td>the Responses API keeps server-side conversation state via <code>previous_response_id</code></td><td>the HTTP response; streaming interleaves tool progress</td><td><a href="/blog/hermes-automation">Hermes #8</a></td></tr>
+                <tr><td><strong>Kanban</strong></td><td>a task row on the board plus the dispatcher's sweep</td><td>a worker that is a full OS process with its own identity</td><td>durable — every task is a row in <code>~/.hermes/kanban.db</code></td><td>rows on the board that people and agents both read and write</td><td><a href="/blog/hermes-agent-teams">Hermes #2</a></td></tr>
+            </tbody>
+        </table>
+    </div>
+
+    <p>Read that table down the <strong>Memory</strong> column and almost every choice explains itself. Work that must "remember what it told you yesterday" belongs in a Routine, not a subagent, because a subagent starts from zero every time by design. Work that must survive a restart and leave a trail a person can step into belongs on the Kanban board, not in either — and the delegation docs point the same way, saying that for durable execution that must survive session closure or a process restart you should use <code>cronjob</code> or <code>terminal(background=True, notify_on_complete=True)</code> instead of <code>delegate_task</code>.<sup><a href="#en-ref-4">[4]</a></sup></p>
+
+    <h2 id="en-limits">6. Limits to Know</h2>
+
+    <p>The three limits below are real as of 7 September 2026, and every one of them changes how you design automated work. I have ordered them by how much they affect ordinary daily use:</p>
+
+    <ul>
+        <li><strong>A Bot group room is tied to a Desktop that stays open.</strong> Issue #95163 (opened 26 August 2026, last updated 6 September 2026, still <code>open</code>) explains that a group room's rounds are driven entirely by the Desktop renderer, and lists as its first consequence: "Rooms stall when the driving client goes away. Backgrounding or closing the desktop mid-round stops turn delivery until it returns."<sup><a href="#en-ref-13">[13]</a></sup> Issue #97681, "Bot Group Chats should keep working after Desktop closes" (opened 29 August 2026, last updated 6 September 2026, still <code>open</code>), is the fix path still under way, and the issue itself states that "Work continues without Desktop only while the authority gateway is reachable" and that "Passive history retention is not safe automatic takeover, which remains disabled."<sup><a href="#en-ref-13">[13]</a></sup> The practical conclusion: do not design overnight work to live in a group room. Use a Routine or the Kanban board instead.</li>
+        <li><strong>The subagent model is one global value, not a per-call one.</strong> The delegation docs say it literally: "the pin is global: <code>delegate_task</code> has no per-task model parameter, so every child in a batch runs on the configured delegation model". The knobs you get are <code>delegation.model</code> and <code>delegation.provider</code> in <code>config.yaml</code>, and if one sub-task needs a stronger model the docs' own answer is either to leave <code>delegation.model</code> unset for that session or to hand the task to the Kanban board, which does support a per-task model override.<sup><a href="#en-ref-4">[4]</a></sup> Hence the cost strategy the docs recommend — "frontier planner, inexpensive workers": the parent stays on the strong model while the whole flock of children runs on a cheap one, because that is where most of the tokens land.<sup><a href="#en-ref-4">[4]</a></sup></li>
+        <li><strong>The delegation defaults still disagree between the docs and the code.</strong> I checked three sources on the same day. The delegation docs page says <code>max_iterations</code> defaults to <strong>50</strong> and that <strong>3</strong> tasks run in parallel, but <code>hermes_cli/config_defaults.py</code> on <code>main</code> reads <code>"max_iterations": 250</code> and <code>"max_concurrent_children": 10</code>, and <code>cli-config.yaml.example</code> carries the same pair.<sup><a href="#en-ref-4">[4]</a></sup><sup><a href="#en-ref-10">[10]</a></sup> The v0.21.0 release note settles the dispute itself, saying delegation gained "raised defaults (250 iterations, 10 concurrent children)".<sup><a href="#en-ref-11">[11]</a></sup> So the numbers actually in force are 250/10, and the docs page is the side that has not caught up. Never budget cost against the number 3 — and to read the real value on your own machine, run <code>hermes config get delegation.max_concurrent_children</code>.<sup><a href="#en-ref-9">[9]</a></sup></li>
+    </ul>
+
+    <div class="alert danger">
+        <strong>Do not raise <code>max_spawn_depth</code> casually:</strong> the docs warn by doing the multiplication for you — "With <code>max_spawn_depth: 3</code> and <code>max_concurrent_children: 3</code>, the tree can reach 3×3×3 = 27 concurrent leaf agents. Each extra level multiplies spend"<sup><a href="#en-ref-4">[4]</a></sup> — and since the real concurrency on your machine is 10 rather than 3, the true figure is far above the docs' example. The default <code>max_spawn_depth: 1</code> means flat — children cannot spawn grandchildren — and I would keep it there until you have a reason you can write down as a number.
+    </div>
+
+    <h2 id="en-summary">7. Summary</h2>
+
+    <p>We started with the question of what the machine does while you are not typing, and found three surfaces: a Routine woken by the clock which, since v0.21.0, remembers its last run; a subagent the agent fans out for itself and which you can redirect mid-flight from <code>/agents</code>; and the panes you watch both from. Then we closed the door with <code>verify_on_stop</code>, which forbids the word "done" where there is no evidence, and the <code>pre_verify</code> hook, which turns your team's rule into a real condition in code. Finally we put every door into one table and accepted the three limits that have not gone away today. The next post, <a href="/blog/hermes-desktop-safety">#7 Safety, Remote &amp; Recovery</a>, takes on the one question left — how to get everything back when it breaks.</p>
+
+    <div class="key-takeaways">
+        <h3>🎯 Key Takeaways</h3>
+        <ul>
+            <li><strong>A Routine is a cron job</strong> a Bot owns, named <code>[bot:&lt;name&gt;]</code>, appearing in <code>hermes cron list</code> and the Cron pane alike — the screen invented no new primitive.</li>
+            <li><strong>Trigger now</strong> is the receipt that a job exists and runs, before you leave it waiting for its hour; every run is always written to <code>~/.hermes/cron/output/{job_id}/{timestamp}.md</code>.</li>
+            <li><strong>continuity</strong> is the documented mechanism by which each run sees its own previous output; cron persistent memory is announced in the v0.21.0 release note but the cron docs page does not mention it yet.</li>
+            <li><strong>delegate_task</strong> takes <code>goal</code>, <code>context</code>, <code>tasks</code>, <code>role</code> (leaf | orchestrator), <code>max_iterations</code>, <code>background</code>, <code>output_schema</code> — and <strong>no</strong> per-call <code>model</code> parameter.</li>
+            <li><strong>steer beats stop</strong>: redirect a running child with <code>{"action":"steer", …}</code> rather than killing it, but <code>"queued"</code> does not mean the child saw it — check <code>missed_steer</code> in the result.</li>
+            <li><strong>verify_on_stop: false</strong> is the default; set <code>true</code> or <code>"auto"</code> yourself if you want the gate that forbids "done" without evidence.</li>
+            <li><strong>pre_verify</strong> is the hook that fires once per code-editing turn, receives a seven-field payload, returns <code>{"action":"continue"}</code> to keep working, and is bounded by <code>max_verify_nudges: 3</code>.</li>
+            <li><strong>A group room is not the place for overnight work</strong>: its rounds are driven by the Desktop, and issues #95163 and #97681 are both still open as of writing.</li>
+        </ul>
+    </div>
+
+    <section class="references" aria-labelledby="en-references">
+        <h2 id="en-references">References</h2>
+        <p class="references__note">Every source was verified and accessed on 7 September 2026 (2026-09-07). This series uses four evidence labels — <strong>Docs</strong> official Hermes Agent documentation · <strong>Release</strong> release notes or a merged commit/PR · <strong>Issue</strong> an open issue or PR · <strong>Community</strong> a non-official community source</p>
+        <ol class="references__list">
+            <li id="en-ref-1"><span class="ref-tag ref-tag--standard">Docs</span> Nous Research. <cite>Scheduled Tasks (Cron)</cite>, Hermes Agent User Guide. <a href="https://hermes-agent.nousresearch.com/docs/user-guide/features/cron">hermes-agent.nousresearch.com</a> — accessed 2026-09-07. <span class="ref-supports">Supports: <code>hermes cron create</code> with the <code>--skill</code> and <code>--continuity</code> forms · all five schedule formats · the lifecycle verbs and name-based lookup · <code>~/.hermes/cron/jobs.json</code> and <code>~/.hermes/cron/output/{job_id}/{timestamp}.md</code> · a job carrying zero, one or several skills · each run being a fresh session · the <code>deliver:</code> target table including <code>bot-chat</code> · the absence of any sentence about cron persistent memory (a negative finding)</span></li>
+            <li id="en-ref-2"><span class="ref-tag ref-tag--standard">Docs</span> Nous Research. <cite>Bot Mode: A Roster of Agents</cite>, Hermes Agent User Guide. <a href="https://hermes-agent.nousresearch.com/docs/user-guide/bot-mode">hermes-agent.nousresearch.com</a> — accessed 2026-09-07. <span class="ref-supports">Supports: the sentence "Routines are plain Hermes cron jobs namespaced <code>[bot:&lt;name&gt;] &lt;routine&gt;</code>" and their appearance in <code>hermes cron list</code> · runs landing in the Bot's own chat history · the structured schedule picker and its Advanced field · the CLI parity table · group rooms of 2–6 Bots, three serial rounds, and each member's <code>Group: &lt;name&gt;</code> session · recent history mirrored to every connected gateway</span></li>
+            <li id="en-ref-3"><span class="ref-tag ref-tag--standard">Docs</span> Nous Research. <cite>Hermes Desktop</cite>, Hermes Agent User Guide. <a href="https://hermes-agent.nousresearch.com/docs/user-guide/desktop">hermes-agent.nousresearch.com</a> — accessed 2026-09-07. <span class="ref-supports">Supports: the Cron pane ("view and manage scheduled jobs") · "Agents and Command Center — orchestration surfaces for multi-agent work" · the Cmd/Ctrl+. shortcut and the Show in status bar item · the Sessions | Bots tab strip and the Routines/Cronjobs pane appearing only while the Bots tab is active</span></li>
+            <li id="en-ref-4"><span class="ref-tag ref-tag--standard">Docs</span> Nous Research. <cite>Subagent Delegation</cite>, Hermes Agent User Guide. <a href="https://hermes-agent.nousresearch.com/docs/user-guide/features/delegation">hermes-agent.nousresearch.com</a> — accessed 2026-09-07. <span class="ref-supports">Supports: the sentence "Each child gets a fresh conversation…" · the <code>goal</code>/<code>context</code>/<code>tasks</code>/<code>group</code>/<code>role</code>/<code>max_iterations</code>/<code>background</code> parameters · <code>/agents</code> and what it shows · the list/steer/stop JSON block and each action's semantics · <code>"queued"</code> versus <code>missed_steer</code> · the sentence "the pin is global…no per-task model parameter" and the Kanban escape hatch · the frontier-planner / inexpensive-workers strategy · the 3×3×3 = 27 warning and <code>max_spawn_depth: 1</code> · leaf children blocked from <code>memory</code> · the advice to use <code>cronjob</code> or <code>terminal(background=True…)</code> for durable execution · the defaults this page prints (50 iterations, 3 concurrent)</span></li>
+            <li id="en-ref-5"><span class="ref-tag ref-tag--standard">Docs</span> Nous Research. <cite>Configuration</cite> (Verify-on-Stop section), Hermes Agent User Guide. <a href="https://hermes-agent.nousresearch.com/docs/user-guide/configuration">hermes-agent.nousresearch.com</a> — accessed 2026-09-07. <span class="ref-supports">Supports: the verify-on-stop definition quoted in full · the three-key YAML block <code>verify_on_stop</code>/<code>verify_guidance</code>/<code>max_verify_nudges</code> · the meaning of <code>true</code>/<code>false</code>/<code>"auto"</code> · fresh installs shipping <code>false</code> · the <code>HERMES_VERIFY_ON_STOP</code> variable · doc/skill-only edits never triggering the gate</span></li>
+            <li id="en-ref-6"><span class="ref-tag ref-tag--standard">Docs</span> Nous Research. <cite>Hooks</cite> (the <code>pre_verify</code> section), Hermes Agent User Guide. <a href="https://hermes-agent.nousresearch.com/docs/user-guide/features/hooks">hermes-agent.nousresearch.com</a> — accessed 2026-09-07. <span class="ref-supports">Supports: the sentence "Fires once per turn when the agent edited code…" · the seven-field payload table and each field's description · the <code>{"action": "continue", "message": …}</code> return shape and the accepted Claude Code Stop shape · the <code>max_verify_nudges</code> bound, default 3 · the advice to scope on <code>coding</code> and be one-shot on <code>attempt</code></span></li>
+            <li id="en-ref-7"><span class="ref-tag ref-tag--standard">Docs</span> Nous Research. <cite>Plugins</cite>, Hermes Agent User Guide. <a href="https://hermes-agent.nousresearch.com/docs/user-guide/features/plugins">hermes-agent.nousresearch.com</a> — accessed 2026-09-07. <span class="ref-supports">Supports: the <code>~/.hermes/plugins/&lt;name&gt;/</code> directory layout with <code>plugin.yaml</code> and <code>__init__.py</code> · the <code>def register(ctx)</code> and <code>ctx.register_hook("&lt;hook&gt;", callback)</code> forms · project-local plugins being disabled by default and requiring <code>HERMES_ENABLE_PROJECT_PLUGINS=true</code></span></li>
+            <li id="en-ref-8"><span class="ref-tag ref-tag--standard">Docs</span> Nous Research. <cite>Security</cite> (the <code>approvals</code> table), Hermes Agent User Guide. <a href="https://hermes-agent.nousresearch.com/docs/user-guide/security">hermes-agent.nousresearch.com</a> — accessed 2026-09-07. <span class="ref-supports">Supports: <code>approvals.cron_mode</code> defaulting to <code>deny</code> and the meaning of <code>deny</code>/<code>approve</code> for headless runs · <code>unattended_mode</code> covering webhook and API-server sessions</span></li>
+            <li id="en-ref-9"><span class="ref-tag ref-tag--standard">Docs</span> Nous Research. <cite>CLI Commands</cite> and <cite>Slash Commands</cite>, Hermes Agent Reference. <a href="https://hermes-agent.nousresearch.com/docs/reference/cli-commands">cli-commands</a> · <a href="https://hermes-agent.nousresearch.com/docs/reference/slash-commands">slash-commands</a> — accessed 2026-09-07. <span class="ref-supports">Supports: the <code>hermes cron</code> subcommand list · the description of <code>doctor</code> as a read-only fleet health check that "Exits non-zero when issues are found" · <code>/agents</code> (alias <code>/tasks</code>) and <code>/cron</code> being classified as a CLI-side command</span></li>
+            <li id="en-ref-10"><span class="ref-tag ref-tag--standard">Docs</span> Nous Research. <cite>hermes_cli/config_defaults.py</cite> and <cite>cli-config.yaml.example</cite> (source files on <code>main</code>). <a href="https://raw.githubusercontent.com/NousResearch/hermes-agent/main/hermes_cli/config_defaults.py">config_defaults.py</a> · <a href="https://raw.githubusercontent.com/NousResearch/hermes-agent/main/cli-config.yaml.example">cli-config.yaml.example</a> — accessed 2026-09-07. <span class="ref-supports">Supports: <code>"verify_on_stop": False</code>, <code>"verify_guidance": True</code>, <code>"max_verify_nudges": 3</code> · <code>"max_iterations": 250</code>, <code>"max_concurrent_children": 10</code>, <code>"max_spawn_depth": 1</code>, <code>"orchestrator_enabled": True</code> · the example file's <code>delegation:</code> block carrying the same pair of numbers</span></li>
+            <li id="en-ref-11"><span class="ref-tag ref-tag--study">Release</span> Nous Research. <cite>Hermes Agent v0.21.0 (v2026.8.31) — The Pantheon Release</cite>. <a href="https://github.com/NousResearch/hermes-agent/releases/tag/v2026.8.31">github.com</a> — published 2026-08-31, accessed 2026-09-07. <span class="ref-supports">Supports: the "Scheduled jobs stopped being goldfish…" paragraph in full · "Steer your subagents while they run" with <code>output_schema</code>, per-delegation cost and "raised defaults (250 iterations, 10 concurrent children)" · the fact that "MCP command center" names the MCP page, not the Command Center pane</span></li>
+            <li id="en-ref-12"><span class="ref-tag ref-tag--study">Release</span> NousResearch. <cite>PR #81144 feat(delegation): optional structured-output schema on delegate_task</cite> (merged 2026-08-07) and <cite>PR #70638 fix(cron): make Trigger now execute immediately and safely</cite> (merged 2026-08-15). <a href="https://github.com/NousResearch/hermes-agent/pull/81144">github.com/…/pull/81144</a> · <a href="https://github.com/NousResearch/hermes-agent/pull/70638">github.com/…/pull/70638</a> — accessed 2026-09-07. <span class="ref-supports">Supports: the parameter name <code>output_schema</code> as a JSON Schema per task item and on the single-goal form · "an explicit OUTPUT CONTRACT block in its context", jsonschema validation and the single bounded retry · the button name "Trigger now" and the routing of immediate execution through the real scheduler provider on both Dashboard and Desktop</span></li>
+            <li id="en-ref-13"><span class="ref-tag ref-tag--law">Issue</span> angel12; dokterdok. <cite>Issue #95163 Opt-in backend-hosted group rooms — gateway-side round driver + authoritative room log</cite> (opened 2026-08-26) and <cite>Issue #97681 Bot Group Chats should keep working after Desktop closes</cite> (opened 2026-08-29). <a href="https://github.com/NousResearch/hermes-agent/issues/95163">github.com/…/issues/95163</a> · <a href="https://github.com/NousResearch/hermes-agent/issues/97681">github.com/…/issues/97681</a> — accessed 2026-09-07. <span class="ref-supports">Supports: the sentence "Rooms stall when the driving client goes away…" · rounds being driven by the Desktop renderer · the sentences "Work continues without Desktop only while the authority gateway is reachable" and "Passive history retention is not safe automatic takeover, which remains disabled." · the <code>open</code> status of both issues with a last-updated date of 2026-09-06</span></li>
+            <li id="en-ref-14"><span class="ref-tag ref-tag--synthesis">Community</span> Greg Isenberg (with Alex Finn). <cite>Hermes Agent Desktop: Full Setup + Real Use Cases</cite> (43-minute video) and Wanderloots. <cite>Full Hermes Agent Tutorial (Desktop)</cite> (28-minute video). <a href="https://www.youtube.com/watch?v=EJm8Ka-gVOc">youtube.com/…EJm8Ka-gVOc</a> · <a href="https://www.youtube.com/watch?v=GL67DEf2nyI">youtube.com/…GL67DEf2nyI</a> — published 2026-06-06 and 2026-07-01, accessed 2026-09-07. <span class="ref-supports">Supports: the first video's summary line that Finn "praises the Cron section for giving one-click confirmation that scheduled tasks truly exist", and its separation of sub-agents from profiles · the second video devoting its own chapters to cron jobs and automation tips, confirming that setting a cron up is a step users really do have to retry</span></li>
+        </ol>
+    </section>
+    </div>
+
+    <div class="post-series-footer">
+      <span class="l-th">บทความจากซีรีส์ Hermes Desktop Hands-On 2026</span><span class="l-en" lang="en">From the Hermes Desktop Hands-On 2026 series</span>
+    </div>
+
+    <nav aria-label="Hermes Desktop Hands-On">
+    <div class="series-nav">
+      <h3>💻 Hermes Desktop Hands-On 2026</h3>
+      <div class="series-links">
+        <a href="/blog/hermes-desktop-install">#1 First Run</a>
+        <a href="/blog/hermes-desktop-local-models">#2 Local Models</a>
+        <a href="/blog/hermes-desktop-profiles">#3 Profiles</a>
+        <a href="/blog/hermes-desktop-council">#4 Council</a>
+        <a href="/blog/hermes-desktop-skills-mcp">#5 Skills &amp; MCP</a>
+        <span class="current" aria-current="page">#6 Automation</span>
+        <a href="/blog/hermes-desktop-safety">#7 Recovery</a>
+      </div>
+    </div>
+    </nav>
+
+  </article>
+
+  </main>
+
+  <footer class="blog-footer">
+    <nav class="blog-footer__nav" aria-label="Site">
+      <a href="../index.html">Home</a>
+      <a href="./">Blog</a>
+      <a href="../publications/">Publications</a>
+      <a href="../books/">Books</a>
+      <a href="../projects/">Projects</a>
+      <a href="../news/">News</a>
+      <a href="../index.html#contact">Contact</a>
+    </nav>
+    <a href="./">← Back to Blog</a>
+    <span>© 2026 Anirach Mingkhwan — Associate Professor, KMUTNB</span>
+  </footer>
+
+</body>
+</html>

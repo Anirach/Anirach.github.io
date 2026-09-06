@@ -1,0 +1,1096 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>The Council — ตรวจก่อนส่ง ทุกคำตอบ | Anirach Mingkhwan</title>
+  <meta name="description" content="สร้าง council ให้ Hermes ตรวจคำตอบก่อนส่ง — Mixture of Agents preset, /review reviewer และ /goal contract ทีละคำสั่ง พร้อมต้นทุนที่ต้องรู้">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=Sarabun:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      color-scheme: light;
+      /* ink */
+      --navy: #11304b; --slate: #334155; --slate-light: #526174; --gray: #94a3b8;
+      /* ground */
+      --bg: #faf7f0; --white: #ffffff; --code-bg: #1e293b;
+      /* accent */
+      --blue: #226299; --blue-dark: #1a4d7a; --blue-light: #4992b9;
+      /* brand — sampled from the book covers. --gold is decorative on light grounds (2.2:1); --gold-dark is its text form. */
+      --gold: #c4a46c; --gold-dark: #7a5f22; --cloud: #dee7e6; --parchment: #e9e1c4; --focus: #226299;
+      /* status — use only these six, never invent a seventh */
+      --green: #22c55e; --red: #ef4444; --amber: #f59e0b;
+      --cyan: #06b6d4; --purple: #226299; --purple-dark: #1a4d7a;
+      /* type */
+      --font: 'Inter', 'Sarabun', -apple-system, BlinkMacSystemFont, sans-serif;
+      --mono: 'JetBrains Mono', 'Fira Code', 'Sarabun', monospace;
+      /* form */
+      --radius: 12px; --radius-sm: 8px; --radius-lg: 16px;
+      --measure: 720px; --wide: 860px;
+      --transition: 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+    html { scroll-behavior: smooth; }
+    body { font-family: var(--font); font-size: 17px; line-height: 1.8; color: var(--slate); background: var(--bg); -webkit-font-smoothing: antialiased; }
+    .blog-nav { position: fixed; top: 0; left: 0; right: 0; z-index: 100; background: rgba(248,250,252,0.85); backdrop-filter: blur(20px); border-bottom: 1px solid rgba(0,0,0,0.05); }
+    .blog-nav__inner { max-width: 860px; margin: 0 auto; padding: 0 2rem; height: 56px; display: flex; align-items: center; justify-content: space-between; }
+    .blog-nav__back { font-size: 0.85rem; font-weight: 500; color: var(--blue); text-decoration: none; }
+    .blog-nav__back:hover { color: #1a4d7a; }
+    .blog-nav__title { font-size: 0.85rem; font-weight: 600; color: var(--navy); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 50%; }
+    /* ── HERO ── house .post-hero on the approved Deep Blue gradient (page-design
+       §5 / INV-28). Ink is inverted for the dark ground: white title/meta, tag
+       pills white on 18% white — the openclaw-production treatment. The
+       background value must stay byte-identical to the approved string. */
+    .post-hero { padding: 8rem 2rem 3rem; background: linear-gradient(135deg, #11304b 0%, #1a4d7a 45%, #226299 100%); color: #fff; text-align: center; }
+    .post-hero__tags { display: flex; gap: 0.5rem; justify-content: center; margin-bottom: 1.25rem; flex-wrap: wrap; }
+    .post-hero__tag { display: inline-block; font-size: 0.72rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.1em; color: #fff; background: rgba(255,255,255,0.18); padding: 0.35rem 0.9rem; border-radius: 20px; }
+    .post-hero__title { font-size: clamp(1.8rem, 5vw, 3rem); font-weight: 800; color: #fff; line-height: 1.2; margin-bottom: 1rem; max-width: 720px; margin-left: auto; margin-right: auto; }
+    .post-hero__sub { font-size: 1.05rem; max-width: 640px; margin: 0 auto 1.5rem; line-height: 1.7; color: #fff; }
+    .post-hero__meta { font-size: 0.85rem; color: #fff; display: flex; align-items: center; justify-content: center; gap: 1.5rem; flex-wrap: wrap; }
+    .post-hero__series { font-weight: 600; color: #fff; }
+    /* the switch pill and the focus ring both sit on the dark hero: the pill is
+       a light chip so its labels keep their light-ground colours, and --focus
+       re-points to gold here (blue collapses on blue — the footer/pre
+       precedent). */
+    .post-hero { --focus: var(--gold); }
+    .post-hero__cover {
+      aspect-ratio: 1 / 1;
+      max-width: 380px;
+      margin: 2.5rem auto 0;
+      border-radius: var(--radius-lg, 16px);
+      overflow: hidden;
+      box-shadow: 0 20px 60px rgba(17,48,75,0.14);
+    }
+    .post-hero__cover img { width: 100%; height: 100%; object-fit: cover; display: block; }
+    .post-body { max-width: 720px; margin: 0 auto; padding: 3rem 2rem 6rem; }
+    .post-body h2 { font-size: 1.6rem; font-weight: 800; color: var(--navy); margin: 3rem 0 1rem; padding-bottom: 0.5rem; border-bottom: 2px solid rgba(34,98,153,0.15); }
+    .post-body h3 { font-size: 1.25rem; font-weight: 700; color: var(--navy); margin: 2.25rem 0 0.75rem; }
+    .post-body p { margin-bottom: 1.25rem; }
+    .post-body strong { font-weight: 700; color: var(--navy); }
+    .post-body a { color: var(--blue); text-decoration: underline; text-decoration-thickness: 1px; text-underline-offset: 2px; }
+    .post-body ul, .post-body ol { margin: 0.5rem 0 1.25rem 1.5rem; }
+    .post-body li { margin-bottom: 0.4rem; }
+    .post-body blockquote { background: rgba(34,98,153,0.06); border-left: 4px solid var(--blue); padding: 1rem 1.25rem; border-radius: 0 10px 10px 0; margin: 1.25rem 0; font-size: 0.95rem; color: var(--navy); }
+    .post-body hr { border: none; height: 1px; background: linear-gradient(90deg, transparent, rgba(34,98,153,0.2), transparent); margin: 3rem 0; }
+    /* ── CODE ── */
+    .post-body pre { background: var(--code-bg); border-radius: 12px; padding: 1.5rem; margin: 1.25rem 0 1.5rem; overflow-x: auto; border: 1px solid rgba(255,255,255,0.05); }
+    .post-body pre code { font-family: var(--mono); font-size: 0.85rem; color: #e2e8f0; line-height: 1.7; background: none; padding: 0; white-space: pre-wrap; }
+    .post-body code { font-family: var(--mono); font-size: 0.88em; background: rgba(34,98,153,0.08); color: var(--blue-dark); padding: 0.15em 0.45em; border-radius: 5px; }
+    /* ── TABLES ── */
+    .table-wrapper { overflow-x: auto; margin: 1.5rem 0; border-radius: 0.5rem; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1); }
+    table { width: 100%; border-collapse: collapse; background: white; }
+    th { background: #226299; color: white; padding: 1rem; text-align: left; font-weight: 600; }
+    td { padding: 1rem; border-bottom: 1px solid #e5e7eb; }
+    .post-body table { display: block; width: 100%; overflow-x: auto; }
+    /* ── ALERTS ── */
+    .alert { background: #fef3cd; border: 1px solid #facc15; border-radius: 0.5rem; padding: 1rem; margin: 1.5rem 0; }
+    .alert.danger { background: #fee2e2; border-color: #ef4444; }
+    .alert.info { background: #e0f2fe; border-color: #06b6d4; }
+    .alert.success { background: #d1fae5; border-color: #10b981; }
+    /* ── KEY TAKEAWAYS ── */
+    .key-takeaways { background: linear-gradient(135deg, #f3f4f6 0%, #e5e7eb 100%); border-radius: 1rem; padding: 2rem; margin: 3rem 0; }
+    .key-takeaways h3 { color: #226299; margin-bottom: 1.5rem; }
+    .post-series-footer { text-align: center; font-size: 0.85rem; color: var(--slate-light); font-style: italic; margin-top: 2rem; padding-top: 2rem; border-top: 1px solid #e2e8f0; }
+    .blog-footer { background: var(--navy); padding: 2rem 0; text-align: center; }
+    .blog-footer a { color: var(--gold); text-decoration: none; font-weight: 600; font-size: 0.9rem; }
+    .blog-footer span { color: var(--gray); font-size: 0.8rem; display: block; margin-top: 0.4rem; }
+    @media (max-width: 600px) {
+      .post-hero { padding: 7rem 1.25rem 2.5rem; }
+      .post-body { padding: 2rem 1.25rem 4rem; }
+      .post-hero__meta { flex-direction: column; gap: 0.4rem; }
+      .post-body h2 { font-size: 1.4rem; }
+      .post-body h3 { font-size: 1.15rem; }
+      .post-body pre { padding: 1rem; border-radius: 8px; }
+    }
+
+    :focus-visible { outline: 2px solid var(--focus); outline-offset: 3px; border-radius: 2px; }
+    /* the ring sits on the page ground (3px offset). Inside the navy footers
+       and code blocks var(--blue) collapses to 2.12:1, so those scopes
+       re-point --focus to gold (5.73:1 on navy). */
+    .footer, .blog-footer, pre { --focus: var(--gold); }
+    :focus:not(:focus-visible) { outline: none; }
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after {
+        animation-duration: .01ms !important; animation-iteration-count: 1 !important;
+        transition-duration: .01ms !important; scroll-behavior: auto !important;
+      }
+    }
+    h1, h2, h3, .post-hero__title, .card__title { text-wrap: balance; }
+
+    .post-body img, .post-body svg { max-width: 100%; height: auto; }
+
+    /* ── SKIP LINK ── a11y-perf R5: the link and the landmark it targets are a
+       pair — useless without both halves. Off-screen until focused, then the
+       first tab stop on every page. */
+    .skip-link { position: absolute; left: -9999px; }
+    .skip-link:focus {
+      left: 1rem; top: 1rem; z-index: 999;
+      background: var(--navy); color: #fff;
+      padding: 0.75rem 1.25rem; border-radius: var(--radius-sm);
+      font-weight: 600; text-decoration: none;
+    }
+
+    /* ── POST WAYFINDING ── the wordmark is the home link; the footer carries
+       the full destination row. */
+    .blog-nav__home {
+      font-size: 0.9rem; font-weight: 800; color: var(--navy);
+      text-decoration: none; margin-right: 1rem;
+    }
+    .blog-nav__home:hover { color: var(--blue); }
+    .blog-nav__inner > .blog-nav__back { margin-right: auto; }
+    .blog-footer__nav {
+      display: flex; flex-wrap: wrap; justify-content: center; gap: 0.35rem 1.25rem;
+      max-width: 860px; margin: 0 auto 1.25rem; padding: 0 2rem 1.25rem;
+      border-bottom: 1px solid rgba(255,255,255,0.12);
+    }
+    .blog-footer__nav a { color: var(--gold); font-size: 0.85rem; font-weight: 600; text-decoration: none; }
+    .blog-footer__nav a:hover { color: #fff; text-decoration: underline; }
+
+    html { scroll-padding-top: 5rem; }
+    [id] { scroll-margin-top: 5rem; }
+
+    /* Thai needs more room than Latin at the same nominal size. */
+    .post-body:lang(th) { font-size: 18px; line-height: 1.85; }
+    .post-body p, .post-body li, .post-body blockquote { text-wrap: pretty; }
+
+    /* ---- side-scroll affordance ----
+       pre blocks and tables can exceed 720px. These layers paint a shadow ONLY
+       where there is more content in that direction; when fully scrolled the
+       cover slides over the shadow and hides it. No JavaScript, no wrapper. */
+    .post-body pre, .post-body table {
+      overflow-x: auto;
+      background-image:
+        linear-gradient(to right, var(--code-bg, #0f172a) 30%, rgba(15,23,42,0)),
+        linear-gradient(to left, var(--code-bg, #0f172a) 30%, rgba(15,23,42,0)),
+        radial-gradient(farthest-side at 0 50%, rgba(0,0,0,.28), rgba(0,0,0,0)),
+        radial-gradient(farthest-side at 100% 50%, rgba(0,0,0,.28), rgba(0,0,0,0));
+      background-position: 0 0, 100% 0, 0 0, 100% 0;
+      background-repeat: no-repeat;
+      background-size: 40px 100%, 40px 100%, 14px 100%, 14px 100%;
+      background-attachment: local, local, scroll, scroll;
+    }
+    .post-body table {
+      background-image:
+        linear-gradient(to right, var(--white, #fff) 30%, rgba(255,255,255,0)),
+        linear-gradient(to left, var(--white, #fff) 30%, rgba(255,255,255,0)),
+        radial-gradient(farthest-side at 0 50%, rgba(17,48,75,.16), rgba(17,48,75,0)),
+        radial-gradient(farthest-side at 100% 50%, rgba(17,48,75,.16), rgba(17,48,75,0));
+      background-position: 0 0, 100% 0, 0 0, 100% 0;
+      background-repeat: no-repeat;
+      background-size: 40px 100%, 40px 100%, 14px 100%, 14px 100%;
+      background-attachment: local, local, scroll, scroll;
+    }
+
+    /* ---- table of contents ---- */
+    .post-toc {
+      max-width: 720px;
+      margin: 2rem auto 0;
+      padding: 1rem 1.25rem;
+      background: rgba(34,98,153,0.05);
+      border: 1px solid rgba(34,98,153,0.14);
+      border-left: 3px solid var(--gold, #c4a46c);
+      border-radius: 10px;
+      font-size: 0.92rem;
+    }
+    .post-toc > summary {
+      cursor: pointer;
+      font-weight: 700;
+      color: var(--navy);
+      list-style: none;
+    }
+    .post-toc > summary::-webkit-details-marker { display: none; }
+    .post-toc > summary::before {
+      content: "\25B8";
+      display: inline-block;
+      margin-right: 0.5rem;
+      transition: transform 0.2s ease;
+      color: var(--gold-dark, #7a5f22);
+    }
+    .post-toc[open] > summary::before { transform: rotate(90deg); }
+    .post-toc > summary:focus-visible { outline: 3px solid var(--focus, #226299); outline-offset: 3px; }
+    .post-toc ol { margin: 0.85rem 0 0.25rem; padding-left: 1.4rem; }
+    .post-toc li { margin-bottom: 0.4rem; line-height: 1.5; }
+    .post-toc a { color: var(--slate); text-decoration: none; }
+    .post-toc a:hover, .post-toc a:focus-visible { color: var(--blue-dark, #1a4d7a); text-decoration: underline; }
+    @media (max-width: 600px) { .post-toc { margin: 1.25rem 1rem 0; } }
+
+    /* ---- cross-document view transitions ---- */
+    @view-transition { navigation: auto; }
+    .nav, .blog-nav { view-transition-name: site-nav; }
+    .footer, .blog-footer { view-transition-name: site-footer; }
+    @media (prefers-reduced-motion: reduce) {
+      ::view-transition-group(*),
+      ::view-transition-old(*),
+      ::view-transition-new(*) { animation: none !important; }
+    }
+
+    /* ── SERIES STRIP — Hermes Agent in Practice ──
+       Same class and inner-wrapper shape as the OpenClaw strip because the
+       linter's RE_SNAV recognises exactly `series-nav` + a nested div; a
+       renamed strip would read as "no nav" and fail INV-08. All content
+       checks (INV-03 family) iterate the SERIES7 list only, so this strip's
+       labels are convention, not contract. House-styled, not the island CSS. */
+    .series-nav {
+      max-width: 720px; margin: 2rem auto 0; padding: 1.1rem 1.4rem;
+      background: rgba(255,255,255,0.75); border: 1px solid rgba(34,98,153,0.15);
+      border-left: 3px solid var(--gold); border-radius: 12px;
+    }
+    .series-nav h3 {
+      font-size: 0.78rem; font-weight: 700; text-transform: uppercase;
+      letter-spacing: 0.08em; color: var(--gold-dark); margin-bottom: 0.6rem;
+    }
+    .series-links { display: flex; flex-wrap: wrap; gap: 0.5rem; }
+    .series-links a, .series-links .current {
+      font-size: 0.82rem; font-weight: 600; padding: 0.35rem 0.8rem;
+      border-radius: 50px; text-decoration: none;
+    }
+    .series-links a { color: var(--blue-dark); background: rgba(34,98,153,0.08); }
+    .series-links a:hover { background: rgba(34,98,153,0.16); }
+    .series-links .current { color: #fff; background: var(--blue-dark); }
+    @media (max-width: 600px) { .series-nav { margin: 1.5rem 1rem 0; } }
+
+    /* ── FIGURE — the sanctioned diagram component (page-design §4 Content).
+       Diagrams are PNGs; this repo built them out of divs twice and reverted
+       twice. The image is wrapped in a link to itself so a phone can pinch a
+       1400px drawing without a line of JavaScript. */
+    .figure { margin: 2.5rem 0; }
+    .figure__img { width: 100%; height: auto; display: block;
+                   border-radius: var(--radius); border: 1px solid rgba(0,0,0,0.06); }
+    .figure__caption { font-size: 0.85rem; color: var(--slate-light);
+                       text-align: center; margin-top: 0.75rem; }
+
+    /* ── REFERENCES — every material number in this series carries its source.
+       The tags are the book's own four evidence labels. */
+    .references { margin-top: 3rem; padding-top: 2rem; border-top: 1px solid #e2e8f0; }
+    .references__note { font-size: 0.85rem; color: var(--slate-light); margin-bottom: 1rem; }
+    .references__list { padding-left: 1.4rem; font-size: 0.9rem; line-height: 1.75; }
+    .references__list li { margin-bottom: 0.7rem; }
+    .ref-tag { display: inline-block; font-size: 0.7rem; font-weight: 700;
+               letter-spacing: 0.06em; text-transform: uppercase; padding: 0.1rem 0.5rem;
+               border-radius: 50px; margin-right: 0.4rem; vertical-align: 0.05em;
+               background: rgba(34,98,153,0.1); color: var(--blue-dark); }
+    /* All four labels get a rule.  --standard and --study shipped without one
+       on 2026-09-05, so 158 of 306 tags fell through to the base blue and the
+       two labels were indistinguishable.  Ratios on --bg: 6.70 / 6.92 / 7.36 /
+       4.81:1, all AA at this size. */
+    .ref-tag--law { background: rgba(239,68,68,0.12); color: #991b1b; }
+    .ref-tag--standard { background: rgba(34,98,153,0.12); color: var(--blue-dark); }
+    .ref-tag--study { background: rgba(34,197,94,0.18); color: #14532d; }
+    .ref-tag--synthesis { background: rgba(196,164,108,0.22); color: var(--gold-dark); }
+    .ref-supports { display: block; color: var(--slate-light); font-size: 0.85rem; }
+
+    /* ── LANGUAGE SWITCH — pure CSS, zero JavaScript (INV-38) ──
+       One visually-hidden checkbox as a direct child of body, BEFORE the main landmark,
+       so `#langSwitch:checked ~ main …` reaches every content block. The two
+       tracks are paired blocks: .l-th (default) and .l-en (hidden until
+       checked; display:revert restores block for divs, inline for spans).
+       Naming stays clear of INV-12's menu-token regex (hamburger|burger|
+       nav__toggle|nav-toggle|navtoggle|menu-toggle|menu__toggle) — verified.
+       No JS also means no persistence across posts; each post opens in Thai. */
+    .lang-switch-box { position: absolute; left: -9999px; }
+    .l-en { display: none; }
+    #langSwitch:checked ~ main .l-en { display: revert; }
+    #langSwitch:checked ~ main .l-th { display: none; }
+    .lang-switch {
+      display: inline-flex; align-items: center; gap: 0.55rem;
+      margin-top: 1.4rem; padding: 0.4rem 1.1rem; border-radius: 50px;
+      background: rgba(255,255,255,0.85); border: 1px solid rgba(255,255,255,0.4);
+      cursor: pointer; font-size: 0.85rem; user-select: none;
+    }
+    .lang-switch span { color: var(--slate-light); font-weight: 600; transition: color 0.2s; }
+    .lang-switch .lang-sep { color: var(--gray); font-weight: 400; }
+    .lang-switch .lang-th { color: var(--navy); font-weight: 800; }
+    #langSwitch:checked ~ main .lang-switch .lang-th { color: var(--slate-light); font-weight: 600; }
+    #langSwitch:checked ~ main .lang-switch .lang-en { color: var(--navy); font-weight: 800; }
+    .lang-switch:hover { border-color: #fff; }
+    #langSwitch:focus-visible ~ main .lang-switch {
+      outline: 2px solid var(--focus); outline-offset: 3px;
+    }
+  </style>
+  <!-- social -->
+  <link rel="canonical" href="https://anirach.com/blog/hermes-desktop-council.html">
+  <meta property="og:type" content="article">
+  <meta property="og:url" content="https://anirach.com/blog/hermes-desktop-council.html">
+  <meta property="og:site_name" content="Anirach Mingkhwan">
+  <meta property="og:locale" content="th_TH">
+  <meta property="og:locale:alternate" content="en_US">
+  <meta property="article:published_time" content="2026-09-07">
+  <meta property="article:author" content="https://anirach.com/">
+  <meta property="og:title" content="The Council — ตรวจก่อนส่ง ทุกคำตอบ">
+  <meta property="og:description" content="สร้าง council ให้ Hermes ตรวจคำตอบก่อนส่ง — Mixture of Agents preset, /review reviewer และ /goal contract ทีละคำสั่ง พร้อมต้นทุนที่ต้องรู้">
+  <meta property="og:image" content="https://anirach.com/images/hermes-desktop-council-og.jpg">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
+  <meta property="og:image:alt" content="The Council — ตรวจก่อนส่ง ทุกคำตอบ">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:image" content="https://anirach.com/images/hermes-desktop-council-og.jpg">
+  <meta name="twitter:image:alt" content="The Council — ตรวจก่อนส่ง ทุกคำตอบ">
+  <meta name="robots" content="max-image-preview:large">
+  <meta name="theme-color" content="#11304b">
+  <link rel="icon" href="/favicon.ico" sizes="any">
+  <link rel="apple-touch-icon" href="/apple-touch-icon.png">
+  <!-- /social -->
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "BlogPosting",
+    "headline": "The Council — ตรวจก่อนส่ง ทุกคำตอบ",
+    "author": {
+      "@type": "Person",
+      "@id": "https://anirach.com/#person",
+      "name": "Anirach Mingkhwan",
+      "url": "https://anirach.com/"
+    },
+    "datePublished": "2026-09-07",
+    "dateModified": "2026-09-07",
+    "image": "https://anirach.com/images/hermes-desktop-council-og.jpg",
+    "inLanguage": [
+      "th",
+      "en"
+    ],
+    "mainEntityOfPage": "https://anirach.com/blog/hermes-desktop-council.html"
+  }
+  </script>
+</head>
+<body>
+<a href="#main" class="skip-link">Skip to content</a>
+<input type="checkbox" id="langSwitch" class="lang-switch-box" aria-label="Switch language: Thai / English">
+
+  <nav class="blog-nav">
+    <div class="blog-nav__inner">
+      <a href="../index.html" class="blog-nav__home">Anirach</a>
+      <a href="./" class="blog-nav__back">‹ Blog</a>
+      <div class="blog-nav__title">The Council</div>
+    </div>
+  </nav>
+
+  <main id="main">
+
+  <header class="post-hero">
+    <div class="post-hero__tags">
+      <span class="post-hero__tag">Hermes Desktop</span>
+      <span class="post-hero__tag">Mixture of Agents</span>
+      <span class="post-hero__tag">Review</span>
+    </div>
+    <h1 class="post-hero__title"><span class="l-th">The Council — ตรวจก่อนส่ง ทุกคำตอบ</span><span class="l-en" lang="en">The Council — Check Before Deliver</span></h1>
+    <p class="post-hero__sub"><span class="l-th">Hermes ไม่มีคำสั่ง /council — แต่สร้าง &quot;สภา&quot; ได้จริงด้วย Mixture of Agents preset ที่ให้หลายโมเดลตอบแยกกันแล้วสังเคราะห์, /review ที่ส่ง reviewer อิสระมาตรวจ และ /goal ที่นิยาม &quot;เสร็จ&quot; ด้วยหลักฐาน ⚖️</span><span class="l-en" lang="en">Hermes has no /council command — but a real council is buildable: a Mixture of Agents preset where several models answer separately before one synthesises, /review to dispatch an independent reviewer, and /goal to define &quot;done&quot; as evidence ⚖️</span></p>
+    <div class="post-hero__meta">
+      <span>By <strong>Anirach Mingkhwan</strong></span>
+      <span class="post-hero__series">Hermes Desktop Hands-On 2026 • Post #4</span>
+      <span><time datetime="2026-09-07">7 Sep 2026</time></span>
+      <span>24 min read</span>
+    </div>
+    <label for="langSwitch" class="lang-switch" title="สลับภาษา · Switch language"><span class="lang-th">ไทย</span><span class="lang-sep">·</span><span class="lang-en" lang="en">English</span></label>
+    <div class="post-hero__cover">
+      <img src="../images/hermes-desktop-council-cover.jpg" alt="The Council — ตรวจก่อนส่ง ทุกคำตอบ" width="800" height="800" loading="eager" fetchpriority="high" decoding="async">
+    </div>
+  </header>
+
+  <article class="post-body">
+
+    <details class="post-toc l-th" open>
+      <summary>ในบทความนี้</summary>
+      <ol>
+          <li><a href="#th-no-council">1. ไม่มีคำสั่ง /council — แล้ว "สภา" ใน Hermes คืออะไร</a></li>
+          <li><a href="#th-moa">2. Mixture of Agents ทำงานอย่างไร</a></li>
+          <li><a href="#th-build">3. ขั้นตอน — สร้างสภาของเราเอง</a></li>
+          <li><a href="#th-reading">4. อ่านสิ่งที่สภาพูด — labelled block, ความล้มเหลว และ trace</a></li>
+          <li><a href="#th-review">5. ด่านที่สอง — /review</a></li>
+          <li><a href="#th-goal">6. นิยามคำว่า "เสร็จ" ด้วยหลักฐาน — /goal</a></li>
+          <li><a href="#th-cost">7. ปุ่มควบคุมต้นทุนและความเร็ว</a></li>
+          <li><a href="#th-panel">8. แผงที่มองเห็นได้ และสิ่งที่ไม่ควรติดตั้ง</a></li>
+          <li><a href="#th-summary">9. สรุป</a></li>
+      </ol>
+    </details>
+    <details class="post-toc l-en" open>
+      <summary>In this post</summary>
+      <ol>
+          <li><a href="#en-no-council">1. There Is No /council — What "Council" Means in Hermes</a></li>
+          <li><a href="#en-moa">2. How Mixture of Agents Works</a></li>
+          <li><a href="#en-build">3. Procedure — Build the Council</a></li>
+          <li><a href="#en-reading">4. Reading What the Council Said — Labelled Blocks, Failures and Traces</a></li>
+          <li><a href="#en-review">5. The Second Check: /review</a></li>
+          <li><a href="#en-goal">6. Define Done as Evidence: /goal</a></li>
+          <li><a href="#en-cost">7. Cost and Speed Knobs</a></li>
+          <li><a href="#en-panel">8. A Visible Panel, and What Not to Install</a></li>
+          <li><a href="#en-summary">9. Summary</a></li>
+      </ol>
+    </details>
+    <div class="l-th">
+
+    <p>🤔 <strong>ถ้า agent ตอบผิด แล้วไม่มีใครตรวจก่อนที่คำตอบจะถึงมือเรา — เราจะรู้ตอนไหน?</strong> คำถามนี้ไม่ได้เกิดจากความไม่ไว้ใจโมเดล แต่เกิดจากข้อเท็จจริงง่าย ๆ ว่าคำตอบที่ผิดกับคำตอบที่ถูกมาถึงหน้าจอด้วยหน้าตาเหมือนกันทุกประการ</p>
+
+    <p>ตอนที่แล้ว — <a href="/blog/hermes-desktop-profiles">#3 Profiles — หนึ่ง agent ต่อหนึ่งบทบาท</a> — เราแยก agent ออกเป็นหลายบทบาท แต่ละบทบาทมี home directory, SOUL.md, ความจำและโมเดลของตัวเอง<sup><a href="#th-ref-6">[6]</a></sup> คำถามถัดไปตามมาเองอย่างเป็นธรรมชาติ: ถ้าเรามีหลายบทบาทแล้ว จะให้บทบาทหนึ่ง<em>ตรวจงาน</em>ของอีกบทบาทหนึ่งก่อนที่งานจะถึงมือเราได้ไหม</p>
+
+    <p>คำตอบหนึ่งบรรทัดของตอนนี้คือ <strong>Hermes ไม่มีคำสั่ง <code>/council</code></strong> — แต่สิ่งที่ผู้อ่านเรียกว่า "สภา" สร้างได้จริงจากสามกลไกทางการที่มีอยู่แล้วใน Hermes Agent v0.21.0 คือ <strong>Mixture of Agents</strong> (หลายโมเดลปรึกษากันก่อนตอบ), <strong><code>/review</code></strong> (ผู้ตรวจอิสระตรวจงานก่อนเรารับ) และ <strong><code>/goal</code></strong> (สัญญาว่า "เสร็จ" แปลว่ามีหลักฐาน) บทความนี้พาไปสร้างทั้งสามอย่างทีละคำสั่ง พร้อมบอกต้นทุนที่ต้องจ่าย</p>
+
+    <h2 id="th-no-council">1. ไม่มีคำสั่ง /council — แล้ว "สภา" ใน Hermes คืออะไร</h2>
+
+    <p>ขอตอบตรง ๆ ก่อนเป็นอย่างแรก เพราะเรื่องนี้มีข้อมูลผิดหมุนอยู่ในอินเทอร์เน็ตพอสมควร: <strong>Hermes Agent v0.21.0 (tag <code>v2026.8.31</code>) ไม่มีคำสั่ง <code>/council</code></strong> หน้าอ้างอิง slash command ทั้งหน้าไม่มีคำนี้อยู่เลย<sup><a href="#th-ref-3">[3]</a></sup> และการค้นคำว่า council ทั้ง repository ผ่าน GitHub code search ให้ผลลัพธ์เดียว ซึ่งเป็นไฟล์ทดสอบที่ไม่เกี่ยวข้องกัน</p>
+
+    <p>เรื่องที่ทำให้คนสับสนคือมันเคยมีอยู่จริง — นานประมาณสองชั่วโมง PR #84904 ชื่อ "Model Council mode — user-facing multi-model deliberation (/council)" ถูก merge เมื่อ 2026-08-13 เวลา 02:44 UTC เพิ่มฟิลด์ <code>synthesis_style</code> ต่อ preset (<code>guidance</code> เป็นค่าตั้งต้น หรือ <code>council</code>) และคำสั่ง <code>/council</code> ที่ "โมเดลอ้างอิงตอบอย่างอิสระ แล้วโมเดลที่ลงมือทำทำหน้าที่ประธานการปรึกษา ส่งรายงานที่ผู้ใช้อ่านได้ว่าที่ประชุมเห็นตรงกันตรงไหน ขัดแย้งกันตรงไหน แต่ละโมเดลเสนออะไรที่ไม่ซ้ำใคร และข้อเสนอแนะพร้อมระดับความมั่นใจที่ระบุชัด"<sup><a href="#th-ref-10">[10]</a></sup> จากนั้น PR #84994 ก็ revert มันทั้งชุดในวันเดียวกันเวลา 04:50 UTC (10 ไฟล์ +24/−407)<sup><a href="#th-ref-10">[10]</a></sup></p>
+
+    <p>บันทึกการออกรุ่น v0.21.0 จึงระบุไว้ในหัวข้อ <em>"Reverted in this window (not shipping)"</em> ตรง ๆ ว่า <strong>"Model Council mode (/council) — landed then reverted; not in this release."</strong><sup><a href="#th-ref-8">[8]</a></sup> ผมย้ำข้อนี้เพราะบทความและวิดีโอจำนวนหนึ่งที่เขียนขึ้นในสัปดาห์นั้นยังพูดถึง <code>/council</code> ราวกับเป็นฟีเจอร์ที่ใช้ได้ ถ้าพิมพ์แล้วไม่มีอะไรเกิดขึ้น นั่นไม่ใช่ความผิดของเครื่องเรา</p>
+
+    <figure class="figure">
+      <a href="../images/hermes-desktop-fig-04-council.png">
+        <img class="figure__img" src="../images/hermes-desktop-fig-04-council.png" alt="แผนภาพไหลจากบนลงล่าง คำถามแตกเป็นสามโมเดลอ้างอิงที่ตอบแยกกัน รวมเข้าแถบ aggregator สีน้ำเงินเข้ม ออกเป็นคำตอบ มีกล่อง /review กรอบสีเขียวน้ำทะเลเข้มทางขวาส่งลูกศรกลับเข้าคำตอบ และชิป /goal ก่อนถึงผู้ใช้ด้านล่าง" width="1400" height="1000" loading="lazy" decoding="async">
+      </a>
+      <figcaption class="figure__caption">รูปที่ 1 · สภาแบบที่ Hermes สร้างได้จริง — โมเดลอ้างอิงตอบแยกกัน aggregator สังเคราะห์ /review ส่งผู้ตรวจอิสระ และ /goal นิยามคำว่าเสร็จด้วยหลักฐาน</figcaption>
+    </figure>
+
+    <p>แต่คำว่า "สภา" ที่ผู้อ่านต้องการนั้นไม่ได้หมายถึงชื่อคำสั่ง มันหมายถึง<strong>กลไกที่ทำให้มีมากกว่าหนึ่งความเห็นมองคำตอบก่อนที่คำตอบจะถึงมือเรา</strong> และกลไกแบบนั้น Hermes มีอยู่แล้วสามอย่าง โดยเรียกด้วยชื่อทางการของมันเอง</p>
+
+    <ul>
+        <li><strong>Mixture of Agents (MoA)</strong> — โมเดลอ้างอิงหลายตัวตอบแยกกันเป็นการส่วนตัวก่อน แล้วโมเดลผู้สังเคราะห์หนึ่งตัวเป็นผู้ลงมือและเขียนคำตอบจริง<sup><a href="#th-ref-1">[1]</a></sup></li>
+        <li><strong><code>/review</code></strong> — subagent ผู้ตรวจอิสระที่มีเครื่องมือครบชุด ถูกส่งไปตรวจ<em>ผลงาน</em>ที่บทสนทนาเพิ่งผลิตออกมา แล้วรายงานกลับเข้ามาในห้องแชทเดิม<sup><a href="#th-ref-2">[2]</a></sup></li>
+        <li><strong><code>/goal</code> completion contract</strong> — สัญญาที่ผู้ตัดสินจะประกาศว่า <code>done</code> ก็ต่อเมื่อเงื่อนไขการตรวจสอบถูกทำให้สำเร็จ<em>ด้วยหลักฐานที่จับต้องได้</em> ไม่ใช่คำกล่าวอ้างว่าเสร็จแล้ว<sup><a href="#th-ref-4">[4]</a></sup></li>
+    </ul>
+
+    <p>สามอย่างนี้อยู่กันคนละชั้นและไม่ทดแทนกัน MoA ทำงานภายใน<em>เทิร์นเดียว</em> ส่วน <code>/review</code> เป็น subagent ที่แยกออกไปทำงานเบื้องหลัง ใครที่อยากเห็นแผนที่ของชั้นต่าง ๆ ในระบบหลาย agent ของ Hermes อย่างครบถ้วน ผมเขียนไว้แล้วในตอนวิเคราะห์ <a href="/blog/hermes-agent-teams">Hermes #2 Agent Teams</a> ซึ่งไล่ทั้งสี่ชั้น — subagent ในเซสชัน, บอร์ด Kanban, Bot Mode กับ A2A และการเสิร์ฟหลาย profile — และชี้ไว้ตรงนั้นแล้วว่า MoA <em>ไม่ใช่</em> การมอบหมายงาน แต่เป็น "virtual model provider" ตอนนี้เราจะไม่เล่าซ้ำ แต่จะลงมือสร้างของจริงบนหน้าจอ Hermes Desktop</p>
+
+    <h2 id="th-moa">2. Mixture of Agents ทำงานอย่างไร</h2>
+
+    <p>MoA คือ <strong>virtual model provider</strong> เอกสารทางการเปิดหัวข้อด้วยประโยคนี้ตรง ๆ ว่า "Mixture of Agents is a virtual model provider. Each named MoA preset appears as a selectable model under the <code>moa</code> provider."<sup><a href="#th-ref-1">[1]</a></sup> แปลเป็นภาษาที่ใช้งานได้คือ <em>preset ที่เราตั้งชื่อไว้ จะโผล่ขึ้นมาในช่องเลือกโมเดลเหมือนโมเดลตัวหนึ่ง</em> — ทั้งใน CLI, TUI, Hermes Desktop และ gateway</p>
+
+    <p>ความเข้าใจผิดที่พบบ่อยที่สุดคือคิดว่าโมเดลทุกตัวใน preset ช่วยกันตอบ ความจริงไม่ใช่ ในหนึ่งรอบการเรียกโมเดล Hermes ทำตามลำดับนี้<sup><a href="#th-ref-1">[1]</a></sup></p>
+
+    <ol>
+        <li>หา preset ที่เลือกไว้จากชื่อ</li>
+        <li>รันโมเดลอ้างอิงทั้งหมด <strong>โดยไม่ส่ง tool schema ไปด้วย</strong> — โมเดลอ้างอิงเห็นเฉพาะข้อความ user/assistant ของบทสนทนา ไม่เห็น system prompt ของ Hermes และไม่เห็น transcript ของการเรียกเครื่องมือ</li>
+        <li>เอาผลลัพธ์ของโมเดลอ้างอิงไปต่อท้ายเป็น context ส่วนตัวสำหรับผู้สังเคราะห์</li>
+        <li>เรียก aggregator ที่ตั้งค่าไว้ พร้อม tool schema ปกติของ Hermes</li>
+        <li>ถือว่าคำตอบของ aggregator คือคำตอบจริงของโมเดล และถ้ามันเรียกเครื่องมือ Hermes ก็รันเครื่องมือตามปกติ</li>
+        <li>รอบถัดไปกระบวนการเดิมเกิดซ้ำบนบทสนทนาที่อัปเดตแล้ว รวมผลลัพธ์จากเครื่องมือด้วย</li>
+    </ol>
+
+    <h3>โมเดลอ้างอิงให้คำปรึกษา ผู้สังเคราะห์เป็นคนลงมือ</h3>
+
+    <p>ข้อสรุปเชิงปฏิบัติของลำดับข้างบนมีสองข้อ ข้อแรก — <strong>aggregator คือ "the acting model"</strong> มันคือโมเดลที่เขียนคำตอบและเป็นตัวเดียวที่เรียกเครื่องมือได้ ข้อสอง — โมเดลอ้างอิง<em>ไม่เคยตอบผู้ใช้โดยตรง</em> มันเป็นที่ปรึกษา (advisors) ที่พูดกับ aggregator เท่านั้น<sup><a href="#th-ref-1">[1]</a></sup> ดังนั้นคุณภาพของ preset จึงขึ้นกับการเลือก aggregator มากกว่าจำนวนที่ปรึกษา</p>
+
+    <p>เหตุผลที่โมเดลอ้างอิงไม่ได้รับ tool schema เอกสารระบุไว้ตรง ๆ ว่าเพื่อให้ "reference calls stay cheap and avoid strict-provider rejections"<sup><a href="#th-ref-1">[1]</a></sup> — คือถูกลง และไม่ชนกับ provider ที่ตรวจ schema เข้มงวด นี่คือเหตุผลว่าทำไมโมเดลเล็กหรือโมเดลบนเครื่องเราถึงนั่งเก้าอี้ที่ปรึกษาได้ ทั้งที่อาจเรียกเครื่องมือได้ไม่ดีนัก</p>
+
+    <h3>เป็นพลเมืองชั้นหนึ่งตั้งแต่ v0.18.0</h3>
+
+    <p>MoA ไม่ใช่ของใหม่ในรุ่นนี้ มันกลายเป็นพลเมืองชั้นหนึ่งตั้งแต่ Hermes Agent v0.18.0 (tag <code>v2026.7.1</code> เผยแพร่ 2026-07-01) ที่ทีมตั้งชื่อว่า <strong>"The Judgment Release"</strong> บันทึกการออกรุ่นเขียนว่า preset ทุกอันจะ "shows up as a selectable model under a <code>moa</code> provider, right alongside Claude, GPT, and Grok in every model picker (CLI, TUI, desktop, gateway)"<sup><a href="#th-ref-9">[9]</a></sup> รุ่นเดียวกันยังทำให้ผลลัพธ์ของโมเดลอ้างอิงแต่ละตัว "renders as its own labelled block" และคำตอบสุดท้าย stream ให้เห็นสด ๆ — ประโยคที่ผมชอบที่สุดในบันทึกนั้นคือ "You get to watch the committee deliberate, not just read the verdict."<sup><a href="#th-ref-9">[9]</a></sup></p>
+
+    <blockquote><strong>💡 ตัวเลขที่มีในเอกสาร:</strong> หน้าเอกสาร MoA เผยแพร่ผลบน HermesBench ของ preset สองโมเดล — <code>claude-opus-4.8</code> เป็นผู้สังเคราะห์เหนือ <code>gpt-5.5</code> ที่เป็นโมเดลอ้างอิง — ได้ <strong>0.8202</strong> เทียบกับ <strong>0.7607</strong> ของ <code>anthropic/claude-opus-4.8</code> ตัวเดียว และ <strong>0.7412</strong> ของ <code>openai/gpt-5.5</code> ตัวเดียว<sup><a href="#th-ref-1">[1]</a></sup> ข้อควรระวังคือนี่เป็น benchmark ภายในของ Nous Research เอง ไม่ใช่การวัดโดยบุคคลที่สาม และเอกสารไม่ได้เผยแพร่วิธีวัดหรือชุดข้อสอบ — ผมจึงอ่านมันเป็นหลักฐานว่า "ทิศทางถูก" ไม่ใช่ตัวเลขที่เอาไปอ้างในสไลด์ได้</blockquote>
+
+    <h2 id="th-build">3. ขั้นตอน — สร้างสภาของเราเอง</h2>
+
+    <p>สภาที่ใช้งานได้จริงสร้างเสร็จในไม่กี่นาที ขั้นตอนคือสร้าง preset ชื่อ <code>council</code> ด้วยตัวช่วยแบบโต้ตอบใน terminal เลือกโมเดลอ้างอิงสองถึงสามตัวและผู้สังเคราะห์หนึ่งตัว แล้วเลือก preset นั้นในช่องเลือกโมเดลของ Hermes Desktop ทุกคำสั่งข้างล่างนี้ทำงานได้ทุกพื้นผิว ไม่ใช่เฉพาะ Desktop</p>
+
+    <ol>
+        <li>เปิด terminal แล้วดูของที่มีอยู่ก่อนด้วย <code>hermes moa list</code> — จะเห็น preset ชื่อ <code>default</code> ที่มากับเครื่อง พร้อมรายการโมเดลอ้างอิงและ aggregator ของมัน<sup><a href="#th-ref-1">[1]</a></sup></li>
+        <li>สร้าง preset ใหม่ด้วย <code>hermes moa configure council</code> — เอกสารอธิบายว่า <code>hermes moa configure [name]</code> คือคำสั่ง "create or update a named preset"<sup><a href="#th-ref-1">[1]</a></sup> ตัวช่วยจะให้เลือก provider ก่อน แล้วจึงเลือกโมเดลของ provider นั้น</li>
+        <li>เลือกโมเดลอ้างอิงทีละตัว หน้าจอจะถามซ้ำว่าจะเพิ่มอีกไหม — ผมแนะนำสองถึงสามตัวที่<em>คิดคนละแบบ</em> เพราะที่ปรึกษาสามตัวที่เห็นตรงกันเสมอไม่ได้ให้ข้อมูลมากไปกว่าที่ปรึกษาตัวเดียว</li>
+        <li>เลือก aggregator เป็นลำดับสุดท้าย ให้เลือกโมเดลที่แข็งแรงที่สุดที่เรามีสิทธิ์ใช้ เพราะมันคือตัวที่เขียนคำตอบและเรียกเครื่องมือจริง</li>
+        <li>ตรวจผลด้วย <code>hermes moa list</code> อีกครั้ง แล้วเทียบกับสิ่งที่เขียนลงไฟล์ <code>config.yaml</code> จริง ๆ ตามรูปแบบข้างล่าง</li>
+        <li>ใน Hermes Desktop เปิดช่องเลือกโมเดลที่ composer — เอกสาร MoA ระบุว่าเมนูจะมีหัวข้อ <code>MoA presets</code> และเมื่อเลือกแล้วโมเดลที่ใช้งานจะกลายเป็น <code>MoA: council</code><sup><a href="#th-ref-1">[1]</a></sup> ถ้าถนัดพิมพ์มากกว่า ใช้ <code>/model council --provider moa</code> ได้เหมือนกัน</li>
+        <li>ถามคำถามจริงที่มีคำตอบผิดได้หลายแบบ — คำถามที่ตอบยังไงก็ถูกจะไม่แสดงให้เห็นว่าสภาทำงานหรือเปล่า</li>
+        <li>อ่าน labelled block ของโมเดลอ้างอิงแต่ละตัวก่อน แล้วค่อยอ่านคำตอบที่สังเคราะห์แล้ว — ลำดับนี้สำคัญ เพราะถ้าอ่านคำตอบสุดท้ายก่อน เราจะเห็นด้วยกับมันแล้วอ่านที่ปรึกษาแบบหาเหตุผลสนับสนุน</li>
+        <li>ถ้าอยากถามสภาแค่คำถามเดียวโดยไม่เปลี่ยนโมเดลของเซสชัน ใช้ <code>/moa &lt;prompt&gt;</code> — เอกสารระบุว่ามันรัน prompt เดียวผ่าน preset ที่เป็น default แล้วคืนโมเดลเดิมให้ "One-shot — does not change your session model" และพิมพ์ <code>/moa</code> เปล่า ๆ จะขึ้นวิธีใช้เฉย ๆ<sup><a href="#th-ref-3">[3]</a></sup></li>
+        <li>เมื่อได้คำตอบที่พอใจแล้ว <em>อย่าเพิ่งรับ</em> — พิมพ์ <code>/review</code> เพื่อส่งผู้ตรวจอิสระไปตรวจผลงานนั้นอีกชั้น ตามที่จะเล่าใน<a href="#th-review">หัวข้อที่ 5</a> แล้วจึงตัดสินใจว่าจะรับ จะสั่งแก้ หรือจะสั่งหยุด</li>
+    </ol>
+
+    <p>ถ้าอยากเขียนเองมากกว่ากดเลือก ไฟล์ <code>~/.hermes/config.yaml</code> รับ preset ในรูปแบบนี้ ทุกคีย์และทุกค่าข้างล่างคัดมาจากหน้าเอกสาร MoA และจากค่าตั้งต้นใน <code>hermes_cli/config_defaults.py</code> โดยตรง</p>
+
+    <pre><code>moa:
+  default_preset: council      # preset ที่ /moa จะใช้เมื่อไม่ระบุชื่อ
+  active_preset: ""            # ค่าตั้งต้นคือว่าง = ไม่บังคับ preset ใดกับทุกเซสชัน
+  save_traces: false           # true = เขียน trace ของทุกเทิร์นเป็น JSONL
+  presets:
+    council:
+      reference_models:
+        - provider: openai-codex
+          model: gpt-5.5
+        - provider: openrouter
+          model: deepseek/deepseek-v4-pro
+      aggregator:
+        provider: openrouter
+        model: anthropic/claude-opus-4.8
+      max_tokens: 4096
+      fanout: user_turn        # ที่ปรึกษาทำงานครั้งเดียวต่อหนึ่งข้อความของผู้ใช้
+      enabled: true            # false = ปิดการกระจายงาน ให้ aggregator ทำงานลำพัง</code></pre>
+
+    <h3>โมเดลบนเครื่องเรานั่งเก้าอี้ในสภาได้ไหม</h3>
+
+    <p>ตอบตามที่เอกสารบอกจริง ๆ: เอกสาร MoA เขียนว่า "The config stores explicit provider/model pairs, so you can mix providers and use multiple models from the same provider"<sup><a href="#th-ref-1">[1]</a></sup> และหน้า Local Models ก็เขียนว่าการเลือกโมเดลบนเครื่องเป็นโมเดลหลักใช้ <code>model.provider: llamacpp</code> ซึ่งเป็น "the same shape as every other provider"<sup><a href="#th-ref-5">[5]</a></sup> ข้อจำกัดเรื่องช่องที่เอกสารระบุไว้มีเพียงข้อเดียวคือ <em>aggregator ห้ามเป็น MoA preset อีกอันหนึ่ง</em> เพราะ Hermes ปิดกั้น MoA ซ้อน MoA ไว้โดยตั้งใจ<sup><a href="#th-ref-1">[1]</a></sup></p>
+
+    <p>ดังนั้นในเชิงโครงสร้าง โมเดลจาก <a href="/blog/hermes-desktop-local-models">#2 Local Models</a> นั่งเป็นที่ปรึกษาได้ และเก้าอี้ที่ปรึกษาก็เป็นเก้าอี้ที่เหมาะกับมันที่สุด เพราะที่ปรึกษาไม่ต้องรับ tool schema แต่ผมต้องพูดให้ชัดว่า <strong>เอกสารไม่ได้ยกตัวอย่างการใช้ provider บนเครื่องใน preset ของ MoA ไว้เลย</strong> ตัวอย่างทั้งหมดในหน้านั้นเป็น provider บนคลาวด์ ดังนั้นให้ถือเป็นสิ่งที่โครงสร้างรองรับและควรลองเอง ไม่ใช่สูตรที่ผมยืนยันแทนเอกสารได้</p>
+
+    <h2 id="th-reading">4. อ่านสิ่งที่สภาพูด — labelled block, ความล้มเหลว และ trace</h2>
+
+    <p>สิ่งที่ทำให้ MoA เป็น "สภา" ที่ดูได้ ไม่ใช่กล่องดำ คือการที่ผลลัพธ์ของโมเดลอ้างอิง<strong>ทุกตัวถูกแสดงเป็นบล็อกที่มีป้ายชื่อของมันเอง</strong> ก่อนที่คำตอบสังเคราะห์จะไหลออกมา บันทึกรุ่น v0.18.0 อธิบายว่าเราจะ "read what GPT-5 thought, what Claude thought, and what Grok thought, before the aggregator synthesizes them into one answer" และระบุพื้นผิวไว้สามอย่างคือ CLI, TUI และ desktop app<sup><a href="#th-ref-9">[9]</a></sup> — สังเกตว่าบันทึกนั้น<em>ไม่ได้</em>ระบุถึงแพลตฟอร์มแชทผ่าน gateway ผมจึงไม่ยืนยันว่าบล็อกเหล่านี้แสดงบน Telegram หรือ Discord ด้วย</p>
+
+    <p>สี่ข้อต่อไปนี้คือพฤติกรรมที่ควรรู้ก่อนใช้จริง เพราะแต่ละข้อเปลี่ยนสิ่งที่เราเห็นบนหน้าจอ</p>
+
+    <ul>
+        <li><strong>ที่ปรึกษาล้มเหลวไม่ล้มทั้งเทิร์น</strong> — เอกสารระบุว่า "Credential failures on one reference model do not abort the turn. Hermes includes the failure in the reference context and continues with whatever models returned."<sup><a href="#th-ref-1">[1]</a></sup> แปลว่าถ้า API key ของที่ปรึกษาตัวหนึ่งหมดอายุ เราจะยังได้คำตอบ — และนี่คือกับดักที่ผมอยากเตือนที่สุด เพราะสภาสามที่นั่งอาจกลายเป็นสภาสองที่นั่งโดยที่เราไม่ทันสังเกต</li>
+        <li><strong><code>enabled: false</code> ปิดการกระจายงาน</strong> — ตั้งค่านี้ที่ preset แล้ว "the aggregator acts alone, exactly as if you selected it as a plain model"<sup><a href="#th-ref-1">[1]</a></sup> ใช้เป็นสวิตช์ปิดชั่วคราวได้โดยไม่ต้องลบ preset ทิ้ง</li>
+        <li><strong>จำนวนการเรียกโมเดลเพิ่มขึ้นแน่นอน</strong> — เอกสารเขียนไว้ในหัวข้อ Notes ว่า "MoA increases model-call count. A single model iteration can involve multiple reference calls plus the aggregator call."<sup><a href="#th-ref-1">[1]</a></sup></li>
+        <li><strong><code>save_traces</code> เก็บบันทึกทุกเทิร์น</strong> — ค่าตั้งต้นคือ <code>false</code> เมื่อเปิดแล้ว Hermes จะเขียน "each MoA turn (reference + aggregator exact input/output/usage) as JSONL" ไปที่ <code>&lt;hermes_home&gt;/moa-traces/&lt;session_id&gt;.jsonl</code> หรือไดเรกทอรีที่ระบุใน <code>moa.trace_dir</code><sup><a href="#th-ref-6">[6]</a></sup></li>
+    </ul>
+
+    <p>คำว่า <code>&lt;hermes_home&gt;</code> ในบรรทัดสุดท้ายสำคัญกว่าที่เห็น เพราะถ้าเราทำงานภายใต้ profile ตามตอนที่แล้ว home ของมันคือ <code>~/.hermes/profiles/&lt;name&gt;/</code> ไม่ใช่ <code>~/.hermes/</code> — เอกสาร Profiles อธิบายว่า profile "is a separate Hermes home directory" และ wrapper จะตั้ง <code>HERMES_HOME</code> ให้เองก่อนเรียก hermes<sup><a href="#th-ref-6">[6]</a></sup> trace ของสภาจึงไปกองอยู่ในบ้านของ profile นั้น</p>
+
+    <div class="alert">
+        <strong>⚠️ ก่อนส่ง trace ให้ใคร:</strong> ไฟล์ trace เก็บ <em>input และ output ที่แน่นอน</em> ของทั้งที่ปรึกษาและผู้สังเคราะห์ ซึ่งหมายถึงข้อความทั้งหมดที่เราพิมพ์เข้าไปด้วย เอกสารเตือนว่าผลลัพธ์ของที่ปรึกษา "can echo sensitive data from the conversation — emails, formatted phone numbers, API keys, JWTs — into the reference blocks shown in the UI, saved MoA traces, and the aggregator prompt" ทางแก้ทางการคือ <code>moa.privacy_filter</code> ซึ่งค่าตั้งต้นคือปิด โดย <code>display</code> จะปกปิดเฉพาะบล็อกที่แสดงบนหน้าจอกับ trace ที่บันทึก ส่วน <code>full</code> จะปกปิดข้อความที่ฉีดเข้า prompt ของ aggregator ด้วย<sup><a href="#th-ref-1">[1]</a></sup> ถ้าจะส่ง trace ให้เพื่อนร่วมทีมหรือแนบใน issue เปิด <code>display</code> เป็นอย่างน้อยเสมอ
+    </div>
+
+    <h2 id="th-review">5. ด่านที่สอง — /review</h2>
+
+    <p>MoA ตรวจ<em>ความคิด</em>ก่อนเขียนคำตอบ ส่วน <code>/review</code> ตรวจ<em>ผลงาน</em>หลังคำตอบออกมาแล้ว เอกสารอธิบายไว้ว่ามัน "spawns an independent, full-privilege background subagent whose only job is to review the work your conversation just produced — a PR, a diff, code, documentation, a design" และทำงาน "on every surface: CLI, TUI, the Desktop app, and every gateway messaging platform"<sup><a href="#th-ref-2">[2]</a></sup></p>
+
+    <p>รายละเอียดห้าข้อที่เปลี่ยนวิธีใช้จริง</p>
+
+    <ul>
+        <li><strong>หลักฐานตั้งต้นคือสิบข้อความล่าสุด</strong> — "The last 10 user/assistant messages are snapshotted as the reviewer's starting evidence (tool output and system messages are excluded)"<sup><a href="#th-ref-2">[2]</a></sup> ผลลัพธ์จากเครื่องมือไม่ถูกนับ ดังนั้นถ้างานสำคัญอยู่ในผลลัพธ์ของเครื่องมือล้วน ๆ ควรให้ agent สรุปเป็นข้อความก่อนสั่ง review</li>
+        <li><strong>ผู้ตรวจมีเครื่องมือครบ ไม่ได้ตัดสินจากข้อความ</strong> — subagent ได้ "the full normal subagent toolset (terminal, web, files, browser...), so it actually opens the PR, reads the diff, and runs code rather than judging from the excerpt"<sup><a href="#th-ref-2">[2]</a></sup></li>
+        <li><strong>ผู้ตรวจรับกติกาของโครงการไปด้วย</strong> — skill ที่ agent หลักโหลดไว้จะถูกระบุใน briefing พร้อมคำสั่งให้โหลดและตัดสินงานตามกติกานั้น และ system prompt ของมันฝังไฟล์บริบทของ workspace คือ AGENTS.md / CLAUDE.md / .cursorrules ไว้ในฐานะกติกาที่ต้องปฏิบัติตาม<sup><a href="#th-ref-2">[2]</a></sup></li>
+        <li><strong>รายงานกลับเข้าห้องแชทเดิม</strong> — "its full review re-enters the same session as a normal background-subagent completion" ซึ่งแปลว่า agent หลักเห็นรายงานนั้นและลงมือแก้ต่อได้ทันที<sup><a href="#th-ref-2">[2]</a></sup></li>
+        <li><strong>คนละอย่างกับ <code>/refine</code></strong> — เอกสารแยกไว้ชัดว่า <code>/refine</code> ทบทวนบทสนทนาเพื่ออัปเดตความจำและ skill ส่วน <code>/review</code> ทบทวน <em>ผลงาน</em> ที่บทสนทนาสร้างขึ้น<sup><a href="#th-ref-2">[2]</a></sup></li>
+    </ul>
+
+    <p>ขั้นตอนที่ผมใช้จริงกับงานที่ต้องส่งคนอื่น มีสี่ขั้นและใช้เวลาไม่ถึงหนึ่งนาทีของเรา</p>
+
+    <ol>
+        <li>ปล่อยให้ agent ทำงานจนได้ผลงานที่จับต้องได้ — PR หนึ่งอัน diff หนึ่งชุด หรือเอกสารหนึ่งฉบับ</li>
+        <li>พิมพ์ <code>/review</code> เฉย ๆ เพื่อให้ตรวจทุกอย่างที่สิบข้อความล่าสุดนำเสนอ หรือใส่คำสั่งเพิ่มแบบที่เอกสารยกตัวอย่างไว้คือ <code>/review focus on security</code><sup><a href="#th-ref-2">[2]</a></sup></li>
+        <li>ระหว่างรอ พิมพ์ <code>/agents</code> (ชื่อพ้อง <code>/tasks</code>) เพื่อดู agent และงานที่กำลังทำงานอยู่ในเซสชันนี้<sup><a href="#th-ref-3">[3]</a></sup></li>
+        <li>ถ้าผู้ตรวจเดินผิดทาง สั่งแก้ทิศได้ระหว่างทาง — ตั้งแต่ v0.21.0 เครื่องมือ <code>delegate_task</code> รับ <code>{"action": "steer", "subagent_id": "...", "message": "..."}</code> เพื่อแทรกคำสั่งใหม่โดยไม่หยุดงาน และ <code>{"action": "stop", "subagent_id": "..."}</code> เพื่อจบงานตั้งแต่รอบถัดไป โดยผลลัพธ์บางส่วนยังกลับเข้าบทสนทนาตามปกติ<sup><a href="#th-ref-2">[2]</a></sup></li>
+    </ol>
+
+    <h3>ปักโมเดลของผู้ตรวจ</h3>
+
+    <p>ค่าตั้งต้นคือผู้ตรวจใช้โมเดลเดียวกับ agent หลัก ซึ่งเป็นค่าที่ผมแนะนำให้เปลี่ยน เพราะโมเดลเดียวกันมักมองข้ามข้อผิดพลาดชนิดเดียวกัน ในไฟล์ <code>~/.hermes/config.yaml</code> ปักได้ที่บล็อก <code>auxiliary.review</code></p>
+
+    <pre><code>auxiliary:
+  review:
+    provider: openrouter               # or nous, anthropic, a direct base_url, ...
+    model: anthropic/claude-opus-4.6   # a strong reviewer model</code></pre>
+
+    <p>ค่าตั้งต้นในซอร์สคือ <code>{"provider": "auto", "model": "", "base_url": "", "api_key": "", "api_mode": ""}</code> โดยความเห็นในไฟล์ระบุว่า <code>"auto"</code> คู่กับ <code>""</code> แปลว่า "main agent's model" ส่วน <code>api_mode</code> ใช้บังคับ transport ระหว่าง <code>chat_completions</code>, <code>anthropic_messages</code> และ <code>codex_responses</code><sup><a href="#th-ref-6">[6]</a></sup></p>
+
+    <blockquote><strong>💡 กติกาที่ Hermes เขียนไว้ในตัวเอง:</strong> skill ที่มากับ repo ชื่อ <code>requesting-code-review</code> (เวอร์ชัน 2.0.0) ประกาศหลักการไว้บรรทัดเดียวว่า <em>"No agent should verify its own work. Fresh context finds what you miss."</em><sup><a href="#th-ref-7">[7]</a></sup> — ไม่มี agent ตัวไหนควรตรวจงานของตัวเอง context ที่สดใหม่คือสิ่งที่จะเห็นสิ่งที่เรามองข้าม นี่คือเหตุผลทั้งหมดที่ปุ่ม "ปักโมเดลผู้ตรวจ" มีอยู่ และเป็นเหตุผลที่ผมไม่แนะนำให้ปล่อยไว้ที่ <code>auto</code></blockquote>
+
+    <p>เรื่องเวอร์ชันขอพูดให้ตรง: <code>/review</code> merge เข้า main ผ่าน PR #93339 เมื่อ 2026-08-24 เวลา 00:38 UTC<sup><a href="#th-ref-11">[11]</a></sup> รุ่นที่ติดป้ายรุ่นถัดจากวันนั้นคือ v0.20.6 (tag <code>v2026.8.27</code>) แต่<strong>บันทึกการออกรุ่นทั้งของ v0.20.6 และ v0.21.0 ไม่ปรากฏคำว่า <code>/review</code> เลย</strong> ผมจึงบอกได้แค่ว่ามันอยู่ใน main มาตั้งแต่ 2026-08-24 และอยู่ในเอกสารปัจจุบัน แต่ไม่มีบันทึกทางการที่ยืนยันว่ารุ่นติดป้ายรุ่นไหนคือรุ่นแรกที่มีมัน<sup><a href="#th-ref-8">[8]</a></sup></p>
+
+    <h2 id="th-goal">6. นิยามคำว่า "เสร็จ" ด้วยหลักฐาน — /goal</h2>
+
+    <p>ด่านที่สามไม่ได้ตรวจคำตอบ แต่ตรวจ<em>คำว่าเสร็จ</em> <code>/goal</code> คือเป้าหมายที่ Hermes ทำงานต่อเนื่องข้ามหลายเทิร์นโดยมีโมเดลผู้ตัดสินคอยตรวจหลังทุกเทิร์น และเมื่อเราแนบ <strong>completion contract</strong> เข้าไป prompt ของผู้ตัดสินจะเปลี่ยนไปเป็นการตัดสินว่า <code>done</code> "only when the verification criterion is met with concrete evidence (a command result, file excerpt, test output) — not a loose 'looks done' claim"<sup><a href="#th-ref-4">[4]</a></sup></p>
+
+    <p>เขียนสัญญาได้สองแบบ แบบแรกให้ Hermes ร่างให้ด้วย <code>/goal draft &lt;text&gt;</code> ซึ่งเอกสารแนะนำเป็นทางหลัก แบบที่สองเขียนเองเป็นบรรทัด <code>field: value</code> ตามตัวอย่างที่เอกสารให้ไว้ตรง ๆ</p>
+
+    <pre><code>/goal Migrate auth to JWT
+verify: pytest tests/auth passes
+constraints: keep the /login response shape unchanged
+boundaries: only touch services/auth and its tests
+stop when: a DB schema migration is required</code></pre>
+
+    <p>บรรทัดแรกที่ไม่ใช่ฟิลด์คือหัวเรื่องของเป้าหมาย ส่วนคำนำหน้าที่ระบบรู้จักได้แก่ <code>verify:</code>, <code>verified by:</code>, <code>constraints:</code>, <code>preserve:</code>, <code>boundaries:</code>, <code>scope:</code>, <code>stop when:</code> และ <code>blocked:</code> เอกสารยังระบุด้วยว่าเป้าหมายธรรมดาที่บังเอิญมีเครื่องหมายทวิภาค เช่น <code>Fix bug: the parser drops commas</code> จะไม่ถูกแยกผิด เพราะระบบดึงเฉพาะคำนำหน้าที่รู้จัก<sup><a href="#th-ref-4">[4]</a></sup></p>
+
+    <ul>
+        <li><code>/goal show</code> — พิมพ์สัญญาของเป้าหมายที่ใช้งานอยู่ออกมาดู<sup><a href="#th-ref-4">[4]</a></sup></li>
+        <li><code>/goal gate add scripts/run_tests.sh tests/hermes_cli/test_goals.py</code> — เพิ่ม <strong>quality gate</strong> คือคำสั่ง shell ที่ต้องคืนค่า 0 ก่อนเป้าหมายจะจบได้ เอกสารระบุว่า gate ทำงาน<em>ก่อน</em>ผู้ตัดสิน และถ้า gate แดง ผู้ตัดสินจะไม่ถูกเรียกเลย<sup><a href="#th-ref-4">[4]</a></sup></li>
+        <li><code>/subgoal &lt;text&gt;</code> — เพิ่มเกณฑ์ระหว่างทางโดยไม่รีเซ็ตลูป และผู้ตัดสินจะไม่ประกาศว่าเสร็จจนกว่าทั้งเป้าหมายเดิมและทุก subgoal จะสำเร็จ<sup><a href="#th-ref-3">[3]</a></sup></li>
+    </ul>
+
+    <p>ข้อจำกัดที่ต้องรู้และเอกสารพูดเองคือ <strong>ผู้ตัดสินล้มเหลวแบบเปิด</strong> (fail-open) — เอกสารเขียนไว้ว่า "If the judge errors (network blip, malformed response, unavailable aux client), Hermes treats the verdict as <code>continue</code> — a broken judge never wedges progress."<sup><a href="#th-ref-4">[4]</a></sup> แปลว่าถ้าโมเดลผู้ตัดสินล่ม ลูปจะเดินต่อ ไม่ใช่หยุด นี่คือเหตุผลว่าทำไม quality gate ที่เป็นคำสั่ง shell จริงจึงแข็งแรงกว่าสัญญาที่เป็นข้อความล้วน และเป็นเหตุผลที่ผมใช้ทั้งสองอย่างคู่กันเสมอ</p>
+
+    <p>ถ้างานที่ต้องตรวจคืองานที่<em>ไม่มีใครนั่งดู</em> — งานตามเวลา งานเบื้องหลัง หรือ agent ที่ทำงานข้ามคืน — กลไกที่ตรงกว่าคือ verify-on-stop ที่บังคับให้ agent ต้องมีหลักฐานการตรวจสอบใหม่ก่อนจบเทิร์นที่มันแก้โค้ด และ hook ชื่อ <code>pre_verify</code> ที่ปลั๊กอินใช้แทรกนโยบายของเราเองเข้าไปที่จุดเดียวกัน สองอย่างนี้เป็นเนื้อหาเต็มของ <a href="/blog/hermes-desktop-automation">#6 Automation &amp; Agents</a> จึงขอวางลิงก์ไว้ตรงนี้แทนการเล่าซ้ำ</p>
+
+    <h2 id="th-cost">7. ปุ่มควบคุมต้นทุนและความเร็ว</h2>
+
+    <p>สภามีราคา และราคาของมันตรงไปตรงมา — เราจ่ายค่าเรียกโมเดลที่ปรึกษาเพิ่มขึ้นทุกครั้งที่พวกเขาพูด เอกสารระบุว่าเวลารอต่อเทิร์นถูกกำหนดโดยที่ปรึกษาเป็นหลัก "Advisor generation is the dominant per-turn latency" เพราะเทิร์นต้องรอที่ปรึกษาตัวที่ช้าที่สุดเขียนเสร็จ<sup><a href="#th-ref-1">[1]</a></sup> ตารางนี้คือปุ่มทั้งหมดที่หมุนได้จริง พร้อมค่าตั้งต้นตามที่ปรากฏในเอกสารและใน <code>config_defaults.py</code></p>
+
+    <div class="table-wrapper">
+        <table>
+            <thead>
+                <tr>
+                    <th>Knob</th>
+                    <th>Config key</th>
+                    <th>Default</th>
+                    <th>Effect</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td><strong>จังหวะที่ที่ปรึกษาทำงาน</strong></td>
+                    <td><code>moa.presets.&lt;name&gt;.fanout</code></td>
+                    <td><code>user_turn</code></td>
+                    <td>ค่าตั้งต้นคือทำงานครั้งเดียวต่อหนึ่งข้อความของผู้ใช้ ซึ่งเอกสารเรียกว่าจังหวะที่ถูกที่สุด เพราะ "advisor cost does not multiply with the number of tool calls in a turn" ส่วน <code>per_iteration</code> รันที่ปรึกษาใหม่ทุกรอบเครื่องมือ โดยแลกกับการคูณทั้งเวลาและค่าใช้จ่ายด้วยจำนวนการเรียกเครื่องมือ และ <code>every_n:3</code> คือทางสายกลาง</td>
+                </tr>
+                <tr>
+                    <td><strong>เพดานคำตอบของที่ปรึกษา</strong></td>
+                    <td><code>moa.presets.&lt;name&gt;.reference_max_tokens</code></td>
+                    <td>ไม่ตั้ง = ไม่จำกัด</td>
+                    <td>จำกัดความยาวคำแนะนำ เอกสารแนะนำค่าอย่าง <code>600</code> ว่า "measurably cuts per-turn wall time with little quality impact" และย้ำว่ามันจำกัดเฉพาะที่ปรึกษา ไม่เคยจำกัดคำตอบของ aggregator ที่ผู้ใช้เห็น</td>
+                </tr>
+                <tr>
+                    <td><strong>เพดานคำตอบของ preset</strong></td>
+                    <td><code>moa.presets.&lt;name&gt;.max_tokens</code></td>
+                    <td><code>4096</code></td>
+                    <td>ค่าที่ preset <code>default</code> ที่มากับเครื่องตั้งไว้ ทั้งในหน้าเอกสารและใน <code>config_defaults.py</code></td>
+                </tr>
+                <tr>
+                    <td><strong>สวิตช์ปิดการกระจายงาน</strong></td>
+                    <td><code>moa.presets.&lt;name&gt;.enabled</code></td>
+                    <td><code>true</code></td>
+                    <td>ตั้งเป็น <code>false</code> แล้ว aggregator ทำงานลำพัง "exactly as if you selected it as a plain model" — ใช้เทียบราคาและคุณภาพระหว่างมีสภากับไม่มีสภาได้ในคลิกเดียว</td>
+                </tr>
+                <tr>
+                    <td><strong>บันทึกการประชุม</strong></td>
+                    <td><code>moa.save_traces</code></td>
+                    <td><code>false</code></td>
+                    <td>เขียน input/output/usage ที่แน่นอนของทุกเทิร์นเป็น JSONL ลง <code>&lt;hermes_home&gt;/moa-traces/</code> — เปิดเมื่อจะตรวจสอบย้อนหลัง ไม่ใช่เปิดค้างไว้ เพราะมันเก็บทุกอย่างที่เราพิมพ์</td>
+                </tr>
+                <tr>
+                    <td><strong>โมเดลของผู้ตรวจ</strong></td>
+                    <td><code>auxiliary.review.provider</code> / <code>.model</code></td>
+                    <td><code>auto</code> / <code>""</code></td>
+                    <td>ค่าตั้งต้นแปลว่าใช้โมเดลเดียวกับ agent หลัก ปักเป็นโมเดลที่แข็งแรงคนละตระกูลเพื่อไม่ให้ผู้ตรวจตาบอดจุดเดียวกับผู้ถูกตรวจ</td>
+                </tr>
+                <tr>
+                    <td><strong>preset ที่ถือว่าเป็นค่าตั้งต้น</strong></td>
+                    <td><code>moa.default_preset</code> / <code>moa.active_preset</code></td>
+                    <td><code>"default"</code> / <code>""</code></td>
+                    <td><code>/moa &lt;prompt&gt;</code> ใช้ preset ที่ระบุใน <code>default_preset</code> เสมอ ดังนั้นถ้าจะให้ <code>/moa</code> เรียกสภาที่เราสร้าง ต้องเปลี่ยนค่านี้ให้เป็นชื่อ preset ของเรา</td>
+                </tr>
+                <tr>
+                    <td><strong>โมเดลของ subagent</strong></td>
+                    <td><code>delegation.provider</code> / <code>delegation.model</code></td>
+                    <td><code>""</code> / <code>""</code></td>
+                    <td>ค่าว่างแปลว่าลูกสืบทอด provider และโมเดลของพ่อแม่ และการปักนี้เป็น<strong>ค่าเดียวทั้งระบบ</strong> — เอกสารระบุว่า "delegate_task has no per-task model parameter, so every child in a batch runs on the configured delegation model"</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <p>แถวสุดท้ายคือแถวที่ทำให้ "สภาที่แต่ละที่นั่งใช้คนละโมเดล" สร้างด้วย subagent ไม่ได้ และนี่ไม่ใช่ข้อจำกัดทางเทคนิคที่รอการแก้ แต่เป็นนโยบายที่ผู้ดูแลประกาศไว้ ตอนปิดคำขอ <code>/council</code> ใน issue #37569 เมื่อ 2026-07-13 teknium1 เขียนว่าข้อเสนอนั้น "assigns distinct provider/model pairs to individual proposer, critic, chairman, and delegated subtask calls" ซึ่งเป็น per-call model routing ที่ขัดกับนโยบายชื่อ <code>delegation-model-routing</code> และย้ำว่า "subagent models are not selectable per call; the supported configuration is a single global <code>delegation.provider</code> / <code>delegation.model</code> override"<sup><a href="#th-ref-12">[12]</a></sup></p>
+
+    <p>ผลลัพธ์เชิงออกแบบจึงชัดเจนมาก: <strong>ถ้าต้องการหลายโมเดลในสภาเดียว ช่องทางทางการคือช่องของ MoA ไม่ใช่ subagent</strong> ข่าวดีคือค่าใช้จ่ายฝั่ง context ไม่ได้แย่อย่างที่กลัว เอกสารระบุว่า MoA ถูกออกแบบให้ "the main conversation's prompt cache is never broken" และสรุปว่า "Its only real cost is the extra reference calls per iteration"<sup><a href="#th-ref-1">[1]</a></sup> ใครที่ต้องคำนวณต้นทุนเป็นตัวเงินจริงจัง ผมเขียนวิธีคิดไว้แล้วใน <a href="/blog/hermes-models-cost">Hermes #9 Models &amp; Cost</a></p>
+
+    <h2 id="th-panel">8. แผงที่มองเห็นได้ และสิ่งที่ไม่ควรติดตั้ง</h2>
+
+    <p>ถ้าสิ่งที่เราอยากได้คือ "เห็นหลายตัวคุยกัน" มากกว่า "ให้หลายตัวช่วยกันตอบ" Hermes Desktop มีของให้แล้วในชื่อ <strong>Bot Mode group chat</strong> แต่ต้องเข้าใจให้ตรงว่ามันคือแผงอภิปรายที่เรานั่งดู ไม่ใช่คณะกรรมการที่ตัดสินให้เรา</p>
+
+    <ul>
+        <li><strong>ขนาดห้องและจำนวนรอบ</strong> — เอกสารระบุว่าการเปิดแชทบนแถวของกลุ่ม (2–6 Bots) จะเปิดห้องที่ทั้งกลุ่มประสานงานกัน และข้อความของเรา "triggers up to three serial rounds of member turns" โดย Bot ที่ถูก @-mention จะตอบ (ถ้าไม่ mention ใครเลย ทุกตัวตอบ) แต่ละตัวตอบสั้น ๆ หรือขอผ่าน และห้องจะสงบเมื่อครบหนึ่งรอบที่ไม่มีใครพูด<sup><a href="#th-ref-5">[5]</a></sup></li>
+        <li><strong>เพดานที่กันห้องหมุนไม่หยุด</strong> — "Hard caps (10 messages per send, 3 rounds) keep rooms from spinning" และ Bot ดึงเราเข้ามาด้วย <code>@user</code> ซึ่งจะขึ้นป้าย "needs you" ที่แถวของกลุ่ม<sup><a href="#th-ref-5">[5]</a></sup></li>
+        <li><strong>ไม่มีการลงคะแนน ไม่มีประธาน</strong> — เอกสาร Bot Mode ไม่ได้อธิบายกลไกการโหวต การเลือกประธาน หรือการหาข้อสรุปไว้เลย ดังนั้นคนที่สังเคราะห์ผลของห้องนี้คือ<em>เรา</em> ต่างจาก MoA ที่ aggregator สังเคราะห์ให้อัตโนมัติ<sup><a href="#th-ref-5">[5]</a></sup></li>
+    </ul>
+
+    <p>เลือกใช้ให้ถูกงานจึงง่ายกว่าที่คิด — อยากได้<em>คำตอบเดียวที่ผ่านหลายมุมมองแล้ว</em> ใช้ MoA อยากได้<em>บทสนทนาที่อ่านได้ว่าใครคิดอย่างไร</em> ใช้ Bot Mode group chat และอยากได้<em>คำตัดสินเรื่องผลงานชิ้นหนึ่ง</em> ใช้ <code>/review</code></p>
+
+    <h3>ของนอกที่ควรรู้จักก่อนตัดสินใจ</h3>
+
+    <p>ค้นคำว่า hermes council บนอินเทอร์เน็ตแล้วจะเจอของอยู่หลายชิ้น ทุกชิ้นเป็นของบุคคลที่สาม และไม่มีชิ้นไหนอยู่ในตัว Hermes เอง กล่องข้างล่างสรุปสถานะของแต่ละชิ้น ณ วันที่ผมตรวจสอบ</p>
+
+    <div class="alert info">
+        <strong>ℹ️ สถานะของ "council" นอกทางการ ณ 2026-09-07:</strong> โครงการชุมชน <code>Ridwannurudeen/hermes-council</code> เป็น MCP server สัญญาอนุญาต MIT ที่รันห้าบทบาท (Advocate, Skeptic, Oracle, Contrarian, Arbiter) ในสามโหมด fast / standard / deep และ README ของมันเองเตือนไว้ว่า "The council adds latency and token cost"<sup><a href="#th-ref-14">[14]</a></sup> · skill สองตัวคือ PR #86614 และ PR #49632 <strong>ยังเป็น pull request ที่เปิดค้างอยู่</strong> ไม่ได้ merge และไม่มีความเห็นจากผู้ดูแลในทั้งสองอัน<sup><a href="#th-ref-13">[13]</a></sup> · ผู้ดูแลปฏิเสธการใส่ council เข้าแกนกลางมาแล้วสองครั้ง — PR #848 (เปิด 2026-03-10 ปิด 2026-03-11) ถูกปิดด้วยเหตุผลว่าเครื่องมือจะถูกยัดเข้าทุกเซสชัน ข้ามสายการเรียก provider ของ agent มีต้นทุนแฝง "5 hidden LLM calls per invocation" และแยกผลลัพธ์ด้วย regex ที่เปราะ พร้อมคำแนะนำให้ไปสร้างเป็น MCP server แทน<sup><a href="#th-ref-12">[12]</a></sup> และ issue #5876 ถูกปิดเมื่อ 2026-07-05 ด้วยประโยคเดียวว่า "Implemented with our MoA update 2 weeks ago"<sup><a href="#th-ref-12">[12]</a></sup> · ส่วน PR #1972 ที่ขอเพียงตัวอย่างค่าคอนฟิกก็ถูกปฏิเสธเช่นกัน ด้วยเหตุผลว่า repo ไม่แจก stub ให้ MCP server ของบุคคลที่สามรายใดรายหนึ่ง<sup><a href="#th-ref-12">[12]</a></sup> · และผมค้นแล้วไม่พบการนำ LLM Council ของ Andrej Karpathy มาทำเป็นเวอร์ชัน Hermes ทั้งในเอกสารทางการ ใน repo และในรายการ awesome ของชุมชน
+    </div>
+
+    <p>ข้อสรุปของผมตรงกับสิ่งที่ผู้ดูแลทำมาตลอด: ถ้าจะติดตั้ง council ของบุคคลที่สาม ให้ติดตั้งในฐานะ MCP server ที่เราเลือกเปิดเอง ไม่ใช่ในฐานะส่วนหนึ่งของแกนกลาง วิธีเพิ่ม MCP server ทีละขั้นอยู่ในตอนถัดไป <a href="/blog/hermes-desktop-skills-mcp">#5 Skills, MCP &amp; Memory</a> และก่อนกดติดตั้งอะไรก็ตาม ขอให้ถามคำถามเดียวกับที่ผู้ดูแลถาม — เครื่องมือนี้เรียกโมเดลกี่ครั้งต่อการใช้หนึ่งครั้ง และเราเห็นค่าใช้จ่ายนั้นหรือไม่</p>
+
+    <h2 id="th-summary">9. สรุป</h2>
+
+    <p>ตอนนี้เริ่มด้วยข่าวร้ายว่าไม่มีคำสั่ง <code>/council</code> และจบด้วยข่าวดีว่าเราไม่ต้องการมัน สิ่งที่ผู้อ่านอยากได้ — ความเห็นมากกว่าหนึ่งชุดที่มองคำตอบก่อนคำตอบถึงมือเรา — ประกอบขึ้นได้จากของที่มีอยู่แล้วสามชิ้น และแต่ละชิ้นเข้าคนละจุดของเทิร์นเดียวกัน MoA เข้าก่อนคำตอบถูกเขียน <code>/review</code> เข้าหลังผลงานเสร็จ และ <code>/goal</code> เข้าที่นิยามของคำว่าเสร็จ</p>
+
+    <p>สิ่งที่ผมแนะนำให้ทำภายในวันนี้มีสามข้อ หนึ่ง — สร้าง preset ชื่อ <code>council</code> ด้วย <code>hermes moa configure council</code> แล้วถามคำถามที่เราเคยตอบผิดมาก่อน สอง — ปัก <code>auxiliary.review.model</code> เป็นโมเดลคนละตระกูลกับโมเดลหลัก แล้วสั่ง <code>/review</code> กับงานชิ้นล่าสุดที่เราส่งไปแล้ว สาม — เปิด <code>save_traces</code> หนึ่งวันแล้วอ่าน trace ของตัวเองสักไฟล์ ผมรับรองว่าสิ่งที่ที่ปรึกษาพูดกันจะทำให้เราเลือก aggregator ใหม่</p>
+
+    <div class="key-takeaways">
+        <h3>🎯 สิ่งสำคัญที่ต้องจำ</h3>
+        <ul>
+            <li><strong>ไม่มี <code>/council</code></strong> = Hermes Agent v0.21.0 ไม่มีคำสั่งนี้ มันถูก merge ใน PR #84904 แล้ว revert ด้วย PR #84994 ในวันเดียวกัน และบันทึกรุ่นระบุไว้ในหมวด "Reverted in this window (not shipping)"</li>
+            <li><strong>MoA</strong> = virtual model provider ที่ทำให้ preset ปรากฏเป็นโมเดลให้เลือกใต้ provider ชื่อ <code>moa</code> โมเดลอ้างอิงตอบโดยไม่มี tool schema ส่วน aggregator คือตัวที่ลงมือและเขียนคำตอบ</li>
+            <li><strong>สามคำสั่งที่ต้องจำ</strong> = <code>hermes moa configure &lt;name&gt;</code> สร้างสภา, <code>/model &lt;name&gt; --provider moa</code> สลับเซสชันเข้าสภา และ <code>/moa &lt;prompt&gt;</code> ถามครั้งเดียวโดยไม่เปลี่ยนโมเดล</li>
+            <li><strong><code>/review</code></strong> = subagent ผู้ตรวจอิสระที่มีเครื่องมือครบ อ่านสิบข้อความล่าสุดเป็นหลักฐานตั้งต้น ลงมือเปิด PR อ่าน diff และรันโค้ดจริง แล้วรายงานกลับเข้าห้องแชทเดิม</li>
+            <li><strong><code>auxiliary.review</code></strong> = ที่ปักโมเดลผู้ตรวจ ค่าตั้งต้น <code>auto</code> กับ <code>""</code> แปลว่าใช้โมเดลเดียวกับ agent หลัก ซึ่งขัดกับกติกาที่ Hermes เขียนไว้เองว่าไม่มี agent ตัวไหนควรตรวจงานของตัวเอง</li>
+            <li><strong><code>/goal</code> contract</strong> = ผู้ตัดสินประกาศ <code>done</code> เมื่อเงื่อนไขการตรวจสอบสำเร็จด้วยหลักฐานที่จับต้องได้ และเพราะผู้ตัดสินล้มเหลวแบบเปิด ควรใช้คู่กับ quality gate ที่เป็นคำสั่ง shell จริง</li>
+            <li><strong>ต้นทุนของสภา</strong> = จำนวนการเรียกโมเดลเพิ่มขึ้นแน่นอน แต่ prompt cache ไม่พัง หมุน <code>fanout</code> และ <code>reference_max_tokens</code> ก่อนคิดจะลดจำนวนที่นั่ง</li>
+            <li><strong>ของนอกทางการ</strong> = council ทุกตัวที่ค้นเจอเป็นของบุคคลที่สาม ผู้ดูแลปฏิเสธการใส่เข้าแกนกลางสองครั้ง และครั้งหลังปิดด้วยประโยคว่า MoA คือคำตอบแล้ว</li>
+        </ul>
+    </div>
+
+    <section class="references" aria-labelledby="th-references">
+        <h2 id="th-references">อ้างอิง</h2>
+        <p class="references__note">ทุกแหล่งอ้างอิงตรวจสอบและเข้าถึงเมื่อ 2026-09-07 ซีรีส์นี้ใช้ป้ายกำกับหลักฐานสี่แบบ — <strong>Docs</strong> เอกสารทางการของ Hermes Agent · <strong>Release</strong> บันทึกการออกรุ่นหรือ commit/PR ที่ merge แล้ว · <strong>Issue</strong> issue หรือ PR ที่ยังเปิดอยู่ · <strong>Community</strong> แหล่งจากชุมชนที่ไม่ใช่ทางการ</p>
+        <ol class="references__list">
+            <li id="th-ref-1"><span class="ref-tag ref-tag--standard">Docs</span> Nous Research. <cite>Mixture of Agents</cite>. <a href="https://hermes-agent.nousresearch.com/docs/user-guide/features/mixture-of-agents">hermes-agent.nousresearch.com</a> — เข้าถึง 2026-09-07. <span class="ref-supports">รองรับ: นิยาม virtual model provider · ลำดับหกขั้นของ agent loop · โมเดลอ้างอิงรันโดยไม่มี tool schema และเหตุผล cheap/strict-provider · aggregator คือ acting model · ตาราง HermesBench 0.8202 / 0.7607 / 0.7412 · บล็อก YAML ของ preset ทั้งชุด · <code>hermes moa list|configure|delete</code> · เมนู MoA presets ใน Desktop และ <code>/model &lt;preset&gt; --provider moa</code> · <code>fanout</code>, <code>reference_max_tokens</code>, <code>max_tokens</code>, <code>enabled</code>, <code>privacy_filter</code> · ความล้มเหลวของ credential ไม่ล้มทั้งเทิร์น · aggregator ห้ามเป็น MoA preset · prompt cache ไม่พัง และ MoA เพิ่มจำนวนการเรียกโมเดล</span></li>
+            <li id="th-ref-2"><span class="ref-tag ref-tag--standard">Docs</span> Nous Research. <cite>Subagent Delegation</cite>. <a href="https://hermes-agent.nousresearch.com/docs/user-guide/features/delegation">hermes-agent.nousresearch.com</a> — เข้าถึง 2026-09-07. <span class="ref-supports">รองรับ: คำอธิบาย <code>/review</code> ทั้งหัวข้อ · สิบข้อความล่าสุดเป็นหลักฐานตั้งต้นและการตัดผลลัพธ์เครื่องมือออก · toolset ครบชุดของผู้ตรวจ · การสืบทอด skill และไฟล์บริบท AGENTS.md / CLAUDE.md / .cursorrules · รายงานกลับเข้าเซสชันเดิม · ทำงานทุกพื้นผิวรวม Desktop · บล็อก <code>auxiliary.review</code> · ความต่างจาก <code>/refine</code> · <code>steer</code> และ <code>stop</code> ของ <code>delegate_task</code> · และประโยคว่า delegate_task ไม่มีพารามิเตอร์โมเดลรายงาน</span></li>
+            <li id="th-ref-3"><span class="ref-tag ref-tag--standard">Docs</span> Nous Research. <cite>Slash Commands Reference</cite>. <a href="https://hermes-agent.nousresearch.com/docs/reference/slash-commands">hermes-agent.nousresearch.com</a> — เข้าถึง 2026-09-07. <span class="ref-supports">รองรับ: การไม่มี <code>/council</code> อยู่ในรายการคำสั่งทั้งหน้า · รายการของ <code>/moa</code> ที่ระบุว่า one-shot และไม่เปลี่ยนโมเดลของเซสชัน · รายการของ <code>/review</code> · <code>/agents</code> พร้อมชื่อพ้อง <code>/tasks</code> · และ <code>/subgoal</code></span></li>
+            <li id="th-ref-4"><span class="ref-tag ref-tag--standard">Docs</span> Nous Research. <cite>Persistent Goals</cite>. <a href="https://hermes-agent.nousresearch.com/docs/user-guide/features/goals">hermes-agent.nousresearch.com</a> — เข้าถึง 2026-09-07. <span class="ref-supports">รองรับ: completion contract และประโยคว่าผู้ตัดสินประกาศ done เมื่อเงื่อนไขสำเร็จด้วยหลักฐานที่จับต้องได้ · <code>/goal draft</code> · บล็อกสัญญาแบบ inline ทั้งบล็อก · รายการคำนำหน้าที่ระบบรู้จัก · <code>/goal show</code> · <code>/goal gate add</code> และลำดับที่ gate ทำงานก่อนผู้ตัดสิน · และประโยคว่าผู้ตัดสินล้มเหลวแบบเปิด</span></li>
+            <li id="th-ref-5"><span class="ref-tag ref-tag--standard">Docs</span> Nous Research. <cite>Bot Mode: A Roster of Agents</cite> และ <cite>Local Models</cite>. <a href="https://hermes-agent.nousresearch.com/docs/user-guide/bot-mode">hermes-agent.nousresearch.com</a> — เข้าถึง 2026-09-07. <span class="ref-supports">รองรับ: ห้องกลุ่มขนาด 2–6 Bots · สามรอบเรียงกัน · การ @-mention และการที่ทุกตัวตอบเมื่อไม่ mention ใคร · เพดาน 10 ข้อความต่อการส่งหนึ่งครั้งและ 3 รอบ · การเรียกผู้ใช้ด้วย <code>@user</code> พร้อมป้าย needs you · การไม่มีกลไกโหวตหรือประธานในเอกสาร · และจากหน้า Local Models คือประโยคว่าการเลือกโมเดลบนเครื่องเป็นโมเดลหลักใช้ <code>model.provider: llamacpp</code> ในรูปแบบเดียวกับ provider อื่นทุกตัว</span></li>
+            <li id="th-ref-6"><span class="ref-tag ref-tag--standard">Docs</span> NousResearch. <cite>hermes_cli/config_defaults.py</cite> และ <cite>Profiles</cite> (สาขา main). <a href="https://raw.githubusercontent.com/NousResearch/hermes-agent/main/hermes_cli/config_defaults.py">raw.githubusercontent.com</a> — เข้าถึง 2026-09-07. <span class="ref-supports">รองรับ: ค่าตั้งต้น <code>moa.default_preset: "default"</code>, <code>active_preset: ""</code>, <code>save_traces: false</code>, <code>trace_dir</code>, <code>privacy_filter</code> · เส้นทาง <code>&lt;hermes_home&gt;/moa-traces/&lt;session_id&gt;.jsonl</code> · preset <code>default</code> ที่มากับเครื่องพร้อม <code>max_tokens: 4096</code> และ <code>enabled: true</code> · ค่าตั้งต้นของ <code>auxiliary.review</code> ทั้งบล็อกพร้อมความหมายของ auto กับสตริงว่างและ <code>api_mode</code> · ค่าตั้งต้นว่างของ <code>delegation.model</code> และ <code>delegation.provider</code> · และจากหน้า Profiles คือประโยคว่า profile คือ Hermes home directory แยกต่างหากที่ <code>~/.hermes/profiles/&lt;name&gt;/</code> พร้อมการตั้ง <code>HERMES_HOME</code></span></li>
+            <li id="th-ref-7"><span class="ref-tag ref-tag--standard">Docs</span> NousResearch. <cite>skills/software-development/requesting-code-review/SKILL.md</cite> เวอร์ชัน 2.0.0 (สาขา main). <a href="https://raw.githubusercontent.com/NousResearch/hermes-agent/main/skills/software-development/requesting-code-review/SKILL.md">raw.githubusercontent.com</a> — เข้าถึง 2026-09-07. <span class="ref-supports">รองรับ: ประโยคหลักการ "No agent should verify its own work. Fresh context finds what you miss." และสถานะของมันในฐานะ skill ที่มากับ repo</span></li>
+            <li id="th-ref-8"><span class="ref-tag ref-tag--study">Release</span> NousResearch. <cite>Hermes Agent v0.21.0 (v2026.8.31)</cite>. <a href="https://github.com/NousResearch/hermes-agent/releases/tag/v2026.8.31">github.com</a> — เผยแพร่ 2026-08-31, เข้าถึง 2026-09-07. <span class="ref-supports">รองรับ: บรรทัด "Model Council mode (/council) — landed then reverted; not in this release." ใต้หัวข้อ Reverted in this window (not shipping) · การมีอยู่ของการสั่งการ subagent สดใน v0.21.0 · ชื่อรุ่นและ tag ที่ใช้อ้างตลอดบทความ · และการที่บันทึกรุ่นนี้ไม่ปรากฏคำว่า <code>/review</code> เลย ซึ่งเป็นฐานของการไม่ยืนยันว่ารุ่นติดป้ายใดเป็นรุ่นแรกที่มี <code>/review</code></span></li>
+            <li id="th-ref-9"><span class="ref-tag ref-tag--study">Release</span> NousResearch. <cite>Hermes Agent v0.18.0 (2026.7.1) — The Judgment Release</cite>. <a href="https://github.com/NousResearch/hermes-agent/releases/tag/v2026.7.1">github.com</a> — เผยแพร่ 2026-07-01, เข้าถึง 2026-09-07. <span class="ref-supports">รองรับ: MoA กลายเป็นพลเมืองชั้นหนึ่งในรุ่นนี้ · ประโยคว่า preset ปรากฏใต้ provider <code>moa</code> ในช่องเลือกโมเดลของ CLI, TUI, desktop และ gateway · ประโยคว่าผลลัพธ์ของโมเดลอ้างอิงแต่ละตัวแสดงเป็นบล็อกที่มีป้ายชื่อ และคำตอบสุดท้าย stream สด โดยระบุพื้นผิวเพียง CLI, TUI และ desktop app · และประโยค "You get to watch the committee deliberate, not just read the verdict."</span></li>
+            <li id="th-ref-10"><span class="ref-tag ref-tag--study">Release</span> NousResearch. <cite>PR #84904 "feat(moa): Model Council mode — user-facing multi-model deliberation (/council)"</cite> และ <cite>PR #84994 "Revert 'Model Council mode for Mixture of Agents' (#84904)"</cite>. <a href="https://github.com/NousResearch/hermes-agent/pull/84904">github.com</a> — merge 2026-08-13 เวลา 02:44 UTC และ 04:50 UTC ตามลำดับ, เข้าถึง 2026-09-07. <span class="ref-supports">รองรับ: ฟิลด์ <code>synthesis_style</code> ต่อ preset ที่มีค่า guidance เป็นค่าตั้งต้นและ council เป็นทางเลือก · คำบรรยายพฤติกรรมของ <code>/council</code> ที่ยกมาทั้งประโยค · เวลาที่ merge ทั้งสองครั้ง · และขนาดของการ revert คือ 10 ไฟล์ +24/−407</span></li>
+            <li id="th-ref-11"><span class="ref-tag ref-tag--study">Release</span> NousResearch. <cite>PR #93339 "feat: /review spawns an independent reviewer subagent on every surface"</cite>. <a href="https://github.com/NousResearch/hermes-agent/pull/93339">github.com</a> — merge 2026-08-24 เวลา 00:38 UTC, เข้าถึง 2026-09-07. <span class="ref-supports">รองรับ: วันและเวลาที่ <code>/review</code> เข้าสู่ main และการที่มันเป็น PR ที่ merge แล้ว ไม่ใช่ข้อเสนอ</span></li>
+            <li id="th-ref-12"><span class="ref-tag ref-tag--law">Issue</span> NousResearch. <cite>issue #37569, PR #848, issue #5876 และ PR #1972</cite> — คำตัดสินของผู้ดูแลเรื่อง council ในแกนกลาง. <a href="https://github.com/NousResearch/hermes-agent/issues/37569">github.com</a> — ปิด 2026-07-13, 2026-03-11, 2026-07-05 และ 2026-05-11 ตามลำดับ, เข้าถึง 2026-09-07. <span class="ref-supports">รองรับ: นโยบาย <code>delegation-model-routing</code> และประโยคว่า subagent models are not selectable per call · เหตุผลสี่ข้อที่ปิด PR #848 รวมถึงต้นทุนแฝง 5 hidden LLM calls per invocation และคำแนะนำให้ไปทำเป็น MCP server · ประโยคปิด issue #5876 ว่า "Implemented with our MoA update 2 weeks ago" · และเหตุผลที่ปิด PR #1972 ว่า repo ไม่แจก stub ให้ MCP server ของบุคคลที่สาม</span></li>
+            <li id="th-ref-13"><span class="ref-tag ref-tag--law">Issue</span> NousResearch. <cite>PR #86614 "feat(skills): council — multi-persona deliberation skill"</cite> และ <cite>PR #49632 "feat(skills): add model-council — 3-model peer review with synthesis pass"</cite>. <a href="https://github.com/NousResearch/hermes-agent/pull/86614">github.com</a> — เปิด 2026-08-15 และ 2026-06-20, ยังเปิดอยู่ ณ 2026-09-07. <span class="ref-supports">รองรับ: สถานะว่ายังเป็น pull request ที่เปิดค้าง ไม่ได้ merge · การไม่มีความเห็นจากผู้ดูแลในทั้งสอง · และการที่ #86614 วางตัวเองไว้ตรงข้ามกับ MoA ด้วยประโยคว่า MoA ตอบว่าหลายโมเดลคิดอย่างไร ส่วน council ตอบว่าจุดยืนใดรอดจากการตรวจสอบแบบปฏิปักษ์</span></li>
+            <li id="th-ref-14"><span class="ref-tag ref-tag--synthesis">Community</span> Ridwannurudeen. <cite>hermes-council — Adversarial preflight and decision review for Hermes Agent</cite> (README, สาขา master). <a href="https://raw.githubusercontent.com/Ridwannurudeen/hermes-council/master/README.md">raw.githubusercontent.com</a> — เข้าถึง 2026-09-07. <span class="ref-supports">รองรับ: สถานะเป็น MCP server ของบุคคลที่สามภายใต้สัญญาอนุญาต MIT · ห้าบทบาท Advocate, Skeptic, Oracle, Contrarian และ Arbiter · สามโหมด fast, standard และ deep · และคำเตือนของ README เองว่า "The council adds latency and token cost"</span></li>
+        </ol>
+    </section>
+    </div>
+
+    <div class="l-en" lang="en">
+
+    <p>🤔 <strong>If the agent answers wrongly and nobody checks before the answer reaches you — when exactly do you find out?</strong> The question is not about distrusting models. It comes from a plain fact: a wrong answer and a right one arrive on your screen looking exactly the same.</p>
+
+    <p>The previous post — <a href="/blog/hermes-desktop-profiles">#3 Profiles — One Agent per Role</a> — split the agent into several roles, each with its own home directory, SOUL.md, memory and model.<sup><a href="#en-ref-6">[6]</a></sup> The next question follows naturally: now that we have several roles, can one of them <em>check the work</em> of another before that work reaches us?</p>
+
+    <p>The one-line answer for this post is that <strong>Hermes has no <code>/council</code> command</strong> — but what readers mean by "a council" is genuinely buildable out of three official mechanisms that already ship in Hermes Agent v0.21.0: <strong>Mixture of Agents</strong> (several models deliberate before the answer), <strong><code>/review</code></strong> (an independent reviewer checks the work before you accept it), and <strong><code>/goal</code></strong> (a contract in which "done" means evidence). This post builds all three, one command at a time, and names the cost of each.</p>
+
+    <h2 id="en-no-council">1. There Is No /council — What "Council" Means in Hermes</h2>
+
+    <p>Let me answer plainly first, because there is a fair amount of wrong information circulating: <strong>Hermes Agent v0.21.0 (tag <code>v2026.8.31</code>) has no <code>/council</code> command</strong>. The whole slash-command reference page does not contain the word,<sup><a href="#en-ref-3">[3]</a></sup> and a GitHub code search for "council" across the repository returns a single hit, in an unrelated test file.</p>
+
+    <p>What confuses people is that it did exist — for about two hours. PR #84904, titled "Model Council mode — user-facing multi-model deliberation (/council)", merged on 2026-08-13 at 02:44 UTC. It added a per-preset <code>synthesis_style</code> field (<code>guidance</code> by default, or <code>council</code>) and a <code>/council</code> command in which "reference models answer independently and the acting model chairs the deliberation, delivering a user-facing report of consensus, per-model disagreements (with the differing assumptions behind them), unique contributions, and a recommendation with an explicit confidence level".<sup><a href="#en-ref-10">[10]</a></sup> PR #84994 then reverted the whole thing the same day at 04:50 UTC — 10 files, +24/−407.<sup><a href="#en-ref-10">[10]</a></sup></p>
+
+    <p>The v0.21.0 release notes therefore say so directly, under the heading <em>"Reverted in this window (not shipping)"</em>: <strong>"Model Council mode (/council) — landed then reverted; not in this release."</strong><sup><a href="#en-ref-8">[8]</a></sup> I labour this because several posts and videos written during that week still discuss <code>/council</code> as if it were a working feature. If you type it and nothing happens, your machine is not at fault.</p>
+
+    <figure class="figure">
+      <a href="../images/hermes-desktop-fig-04-council.png">
+        <img class="figure__img" src="../images/hermes-desktop-fig-04-council.png" alt="Top-to-bottom flow diagram: a question fans out to three reference models that answer separately, merges into a navy aggregator bar, emerges as an answer, with a dark-teal-outlined /review box on the right sending an arrow back into the answer and a /goal chip before the user at the bottom." width="1400" height="1000" loading="lazy" decoding="async">
+      </a>
+      <figcaption class="figure__caption">Figure 1 · The council Hermes can really build — reference models answer separately, the aggregator synthesises, /review sends an independent checker, and /goal defines done as evidence.</figcaption>
+    </figure>
+
+    <p>But the "council" readers actually want is not a command name. It is <strong>a mechanism that puts more than one opinion in front of an answer before the answer reaches you</strong> — and Hermes already has three of those, each under its own official name.</p>
+
+    <ul>
+        <li><strong>Mixture of Agents (MoA)</strong> — several reference models answer privately first, and one synthesising model then acts and writes the real answer.<sup><a href="#en-ref-1">[1]</a></sup></li>
+        <li><strong><code>/review</code></strong> — an independent reviewer subagent with the full toolset is dispatched to inspect the <em>work product</em> the conversation just made, and reports back into the same chat.<sup><a href="#en-ref-2">[2]</a></sup></li>
+        <li><strong><code>/goal</code> completion contract</strong> — a contract whose judge declares <code>done</code> only when the verification criterion has been met <em>with concrete evidence</em>, rather than on a claim of completion.<sup><a href="#en-ref-4">[4]</a></sup></li>
+    </ul>
+
+    <p>The three sit at different layers and do not substitute for one another: MoA works inside a <em>single turn</em>, while <code>/review</code> is a separate subagent working in the background. Anyone who wants the full map of Hermes' multi-agent layers has it in the analytical post <a href="/blog/hermes-agent-teams">Hermes #2 Agent Teams</a>, which walks all four — in-session subagents, the Kanban board, Bot Mode with A2A, and multi-profile serving — and already makes the point there that MoA is <em>not</em> delegation but a "virtual model provider". I will not repeat that here; here we build the thing on the Hermes Desktop screen.</p>
+
+    <h2 id="en-moa">2. How Mixture of Agents Works</h2>
+
+    <p>MoA is a <strong>virtual model provider</strong>. The official page opens on exactly that sentence: "Mixture of Agents is a virtual model provider. Each named MoA preset appears as a selectable model under the <code>moa</code> provider."<sup><a href="#en-ref-1">[1]</a></sup> Translated into something operational: <em>a preset you name shows up in the model picker as if it were a model</em> — in the CLI, the TUI, Hermes Desktop and the gateway alike.</p>
+
+    <p>The most common misreading is that every model in the preset helps write the answer. It does not work that way. Within one model call, Hermes does this:<sup><a href="#en-ref-1">[1]</a></sup></p>
+
+    <ol>
+        <li>resolves the selected preset by name;</li>
+        <li>runs the reference models <strong>without tool schemas</strong> — they see only the conversation's user/assistant text, not Hermes' system prompt and not the tool-call transcript;</li>
+        <li>appends the reference outputs as private context for the aggregator;</li>
+        <li>calls the configured aggregator with Hermes' normal tool schema;</li>
+        <li>treats the aggregator's response as the real model response, and if it calls tools, Hermes executes them normally;</li>
+        <li>on the next iteration the same process runs again over the updated conversation, tool results included.</li>
+    </ol>
+
+    <h3>The references advise; the aggregator acts</h3>
+
+    <p>Two practical consequences follow. First, <strong>the aggregator is "the acting model"</strong> — it writes the reply and it is the only slot that can call tools. Second, the reference models <em>never answer the user directly</em>; they are advisors speaking only to the aggregator.<sup><a href="#en-ref-1">[1]</a></sup> So a preset's quality depends on the choice of aggregator far more than on the number of advisors.</p>
+
+    <p>The docs give the reason the references get no tool schema outright: so that "reference calls stay cheap and avoid strict-provider rejections".<sup><a href="#en-ref-1">[1]</a></sup> Cheaper, and safe against providers that validate schemas strictly. That is also why a small model, or a model running on your own machine, can take an advisor's chair even if it is not much good at tool calling.</p>
+
+    <h3>First-class since v0.18.0</h3>
+
+    <p>MoA is not new in this release. It became first-class in Hermes Agent v0.18.0 (tag <code>v2026.7.1</code>, published 2026-07-01), the release the team named <strong>"The Judgment Release"</strong>. The notes say every preset "shows up as a selectable model under a <code>moa</code> provider, right alongside Claude, GPT, and Grok in every model picker (CLI, TUI, desktop, gateway)".<sup><a href="#en-ref-9">[9]</a></sup> The same release made each reference model's output render "as its own labelled block" with the final answer streaming live — and my favourite line in those notes: "You get to watch the committee deliberate, not just read the verdict."<sup><a href="#en-ref-9">[9]</a></sup></p>
+
+    <blockquote><strong>💡 The numbers the docs publish:</strong> the MoA page reports HermesBench results for a two-model preset — <code>claude-opus-4.8</code> aggregating over a <code>gpt-5.5</code> reference — at <strong>0.8202</strong>, against <strong>0.7607</strong> for <code>anthropic/claude-opus-4.8</code> alone and <strong>0.7412</strong> for <code>openai/gpt-5.5</code> alone.<sup><a href="#en-ref-1">[1]</a></sup> The caveat is that this is Nous Research's own internal benchmark, not a third-party measurement, and the page publishes neither the method nor the task set — so I read it as evidence that the direction is right, not as a number to put on a slide.</blockquote>
+
+    <h2 id="en-build">3. Procedure — Build the Council</h2>
+
+    <p>A working council takes a few minutes to build. Create a preset called <code>council</code> with the interactive helper in a terminal, choose two or three reference models and one aggregator, then select that preset in Hermes Desktop's model picker. Every command below works on every surface, not only on the Desktop.</p>
+
+    <ol>
+        <li>Open a terminal and look at what you already have with <code>hermes moa list</code> — you will see the shipped preset named <code>default</code> with its reference models and its aggregator.<sup><a href="#en-ref-1">[1]</a></sup></li>
+        <li>Create the new preset with <code>hermes moa configure council</code> — the docs describe <code>hermes moa configure [name]</code> as the command that will "create or update a named preset".<sup><a href="#en-ref-1">[1]</a></sup> The helper asks for a provider first, then for a model from that provider.</li>
+        <li>Pick the reference models one at a time; the screen asks each time whether you want to add another. I would take two or three that <em>think differently</em>, because three advisors who always agree tell you no more than one advisor does.</li>
+        <li>Pick the aggregator last, and make it the strongest model you have access to — it is the slot that writes the answer and makes the real tool calls.</li>
+        <li>Check the result with <code>hermes moa list</code> again, and compare it against what actually landed in <code>config.yaml</code>, in the shape shown below.</li>
+        <li>In Hermes Desktop, open the model picker in the composer — the MoA page states that the dropdown carries an <code>MoA presets</code> section, and that selecting one switches the active model to <code>MoA: council</code>.<sup><a href="#en-ref-1">[1]</a></sup> If you would rather type, <code>/model council --provider moa</code> does the same thing.</li>
+        <li>Ask a real question — one that has several plausible wrong answers. A question that cannot be answered badly will never show you whether the council is working.</li>
+        <li>Read each reference model's labelled block first, and only then the synthesised answer. The order matters: read the verdict first and you will agree with it, then read the advisors looking for confirmation.</li>
+        <li>To ask the council a single question without changing your session's model, use <code>/moa &lt;prompt&gt;</code> — the docs describe it as running one prompt through the default preset and then restoring your model, "One-shot — does not change your session model", and note that a bare <code>/moa</code> simply prints usage.<sup><a href="#en-ref-3">[3]</a></sup></li>
+        <li>When you have an answer you like, <em>do not accept it yet</em> — type <code>/review</code> to send an independent reviewer at that work product, as described in <a href="#en-review">section 5</a>, and only then decide whether to accept it, steer it, or stop it.</li>
+    </ol>
+
+    <p>If you would rather write it than click it, <code>~/.hermes/config.yaml</code> takes a preset in this shape. Every key and every value below is taken directly from the MoA documentation page and from the defaults in <code>hermes_cli/config_defaults.py</code>.</p>
+
+    <pre><code>moa:
+  default_preset: council      # the preset /moa uses when no name is given
+  active_preset: ""            # default is empty = no preset forced on every session
+  save_traces: false           # true = write every turn's trace as JSONL
+  presets:
+    council:
+      reference_models:
+        - provider: openai-codex
+          model: gpt-5.5
+        - provider: openrouter
+          model: deepseek/deepseek-v4-pro
+      aggregator:
+        provider: openrouter
+        model: anthropic/claude-opus-4.8
+      max_tokens: 4096
+      fanout: user_turn        # advisors run once per user message
+      enabled: true            # false = no fan-out, the aggregator acts alone</code></pre>
+
+    <h3>Can a local model take a seat on the council?</h3>
+
+    <p>Here is what the documentation actually supports. The MoA page says "The config stores explicit provider/model pairs, so you can mix providers and use multiple models from the same provider",<sup><a href="#en-ref-1">[1]</a></sup> and the Local Models page says that selecting a local model as your main model uses <code>model.provider: llamacpp</code>, which is "the same shape as every other provider".<sup><a href="#en-ref-5">[5]</a></sup> The only slot restriction the docs state is that <em>an aggregator may not be another MoA preset</em> — recursive MoA trees are deliberately blocked.<sup><a href="#en-ref-1">[1]</a></sup></p>
+
+    <p>Structurally, then, a model from <a href="/blog/hermes-desktop-local-models">#2 Local Models</a> can sit as an advisor, and the advisor's chair is the one that suits it best, since advisors receive no tool schema. But I have to be explicit: <strong>the documentation gives no example of a local provider inside an MoA preset</strong>. Every example on that page uses a cloud provider. So treat this as something the structure supports and you should test yourself, not as a recipe I can vouch for on the documentation's behalf.</p>
+
+    <h2 id="en-reading">4. Reading What the Council Said — Labelled Blocks, Failures and Traces</h2>
+
+    <p>What makes MoA a council you can watch rather than a black box is that <strong>every reference model's output is rendered as its own labelled block</strong> before the synthesised answer streams. The v0.18.0 notes describe reading "what GPT-5 thought, what Claude thought, and what Grok thought, before the aggregator synthesizes them into one answer", and name three surfaces: the CLI, the TUI and the desktop app.<sup><a href="#en-ref-9">[9]</a></sup> Note that those notes do <em>not</em> mention the gateway messaging platforms, so I will not claim these blocks render on Telegram or Discord.</p>
+
+    <p>Four behaviours are worth knowing before you rely on this, because each changes what you see on screen.</p>
+
+    <ul>
+        <li><strong>A failed advisor does not fail the turn</strong> — the docs state that "Credential failures on one reference model do not abort the turn. Hermes includes the failure in the reference context and continues with whatever models returned."<sup><a href="#en-ref-1">[1]</a></sup> So an expired API key on one advisor still gets you an answer — and this is the trap I most want to flag, because a three-seat council can quietly become a two-seat one without your noticing.</li>
+        <li><strong><code>enabled: false</code> turns the fan-out off</strong> — set it on a preset and "the aggregator acts alone, exactly as if you selected it as a plain model".<sup><a href="#en-ref-1">[1]</a></sup> It is a temporary off switch that does not require deleting the preset.</li>
+        <li><strong>The model-call count definitely rises</strong> — the docs say so in their Notes section: "MoA increases model-call count. A single model iteration can involve multiple reference calls plus the aggregator call."<sup><a href="#en-ref-1">[1]</a></sup></li>
+        <li><strong><code>save_traces</code> records every turn</strong> — it defaults to <code>false</code>; switched on, Hermes writes "each MoA turn (reference + aggregator exact input/output/usage) as JSONL" to <code>&lt;hermes_home&gt;/moa-traces/&lt;session_id&gt;.jsonl</code>, or to the directory named in <code>moa.trace_dir</code>.<sup><a href="#en-ref-6">[6]</a></sup></li>
+    </ul>
+
+    <p>That <code>&lt;hermes_home&gt;</code> in the last line matters more than it looks. If you work under a profile, as in the previous post, its home is <code>~/.hermes/profiles/&lt;name&gt;/</code> and not <code>~/.hermes/</code> — the Profiles page states that a profile "is a separate Hermes home directory" and that the wrapper sets <code>HERMES_HOME</code> before launching hermes.<sup><a href="#en-ref-6">[6]</a></sup> Your council's traces pile up inside that profile's home.</p>
+
+    <div class="alert">
+        <strong>⚠️ Before you send a trace to anyone:</strong> a trace file records the <em>exact input and output</em> of both the advisors and the aggregator, which means everything you typed as well. The docs warn that advisor output "can echo sensitive data from the conversation — emails, formatted phone numbers, API keys, JWTs — into the reference blocks shown in the UI, saved MoA traces, and the aggregator prompt". The official remedy is <code>moa.privacy_filter</code>, off by default: <code>display</code> redacts only the blocks shown on screen and the saved trace records, while <code>full</code> additionally redacts the advisor text injected into the aggregator's prompt.<sup><a href="#en-ref-1">[1]</a></sup> If a trace is going to a colleague or into an issue, turn on <code>display</code> at the very least.
+    </div>
+
+    <h2 id="en-review">5. The Second Check: /review</h2>
+
+    <p>MoA checks the <em>thinking</em> before the answer is written; <code>/review</code> checks the <em>work</em> after the answer exists. The docs describe it as spawning "an independent, full-privilege background subagent whose only job is to review the work your conversation just produced — a PR, a diff, code, documentation, a design", and say it works "on every surface: CLI, TUI, the Desktop app, and every gateway messaging platform".<sup><a href="#en-ref-2">[2]</a></sup></p>
+
+    <p>Five details change how you actually use it.</p>
+
+    <ul>
+        <li><strong>The starting evidence is the last ten messages</strong> — "The last 10 user/assistant messages are snapshotted as the reviewer's starting evidence (tool output and system messages are excluded)".<sup><a href="#en-ref-2">[2]</a></sup> Tool output does not count, so if the work lives purely in tool results, have the agent summarise it in a message before you call the review.</li>
+        <li><strong>The reviewer has real tools; it does not judge from text</strong> — the subagent gets "the full normal subagent toolset (terminal, web, files, browser...), so it actually opens the PR, reads the diff, and runs code rather than judging from the excerpt".<sup><a href="#en-ref-2">[2]</a></sup></li>
+        <li><strong>The reviewer inherits the project's rules</strong> — any skills the primary agent had loaded are named in its briefing with an instruction to load them and judge the work against their conventions, and its system prompt embeds the workspace's context files, AGENTS.md / CLAUDE.md / .cursorrules, as binding conventions.<sup><a href="#en-ref-2">[2]</a></sup></li>
+        <li><strong>The report lands back in the same chat</strong> — "its full review re-enters the same session as a normal background-subagent completion", which means the primary agent sees it and can start fixing straight away.<sup><a href="#en-ref-2">[2]</a></sup></li>
+        <li><strong>It is not <code>/refine</code></strong> — the docs separate them explicitly: <code>/refine</code> reviews the conversation to update memory and skills, while <code>/review</code> reviews the <em>work product</em> the conversation created.<sup><a href="#en-ref-2">[2]</a></sup></li>
+    </ul>
+
+    <p>The routine I actually use on anything I am about to hand to another person has four steps and costs me under a minute.</p>
+
+    <ol>
+        <li>Let the agent work until there is a tangible artifact — one PR, one diff, or one document.</li>
+        <li>Type a bare <code>/review</code> to review whatever the last ten messages presented, or add instructions the way the docs show: <code>/review focus on security</code>.<sup><a href="#en-ref-2">[2]</a></sup></li>
+        <li>While you wait, type <code>/agents</code> (alias <code>/tasks</code>) to see the agents and running tasks in the current session.<sup><a href="#en-ref-3">[3]</a></sup></li>
+        <li>If the reviewer heads the wrong way, correct it mid-flight — since v0.21.0 <code>delegate_task</code> accepts <code>{"action": "steer", "subagent_id": "...", "message": "..."}</code> to queue a course correction without stopping the child, and <code>{"action": "stop", "subagent_id": "..."}</code> to end it at the next iteration boundary, with the partial result still re-entering the conversation as a normal completion.<sup><a href="#en-ref-2">[2]</a></sup></li>
+    </ol>
+
+    <h3>Pin the reviewer's model</h3>
+
+    <p>By default the reviewer runs on the same model as the main agent, and that is the default I would change, because the same model tends to miss the same class of mistake. In <code>~/.hermes/config.yaml</code>, pin it in the <code>auxiliary.review</code> block.</p>
+
+    <pre><code>auxiliary:
+  review:
+    provider: openrouter               # or nous, anthropic, a direct base_url, ...
+    model: anthropic/claude-opus-4.6   # a strong reviewer model</code></pre>
+
+    <p>The default in the source is <code>{"provider": "auto", "model": "", "base_url": "", "api_key": "", "api_mode": ""}</code>, with the in-file comment stating that <code>"auto"</code> plus <code>""</code> means the "main agent's model", and that <code>api_mode</code> forces the transport among <code>chat_completions</code>, <code>anthropic_messages</code> and <code>codex_responses</code>.<sup><a href="#en-ref-6">[6]</a></sup></p>
+
+    <blockquote><strong>💡 The rule Hermes wrote for itself:</strong> the bundled skill <code>requesting-code-review</code> (version 2.0.0) states its core principle in one line — <em>"No agent should verify its own work. Fresh context finds what you miss."</em><sup><a href="#en-ref-7">[7]</a></sup> That sentence is the entire reason the reviewer-model pin exists, and the reason I do not recommend leaving it on <code>auto</code>.</blockquote>
+
+    <p>On versions, let me be exact: <code>/review</code> merged into main through PR #93339 on 2026-08-24 at 00:38 UTC.<sup><a href="#en-ref-11">[11]</a></sup> The first tagged release after that date is v0.20.6 (tag <code>v2026.8.27</code>) — but <strong>neither the v0.20.6 nor the v0.21.0 release notes contain the string <code>/review</code> at all</strong>. So all I can say is that it has been in main since 2026-08-24 and is in the current documentation; no release note confirms which tagged release first carried it.<sup><a href="#en-ref-8">[8]</a></sup></p>
+
+    <h2 id="en-goal">6. Define Done as Evidence: /goal</h2>
+
+    <p>The third check does not inspect the answer; it inspects <em>the word "done"</em>. <code>/goal</code> is a standing objective Hermes works toward across turns, with a judge model checking after every turn — and when you attach a <strong>completion contract</strong>, the judge's prompt changes so that it decides <code>done</code> "only when the verification criterion is met with concrete evidence (a command result, file excerpt, test output) — not a loose 'looks done' claim".<sup><a href="#en-ref-4">[4]</a></sup></p>
+
+    <p>There are two ways to write the contract. The first is to have Hermes draft it with <code>/goal draft &lt;text&gt;</code>, which the docs recommend as the main route. The second is to write it yourself as <code>field: value</code> lines, exactly as the documentation shows.</p>
+
+    <pre><code>/goal Migrate auth to JWT
+verify: pytest tests/auth passes
+constraints: keep the /login response shape unchanged
+boundaries: only touch services/auth and its tests
+stop when: a DB schema migration is required</code></pre>
+
+    <p>The first non-field line is the goal's headline, and the recognised field prefixes include <code>verify:</code>, <code>verified by:</code>, <code>constraints:</code>, <code>preserve:</code>, <code>boundaries:</code>, <code>scope:</code>, <code>stop when:</code> and <code>blocked:</code>. The docs also note that a plain goal with an incidental colon, such as <code>Fix bug: the parser drops commas</code>, is not mangled, because only known prefixes are pulled out.<sup><a href="#en-ref-4">[4]</a></sup></p>
+
+    <ul>
+        <li><code>/goal show</code> — print the active goal's completion contract so you can read it.<sup><a href="#en-ref-4">[4]</a></sup></li>
+        <li><code>/goal gate add scripts/run_tests.sh tests/hermes_cli/test_goals.py</code> — add a <strong>quality gate</strong>, a shell command that must exit 0 before the goal can complete at all. The docs state that gates run <em>before</em> the judge, and that if a gate fails the judge is not called.<sup><a href="#en-ref-4">[4]</a></sup></li>
+        <li><code>/subgoal &lt;text&gt;</code> — append a criterion mid-loop without resetting it; the judge will not mark the goal done until the original objective and every subgoal are met.<sup><a href="#en-ref-3">[3]</a></sup></li>
+    </ul>
+
+    <p>The limitation to know, and the docs state it themselves, is that <strong>the judge fails open</strong> — the page states that "If the judge errors (network blip, malformed response, unavailable aux client), Hermes treats the verdict as <code>continue</code> — a broken judge never wedges progress."<sup><a href="#en-ref-4">[4]</a></sup> If the judge model dies, the loop continues rather than stopping. That is precisely why a quality gate made of a real shell command is stronger than a contract made of prose, and why I always use the two together.</p>
+
+    <p>If the work that needs checking is work <em>nobody is watching</em> — scheduled jobs, background runs, an agent working overnight — the closer mechanism is verify-on-stop, which refuses a final answer on a turn where the agent edited code without producing fresh verification evidence, plus the <code>pre_verify</code> hook that lets a plugin inject your own policy at the same point. Both are the full subject of <a href="/blog/hermes-desktop-automation">#6 Automation &amp; Agents</a>, so I will leave the link here rather than tell that story twice.</p>
+
+    <h2 id="en-cost">7. Cost and Speed Knobs</h2>
+
+    <p>A council has a price, and the price is straightforward — you pay for the advisors' model calls every time they speak. The docs state that the wait per turn is set mainly by the advisors, "Advisor generation is the dominant per-turn latency", because the turn waits for the slowest advisor to finish writing.<sup><a href="#en-ref-1">[1]</a></sup> The table below is every knob you can actually turn, with the defaults as they appear in the documentation and in <code>config_defaults.py</code>.</p>
+
+    <div class="table-wrapper">
+        <table>
+            <thead>
+                <tr>
+                    <th>Knob</th>
+                    <th>Config key</th>
+                    <th>Default</th>
+                    <th>Effect</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td><strong>Advisor cadence</strong></td>
+                    <td><code>moa.presets.&lt;name&gt;.fanout</code></td>
+                    <td><code>user_turn</code></td>
+                    <td>The default runs the advisors once per user message, which the docs call the cheapest cadence because "advisor cost does not multiply with the number of tool calls in a turn". <code>per_iteration</code> re-runs advisors on every tool iteration, at the cost of multiplying advisor latency and spend by the number of tool calls; <code>every_n:3</code> is the middle ground.</td>
+                </tr>
+                <tr>
+                    <td><strong>Advisor output cap</strong></td>
+                    <td><code>moa.presets.&lt;name&gt;.reference_max_tokens</code></td>
+                    <td>unset = uncapped</td>
+                    <td>Caps how long the advice may be. The docs suggest a value such as <code>600</code>, saying it "measurably cuts per-turn wall time with little quality impact", and stress that it caps advisors only — the aggregator's user-visible answer is never capped.</td>
+                </tr>
+                <tr>
+                    <td><strong>Preset output cap</strong></td>
+                    <td><code>moa.presets.&lt;name&gt;.max_tokens</code></td>
+                    <td><code>4096</code></td>
+                    <td>The value the shipped <code>default</code> preset carries, both on the documentation page and in <code>config_defaults.py</code>.</td>
+                </tr>
+                <tr>
+                    <td><strong>Fan-out off switch</strong></td>
+                    <td><code>moa.presets.&lt;name&gt;.enabled</code></td>
+                    <td><code>true</code></td>
+                    <td>Set it to <code>false</code> and the aggregator acts alone, "exactly as if you selected it as a plain model" — a one-click way to compare price and quality with and without the council.</td>
+                </tr>
+                <tr>
+                    <td><strong>Minutes of the meeting</strong></td>
+                    <td><code>moa.save_traces</code></td>
+                    <td><code>false</code></td>
+                    <td>Writes each turn's exact input/output/usage as JSONL under <code>&lt;hermes_home&gt;/moa-traces/</code> — switch it on to audit afterwards, not as a standing setting, because it records everything you type.</td>
+                </tr>
+                <tr>
+                    <td><strong>The reviewer's model</strong></td>
+                    <td><code>auxiliary.review.provider</code> / <code>.model</code></td>
+                    <td><code>auto</code> / <code>""</code></td>
+                    <td>The default means the reviewer uses the same model as the main agent. Pin a strong model from a different family so the reviewer is not blind in the same places as the reviewed.</td>
+                </tr>
+                <tr>
+                    <td><strong>Which preset counts as default</strong></td>
+                    <td><code>moa.default_preset</code> / <code>moa.active_preset</code></td>
+                    <td><code>"default"</code> / <code>""</code></td>
+                    <td><code>/moa &lt;prompt&gt;</code> always uses the preset named in <code>default_preset</code>, so if you want <code>/moa</code> to convene your council, this is the value to change.</td>
+                </tr>
+                <tr>
+                    <td><strong>The subagents' model</strong></td>
+                    <td><code>delegation.provider</code> / <code>delegation.model</code></td>
+                    <td><code>""</code> / <code>""</code></td>
+                    <td>Empty means children inherit the parent's provider and model, and the pin is a <strong>single global value</strong> — the docs state that "delegate_task has no per-task model parameter, so every child in a batch runs on the configured delegation model".</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <p>That last row is what makes "a council where every seat runs a different model" unbuildable out of subagents — and it is not a technical gap awaiting a fix but a declared maintainer policy. Closing the <code>/council</code> request in issue #37569 on 2026-07-13, teknium1 wrote that the proposal "assigns distinct provider/model pairs to individual proposer, critic, chairman, and delegated subtask calls", which is the per-call model routing covered by the standing <code>delegation-model-routing</code> policy, and restated that "subagent models are not selectable per call; the supported configuration is a single global <code>delegation.provider</code> / <code>delegation.model</code> override".<sup><a href="#en-ref-12">[12]</a></sup></p>
+
+    <p>The design conclusion is therefore unambiguous: <strong>if you want several models in one council, the official channel is MoA's slots, not subagents</strong>. The good news is that the context-side cost is milder than you might fear. The docs state that MoA is built so "the main conversation's prompt cache is never broken", and conclude that "Its only real cost is the extra reference calls per iteration".<sup><a href="#en-ref-1">[1]</a></sup> For anyone who has to turn that into actual money, I set out the arithmetic in <a href="/blog/hermes-models-cost">Hermes #9 Models &amp; Cost</a>.</p>
+
+    <h2 id="en-panel">8. A Visible Panel, and What Not to Install</h2>
+
+    <p>If what you want is to <em>watch several agents talk</em> rather than have several models help write one answer, Hermes Desktop already has it, under the name <strong>Bot Mode group chat</strong>. Just be clear about what it is: a panel you sit and watch, not a committee that decides for you.</p>
+
+    <ul>
+        <li><strong>Room size and rounds</strong> — the docs state that opening chat on a group row (2–6 Bots) opens a shared room where the whole group coordinates, and that your message "triggers up to three serial rounds of member turns"; @-mentioned Bots respond, everyone responds when nobody is mentioned, each Bot replies briefly or passes, and the room settles when a full round stays silent.<sup><a href="#en-ref-5">[5]</a></sup></li>
+        <li><strong>The caps that stop a room spinning</strong> — "Hard caps (10 messages per send, 3 rounds) keep rooms from spinning", and Bots pull you in with <code>@user</code>, which raises a "needs you" badge on the group row.<sup><a href="#en-ref-5">[5]</a></sup></li>
+        <li><strong>No voting, no chair</strong> — the Bot Mode documentation describes no voting mechanism, no chair and no consensus rule, so the person who synthesises that room's output is <em>you</em>. That is the opposite of MoA, where the aggregator synthesises automatically.<sup><a href="#en-ref-5">[5]</a></sup></li>
+    </ul>
+
+    <p>Choosing between them is therefore easier than it sounds — if you want <em>one answer that has passed through several perspectives</em>, use MoA; if you want <em>a conversation you can read to see who thought what</em>, use a Bot Mode group chat; and if you want <em>a verdict on one piece of work</em>, use <code>/review</code>.</p>
+
+    <h3>The outside options, before you decide</h3>
+
+    <p>Search the internet for "hermes council" and you will find several things. All of them are third-party, and none of them lives inside Hermes itself. The box below records the status of each as of the day I checked.</p>
+
+    <div class="alert info">
+        <strong>ℹ️ The status of unofficial "councils" as of 2026-09-07:</strong> the community project <code>Ridwannurudeen/hermes-council</code> is an MIT-licensed MCP server running five personas (Advocate, Skeptic, Oracle, Contrarian, Arbiter) in three modes — fast, standard and deep — and its own README warns that "The council adds latency and token cost".<sup><a href="#en-ref-14">[14]</a></sup> · The two council skills, PR #86614 and PR #49632, are <strong>still open pull requests</strong>, unmerged, with no maintainer comment on either.<sup><a href="#en-ref-13">[13]</a></sup> · The maintainers have refused an in-core council twice — PR #848 (opened 2026-03-10, closed 2026-03-11) was closed because the tool would be injected into every session, because it bypassed the agent's provider chain, because of a hidden cost of "5 hidden LLM calls per invocation", and because it parsed results with brittle regex, with the advice to rebuild it as an MCP server instead;<sup><a href="#en-ref-12">[12]</a></sup> and issue #5876 was closed on 2026-07-05 with a single line: "Implemented with our MoA update 2 weeks ago".<sup><a href="#en-ref-12">[12]</a></sup> · PR #1972, which asked only for a commented-out config example, was declined too, on the grounds that the repo does not ship stubs for any one third-party MCP server.<sup><a href="#en-ref-12">[12]</a></sup> · And I could not find any port of Andrej Karpathy's LLM Council to Hermes — not in the official docs, not in the repo, and not in the community's awesome lists.
+    </div>
+
+    <p>My own conclusion matches what the maintainers have done throughout: if you are going to install a third-party council, install it as an MCP server you opt into, not as part of the core. The step-by-step for adding an MCP server is the next post, <a href="/blog/hermes-desktop-skills-mcp">#5 Skills, MCP &amp; Memory</a> — and before you install anything at all, ask the question the maintainers asked: how many model calls does this tool make per invocation, and can you see that cost?</p>
+
+    <h2 id="en-summary">9. Summary</h2>
+
+    <p>This post opened on the bad news that there is no <code>/council</code> command and closes on the good news that we do not need one. What readers want — more than one set of eyes on an answer before the answer reaches them — assembles out of three things that already exist, and each of them enters at a different point of the same turn: MoA before the answer is written, <code>/review</code> after the work product exists, and <code>/goal</code> at the definition of "done".</p>
+
+    <p>Three things I would do today. One — build a preset called <code>council</code> with <code>hermes moa configure council</code> and ask it a question you have previously got wrong. Two — pin <code>auxiliary.review.model</code> to a model from a different family than your main one, and run <code>/review</code> over the last piece of work you already shipped. Three — turn on <code>save_traces</code> for a day and read one of your own trace files. I promise that what the advisors say to each other will change which aggregator you pick.</p>
+
+    <div class="key-takeaways">
+        <h3>🎯 Key Takeaways</h3>
+        <ul>
+            <li><strong>There is no <code>/council</code></strong> = Hermes Agent v0.21.0 does not have the command; it merged in PR #84904 and was reverted by PR #84994 on the same day, and the release notes list it under "Reverted in this window (not shipping)"</li>
+            <li><strong>MoA</strong> = a virtual model provider that makes a named preset appear as a selectable model under the <code>moa</code> provider; the reference models answer without tool schemas, while the aggregator is the model that acts and writes the reply</li>
+            <li><strong>Three commands to remember</strong> = <code>hermes moa configure &lt;name&gt;</code> builds the council, <code>/model &lt;name&gt; --provider moa</code> switches the session into it, and <code>/moa &lt;prompt&gt;</code> asks it once without changing your model</li>
+            <li><strong><code>/review</code></strong> = an independent reviewer subagent with the full toolset, taking the last ten messages as starting evidence, which actually opens the PR, reads the diff and runs the code, then reports back into the same chat</li>
+            <li><strong><code>auxiliary.review</code></strong> = where the reviewer's model is pinned; the defaults <code>auto</code> and <code>""</code> mean the same model as the main agent, which contradicts the rule Hermes wrote for itself that no agent should verify its own work</li>
+            <li><strong><code>/goal</code> contract</strong> = the judge declares <code>done</code> only when the verification criterion is met with concrete evidence, and because the judge fails open, pair it with a quality gate made of a real shell command</li>
+            <li><strong>What a council costs</strong> = the model-call count definitely rises, but the prompt cache is not broken; turn <code>fanout</code> and <code>reference_max_tokens</code> before you think about removing a seat</li>
+            <li><strong>The unofficial options</strong> = every council I could find is third-party, the maintainers have refused an in-core one twice, and the second refusal closed with the line that MoA is already the answer</li>
+        </ul>
+    </div>
+
+    <section class="references" aria-labelledby="en-references">
+        <h2 id="en-references">References</h2>
+        <p class="references__note">Every source was verified and accessed on 2026-09-07. This series uses four evidence labels — <strong>Docs</strong> official Hermes Agent documentation · <strong>Release</strong> release notes or a merged commit/PR · <strong>Issue</strong> an open issue or PR · <strong>Community</strong> a non-official community source.</p>
+        <ol class="references__list">
+            <li id="en-ref-1"><span class="ref-tag ref-tag--standard">Docs</span> Nous Research. <cite>Mixture of Agents</cite>. <a href="https://hermes-agent.nousresearch.com/docs/user-guide/features/mixture-of-agents">hermes-agent.nousresearch.com</a> — accessed 2026-09-07. <span class="ref-supports">Supports: the virtual-model-provider definition · the six-step agent loop · reference models running without tool schemas and the cheap/strict-provider reason · the aggregator as the acting model · the HermesBench table 0.8202 / 0.7607 / 0.7412 · the whole preset YAML block · <code>hermes moa list|configure|delete</code> · the MoA presets section in the Desktop dropdown and <code>/model &lt;preset&gt; --provider moa</code> · <code>fanout</code>, <code>reference_max_tokens</code>, <code>max_tokens</code>, <code>enabled</code>, <code>privacy_filter</code> · credential failures not aborting the turn · the aggregator not being allowed to be an MoA preset · the prompt cache never being broken, and MoA increasing the model-call count</span></li>
+            <li id="en-ref-2"><span class="ref-tag ref-tag--standard">Docs</span> Nous Research. <cite>Subagent Delegation</cite>. <a href="https://hermes-agent.nousresearch.com/docs/user-guide/features/delegation">hermes-agent.nousresearch.com</a> — accessed 2026-09-07. <span class="ref-supports">Supports: the whole <code>/review</code> section · the last ten messages as starting evidence and the exclusion of tool output · the reviewer's full toolset · the inheritance of loaded skills and the AGENTS.md / CLAUDE.md / .cursorrules context files · the review re-entering the same session · working on every surface including the Desktop · the <code>auxiliary.review</code> block · the difference from <code>/refine</code> · the <code>steer</code> and <code>stop</code> actions of <code>delegate_task</code> · and the sentence that delegate_task has no per-task model parameter</span></li>
+            <li id="en-ref-3"><span class="ref-tag ref-tag--standard">Docs</span> Nous Research. <cite>Slash Commands Reference</cite>. <a href="https://hermes-agent.nousresearch.com/docs/reference/slash-commands">hermes-agent.nousresearch.com</a> — accessed 2026-09-07. <span class="ref-supports">Supports: the absence of <code>/council</code> from the complete command list · the <code>/moa</code> row stating it is one-shot and does not change the session model · the <code>/review</code> row · <code>/agents</code> with its <code>/tasks</code> alias · and <code>/subgoal</code></span></li>
+            <li id="en-ref-4"><span class="ref-tag ref-tag--standard">Docs</span> Nous Research. <cite>Persistent Goals</cite>. <a href="https://hermes-agent.nousresearch.com/docs/user-guide/features/goals">hermes-agent.nousresearch.com</a> — accessed 2026-09-07. <span class="ref-supports">Supports: completion contracts and the sentence that the judge decides done only when the verification criterion is met with concrete evidence · <code>/goal draft</code> · the entire inline contract block · the list of recognised field prefixes · <code>/goal show</code> · <code>/goal gate add</code> and gates running before the judge · and the sentence that judge failures fail open</span></li>
+            <li id="en-ref-5"><span class="ref-tag ref-tag--standard">Docs</span> Nous Research. <cite>Bot Mode: A Roster of Agents</cite> and <cite>Local Models</cite>. <a href="https://hermes-agent.nousresearch.com/docs/user-guide/bot-mode">hermes-agent.nousresearch.com</a> — accessed 2026-09-07. <span class="ref-supports">Supports: group rooms of 2–6 Bots · up to three serial rounds · @-mentioning and everyone responding when nobody is mentioned · the hard caps of 10 messages per send and 3 rounds · escalation to the user with <code>@user</code> and the needs-you badge · the absence of any documented voting or chair mechanism · and, from the Local Models page, the sentence that selecting a local model as the main model uses <code>model.provider: llamacpp</code>, the same shape as every other provider</span></li>
+            <li id="en-ref-6"><span class="ref-tag ref-tag--standard">Docs</span> NousResearch. <cite>hermes_cli/config_defaults.py</cite> and <cite>Profiles</cite> (branch main). <a href="https://raw.githubusercontent.com/NousResearch/hermes-agent/main/hermes_cli/config_defaults.py">raw.githubusercontent.com</a> — accessed 2026-09-07. <span class="ref-supports">Supports: the defaults <code>moa.default_preset: "default"</code>, <code>active_preset: ""</code>, <code>save_traces: false</code>, <code>trace_dir</code> and <code>privacy_filter</code> · the path <code>&lt;hermes_home&gt;/moa-traces/&lt;session_id&gt;.jsonl</code> · the shipped <code>default</code> preset with <code>max_tokens: 4096</code> and <code>enabled: true</code> · the whole <code>auxiliary.review</code> default block with the meaning of auto plus the empty string and of <code>api_mode</code> · the empty defaults of <code>delegation.model</code> and <code>delegation.provider</code> · and, from the Profiles page, the sentence that a profile is a separate Hermes home directory at <code>~/.hermes/profiles/&lt;name&gt;/</code> with <code>HERMES_HOME</code> set for it</span></li>
+            <li id="en-ref-7"><span class="ref-tag ref-tag--standard">Docs</span> NousResearch. <cite>skills/software-development/requesting-code-review/SKILL.md</cite> version 2.0.0 (branch main). <a href="https://raw.githubusercontent.com/NousResearch/hermes-agent/main/skills/software-development/requesting-code-review/SKILL.md">raw.githubusercontent.com</a> — accessed 2026-09-07. <span class="ref-supports">Supports: the core-principle sentence "No agent should verify its own work. Fresh context finds what you miss." and its status as a skill bundled with the repository</span></li>
+            <li id="en-ref-8"><span class="ref-tag ref-tag--study">Release</span> NousResearch. <cite>Hermes Agent v0.21.0 (v2026.8.31)</cite>. <a href="https://github.com/NousResearch/hermes-agent/releases/tag/v2026.8.31">github.com</a> — published 2026-08-31, accessed 2026-09-07. <span class="ref-supports">Supports: the line "Model Council mode (/council) — landed then reverted; not in this release." under Reverted in this window (not shipping) · the presence of live subagent orchestration in v0.21.0 · the release name and tag used throughout this post · and the fact that these notes contain no occurrence of <code>/review</code>, which is the basis for declining to name the first tagged release that carried it</span></li>
+            <li id="en-ref-9"><span class="ref-tag ref-tag--study">Release</span> NousResearch. <cite>Hermes Agent v0.18.0 (2026.7.1) — The Judgment Release</cite>. <a href="https://github.com/NousResearch/hermes-agent/releases/tag/v2026.7.1">github.com</a> — published 2026-07-01, accessed 2026-09-07. <span class="ref-supports">Supports: MoA becoming first-class in this release · the sentence that presets appear under a <code>moa</code> provider in the CLI, TUI, desktop and gateway model pickers · the sentence that each reference model's output renders as its own labelled block with the final answer streaming live, naming only the CLI, the TUI and the desktop app · and the line "You get to watch the committee deliberate, not just read the verdict."</span></li>
+            <li id="en-ref-10"><span class="ref-tag ref-tag--study">Release</span> NousResearch. <cite>PR #84904 "feat(moa): Model Council mode — user-facing multi-model deliberation (/council)"</cite> and <cite>PR #84994 "Revert 'Model Council mode for Mixture of Agents' (#84904)"</cite>. <a href="https://github.com/NousResearch/hermes-agent/pull/84904">github.com</a> — merged 2026-08-13 at 02:44 UTC and 04:50 UTC respectively, accessed 2026-09-07. <span class="ref-supports">Supports: the per-preset <code>synthesis_style</code> field with guidance as its default and council as the alternative · the quoted description of what <code>/council</code> did · both merge timestamps · and the size of the revert, 10 files, +24/−407</span></li>
+            <li id="en-ref-11"><span class="ref-tag ref-tag--study">Release</span> NousResearch. <cite>PR #93339 "feat: /review spawns an independent reviewer subagent on every surface"</cite>. <a href="https://github.com/NousResearch/hermes-agent/pull/93339">github.com</a> — merged 2026-08-24 at 00:38 UTC, accessed 2026-09-07. <span class="ref-supports">Supports: the date and time <code>/review</code> entered main, and that it is a merged PR rather than a proposal</span></li>
+            <li id="en-ref-12"><span class="ref-tag ref-tag--law">Issue</span> NousResearch. <cite>issue #37569, PR #848, issue #5876 and PR #1972</cite> — the maintainers' decisions on an in-core council. <a href="https://github.com/NousResearch/hermes-agent/issues/37569">github.com</a> — closed 2026-07-13, 2026-03-11, 2026-07-05 and 2026-05-11 respectively, accessed 2026-09-07. <span class="ref-supports">Supports: the <code>delegation-model-routing</code> policy and the sentence that subagent models are not selectable per call · the four reasons PR #848 was closed, including the hidden cost of 5 hidden LLM calls per invocation and the advice to rebuild it as an MCP server · the closing line of issue #5876, "Implemented with our MoA update 2 weeks ago" · and the reason PR #1972 was closed, that the repo does not ship stubs for specific third-party MCP servers</span></li>
+            <li id="en-ref-13"><span class="ref-tag ref-tag--law">Issue</span> NousResearch. <cite>PR #86614 "feat(skills): council — multi-persona deliberation skill"</cite> and <cite>PR #49632 "feat(skills): add model-council — 3-model peer review with synthesis pass"</cite>. <a href="https://github.com/NousResearch/hermes-agent/pull/86614">github.com</a> — opened 2026-08-15 and 2026-06-20, both still open as of 2026-09-07. <span class="ref-supports">Supports: their status as open, unmerged pull requests · the absence of any maintainer comment on either · and #86614 positioning itself against MoA with the line that MoA answers what several models think while the council answers which position survives adversarial review</span></li>
+            <li id="en-ref-14"><span class="ref-tag ref-tag--synthesis">Community</span> Ridwannurudeen. <cite>hermes-council — Adversarial preflight and decision review for Hermes Agent</cite> (README, branch master). <a href="https://raw.githubusercontent.com/Ridwannurudeen/hermes-council/master/README.md">raw.githubusercontent.com</a> — accessed 2026-09-07. <span class="ref-supports">Supports: its status as a third-party MIT-licensed MCP server · the five personas Advocate, Skeptic, Oracle, Contrarian and Arbiter · the three modes fast, standard and deep · and the README's own warning that "The council adds latency and token cost"</span></li>
+        </ol>
+    </section>
+    </div>
+
+    <div class="post-series-footer">
+      <span class="l-th">บทความจากซีรีส์ Hermes Desktop Hands-On 2026</span><span class="l-en" lang="en">From the Hermes Desktop Hands-On 2026 series</span>
+    </div>
+
+    <nav aria-label="Hermes Desktop Hands-On">
+    <div class="series-nav">
+      <h3>💻 Hermes Desktop Hands-On 2026</h3>
+      <div class="series-links">
+        <a href="/blog/hermes-desktop-install">#1 First Run</a>
+        <a href="/blog/hermes-desktop-local-models">#2 Local Models</a>
+        <a href="/blog/hermes-desktop-profiles">#3 Profiles</a>
+        <span class="current" aria-current="page">#4 Council</span>
+        <a href="/blog/hermes-desktop-skills-mcp">#5 Skills &amp; MCP</a>
+        <a href="/blog/hermes-desktop-automation">#6 Automation</a>
+        <a href="/blog/hermes-desktop-safety">#7 Recovery</a>
+      </div>
+    </div>
+    </nav>
+
+  </article>
+
+  </main>
+
+  <footer class="blog-footer">
+    <nav class="blog-footer__nav" aria-label="Site">
+      <a href="../index.html">Home</a>
+      <a href="./">Blog</a>
+      <a href="../publications/">Publications</a>
+      <a href="../books/">Books</a>
+      <a href="../projects/">Projects</a>
+      <a href="../news/">News</a>
+      <a href="../index.html#contact">Contact</a>
+    </nav>
+    <a href="./">← Back to Blog</a>
+    <span>© 2026 Anirach Mingkhwan — Associate Professor, KMUTNB</span>
+  </footer>
+
+</body>
+</html>

@@ -128,7 +128,7 @@ def skeleton(man):
     return out
 
 
-EXTRA_CSS = """
+FIGURE_CSS = """
     /* ── FIGURE — the sanctioned diagram component (page-design §4 Content).
        Diagrams are PNGs; this repo built them out of divs twice and reverted
        twice. The image is wrapped in a link to itself so a phone can pinch a
@@ -138,7 +138,9 @@ EXTRA_CSS = """
                    border-radius: var(--radius); border: 1px solid rgba(0,0,0,0.06); }
     .figure__caption { font-size: 0.85rem; color: var(--slate-light);
                        text-align: center; margin-top: 0.75rem; }
+"""
 
+REFERENCES_CSS = """
     /* ── REFERENCES — every material number in this series carries its source.
        The tags are the book's own four evidence labels. */
     .references { margin-top: 3rem; padding-top: 2rem; border-top: 1px solid #e2e8f0; }
@@ -158,7 +160,9 @@ EXTRA_CSS = """
     .ref-tag--study { background: rgba(34,197,94,0.18); color: #14532d; }
     .ref-tag--synthesis { background: rgba(196,164,108,0.22); color: var(--gold-dark); }
     .ref-supports { display: block; color: var(--slate-light); font-size: 0.85rem; }
+"""
 
+GROUPED_STRIP_CSS = """
     /* ── SERIES STRIP, GROUPED — twenty chips is four rows of noise unless they
        are grouped, so the four parts of the book label their own rows. The
        .series-nav and .series-links wrappers stay byte-literal because INV-08
@@ -181,16 +185,43 @@ EXTRA_CSS = """
 """
 
 
+# The brand line of the canonical :root, and where a series splices its own
+# token in (AI Transformation adds --coral there; a series with no
+# "extra_tokens" keeps the 29-token block byte-identical to the skeleton).
+TOKEN_ANCHOR = "--gold: #c4a46c; --gold-dark: #7a5f22;"
+
+
+def groups(man):
+    """The manifest's chip groups, or [] for a flat strip (no "groups" key,
+    or an empty list) — the Hermes / Life / OpenClaw shape."""
+    return man.get("groups") or []
+
+
+def series_css(man):
+    """Only the CSS this series' markup can reach.  .figure always (the
+    skeleton has none); .references when the manifest says the posts carry a
+    sources block; the grouped-strip rules only when the strip is grouped —
+    the skeleton already styles a flat .series-nav."""
+    parts = [FIGURE_CSS]
+    if man.get("references"):
+        parts.append(REFERENCES_CSS)
+    if groups(man):
+        parts.append(GROUPED_STRIP_CSS)
+    return "".join(parts)
+
+
 def styled(style, man):
-    """Inject the series' own CSS, plus the one token it adds."""
-    if "--coral" not in style:
-        style = style.replace(
-            "--gold: #c4a46c; --gold-dark: #7a5f22;",
-            "--gold: #c4a46c; --gold-dark: #7a5f22; --coral: #c2410c;", 1)
+    """Inject the series' own CSS, plus any token the manifest adds."""
+    for name, value in (man.get("extra_tokens") or {}).items():
+        if name + ":" in style:
+            continue
+        if TOKEN_ANCHOR not in style:
+            raise Bail("skeleton :root has no %r to anchor %s on" % (TOKEN_ANCHOR, name))
+        style = style.replace(TOKEN_ANCHOR, "%s %s: %s;" % (TOKEN_ANCHOR, name, value), 1)
     anchor = "    /* ── LANGUAGE SWITCH"
     if anchor not in style:
         raise Bail("skeleton style has no LANGUAGE SWITCH block to anchor on")
-    return style.replace(anchor, EXTRA_CSS.strip("\n") + "\n\n" + anchor, 1)
+    return style.replace(anchor, series_css(man).strip("\n") + "\n\n" + anchor, 1)
 
 
 # ── sheets ──────────────────────────────────────────────────────────────────
@@ -299,31 +330,59 @@ STRIP_OPEN = '    <nav aria-label="%s">'
 STRIP_CLOSE = "    </nav>"
 
 
+def chip_lines(posts, slug, pad):
+    out = []
+    for p in posts:
+        label = htmlmod.escape(p["chip"])
+        if p["slug"] == slug:
+            out.append('%s<span class="current" aria-current="page">%s</span>' % (pad, label))
+        else:
+            out.append('%s<a href="/blog/%s">%s</a>' % (pad, p["slug"], label))
+    return out
+
+
 def strip_block(man, slug):
-    by_group = {g["key"]: [] for g in man["groups"]}
-    for p in man["posts"]:
-        by_group[p["group"]].append(p)
+    """A flat strip (no groups) has the Hermes/Life/OpenClaw shape —
+    <nav> > .series-nav > h3 + .series-links > chips — so INV-03c reads it
+    exactly like the hand-written ones.  A grouped strip adds the
+    --grouped modifier and one .series-links__group per manifest group."""
+    gs = groups(man)
     lines = [STRIP_OPEN % man["aria_label"],
              '    <div class="series-nav">',
-             "      <h3>%s</h3>" % htmlmod.escape(man["h3"]),
-             '      <div class="series-links series-links--grouped">']
-    for g in man["groups"]:
-        lines.append('        <div class="series-links__group">')
-        lines.append('          <p class="series-links__label">%s</p>'
-                     % htmlmod.escape(g["label"]))
-        for p in by_group[g["key"]]:
-            label = htmlmod.escape(p["chip"])
-            if p["slug"] == slug:
-                lines.append('          <span class="current" aria-current="page">%s</span>'
-                             % label)
-            else:
-                lines.append('          <a href="/blog/%s">%s</a>' % (p["slug"], label))
-        lines.append("        </div>")
+             "      <h3>%s</h3>" % htmlmod.escape(man["h3"])]
+    if not gs:
+        lines.append('      <div class="series-links">')
+        lines += chip_lines(man["posts"], slug, "        ")
+    else:
+        by_group = {g["key"]: [] for g in gs}
+        for p in man["posts"]:
+            by_group[p["group"]].append(p)
+        lines.append('      <div class="series-links series-links--grouped">')
+        for g in gs:
+            lines.append('        <div class="series-links__group">')
+            lines.append('          <p class="series-links__label">%s</p>'
+                         % htmlmod.escape(g["label"]))
+            lines += chip_lines(by_group[g["key"]], slug, "          ")
+            lines.append("        </div>")
     lines += ["      </div>", "    </div>", STRIP_CLOSE]
     return "\n".join(lines) + "\n"
 
 
 # ── the page ────────────────────────────────────────────────────────────────
+
+RE_NAV_TITLE = re.compile(r'<div class="blog-nav__title">[^<]*</div>')
+
+
+def nav_titled(nav, title):
+    """The skeleton's .blog-nav with its title swapped — by pattern, not by
+    the literal text of whichever post the skeleton is, so a changed skeleton
+    fails loudly instead of shipping the wrong nav title in every post."""
+    repl = '<div class="blog-nav__title">%s</div>' % htmlmod.escape(title)
+    new, n = RE_NAV_TITLE.subn(lambda _m: repl, nav)
+    if n != 1:
+        raise Bail("skeleton nav has %d .blog-nav__title div(s), want 1" % n)
+    return new
+
 
 def build(man, post, sk):
     slug = post["slug"]
@@ -355,6 +414,9 @@ def build(man, post, sk):
     for bad in ("<h1", "<script", "<style", "style=", "%%EN-"):
         if bad in th_body or bad in en_body:
             raise Bail("sheet contains %r — the builder owns that" % bad)
+    if 'class="references"' in th_body and not man.get("references"):
+        raise Bail('sheet has a references block; set "references": true in the manifest '
+                   "so its CSS ships")
 
     date, title, sub = man["date"], post["title"], post["sub"]
     canon = "https://anirach.com/blog/%s.html" % slug
@@ -476,9 +538,7 @@ def build(man, post, sk):
     body = ('<body>\n<a href="#main" class="skip-link">Skip to content</a>\n'
             '<input type="checkbox" id="langSwitch" class="lang-switch-box" '
             'aria-label="Switch language: Thai / English">\n\n'
-            + sk["nav"].replace(
-                '<div class="blog-nav__title">Hermes 101 · รู้จัก Hermes Agent</div>',
-                '<div class="blog-nav__title">%s</div>' % htmlmod.escape(post["nav_title"]))
+            + nav_titled(sk["nav"], post["nav_title"])
             + "\n" + hero + article + sk["footer"] + "\n</body>\n</html>\n")
 
     job = {"slug": slug, "variant": man["hero"],
@@ -546,15 +606,29 @@ def check(man, sk):
     posts = man["posts"]
     if [p["n"] for p in posts] != list(range(1, len(posts) + 1)):
         bad.append("post numbers are not 1..%d contiguous" % len(posts))
-    sizes = {}
+    gs = groups(man)
+    if gs:
+        sizes = {}
+        for p in posts:
+            sizes.setdefault(p.get("group"), []).append(p["n"])
+        keys = {g["key"] for g in gs}
+        for k, ns in sizes.items():
+            if k not in keys:
+                bad.append("posts %s name group %r, which the manifest does not define" % (ns, k))
+        for g in gs:
+            ns = sizes.get(g["key"], [])
+            if len(ns) != len(posts) // len(gs):
+                bad.append("group %s holds %d posts" % (g["key"], len(ns)))
+            if ns != sorted(ns):
+                bad.append("group %s is out of order: %s" % (g["key"], ns))
+    elif any("group" in p for p in posts):
+        bad.append("flat series (no groups) but some posts carry a group key")
+    strip_open = STRIP_OPEN % man["aria_label"]
     for p in posts:
-        sizes.setdefault(p["group"], []).append(p["n"])
-    for g in man["groups"]:
-        ns = sizes.get(g["key"], [])
-        if len(ns) != len(posts) // len(man["groups"]):
-            bad.append("group %s holds %d posts" % (g["key"], len(ns)))
-        if ns != sorted(ns):
-            bad.append("group %s is out of order: %s" % (g["key"], ns))
+        path = os.path.join(BLOG, p["slug"] + ".html")
+        if os.path.exists(path) and strip_open not in read(path):
+            bad.append("%s.html exists but is not a %s post — refusing to overwrite it"
+                       % (p["slug"], man["series"]))
     for field, fn in (("slug", lambda p: p["slug"]), ("chip", lambda p: p["chip"]),
                       ("cover", lambda p: p["cover"])):
         seen = [fn(p) for p in posts]
@@ -571,6 +645,9 @@ def check(man, sk):
         if not 70 <= n <= 160:
             bad.append("%s description is %d chars (want 70-160)" % (p["slug"], n))
         for f in p["figures"]:
+            pfx = man.get("figure_prefix")
+            if pfx and not f["file"].startswith(pfx):
+                bad.append("%s figure %s does not start with %r" % (p["slug"], f["file"], pfx))
             if "-cover." in f["file"] or "-og." in f["file"]:
                 bad.append("%s figure %s collides with the cover-detection substring"
                            % (p["slug"], f["file"]))
@@ -591,8 +668,10 @@ def check(man, sk):
     for line in bad:
         print("  ✗ %s" % line)
     if missing:
+        pfx = man["series"] + "-"
         print("  … %d sheet pair(s) not written yet: %s"
-              % (len(missing), ", ".join(m.replace("ai-transformation-", "") for m in missing)))
+              % (len(missing), ", ".join(m[len(pfx):] if m.startswith(pfx) else m
+                                         for m in missing)))
     print("%-22s %s" % (man["series"], "OK" if not bad else "%d problem(s)" % len(bad)))
     return 1 if bad else 0
 
@@ -601,8 +680,17 @@ def emit(man, sk, slugs):
     rc = 0
     if not os.path.isdir(WORKDIR):
         os.makedirs(WORKDIR)
+    strip_open = STRIP_OPEN % man["aria_label"]
     for p in man["posts"]:
         if slugs and p["slug"] not in slugs:
+            continue
+        path = os.path.join(BLOG, p["slug"] + ".html")
+        if os.path.exists(path) and strip_open not in read(path):
+            # blog/hermes-desktop-fleet.html is Hermes #10, not a hermes-desktop
+            # post; a manifest slug that lands on a foreign file must not clobber it.
+            print("%-38s BAIL: exists but is not a %s post — refusing to overwrite"
+                  % (p["slug"], man["series"]), file=sys.stderr)
+            rc = 1
             continue
         try:
             page, job = build(man, p, sk)
@@ -709,11 +797,18 @@ def llms_fragment(man):
 
 
 def covers_rows(man):
-    """The covers.tsv rows this series needs, for cross-checking what was written."""
+    """The covers.tsv rows this series needs, for cross-checking what was
+    written.  Eyebrow, accent, ground rotation and motif prefix come from the
+    manifest's "covers" block; the motif itself is `<prefix>?` because it is
+    the one thing a drawing decides, not a table."""
+    cv = man.get("covers") or {}
+    grounds = cv.get("grounds") or ["cloud", "parchment"]
     for p in man["posts"]:
-        ground = "cream" if p["n"] % 2 else "parchment"
-        print("%s\t%s\tat_?\t%s\tcoral\tAI TRANSFORMATION · %s\t?\t?\t"
-              % (p["slug"], p["cover"], ground, roman(p["n"])))
+        ground = grounds[(p["n"] - 1) % len(grounds)]
+        print("%s\t%s\t%s?\t%s\t%s\t%s · %s\t?\t?\t"
+              % (p["slug"], p["cover"], cv.get("motif_prefix", "xx_"), ground,
+                 cv.get("accent", "violet"), cv.get("eyebrow", man["title"].upper()),
+                 roman(p["n"])))
     return 0
 
 
@@ -751,7 +846,7 @@ def main():
     if a.all or a.post:
         return emit(man, sk, set(a.post))
     ap.error("nothing to do — pass --check, --all, --post, --restrip, "
-             "--sync-read-min, --index-fragment or --llms-fragment")
+             "--sync-read-min, --index-fragment, --llms-fragment or --covers-rows")
 
 
 if __name__ == "__main__":

@@ -333,7 +333,7 @@ The 2 files with no `.post-body h2/h3/h4` rules at all are `openclaw-memory-arch
 `vibe-coding-devops-process.html` (§0).
 
 **The extension work this section used to schedule is DONE.** The 11 island files were converted in
-`662e966`; all 76 posts now carry the house body type, the canonical `clamp()` title, and the
+`662e966`; all 83 posts now carry the house body type, the canonical `clamp()` title, and the
 Inter + Sarabun webfont pair. The 5 LISTING pages and the 4 DETAIL pages are `16px` / `1.7` and
 that is deliberate and uniform across all nine — leave it. The five font stacks this section listed
 for retirement (`'SF Pro Display'`, `'Segoe UI', Tahoma, …`, bare `-apple-system`,
@@ -448,7 +448,7 @@ Content    .callout  .callout--info|--warn|--good|--bad    [defined in the templ
                                           evidence a source is, .ref-supports says which
                                           claim it carries)
 Language   .lang-switch-box  .lang-switch  .lang-th  .lang-sep  .lang-en
-           .l-th  .l-en                    (the TH ⇄ EN switch — all 76 posts. Pure CSS:
+           .l-th  .l-en                    (the TH ⇄ EN switch — all 83 posts. Pure CSS:
                                           a hidden checkbox before <main>, two content
                                           tracks. The short .l-* names are the TRACKS;
                                           .lang-* are the pill. Never rename to anything
@@ -1041,5 +1041,5 @@ launch (`5348a2c`…`905d3a4`): 87 HTML files, 86 enumerated, 76 posts in 5 seri
 
 Four numbers in this file are the ones most likely to be stale first, because a single new post
 moves all of them: the post count (76), the series counts (20/10/13/24/9), the image census
-(299 `<img>`, 85 covers, 82 share cards) and the `.card__title` heading level (`h3`). Re-run their
+(336 `<img>`, 91 covers, 87 share cards) and the `.card__title` heading level (`h3`). Re-run their
 commands before trusting them — and then update them here, per the standing rule at the top.

@@ -1,0 +1,892 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Profiles — หนึ่ง agent ต่อหนึ่งบทบาท | Anirach Mingkhwan</title>
+  <meta name="description" content="สร้าง profile ใน Hermes Desktop ทีละขั้น — Bot ต่อบทบาท, SOUL.md, โฟลเดอร์งาน, โมเดลต่อ profile และการย้าย profile ข้ามเครื่อง">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=Sarabun:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      color-scheme: light;
+      /* ink */
+      --navy: #11304b; --slate: #334155; --slate-light: #526174; --gray: #94a3b8;
+      /* ground */
+      --bg: #faf7f0; --white: #ffffff; --code-bg: #1e293b;
+      /* accent */
+      --blue: #226299; --blue-dark: #1a4d7a; --blue-light: #4992b9;
+      /* brand — sampled from the book covers. --gold is decorative on light grounds (2.2:1); --gold-dark is its text form. */
+      --gold: #c4a46c; --gold-dark: #7a5f22; --cloud: #dee7e6; --parchment: #e9e1c4; --focus: #226299;
+      /* status — use only these six, never invent a seventh */
+      --green: #22c55e; --red: #ef4444; --amber: #f59e0b;
+      --cyan: #06b6d4; --purple: #226299; --purple-dark: #1a4d7a;
+      /* type */
+      --font: 'Inter', 'Sarabun', -apple-system, BlinkMacSystemFont, sans-serif;
+      --mono: 'JetBrains Mono', 'Fira Code', 'Sarabun', monospace;
+      /* form */
+      --radius: 12px; --radius-sm: 8px; --radius-lg: 16px;
+      --measure: 720px; --wide: 860px;
+      --transition: 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+    html { scroll-behavior: smooth; }
+    body { font-family: var(--font); font-size: 17px; line-height: 1.8; color: var(--slate); background: var(--bg); -webkit-font-smoothing: antialiased; }
+    .blog-nav { position: fixed; top: 0; left: 0; right: 0; z-index: 100; background: rgba(248,250,252,0.85); backdrop-filter: blur(20px); border-bottom: 1px solid rgba(0,0,0,0.05); }
+    .blog-nav__inner { max-width: 860px; margin: 0 auto; padding: 0 2rem; height: 56px; display: flex; align-items: center; justify-content: space-between; }
+    .blog-nav__back { font-size: 0.85rem; font-weight: 500; color: var(--blue); text-decoration: none; }
+    .blog-nav__back:hover { color: #1a4d7a; }
+    .blog-nav__title { font-size: 0.85rem; font-weight: 600; color: var(--navy); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 50%; }
+    /* ── HERO ── house .post-hero on the approved Deep Blue gradient (page-design
+       §5 / INV-28). Ink is inverted for the dark ground: white title/meta, tag
+       pills white on 18% white — the openclaw-production treatment. The
+       background value must stay byte-identical to the approved string. */
+    .post-hero { padding: 8rem 2rem 3rem; background: linear-gradient(135deg, #11304b 0%, #1a4d7a 45%, #226299 100%); color: #fff; text-align: center; }
+    .post-hero__tags { display: flex; gap: 0.5rem; justify-content: center; margin-bottom: 1.25rem; flex-wrap: wrap; }
+    .post-hero__tag { display: inline-block; font-size: 0.72rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.1em; color: #fff; background: rgba(255,255,255,0.18); padding: 0.35rem 0.9rem; border-radius: 20px; }
+    .post-hero__title { font-size: clamp(1.8rem, 5vw, 3rem); font-weight: 800; color: #fff; line-height: 1.2; margin-bottom: 1rem; max-width: 720px; margin-left: auto; margin-right: auto; }
+    .post-hero__sub { font-size: 1.05rem; max-width: 640px; margin: 0 auto 1.5rem; line-height: 1.7; color: #fff; }
+    .post-hero__meta { font-size: 0.85rem; color: #fff; display: flex; align-items: center; justify-content: center; gap: 1.5rem; flex-wrap: wrap; }
+    .post-hero__series { font-weight: 600; color: #fff; }
+    /* the switch pill and the focus ring both sit on the dark hero: the pill is
+       a light chip so its labels keep their light-ground colours, and --focus
+       re-points to gold here (blue collapses on blue — the footer/pre
+       precedent). */
+    .post-hero { --focus: var(--gold); }
+    .post-hero__cover {
+      aspect-ratio: 1 / 1;
+      max-width: 380px;
+      margin: 2.5rem auto 0;
+      border-radius: var(--radius-lg, 16px);
+      overflow: hidden;
+      box-shadow: 0 20px 60px rgba(17,48,75,0.14);
+    }
+    .post-hero__cover img { width: 100%; height: 100%; object-fit: cover; display: block; }
+    .post-body { max-width: 720px; margin: 0 auto; padding: 3rem 2rem 6rem; }
+    .post-body h2 { font-size: 1.6rem; font-weight: 800; color: var(--navy); margin: 3rem 0 1rem; padding-bottom: 0.5rem; border-bottom: 2px solid rgba(34,98,153,0.15); }
+    .post-body h3 { font-size: 1.25rem; font-weight: 700; color: var(--navy); margin: 2.25rem 0 0.75rem; }
+    .post-body p { margin-bottom: 1.25rem; }
+    .post-body strong { font-weight: 700; color: var(--navy); }
+    .post-body a { color: var(--blue); text-decoration: underline; text-decoration-thickness: 1px; text-underline-offset: 2px; }
+    .post-body ul, .post-body ol { margin: 0.5rem 0 1.25rem 1.5rem; }
+    .post-body li { margin-bottom: 0.4rem; }
+    .post-body blockquote { background: rgba(34,98,153,0.06); border-left: 4px solid var(--blue); padding: 1rem 1.25rem; border-radius: 0 10px 10px 0; margin: 1.25rem 0; font-size: 0.95rem; color: var(--navy); }
+    .post-body hr { border: none; height: 1px; background: linear-gradient(90deg, transparent, rgba(34,98,153,0.2), transparent); margin: 3rem 0; }
+    /* ── CODE ── */
+    .post-body pre { background: var(--code-bg); border-radius: 12px; padding: 1.5rem; margin: 1.25rem 0 1.5rem; overflow-x: auto; border: 1px solid rgba(255,255,255,0.05); }
+    .post-body pre code { font-family: var(--mono); font-size: 0.85rem; color: #e2e8f0; line-height: 1.7; background: none; padding: 0; white-space: pre-wrap; }
+    .post-body code { font-family: var(--mono); font-size: 0.88em; background: rgba(34,98,153,0.08); color: var(--blue-dark); padding: 0.15em 0.45em; border-radius: 5px; }
+    /* ── TABLES ── */
+    .table-wrapper { overflow-x: auto; margin: 1.5rem 0; border-radius: 0.5rem; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1); }
+    table { width: 100%; border-collapse: collapse; background: white; }
+    th { background: #226299; color: white; padding: 1rem; text-align: left; font-weight: 600; }
+    td { padding: 1rem; border-bottom: 1px solid #e5e7eb; }
+    .post-body table { display: block; width: 100%; overflow-x: auto; }
+    /* ── ALERTS ── */
+    .alert { background: #fef3cd; border: 1px solid #facc15; border-radius: 0.5rem; padding: 1rem; margin: 1.5rem 0; }
+    .alert.danger { background: #fee2e2; border-color: #ef4444; }
+    .alert.info { background: #e0f2fe; border-color: #06b6d4; }
+    .alert.success { background: #d1fae5; border-color: #10b981; }
+    /* ── KEY TAKEAWAYS ── */
+    .key-takeaways { background: linear-gradient(135deg, #f3f4f6 0%, #e5e7eb 100%); border-radius: 1rem; padding: 2rem; margin: 3rem 0; }
+    .key-takeaways h3 { color: #226299; margin-bottom: 1.5rem; }
+    .post-series-footer { text-align: center; font-size: 0.85rem; color: var(--slate-light); font-style: italic; margin-top: 2rem; padding-top: 2rem; border-top: 1px solid #e2e8f0; }
+    .blog-footer { background: var(--navy); padding: 2rem 0; text-align: center; }
+    .blog-footer a { color: var(--gold); text-decoration: none; font-weight: 600; font-size: 0.9rem; }
+    .blog-footer span { color: var(--gray); font-size: 0.8rem; display: block; margin-top: 0.4rem; }
+    @media (max-width: 600px) {
+      .post-hero { padding: 7rem 1.25rem 2.5rem; }
+      .post-body { padding: 2rem 1.25rem 4rem; }
+      .post-hero__meta { flex-direction: column; gap: 0.4rem; }
+      .post-body h2 { font-size: 1.4rem; }
+      .post-body h3 { font-size: 1.15rem; }
+      .post-body pre { padding: 1rem; border-radius: 8px; }
+    }
+
+    :focus-visible { outline: 2px solid var(--focus); outline-offset: 3px; border-radius: 2px; }
+    /* the ring sits on the page ground (3px offset). Inside the navy footers
+       and code blocks var(--blue) collapses to 2.12:1, so those scopes
+       re-point --focus to gold (5.73:1 on navy). */
+    .footer, .blog-footer, pre { --focus: var(--gold); }
+    :focus:not(:focus-visible) { outline: none; }
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after {
+        animation-duration: .01ms !important; animation-iteration-count: 1 !important;
+        transition-duration: .01ms !important; scroll-behavior: auto !important;
+      }
+    }
+    h1, h2, h3, .post-hero__title, .card__title { text-wrap: balance; }
+
+    .post-body img, .post-body svg { max-width: 100%; height: auto; }
+
+    /* ── SKIP LINK ── a11y-perf R5: the link and the landmark it targets are a
+       pair — useless without both halves. Off-screen until focused, then the
+       first tab stop on every page. */
+    .skip-link { position: absolute; left: -9999px; }
+    .skip-link:focus {
+      left: 1rem; top: 1rem; z-index: 999;
+      background: var(--navy); color: #fff;
+      padding: 0.75rem 1.25rem; border-radius: var(--radius-sm);
+      font-weight: 600; text-decoration: none;
+    }
+
+    /* ── POST WAYFINDING ── the wordmark is the home link; the footer carries
+       the full destination row. */
+    .blog-nav__home {
+      font-size: 0.9rem; font-weight: 800; color: var(--navy);
+      text-decoration: none; margin-right: 1rem;
+    }
+    .blog-nav__home:hover { color: var(--blue); }
+    .blog-nav__inner > .blog-nav__back { margin-right: auto; }
+    .blog-footer__nav {
+      display: flex; flex-wrap: wrap; justify-content: center; gap: 0.35rem 1.25rem;
+      max-width: 860px; margin: 0 auto 1.25rem; padding: 0 2rem 1.25rem;
+      border-bottom: 1px solid rgba(255,255,255,0.12);
+    }
+    .blog-footer__nav a { color: var(--gold); font-size: 0.85rem; font-weight: 600; text-decoration: none; }
+    .blog-footer__nav a:hover { color: #fff; text-decoration: underline; }
+
+    html { scroll-padding-top: 5rem; }
+    [id] { scroll-margin-top: 5rem; }
+
+    /* Thai needs more room than Latin at the same nominal size. */
+    .post-body:lang(th) { font-size: 18px; line-height: 1.85; }
+    .post-body p, .post-body li, .post-body blockquote { text-wrap: pretty; }
+
+    /* ---- side-scroll affordance ----
+       pre blocks and tables can exceed 720px. These layers paint a shadow ONLY
+       where there is more content in that direction; when fully scrolled the
+       cover slides over the shadow and hides it. No JavaScript, no wrapper. */
+    .post-body pre, .post-body table {
+      overflow-x: auto;
+      background-image:
+        linear-gradient(to right, var(--code-bg, #0f172a) 30%, rgba(15,23,42,0)),
+        linear-gradient(to left, var(--code-bg, #0f172a) 30%, rgba(15,23,42,0)),
+        radial-gradient(farthest-side at 0 50%, rgba(0,0,0,.28), rgba(0,0,0,0)),
+        radial-gradient(farthest-side at 100% 50%, rgba(0,0,0,.28), rgba(0,0,0,0));
+      background-position: 0 0, 100% 0, 0 0, 100% 0;
+      background-repeat: no-repeat;
+      background-size: 40px 100%, 40px 100%, 14px 100%, 14px 100%;
+      background-attachment: local, local, scroll, scroll;
+    }
+    .post-body table {
+      background-image:
+        linear-gradient(to right, var(--white, #fff) 30%, rgba(255,255,255,0)),
+        linear-gradient(to left, var(--white, #fff) 30%, rgba(255,255,255,0)),
+        radial-gradient(farthest-side at 0 50%, rgba(17,48,75,.16), rgba(17,48,75,0)),
+        radial-gradient(farthest-side at 100% 50%, rgba(17,48,75,.16), rgba(17,48,75,0));
+      background-position: 0 0, 100% 0, 0 0, 100% 0;
+      background-repeat: no-repeat;
+      background-size: 40px 100%, 40px 100%, 14px 100%, 14px 100%;
+      background-attachment: local, local, scroll, scroll;
+    }
+
+    /* ---- table of contents ---- */
+    .post-toc {
+      max-width: 720px;
+      margin: 2rem auto 0;
+      padding: 1rem 1.25rem;
+      background: rgba(34,98,153,0.05);
+      border: 1px solid rgba(34,98,153,0.14);
+      border-left: 3px solid var(--gold, #c4a46c);
+      border-radius: 10px;
+      font-size: 0.92rem;
+    }
+    .post-toc > summary {
+      cursor: pointer;
+      font-weight: 700;
+      color: var(--navy);
+      list-style: none;
+    }
+    .post-toc > summary::-webkit-details-marker { display: none; }
+    .post-toc > summary::before {
+      content: "\25B8";
+      display: inline-block;
+      margin-right: 0.5rem;
+      transition: transform 0.2s ease;
+      color: var(--gold-dark, #7a5f22);
+    }
+    .post-toc[open] > summary::before { transform: rotate(90deg); }
+    .post-toc > summary:focus-visible { outline: 3px solid var(--focus, #226299); outline-offset: 3px; }
+    .post-toc ol { margin: 0.85rem 0 0.25rem; padding-left: 1.4rem; }
+    .post-toc li { margin-bottom: 0.4rem; line-height: 1.5; }
+    .post-toc a { color: var(--slate); text-decoration: none; }
+    .post-toc a:hover, .post-toc a:focus-visible { color: var(--blue-dark, #1a4d7a); text-decoration: underline; }
+    @media (max-width: 600px) { .post-toc { margin: 1.25rem 1rem 0; } }
+
+    /* ---- cross-document view transitions ---- */
+    @view-transition { navigation: auto; }
+    .nav, .blog-nav { view-transition-name: site-nav; }
+    .footer, .blog-footer { view-transition-name: site-footer; }
+    @media (prefers-reduced-motion: reduce) {
+      ::view-transition-group(*),
+      ::view-transition-old(*),
+      ::view-transition-new(*) { animation: none !important; }
+    }
+
+    /* ── SERIES STRIP — Hermes Agent in Practice ──
+       Same class and inner-wrapper shape as the OpenClaw strip because the
+       linter's RE_SNAV recognises exactly `series-nav` + a nested div; a
+       renamed strip would read as "no nav" and fail INV-08. All content
+       checks (INV-03 family) iterate the SERIES7 list only, so this strip's
+       labels are convention, not contract. House-styled, not the island CSS. */
+    .series-nav {
+      max-width: 720px; margin: 2rem auto 0; padding: 1.1rem 1.4rem;
+      background: rgba(255,255,255,0.75); border: 1px solid rgba(34,98,153,0.15);
+      border-left: 3px solid var(--gold); border-radius: 12px;
+    }
+    .series-nav h3 {
+      font-size: 0.78rem; font-weight: 700; text-transform: uppercase;
+      letter-spacing: 0.08em; color: var(--gold-dark); margin-bottom: 0.6rem;
+    }
+    .series-links { display: flex; flex-wrap: wrap; gap: 0.5rem; }
+    .series-links a, .series-links .current {
+      font-size: 0.82rem; font-weight: 600; padding: 0.35rem 0.8rem;
+      border-radius: 50px; text-decoration: none;
+    }
+    .series-links a { color: var(--blue-dark); background: rgba(34,98,153,0.08); }
+    .series-links a:hover { background: rgba(34,98,153,0.16); }
+    .series-links .current { color: #fff; background: var(--blue-dark); }
+    @media (max-width: 600px) { .series-nav { margin: 1.5rem 1rem 0; } }
+
+    /* ── FIGURE — the sanctioned diagram component (page-design §4 Content).
+       Diagrams are PNGs; this repo built them out of divs twice and reverted
+       twice. The image is wrapped in a link to itself so a phone can pinch a
+       1400px drawing without a line of JavaScript. */
+    .figure { margin: 2.5rem 0; }
+    .figure__img { width: 100%; height: auto; display: block;
+                   border-radius: var(--radius); border: 1px solid rgba(0,0,0,0.06); }
+    .figure__caption { font-size: 0.85rem; color: var(--slate-light);
+                       text-align: center; margin-top: 0.75rem; }
+
+    /* ── REFERENCES — every material number in this series carries its source.
+       The tags are the book's own four evidence labels. */
+    .references { margin-top: 3rem; padding-top: 2rem; border-top: 1px solid #e2e8f0; }
+    .references__note { font-size: 0.85rem; color: var(--slate-light); margin-bottom: 1rem; }
+    .references__list { padding-left: 1.4rem; font-size: 0.9rem; line-height: 1.75; }
+    .references__list li { margin-bottom: 0.7rem; }
+    .ref-tag { display: inline-block; font-size: 0.7rem; font-weight: 700;
+               letter-spacing: 0.06em; text-transform: uppercase; padding: 0.1rem 0.5rem;
+               border-radius: 50px; margin-right: 0.4rem; vertical-align: 0.05em;
+               background: rgba(34,98,153,0.1); color: var(--blue-dark); }
+    /* All four labels get a rule.  --standard and --study shipped without one
+       on 2026-09-05, so 158 of 306 tags fell through to the base blue and the
+       two labels were indistinguishable.  Ratios on --bg: 6.70 / 6.92 / 7.36 /
+       4.81:1, all AA at this size. */
+    .ref-tag--law { background: rgba(239,68,68,0.12); color: #991b1b; }
+    .ref-tag--standard { background: rgba(34,98,153,0.12); color: var(--blue-dark); }
+    .ref-tag--study { background: rgba(34,197,94,0.18); color: #14532d; }
+    .ref-tag--synthesis { background: rgba(196,164,108,0.22); color: var(--gold-dark); }
+    .ref-supports { display: block; color: var(--slate-light); font-size: 0.85rem; }
+
+    /* ── LANGUAGE SWITCH — pure CSS, zero JavaScript (INV-38) ──
+       One visually-hidden checkbox as a direct child of body, BEFORE the main landmark,
+       so `#langSwitch:checked ~ main …` reaches every content block. The two
+       tracks are paired blocks: .l-th (default) and .l-en (hidden until
+       checked; display:revert restores block for divs, inline for spans).
+       Naming stays clear of INV-12's menu-token regex (hamburger|burger|
+       nav__toggle|nav-toggle|navtoggle|menu-toggle|menu__toggle) — verified.
+       No JS also means no persistence across posts; each post opens in Thai. */
+    .lang-switch-box { position: absolute; left: -9999px; }
+    .l-en { display: none; }
+    #langSwitch:checked ~ main .l-en { display: revert; }
+    #langSwitch:checked ~ main .l-th { display: none; }
+    .lang-switch {
+      display: inline-flex; align-items: center; gap: 0.55rem;
+      margin-top: 1.4rem; padding: 0.4rem 1.1rem; border-radius: 50px;
+      background: rgba(255,255,255,0.85); border: 1px solid rgba(255,255,255,0.4);
+      cursor: pointer; font-size: 0.85rem; user-select: none;
+    }
+    .lang-switch span { color: var(--slate-light); font-weight: 600; transition: color 0.2s; }
+    .lang-switch .lang-sep { color: var(--gray); font-weight: 400; }
+    .lang-switch .lang-th { color: var(--navy); font-weight: 800; }
+    #langSwitch:checked ~ main .lang-switch .lang-th { color: var(--slate-light); font-weight: 600; }
+    #langSwitch:checked ~ main .lang-switch .lang-en { color: var(--navy); font-weight: 800; }
+    .lang-switch:hover { border-color: #fff; }
+    #langSwitch:focus-visible ~ main .lang-switch {
+      outline: 2px solid var(--focus); outline-offset: 3px;
+    }
+  </style>
+  <!-- social -->
+  <link rel="canonical" href="https://anirach.com/blog/hermes-desktop-profiles.html">
+  <meta property="og:type" content="article">
+  <meta property="og:url" content="https://anirach.com/blog/hermes-desktop-profiles.html">
+  <meta property="og:site_name" content="Anirach Mingkhwan">
+  <meta property="og:locale" content="th_TH">
+  <meta property="og:locale:alternate" content="en_US">
+  <meta property="article:published_time" content="2026-09-07">
+  <meta property="article:author" content="https://anirach.com/">
+  <meta property="og:title" content="Profiles — หนึ่ง agent ต่อหนึ่งบทบาท">
+  <meta property="og:description" content="สร้าง profile ใน Hermes Desktop ทีละขั้น — Bot ต่อบทบาท, SOUL.md, โฟลเดอร์งาน, โมเดลต่อ profile และการย้าย profile ข้ามเครื่อง">
+  <meta property="og:image" content="https://anirach.com/images/hermes-desktop-profiles-og.jpg">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
+  <meta property="og:image:alt" content="Profiles — หนึ่ง agent ต่อหนึ่งบทบาท">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:image" content="https://anirach.com/images/hermes-desktop-profiles-og.jpg">
+  <meta name="twitter:image:alt" content="Profiles — หนึ่ง agent ต่อหนึ่งบทบาท">
+  <meta name="robots" content="max-image-preview:large">
+  <meta name="theme-color" content="#11304b">
+  <link rel="icon" href="/favicon.ico" sizes="any">
+  <link rel="apple-touch-icon" href="/apple-touch-icon.png">
+  <!-- /social -->
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "BlogPosting",
+    "headline": "Profiles — หนึ่ง agent ต่อหนึ่งบทบาท",
+    "author": {
+      "@type": "Person",
+      "@id": "https://anirach.com/#person",
+      "name": "Anirach Mingkhwan",
+      "url": "https://anirach.com/"
+    },
+    "datePublished": "2026-09-07",
+    "dateModified": "2026-09-07",
+    "image": "https://anirach.com/images/hermes-desktop-profiles-og.jpg",
+    "inLanguage": [
+      "th",
+      "en"
+    ],
+    "mainEntityOfPage": "https://anirach.com/blog/hermes-desktop-profiles.html"
+  }
+  </script>
+</head>
+<body>
+<a href="#main" class="skip-link">Skip to content</a>
+<input type="checkbox" id="langSwitch" class="lang-switch-box" aria-label="Switch language: Thai / English">
+
+  <nav class="blog-nav">
+    <div class="blog-nav__inner">
+      <a href="../index.html" class="blog-nav__home">Anirach</a>
+      <a href="./" class="blog-nav__back">‹ Blog</a>
+      <div class="blog-nav__title">Profiles</div>
+    </div>
+  </nav>
+
+  <main id="main">
+
+  <header class="post-hero">
+    <div class="post-hero__tags">
+      <span class="post-hero__tag">Hermes Desktop</span>
+      <span class="post-hero__tag">Profiles</span>
+      <span class="post-hero__tag">Bot Mode</span>
+    </div>
+    <h1 class="post-hero__title"><span class="l-th">Profiles — หนึ่ง agent ต่อหนึ่งบทบาท</span><span class="l-en" lang="en">Profiles — One Agent per Role</span></h1>
+    <p class="post-hero__sub"><span class="l-th">profile คือ Hermes home directory แยกต่างหาก — สร้างเป็น Bot ในหน้าจอหรือด้วย hermes profile create, ใส่ SOUL.md, ผูกโฟลเดอร์งาน, ปักโมเดลต่อ profile แล้วส่งออก/นำเข้าข้ามเครื่อง 🎭</span><span class="l-en" lang="en">A profile is a separate Hermes home directory — create one as a Bot on screen or with hermes profile create, give it a SOUL.md, pin a working folder and a model, then export and import it across machines 🎭</span></p>
+    <div class="post-hero__meta">
+      <span>By <strong>Anirach Mingkhwan</strong></span>
+      <span class="post-hero__series">Hermes Desktop Hands-On 2026 • Post #3</span>
+      <span><time datetime="2026-09-07">7 Sep 2026</time></span>
+      <span>19 min read</span>
+    </div>
+    <label for="langSwitch" class="lang-switch" title="สลับภาษา · Switch language"><span class="lang-th">ไทย</span><span class="lang-sep">·</span><span class="lang-en" lang="en">English</span></label>
+    <div class="post-hero__cover">
+      <img src="../images/hermes-desktop-profiles-cover.jpg" alt="Profiles — หนึ่ง agent ต่อหนึ่งบทบาท" width="800" height="800" loading="eager" fetchpriority="high" decoding="async">
+    </div>
+  </header>
+
+  <article class="post-body">
+
+    <details class="post-toc l-th" open>
+      <summary>ในบทความนี้</summary>
+      <ol>
+          <li><a href="#th-what-is-a-profile">1. What a Profile Is — and What It Is Not</a></li>
+          <li><a href="#th-owns-and-shares">2. What a Profile Owns, and What It Shares</a></li>
+          <li><a href="#th-create-a-bot">3. Procedure A — Create a Bot on Screen</a></li>
+          <li><a href="#th-create-from-terminal">4. Procedure B — The Same Thing from the Terminal</a></li>
+          <li><a href="#th-persona-folder-model">5. Persona, Folder and Model</a></li>
+          <li><a href="#th-move-a-profile">6. Move a Profile to Another Machine</a></li>
+          <li><a href="#th-rules">7. Rules That Save You Pain</a></li>
+          <li><a href="#th-summary">8. สรุป</a></li>
+      </ol>
+    </details>
+    <details class="post-toc l-en" open>
+      <summary>In this post</summary>
+      <ol>
+          <li><a href="#en-what-is-a-profile">1. What a Profile Is — and What It Is Not</a></li>
+          <li><a href="#en-owns-and-shares">2. What a Profile Owns, and What It Shares</a></li>
+          <li><a href="#en-create-a-bot">3. Procedure A — Create a Bot on Screen</a></li>
+          <li><a href="#en-create-from-terminal">4. Procedure B — The Same Thing from the Terminal</a></li>
+          <li><a href="#en-persona-folder-model">5. Persona, Folder and Model</a></li>
+          <li><a href="#en-move-a-profile">6. Move a Profile to Another Machine</a></li>
+          <li><a href="#en-rules">7. Rules That Save You Pain</a></li>
+          <li><a href="#en-summary">8. Summary</a></li>
+      </ol>
+    </details>
+    <div class="l-th">
+
+    <p>🤔 <strong>ถ้าคุณอยากได้ agent สำหรับงานวิจัย อีกตัวสำหรับเขียนโค้ด และอีกตัวสำหรับงานการเงิน — ต้องลง Hermes สามชุดไหม?</strong></p>
+
+    <p>ตอนที่แล้ว — <a href="/blog/hermes-desktop-local-models">#2 Local Models</a> — เราต่อ Hermes Desktop เข้ากับโมเดลบนเครื่องของเราเอง แล้วคำถามที่ตามมาทันทีคือคำถามเรื่องการจัดระเบียบ: พอมีทั้งโมเดลที่เสียเงินและโมเดลฟรีอยู่ในมือ เราจะแยก "งานที่ควรใช้ตัวไหน" อย่างไรโดยไม่ต้องมานั่งเปลี่ยนโมเดลทุกครั้งที่เปิดแชตใหม่ และจะทำอย่างไรให้ agent ที่อ่านงบการเงินไม่เอาความจำจากงานเขียนโค้ดมาปน</p>
+
+    <p>คำตอบหนึ่งบรรทัด: Hermes เรียกสิ่งนี้ว่า <strong>profile</strong> และนิยามของมันสั้นมาก — <em>"A profile is a separate Hermes home directory"</em> <span lang="en">profile</span> คือ Hermes home directory อีกอันหนึ่ง มี <code>config.yaml</code>, <code>.env</code>, <code>SOUL.md</code>, ความจำ, session, skill, cron job และฐานข้อมูล state เป็นของตัวเองครบชุด<sup><a href="#th-ref-1">[1]</a></sup> บทความนี้พาสร้าง profile สองทาง — เป็น Bot บนหน้าจอ และด้วยคำสั่งใน terminal — แล้วต่อด้วยการใส่บุคลิก ผูกโฟลเดอร์งาน ปักโมเดล และย้ายทั้งตัวข้ามเครื่อง</p>
+
+    <h2 id="th-what-is-a-profile" lang="en">1. What a Profile Is — and What It Is Not</h2>
+
+    <p>คำตอบตรง ๆ ก่อน: profile คือ <strong>Hermes home directory แยกต่างหาก</strong> ไม่ใช่ทั้งโปรแกรมที่ลงใหม่ profile ที่ตั้งชื่อแล้วอยู่ที่ <code>~/.hermes/profiles/&lt;name&gt;/</code> ส่วน profile ตั้งต้นคือ <code>~/.hermes</code> เองโดยมีรหัสภายในว่า <code>default</code> เสมอ เอกสารย้ำว่า <em>"No migration needed — existing installs work identically"</em> ของเดิมที่คุณมีอยู่ไม่ต้องย้ายอะไรเลย<sup><a href="#th-ref-1">[1]</a></sup></p>
+
+    <p>กลไกเบื้องหลังเป็นตัวแปรสภาพแวดล้อมตัวเดียวคือ <code>HERMES_HOME</code> เอกสารอธิบายว่ามีไฟล์ในโค้ดเบสมากกว่า 119 ไฟล์ที่หา path ผ่าน <code>get_hermes_home()</code> ดังนั้นเมื่อชี้ตัวแปรนี้ไปที่โฟลเดอร์ไหน state ของ Hermes ทั้งหมด — config, session, ความจำ, skill, ฐานข้อมูล state, PID ของ gateway, log และ cron job — ก็ย้ายตามไปทั้งก้อน<sup><a href="#th-ref-1">[1]</a></sup> และเมื่อคุณสร้าง profile หนึ่งอัน มันจะกลายเป็นคำสั่งของตัวเองทันที: สร้าง <code>coder</code> แล้วคุณมี <code>coder chat</code>, <code>coder setup</code>, <code>coder gateway start</code> ใช้ได้เลย</p>
+
+    <figure class="figure">
+      <a href="../images/hermes-desktop-fig-03-profiles.png">
+        <img class="figure__img" src="../images/hermes-desktop-fig-03-profiles.png" alt="แผนภาพกล่องใหญ่ ~/.hermes มีแถวไฟล์ config.yaml ถึง state.db ด้านใน และกล่องย่อย profiles ที่มีสามกล่อง research, coder, finance แต่ละกล่องมีแถวไฟล์เดียวกันย่อส่วน มีแถบ auth.json ด้านบนโยงเส้นประไปทั้งสาม" width="1400" height="840" loading="lazy" decoding="async">
+      </a>
+      <figcaption class="figure__caption">รูปที่ 1 · profile คือ home directory แยกกัน ใต้ ~/.hermes/profiles/ — แต่ละอันมี config, SOUL, ความจำ และ session ของตัวเอง แชร์เฉพาะ OAuth ใน auth.json</figcaption>
+    </figure>
+
+    <p>ที่ต้องแยกให้ขาดตั้งแต่ต้นคือคำสามคำที่คนสับสนกันบ่อยที่สุด เอกสารแยกไว้ชัดเจนสามข้อ<sup><a href="#th-ref-1">[1]</a></sup>:</p>
+
+    <ul>
+        <li><strong>profile</strong> = state directory ของ Hermes เอง — <code>config.yaml</code>, <code>.env</code>, <code>SOUL.md</code>, session, ความจำ, log, cron job และ state ของ gateway</li>
+        <li><strong>workspace</strong> หรือ working directory = จุดที่คำสั่ง terminal เริ่มทำงาน ควบคุมแยกต่างหากด้วย <code>terminal.cwd</code> — ไม่ใช่โฟลเดอร์ของ profile</li>
+        <li><strong>sandbox</strong> = สิ่งที่จำกัดการเข้าถึงไฟล์ และเอกสารเขียนตัวหนาไว้ว่า <em>"Profiles do <strong>not</strong> sandbox the agent"</em> — บน backend <code>local</code> ที่เป็นค่าเริ่มต้น agent ยังเข้าถึงไฟล์ได้เท่ากับบัญชีผู้ใช้ของคุณทุกประการ</li>
+    </ul>
+
+    <p>ข้อสามคือข้อที่ผมอยากให้ผู้อ่านชาวไทยจำให้แม่นที่สุด เพราะ "แยก profile" ฟังดูเหมือน "แยกกล่อง" แต่มันไม่ใช่กำแพงความปลอดภัย มันคือการแยก <em>สถานะ</em> ไม่ใช่การแยก <em>สิทธิ์</em> ถ้าคุณต้องการกำแพงจริง ๆ ต้องไปที่ระดับ execution backend ซึ่งเป็นเรื่องของ <a href="/blog/hermes-desktop-safety">#7 Safety, Remote &amp; Recovery</a> ส่วนกลไกของ Bot Mode ที่ทำให้ profile คุยกันเองได้อยู่ใน <a href="/blog/hermes-agent-teams">Hermes #2 Agent Teams</a> และการแจก profile เป็น git repository สำหรับทั้งองค์กรอยู่ใน <a href="/blog/hermes-desktop-fleet">Hermes #10 Desktop &amp; Fleet</a> — ตอนนี้ผมจะอยู่กับเครื่องเดียวของเราเอง</p>
+
+    <blockquote><strong>💡 ชื่อ profile ตั้งได้แค่ไหน:</strong> เอกสารอ้างอิงบอกกว้าง ๆ ว่า <em>"Must be a valid directory name (alphanumeric, hyphens, underscores)"</em><sup><a href="#th-ref-2">[2]</a></sup> ส่วนซอร์สโค้ดเข้มกว่านั้น — <code>hermes_cli/profiles.py</code> ตรวจด้วย regex <code>^[a-z0-9][a-z0-9_-]{0,63}$</code> (ตัวพิมพ์เล็กเท่านั้น) และกันชื่อสงวนไว้หกชื่อคือ <code>hermes</code>, <code>default</code>, <code>test</code>, <code>tmp</code>, <code>root</code>, <code>sudo</code><sup><a href="#th-ref-9">[9]</a></sup> ตั้งชื่อเป็น <code>research</code>, <code>coder</code>, <code>finance</code> ปลอดภัยเสมอ</blockquote>
+
+    <h2 id="th-owns-and-shares" lang="en">2. What a Profile Owns, and What It Shares</h2>
+
+    <p>คำตอบตรง ๆ: profile เป็นเจ้าของ<strong>ทุกอย่างที่เป็น state ของ Hermes</strong> — config, กุญแจ, บุคลิก, ความจำ, session, skill, cron และฐานข้อมูล — แต่ <strong>ไม่ได้</strong> เป็นเจ้าของสามอย่างที่ยังใช้ร่วมกันทั้งเครื่อง: การล็อกอินแบบ OAuth ที่ราก, HOME ของระบบปฏิบัติการ และตัวโค้ด Hermes เอง ตารางนี้คือรายการเต็ม</p>
+
+    <div class="table-wrapper">
+        <table>
+            <thead>
+                <tr><th>Item</th><th>Per profile?</th><th>Path</th><th>Note</th></tr>
+            </thead>
+            <tbody>
+                <tr><td><code>config.yaml</code></td><td>ใช่</td><td><code>&lt;profile&gt;/config.yaml</code></td><td>โมเดล, provider, toolset, ทุกการตั้งค่า<sup><a href="#th-ref-1">[1]</a></sup></td></tr>
+                <tr><td><code>.env</code></td><td>ใช่</td><td><code>&lt;profile&gt;/.env</code></td><td>API key และ bot token — ถูกตัดออกจากทั้ง export และ distribution เสมอ<sup><a href="#th-ref-1">[1]</a></sup><sup><a href="#th-ref-4">[4]</a></sup></td></tr>
+                <tr><td><code>SOUL.md</code></td><td>ใช่</td><td><code>&lt;profile&gt;/SOUL.md</code></td><td>บุคลิกและคำสั่งประจำตัว โหลดจาก <code>HERMES_HOME</code> เท่านั้น<sup><a href="#th-ref-6">[6]</a></sup></td></tr>
+                <tr><td><code>memories/</code></td><td>ใช่</td><td><code>&lt;profile&gt;/memories/</code></td><td>เป็นของผู้ติดตั้ง distribution ไม่แตะต้องตอน update<sup><a href="#th-ref-4">[4]</a></sup></td></tr>
+                <tr><td><code>sessions/</code></td><td>ใช่</td><td><code>&lt;profile&gt;/sessions/</code></td><td>ประวัติแชต ถูกกันออกจาก <code>--clone-all</code><sup><a href="#th-ref-2">[2]</a></sup></td></tr>
+                <tr><td><code>skills/</code></td><td>ใช่</td><td><code>&lt;profile&gt;/skills/</code></td><td>แต่ <code>hermes update</code> ซิงก์ skill ใหม่ให้ทุก profile — ดูตอนที่ 7<sup><a href="#th-ref-1">[1]</a></sup></td></tr>
+                <tr><td>cron jobs</td><td>ใช่</td><td><code>&lt;profile&gt;/cron/</code></td><td>Routine ของ Bot คือ cron job ชื่อ <code>[bot:&lt;name&gt;] &lt;routine&gt;</code><sup><a href="#th-ref-3">[3]</a></sup></td></tr>
+                <tr><td><code>mcp.json</code></td><td>ใช่</td><td><code>&lt;profile&gt;/mcp.json</code></td><td>MCP server ที่ agent ตัวนี้ต่ออยู่<sup><a href="#th-ref-4">[4]</a></sup></td></tr>
+                <tr><td><code>state.db</code></td><td>ใช่</td><td><code>&lt;profile&gt;/state.db</code></td><td>นับเป็น per-profile history จึงถูกกันออกจาก <code>--clone-all</code><sup><a href="#th-ref-2">[2]</a></sup></td></tr>
+                <tr><td><code>profile.yaml</code></td><td>ใช่</td><td><code>&lt;profile&gt;/profile.yaml</code></td><td>คีย์ <code>description</code>, <code>description_auto</code>, <code>display_name</code><sup><a href="#th-ref-2">[2]</a></sup><sup><a href="#th-ref-9">[9]</a></sup></td></tr>
+                <tr><td><code>auth.json</code> (OAuth)</td><td><strong>ไม่ — ใช้ร่วมกัน</strong></td><td><code>~/.hermes/auth.json</code></td><td>ทุก profile อ่านการล็อกอินจากราก และการ refresh ใน profile ไหนก็เขียนกลับที่ราก<sup><a href="#th-ref-1">[1]</a></sup></td></tr>
+                <tr><td><code>HOME</code> ของระบบปฏิบัติการ</td><td><strong>ไม่โดยค่าเริ่มต้น</strong></td><td>HOME จริงของผู้ใช้</td><td>บนการติดตั้งแบบ host ยังใช้ HOME จริงเพื่อให้ git/ssh/gh/npm ทำงานได้ เปลี่ยนด้วย <code>terminal.home_mode: profile</code><sup><a href="#th-ref-1">[1]</a></sup><sup><a href="#th-ref-7">[7]</a></sup></td></tr>
+                <tr><td>ตัวโค้ด Hermes</td><td><strong>ไม่ — ใช้ร่วมกัน</strong></td><td>ติดตั้งชุดเดียว</td><td><em>"hermes update pulls code once (shared)"</em> โค้ดดึงครั้งเดียวใช้ทั้งเครื่อง<sup><a href="#th-ref-1">[1]</a></sup></td></tr>
+            </tbody>
+        </table>
+    </div>
+
+    <p>สามแถวล่างคือสามแถวที่ผมเห็นคนเข้าใจผิดบ่อยที่สุด และผิดคนละแบบ แถว <code>auth.json</code> เป็น <em>ข้อดี</em> ที่ตั้งใจออกแบบมา — คุณล็อกอินครั้งเดียวแล้วทุก profile ใช้ได้ ไม่ต้องจ่ายหลายบัญชี แถว <code>HOME</code> เป็น <em>ข้อแลกเปลี่ยน</em> ที่เอกสารเขียนตรง ๆ ว่า <em>"host profiles share normal user-level CLI state by default"</em> — profile ที่ต่างกันยังใช้ <code>~/.ssh</code> และ <code>~/.gitconfig</code> ชุดเดียวกัน ถ้าคุณต้องการตัวตน git คนละคนจริง ๆ ต้องเปิด <code>terminal.home_mode: profile</code> แล้วไปตั้ง <code>~/.ssh</code>, <code>~/.gitconfig</code>, <code>~/.config/gh</code> ใหม่ในโฟลเดอร์ <code>{HERMES_HOME}/home</code> ของ profile นั้นเอง<sup><a href="#th-ref-7">[7]</a></sup> ส่วนแถวโค้ดเป็นเพียงคำอธิบายว่าทำไมการมีสิบ profile ถึงไม่กินดิสก์เป็นสิบเท่า</p>
+
+    <div class="alert danger"><strong>ห้ามชี้ agent สองตัวไปที่ profile เดียวกันเด็ดขาด:</strong> นี่คือคำเตือนที่เอกสาร Profiles ขึ้นเป็นกล่องแรกของหน้า — <em>"Never point two agent processes at the same profile (the same Hermes home). Both write memory automatically, and each loads the other's writes into its system prompt at session start"</em> ทั้งคู่เขียนความจำอัตโนมัติ และแต่ละตัวโหลดสิ่งที่อีกตัวเขียนเข้าไปใน system prompt ของตัวเองตอนเริ่ม session ผลคือ state ทบกันไปเรื่อยจนไม่เหลือเค้าของสิ่งที่คุณตั้งไว้ เอกสารปิดท้ายว่า <em>"Profiles exist exactly to prevent this; agents that need shared memory should use an external memory provider instead"</em><sup><a href="#th-ref-1">[1]</a></sup></div>
+
+    <h2 id="th-create-a-bot" lang="en">3. Procedure A — Create a Bot on Screen</h2>
+
+    <p>คำตอบตรง ๆ: ใน Hermes Desktop คุณไม่ต้องหาเมนูชื่อ "profile" เลย เพราะโหมด Bot Mode ทำให้ <strong>Bot หนึ่งตัวคือ profile หนึ่งอัน</strong> เอกสารเขียนไว้ตรงตัวว่า <em>"There is no new primitive to learn: a Bot <strong>is</strong> a Hermes profile"</em> และ <em>"Bot Mode is a UI over that primitive"</em><sup><a href="#th-ref-3">[3]</a></sup> สร้าง Bot ก็คือสร้าง profile ทำตามเก้าขั้นนี้</p>
+
+    <ol>
+        <li>เปิดแท็บ <strong>Bots</strong> ที่อยู่ถัดจาก Sessions ใน sidebar ซ้าย — Bot Mode ติดตั้งมาในตัวแอปและเปิดอยู่แล้ว ไม่ต้องลงอะไรเพิ่ม และจะมีไทล์ <strong>Routines</strong> มาจอดข้างบทสนทนาขณะที่แท็บนี้ทำงานอยู่<sup><a href="#th-ref-3">[3]</a></sup></li>
+        <li>กด <strong>New Agent</strong> ในหน้ารายชื่อ ทางลัดคือสามช่อง — <strong>Name</strong>, <strong>Title</strong>, <strong>Description</strong> — แล้ว Bot เกิดขึ้นภายในไม่กี่วินาที พร้อมแนะนำตัวเองเป็นข้อความแรกใน Bot Chat ของมัน<sup><a href="#th-ref-3">[3]</a></sup></li>
+        <li>เขียนช่อง <strong>Description</strong> ให้เหมือนเขียนให้คนอื่นอ่าน ไม่ใช่ให้ตัวเองจำ เพราะรายชื่อเพื่อนร่วมทีม — <em>"names <strong>and roles</strong> from each profile's title/description"</em> — ถูกใส่เข้าไปใน system prompt ของทุก Bot Chat ทำให้ Bot ตัวอื่นรู้ว่าใครทำอะไรก่อนเลือกผู้รับ<sup><a href="#th-ref-3">[3]</a></sup> และคำบรรยายเดียวกันนี้ยังเป็นสิ่งที่ kanban orchestrator ใช้จัดงาน <em>"based on role instead of profile name alone"</em><sup><a href="#th-ref-2">[2]</a></sup></li>
+        <li>กางส่วน <strong>Advanced</strong> เลือกระหว่าง <strong>Clone from an existing profile</strong> ซึ่งเริ่มจาก config, skill, SOUL และความจำของ Bot ตัวอื่น กับ <strong>Fresh profile</strong> ที่เริ่มใหม่หมด และมี <strong>Create empty</strong> สำหรับข้าม bundled skill ทั้งชุด<sup><a href="#th-ref-3">[3]</a></sup></li>
+        <li>ตั้ง <strong>Model &amp; provider pin</strong> ให้ Bot มีโมเดลของตัวเอง เอกสารบอกว่าคู่ provider/model ใดก็ได้ที่ Hermes รู้จัก และ Bot คนละตัวรันคนละโมเดลพร้อมกันได้ — <em>"Leave it unset to inherit from the launch profile"</em> ถ้าไม่ตั้งก็รับค่าจาก profile ที่เปิดแอปมา<sup><a href="#th-ref-3">[3]</a></sup></li>
+        <li>ใส่ <strong>Custom SOUL.md</strong> — บุคลิกและคำสั่งประจำตัวของ Bot นี้ (รายละเอียดว่ามันถูกใช้อย่างไรอยู่ในตอนที่ 5)</li>
+        <li>ติ๊ก <strong>per-skill, per-toolset และ per-MCP-server enablement</strong> ให้เหลือเฉพาะความสามารถที่ผู้เชี่ยวชาญตัวนี้ต้องใช้จริง ส่วน <strong>Shared keys</strong> เปิดอยู่โดยค่าเริ่มต้น — Bot ใหม่ใช้ OAuth/token pool ร่วมกับ profile หลัก เพื่อไม่ให้การ refresh ของฝั่งหนึ่งไปทำให้อีกฝั่งใช้ไม่ได้<sup><a href="#th-ref-3">[3]</a></sup></li>
+        <li>บันทึกแล้วคลิกแถวของ Bot เพื่อเข้าไปที่ <strong>Bot Chat</strong> ของมัน ซึ่งเป็นบทสนทนาถาวรที่ถูกสร้างและปักหมุดตั้งแต่วินาทีที่ Bot เกิด — คลิกแถวเมื่อไรก็กลับมาที่ห้องเดิมเสมอ<sup><a href="#th-ref-3">[3]</a></sup></li>
+        <li>ยืนยันจาก terminal ด้วย <code>hermes profile list</code> — Bot ที่เพิ่งสร้างจะโผล่มาเป็น profile ธรรมดาหนึ่งแถว และ <code>hermes -p &lt;bot&gt; chat</code> เปิด agent ตัวเดียวกันนั้นได้ทันที นี่คือตารางความเท่าเทียม CLI ที่เอกสาร Bot Mode ให้ไว้<sup><a href="#th-ref-3">[3]</a></sup></li>
+    </ol>
+
+    <p>เรื่องเวอร์ชันที่ควรพูดให้ตรง: Bot Mode เป็น <strong>bundled desktop plugin</strong> ที่เปิดอยู่โดยค่าเริ่มต้น และรุ่นที่ประกาศเรื่องนี้เป็นทางการคือ Hermes Agent v0.21.0 (tag v2026.8.31) "The Pantheon Release" ซึ่งเขียนไว้ว่า <em>"Bot Mode is now a bundled, default-on part of the desktop app: every agent profile gets a name, a deterministic avatar face"</em><sup><a href="#th-ref-10">[10]</a></sup> ถ้าไม่อยากใช้ ปิดได้ที่ <strong>Settings → Plugins → Bots</strong> เอกสารบอกว่ารายชื่อ Bot, ไทล์ Routines และ middleware ของช่องพิมพ์จะถูกถอนออกทันทีโดยไม่ต้องรีสตาร์ต และ <em>"Your profiles, sessions, and cron jobs are untouched either way; Bot Mode never owns your data, it only renders it"</em> — profile ของคุณไม่หายไปไหน เพราะ Bot Mode เป็นแค่หน้าจอที่วาดมันออกมา<sup><a href="#th-ref-3">[3]</a></sup></p>
+
+    <h2 id="th-create-from-terminal" lang="en">4. Procedure B — The Same Thing from the Terminal</h2>
+
+    <p>คำตอบตรง ๆ: คำสั่งเดียวสร้างเสร็จ และ Hermes แถม alias ให้เป็นคำสั่งใหม่ในเชลล์ทันที ก่อนจะไล่ทีละขั้น ผมตรวจชุดคำสั่งย่อยทั้งหมดจากหน้าอ้างอิงในวันที่เขียนแล้ว มีสิบสามตัวพอดี: <code>list</code>, <code>use</code>, <code>create</code>, <code>describe</code>, <code>delete</code>, <code>show</code>, <code>alias</code>, <code>rename</code>, <code>export</code>, <code>import</code>, <code>install</code>, <code>update</code>, <code>info</code><sup><a href="#th-ref-2">[2]</a></sup> เจ็ดขั้นนี้ใช้แค่หกตัวแรก</p>
+
+    <ol>
+        <li>สร้าง: <code>hermes profile create research --description "อ่านซอร์สโค้ดและเอกสารภายนอก แล้วเขียนสรุปผล"</code> — ได้ profile พร้อม alias ชื่อ <code>research</code> คำบรรยายถูกบันทึกไว้ที่ <code>&lt;profile_dir&gt;/profile.yaml</code> จึงอยู่ข้ามการรีบูตและแชร์กับ gateway ได้<sup><a href="#th-ref-2">[2]</a></sup></li>
+        <li>ตรวจว่าเกิดจริง: <code>hermes profile list</code> — แสดงทุก profile โดยตัวที่ active ถูกทำเครื่องหมายด้วย <code>*</code> และในตารางแบบเต็มยังมีคอลัมน์ Model, Gateway, Alias และ Distribution<sup><a href="#th-ref-2">[2]</a></sup><sup><a href="#th-ref-4">[4]</a></sup></li>
+        <li>คุยกับมัน: <code>hermes -p research chat</code> หรือใช้ alias สั้น ๆ ว่า <code>research chat</code> ก็ได้ alias ถูกเขียนไว้ที่ <code>~/.local/bin/research</code> และเอกสารบอกตรง ๆ ว่า <em>"it's just <code>hermes -p &lt;name&gt;</code> under the hood"</em><sup><a href="#th-ref-1">[1]</a></sup> ธง <code>-p</code> ใช้ได้ทุกตำแหน่ง เช่น <code>hermes chat -p research -q "hello"</code></li>
+        <li>ตั้งเป็นค่าเริ่มต้นแบบติดหนึบ: <code>hermes profile use research</code> ทำให้คำสั่ง <code>hermes</code> เปล่า ๆ ทั้งหมดวิ่งไปที่ profile นี้ เอกสารเปรียบเทียบว่า <em>"Like <code>kubectl config use-context</code>"</em> และกลับด้วย <code>hermes profile use default</code><sup><a href="#th-ref-1">[1]</a></sup></li>
+        <li>ดูว่าตอนนี้อยู่ที่ไหน: prompt เปลี่ยนเป็น <code>research ❯</code> แทน <code>❯</code> เฉย ๆ, banner ตอนเปิดขึ้นว่า <code>Profile: research</code>, คำสั่ง <code>hermes profile</code> เปล่า ๆ บอกชื่อ path โมเดลและสถานะ gateway ส่วนในแชตพิมพ์ <code>/profile</code> จะได้ชื่อ profile ที่ใช้อยู่กับ home directory ของมัน<sup><a href="#th-ref-1">[1]</a></sup><sup><a href="#th-ref-8">[8]</a></sup></li>
+        <li>ดูรายละเอียดตัวเดียว: <code>hermes profile show research</code> พิมพ์ Path, Model, Gateway, จำนวน Skills, สถานะ <code>.env</code> และ <code>SOUL.md</code> รวมถึงตำแหน่ง Alias ออกมาให้ครบ<sup><a href="#th-ref-2">[2]</a></sup></li>
+        <li>ตั้งค่าให้ใช้งานได้: <code>research setup</code> เพื่อใส่ API key และเลือกโมเดล หรือถ้าใช้ Nous Portal เอกสารแนะทางลัดไว้ว่า <em>"Quickest setup: run <code>hermes setup --portal</code> inside the new profile to wire up models + tools at once"</em><sup><a href="#th-ref-1">[1]</a></sup></li>
+    </ol>
+
+    <h3 lang="en">Cloning instead of starting blank</h3>
+
+    <p>ถ้า profile ใหม่ควรหน้าตาเหมือนตัวที่มีอยู่แล้ว มีธงสำหรับก๊อปปี้สามระดับ ผมตรวจความหมายของแต่ละธงจากตารางในหน้าอ้างอิงคำสั่งแล้ว และข้อสำคัญคือ <code>--no-skills</code> <em>ปฏิเสธ</em> ที่จะทำงานร่วมกับธง clone ทั้งสามตัว เพราะการ clone จะลาก skill กลับเข้ามาอยู่ดี<sup><a href="#th-ref-2">[2]</a></sup></p>
+
+<pre><code># ก๊อป config.yaml, .env, SOUL.md และ skill จาก profile ปัจจุบัน — session และความจำเริ่มใหม่
+hermes profile create work --clone
+
+# ก๊อปทุกอย่าง ยกเว้น per-profile history (sessions, state.db, backups, state-snapshots, checkpoints)
+hermes profile create backup --clone-all
+
+# ระบุต้นทางเองแทนที่จะใช้ profile ปัจจุบัน
+hermes profile create work --clone-from coder
+hermes profile create work-backup --clone-from coder --clone-all
+
+# profile เปล่าที่ไม่มี bundled skill เลย — เขียน marker .no-bundled-skills ไว้กัน update มา seed ซ้ำ
+hermes profile create orchestrator --no-skills --description "Coordinates the board; does not implement."</code></pre>
+
+    <h2 id="th-persona-folder-model" lang="en">5. Persona, Folder and Model</h2>
+
+    <p>คำตอบตรง ๆ: สามอย่างที่ทำให้ profile "เป็นบทบาท" จริง ๆ อยู่คนละที่กัน — บุคลิกอยู่ในไฟล์ <code>SOUL.md</code> ที่รากของ profile, โฟลเดอร์งานอยู่ในคีย์ <code>terminal.cwd</code> ของ <code>config.yaml</code> และโมเดลอยู่ในคีย์ <code>model.default</code> ตั้งได้ทั้งจากบรรทัดคำสั่งและจากหน้าจอ</p>
+
+    <h3 lang="en">SOUL.md — the persona</h3>
+
+    <p>เอกสาร Personality อธิบาย <code>SOUL.md</code> ว่าเป็น <strong>primary identity</strong> ของ agent และกินช่องแรกของ system prompt — <em>"It occupies slot #1 in the system prompt, replacing the hardcoded default identity"</em> Hermes โหลดไฟล์นี้จาก <code>HERMES_HOME</code> เท่านั้น <em>ไม่</em> มองหาใน working directory ที่คุณเปิดโปรแกรมมา ซึ่งเป็นเหตุผลว่าทำไมบุคลิกจึงเป็นของ profile ไม่ใช่ของโปรเจกต์<sup><a href="#th-ref-6">[6]</a></sup> สองเรื่องที่ต้องรู้ต่อจากนั้น: หนึ่ง เนื้อหาถูกใส่เข้า prompt <em>แบบคำต่อคำ</em> แต่ผ่านการสแกนก่อน — <em>"that content is injected verbatim after security scanning and truncation"</em> และเอกสารระบุว่าไฟล์นี้ <em>"is scanned like other context-bearing files for prompt injection patterns before inclusion"</em> จึงควรเขียนเป็นบุคลิกและน้ำเสียง ไม่ใช่คำสั่งแปลก ๆ ที่พยายามแทรกเข้าไป<sup><a href="#th-ref-6">[6]</a></sup> สอง เอกสาร Profiles เตือนว่าการแก้ <code>SOUL.md</code> <em>"take effect cleanly on a new session"</em> — session ที่เปิดค้างอยู่อาจยังใช้ prompt เดิม<sup><a href="#th-ref-1">[1]</a></sup></p>
+
+<pre><code># บุคลิก: SOUL.md ที่รากของ profile
+echo "You are a focused coding assistant." &gt; ~/.hermes/profiles/coder/SOUL.md
+
+# โฟลเดอร์งาน: terminal.cwd ต้องเป็น absolute path
+coder config set terminal.cwd /absolute/path/to/project
+
+# โมเดล: ค่าเริ่มต้นของ profile นี้
+coder config set model.default anthropic/claude-sonnet-4</code></pre>
+
+    <h3 lang="en">Working folder and model</h3>
+
+    <p>โฟลเดอร์งานสำคัญกว่าที่คิด เพราะเอกสารเตือนว่า <code>cwd: "."</code> บน backend <code>local</code> แปลว่า <em>"the directory Hermes was launched from"</em> ไม่ใช่โฟลเดอร์ของ profile<sup><a href="#th-ref-1">[1]</a></sup> ถ้าอยากให้ profile หนึ่งเริ่มที่โปรเจกต์หนึ่งเสมอ ต้องเขียน absolute path ลงไปตรง ๆ และเอกสารเสริมอีกข้อที่ผมชอบมาก: <em>"Asking the model 'what directory are you in?' is not a reliable isolation test"</em> — อย่าถาม agent ว่าอยู่โฟลเดอร์ไหน ให้ตั้ง <code>terminal.cwd</code> ให้ชัดแทน</p>
+
+<pre><code># ~/.hermes/profiles/coder/config.yaml — สามค่าเดิมในรูปแบบ YAML
+terminal:
+  backend: local
+  cwd: /absolute/path/to/project
+  home_mode: auto     # auto | real | profile — นโยบาย HOME ของ subprocess</code></pre>
+
+    <p>ส่วนโมเดล ถ้าชอบทำจากหน้าจอมากกว่า Hermes Desktop มีทางที่ตรงกว่า: เอกสารบอกว่า <strong>Settings → Model</strong> คือที่เดียวที่เขียนค่าเริ่มต้นจริง — <em>"That 'main' model is your <strong>per-profile global default</strong> — it's what new chats, crons, subagents, and auxiliary tasks start from, and it's the only place that writes it"</em> และย้ำว่า <em>"Each profile keeps its own default"</em><sup><a href="#th-ref-5">[5]</a></sup> สิ่งที่ต้องระวังคือ<em>ตัวเลือกโมเดลในช่องพิมพ์ไม่ใช่ค่าเริ่มต้น</em> — เอกสารเขียนว่า <em>"The composer picker is sticky UI state and never touches your default"</em> มันจำไว้ต่อเครื่อง ไม่เขียนลง profile และเมื่อคุณมี profile ตั้งแต่สองอันขึ้นไป หน้าตั้งค่าที่ผูกกับ config — Model, Workspace, Safety, Memory &amp; Context, Voice, Chat, Advanced และ Tools &amp; Keys — จะขึ้นแถบชิป <strong>Applies to</strong> ที่ด้านบนให้เลือกว่ากำลังแก้ของ profile ไหน ค่าเริ่มต้นตามด้วย profile ที่ใช้งานอยู่ และแถบนี้ถูกซ่อนทั้งแถบเมื่อมี profile น้อยกว่าสองอัน<sup><a href="#th-ref-5">[5]</a></sup></p>
+
+    <blockquote><strong>💡 <code>/personality</code> ไม่ใช่ profile และไม่ใช่ SOUL:</strong> เอกสารแยกไว้เป็นประโยคเดียว — <em>"<code>SOUL.md</code> = baseline voice"</em> ส่วน <em>"<code>/personality</code> = temporary mode switch"</em> มันคือ overlay ระดับ session ที่ทับ system prompt ของบทสนทนานั้นชั่วคราว ไม่ได้แก้ตัวตนถาวรของ profile<sup><a href="#th-ref-6">[6]</a></sup> ใช้ผิดที่แล้วจะงงว่าทำไมบุคลิกหายไปตอนเปิดแชตใหม่</blockquote>
+
+    <h2 id="th-move-a-profile" lang="en">6. Move a Profile to Another Machine</h2>
+
+    <p>คำตอบตรง ๆ: <code>hermes profile export</code> แพ็ก profile ทั้งอันเป็นไฟล์ <code>.tar.gz</code> หนึ่งไฟล์ โดย <code>auth.json</code> และ <code>.env</code> ถูกตัดออก<em>เสมอ</em> แล้ว <code>hermes profile import</code> ที่ปลายทางติดตั้งมันเป็น profile <strong>ใหม่</strong> — มันปฏิเสธที่จะเขียนทับของเดิม และห้ามนำเข้าเป็นชื่อ <code>default</code><sup><a href="#th-ref-2">[2]</a></sup></p>
+
+<pre><code># จาก CLI — auth.json และ .env ถูกตัดออกเสมอ
+hermes profile export research
+hermes profile export research -o ./research.tar.gz
+hermes profile import ./research.tar.gz --name research
+
+# สองคำสั่งเดียวกันในแชต (CLI, TUI, Desktop)
+/export research -o ~/Desktop/research.tar.gz
+/import ~/Downloads/research.tar.gz --name research-2
+
+# อ่านไฟล์ก่อนส่งให้คนอื่นเสมอ
+tar -tzf research.tar.gz | less</code></pre>
+
+    <p>บรรทัดสุดท้ายไม่ใช่พิธีกรรม เอกสาร Profile Distributions ขึ้นกล่องเตือนไว้ว่า export คือ <em>"a snapshot of your profile, not a curated release"</em> และต่างจาก distribution ตรงที่มัน <strong>สามารถ</strong> มี <code>memories/</code>, <code>sessions/</code> และ <code>USER.md</code> ติดไปด้วย เพราะ <em>"Credentials are filtered by filename; content is not"</em> — ตัวกรองดูแค่ชื่อไฟล์ ไม่ได้อ่านเนื้อหา และเมื่อเป็น profile ที่ตั้งชื่อแล้ว <em>"A named profile copies the whole directory minus <code>auth.json</code> / <code>.env</code>"</em> ทั้ง <code>state.db</code> log และ cache ก็ไปด้วย ไฟล์จึงใหญ่ได้มาก<sup><a href="#th-ref-4">[4]</a></sup> บนหน้าจอ Desktop มีสามประตูที่ทำเรื่องเดียวกัน: <strong>⌘K → Export profile…</strong>, คลิกขวาที่ช่อง profile ใน rail แล้วเลือก Export profile… หรือปุ่ม import ข้าง ๆ เครื่องหมาย <strong>+</strong> ของ rail และ export จาก Desktop จะแถมไฟล์ <code>desktop.json</code> ที่พก skin, โหมดสว่าง/มืด, ธีมกำหนดเอง, สีของ rail และ layout หน้าต่างไปด้วย<sup><a href="#th-ref-4">[4]</a></sup><sup><a href="#th-ref-5">[5]</a></sup></p>
+
+    <div class="alert"><strong>เอกสารสองฝั่งยังไม่ตรงกันเรื่องที่เก็บไฟล์ export:</strong> ผมอ่านทั้งสามหน้าในวันที่เขียนแล้วยังขัดกันอยู่ หน้าอ้างอิงคำสั่งบอกว่าธง <code>-o</code> มีค่าเริ่มต้นเป็น <code>&lt;name&gt;.tar.gz</code> พร้อมตัวอย่างว่า <em>"Creates work.tar.gz in the current directory"</em><sup><a href="#th-ref-2">[2]</a></sup> และหน้าอ้างอิง slash command พูดตรงกันว่า <em>"Defaults to the active profile and <code>&lt;name&gt;.tar.gz</code> in the current directory"</em><sup><a href="#th-ref-8">[8]</a></sup> แต่คู่มือ Profile Distributions บอกตรงข้ามว่า <em>"Without <code>-o</code>, the CLI and TUI place the archive in Hermes's managed <code>profile-exports/</code> directory under the default Hermes home, not in the current working directory"</em> พร้อมเหตุผลว่าเพื่อกันไฟล์ snapshot หลุดเข้าไปใน git checkout<sup><a href="#th-ref-4">[4]</a></sup> ผมยืนยันไม่ได้ว่าเวอร์ชันที่คุณติดตั้งเป็นแบบไหน ทางที่ปลอดภัยคือ<strong>ใส่ <code>-o</code> ทุกครั้ง</strong> แล้วคุณจะรู้แน่นอนว่าไฟล์อยู่ที่ไหน</div>
+
+    <p>ไฟล์ <code>.tar.gz</code> เหมาะกับการส่งครั้งเดียวหรือการย้ายเครื่อง แต่ถ้าเป็น agent ที่คุณจะ<em>ปล่อยรุ่นใหม่เรื่อย ๆ</em> ให้ทั้งทีมหรือทั้งองค์กร Hermes มีอีกทางคือ profile distribution ที่แพ็ก profile เป็น git repository พร้อม <code>distribution.yaml</code> แล้วให้ปลายทาง <code>hermes profile install</code> และ <code>hermes profile update</code> ดึงเฉพาะส่วนที่ distribution เป็นเจ้าของ โดยไม่แตะ <code>memories/</code>, <code>sessions/</code>, <code>.env</code> ของผู้ติดตั้ง<sup><a href="#th-ref-4">[4]</a></sup> ผมเขียนเรื่องนี้ในมุมขององค์กรไว้แล้วใน <a href="/blog/hermes-desktop-fleet">Hermes #10 Desktop &amp; Fleet</a> รวมถึงเส้นแบ่ง distribution-owned กับ user-owned และเหตุผลที่ควรเอา repo นั้นเข้า branch protection — ตอนนี้จึงไม่สอนซ้ำ</p>
+
+    <h2 id="th-rules" lang="en">7. Rules That Save You Pain</h2>
+
+    <p>คำตอบตรง ๆ: ห้าข้อนี้คือสิ่งที่เอกสารเขียนไว้ชัด แต่คนมักไปเจอเอาตอนที่มันพังแล้ว ผมรวบมาไว้ที่เดียวเพื่อให้อ่านก่อน ไม่ใช่อ่านทีหลัง</p>
+
+    <ul>
+        <li><strong>การล็อกอิน OAuth ใช้ร่วมกัน ไม่ได้ก๊อป</strong> — Anthropic (Claude Pro/Max), OpenAI Codex และ xAI ใช้ <em>"single-use refresh tokens"</em> ซึ่งเอกสารอธิบายว่าการก๊อปไม่ได้ทำให้ได้ credential ที่สอง แต่เป็นอันเดียวกันที่มีเจ้าของสองคน และตัวแรกที่ refresh จะทำให้ทุกสำเนาที่เหลือใช้ไม่ได้ ดังนั้น <code>--clone-all</code> จึง<em>ตัด</em>แถว OAuth ออกจากการก๊อป profile ใหม่ยังอ่านการล็อกอินจาก <code>~/.hermes/auth.json</code> ที่รากได้ตามปกติ ส่วน static API key ก๊อปตามปกติ ถ้าอยากให้ profile หนึ่งมีล็อกอินของตัวเองจริง ๆ ให้รัน <code>hermes -p &lt;name&gt; auth add &lt;provider&gt;</code> ข้างในนั้น<sup><a href="#th-ref-1">[1]</a></sup></li>
+        <li><strong><code>hermes update</code> ซิงก์ skill ให้ทุก profile และไม่เคยทับของที่คุณแก้เอง</strong> — เอกสารแสดงผลลัพธ์ตัวอย่างว่า <em>"Skills synced: default (up to date), coder (+2 new), assistant (+2 new)"</em> พร้อมประโยคปิดว่า <em>"User-modified skills are never overwritten"</em><sup><a href="#th-ref-1">[1]</a></sup> และถ้าคุณตั้งใจสร้าง profile เปล่าด้วย <code>--no-skills</code> มันจะเขียน marker <code>.no-bundled-skills</code> ไว้ให้ update รอบหลังไม่ seed ซ้ำ สลับทีหลังได้ด้วย <code>hermes skills opt-out</code> / <code>hermes skills opt-in</code><sup><a href="#th-ref-2">[2]</a></sup></li>
+        <li><strong>Routine คือ cron job ธรรมดา</strong> — สิ่งที่หน้าจอเรียกว่า Routine ของ Bot คือ <em>"plain Hermes cron jobs namespaced <code>[bot:&lt;name&gt;] &lt;routine&gt;</code>"</em> มันโผล่ใน <code>hermes cron list</code> และในหน้า Cron หลักด้วย ส่วนผลการรันไปจบที่ประวัติแชตของ Bot ตัวนั้นเอง<sup><a href="#th-ref-3">[3]</a></sup> แปลว่าคุณตรวจสอบและแก้ไขจาก terminal ได้เสมอ — เรื่องนี้ต่อยอดใน <a href="/blog/hermes-desktop-automation">#6 Automation &amp; Agents</a></li>
+        <li><strong><code>default</code> ลบไม่ได้และนำเข้าทับไม่ได้</strong> — เอกสารเขียนว่า <em>"You cannot delete the default profile (<code>~/.hermes</code>). To remove everything, use <code>hermes uninstall</code>"</em><sup><a href="#th-ref-1">[1]</a></sup> และฝั่งนำเข้าก็ปฏิเสธเช่นกัน <em>"You cannot import as <code>default</code> — that name is the built-in root profile"</em> ให้ใส่ <code>--name</code> เป็นชื่ออื่น<sup><a href="#th-ref-4">[4]</a></sup> สิ่งเดียวที่ทำได้กับ <code>default</code> คือตั้งชื่อสำหรับแสดงผลด้วย <code>hermes profile rename default &lt;Name&gt;</code> ซึ่งเก็บเป็นคีย์ <code>display_name</code> ใน <code>~/.hermes/profile.yaml</code> โดยรหัสจริงยังเป็น <code>default</code> ทุกที่<sup><a href="#th-ref-1">[1]</a></sup></li>
+        <li><strong>แต่ละ profile รัน gateway ของตัวเองด้วย token ของตัวเอง</strong> — <code>coder gateway start</code> กับ <code>assistant gateway start</code> เป็นคนละ process อ่าน token คนละไฟล์ <code>.env</code> และ <code>coder gateway install</code> สร้าง service ชื่อ <code>hermes-gateway-coder</code> บน systemd/launchd ให้<sup><a href="#th-ref-1">[1]</a></sup> ตัวกันพลาดที่สำคัญคือ token lock — เอกสารบอกว่าถ้าสอง profile เผลอใช้ bot token เดียวกัน <em>"the second gateway will be blocked with a clear error naming the conflicting profile"</em> รองรับ Telegram, Discord, Slack, WhatsApp และ Signal<sup><a href="#th-ref-1">[1]</a></sup></li>
+    </ul>
+
+    <p>ข้อที่ผมอยากขีดเส้นใต้เป็นพิเศษคือข้อแรก เพราะมันเปลี่ยนวิธีคิดเรื่องค่าใช้จ่าย: การมี profile สิบอันไม่ได้แปลว่าต้องจ่ายสิบบัญชี ทุกอันอ่านการล็อกอินเดียวกันจากราก แต่ก็แปลว่าโควตาถูกใช้ร่วมกันด้วย ถ้าคุณต้องการแยกบิลจริง ๆ ต้องแยกที่ระดับ credential ไม่ใช่ที่ระดับ profile</p>
+
+    <h2 id="th-summary" lang="en">8. สรุป</h2>
+
+    <p>ตอนนี้เราเริ่มจากนิยามสั้น ๆ ประโยคเดียว — profile คือ Hermes home directory แยกต่างหาก — แล้วขยายออกเป็นเครื่องมือจัดระเบียบทั้งเครื่อง: ตารางว่าอะไรเป็นของใครและอะไรใช้ร่วมกัน, การสร้าง Bot บนหน้าจอกับการสร้าง profile ใน terminal ซึ่งได้ของชิ้นเดียวกัน, การใส่บุคลิกด้วย <code>SOUL.md</code> ผูกโฟลเดอร์ด้วย <code>terminal.cwd</code> ปักโมเดลด้วย <code>model.default</code> และการย้ายทั้งตัวข้ามเครื่องด้วย export/import ตอนหน้า <a href="/blog/hermes-desktop-council">#4 The Council</a> จะพาไปไกลกว่านั้นอีกขั้น — ให้คำตอบถูกตรวจก่อนถึงมือเรา</p>
+
+    <p>ปิดท้ายด้วยแนวปฏิบัติจากผู้ใช้จริง ในคลิปเดินสายของ Greg Isenberg กับ Alex Finn (6 มิถุนายน 2026) Finn จัด profile ของเขาตาม <em>โมเดล</em> ไม่ใช่ตามงาน — โมเดลระดับสูงสำหรับงานกลยุทธ์ อีกตัวสำหรับเขียนโค้ด และโมเดลบนเครื่องสำหรับงานค้นคว้าที่ไม่มีค่าใช้จ่าย — แล้วเลือก profile ที่จุดแข็งตรงกับงานตรงหน้า และเขาให้กฎแยก profile กับ subagent ไว้สั้นที่สุดเท่าที่ผมเคยเห็น: <em>"Sub-agents handle one skill across many parallel tasks; profiles handle work where each step needs a distinct skill set"</em> — งานที่ต้องใช้ทักษะคนละชุดให้แยก profile ส่วนทักษะเดียวที่ต้องรันหลายรอบพร้อมกันให้ใช้ subagent<sup><a href="#th-ref-11">[11]</a></sup> นี่เป็นแนวปฏิบัติจากชุมชน ไม่ใช่คำแนะนำในเอกสารทางการ แต่ผมพบว่ามันตรงกับสิ่งที่เอกสารบอกโดยไม่ได้พูดออกมา: profile แยก <em>state</em> ส่วน subagent แยก <em>แรงงาน</em></p>
+
+    <div class="key-takeaways">
+        <h3>🎯 สิ่งสำคัญที่ต้องจำ</h3>
+        <ul>
+            <li><strong>profile</strong> = Hermes home directory แยกต่างหากที่ <code>~/.hermes/profiles/&lt;name&gt;/</code> ส่วนตัวตั้งต้นคือ <code>~/.hermes</code> เองที่มีรหัสภายในว่า <code>default</code></li>
+            <li><strong>ไม่ใช่ workspace ไม่ใช่ sandbox</strong> = โฟลเดอร์งานคือ <code>terminal.cwd</code> และเอกสารเขียนตรง ๆ ว่า profile ไม่ได้ sandbox ตัว agent</li>
+            <li><strong>Bot = profile</strong> = New Agent ในแท็บ Bots สร้าง profile จริงหนึ่งอัน ตรวจได้ด้วย <code>hermes profile list</code> และเปิดด้วย <code>hermes -p &lt;bot&gt; chat</code></li>
+            <li><strong>Description คือคีย์เส้นทาง</strong> = ชื่อและบทบาทจาก title/description ของแต่ละ profile ถูกใส่เข้า system prompt ของทุก Bot Chat และ kanban orchestrator ใช้จัดงานตามบทบาท</li>
+            <li><strong>สามที่ของบทบาท</strong> = บุคลิกที่ <code>SOUL.md</code> (ช่องแรกของ system prompt, สแกน prompt injection ก่อน), โฟลเดอร์ที่ <code>terminal.cwd</code> แบบ absolute, โมเดลที่ <code>model.default</code> หรือ Settings → Model พร้อมแถบชิป Applies to</li>
+            <li><strong>export ตัดกุญแจ แต่ไม่ตัดความจำ</strong> = <code>auth.json</code> และ <code>.env</code> หายไปเสมอ แต่ <code>memories/</code> และ <code>sessions/</code> อาจติดไปด้วย — <code>tar -tzf</code> ก่อนส่งทุกครั้ง และใส่ <code>-o</code> เพราะเอกสารสองฝั่งยังบอกที่เก็บไม่ตรงกัน</li>
+            <li><strong>สองกฎที่กันเจ็บ</strong> = ห้ามชี้ agent สองตัวไปที่ profile เดียวกัน และ OAuth ใช้ร่วมกันจาก <code>auth.json</code> ที่ราก ไม่ได้ก๊อปแยกกัน</li>
+        </ul>
+    </div>
+
+    <section class="references" aria-labelledby="th-references">
+        <h2 id="th-references">อ้างอิง</h2>
+        <p class="references__note">ทุกแหล่งอ้างอิงตรวจสอบและเข้าถึงเมื่อ 7 กันยายน 2026 (2026-09-07) ซีรีส์นี้ใช้ป้ายกำกับหลักฐานสี่แบบ — <strong>Docs</strong> เอกสารทางการของ Hermes Agent · <strong>Release</strong> บันทึกการออกรุ่นหรือ commit/PR ที่ merge แล้ว · <strong>Issue</strong> issue หรือ PR ที่ยังเปิดอยู่ · <strong>Community</strong> แหล่งจากชุมชนที่ไม่ใช่ทางการ</p>
+        <ol class="references__list">
+            <li id="th-ref-1"><span class="ref-tag ref-tag--standard">Docs</span> Nous Research. <cite>Profiles: Running Multiple Agents</cite>, Hermes Agent User Guide. <a href="https://raw.githubusercontent.com/NousResearch/hermes-agent/main/website/docs/user-guide/profiles.md">raw.githubusercontent.com</a> — เข้าถึง 2026-09-07. <span class="ref-supports">รองรับ: นิยาม "A profile is a separate Hermes home directory" และรายการสิ่งที่ profile เป็นเจ้าของ · path <code>~/.hermes/profiles/&lt;name&gt;/</code> และ default = <code>~/.hermes</code> · กล่องเตือนห้ามชี้ agent สองตัวไปที่ profile เดียว · profile vs workspace vs sandbox และ <code>terminal.cwd</code> · alias ที่ <code>~/.local/bin/&lt;name&gt;</code>, ธง <code>-p</code>, <code>hermes profile use</code> แบบ kubectl, prompt <code>coder ❯</code> และ banner · <code>HERMES_HOME</code> กับ 119+ ไฟล์, HOME จริง และ <code>home_mode: profile</code> · OAuth ใช้ร่วมกันจาก <code>auth.json</code> ที่ราก · <code>hermes update</code> ซิงก์ skill · <code>config set model.default</code> และ <code>terminal.cwd</code> · <code>default</code> ลบไม่ได้และ <code>display_name</code> · gateway ต่อ profile กับ token lock · ทางลัด <code>hermes setup --portal</code> · ตารางในตอนที่ 2</span></li>
+            <li id="th-ref-2"><span class="ref-tag ref-tag--standard">Docs</span> Nous Research. <cite>Profile Commands Reference</cite>, Hermes Agent Reference. <a href="https://raw.githubusercontent.com/NousResearch/hermes-agent/main/website/docs/reference/profile-commands.md">raw.githubusercontent.com</a> — เข้าถึง 2026-09-07. <span class="ref-supports">รองรับ: ชุดคำสั่งย่อยสิบสามตัว · ธงของ <code>create</code> ทั้งหมดรวม <code>--no-skills</code> ที่ปฏิเสธการรวมกับธง clone และ marker <code>.no-bundled-skills</code> · <code>--clone-all</code> กัน sessions/state.db/backups/state-snapshots/checkpoints · <code>describe</code> และ <code>profile.yaml</code> · ผลลัพธ์ของ <code>profile list</code> และ <code>profile show</code> · <code>export</code>/<code>import</code> พร้อมค่าเริ่มต้น <code>&lt;name&gt;.tar.gz</code> ในไดเรกทอรีปัจจุบัน และการปฏิเสธเขียนทับ/นำเข้าเป็น default · กฎการตั้งชื่อฉบับเอกสาร</span></li>
+            <li id="th-ref-3"><span class="ref-tag ref-tag--standard">Docs</span> Nous Research. <cite>Bot Mode</cite>, Hermes Agent User Guide. <a href="https://raw.githubusercontent.com/NousResearch/hermes-agent/main/website/docs/user-guide/bot-mode.md">raw.githubusercontent.com</a> — เข้าถึง 2026-09-07. <span class="ref-supports">รองรับ: "a Bot <strong>is</strong> a Hermes profile" และ "Bot Mode is a UI over that primitive" · แท็บ Bots ข้าง Sessions, ไทล์ Routines, Bot Mode ติดตั้งมาในตัวและเปิดโดยค่าเริ่มต้น · ขั้นตอน New Agent ทั้งหมด (Name/Title/Description, Advanced, Clone/Fresh, Create empty, model pin กับประโยค inherit, Custom SOUL.md, per-skill/toolset/MCP, Shared keys) · Bot Chat ถาวรที่ถูกปักหมุด · teammate roster จาก title/description ใน system prompt · Routine = cron job ชื่อ <code>[bot:&lt;name&gt;]</code> · ตาราง CLI parity · การปิดที่ Settings → Plugins → Bots</span></li>
+            <li id="th-ref-4"><span class="ref-tag ref-tag--standard">Docs</span> Nous Research. <cite>Profile Distributions: Share a Whole Agent</cite>, Hermes Agent User Guide. <a href="https://raw.githubusercontent.com/NousResearch/hermes-agent/main/website/docs/user-guide/profile-distributions.md">raw.githubusercontent.com</a> — เข้าถึง 2026-09-07. <span class="ref-supports">รองรับ: สิ่งที่อยู่ในไฟล์ export และประโยค "a snapshot of your profile, not a curated release" · "Credentials are filtered by filename; content is not" · named profile ก๊อปทั้งไดเรกทอรีลบ <code>auth.json</code>/<code>.env</code> · ห้ามนำเข้าเป็น <code>default</code> · สามประตู export ใน Desktop และไฟล์ <code>desktop.json</code> · ที่เก็บแบบ managed <code>profile-exports/</code> ซึ่งขัดกับหน้าอ้างอิง · ตาราง distribution-owned กับ user-owned และ <code>mcp.json</code> · ตัวอย่างตาราง <code>hermes profile list</code> ที่มีคอลัมน์ Model/Gateway/Alias/Distribution</span></li>
+            <li id="th-ref-5"><span class="ref-tag ref-tag--standard">Docs</span> Nous Research. <cite>Hermes Desktop</cite>, Hermes Agent User Guide. <a href="https://raw.githubusercontent.com/NousResearch/hermes-agent/main/website/docs/user-guide/desktop.md">raw.githubusercontent.com</a> — เข้าถึง 2026-09-07. <span class="ref-supports">รองรับ: แถบชิป "Applies to" บนหน้าตั้งค่าที่ผูกกับ config ทั้งแปดหน้า และการซ่อนเมื่อมี profile น้อยกว่าสองอัน · Settings → Model เป็น per-profile global default และเป็นที่เดียวที่เขียนค่านั้น · ตัวเลือกโมเดลในช่องพิมพ์เป็น sticky UI state ที่ไม่แตะค่าเริ่มต้น · ⌘K → Export/Import profile… และ desktop.json</span></li>
+            <li id="th-ref-6"><span class="ref-tag ref-tag--standard">Docs</span> Nous Research. <cite>Personality &amp; SOUL.md</cite>, Hermes Agent User Guide. <a href="https://raw.githubusercontent.com/NousResearch/hermes-agent/main/website/docs/user-guide/features/personality.md">raw.githubusercontent.com</a> — เข้าถึง 2026-09-07. <span class="ref-supports">รองรับ: SOUL.md เป็น primary identity และกิน slot #1 ของ system prompt · โหลดจาก <code>HERMES_HOME</code> เท่านั้น ไม่มองหาใน working directory · "injected verbatim after security scanning and truncation" และการสแกน prompt injection · SOUL.md = baseline voice ส่วน /personality = temporary mode switch ระดับ session</span></li>
+            <li id="th-ref-7"><span class="ref-tag ref-tag--standard">Docs</span> Nous Research. <cite>Configuration</cite>, Hermes Agent User Guide. <a href="https://raw.githubusercontent.com/NousResearch/hermes-agent/main/website/docs/user-guide/configuration.md">raw.githubusercontent.com</a> — เข้าถึง 2026-09-07. <span class="ref-supports">รองรับ: คีย์ <code>terminal.home_mode</code> ค่า auto | real | profile พร้อมตารางผลของแต่ละค่า และสิ่งที่ต้องตั้งใหม่เองใน profile home เมื่อเลือก profile · บล็อก <code>terminal</code> ใน config.yaml ที่ใช้ในตัวอย่าง YAML</span></li>
+            <li id="th-ref-8"><span class="ref-tag ref-tag--standard">Docs</span> Nous Research. <cite>Slash Commands</cite>, Hermes Agent Reference. <a href="https://raw.githubusercontent.com/NousResearch/hermes-agent/main/website/docs/reference/slash-commands.md">raw.githubusercontent.com</a> — เข้าถึง 2026-09-07. <span class="ref-supports">รองรับ: <code>/profile</code> แสดงชื่อ profile ที่ใช้อยู่กับ home directory · <code>/export</code> และ <code>/import</code> พร้อมธง และประโยคที่ยืนยันค่าเริ่มต้นเป็น <code>&lt;name&gt;.tar.gz</code> ในไดเรกทอรีปัจจุบัน ซึ่งเป็นหลักฐานฝั่งที่สองของความไม่ตรงกัน</span></li>
+            <li id="th-ref-9"><span class="ref-tag ref-tag--standard">Docs</span> Nous Research. <cite>hermes_cli/profiles.py</cite> (ไฟล์ซอร์สบน main). <a href="https://raw.githubusercontent.com/NousResearch/hermes-agent/main/hermes_cli/profiles.py">raw.githubusercontent.com</a> — เข้าถึง 2026-09-07. <span class="ref-supports">รองรับ: regex ชื่อ profile <code>^[a-z0-9][a-z0-9_-]{0,63}$</code> และชื่อสงวนหกชื่อ · การคำนวณ path เป็น <code>root / "profiles" / canon</code> โดย <code>default</code> คืนค่าเป็นรากเอง · คีย์ใน profile.yaml (description, description_auto, display_name)</span></li>
+            <li id="th-ref-10"><span class="ref-tag ref-tag--study">Release</span> Nous Research. <cite>Hermes Agent v0.21.0 (v2026.8.31) — The Pantheon Release</cite>. <a href="https://github.com/NousResearch/hermes-agent/releases/tag/v2026.8.31">github.com</a> — เผยแพร่ 2026-08-31, เข้าถึง 2026-09-07. <span class="ref-supports">รองรับ: ประโยค "Bot Mode is now a bundled, default-on part of the desktop app: every agent profile gets a name, a deterministic avatar face" ซึ่งเป็นรุ่นที่ยืนยันว่า Bot Mode เปิดอยู่โดยค่าเริ่มต้น</span></li>
+            <li id="th-ref-11"><span class="ref-tag ref-tag--synthesis">Community</span> Greg Isenberg (กับ Alex Finn). <cite>Hermes Agent Desktop: Full Setup + Real Use Cases</cite> (วิดีโอ, 43 นาที). <a href="https://www.youtube.com/watch?v=EJm8Ka-gVOc">youtube.com</a> — เผยแพร่ 2026-06-06, เข้าถึง 2026-09-07. <span class="ref-supports">รองรับ: แนวปฏิบัติจากชุมชนในตอนที่ 8 — การจัด profile ตามโมเดล (โมเดลระดับสูงสำหรับกลยุทธ์ อีกตัวสำหรับโค้ด และโมเดลบนเครื่องสำหรับงานค้นคว้าฟรี) และกฎ "Sub-agents handle one skill across many parallel tasks; profiles handle work where each step needs a distinct skill set"</span></li>
+        </ol>
+    </section>
+    </div>
+
+    <div class="l-en" lang="en">
+
+    <p>🤔 <strong>If you want one agent for research, another for code and a third for finance — do you have to install Hermes three times?</strong></p>
+
+    <p>The previous post — <a href="/blog/hermes-desktop-local-models">#2 Local Models</a> — connected Hermes Desktop to a model running on your own machine, and the question that follows immediately is one of housekeeping: now that you hold both a paid model and a free one, how do you settle "which work goes to which" without changing models every time you open a new chat, and how do you keep the agent that reads your accounts from carrying memories out of your coding work?</p>
+
+    <p>The one-line answer: Hermes calls this a <strong>profile</strong>, and its definition is very short — <em>"A profile is a separate Hermes home directory"</em> — a second Hermes home with its own <code>config.yaml</code>, <code>.env</code>, <code>SOUL.md</code>, memories, sessions, skills, cron jobs and state database, a complete set each<sup><a href="#en-ref-1">[1]</a></sup>. This post creates a profile two ways — as a Bot on screen, and with a command in a terminal — then gives it a persona, pins it to a working folder and a model, and moves the whole thing to another machine.</p>
+
+    <h2 id="en-what-is-a-profile">1. What a Profile Is — and What It Is Not</h2>
+
+    <p>The direct answer first: a profile is <strong>a separate Hermes home directory</strong>, not a second copy of the program. A named profile lives at <code>~/.hermes/profiles/&lt;name&gt;/</code>, while the starting profile is <code>~/.hermes</code> itself, whose internal ID is always <code>default</code>. The docs stress that <em>"No migration needed — existing installs work identically"</em> — nothing you already have needs moving<sup><a href="#en-ref-1">[1]</a></sup>.</p>
+
+    <p>The mechanism behind it is a single environment variable, <code>HERMES_HOME</code>. The docs explain that more than 119 files in the codebase resolve their paths through <code>get_hermes_home()</code>, so pointing that variable at a directory moves the whole of Hermes' state with it — config, sessions, memory, skills, the state database, the gateway PID, logs and cron jobs<sup><a href="#en-ref-1">[1]</a></sup>. And when you create a profile it becomes its own command straight away: create <code>coder</code> and you immediately have <code>coder chat</code>, <code>coder setup</code> and <code>coder gateway start</code>.</p>
+
+    <figure class="figure">
+      <a href="../images/hermes-desktop-fig-03-profiles.png">
+        <img class="figure__img" src="../images/hermes-desktop-fig-03-profiles.png" alt="Diagram of a large ~/.hermes box holding a row of files from config.yaml to state.db, with an inner profiles box containing three tiles research, coder and finance, each repeating the same file row in miniature, and an auth.json bar on top linked by dashed lines to all three." width="1400" height="840" loading="lazy" decoding="async">
+      </a>
+      <figcaption class="figure__caption">Figure 1 · A profile is its own home directory under ~/.hermes/profiles/ — each has its own config, SOUL, memory and sessions, sharing only the OAuth login in auth.json.</figcaption>
+    </figure>
+
+    <p>What must be separated from the start are the three words people confuse most often. The docs keep them apart in three clean lines<sup><a href="#en-ref-1">[1]</a></sup>:</p>
+
+    <ul>
+        <li>a <strong>profile</strong> = Hermes' own state directory — <code>config.yaml</code>, <code>.env</code>, <code>SOUL.md</code>, sessions, memory, logs, cron jobs and gateway state</li>
+        <li>a <strong>workspace</strong>, or working directory, = where terminal commands start. It is controlled separately by <code>terminal.cwd</code> — not by the profile's folder</li>
+        <li>a <strong>sandbox</strong> = what limits filesystem access, and the docs put it in bold: <em>"Profiles do <strong>not</strong> sandbox the agent"</em> — on the default <code>local</code> backend the agent still has exactly the same filesystem access as your user account</li>
+    </ul>
+
+    <p>The third line is the one I most want readers to hold on to, because "separate profiles" sounds like "separate boxes" and it is not a security boundary. It separates <em>state</em>, not <em>privilege</em>. If you want a real wall you have to go down to the execution backend, which belongs to <a href="/blog/hermes-desktop-safety">#7 Safety, Remote &amp; Recovery</a>. The Bot Mode machinery that lets profiles talk to each other is in <a href="/blog/hermes-agent-teams">Hermes #2 Agent Teams</a>, and handing profiles out as git repositories across an organization is in <a href="/blog/hermes-desktop-fleet">Hermes #10 Desktop &amp; Fleet</a> — today I am staying on one machine, our own.</p>
+
+    <blockquote><strong>💡 How far a profile name can go:</strong> the command reference says it loosely — <em>"Must be a valid directory name (alphanumeric, hyphens, underscores)"</em><sup><a href="#en-ref-2">[2]</a></sup> — while the source is stricter: <code>hermes_cli/profiles.py</code> validates against the regex <code>^[a-z0-9][a-z0-9_-]{0,63}$</code> (lower case only) and reserves six names outright — <code>hermes</code>, <code>default</code>, <code>test</code>, <code>tmp</code>, <code>root</code>, <code>sudo</code><sup><a href="#en-ref-9">[9]</a></sup>. Names like <code>research</code>, <code>coder</code> and <code>finance</code> are always safe.</blockquote>
+
+    <h2 id="en-owns-and-shares">2. What a Profile Owns, and What It Shares</h2>
+
+    <p>The direct answer: a profile owns <strong>everything that is Hermes state</strong> — config, keys, persona, memories, sessions, skills, cron and the database — but it does <strong>not</strong> own three things that stay shared across the machine: the OAuth login at the root, the operating system's HOME, and the Hermes code itself. This table is the full list.</p>
+
+    <div class="table-wrapper">
+        <table>
+            <thead>
+                <tr><th>Item</th><th>Per profile?</th><th>Path</th><th>Note</th></tr>
+            </thead>
+            <tbody>
+                <tr><td><code>config.yaml</code></td><td>Yes</td><td><code>&lt;profile&gt;/config.yaml</code></td><td>Model, provider, toolsets, all settings<sup><a href="#en-ref-1">[1]</a></sup></td></tr>
+                <tr><td><code>.env</code></td><td>Yes</td><td><code>&lt;profile&gt;/.env</code></td><td>API keys and bot tokens — always stripped from both an export and a distribution<sup><a href="#en-ref-1">[1]</a></sup><sup><a href="#en-ref-4">[4]</a></sup></td></tr>
+                <tr><td><code>SOUL.md</code></td><td>Yes</td><td><code>&lt;profile&gt;/SOUL.md</code></td><td>Persona and standing instructions, loaded only from <code>HERMES_HOME</code><sup><a href="#en-ref-6">[6]</a></sup></td></tr>
+                <tr><td><code>memories/</code></td><td>Yes</td><td><code>&lt;profile&gt;/memories/</code></td><td>Belongs to the installer; a distribution update never touches it<sup><a href="#en-ref-4">[4]</a></sup></td></tr>
+                <tr><td><code>sessions/</code></td><td>Yes</td><td><code>&lt;profile&gt;/sessions/</code></td><td>Chat history, excluded from <code>--clone-all</code><sup><a href="#en-ref-2">[2]</a></sup></td></tr>
+                <tr><td><code>skills/</code></td><td>Yes</td><td><code>&lt;profile&gt;/skills/</code></td><td>But <code>hermes update</code> syncs new skills to every profile — see section 7<sup><a href="#en-ref-1">[1]</a></sup></td></tr>
+                <tr><td>cron jobs</td><td>Yes</td><td><code>&lt;profile&gt;/cron/</code></td><td>A Bot's Routines are cron jobs named <code>[bot:&lt;name&gt;] &lt;routine&gt;</code><sup><a href="#en-ref-3">[3]</a></sup></td></tr>
+                <tr><td><code>mcp.json</code></td><td>Yes</td><td><code>&lt;profile&gt;/mcp.json</code></td><td>The MCP servers this agent connects to<sup><a href="#en-ref-4">[4]</a></sup></td></tr>
+                <tr><td><code>state.db</code></td><td>Yes</td><td><code>&lt;profile&gt;/state.db</code></td><td>Counts as per-profile history, so it is excluded from <code>--clone-all</code><sup><a href="#en-ref-2">[2]</a></sup></td></tr>
+                <tr><td><code>profile.yaml</code></td><td>Yes</td><td><code>&lt;profile&gt;/profile.yaml</code></td><td>Keys <code>description</code>, <code>description_auto</code>, <code>display_name</code><sup><a href="#en-ref-2">[2]</a></sup><sup><a href="#en-ref-9">[9]</a></sup></td></tr>
+                <tr><td><code>auth.json</code> (OAuth)</td><td><strong>No — shared</strong></td><td><code>~/.hermes/auth.json</code></td><td>Every profile reads the login from the root, and a refresh performed in any profile is written back there<sup><a href="#en-ref-1">[1]</a></sup></td></tr>
+                <tr><td>The OS <code>HOME</code></td><td><strong>Not by default</strong></td><td>Your real user HOME</td><td>Host installs keep the real HOME so git/ssh/gh/npm keep working; change it with <code>terminal.home_mode: profile</code><sup><a href="#en-ref-1">[1]</a></sup><sup><a href="#en-ref-7">[7]</a></sup></td></tr>
+                <tr><td>The Hermes code</td><td><strong>No — shared</strong></td><td>One installation</td><td><em>"hermes update pulls code once (shared)"</em> — pulled once, used machine-wide<sup><a href="#en-ref-1">[1]</a></sup></td></tr>
+            </tbody>
+        </table>
+    </div>
+
+    <p>The bottom three rows are the three I see misread most often, and each is misread differently. The <code>auth.json</code> row is a <em>feature</em>, deliberately designed — you sign in once and every profile is covered, with no second subscription to buy. The <code>HOME</code> row is a <em>tradeoff</em> the docs state plainly: <em>"host profiles share normal user-level CLI state by default"</em> — different profiles still share one <code>~/.ssh</code> and one <code>~/.gitconfig</code>. If you genuinely need a different git identity per profile you must turn on <code>terminal.home_mode: profile</code> and then initialize <code>~/.ssh</code>, <code>~/.gitconfig</code> and <code>~/.config/gh</code> again inside that profile's own <code>{HERMES_HOME}/home</code><sup><a href="#en-ref-7">[7]</a></sup>. And the code row is simply the explanation for why ten profiles do not cost ten times the disk.</p>
+
+    <div class="alert danger"><strong>Never point two agent processes at one profile:</strong> this is the warning the Profiles page raises as the first box on the page — <em>"Never point two agent processes at the same profile (the same Hermes home). Both write memory automatically, and each loads the other's writes into its system prompt at session start"</em>. Both write memory automatically, and each loads what the other wrote into its own system prompt when a session starts, so the state compounds until nothing you configured is left in it. The docs close the box with the remedy: <em>"Profiles exist exactly to prevent this; agents that need shared memory should use an external memory provider instead"</em><sup><a href="#en-ref-1">[1]</a></sup>.</div>
+
+    <h2 id="en-create-a-bot">3. Procedure A — Create a Bot on Screen</h2>
+
+    <p>The direct answer: in Hermes Desktop you never have to hunt for a menu called "profile", because Bot Mode makes <strong>one Bot exactly one profile</strong>. The docs say it outright — <em>"There is no new primitive to learn: a Bot <strong>is</strong> a Hermes profile"</em> and <em>"Bot Mode is a UI over that primitive"</em><sup><a href="#en-ref-3">[3]</a></sup>. Creating a Bot is creating a profile. These are the nine steps.</p>
+
+    <ol>
+        <li>Open the <strong>Bots</strong> tab, which sits next to Sessions in the left sidebar — Bot Mode ships built into the app and is on already, nothing to install, and a <strong>Routines</strong> tile docks beside the conversation while that tab is active<sup><a href="#en-ref-3">[3]</a></sup></li>
+        <li>Hit <strong>New Agent</strong> in the roster. The quick path is three fields — <strong>Name</strong>, <strong>Title</strong>, <strong>Description</strong> — and the Bot exists in seconds, introducing itself as the first message of its own Bot Chat<sup><a href="#en-ref-3">[3]</a></sup></li>
+        <li>Write the <strong>Description</strong> as though writing for someone else, not as a note to yourself, because the teammate roster — <em>"names <strong>and roles</strong> from each profile's title/description"</em> — is part of every Bot Chat's system prompt, so other Bots know who does what before choosing a recipient<sup><a href="#en-ref-3">[3]</a></sup>. The same description is also what the kanban orchestrator routes on, <em>"based on role instead of profile name alone"</em><sup><a href="#en-ref-2">[2]</a></sup></li>
+        <li>Open the <strong>Advanced</strong> disclosure and choose between <strong>Clone from an existing profile</strong>, which starts from another Bot's config, skills, SOUL and memory, and <strong>Fresh profile</strong>, which starts clean; <strong>Create empty</strong> skips the bundled skills entirely<sup><a href="#en-ref-3">[3]</a></sup></li>
+        <li>Set the <strong>Model &amp; provider pin</strong> to give the Bot a model of its own. The docs say any provider/model pair Hermes knows about works and that different Bots can run different models side by side — <em>"Leave it unset to inherit from the launch profile"</em> if you would rather it followed the profile you launched from<sup><a href="#en-ref-3">[3]</a></sup></li>
+        <li>Fill in the <strong>Custom SOUL.md</strong> — this Bot's persona and standing instructions (how it is actually used is section 5)</li>
+        <li>Tick the <strong>per-skill, per-toolset and per-MCP-server enablement</strong> down to only what this specialist really needs. <strong>Shared keys</strong> is on by default — the new Bot shares one OAuth/token pool with the main profile so that a refresh on one side cannot invalidate the other<sup><a href="#en-ref-3">[3]</a></sup></li>
+        <li>Save, then click the Bot's row to land in its <strong>Bot Chat</strong> — a persistent conversation created and pinned the moment the Bot was born, so a row click always returns you to the same room<sup><a href="#en-ref-3">[3]</a></sup></li>
+        <li>Confirm from a terminal with <code>hermes profile list</code> — the Bot you just made appears as one ordinary profile row, and <code>hermes -p &lt;bot&gt; chat</code> opens that very same agent. This is the CLI parity table the Bot Mode docs publish<sup><a href="#en-ref-3">[3]</a></sup></li>
+    </ol>
+
+    <p>One version fact worth stating precisely: Bot Mode is a <strong>bundled desktop plugin</strong> that is on by default, and the release that announced this officially is Hermes Agent v0.21.0 (tag v2026.8.31), "The Pantheon Release", which reads <em>"Bot Mode is now a bundled, default-on part of the desktop app: every agent profile gets a name, a deterministic avatar face"</em><sup><a href="#en-ref-10">[10]</a></sup>. If you would rather not use it, switch it off under <strong>Settings → Plugins → Bots</strong>; the docs say the roster, the Routines pane and the composer middleware unregister live with no restart, and that <em>"Your profiles, sessions, and cron jobs are untouched either way; Bot Mode never owns your data, it only renders it"</em> — your profiles do not go anywhere, because Bot Mode is only the screen that draws them<sup><a href="#en-ref-3">[3]</a></sup>.</p>
+
+    <h2 id="en-create-from-terminal">4. Procedure B — The Same Thing from the Terminal</h2>
+
+    <p>The direct answer: one command creates it, and Hermes throws in an alias that becomes a new shell command immediately. Before walking the steps, I checked the complete subcommand set against the reference page on the day of writing — there are exactly thirteen: <code>list</code>, <code>use</code>, <code>create</code>, <code>describe</code>, <code>delete</code>, <code>show</code>, <code>alias</code>, <code>rename</code>, <code>export</code>, <code>import</code>, <code>install</code>, <code>update</code>, <code>info</code><sup><a href="#en-ref-2">[2]</a></sup>. These seven steps use only the first six.</p>
+
+    <ol>
+        <li>Create it: <code>hermes profile create research --description "Reads source code and external docs, writes findings."</code> — you get the profile plus an alias called <code>research</code>. The description is persisted in <code>&lt;profile_dir&gt;/profile.yaml</code>, so it survives reboots and is shared with the gateway<sup><a href="#en-ref-2">[2]</a></sup></li>
+        <li>Check that it exists: <code>hermes profile list</code> — every profile, with the active one marked by a <code>*</code>; the fuller table also carries Model, Gateway, Alias and Distribution columns<sup><a href="#en-ref-2">[2]</a></sup><sup><a href="#en-ref-4">[4]</a></sup></li>
+        <li>Talk to it: <code>hermes -p research chat</code>, or the short alias <code>research chat</code>. The alias is written to <code>~/.local/bin/research</code>, and the docs say plainly that <em>"it's just <code>hermes -p &lt;name&gt;</code> under the hood"</em><sup><a href="#en-ref-1">[1]</a></sup>. The <code>-p</code> flag works in any position, e.g. <code>hermes chat -p research -q "hello"</code></li>
+        <li>Make it the sticky default: <code>hermes profile use research</code> sends every bare <code>hermes</code> command to that profile. The docs compare it to <em>"Like <code>kubectl config use-context</code>"</em>, and <code>hermes profile use default</code> switches back<sup><a href="#en-ref-1">[1]</a></sup></li>
+        <li>See where you are: the prompt becomes <code>research ❯</code> instead of a bare <code>❯</code>, the startup banner reads <code>Profile: research</code>, a bare <code>hermes profile</code> prints the name, path, model and gateway status, and typing <code>/profile</code> in a chat returns the active profile name and its home directory<sup><a href="#en-ref-1">[1]</a></sup><sup><a href="#en-ref-8">[8]</a></sup></li>
+        <li>Inspect one in detail: <code>hermes profile show research</code> prints Path, Model, Gateway, the Skills count, whether <code>.env</code> and <code>SOUL.md</code> exist, and where the Alias lives<sup><a href="#en-ref-2">[2]</a></sup></li>
+        <li>Make it usable: <code>research setup</code> to enter API keys and pick a model — or, if you are on Nous Portal, the shortcut the docs recommend: <em>"Quickest setup: run <code>hermes setup --portal</code> inside the new profile to wire up models + tools at once"</em><sup><a href="#en-ref-1">[1]</a></sup></li>
+    </ol>
+
+    <h3>Cloning instead of starting blank</h3>
+
+    <p>If the new profile should look like one you already have, there are three levels of copying. I checked what each flag means against the table on the command reference page, and the important one is that <code>--no-skills</code> <em>refuses</em> to combine with any of the three clone flags, because cloning would drag the skills back in regardless<sup><a href="#en-ref-2">[2]</a></sup>.</p>
+
+<pre><code># copy config.yaml, .env, SOUL.md and skills from the current profile — fresh sessions and memory
+hermes profile create work --clone
+
+# copy everything except per-profile history (sessions, state.db, backups, state-snapshots, checkpoints)
+hermes profile create backup --clone-all
+
+# name the source explicitly instead of using the current profile
+hermes profile create work --clone-from coder
+hermes profile create work-backup --clone-from coder --clone-all
+
+# an empty profile with no bundled skills — writes a .no-bundled-skills marker so updates don't re-seed
+hermes profile create orchestrator --no-skills --description "Coordinates the board; does not implement."</code></pre>
+
+    <h2 id="en-persona-folder-model">5. Persona, Folder and Model</h2>
+
+    <p>The direct answer: the three things that make a profile genuinely <em>a role</em> live in three different places — the persona in a <code>SOUL.md</code> at the profile root, the working folder in the <code>terminal.cwd</code> key of <code>config.yaml</code>, and the model in the <code>model.default</code> key, settable both from the command line and from the screen.</p>
+
+    <h3>SOUL.md — the persona</h3>
+
+    <p>The Personality page describes <code>SOUL.md</code> as the agent's <strong>primary identity</strong>, occupying the first slot of the system prompt — <em>"It occupies slot #1 in the system prompt, replacing the hardcoded default identity"</em>. Hermes loads this file only from <code>HERMES_HOME</code> and does <em>not</em> look in the working directory you launched from, which is exactly why the persona belongs to the profile rather than to the project<sup><a href="#en-ref-6">[6]</a></sup>. Two things follow. First, the content goes into the prompt <em>word for word</em>, but only after a scan — <em>"that content is injected verbatim after security scanning and truncation"</em> — and the docs state that the file <em>"is scanned like other context-bearing files for prompt injection patterns before inclusion"</em>, so write persona and voice into it rather than strange meta-instructions<sup><a href="#en-ref-6">[6]</a></sup>. Second, the Profiles page warns that edits to <code>SOUL.md</code> <em>"take effect cleanly on a new session"</em> — a session left open may still be running on the old prompt<sup><a href="#en-ref-1">[1]</a></sup>.</p>
+
+<pre><code># persona: SOUL.md at the profile root
+echo "You are a focused coding assistant." &gt; ~/.hermes/profiles/coder/SOUL.md
+
+# working folder: terminal.cwd must be an absolute path
+coder config set terminal.cwd /absolute/path/to/project
+
+# model: this profile's default
+coder config set model.default anthropic/claude-sonnet-4</code></pre>
+
+    <h3>Working folder and model</h3>
+
+    <p>The working folder matters more than people expect, because the docs warn that <code>cwd: "."</code> on the <code>local</code> backend means <em>"the directory Hermes was launched from"</em>, not the profile's directory<sup><a href="#en-ref-1">[1]</a></sup>. If you want a profile to start in one project every time, write the absolute path in. And there is one more line I am fond of: <em>"Asking the model 'what directory are you in?' is not a reliable isolation test"</em> — do not ask the agent where it is, set <code>terminal.cwd</code> explicitly instead.</p>
+
+<pre><code># ~/.hermes/profiles/coder/config.yaml — the same three settings as YAML
+terminal:
+  backend: local
+  cwd: /absolute/path/to/project
+  home_mode: auto     # auto | real | profile — the subprocess HOME policy</code></pre>
+
+    <p>For the model, if you prefer the screen, Hermes Desktop has a more direct route: the docs say <strong>Settings → Model</strong> is the only place that writes the real default — <em>"That 'main' model is your <strong>per-profile global default</strong> — it's what new chats, crons, subagents, and auxiliary tasks start from, and it's the only place that writes it"</em> — and repeat that <em>"Each profile keeps its own default"</em><sup><a href="#en-ref-5">[5]</a></sup>. What to watch out for is that <em>the model picker in the composer is not the default</em> — the docs write that <em>"The composer picker is sticky UI state and never touches your default"</em>; it is remembered per device and never written into the profile. And once you have two or more profiles, the config-backed settings pages — Model, Workspace, Safety, Memory &amp; Context, Voice, Chat, Advanced and Tools &amp; Keys — grow an <strong>Applies to</strong> chip row at the top that selects which profile your edits target. The default selection follows the active profile, and the row is hidden entirely when there are fewer than two profiles<sup><a href="#en-ref-5">[5]</a></sup>.</p>
+
+    <blockquote><strong>💡 <code>/personality</code> is neither a profile nor a SOUL:</strong> the docs separate them in a single line — <em>"<code>SOUL.md</code> = baseline voice"</em> against <em>"<code>/personality</code> = temporary mode switch"</em>. It is a session-level overlay that temporarily supplements that conversation's system prompt; it does not change the profile's durable identity<sup><a href="#en-ref-6">[6]</a></sup>. Reach for the wrong one and you will wonder why the persona vanished when you opened a new chat.</blockquote>
+
+    <h2 id="en-move-a-profile">6. Move a Profile to Another Machine</h2>
+
+    <p>The direct answer: <code>hermes profile export</code> packs a whole profile into a single <code>.tar.gz</code> with <code>auth.json</code> and <code>.env</code> <em>always</em> excluded, and <code>hermes profile import</code> at the other end installs it as a <strong>new</strong> profile — it refuses to overwrite an existing one, and it will not import as the name <code>default</code><sup><a href="#en-ref-2">[2]</a></sup>.</p>
+
+<pre><code># from the CLI — auth.json and .env are always excluded
+hermes profile export research
+hermes profile export research -o ./research.tar.gz
+hermes profile import ./research.tar.gz --name research
+
+# the same two commands in chat (CLI, TUI, Desktop)
+/export research -o ~/Desktop/research.tar.gz
+/import ~/Downloads/research.tar.gz --name research-2
+
+# always read the archive before you send it to someone
+tar -tzf research.tar.gz | less</code></pre>
+
+    <p>That last line is not a ritual. The Profile Distributions page raises a caution box saying an export is <em>"a snapshot of your profile, not a curated release"</em> and that, unlike a distribution, it <strong>can</strong> carry <code>memories/</code>, <code>sessions/</code> and <code>USER.md</code> along with it, because <em>"Credentials are filtered by filename; content is not"</em> — the filter reads names, not contents. And for a named profile, <em>"A named profile copies the whole directory minus <code>auth.json</code> / <code>.env</code>"</em>, so <code>state.db</code>, logs and caches ride along too and the file can get big<sup><a href="#en-ref-4">[4]</a></sup>. On the Desktop there are three doors onto the same thing: <strong>⌘K → Export profile…</strong>, a right-click on a profile square in the rail → Export profile…, or the import button beside the rail's <strong>+</strong>. A desktop export adds a <code>desktop.json</code> carrying your skin, light/dark mode, custom themes, the profile's rail color and your window layout<sup><a href="#en-ref-4">[4]</a></sup><sup><a href="#en-ref-5">[5]</a></sup>.</p>
+
+    <div class="alert"><strong>Two sides of the docs still disagree about where an export lands:</strong> I read all three pages on the day of writing and they still conflict. The command reference says the <code>-o</code> flag defaults to <code>&lt;name&gt;.tar.gz</code>, with the example <em>"Creates work.tar.gz in the current directory"</em><sup><a href="#en-ref-2">[2]</a></sup>, and the slash-command reference agrees: <em>"Defaults to the active profile and <code>&lt;name&gt;.tar.gz</code> in the current directory"</em><sup><a href="#en-ref-8">[8]</a></sup>. But the Profile Distributions guide says the opposite — <em>"Without <code>-o</code>, the CLI and TUI place the archive in Hermes's managed <code>profile-exports/</code> directory under the default Hermes home, not in the current working directory"</em> — with the reasoning that it keeps snapshot files out of git checkouts<sup><a href="#en-ref-4">[4]</a></sup>. I cannot confirm which behaviour your installed version has. The safe route is to <strong>pass <code>-o</code> every time</strong>, and then you know exactly where the file is.</div>
+
+    <p>A <code>.tar.gz</code> suits a one-time handoff or a move between your own machines. But for an agent you intend to <em>keep shipping new versions of</em> to a team or a whole organization, Hermes has the other path: a profile distribution, which packages the profile as a git repository with a <code>distribution.yaml</code>, so recipients run <code>hermes profile install</code> and later <code>hermes profile update</code> to pull only what the distribution owns, without touching their own <code>memories/</code>, <code>sessions/</code> or <code>.env</code><sup><a href="#en-ref-4">[4]</a></sup>. I wrote that up from the organization's side in <a href="/blog/hermes-desktop-fleet">Hermes #10 Desktop &amp; Fleet</a> — including the distribution-owned versus user-owned line and why that repo belongs under branch protection — so I will not teach it twice.</p>
+
+    <h2 id="en-rules">7. Rules That Save You Pain</h2>
+
+    <p>The direct answer: these five are all stated clearly in the docs, and people usually meet them only after something has already broken. I have gathered them in one place so they can be read beforehand rather than afterwards.</p>
+
+    <ul>
+        <li><strong>OAuth logins are shared, not copied</strong> — Anthropic (Claude Pro/Max), OpenAI Codex and xAI use <em>"single-use refresh tokens"</em>, and the docs explain that a copy is not a second credential but the same credential with two owners, where the first profile to refresh it revokes it for every other copy. <code>--clone-all</code> therefore <em>drops</em> those OAuth rows from the clone; the new profile keeps reading the login from the root <code>~/.hermes/auth.json</code> as normal, while static API keys are copied as usual. To give a profile a login genuinely of its own, run <code>hermes -p &lt;name&gt; auth add &lt;provider&gt;</code> inside it<sup><a href="#en-ref-1">[1]</a></sup></li>
+        <li><strong><code>hermes update</code> syncs skills to every profile and never overwrites what you edited</strong> — the docs show the sample output <em>"Skills synced: default (up to date), coder (+2 new), assistant (+2 new)"</em> and close with <em>"User-modified skills are never overwritten"</em><sup><a href="#en-ref-1">[1]</a></sup>. And if you deliberately made an empty profile with <code>--no-skills</code>, it writes a <code>.no-bundled-skills</code> marker so later updates do not re-seed it; toggle that afterwards with <code>hermes skills opt-out</code> / <code>hermes skills opt-in</code><sup><a href="#en-ref-2">[2]</a></sup></li>
+        <li><strong>Routines are ordinary cron jobs</strong> — what the screen calls a Bot's Routine is <em>"plain Hermes cron jobs namespaced <code>[bot:&lt;name&gt;] &lt;routine&gt;</code>"</em>. They show up in <code>hermes cron list</code> and on the core Cron page too, and each run lands in that Bot's own chat history<sup><a href="#en-ref-3">[3]</a></sup>. Which means you can always inspect and fix them from a terminal — a thread <a href="/blog/hermes-desktop-automation">#6 Automation &amp; Agents</a> picks up</li>
+        <li><strong><code>default</code> can be neither deleted nor imported over</strong> — the docs say <em>"You cannot delete the default profile (<code>~/.hermes</code>). To remove everything, use <code>hermes uninstall</code>"</em><sup><a href="#en-ref-1">[1]</a></sup>, and the import side refuses as well: <em>"You cannot import as <code>default</code> — that name is the built-in root profile"</em>, so pass <code>--name</code> with something else<sup><a href="#en-ref-4">[4]</a></sup>. The only thing you can do to <code>default</code> is give it a display name with <code>hermes profile rename default &lt;Name&gt;</code>, stored as the <code>display_name</code> key in <code>~/.hermes/profile.yaml</code>, while the canonical ID stays <code>default</code> everywhere<sup><a href="#en-ref-1">[1]</a></sup></li>
+        <li><strong>Each profile runs its own gateway with its own tokens</strong> — <code>coder gateway start</code> and <code>assistant gateway start</code> are separate processes reading separate <code>.env</code> files, and <code>coder gateway install</code> creates a <code>hermes-gateway-coder</code> systemd/launchd service for you<sup><a href="#en-ref-1">[1]</a></sup>. The safety net that matters is the token lock: the docs say that if two profiles accidentally use the same bot token, <em>"the second gateway will be blocked with a clear error naming the conflicting profile"</em>, supported for Telegram, Discord, Slack, WhatsApp and Signal<sup><a href="#en-ref-1">[1]</a></sup></li>
+    </ul>
+
+    <p>The one I would underline is the first, because it changes how you think about cost: ten profiles do not mean ten subscriptions — they all read the same login from the root. But it also means they share the same quota. If you truly need separate bills, separate at the credential level, not at the profile level.</p>
+
+    <h2 id="en-summary">8. Summary</h2>
+
+    <p>We started from a definition one sentence long — a profile is a separate Hermes home directory — and grew it into a way of organising a whole machine: a table of what belongs to whom and what stays shared, creating a Bot on screen and creating a profile in a terminal and finding they produce the same object, giving it a persona with <code>SOUL.md</code>, a folder with <code>terminal.cwd</code> and a model with <code>model.default</code>, and moving the whole thing between machines with export and import. The next post, <a href="/blog/hermes-desktop-council">#4 The Council</a>, goes one step further — making answers get checked before they reach us.</p>
+
+    <p>Let me close with practice from a real user. In Greg Isenberg's walkthrough with Alex Finn (6 June 2026), Finn organises his profiles by <em>model</em> rather than by task — a top-tier model for strategy, another for coding, and a model on his own machine for research that costs nothing — and then picks the profile whose strengths match the job in front of him. He also gives the shortest rule I have seen for choosing between profiles and subagents: <em>"Sub-agents handle one skill across many parallel tasks; profiles handle work where each step needs a distinct skill set"</em> — different skill sets mean separate profiles; one skill run many times in parallel means subagents<sup><a href="#en-ref-11">[11]</a></sup>. This is community practice, not advice from the official docs, but I find it matches what the docs say without saying it: a profile separates <em>state</em>, a subagent separates <em>labour</em>.</p>
+
+    <div class="key-takeaways">
+        <h3>🎯 Key Takeaways</h3>
+        <ul>
+            <li><strong>profile</strong> = a separate Hermes home directory at <code>~/.hermes/profiles/&lt;name&gt;/</code>; the starting one is <code>~/.hermes</code> itself, whose internal ID is <code>default</code></li>
+            <li><strong>Not a workspace, not a sandbox</strong> = the working folder is <code>terminal.cwd</code>, and the docs say outright that profiles do not sandbox the agent</li>
+            <li><strong>Bot = profile</strong> = New Agent in the Bots tab creates one real profile; check it with <code>hermes profile list</code> and open it with <code>hermes -p &lt;bot&gt; chat</code></li>
+            <li><strong>Description is the routing key</strong> = names and roles from each profile's title/description go into every Bot Chat's system prompt, and the kanban orchestrator routes on role</li>
+            <li><strong>Three homes for a role</strong> = the persona in <code>SOUL.md</code> (slot #1 of the system prompt, scanned for prompt injection first), the folder in an absolute <code>terminal.cwd</code>, the model in <code>model.default</code> or Settings → Model with its Applies to chip row</li>
+            <li><strong>An export strips keys, not memory</strong> = <code>auth.json</code> and <code>.env</code> always go, but <code>memories/</code> and <code>sessions/</code> may ride along — run <code>tar -tzf</code> before sending, and pass <code>-o</code>, because two sides of the docs still name different default locations</li>
+            <li><strong>Two rules that prevent pain</strong> = never point two agent processes at one profile, and remember OAuth is shared from the root <code>auth.json</code> rather than copied per profile</li>
+        </ul>
+    </div>
+
+    <section class="references" aria-labelledby="en-references">
+        <h2 id="en-references">References</h2>
+        <p class="references__note">Every source was verified and accessed on 7 September 2026 (2026-09-07). This series uses four evidence labels — <strong>Docs</strong> official Hermes Agent documentation · <strong>Release</strong> release notes or a merged commit/PR · <strong>Issue</strong> an open issue or PR · <strong>Community</strong> a non-official community source</p>
+        <ol class="references__list">
+            <li id="en-ref-1"><span class="ref-tag ref-tag--standard">Docs</span> Nous Research. <cite>Profiles: Running Multiple Agents</cite>, Hermes Agent User Guide. <a href="https://raw.githubusercontent.com/NousResearch/hermes-agent/main/website/docs/user-guide/profiles.md">raw.githubusercontent.com</a> — accessed 2026-09-07. <span class="ref-supports">Supports: the definition "A profile is a separate Hermes home directory" and the list of what a profile owns · the path <code>~/.hermes/profiles/&lt;name&gt;/</code> and default = <code>~/.hermes</code> · the caution against pointing two agent processes at one profile · profile vs workspace vs sandbox and <code>terminal.cwd</code> · the alias at <code>~/.local/bin/&lt;name&gt;</code>, the <code>-p</code> flag, <code>hermes profile use</code> as kubectl, the <code>coder ❯</code> prompt and banner · <code>HERMES_HOME</code> and the 119+ files, the real HOME, and <code>home_mode: profile</code> · OAuth shared from the root <code>auth.json</code> · <code>hermes update</code> syncing skills · <code>config set model.default</code> and <code>terminal.cwd</code> · <code>default</code> not being deletable and <code>display_name</code> · per-profile gateways and token locks · the <code>hermes setup --portal</code> shortcut · the table in section 2</span></li>
+            <li id="en-ref-2"><span class="ref-tag ref-tag--standard">Docs</span> Nous Research. <cite>Profile Commands Reference</cite>, Hermes Agent Reference. <a href="https://raw.githubusercontent.com/NousResearch/hermes-agent/main/website/docs/reference/profile-commands.md">raw.githubusercontent.com</a> — accessed 2026-09-07. <span class="ref-supports">Supports: the thirteen subcommands · every <code>create</code> flag including <code>--no-skills</code> refusing to combine with the clone flags and the <code>.no-bundled-skills</code> marker · <code>--clone-all</code> excluding sessions/state.db/backups/state-snapshots/checkpoints · <code>describe</code> and <code>profile.yaml</code> · the output of <code>profile list</code> and <code>profile show</code> · <code>export</code>/<code>import</code> with the <code>&lt;name&gt;.tar.gz</code>-in-the-current-directory default and the refusal to overwrite or import as default · the documented naming rule</span></li>
+            <li id="en-ref-3"><span class="ref-tag ref-tag--standard">Docs</span> Nous Research. <cite>Bot Mode</cite>, Hermes Agent User Guide. <a href="https://raw.githubusercontent.com/NousResearch/hermes-agent/main/website/docs/user-guide/bot-mode.md">raw.githubusercontent.com</a> — accessed 2026-09-07. <span class="ref-supports">Supports: "a Bot <strong>is</strong> a Hermes profile" and "Bot Mode is a UI over that primitive" · the Bots tab beside Sessions, the Routines tile, Bot Mode being built in and on by default · the whole New Agent flow (Name/Title/Description, Advanced, Clone/Fresh, Create empty, the model pin and its inherit sentence, Custom SOUL.md, per-skill/toolset/MCP, Shared keys) · the persistent pinned Bot Chat · the teammate roster from title/description in the system prompt · Routines as cron jobs named <code>[bot:&lt;name&gt;]</code> · the CLI parity table · switching it off under Settings → Plugins → Bots</span></li>
+            <li id="en-ref-4"><span class="ref-tag ref-tag--standard">Docs</span> Nous Research. <cite>Profile Distributions: Share a Whole Agent</cite>, Hermes Agent User Guide. <a href="https://raw.githubusercontent.com/NousResearch/hermes-agent/main/website/docs/user-guide/profile-distributions.md">raw.githubusercontent.com</a> — accessed 2026-09-07. <span class="ref-supports">Supports: what an export file contains and the line "a snapshot of your profile, not a curated release" · "Credentials are filtered by filename; content is not" · a named profile copying the whole directory minus <code>auth.json</code>/<code>.env</code> · the refusal to import as <code>default</code> · the three Desktop export doors and the <code>desktop.json</code> file · the managed <code>profile-exports/</code> location that conflicts with the reference pages · the distribution-owned versus user-owned table and <code>mcp.json</code> · the sample <code>hermes profile list</code> table with Model/Gateway/Alias/Distribution columns</span></li>
+            <li id="en-ref-5"><span class="ref-tag ref-tag--standard">Docs</span> Nous Research. <cite>Hermes Desktop</cite>, Hermes Agent User Guide. <a href="https://raw.githubusercontent.com/NousResearch/hermes-agent/main/website/docs/user-guide/desktop.md">raw.githubusercontent.com</a> — accessed 2026-09-07. <span class="ref-supports">Supports: the "Applies to" chip row on all eight config-backed settings pages and its hiding below two profiles · Settings → Model as the per-profile global default and the only place that writes it · the composer picker being sticky UI state that never touches the default · ⌘K → Export/Import profile… and desktop.json</span></li>
+            <li id="en-ref-6"><span class="ref-tag ref-tag--standard">Docs</span> Nous Research. <cite>Personality &amp; SOUL.md</cite>, Hermes Agent User Guide. <a href="https://raw.githubusercontent.com/NousResearch/hermes-agent/main/website/docs/user-guide/features/personality.md">raw.githubusercontent.com</a> — accessed 2026-09-07. <span class="ref-supports">Supports: SOUL.md as the primary identity occupying slot #1 of the system prompt · being loaded only from <code>HERMES_HOME</code> and never from the working directory · "injected verbatim after security scanning and truncation" and the prompt-injection scan · SOUL.md = baseline voice against /personality = temporary mode switch at session level</span></li>
+            <li id="en-ref-7"><span class="ref-tag ref-tag--standard">Docs</span> Nous Research. <cite>Configuration</cite>, Hermes Agent User Guide. <a href="https://raw.githubusercontent.com/NousResearch/hermes-agent/main/website/docs/user-guide/configuration.md">raw.githubusercontent.com</a> — accessed 2026-09-07. <span class="ref-supports">Supports: the <code>terminal.home_mode</code> key with values auto | real | profile, the table of what each does, and what you must initialize yourself inside the profile home when choosing profile · the <code>terminal</code> block in config.yaml used in the YAML example</span></li>
+            <li id="en-ref-8"><span class="ref-tag ref-tag--standard">Docs</span> Nous Research. <cite>Slash Commands</cite>, Hermes Agent Reference. <a href="https://raw.githubusercontent.com/NousResearch/hermes-agent/main/website/docs/reference/slash-commands.md">raw.githubusercontent.com</a> — accessed 2026-09-07. <span class="ref-supports">Supports: <code>/profile</code> showing the active profile name and home directory · <code>/export</code> and <code>/import</code> with their flags, and the sentence confirming the default of <code>&lt;name&gt;.tar.gz</code> in the current directory, the second piece of evidence for the disagreement</span></li>
+            <li id="en-ref-9"><span class="ref-tag ref-tag--standard">Docs</span> Nous Research. <cite>hermes_cli/profiles.py</cite> (source file on main). <a href="https://raw.githubusercontent.com/NousResearch/hermes-agent/main/hermes_cli/profiles.py">raw.githubusercontent.com</a> — accessed 2026-09-07. <span class="ref-supports">Supports: the profile-name regex <code>^[a-z0-9][a-z0-9_-]{0,63}$</code> and the six reserved names · the path computation <code>root / "profiles" / canon</code>, with <code>default</code> returning the root itself · the profile.yaml keys (description, description_auto, display_name)</span></li>
+            <li id="en-ref-10"><span class="ref-tag ref-tag--study">Release</span> Nous Research. <cite>Hermes Agent v0.21.0 (v2026.8.31) — The Pantheon Release</cite>. <a href="https://github.com/NousResearch/hermes-agent/releases/tag/v2026.8.31">github.com</a> — published 2026-08-31, accessed 2026-09-07. <span class="ref-supports">Supports: the sentence "Bot Mode is now a bundled, default-on part of the desktop app: every agent profile gets a name, a deterministic avatar face", the release that confirms Bot Mode is on by default</span></li>
+            <li id="en-ref-11"><span class="ref-tag ref-tag--synthesis">Community</span> Greg Isenberg (with Alex Finn). <cite>Hermes Agent Desktop: Full Setup + Real Use Cases</cite> (video, 43 minutes). <a href="https://www.youtube.com/watch?v=EJm8Ka-gVOc">youtube.com</a> — published 2026-06-06, accessed 2026-09-07. <span class="ref-supports">Supports: the community practice in section 8 — organising profiles by model (a top-tier model for strategy, another for coding, a local model for free research) and the rule "Sub-agents handle one skill across many parallel tasks; profiles handle work where each step needs a distinct skill set"</span></li>
+        </ol>
+    </section>
+    </div>
+
+    <div class="post-series-footer">
+      <span class="l-th">บทความจากซีรีส์ Hermes Desktop Hands-On 2026</span><span class="l-en" lang="en">From the Hermes Desktop Hands-On 2026 series</span>
+    </div>
+
+    <nav aria-label="Hermes Desktop Hands-On">
+    <div class="series-nav">
+      <h3>💻 Hermes Desktop Hands-On 2026</h3>
+      <div class="series-links">
+        <a href="/blog/hermes-desktop-install">#1 First Run</a>
+        <a href="/blog/hermes-desktop-local-models">#2 Local Models</a>
+        <span class="current" aria-current="page">#3 Profiles</span>
+        <a href="/blog/hermes-desktop-council">#4 Council</a>
+        <a href="/blog/hermes-desktop-skills-mcp">#5 Skills &amp; MCP</a>
+        <a href="/blog/hermes-desktop-automation">#6 Automation</a>
+        <a href="/blog/hermes-desktop-safety">#7 Recovery</a>
+      </div>
+    </div>
+    </nav>
+
+  </article>
+
+  </main>
+
+  <footer class="blog-footer">
+    <nav class="blog-footer__nav" aria-label="Site">
+      <a href="../index.html">Home</a>
+      <a href="./">Blog</a>
+      <a href="../publications/">Publications</a>
+      <a href="../books/">Books</a>
+      <a href="../projects/">Projects</a>
+      <a href="../news/">News</a>
+      <a href="../index.html#contact">Contact</a>
+    </nav>
+    <a href="./">← Back to Blog</a>
+    <span>© 2026 Anirach Mingkhwan — Associate Professor, KMUTNB</span>
+  </footer>
+
+</body>
+</html>

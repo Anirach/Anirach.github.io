@@ -29,7 +29,8 @@ generic vocabulary. Two changes:
      as the blueprint texture, one CLUSTER ACCENT as the lit ink.
      Life (9)      -- gold on the two dark grounds; one lit object per essay.
      Hermes (10)   -- teal geometry on cloud/parchment, alternating.
-     AI Transf (20) -- coral diagram primitives on cream/parchment, alternating.
+     AI Transf (20) -- coral diagram primitives on cloud/parchment, alternating.
+     Hermes Desktop (7) -- teal, cloud/parchment, one WINDOW FRAME per drawing.
      Diagram primitives ONLY (tiles, bars, discs, rings, arrows, axes), with
      exactly one SOLID NAVY core (c["core"]) and one coral point per drawing.
 
@@ -75,6 +76,7 @@ square. The helpers below all take explicit centres and radii for that reason.
 """
 import argparse
 import csv
+import json
 import math
 import pathlib
 import re
@@ -1755,6 +1757,323 @@ def hm_fleet(d, b, c, o):
                fill=c["hi"] if i == 1 else c["ln2"], width=4)
 
 
+# --- Hermes Desktop Hands-On (hd_*) ---------------------------------------
+# Family rule: every hd_ drawing is built around ONE WINDOW FRAME (a rounded
+# rect, a title bar, three small dots) standing for the desktop app -- no laptop
+# silhouettes (hm_fleet owns the page's laptops), no terminal-with-sprout
+# (hm_growth) -- and the ONE lit teal object (c["hi"]/c["hif"]) is the thing the
+# post teaches; all else navy line (c["ln"]/c["ln2"]) on c["fill"]/c["dimf"],
+# with a touch of c["gold"].
+
+def _hd_frame(d, box, c, bar):
+    """The window frame every hd_ drawing is built around: a rounded rect, a
+    title-bar rule `bar` tall, three small dots.  Returns the body box."""
+    x0, y0, x1, y1 = box
+    rr(d, box, bar * 0.4, fill=c["fill"], outline=c["ln"], w=7)
+    d.line([(x0, y0 + bar), (x1, y0 + bar)], fill=c["ln2"], width=5)
+    for i in range(3):
+        circ(d, x0 + bar * (0.62 + i * 0.55), y0 + bar / 2, bar * 0.12, fill=c["ln2"])
+    return (x0, y0 + bar, x1, y1)
+
+
+def _hd_bez(p0, p1, p2, n=16):
+    """Quadratic Bezier as a point list -- the cables and the rope."""
+    pts = []
+    for i in range(n + 1):
+        t = i / n
+        pts.append(((1 - t) ** 2 * p0[0] + 2 * (1 - t) * t * p1[0] + t * t * p2[0],
+                    (1 - t) ** 2 * p0[1] + 2 * (1 - t) * t * p1[1] + t * t * p2[1]))
+    return pts
+
+
+def hd_firstrun(d, b, c, o):
+    """A window frame with one large round teal button at its centre, and
+    beneath the window a progress bar filled edge to edge in teal with a gold
+    tick at its end -- install, wait, and it runs the first time.  vs
+    hm_growth's terminal and hm_fleet's laptops: one WINDOW, one BUTTON, one
+    full bar; the page's only progress bar."""
+    x0, y0, x1, y1 = b
+    w, h = x1 - x0, y1 - y0
+    cx = (x0 + x1) / 2
+    fw, fh = min(w * 0.62, h * 2.0), h * 0.7
+    fx0 = cx - fw / 2
+    bx0, by0, bx1, by1 = _hd_frame(d, (fx0, y0, fx0 + fw, y0 + fh), c, h * 0.125)
+    bcx, bcy = (bx0 + bx1) / 2, (by0 + by1) / 2
+    r = (by1 - by0) * 0.34
+    circ(d, bcx, bcy, r, fill=c["hif"], outline=c["hi"], w=7)
+    circ(d, bcx, bcy, r * 0.4, fill=c["hi"])
+    # the bar beneath the window: the window's full width, filled to the end
+    bh_ = h * 0.11
+    bcy_ = y0 + h * 0.855
+    gr = h * 0.085
+    px0, px1 = fx0, fx0 + fw
+    rr(d, (px0, bcy_ - bh_ / 2, px1, bcy_ + bh_ / 2), bh_ / 2, fill=c["hi"], outline=None)
+    circ(d, px1, bcy_, gr, fill=c["gold"])
+    d.line([(px1 - gr * 0.45, bcy_), (px1 - gr * 0.12, bcy_ + gr * 0.36),
+            (px1 + gr * 0.5, bcy_ - gr * 0.42)], fill=c["core"], width=6, joint="curve")
+
+
+def hd_cartridge(d, b, c, o):
+    """A window frame with a square chip-cartridge (a teal square with pin
+    stubs) half-slid into a slot cut in the frame's right edge, a gold arrow
+    pushing it home, and a small three-segment memory gauge beside the slot
+    with two segments lit -- a model going INTO your own machine.  vs
+    hm_ladder (a ladder climbing UP to a chip): here the chip slides sideways
+    into the box; the page's only cartridge and the only gauge-beside-a-slot."""
+    x0, y0, x1, y1 = b
+    w, h = x1 - x0, y1 - y0
+    fx0, fx1 = x0 + w * 0.04, x0 + w * 0.58
+    fy0, fy1 = y0 + h * 0.04, y1 - h * 0.04
+    bx0, by0, bx1, by1 = _hd_frame(d, (fx0, fy0, fx1, fy1), c, h * 0.13)
+    for i in range(2):
+        yy = by0 + (by1 - by0) * (0.3 + i * 0.2)
+        d.line([(bx0 + w * 0.03, yy), (bx0 + w * 0.2, yy)], fill=c["ln2"], width=5)
+    s = h * 0.17
+    scy = (by0 + by1) / 2
+    # the slot: a dark opening cut through the frame's right edge
+    d.rectangle([fx1 - w * 0.012, scy - s * 1.35, fx1 + w * 0.012, scy + s * 1.35],
+                fill=c["core"])
+    # the cartridge, half in, half out
+    chx = fx1 + s * 0.1
+    rr(d, (chx - s, scy - s, chx + s, scy + s), h * 0.02, fill=c["hif"], outline=c["hi"], w=7)
+    rr(d, (chx - s * 0.45, scy - s * 0.45, chx + s * 0.45, scy + s * 0.45), h * 0.01,
+       fill=None, outline=c["hi"], w=4)
+    for k in (-0.55, -0.18, 0.18, 0.55):
+        d.line([(chx + s, scy + s * k), (chx + s * 1.32, scy + s * k)], fill=c["hi"], width=5)
+    for k in (0.25, 0.6):
+        d.line([(chx + s * k, scy - s), (chx + s * k, scy - s * 1.32)], fill=c["hi"], width=5)
+        d.line([(chx + s * k, scy + s), (chx + s * k, scy + s * 1.32)], fill=c["hi"], width=5)
+    # gold arrow: push it home
+    ay = scy - s * 1.75
+    arrow(d, (chx + s * 1.5, ay), (chx + s * 0.35, ay), c["gold"], 6, 22)
+    # the memory gauge beside the slot, bottom two segments lit
+    gx = chx + s * 2.9
+    gw, gh_ = w * 0.09, h * 0.16
+    for i in range(3):
+        gy1 = scy + h * 0.29 - i * (gh_ + h * 0.05)
+        lit = i < 2
+        rr(d, (gx - gw / 2, gy1 - gh_, gx + gw / 2, gy1), h * 0.015,
+           fill=c["hif"] if lit else c["dimf"], outline=c["hi"] if lit else c["ln2"], w=5)
+
+
+def hd_drawers(d, b, c, o):
+    """A window frame whose body is a filing cabinet of three labelled
+    drawers, the middle one pulled out to show a single upright persona card
+    in teal, a tiny gold key lying on the cabinet's top edge -- one agent per
+    drawer, keys shared above.  vs hm_kanban's open board and hm_bounded's
+    open vessel: a closed CABINET with one drawer OUT; the page's only
+    drawers."""
+    x0, y0, x1, y1 = b
+    w, h = x1 - x0, y1 - y0
+    fx0, fx1 = x0 + w * 0.1, x0 + w * 0.6
+    fy0, fy1 = y0 + h * 0.15, y1 - h * 0.02
+    bx0, by0, bx1, by1 = _hd_frame(d, (fx0, fy0, fx1, fy1), c, h * 0.12)
+    dh = (by1 - by0) / 3
+    pull = w * 0.2
+    for i in range(3):
+        dy0, dy1 = by0 + dh * (i + 0.1), by0 + dh * (i + 0.9)
+        out = i == 1
+        dx1 = bx1 + pull if out else bx1 - w * 0.012
+        if out:
+            # the drawer sits in front of the frame's edge, so cut the edge
+            d.rectangle([bx1 - w * 0.012, dy0 - h * 0.005, bx1 + w * 0.012, dy1 + h * 0.005],
+                        fill=c["bg"])
+        rr(d, (bx0 + w * 0.012, dy0, dx1, dy1), h * 0.012,
+           fill=c["fill"] if out else c["dimf"], outline=c["ln"] if out else c["ln2"], w=5)
+        rr(d, (bx0 + w * 0.03, dy0 + dh * 0.22, bx0 + w * 0.09, dy1 - dh * 0.22), h * 0.006,
+           fill=c["dimf"], outline=c["ln2"], w=4)
+        hy = (dy0 + dy1) / 2
+        d.line([(dx1 - w * 0.05, hy), (dx1 - w * 0.02, hy)], fill=c["ln"], width=5)
+    # the persona card standing upright in the open drawer
+    dy1 = by0 + dh * 1.9
+    cw, ch = min(pull * 0.5, dh * 0.85), dh * 1.3
+    ccx = bx1 + pull * 0.45
+    cy1 = dy1 - dh * 0.15
+    rr(d, (ccx - cw / 2, cy1 - ch, ccx + cw / 2, cy1), h * 0.012,
+       fill=c["hif"], outline=c["hi"], w=6)
+    circ(d, ccx, cy1 - ch * 0.66, cw * 0.17, fill=c["hi"])
+    d.pieslice([ccx - cw * 0.32, cy1 - ch * 0.5, ccx + cw * 0.32, cy1 - ch * 0.1],
+               180, 360, fill=c["hi"])
+    # the gold key on the cabinet's top edge
+    kx, ky = fx1 - w * 0.16, fy0 - h * 0.065
+    kr = h * 0.03
+    circ(d, kx, ky, kr, fill=None, outline=c["gold"], w=5)
+    d.line([(kx + kr, ky), (kx + kr + w * 0.08, ky)], fill=c["gold"], width=5)
+    for dx in (0.055, 0.075):
+        d.line([(kx + kr + w * dx, ky), (kx + kr + w * dx, ky + kr * 0.9)],
+               fill=c["gold"], width=5)
+
+
+def hd_roundtable(d, b, c, o):
+    """Inside a window frame: a semicircular table with three seats around
+    its arc facing one small lectern at the flat side, and above the lectern
+    a round teal stamp with a tick -- models deliberate, one synthesises, a
+    reviewer stamps it.  vs hm_kanban's three rings and oc_team's org chart:
+    seats around a TABLE, no hierarchy; the page's only stamp."""
+    x0, y0, x1, y1 = b
+    w, h = x1 - x0, y1 - y0
+    fx0, fx1 = x0 + w * 0.06, x1 - w * 0.06
+    bx0, by0, bx1, by1 = _hd_frame(d, (fx0, y0, fx1, y1), c, h * 0.13)
+    bw_, bh_ = bx1 - bx0, by1 - by0
+    R = min(bh_ * 0.4, bw_ * 0.17)
+    tcx, tcy = (bx0 + bx1) / 2 - R * 0.15, by0 + bh_ * 0.54
+    d.pieslice([tcx - R, tcy - R, tcx + R, tcy + R], 90, 270,
+               fill=c["fill"], outline=c["ln"], width=6)
+    for ang in (150, 180, 210):
+        a = math.radians(ang)
+        circ(d, tcx + R * 1.4 * math.cos(a), tcy + R * 1.4 * math.sin(a), R * 0.2,
+             fill=c["dimf"], outline=c["ln"], w=5)
+    # the lectern at the flat side: a post under a slanted board, a gold page on it
+    lx_ = tcx + R * 0.55
+    lw, lh = R * 0.3, R * 0.75
+    d.rectangle([lx_ - lw * 0.28, tcy - lh * 0.15, lx_ + lw * 0.28, tcy + lh / 2],
+                fill=c["fill"], outline=c["ln"], width=5)
+    d.polygon([(lx_ - lw, tcy - lh * 0.5), (lx_ + lw, tcy - lh * 0.1),
+               (lx_ + lw, tcy + lh * 0.08), (lx_ - lw, tcy - lh * 0.32)],
+              fill=c["fill"], outline=c["ln"], width=5)
+    d.line([(lx_ - lw * 0.6, tcy - lh * 0.44), (lx_ + lw * 0.6, tcy - lh * 0.2)],
+           fill=c["gold"], width=5)
+    # the stamp, above the lectern
+    sr = R * 0.45
+    scx, scy = lx_ + R * 0.9, tcy - R * 0.7
+    circ(d, scx, scy, sr, fill=c["hif"], outline=c["hi"], w=7)
+    d.line([(scx - sr * 0.45, scy), (scx - sr * 0.1, scy + sr * 0.36),
+            (scx + sr * 0.5, scy - sr * 0.42)], fill=c["hi"], width=7, joint="curve")
+
+
+def hd_patchboard(d, b, c, o):
+    """Inside a window frame: a rectangular patch panel with three sockets in
+    a row, two plugs on short curved cables already seated, the third plug
+    (teal) hovering just above its socket -- capability that plugs in.  vs
+    hm_gateway's funnel and oc_integrations' hub-and-spokes: a PANEL with
+    SOCKETS and cables; the page's only plugs."""
+    x0, y0, x1, y1 = b
+    w, h = x1 - x0, y1 - y0
+    fx0, fx1 = x0 + w * 0.06, x1 - w * 0.06
+    bx0, by0, bx1, by1 = _hd_frame(d, (fx0, y0, fx1, y1), c, h * 0.13)
+    bw_, bh_ = bx1 - bx0, by1 - by0
+    pw = min(bw_ * 0.72, bh_ * 2.4)
+    px0 = (bx0 + bx1) / 2 - pw / 2
+    py0, py1 = by1 - bh_ * 0.42, by1 - bh_ * 0.1
+    rr(d, (px0, py0, px0 + pw, py1), h * 0.02, fill=c["dimf"], outline=c["ln"], w=6)
+    scy = (py0 + py1) / 2
+    circ(d, px0 + pw * 0.06, scy, h * 0.02, fill=c["gold"])
+    sr = (py1 - py0) * 0.3
+    hub = (px0 + pw * 0.96, by0 + bh_ * 0.12)
+    for i in range(3):
+        sx_ = px0 + pw * (0.27 + i * 0.24)
+        circ(d, sx_, scy, sr, fill=c["fill"], outline=c["ln"], w=5)
+        circ(d, sx_, scy, sr * 0.38, fill=c["ln"])
+        lit = i == 2
+        col = c["hi"] if lit else c["ln"]
+        pbw, pbh = sr * 1.5, sr * 1.6
+        pby = scy - sr * 0.2 - bh_ * 0.2 if lit else scy + sr * 0.35
+        if lit:
+            d.line([(sx_, pby), (sx_, pby + sr * 0.75)], fill=c["hi"], width=7)
+        rr(d, (sx_ - pbw / 2, pby - pbh, sx_ + pbw / 2, pby), sr * 0.3,
+           fill=c["hif"] if lit else c["fill"], outline=col, w=5)
+        d.line(_hd_bez((sx_, pby - pbh), (sx_, by0 + bh_ * 0.08), hub),
+               fill=c["hi"] if lit else c["ln2"], width=5, joint="curve")
+    circ(d, hub[0], hub[1], h * 0.022, fill=c["ln"])
+
+
+def hd_metronome(d, b, c, o):
+    """Inside a window frame: a metronome (tall trapezoid, pendulum arm swung
+    to one side with a teal weight) beside a short stack of three cards, the
+    top card carrying a gold tick -- a rhythm that keeps time and work that
+    comes out checked.  vs hm_railbolt's rail and bolt and lp_*'s clock
+    faces: the page's only METRONOME, no rail."""
+    x0, y0, x1, y1 = b
+    w, h = x1 - x0, y1 - y0
+    fx0, fx1 = x0 + w * 0.06, x1 - w * 0.06
+    bx0, by0, bx1, by1 = _hd_frame(d, (fx0, y0, fx1, y1), c, h * 0.13)
+    bw_, bh_ = bx1 - bx0, by1 - by0
+    mh = bh_ * 0.78
+    mtop, mbot = by0 + bh_ * 0.11, by0 + bh_ * 0.89
+    mcx = bx0 + bw_ * 0.36
+    d.polygon([(mcx - mh * 0.11, mtop), (mcx + mh * 0.11, mtop),
+               (mcx + mh * 0.26, mbot), (mcx - mh * 0.26, mbot)],
+              fill=c["fill"], outline=c["ln"], width=7)
+    # the graduated slot down the centre
+    d.line([(mcx, mtop + mh * 0.1), (mcx, mbot - mh * 0.28)], fill=c["ln2"], width=4)
+    for k in range(4):
+        yy = mtop + mh * (0.16 + k * 0.14)
+        d.line([(mcx - mh * 0.04, yy), (mcx + mh * 0.04, yy)], fill=c["ln2"], width=4)
+    # the pendulum, swung right, with its teal weight
+    pvx, pvy = mcx, mbot - mh * 0.16
+    a = math.radians(-70)
+    ux, uy = math.cos(a), math.sin(a)
+    L = mh * 0.8
+    d.line([(pvx, pvy), (pvx + L * ux, pvy + L * uy)], fill=c["ln"], width=6)
+    circ(d, pvx, pvy, mh * 0.035, fill=c["ln"])
+    wx_, wy_ = pvx + L * 0.58 * ux, pvy + L * 0.58 * uy
+    al, ac = mh * 0.09, mh * 0.06
+    d.polygon([(wx_ + al * ux - ac * uy, wy_ + al * uy + ac * ux),
+               (wx_ + al * ux + ac * uy, wy_ + al * uy - ac * ux),
+               (wx_ - al * ux + ac * uy, wy_ - al * uy - ac * ux),
+               (wx_ - al * ux - ac * uy, wy_ - al * uy + ac * ux)],
+              fill=c["hif"], outline=c["hi"], width=6)
+    # three cards, the top one ticked in gold
+    cw, ch = min(bw_ * 0.3, mh * 0.95), mh * 0.2
+    ccx = bx0 + bw_ * 0.72
+    for i in range(3):
+        cy1 = mbot - ch * i * 1.3
+        top = i == 2
+        rr(d, (ccx - cw / 2, cy1 - ch, ccx + cw / 2, cy1), h * 0.012,
+           fill=c["fill"] if top else c["dimf"], outline=c["ln"] if top else c["ln2"], w=5)
+        d.line([(ccx - cw * 0.38, cy1 - ch / 2), (ccx + cw * (0.05 if top else 0.2), cy1 - ch / 2)],
+               fill=c["ln2"], width=4)
+    tx_, ty_ = ccx + cw * 0.32, mbot - ch * 2.6 - ch / 2
+    d.line([(tx_ - ch * 0.3, ty_), (tx_ - ch * 0.05, ty_ + ch * 0.25),
+            (tx_ + ch * 0.35, ty_ - ch * 0.3)], fill=c["gold"], width=6, joint="curve")
+
+
+def hd_lifebuoy(d, b, c, o):
+    """A window frame at left with a two-tone ring buoy (alternating teal and
+    navy-line segments) hanging on its right edge, a rope trailing from the
+    buoy to a small distant box with an antenna stub at the right -- a safety
+    ring on the near side, a remote host at the end of the line.  vs
+    hm_isolation's nested walls and oc_security's shield: no wall, no shield,
+    a RING and a ROPE; the page's only buoy."""
+    x0, y0, x1, y1 = b
+    w, h = x1 - x0, y1 - y0
+    fx0, fx1 = x0 + w * 0.03, x0 + w * 0.5
+    fy0, fy1 = y0 + h * 0.04, y1 - h * 0.04
+    bx0, by0, bx1, by1 = _hd_frame(d, (fx0, fy0, fx1, fy1), c, h * 0.13)
+    for i in range(3):
+        yy = by0 + (by1 - by0) * (0.25 + i * 0.2)
+        d.line([(bx0 + w * 0.03, yy), (bx0 + w * (0.2 - i * 0.04), yy)], fill=c["ln2"], width=5)
+    # the buoy, hanging on the frame's right edge: four teal segments, four plain
+    ro, ri = h * 0.2, h * 0.105
+    rcx, rcy = fx1, (by0 + by1) / 2
+    circ(d, rcx, rcy, ro, fill=c["bg"])
+    circ(d, rcx, rcy, ro, fill=c["fill"])
+    for k in range(4):
+        a0 = k * 90 - 22.5
+        d.pieslice([rcx - ro, rcy - ro, rcx + ro, rcy + ro], a0, a0 + 45, fill=c["hi"])
+    circ(d, rcx, rcy, ri, fill=c["bg"])
+    d.pieslice([rcx - ri, rcy - ri, rcx + ri, rcy + ri], 90, 270, fill=c["fill"])
+    d.line([(rcx, rcy - ri), (rcx, rcy + ri)], fill=c["ln"], width=7)
+    circ(d, rcx, rcy, ro, outline=c["ln"], w=6)
+    circ(d, rcx, rcy, ri, outline=c["ln"], w=6)
+    # the remote box at the right, antenna up, a gold tip
+    bw_, bh_ = w * 0.13, h * 0.26
+    bx_ = x1 - w * 0.02 - bw_
+    by_ = rcy + h * 0.02
+    rr(d, (bx_, by_, bx_ + bw_, by_ + bh_), h * 0.02, fill=c["fill"], outline=c["ln"], w=6)
+    for i in range(2):
+        yy = by_ + bh_ * (0.38 + i * 0.26)
+        d.line([(bx_ + bw_ * 0.18, yy), (bx_ + bw_ * 0.62, yy)], fill=c["ln2"], width=4)
+    ax_ = bx_ + bw_ * 0.78
+    d.line([(ax_, by_), (ax_, by_ - h * 0.15)], fill=c["ln"], width=5)
+    circ(d, ax_, by_ - h * 0.15, h * 0.03, fill=c["gold"])
+    # the rope, sagging from the ring to the box
+    p0 = (rcx + ro * 0.95, rcy + ro * 0.3)
+    p2 = (bx_, by_ + bh_ * 0.5)
+    d.line(_hd_bez(p0, ((p0[0] + p2[0]) / 2, rcy + h * 0.42), p2),
+           fill=c["ln"], width=5, joint="curve")
+
+
 # --- AI Transformation for Organizations (at_*) --------------------------
 # One family rule, and it is what makes twenty covers read as one series
 # beside Hermes' teal geometry and OpenClaw's filled violet pictograms:
@@ -2377,6 +2696,13 @@ MOTIFS = {
     "hm_isolation": hm_isolation, "hm_gateway": hm_gateway,
     "hm_loop": hm_loop, "hm_alwayson": hm_alwayson,
     "hm_railbolt": hm_railbolt, "hm_ladder": hm_ladder, "hm_fleet": hm_fleet,
+    "hd_firstrun": hd_firstrun,
+    "hd_cartridge": hd_cartridge,
+    "hd_drawers": hd_drawers,
+    "hd_roundtable": hd_roundtable,
+    "hd_patchboard": hd_patchboard,
+    "hd_metronome": hd_metronome,
+    "hd_lifebuoy": hd_lifebuoy,
     "at_spine": at_spine, "at_chevrons": at_chevrons, "at_engine": at_engine,
     "at_stairs": at_stairs, "at_portfolio": at_portfolio, "at_lanes": at_lanes,
     "at_wedge": at_wedge, "at_sorter": at_sorter, "at_factory": at_factory,
@@ -2501,6 +2827,23 @@ def load():
     return rows
 
 
+def manifest_heroes():
+    """slug -> hero family declared by scripts/series/*.json, so a generated
+    post's cover can be drawn -- and its ground checked -- BEFORE
+    build_series.py emits the post (the builder refuses to emit a post whose
+    share card does not exist yet, so one of the two guards has to look at the
+    manifest rather than the file)."""
+    out = {}
+    for p in sorted((ROOT / "scripts" / "series").glob("*.json")):
+        try:
+            m = json.load(open(p, encoding="utf-8"))
+        except (OSError, ValueError):
+            continue
+        for post in m.get("posts", []):
+            out[post["slug"]] = m.get("hero")
+    return out
+
+
 def hero_family(slug):
     p = ROOT / "blog" / (slug + ".html")
     if not p.exists():
@@ -2516,6 +2859,7 @@ def hero_family(slug):
 def check(rows):
     bad = []
     seen, motifs_used = set(), set()
+    declared = manifest_heroes()
     for r in rows:
         if r["motif"] not in MOTIFS:
             bad.append("%s: unknown motif %r" % (r["slug"], r["motif"]))
@@ -2530,9 +2874,9 @@ def check(rows):
         if r["out"] in seen:
             bad.append("%s: two posts write %s" % (r["slug"], r["out"]))
         seen.add(r["out"])
-        if not (ROOT / "blog" / (r["slug"] + ".html")).exists():
+        if not (ROOT / "blog" / (r["slug"] + ".html")).exists() and r["slug"] not in declared:
             bad.append("%s: no such post" % r["slug"])
-        fam = hero_family(r["slug"])
+        fam = hero_family(r["slug"]) or declared.get(r["slug"])
         if fam and r["ground"] in FORBIDDEN.get(fam, set()):
             bad.append("%s: ground %r is its own hero family (%s) -- the cover "
                        "will vanish into the hero" % (r["slug"], r["ground"], fam))

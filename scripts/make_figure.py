@@ -1,12 +1,14 @@
 #!/usr/bin/env python3
-"""Draw the diagram figures for the AI Transformation series, from one
-registry of named drawing functions.
+"""Draw the diagram figures for a generated blog series, from one registry
+of named drawing functions per series (the SERIES table; default: AI
+Transformation, `--series hermes-desktop` for Hermes Desktop Hands-On).
 
     python3 scripts/make_figure.py 10-five-rails   # one figure (a unique prefix works: "10")
     python3 scripts/make_figure.py --all           # every implemented figure; stubs print SKIP
     python3 scripts/make_figure.py --check         # registry, fonts, text bboxes, fits, contrast
     python3 scripts/make_figure.py --contact       # 3-up 420-px review sheet -> .covers/figures-contact.jpg
     python3 scripts/make_figure.py --phone         # every figure at 335 px    -> .covers/figures-phone.jpg
+    python3 scripts/make_figure.py --series hermes-desktop --check   # the other series
 
 THE SYSTEM (plan: make-the-openclaw-and-glimmering-tome, section 3 + Appendix B)
 --------------------------------------------------------------------------------
@@ -75,7 +77,8 @@ ROOT = pathlib.Path(__file__).resolve().parents[1]
 FONTS = pathlib.Path(__file__).resolve().parent / "fonts"
 OUT = ROOT / "images"
 SHEETS = ROOT / ".covers"                    # gitignored, like make_cover's contact sheet
-PREFIX = "ai-transformation-fig-"
+# PREFIX / FIGS / EXPECTED / SHEET are per-series module globals, set from the
+# SERIES table below (defaults: AI Transformation) -- see main().
 
 K = 2                                         # draw at 2x, LANCZOS down to final
 SIZES = {"STRIP": (1400, 560), "WIDE": (1400, 700), "STD": (1400, 840), "TALL": (1400, 1000)}
@@ -101,15 +104,21 @@ GOLD = (196, 164, 108)       # --gold        #c4a46c
 GOLD_DARK = (122, 95, 34)    # --gold-dark   #7a5f22
 GREEN = (34, 197, 94)        # --green
 RED = (239, 68, 68)          # --red
+# Hermes accent, the same value make_cover.py draws the hm_*/hd_* covers in.
+# Decorative only: 2.49:1 on white. Its text/stroke twin is TEAL_DARK, exactly
+# as --gold (2.2:1) has --gold-dark -- 5.47:1 on white, 4.76:1 on the teal tint.
+TEAL = (20, 184, 166)        # make_cover ACCENTS["teal"]  #14b8a6
+TEAL_DARK = (15, 118, 110)   # its ink form               #0f766e
 WHITE = (255, 255, 255)
 CREAM = (250, 247, 240)      # --bg, the review sheets' ground only
 
 TOKENS = {
     "navy": NAVY, "slate": SLATE, "gray": GRAY, "blue": BLUE, "blue-light": BLUE_LIGHT,
     "coral": CORAL, "gold": GOLD, "gold-dark": GOLD_DARK, "green": GREEN, "red": RED,
-    "white": WHITE,
+    "teal": TEAL, "teal-dark": TEAL_DARK, "white": WHITE,
 }
-TINT_A = {"blue": 0.12, "green": 0.15, "gold": 0.30, "coral": 0.14, "gray": 0.25}
+TINT_A = {"blue": 0.12, "green": 0.15, "gold": 0.30, "coral": 0.14, "gray": 0.25,
+          "teal": 0.15}
 
 
 def tint(rgb, a):
@@ -386,7 +395,8 @@ def tile(d, box, key, l1=None, th=None, l2=None, l1px=None, thpx=26, l2px=24,
     """Tinted rounded rect, 3 px parent-token outline, L1 + Thai gloss (+ L2)
     centred. key "white" = white tile with a navy @40 % outline (or `outline`);
     solid=True fills with the token and sets the text white (Fig 9's MODEL).
-    rows=[...] replaces the automatic L1/TH/L2 rows; l1=None draws just the box."""
+    rows=[...] replaces the automatic L1/TH/L2 rows; l1=None draws just the box.
+    key "teal" outlines in TEAL_DARK, never the 2.49:1 raw accent (Hermes rule)."""
     x0, y0, x1, y1 = box
     w = x1 - x0
     if solid:
@@ -394,7 +404,8 @@ def tile(d, box, key, l1=None, th=None, l2=None, l1px=None, thpx=26, l2px=24,
     elif key == "white":
         fill, oc, tc, thc, l2c = WHITE, (outline or NAVY_40), NAVY, NAVY_85, SLATE
     else:
-        fill, oc, tc, thc, l2c = TINTS[key], (outline or TOKENS[key]), NAVY, NAVY_85, SLATE
+        fill, oc, tc, thc, l2c = (TINTS[key], (outline or (TEAL_DARK if key == "teal" else TOKENS[key])),
+                                  NAVY, NAVY_85, SLATE)
     rr(d, box, r, fill=fill, outline=oc, w=ow)
     if rows is None:
         rows = []
@@ -520,14 +531,17 @@ def badge(d, c, n, r=26, px=28):
     return text(d, (cx, cy), str(n), px, "Black", WHITE, kind="BADGE")
 
 
-def chip(d, xy, key, l1, th=None, w=220, h=90, px=26, thpx=22):
-    """220x90 white, 4 px status outline, status dot r 10 at x+26, navy label."""
+def chip(d, xy, key, l1, th=None, w=220, h=90, px=26, thpx=22, l2=None, l2px=22):
+    """220x90 white, 4 px status outline, status dot r 10 at x+26, navy label
+    (+ Thai gloss, + an Inter Medium slate `l2` line -- a command or a note)."""
     x, y = xy
     rr(d, (x, y, x + w, y + h), R_CHIP, fill=WHITE, outline=TOKENS[key], w=4)
     ellipse(d, x + 26, y + h / 2, 10, 10, fill=TOKENS[key])
     rows = [row(l1, px, "Bold", NAVY, "CHIP")]
     if th:
         rows.append((th, thpx, "thai", NAVY_85, "CHIP"))
+    if l2:
+        rows.append(row(l2, l2px, "Medium", SLATE, "CHIP"))
     stack(d, x + 46, y + h / 2, rows, maxw=w - 46 - 12, gap=2, align="l")
     return (x, y, x + w, y + h)
 
@@ -553,6 +567,47 @@ def arrow(d, p0, p1, col, w=W_CONN, head=None):
 def envelope(d, box, col=CORAL, w=W_EMPH, r=R_ENV):
     """The assurance envelope: coral 6 px rounded rect r 24, no fill."""
     rr(d, box, r, fill=None, outline=col, w=w)
+
+
+def dashed(d, p0, p1, col, w=3, on=14, off=10, head=False):
+    """Dashed straight line p0 -> p1 (on/off in final px); head=True caps it
+    with arrow()'s solid head so a scheduled or optional hop still points."""
+    x0, y0 = p0
+    x1, y1 = p1
+    L = math.hypot(x1 - x0, y1 - y0)
+    if L == 0:
+        return
+    ux, uy = (x1 - x0) / L, (y1 - y0) / L
+    end = L - (5.5 * w if head else 0)
+    t = 0.0
+    while t < end:
+        t2 = min(t + on, end)
+        line(d, [(x0 + ux * t, y0 + uy * t), (x0 + ux * t2, y0 + uy * t2)], col, w)
+        t += on + off
+    if head:
+        arrow(d, (x1 - ux * min(5.5 * w, L), y1 - uy * min(5.5 * w, L)), p1, col, w)
+
+
+def pill(d, xy, s, px=22, key="blue", col=NAVY, h=40, padx=12, kind="PILL"):
+    """A file-name pill: tint fill, no outline, one Inter Medium line. Returns
+    the box so a row can be laid out by adding its width."""
+    x, y = xy
+    f = font(px, "Medium")
+    w = d.width(s, f) + 2 * padx
+    rr(d, (x, y, x + w, y + h), h / 2, fill=TINTS[key])
+    text(d, (x + w / 2, y + h / 2), s, px, "Medium", col, kind=kind)
+    return (x, y, x + w, y + h)
+
+
+def edge(c, rx, ry, toward, gap=8):
+    """The point `gap` px outside an rx/ry ellipse at `c`, on the ray to
+    `toward` -- where an arrow into or out of a node starts or ends."""
+    cx, cy = c
+    dx, dy = toward[0] - cx, toward[1] - cy
+    L = math.hypot(dx, dy)
+    ux, uy = dx / L, dy / L
+    t = _ellipse_hit(c, rx, ry, ux, uy) + gap
+    return (cx + ux * t, cy + uy * t)
 
 
 def wedge(d, apex, b0, b1, label, px=22, col=CORAL):
@@ -1157,7 +1212,7 @@ def figs2(d):
          "อ่านร่วมกัน ห้ามยุบเป็นคะแนนเดียว"], px=34)
 
 
-FIGS = {
+FIGS_AT = {
     "01-learning-engine": ("TALL", fig01),
     "02-maturity-levels": ("STD", fig02),
     "03-decision-portfolio": ("TALL", fig03),
@@ -1178,6 +1233,298 @@ FIGS = {
     "s1-six-layers": ("STD", figs1),
     "s2-board-scorecard": ("STD", figs2),
 }
+
+
+# --- Hermes Desktop Hands-On (hd_*) ----------------------------------------
+# Eight figures, one per post plus the series map in #1.  The family rule: the
+# same primitives as the AI Transformation set, with TEAL_DARK (never raw
+# TEAL) as the emphasis ink and NAVY text on the teal tint.  Registered as
+# stubs first so `--series hermes-desktop --check` counts them; each is
+# drawn in turn.
+
+def _stub(d):
+    raise NotImplementedError
+
+
+def hd01(d):
+    """STD -- Install and first run: three installers converge on the local
+    build step, which produces the Desktop app and `hermes serve` talking over
+    JSON-RPC, both standing on one profile folder.
+
+    The three installer tiles are white with a --blue outline rather than
+    tinted: they are the same kind of thing seen three ways, and a tint would
+    read as three different states. row_px puts all three names on one size --
+    'HERMES-SETUP.DMG' is the long one and the row follows it."""
+    inst = [("HERMES-SETUP.DMG", "แมค", "macOS 12+"),
+            ("HERMES-SETUP.EXE", "วินโดวส์", "Windows 10/11"),
+            ("INSTALL.SH", "ลินุกซ์", "Linux")]
+    xs, W = [80, 510, 940], 380
+    px = row_px(d, [l1 for l1, _, _ in inst], 32, "Bold", maxw=W - 24)
+    for (l1, th, l2), x in zip(inst, xs):
+        tile(d, (x, 55, x + W, 185), "white", l1, th, l2, l1px=px, gap=4, outline=BLUE)
+    for x, tx in zip(xs, (460, 700, 940)):
+        arrow(d, (x + W / 2, 191), (tx, 232), BLUE, W_CONN)
+    bar(d, (330, 238, 1070, 368),
+        ["INSTALL.SH / INSTALL.PS1", "BUILDS THE APP LOCALLY", "สร้างแอปบนเครื่อง"])
+    for bx, tx in ((520, 410), (880, 990)):
+        arrow(d, (bx, 372), (tx, 410), BLUE, W_CONN)
+    tile(d, (230, 416, 590, 536), "blue", "HERMES DESKTOP", l2="Electron", l1px=30)
+    tile(d, (810, 416, 1170, 536), "teal", "HERMES SERVE", l2="local agent runtime",
+         l1px=30)
+    stack(d, 700, 455, [L2("JSON-RPC"), L2("WebSocket")], maxw=200, gap=2)
+    arrow(d, (600, 505), (800, 505), TEAL_DARK, W_CONN)
+    arrow(d, (800, 505), (600, 505), TEAL_DARK, W_CONN)
+    chip(d, (1100, 560), "gold-dark", "CLI", l2="hermes chat", w=220, h=84)
+    arrow(d, (1210, 650), (1210, 684), GOLD_DARK, W_CONN)
+    tile(d, (80, 690, 1340, 800), "gold",
+         rows=[L1("~/.hermes  ·  %LOCALAPPDATA%\\hermes", 28),
+               L2("config.yaml · .env · sessions · skills · memories · logs")],
+         gap=10)
+
+
+def hd_s1(d):
+    """STRIP -- The series as a rising staircase: seven numbered steps on a
+    navy baseline, the council step in the teal envelope, YOUR DESKTOP over the
+    last step because every one of the seven runs on the reader's own machine.
+
+    Seven tiles across 1400 is the tightest row in either series: 'AUTOMATION'
+    is 181 px at Bold 26 against a 164-px inner width, so row_px puts the whole
+    staircase on one smaller size (floor 22, the way Fig 14 does) rather than
+    letting one step shrink alone, and 'LOCAL MODELS' is given as two lines.
+    The pitch is 180 except around step 4, which gets 32 px more on each side
+    so its envelope clears the neighbouring steps."""
+    steps = [(["INSTALL"], "ติดตั้ง", "blue"),
+             (["LOCAL", "MODELS"], "โมเดลบนเครื่อง", "blue"),
+             (["PROFILES"], "บทบาท", "blue"),
+             (["COUNCIL"], "สภาตรวจ", "teal"),
+             (["SKILLS · MCP"], "ต่อความสามารถ", "gold"),
+             (["AUTOMATION"], "งานอัตโนมัติ", "gold"),
+             (["SAFETY"], "ปลอดภัย", "green")]
+    xs = [44, 224, 404, 612, 820, 1000, 1180]
+    W, PAD, RISE, T0, H = 176, 6, 27, 340, 156
+    px = row_px(d, [ln for lines, _, _ in steps for ln in lines], 26, "Bold",
+                maxw=W - 2 * PAD, floor=FLOOR_L2)
+    line(d, [(44, 508), (1356, 508)], NAVY, W_HAIR)
+    for i, ((lines, th, key), x) in enumerate(zip(steps, xs)):
+        top = T0 - RISE * i
+        tile(d, (x, top, x + W, top + H), key)          # rows are placed by hand:
+        badge(d, (x + 26, top + 30), i + 1, r=18, px=22)  # the badge owns the top band
+        stack(d, x + W / 2, top + 102,
+              [L1(ln, px) for ln in lines] + [TH(th, 22)], maxw=W - 2 * PAD, gap=6)
+    envelope(d, (604, 251, 796, 423), TEAL_DARK)
+    bar(d, (1180, 20, 1356, 136),
+        [row("YOUR", 28, "Bold", WHITE, "BAR"), row("DESKTOP", 28, "Bold", WHITE, "BAR"),
+         ("เครื่องของคุณ", 24, "thai", WHITE, "BAR")], pad=14, gap=4)
+    arrow(d, (1268, 174), (1268, 142), TEAL_DARK, W_CONN)
+
+
+def hd02(d):
+    """WIDE -- Three ways to serve a local model, one context gate: whichever
+    endpoint you point Hermes at, the 64K minimum is checked before the Desktop
+    ever sees it. The gate is the teal tile outlined TEAL_DARK -- the emphasis
+    ink of this series; the raw accent is 2.5:1 and never carries meaning."""
+    routes = [("MANAGED llama.cpp", "127.0.0.1:18434 · provider llamacpp", "blue"),
+              ("LM STUDIO", "localhost:1234/v1 · provider lmstudio", "green"),
+              ("CUSTOM ENDPOINT",
+               "Ollama :11434 · llama-server :8080 · vLLM :8000", "gold")]
+    ys, GATE = [(90, 220), (285, 415), (480, 610)], (610, 230, 1000, 470)
+    for (l1, l2, key), (y0, y1) in zip(routes, ys):
+        tile(d, (60, y0, 520, y1), key, l1, l2=l2, l1px=34)
+    for (y0, y1), ty in zip(ys, (295, 350, 405)):
+        arrow(d, (528, (y0 + y1) / 2), (600, ty), BLUE, W_CONN)
+    tile(d, GATE, "teal", ow=5,
+         rows=[L1("64,000 TOKENS", 36), TH("ขั้นต่ำ", 28),
+               L2("--jinja / --tool-call-parser hermes")], gap=10)
+    chip(d, (640, 505), "gray", "< 64K", l2="rejected at startup", w=300, h=88)
+    arrow(d, (1010, 350), (1068, 350), TEAL_DARK, W_EMPH)
+    disc(d, (1200, 350), 130, ["HERMES", "DESKTOP"], px=34)
+
+
+def hd03(d):
+    """STD -- One profile folder holds everything: the default profile's files
+    as pills, the shared auth bar over `profiles/`, and three profiles that
+    inherit the login but nothing else.
+
+    The three profiles are set alphabetically, which puts `research` on the
+    right where the Bot chip can reach it with one short arrow instead of one
+    that crosses the other two tiles. The auth bar spans the top of the
+    profiles block rather than the whole card, so its dashed lines drop
+    straight into the tiles without crossing the header or the file pills."""
+    SUB, TOP = (95, 360, 1005, 760), 460
+    rr(d, (60, 60, 1040, 780), 20, fill=None, outline=NAVY, w=W_FRAME)
+    text(d, (95, 105), "~/.hermes · profile: default", 30, "Bold", NAVY,
+         anchor="lm", kind="L1")
+    x = 95
+    for s in ("config.yaml", ".env", "SOUL.md", "memories", "sessions", "skills",
+              "cron", "state.db"):
+        x = pill(d, (x, 150), s)[2] + 12
+    tile(d, (95, 230, 1005, 320), "gold",
+         rows=[L1("auth.json · OAuth shared", 30), TH("ใช้ร่วมกัน", 26)], gap=4)
+    rr(d, SUB, 18, fill=None, outline=GRAY, w=W_HAIR)
+    text(d, (125, 400), "profiles/", 26, "Bold", SLATE, anchor="lm", kind="L2")
+    for i, name in enumerate(("coder", "finance", "research")):
+        px_ = 130 + 300 * i
+        dashed(d, (px_ + 125, 325), (px_ + 125, TOP - 6), GOLD_DARK, 3, head=True)
+        tile(d, (px_, TOP, px_ + 250, TOP + 200), "blue", name,
+             l2="config · SOUL · memory · sessions", l1px=30, l2px=22)
+    chip(d, (1080, 515), "teal-dark", "Bot = profile", w=260, h=90, px=24)
+    arrow(d, (1072, 560), (988, 560), TEAL_DARK, W_CONN)
+    chip(d, (1080, 660), "gray", "terminal.cwd", l2="working folder, not a sandbox",
+         w=260, h=100, px=24)
+
+
+def hd04(d):
+    """TALL -- The council: three reference models answer the same question
+    independently and without tools, the aggregator is the only member that
+    acts, and /review reads the answer as an outsider before you do.
+
+    The node L1 is asked for at 26, not the 28 default: 'REFERENCE MODEL A' is
+    302 px at 28 against the 276-px chord an rx-165 ring leaves, and three
+    rx-165 nodes are already as wide as 1400 takes. /goal and /review flank the
+    answer because they are the two commands that judge it."""
+    NX, NY, RX = (300, 700, 1100), 260, 165
+    chip(d, (555, 40), "blue", "YOUR QUESTION", "คำถาม", w=290, h=90)
+    for cx in NX:
+        arrow(d, (700, 136), edge((cx, NY), RX, 55, (700, 136)), BLUE, W_CONN)
+    for cx, tag in zip(NX, "ABC"):
+        node(d, (cx, NY), "blue", "REFERENCE MODEL " + tag, "ตอบแยกกัน · no tools",
+             rx=RX, px=26)
+        line(d, [(cx, 316), (cx, 344)], BLUE_LIGHT, W_HAIR)   # the draft is the node's
+        tile(d, (cx - 85, 345, cx + 85, 405), "blue", "DRAFT", l1px=24)
+    for cx, bx in zip(NX, (560, 700, 840)):
+        arrow(d, (cx, 411), (bx, 464), BLUE_LIGHT, W_CONN)
+    bar(d, (300, 470, 1100, 600), ["AGGREGATOR", "acts with tools · สังเคราะห์"])
+    arrow(d, (700, 606), (700, 658), BLUE, W_EMPH)
+    tile(d, (480, 664, 860, 786), "teal", "ANSWER", l2="streams live", l1px=36)
+    chip(d, (90, 690), "gold-dark", "/goal", l2="done only with evidence",
+         w=340, h=100)
+    envelope(d, (995, 640, 1325, 810), TEAL_DARK)
+    node(d, (1160, 725), "teal-dark", "/review", "independent reviewer", rx=145)
+    arrow(d, edge((1160, 725), 145, 55, (860, 725)), (866, 725), TEAL_DARK, W_CONN)
+    text(d, (940, 698), "verdict", 22, "Medium", SLATE, kind="L2")
+    arrow(d, (670, 792), (670, 850), BLUE, W_EMPH)
+    chip(d, (540, 856), "blue", "YOU", "ผู้ใช้", w=300, h=90)
+    rtext(d, (45, 480), "moa: preset · provider moa", px=22, col=SLATE,
+          kind="L2", weight="Medium")
+
+
+def hd05(d):
+    """STD -- Three ways to extend the agent, one context bill: skills, MCP
+    servers and memory all arrive as system prompt and tool schemas, and the
+    meter on the right is where that cost becomes visible.
+
+    The meter is a white tile outlined TEAL_DARK rather than a teal-tinted one:
+    its three bars are the ink, and a tint under them would flatten the
+    filled part against its track."""
+    cols = [("SKILLS", "ทักษะ", "~/.hermes/skills/ · load on demand", "blue",
+             "Skills page"),
+            ("MCP", "เครื่องมือภายนอก", "mcp_servers: · external tools", "green",
+             "MCP page"),
+            ("MEMORY", "ความจำ", "MEMORY.md 2,200 chars · USER.md", "gold",
+             "Memory Graph")]
+    xs = [60, 370, 680]
+    for (l1, th, l2, key, surface), x in zip(cols, xs):
+        tile(d, (x, 120, x + 280, 310), key, l1, th, l2, l1px=32, l2px=22)
+        chip(d, (x + 20, 350), key, surface, w=240, h=80)
+    for x, bx in zip(xs, (350, 510, 670)):
+        arrow(d, (x + 140, 436), (bx, 532), BLUE_LIGHT, W_CONN)
+    bar(d, (100, 540, 920, 700),
+        ["SYSTEM PROMPT + TOOL SCHEMAS", "context · บริบท"])
+    tile(d, (1010, 120, 1340, 700), "white", outline=TEAL_DARK, ow=5)
+    stack(d, 1175, 205, [L1("CONTEXT-USAGE", 30), L1("METER", 30), TH("ดูต้นทุน", 26)],
+          maxw=290, gap=6)
+    for y, fill, note in ((340, 200, "prompt"), (450, 130, "tools"), (560, 70, "history")):
+        text(d, (1050, y), note, 22, "Medium", SLATE, anchor="lm", kind="L2")
+        rr(d, (1050, y + 22, 1300, y + 56), 10, fill=TINTS["gray"])
+        rr(d, (1050, y + 22, 1050 + fill, y + 56), 10, fill=TEAL_DARK)
+
+
+def hd06(d):
+    """WIDE -- An unattended run, end to end: the schedule fires, the agent run
+    keeps its memory and may fan out sub-agents, and the only door to DONE is
+    the verify-on-stop gate. The track is dashed because every hop on it is
+    scheduled rather than driven by a person at the keyboard."""
+    ellipse(d, 140, 200, 80, 80, outline=NAVY, w=W_RING)
+    line(d, [(140, 200), (140, 142)], NAVY, W_CONN)
+    line(d, [(140, 200), (184, 219)], NAVY, W_CONN)
+    ellipse(d, 140, 200, 7, 7, fill=NAVY)
+    stack(d, 140, 328, [L1("ROUTINE", 28), L2("cron · every 2h")], maxw=280, gap=8)
+    for x0, x1 in ((232, 322), (648, 692), (1018, 1062)):
+        dashed(d, (x0, 200), (x1, 200), NAVY, 3, head=True)
+    tile(d, (330, 135, 640, 265), "blue", "AGENT RUN", l2="memory + continuity",
+         l1px=32)
+    for cx in (370, 485, 600):
+        arrow(d, (485, 272), edge((cx, 400), 50, 34, (485, 272)), BLUE_LIGHT, W_HAIR)
+    for i, cx in enumerate((370, 485, 600)):
+        node(d, (cx, 400), "blue", "sa-%d" % (i + 1), rx=50, ry=34, px=24, ow=W_HAIR)
+    chip(d, (335, 480), "blue", "/agents", l2="steer · stop", w=300, h=90)
+    tile(d, (700, 125, 1010, 275), "white", "VERIFY-ON-STOP", "หลักฐานก่อนเสร็จ",
+         "pre_verify", l1px=30, outline=TEAL_DARK, ow=5, gap=4)
+    chip(d, (700, 330), "gray", "no evidence", l2="→ not done", w=300, h=84)
+    tile(d, (1070, 135, 1340, 265), "green", "DONE", l2="output in Bot chat", l1px=36)
+
+
+def hd07(d):
+    """STD -- Three things that keep a Desktop agent recoverable: where the
+    approval dial sits, which machine the commands actually run on, and the
+    four rungs to climb when something breaks.
+
+    The dial is drawn with PIL's arc directly -- an arc is the one primitive
+    the helper vocabulary has no wrapper for -- and the needle and the live
+    setting are TEAL_DARK so the current position is the only teal on the card.
+    The transport label sits above the pair with a dashed leader into the
+    arrow: the 88-px gap between the two tiles cannot hold the line."""
+    CX, CY, R = 340, 360, 120
+    tile(d, (60, 100, 620, 500), "white", outline=NAVY)
+    text(d, (CX, 150), "APPROVALS", 32, "Bold", NAVY, kind="L1")
+    d.d.arc(_sc((CX - R, CY - R, CX + R, CY + R)), 180, 360, fill=NAVY,
+            width=int(round(W_FRAME * K)))
+    for ang, label, col in ((180, "manual", SLATE), (270, "smart", TEAL_DARK),
+                            (0, "off", SLATE)):
+        ux, uy = math.cos(math.radians(ang)), math.sin(math.radians(ang))
+        line(d, [(CX + R * ux, CY + R * uy), (CX + (R - 20) * ux, CY + (R - 20) * uy)],
+             NAVY, W_HAIR)
+        text(d, (CX + (R + 45) * ux, CY + (R + 45) * uy), label, 24, "Medium", col,
+             kind="L2")
+    line(d, [(CX, CY), (CX, CY - R + 22)], TEAL_DARK, W_EMPH)
+    ellipse(d, CX, CY, 9, 9, fill=TEAL_DARK)
+    chip(d, (150, 400), "teal-dark", "YOLO = off", l2="this session", w=380, h=84)
+    tile(d, (680, 180, 960, 400), "blue", "DESKTOP", l2="your laptop · screen only",
+         l1px=32)
+    tile(d, (1060, 180, 1340, 400), "teal", "REMOTE HOST", "รันที่นี่",
+         "hermes serve · commands run HERE", l1px=32, l2px=22, ow=5, gap=4)
+    text(d, (1010, 120), "SSH tunnel / HTTPS + token", 24, "Medium", SLATE, kind="L2")
+    dashed(d, (1010, 145), (1010, 272), SLATE, 3)
+    arrow(d, (966, 290), (1054, 290), TEAL_DARK, W_EMPH)
+    rungs = [(60, 280, "blue", "LOGS", "hermes logs desktop"),
+             (400, 260, "blue", "REPORT", "Send diagnostics"),
+             (720, 290, "gold", "UPDATE", "hermes update --backup"),
+             (1050, 290, "green", "UNINSTALL", "--gui | keep data | --full")]
+    for x, w, key, l1, l2 in rungs:
+        chip(d, (x, 570), key, l1, l2=l2, w=w, h=110)
+    for x0, x1 in ((346, 394), (666, 714), (1016, 1044)):
+        arrow(d, (x0, 625), (x1, 625), BLUE_LIGHT, W_CONN)
+    tile(d, (1000, 710, 1340, 800), "gold",
+         rows=[L1("TCC IDENTITY", 26), L2("keeps macOS grants")], gap=6)
+
+FIGS_HD = {
+    "01-install-first-run": ("STD", hd01),
+    "s1-series-map": ("STRIP", hd_s1),
+    "02-local-models": ("WIDE", hd02),
+    "03-profiles": ("STD", hd03),
+    "04-council": ("TALL", hd04),
+    "05-skills-mcp-memory": ("STD", hd05),
+    "06-automation-agents": ("WIDE", hd06),
+    "07-safety-remote-recovery": ("STD", hd07),
+}
+
+SERIES = {
+    "ai-transformation": dict(prefix="ai-transformation-fig-", figs=FIGS_AT, expected=19,
+                              sheet="figures"),
+    "hermes-desktop": dict(prefix="hermes-desktop-fig-", figs=FIGS_HD, expected=8,
+                           sheet="figures-hermes-desktop"),
+}
+FIGS, PREFIX, EXPECTED, SHEET = FIGS_AT, "ai-transformation-fig-", 19, "figures"
 
 
 def out_path(name):
@@ -1267,7 +1614,7 @@ def composite(rgba, bg):
 def contrast_table():
     grounds = [("white", WHITE)] + [("%s tint" % k, TINTS[k]) for k in TINT_A]
     inks = [("navy", NAVY), ("navy @85%", NAVY_85), ("slate-light", SLATE),
-            ("blue", BLUE), ("coral", CORAL)]
+            ("blue", BLUE), ("coral", CORAL), ("teal-dark", TEAL_DARK), ("teal", TEAL)]
     print("\ncontrast (WCAG; text needs >= 4.5, PASS/large/FAIL):")
     print("  %-12s" % "" + "".join("%12s" % g for g, _ in grounds))
     for iname, ink in inks:
@@ -1290,8 +1637,8 @@ def check_registry():
     outs = [out_path(n).name for n in FIGS]
     if len(set(outs)) != len(outs):
         bad.append("two figures write the same file")
-    if len(FIGS) != 19:
-        bad.append("registry has %d figures, the series needs 19" % len(FIGS))
+    if len(FIGS) != EXPECTED:
+        bad.append("registry has %d figures, the series needs %d" % (len(FIGS), EXPECTED))
     for f in ("Inter-var.ttf", "Sarabun-Regular.ttf"):
         if not (FONTS / f).exists():
             bad.append("missing font scripts/fonts/%s" % f)
@@ -1331,7 +1678,7 @@ def contact_sheet(cols=3, cell_w=420, pad=16):
             sheet.paste(t, (pad + i * (cell_w + pad), y))
         y += h + pad
     SHEETS.mkdir(exist_ok=True)
-    out = SHEETS / "figures-contact.jpg"
+    out = SHEETS / (SHEET + "-contact.jpg")
     sheet.save(out, "JPEG", quality=88, optimize=True)
     print("contact sheet: %s (%d figures, %.0f KB)"
           % (out.relative_to(ROOT), len(thumbs), out.stat().st_size / 1024))
@@ -1347,7 +1694,7 @@ def phone_sheet(width=335, pad=12):
         sheet.paste(t, (pad, y))
         y += t.height + pad
     SHEETS.mkdir(exist_ok=True)
-    out = SHEETS / "figures-phone.jpg"
+    out = SHEETS / (SHEET + "-phone.jpg")
     sheet.save(out, "JPEG", quality=88, optimize=True)
     print("phone sheet: %s (%d figures at %d px, %.0f KB)"
           % (out.relative_to(ROOT), len(thumbs), width, out.stat().st_size / 1024))
@@ -1371,7 +1718,12 @@ def main():
     ap.add_argument("--check", action="store_true")
     ap.add_argument("--contact", action="store_true")
     ap.add_argument("--phone", action="store_true")
+    ap.add_argument("--series", default="ai-transformation", choices=sorted(SERIES))
     a = ap.parse_args()
+
+    global FIGS, PREFIX, EXPECTED, SHEET
+    sel = SERIES[a.series]
+    FIGS, PREFIX, EXPECTED, SHEET = sel["figs"], sel["prefix"], sel["expected"], sel["sheet"]
 
     bad = check_registry()
     if bad:

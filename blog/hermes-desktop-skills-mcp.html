@@ -1,0 +1,1102 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Skills, MCP &amp; Memory — ต่อความสามารถให้ agent | Anirach Mingkhwan</title>
+  <meta name="description" content="ต่อความสามารถให้ Hermes Desktop — ติดตั้ง skill จาก hub, เพิ่ม MCP server และจัดการ MEMORY.md/USER.md จากหน้าจอและ config.yaml">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=Sarabun:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      color-scheme: light;
+      /* ink */
+      --navy: #11304b; --slate: #334155; --slate-light: #526174; --gray: #94a3b8;
+      /* ground */
+      --bg: #faf7f0; --white: #ffffff; --code-bg: #1e293b;
+      /* accent */
+      --blue: #226299; --blue-dark: #1a4d7a; --blue-light: #4992b9;
+      /* brand — sampled from the book covers. --gold is decorative on light grounds (2.2:1); --gold-dark is its text form. */
+      --gold: #c4a46c; --gold-dark: #7a5f22; --cloud: #dee7e6; --parchment: #e9e1c4; --focus: #226299;
+      /* status — use only these six, never invent a seventh */
+      --green: #22c55e; --red: #ef4444; --amber: #f59e0b;
+      --cyan: #06b6d4; --purple: #226299; --purple-dark: #1a4d7a;
+      /* type */
+      --font: 'Inter', 'Sarabun', -apple-system, BlinkMacSystemFont, sans-serif;
+      --mono: 'JetBrains Mono', 'Fira Code', 'Sarabun', monospace;
+      /* form */
+      --radius: 12px; --radius-sm: 8px; --radius-lg: 16px;
+      --measure: 720px; --wide: 860px;
+      --transition: 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+    html { scroll-behavior: smooth; }
+    body { font-family: var(--font); font-size: 17px; line-height: 1.8; color: var(--slate); background: var(--bg); -webkit-font-smoothing: antialiased; }
+    .blog-nav { position: fixed; top: 0; left: 0; right: 0; z-index: 100; background: rgba(248,250,252,0.85); backdrop-filter: blur(20px); border-bottom: 1px solid rgba(0,0,0,0.05); }
+    .blog-nav__inner { max-width: 860px; margin: 0 auto; padding: 0 2rem; height: 56px; display: flex; align-items: center; justify-content: space-between; }
+    .blog-nav__back { font-size: 0.85rem; font-weight: 500; color: var(--blue); text-decoration: none; }
+    .blog-nav__back:hover { color: #1a4d7a; }
+    .blog-nav__title { font-size: 0.85rem; font-weight: 600; color: var(--navy); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 50%; }
+    /* ── HERO ── house .post-hero on the approved Deep Blue gradient (page-design
+       §5 / INV-28). Ink is inverted for the dark ground: white title/meta, tag
+       pills white on 18% white — the openclaw-production treatment. The
+       background value must stay byte-identical to the approved string. */
+    .post-hero { padding: 8rem 2rem 3rem; background: linear-gradient(135deg, #11304b 0%, #1a4d7a 45%, #226299 100%); color: #fff; text-align: center; }
+    .post-hero__tags { display: flex; gap: 0.5rem; justify-content: center; margin-bottom: 1.25rem; flex-wrap: wrap; }
+    .post-hero__tag { display: inline-block; font-size: 0.72rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.1em; color: #fff; background: rgba(255,255,255,0.18); padding: 0.35rem 0.9rem; border-radius: 20px; }
+    .post-hero__title { font-size: clamp(1.8rem, 5vw, 3rem); font-weight: 800; color: #fff; line-height: 1.2; margin-bottom: 1rem; max-width: 720px; margin-left: auto; margin-right: auto; }
+    .post-hero__sub { font-size: 1.05rem; max-width: 640px; margin: 0 auto 1.5rem; line-height: 1.7; color: #fff; }
+    .post-hero__meta { font-size: 0.85rem; color: #fff; display: flex; align-items: center; justify-content: center; gap: 1.5rem; flex-wrap: wrap; }
+    .post-hero__series { font-weight: 600; color: #fff; }
+    /* the switch pill and the focus ring both sit on the dark hero: the pill is
+       a light chip so its labels keep their light-ground colours, and --focus
+       re-points to gold here (blue collapses on blue — the footer/pre
+       precedent). */
+    .post-hero { --focus: var(--gold); }
+    .post-hero__cover {
+      aspect-ratio: 1 / 1;
+      max-width: 380px;
+      margin: 2.5rem auto 0;
+      border-radius: var(--radius-lg, 16px);
+      overflow: hidden;
+      box-shadow: 0 20px 60px rgba(17,48,75,0.14);
+    }
+    .post-hero__cover img { width: 100%; height: 100%; object-fit: cover; display: block; }
+    .post-body { max-width: 720px; margin: 0 auto; padding: 3rem 2rem 6rem; }
+    .post-body h2 { font-size: 1.6rem; font-weight: 800; color: var(--navy); margin: 3rem 0 1rem; padding-bottom: 0.5rem; border-bottom: 2px solid rgba(34,98,153,0.15); }
+    .post-body h3 { font-size: 1.25rem; font-weight: 700; color: var(--navy); margin: 2.25rem 0 0.75rem; }
+    .post-body p { margin-bottom: 1.25rem; }
+    .post-body strong { font-weight: 700; color: var(--navy); }
+    .post-body a { color: var(--blue); text-decoration: underline; text-decoration-thickness: 1px; text-underline-offset: 2px; }
+    .post-body ul, .post-body ol { margin: 0.5rem 0 1.25rem 1.5rem; }
+    .post-body li { margin-bottom: 0.4rem; }
+    .post-body blockquote { background: rgba(34,98,153,0.06); border-left: 4px solid var(--blue); padding: 1rem 1.25rem; border-radius: 0 10px 10px 0; margin: 1.25rem 0; font-size: 0.95rem; color: var(--navy); }
+    .post-body hr { border: none; height: 1px; background: linear-gradient(90deg, transparent, rgba(34,98,153,0.2), transparent); margin: 3rem 0; }
+    /* ── CODE ── */
+    .post-body pre { background: var(--code-bg); border-radius: 12px; padding: 1.5rem; margin: 1.25rem 0 1.5rem; overflow-x: auto; border: 1px solid rgba(255,255,255,0.05); }
+    .post-body pre code { font-family: var(--mono); font-size: 0.85rem; color: #e2e8f0; line-height: 1.7; background: none; padding: 0; white-space: pre-wrap; }
+    .post-body code { font-family: var(--mono); font-size: 0.88em; background: rgba(34,98,153,0.08); color: var(--blue-dark); padding: 0.15em 0.45em; border-radius: 5px; }
+    /* ── TABLES ── */
+    .table-wrapper { overflow-x: auto; margin: 1.5rem 0; border-radius: 0.5rem; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1); }
+    table { width: 100%; border-collapse: collapse; background: white; }
+    th { background: #226299; color: white; padding: 1rem; text-align: left; font-weight: 600; }
+    td { padding: 1rem; border-bottom: 1px solid #e5e7eb; }
+    .post-body table { display: block; width: 100%; overflow-x: auto; }
+    /* ── ALERTS ── */
+    .alert { background: #fef3cd; border: 1px solid #facc15; border-radius: 0.5rem; padding: 1rem; margin: 1.5rem 0; }
+    .alert.danger { background: #fee2e2; border-color: #ef4444; }
+    .alert.info { background: #e0f2fe; border-color: #06b6d4; }
+    .alert.success { background: #d1fae5; border-color: #10b981; }
+    /* ── KEY TAKEAWAYS ── */
+    .key-takeaways { background: linear-gradient(135deg, #f3f4f6 0%, #e5e7eb 100%); border-radius: 1rem; padding: 2rem; margin: 3rem 0; }
+    .key-takeaways h3 { color: #226299; margin-bottom: 1.5rem; }
+    .post-series-footer { text-align: center; font-size: 0.85rem; color: var(--slate-light); font-style: italic; margin-top: 2rem; padding-top: 2rem; border-top: 1px solid #e2e8f0; }
+    .blog-footer { background: var(--navy); padding: 2rem 0; text-align: center; }
+    .blog-footer a { color: var(--gold); text-decoration: none; font-weight: 600; font-size: 0.9rem; }
+    .blog-footer span { color: var(--gray); font-size: 0.8rem; display: block; margin-top: 0.4rem; }
+    @media (max-width: 600px) {
+      .post-hero { padding: 7rem 1.25rem 2.5rem; }
+      .post-body { padding: 2rem 1.25rem 4rem; }
+      .post-hero__meta { flex-direction: column; gap: 0.4rem; }
+      .post-body h2 { font-size: 1.4rem; }
+      .post-body h3 { font-size: 1.15rem; }
+      .post-body pre { padding: 1rem; border-radius: 8px; }
+    }
+
+    :focus-visible { outline: 2px solid var(--focus); outline-offset: 3px; border-radius: 2px; }
+    /* the ring sits on the page ground (3px offset). Inside the navy footers
+       and code blocks var(--blue) collapses to 2.12:1, so those scopes
+       re-point --focus to gold (5.73:1 on navy). */
+    .footer, .blog-footer, pre { --focus: var(--gold); }
+    :focus:not(:focus-visible) { outline: none; }
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after {
+        animation-duration: .01ms !important; animation-iteration-count: 1 !important;
+        transition-duration: .01ms !important; scroll-behavior: auto !important;
+      }
+    }
+    h1, h2, h3, .post-hero__title, .card__title { text-wrap: balance; }
+
+    .post-body img, .post-body svg { max-width: 100%; height: auto; }
+
+    /* ── SKIP LINK ── a11y-perf R5: the link and the landmark it targets are a
+       pair — useless without both halves. Off-screen until focused, then the
+       first tab stop on every page. */
+    .skip-link { position: absolute; left: -9999px; }
+    .skip-link:focus {
+      left: 1rem; top: 1rem; z-index: 999;
+      background: var(--navy); color: #fff;
+      padding: 0.75rem 1.25rem; border-radius: var(--radius-sm);
+      font-weight: 600; text-decoration: none;
+    }
+
+    /* ── POST WAYFINDING ── the wordmark is the home link; the footer carries
+       the full destination row. */
+    .blog-nav__home {
+      font-size: 0.9rem; font-weight: 800; color: var(--navy);
+      text-decoration: none; margin-right: 1rem;
+    }
+    .blog-nav__home:hover { color: var(--blue); }
+    .blog-nav__inner > .blog-nav__back { margin-right: auto; }
+    .blog-footer__nav {
+      display: flex; flex-wrap: wrap; justify-content: center; gap: 0.35rem 1.25rem;
+      max-width: 860px; margin: 0 auto 1.25rem; padding: 0 2rem 1.25rem;
+      border-bottom: 1px solid rgba(255,255,255,0.12);
+    }
+    .blog-footer__nav a { color: var(--gold); font-size: 0.85rem; font-weight: 600; text-decoration: none; }
+    .blog-footer__nav a:hover { color: #fff; text-decoration: underline; }
+
+    html { scroll-padding-top: 5rem; }
+    [id] { scroll-margin-top: 5rem; }
+
+    /* Thai needs more room than Latin at the same nominal size. */
+    .post-body:lang(th) { font-size: 18px; line-height: 1.85; }
+    .post-body p, .post-body li, .post-body blockquote { text-wrap: pretty; }
+
+    /* ---- side-scroll affordance ----
+       pre blocks and tables can exceed 720px. These layers paint a shadow ONLY
+       where there is more content in that direction; when fully scrolled the
+       cover slides over the shadow and hides it. No JavaScript, no wrapper. */
+    .post-body pre, .post-body table {
+      overflow-x: auto;
+      background-image:
+        linear-gradient(to right, var(--code-bg, #0f172a) 30%, rgba(15,23,42,0)),
+        linear-gradient(to left, var(--code-bg, #0f172a) 30%, rgba(15,23,42,0)),
+        radial-gradient(farthest-side at 0 50%, rgba(0,0,0,.28), rgba(0,0,0,0)),
+        radial-gradient(farthest-side at 100% 50%, rgba(0,0,0,.28), rgba(0,0,0,0));
+      background-position: 0 0, 100% 0, 0 0, 100% 0;
+      background-repeat: no-repeat;
+      background-size: 40px 100%, 40px 100%, 14px 100%, 14px 100%;
+      background-attachment: local, local, scroll, scroll;
+    }
+    .post-body table {
+      background-image:
+        linear-gradient(to right, var(--white, #fff) 30%, rgba(255,255,255,0)),
+        linear-gradient(to left, var(--white, #fff) 30%, rgba(255,255,255,0)),
+        radial-gradient(farthest-side at 0 50%, rgba(17,48,75,.16), rgba(17,48,75,0)),
+        radial-gradient(farthest-side at 100% 50%, rgba(17,48,75,.16), rgba(17,48,75,0));
+      background-position: 0 0, 100% 0, 0 0, 100% 0;
+      background-repeat: no-repeat;
+      background-size: 40px 100%, 40px 100%, 14px 100%, 14px 100%;
+      background-attachment: local, local, scroll, scroll;
+    }
+
+    /* ---- table of contents ---- */
+    .post-toc {
+      max-width: 720px;
+      margin: 2rem auto 0;
+      padding: 1rem 1.25rem;
+      background: rgba(34,98,153,0.05);
+      border: 1px solid rgba(34,98,153,0.14);
+      border-left: 3px solid var(--gold, #c4a46c);
+      border-radius: 10px;
+      font-size: 0.92rem;
+    }
+    .post-toc > summary {
+      cursor: pointer;
+      font-weight: 700;
+      color: var(--navy);
+      list-style: none;
+    }
+    .post-toc > summary::-webkit-details-marker { display: none; }
+    .post-toc > summary::before {
+      content: "\25B8";
+      display: inline-block;
+      margin-right: 0.5rem;
+      transition: transform 0.2s ease;
+      color: var(--gold-dark, #7a5f22);
+    }
+    .post-toc[open] > summary::before { transform: rotate(90deg); }
+    .post-toc > summary:focus-visible { outline: 3px solid var(--focus, #226299); outline-offset: 3px; }
+    .post-toc ol { margin: 0.85rem 0 0.25rem; padding-left: 1.4rem; }
+    .post-toc li { margin-bottom: 0.4rem; line-height: 1.5; }
+    .post-toc a { color: var(--slate); text-decoration: none; }
+    .post-toc a:hover, .post-toc a:focus-visible { color: var(--blue-dark, #1a4d7a); text-decoration: underline; }
+    @media (max-width: 600px) { .post-toc { margin: 1.25rem 1rem 0; } }
+
+    /* ---- cross-document view transitions ---- */
+    @view-transition { navigation: auto; }
+    .nav, .blog-nav { view-transition-name: site-nav; }
+    .footer, .blog-footer { view-transition-name: site-footer; }
+    @media (prefers-reduced-motion: reduce) {
+      ::view-transition-group(*),
+      ::view-transition-old(*),
+      ::view-transition-new(*) { animation: none !important; }
+    }
+
+    /* ── SERIES STRIP — Hermes Agent in Practice ──
+       Same class and inner-wrapper shape as the OpenClaw strip because the
+       linter's RE_SNAV recognises exactly `series-nav` + a nested div; a
+       renamed strip would read as "no nav" and fail INV-08. All content
+       checks (INV-03 family) iterate the SERIES7 list only, so this strip's
+       labels are convention, not contract. House-styled, not the island CSS. */
+    .series-nav {
+      max-width: 720px; margin: 2rem auto 0; padding: 1.1rem 1.4rem;
+      background: rgba(255,255,255,0.75); border: 1px solid rgba(34,98,153,0.15);
+      border-left: 3px solid var(--gold); border-radius: 12px;
+    }
+    .series-nav h3 {
+      font-size: 0.78rem; font-weight: 700; text-transform: uppercase;
+      letter-spacing: 0.08em; color: var(--gold-dark); margin-bottom: 0.6rem;
+    }
+    .series-links { display: flex; flex-wrap: wrap; gap: 0.5rem; }
+    .series-links a, .series-links .current {
+      font-size: 0.82rem; font-weight: 600; padding: 0.35rem 0.8rem;
+      border-radius: 50px; text-decoration: none;
+    }
+    .series-links a { color: var(--blue-dark); background: rgba(34,98,153,0.08); }
+    .series-links a:hover { background: rgba(34,98,153,0.16); }
+    .series-links .current { color: #fff; background: var(--blue-dark); }
+    @media (max-width: 600px) { .series-nav { margin: 1.5rem 1rem 0; } }
+
+    /* ── FIGURE — the sanctioned diagram component (page-design §4 Content).
+       Diagrams are PNGs; this repo built them out of divs twice and reverted
+       twice. The image is wrapped in a link to itself so a phone can pinch a
+       1400px drawing without a line of JavaScript. */
+    .figure { margin: 2.5rem 0; }
+    .figure__img { width: 100%; height: auto; display: block;
+                   border-radius: var(--radius); border: 1px solid rgba(0,0,0,0.06); }
+    .figure__caption { font-size: 0.85rem; color: var(--slate-light);
+                       text-align: center; margin-top: 0.75rem; }
+
+    /* ── REFERENCES — every material number in this series carries its source.
+       The tags are the book's own four evidence labels. */
+    .references { margin-top: 3rem; padding-top: 2rem; border-top: 1px solid #e2e8f0; }
+    .references__note { font-size: 0.85rem; color: var(--slate-light); margin-bottom: 1rem; }
+    .references__list { padding-left: 1.4rem; font-size: 0.9rem; line-height: 1.75; }
+    .references__list li { margin-bottom: 0.7rem; }
+    .ref-tag { display: inline-block; font-size: 0.7rem; font-weight: 700;
+               letter-spacing: 0.06em; text-transform: uppercase; padding: 0.1rem 0.5rem;
+               border-radius: 50px; margin-right: 0.4rem; vertical-align: 0.05em;
+               background: rgba(34,98,153,0.1); color: var(--blue-dark); }
+    /* All four labels get a rule.  --standard and --study shipped without one
+       on 2026-09-05, so 158 of 306 tags fell through to the base blue and the
+       two labels were indistinguishable.  Ratios on --bg: 6.70 / 6.92 / 7.36 /
+       4.81:1, all AA at this size. */
+    .ref-tag--law { background: rgba(239,68,68,0.12); color: #991b1b; }
+    .ref-tag--standard { background: rgba(34,98,153,0.12); color: var(--blue-dark); }
+    .ref-tag--study { background: rgba(34,197,94,0.18); color: #14532d; }
+    .ref-tag--synthesis { background: rgba(196,164,108,0.22); color: var(--gold-dark); }
+    .ref-supports { display: block; color: var(--slate-light); font-size: 0.85rem; }
+
+    /* ── LANGUAGE SWITCH — pure CSS, zero JavaScript (INV-38) ──
+       One visually-hidden checkbox as a direct child of body, BEFORE the main landmark,
+       so `#langSwitch:checked ~ main …` reaches every content block. The two
+       tracks are paired blocks: .l-th (default) and .l-en (hidden until
+       checked; display:revert restores block for divs, inline for spans).
+       Naming stays clear of INV-12's menu-token regex (hamburger|burger|
+       nav__toggle|nav-toggle|navtoggle|menu-toggle|menu__toggle) — verified.
+       No JS also means no persistence across posts; each post opens in Thai. */
+    .lang-switch-box { position: absolute; left: -9999px; }
+    .l-en { display: none; }
+    #langSwitch:checked ~ main .l-en { display: revert; }
+    #langSwitch:checked ~ main .l-th { display: none; }
+    .lang-switch {
+      display: inline-flex; align-items: center; gap: 0.55rem;
+      margin-top: 1.4rem; padding: 0.4rem 1.1rem; border-radius: 50px;
+      background: rgba(255,255,255,0.85); border: 1px solid rgba(255,255,255,0.4);
+      cursor: pointer; font-size: 0.85rem; user-select: none;
+    }
+    .lang-switch span { color: var(--slate-light); font-weight: 600; transition: color 0.2s; }
+    .lang-switch .lang-sep { color: var(--gray); font-weight: 400; }
+    .lang-switch .lang-th { color: var(--navy); font-weight: 800; }
+    #langSwitch:checked ~ main .lang-switch .lang-th { color: var(--slate-light); font-weight: 600; }
+    #langSwitch:checked ~ main .lang-switch .lang-en { color: var(--navy); font-weight: 800; }
+    .lang-switch:hover { border-color: #fff; }
+    #langSwitch:focus-visible ~ main .lang-switch {
+      outline: 2px solid var(--focus); outline-offset: 3px;
+    }
+  </style>
+  <!-- social -->
+  <link rel="canonical" href="https://anirach.com/blog/hermes-desktop-skills-mcp.html">
+  <meta property="og:type" content="article">
+  <meta property="og:url" content="https://anirach.com/blog/hermes-desktop-skills-mcp.html">
+  <meta property="og:site_name" content="Anirach Mingkhwan">
+  <meta property="og:locale" content="th_TH">
+  <meta property="og:locale:alternate" content="en_US">
+  <meta property="article:published_time" content="2026-09-07">
+  <meta property="article:author" content="https://anirach.com/">
+  <meta property="og:title" content="Skills, MCP &amp; Memory — ต่อความสามารถให้ agent">
+  <meta property="og:description" content="ต่อความสามารถให้ Hermes Desktop — ติดตั้ง skill จาก hub, เพิ่ม MCP server และจัดการ MEMORY.md/USER.md จากหน้าจอและ config.yaml">
+  <meta property="og:image" content="https://anirach.com/images/hermes-desktop-skills-mcp-og.jpg">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
+  <meta property="og:image:alt" content="Skills, MCP &amp; Memory — ต่อความสามารถให้ agent">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:image" content="https://anirach.com/images/hermes-desktop-skills-mcp-og.jpg">
+  <meta name="twitter:image:alt" content="Skills, MCP &amp; Memory — ต่อความสามารถให้ agent">
+  <meta name="robots" content="max-image-preview:large">
+  <meta name="theme-color" content="#11304b">
+  <link rel="icon" href="/favicon.ico" sizes="any">
+  <link rel="apple-touch-icon" href="/apple-touch-icon.png">
+  <!-- /social -->
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "BlogPosting",
+    "headline": "Skills, MCP & Memory — ต่อความสามารถให้ agent",
+    "author": {
+      "@type": "Person",
+      "@id": "https://anirach.com/#person",
+      "name": "Anirach Mingkhwan",
+      "url": "https://anirach.com/"
+    },
+    "datePublished": "2026-09-07",
+    "dateModified": "2026-09-07",
+    "image": "https://anirach.com/images/hermes-desktop-skills-mcp-og.jpg",
+    "inLanguage": [
+      "th",
+      "en"
+    ],
+    "mainEntityOfPage": "https://anirach.com/blog/hermes-desktop-skills-mcp.html"
+  }
+  </script>
+</head>
+<body>
+<a href="#main" class="skip-link">Skip to content</a>
+<input type="checkbox" id="langSwitch" class="lang-switch-box" aria-label="Switch language: Thai / English">
+
+  <nav class="blog-nav">
+    <div class="blog-nav__inner">
+      <a href="../index.html" class="blog-nav__home">Anirach</a>
+      <a href="./" class="blog-nav__back">‹ Blog</a>
+      <div class="blog-nav__title">Skills, MCP &amp; Memory</div>
+    </div>
+  </nav>
+
+  <main id="main">
+
+  <header class="post-hero">
+    <div class="post-hero__tags">
+      <span class="post-hero__tag">Hermes Desktop</span>
+      <span class="post-hero__tag">Skills</span>
+      <span class="post-hero__tag">MCP</span>
+    </div>
+    <h1 class="post-hero__title"><span class="l-th">Skills, MCP &amp; Memory — ต่อความสามารถให้ agent</span><span class="l-en" lang="en">Skills, MCP &amp; Memory — Extending What the Agent Knows</span></h1>
+    <p class="post-hero__sub"><span class="l-th">สามลิ้นชักที่ทำให้ Hermes รู้มากขึ้น — skill จาก hub ที่โหลดเมื่อต้องใช้, MCP server ที่เพิ่มจากหน้า MCP หรือ config.yaml และ MEMORY.md/USER.md ที่แก้ได้จาก Memory Graph — พร้อมวิธีดูว่าแต่ละอย่างกิน context เท่าไร 🧰</span><span class="l-en" lang="en">Three drawers that make Hermes know more — hub skills loaded on demand, MCP servers added from the MCP page or config.yaml, and MEMORY.md/USER.md editable from the Memory Graph — with a way to see what each one costs in context 🧰</span></p>
+    <div class="post-hero__meta">
+      <span>By <strong>Anirach Mingkhwan</strong></span>
+      <span class="post-hero__series">Hermes Desktop Hands-On 2026 • Post #5</span>
+      <span><time datetime="2026-09-07">7 Sep 2026</time></span>
+      <span>22 min read</span>
+    </div>
+    <label for="langSwitch" class="lang-switch" title="สลับภาษา · Switch language"><span class="lang-th">ไทย</span><span class="lang-sep">·</span><span class="lang-en" lang="en">English</span></label>
+    <div class="post-hero__cover">
+      <img src="../images/hermes-desktop-skills-mcp-cover.jpg" alt="Skills, MCP &amp; Memory — ต่อความสามารถให้ agent" width="800" height="800" loading="eager" fetchpriority="high" decoding="async">
+    </div>
+  </header>
+
+  <article class="post-body">
+
+    <details class="post-toc l-th" open>
+      <summary>ในบทความนี้</summary>
+      <ol>
+          <li><a href="#th-three-drawers">1. Three Ways to Make the Agent Know More — Skills, MCP and Memory</a></li>
+          <li><a href="#th-skills">2. Skills — Install One from the Hub, Write One Yourself</a></li>
+          <li><a href="#th-mcp">3. MCP — Add a Server from the Screen or from config.yaml</a></li>
+          <li><a href="#th-memory">4. Memory — Read, Edit and Reset MEMORY.md and USER.md</a></li>
+          <li><a href="#th-which-when">5. Which One, When — Five Extension Points Compared</a></li>
+          <li><a href="#th-context-cost">6. See What Each One Costs in Context</a></li>
+          <li><a href="#th-summary">7. สรุป</a></li>
+      </ol>
+    </details>
+    <details class="post-toc l-en" open>
+      <summary>In this post</summary>
+      <ol>
+          <li><a href="#en-three-drawers">1. Three Ways to Make the Agent Know More — Skills, MCP and Memory</a></li>
+          <li><a href="#en-skills">2. Skills — Install One from the Hub, Write One Yourself</a></li>
+          <li><a href="#en-mcp">3. MCP — Add a Server from the Screen or from config.yaml</a></li>
+          <li><a href="#en-memory">4. Memory — Read, Edit and Reset MEMORY.md and USER.md</a></li>
+          <li><a href="#en-which-when">5. Which One, When — Five Extension Points Compared</a></li>
+          <li><a href="#en-context-cost">6. See What Each One Costs in Context</a></li>
+          <li><a href="#en-summary">7. Summary</a></li>
+      </ol>
+    </details>
+    <div class="l-th">
+
+    <p>🤔 <strong>ถ้าเมื่อวานคุณบอก Hermes ว่า "ผมชอบคำตอบสั้น ๆ" แล้ววันนี้มันยังเขียนมาเป็นเรียงความเหมือนเดิม — มันลืม หรือมันไม่เคยจำตั้งแต่แรก?</strong></p>
+
+    <p>ตอนที่แล้ว — <a href="/blog/hermes-desktop-council">#4 The Council — ตรวจก่อนส่ง ทุกคำตอบ</a> — เราตั้งสภาให้ตรวจคำตอบก่อนที่มันจะมาถึงเรา นั่นคือเรื่อง<strong>คุณภาพของสิ่งที่ agent พูด</strong> ตอนนี้ถอยมาหนึ่งก้าวเพื่อดู<strong>วัตถุดิบ</strong>ของมัน: agent รู้อะไร เอื้อมถึงเครื่องมืออะไร และจำอะไรข้ามวันได้บ้าง เพราะสภาที่เก่งแค่ไหนก็ตรวจได้เฉพาะสิ่งที่ agent มีให้ตรวจ</p>
+
+    <p>คำตอบหนึ่งบรรทัด: Hermes มี<strong>สามลิ้นชัก</strong>ให้เติมความรู้ — <strong>skill</strong> คือเอกสารความรู้ที่โหลดเมื่อต้องใช้ <strong>MCP server</strong> คือเครื่องมือภายนอกที่ประกาศไว้ใน config.yaml และ <strong>memory</strong> คือไฟล์สองไฟล์ที่มีเพดานตัวอักษร — ทั้งสามเปิดจากหน้าจอ Hermes Desktop ได้ และทุกอย่างที่เติมเข้าไปมีราคาเป็น context ที่อ่านได้จากมิเตอร์ที่แถบล่างของหน้าแชต บทความนี้จะเดินทีละลิ้นชัก: คลิกอะไร พิมพ์อะไร เห็นอะไร แล้วเช็กอะไร</p>
+
+    <h2 id="th-three-drawers" lang="en">1. Three Ways to Make the Agent Know More — Skills, MCP and Memory</h2>
+
+    <p>คำตอบตรง ๆ ก่อน: กลไกสามอย่างนี้ต่างกันที่<strong>รูปแบบของความรู้</strong>และ<strong>จังหวะที่มันเข้าสู่ context</strong> แต่ปลายทางเดียวกันคือ prompt ที่โมเดลเห็นในแต่ละเทิร์น — และทั้งสามเป็นความสามารถของ Hermes Agent ไม่ใช่ของ Desktop โดยเฉพาะ เอกสาร Desktop เขียนไว้ชัดว่าแอปสร้างรอบ agent ตัวเดียวกับ CLI — "same config, same API keys, same sessions, same skills, same memory"<sup><a href="#th-ref-2">[2]</a></sup> สิ่งที่ Desktop เพิ่มให้คือ<strong>หน้าจอ</strong>สำหรับแต่ละลิ้นชัก</p>
+
+    <ul>
+        <li><strong>Skills</strong> — เอกสารทางการนิยามว่าเป็น "on-demand knowledge documents the agent can load when needed" เข้ากันได้กับมาตรฐานเปิด agentskills.io และอยู่ที่ <code>~/.hermes/skills/</code> ซึ่งเป็น "the primary directory and source of truth"<sup><a href="#th-ref-1">[1]</a></sup> agent เห็นแค่ชื่อ คำอธิบาย และหมวดของทุก skill (ราว 3k tokens) แล้วจึงโหลดเนื้อหาเต็มเฉพาะตัวที่ต้องใช้จริง<sup><a href="#th-ref-1">[1]</a></sup></li>
+        <li><strong>MCP servers</strong> — เครื่องมือภายนอกตาม Model Context Protocol ประกาศไว้ใต้คีย์ <code>mcp_servers:</code> ใน <code>~/.hermes/config.yaml</code> จะเป็น subprocess บนเครื่อง (stdio) หรือ endpoint ระยะไกล (HTTP) ก็ได้ ทุกเครื่องมือที่ค้นพบถูกลงทะเบียนในชื่อ <code>mcp_&lt;server_name&gt;_&lt;tool_name&gt;</code> เพื่อไม่ให้ชนกับเครื่องมือในตัว<sup><a href="#th-ref-3">[3]</a></sup></li>
+        <li><strong>Memory</strong> — ไฟล์สองไฟล์ใน <code>~/.hermes/memories/</code>: <code>MEMORY.md</code> โน้ตส่วนตัวของ agent (เพดาน 2,200 ตัวอักษร ≈ 800 tokens) และ <code>USER.md</code> โปรไฟล์ของเรา (เพดาน 1,375 ตัวอักษร ≈ 500 tokens) ทั้งคู่ถูกฉีดเข้า system prompt เป็น snapshot ที่แช่แข็งไว้ตอนเริ่ม session<sup><a href="#th-ref-6">[6]</a></sup></li>
+    </ul>
+
+    <figure class="figure">
+      <a href="../images/hermes-desktop-fig-05-skills-mcp-memory.png">
+        <img class="figure__img" src="../images/hermes-desktop-fig-05-skills-mcp-memory.png" alt="แผนภาพสามกล่อง Skills, MCP และ Memory เรียงกัน ลูกศรจากทั้งสามรวมเข้าแถบสีน้ำเงินเข้ม system prompt และมีกล่องมิเตอร์กรอบสีเขียวน้ำทะเลเข้มทางขวาแสดงแท่งสามแท่ง" width="1400" height="840" loading="lazy" decoding="async">
+      </a>
+      <figcaption class="figure__caption">รูปที่ 1 · สามลิ้นชักที่เติมความรู้ให้ agent — skill โหลดเมื่อต้องใช้ MCP เพิ่มเครื่องมือภายนอก ความจำสองไฟล์ — ทั้งหมดไหลเข้า context และวัดได้ด้วย Context-usage meter</figcaption>
+    </figure>
+
+    <p>ทฤษฎีเบื้องหลังแต่ละลิ้นชักผมเขียนไว้แล้วในซีรีส์วิเคราะห์ และจะไม่เล่าซ้ำ: วงจรที่ agent เขียน skill ให้ตัวเองและ Curator ที่เก็บกวาด อยู่ใน <a href="/blog/hermes-skills">Hermes #6 Skills</a> ปรัชญาของความจำที่มีเพดานและชั้นค้นหา FTS5 อยู่ใน <a href="/blog/hermes-memory">Hermes #3 Memory</a> และ MCP ทั้งขาเข้า-ขาออก รวมถึง OAuth อยู่ใน <a href="/blog/hermes-integrations">Hermes #5 Integrations</a> ตอนนี้เป็นภาคปฏิบัติล้วน ๆ: จะเปิดลิ้นชักไหนต้องคลิกตรงไหน</p>
+
+    <div class="alert info">
+        <strong>รุ่นที่ใช้ในบทความนี้:</strong> Hermes Agent v0.21.0 (tag <code>v2026.8.31</code> ออก 31 สิงหาคม 2026) ซึ่งเป็นรุ่นที่หน้า MCP ในแอป Desktop ถูกรวมเป็นหน้าเดียว<sup><a href="#th-ref-10">[10]</a></sup> เอกสารหน้า MCP ยังไม่ได้บรรยาย UI ส่วนนี้ ณ วันที่เข้าถึง ป้ายและพฤติกรรมของหน้า MCP ในตอนที่ 3 จึงอ้างจาก release notes เป็นหลัก ส่วน Skills tab, Memory Graph และมิเตอร์ context มาจากเอกสาร Desktop โดยตรง<sup><a href="#th-ref-2">[2]</a></sup>
+    </div>
+
+    <h2 id="th-skills" lang="en">2. Skills — Install One from the Hub, Write One Yourself</h2>
+
+    <p>คำตอบตรง ๆ: ใน Desktop แท็บ <strong>Skills</strong> แสดง skill ที่ติดตั้งแล้วพร้อมสวิตช์ enable/disable และใต้นั้นคือแคตตาล็อก optional skills ที่มากับ Hermes แต่ละรายการมีปุ่ม <strong>Install</strong> คลิกเดียว<sup><a href="#th-ref-2">[2]</a></sup> ถ้าอยากไปไกลกว่าแคตตาล็อกในตัว — ค้นจาก skills.sh, จาก GitHub หรือจาก URL — ต้องใช้ hub ผ่านคำสั่ง <code>hermes skills</code> ซึ่งพิมพ์ได้จาก terminal ที่ฝังอยู่ในแอป (<code>Ctrl+`</code> เปิดแผง terminal ที่ sidebar ขวา)<sup><a href="#th-ref-2">[2]</a></sup></p>
+
+    <h3>ติดตั้งจาก hub</h3>
+
+    <ol>
+        <li>เปิดแท็บ <strong>Skills</strong> — เอกสารจัดไว้ในกลุ่ม management panes และ command palette (<code>Cmd/Ctrl+K</code>) เปิดหน้าใดหรือส่วนการตั้งค่าใดก็ได้จากคีย์บอร์ด สิ่งที่เห็น: รายการ skill ที่ติดตั้งแล้ว แต่ละแถวมีสวิตช์ และแคตตาล็อก optional skills อยู่ด้านล่าง<sup><a href="#th-ref-2">[2]</a></sup></li>
+        <li>คลิก <strong>Install</strong> ที่รายการในแคตตาล็อก สิ่งที่เห็น: เอกสารบอกว่าปุ่มนี้ "flips the row into the installed list once it finishes" — แถวนั้นย้ายขึ้นไปอยู่ในรายการติดตั้งแล้วเมื่อเสร็จ<sup><a href="#th-ref-2">[2]</a></sup></li>
+        <li>สำหรับแหล่งอื่น เปิด terminal ในแอปด้วย <code>Ctrl+`</code> แล้วสำรวจก่อนติดตั้งเสมอ: <code>hermes skills browse --source official</code> ดูแคตตาล็อกทางการ, <code>hermes skills search kubernetes</code> ค้นทุกแหล่ง, <code>hermes skills inspect openai/skills/k8s</code> ดูรายละเอียดก่อนติดตั้ง<sup><a href="#th-ref-1">[1]</a></sup> แหล่งที่ hub รองรับตามเอกสารคือ <code>official</code>, <code>skills-sh</code>, <code>well-known</code>, <code>url</code>, <code>github</code> และหน้ารวมของชุมชน <code>clawhub</code>, <code>lobehub</code>, <code>browse-sh</code><sup><a href="#th-ref-1">[1]</a></sup></li>
+        <li>ติดตั้ง: <code>hermes skills install openai/skills/k8s</code> — เอกสารกำกับไว้ว่า "Install with security scan" สิ่งที่เห็น: skill ลงไปอยู่ใน <code>~/.hermes/skills/</code> และ <code>hermes skills list --source hub</code> แสดงรายการที่มาจาก hub<sup><a href="#th-ref-1">[1]</a></sup></li>
+        <li>กลับมาที่ช่องแชต พิมพ์ชื่อ skill เป็น slash command <code>/&lt;skill-name&gt;</code> ตามด้วยคำขอ — ทุก skill ที่ติดตั้งจะเป็น slash command โดยอัตโนมัติ และถ้าพิมพ์แค่ชื่อ skill เฉย ๆ agent จะโหลดมันแล้วถามว่าเราต้องการอะไร<sup><a href="#th-ref-1">[1]</a></sup> สิ่งที่เห็น: skill โหลดเข้า context เฉพาะเทิร์นที่เรียก ไม่ใช่ทุกเทิร์น</li>
+        <li>ดูแลต่อ: <code>hermes skills check</code> เช็กว่าต้นทางมีรุ่นใหม่ไหม, <code>hermes skills update</code> ติดตั้งรุ่นใหม่, <code>hermes skills audit</code> สแกนความปลอดภัยซ้ำทั้งหมด<sup><a href="#th-ref-1">[1]</a></sup></li>
+    </ol>
+
+    <pre><code># สำรวจก่อน ติดตั้งทีหลัง — ทุกคำสั่งพิมพ์ใน terminal ของ Desktop ได้
+hermes skills browse --source official
+hermes skills search kubernetes
+hermes skills inspect openai/skills/k8s
+hermes skills install openai/skills/k8s
+hermes skills list --source hub
+hermes skills check
+hermes skills update
+hermes skills audit</code></pre>
+
+    <h3>เขียนเองหนึ่งตัว</h3>
+
+    <p>skill คือโฟลเดอร์ที่มี <code>SKILL.md</code> เป็นไฟล์บังคับ ผังตัวอย่างในเอกสารจัดเป็นหมวด เช่น <code>~/.hermes/skills/devops/deploy-k8s/SKILL.md</code> โดยมี <code>references/</code>, <code>scripts/</code>, <code>templates/</code>, <code>examples/</code> และ <code>assets/</code> เป็นโฟลเดอร์เสริมที่ใส่หรือไม่ใส่ก็ได้<sup><a href="#th-ref-1">[1]</a></sup> ส่วนหัวของไฟล์เป็น YAML frontmatter ตามแบบนี้ (ตัดมาจากตัวอย่างในเอกสาร ซึ่งระบุว่า <code>platforms</code>, คีย์เปิดใช้ตามเงื่อนไข และ <code>config</code> เป็นตัวเลือก)<sup><a href="#th-ref-1">[1]</a></sup>:</p>
+
+    <pre><code>---
+name: my-skill
+description: Brief description of what this skill does
+version: 1.0.0
+platforms: [macos, linux]     # ตัวเลือก — จำกัดเฉพาะบางระบบปฏิบัติการ
+metadata:
+  hermes:
+    tags: [python, automation]
+    category: devops
+    requires_toolsets: [terminal]   # ตัวเลือก — เปิดใช้เมื่อมี toolset นี้
+---
+
+# Skill Title
+
+## When to Use
+## Procedure
+## Pitfalls
+## Verification</code></pre>
+
+    <ol>
+        <li>สร้างโฟลเดอร์และไฟล์: <code>mkdir -p ~/.hermes/skills/devops/my-skill</code> แล้วสร้าง <code>SKILL.md</code> ในโฟลเดอร์นั้น</li>
+        <li>วาง frontmatter ด้านบน แก้ <code>name</code> ให้ตรงกับชื่อโฟลเดอร์ และเขียน <code>description</code> ให้บอกว่า "ใช้เมื่อไร" เพราะชื่อกับคำอธิบายคือสิ่งเดียวที่ agent เห็นในรายการ Level 0 ก่อนตัดสินใจโหลด<sup><a href="#th-ref-1">[1]</a></sup></li>
+        <li>เขียนเนื้อหาสี่หัวข้อตามแม่แบบของเอกสาร — When to Use (เงื่อนไขที่ควรใช้), Procedure (ขั้นตอน), Pitfalls (จุดพลาดที่รู้แล้วและวิธีแก้), Verification (จะรู้ได้อย่างไรว่าสำเร็จ)<sup><a href="#th-ref-1">[1]</a></sup></li>
+        <li>ยืนยัน: ถ้าแชตเปิดค้างอยู่ พิมพ์ <code>/reload-skills</code> ก่อน — มันสแกน <code>~/.hermes/skills/</code> ใหม่เพื่อหา skill ที่เพิ่งเพิ่มหรือถูกลบ<sup><a href="#th-ref-8">[8]</a></sup> จากนั้น <code>hermes skills list</code> ต้องเห็นชื่อใหม่ แท็บ Skills ใน Desktop ต้องแสดงพร้อมสวิตช์ และ <code>/my-skill</code> ในแชตต้องโหลดมันได้<sup><a href="#th-ref-1">[1]</a></sup><sup><a href="#th-ref-4">[4]</a></sup></li>
+    </ol>
+
+    <p>ก่อนไปต่อ ตัวเลขที่ทำให้เห็นภาพว่าลิ้นชักนี้ใหญ่แค่ไหน — และทั้งสองชุดมาจากเอกสาร ไม่ใช่การนับเอง: <strong>Bundled Skills Catalog</strong> ไล่ skill ที่ seed เข้าทุก profile ตั้งแต่ติดตั้งไว้ <strong>61 ตัวใน 12 หมวด</strong> (apple, devops, research, web …) ส่วน <strong>Official Optional Skills Catalog</strong> อีก <strong>136 ตัวใน 22 หมวด</strong> ที่ <em>ไม่</em> เปิดใช้โดยปริยาย ต้องสั่ง <code>hermes skills install official/&lt;category&gt;/&lt;skill&gt;</code> เอง<sup><a href="#th-ref-9">[9]</a></sup> สองชุดนี้คือของที่แท็บ Skills แสดงให้เห็นพอดี: รายการที่ติดตั้งแล้วอยู่บน แคตตาล็อกที่รอ Install อยู่ล่าง<sup><a href="#th-ref-2">[2]</a></sup></p>
+
+    <div class="alert">
+        <strong>agent เขียน skill เองได้ด้วย:</strong> Hermes มีเครื่องมือ <code>skill_manage</code> และคำสั่ง <code>/learn</code> ที่กลั่นไดเรกทอรี, URL หรือบทสนทนาที่เพิ่งคุยกันออกมาเป็น <code>SKILL.md</code><sup><a href="#th-ref-8">[8]</a></sup> ก่อนปล่อยให้มันเขียนอิสระในเครื่องที่ใช้งานจริง ผมแนะนำเปิด <code>skills.write_approval: true</code> ใน config.yaml เพื่อให้ทุกการเขียนไปเข้าคิวรอตรวจด้วย <code>/skills pending</code>, <code>/skills diff &lt;id&gt;</code>, <code>/skills approve &lt;id&gt;</code><sup><a href="#th-ref-6">[6]</a></sup> เหตุผลและลำดับการเปิดใช้อยู่ใน <a href="/blog/hermes-skills">Hermes #6 Skills</a>
+    </div>
+
+    <blockquote><strong>💡 จากชุมชน — ปิดสิ่งที่ไม่ใช้:</strong> ผู้สร้างคอนเทนต์ที่ทำ walkthrough นับ skill ที่เห็นในเครื่องตัวเองได้ไม่เท่ากัน — คลิปหนึ่งบอก "71 skills built into this" อีกคลิปบอก "over 150" — และทุกคนแนะนำเหมือนกันว่าให้ปิด skill ที่ไม่ใช้ (iMessage, Find My, Apple Reminders …)<sup><a href="#th-ref-12">[12]</a></sup><sup><a href="#th-ref-13">[13]</a></sup> ตัวเลขสองชุดนั้นเป็นคำบอกเล่าของผู้ใช้ ไม่ใช่ตัวเลขทางการ และช่วงกว้างของมันอธิบายได้ด้วยแคตตาล็อกสองหน้าข้างบน: 61 ตัวที่ seed มาให้ กับอีก 136 ตัวที่ติดตั้งเพิ่มได้<sup><a href="#th-ref-9">[9]</a></sup> หลักการที่อยู่ใต้คำแนะนำนั้นมีเอกสารรองรับ: รายการ Level 0 ของทุก skill กินราว 3k tokens และ <code>/context all</code> แสดงต้นทุนราย skill ให้ดูได้<sup><a href="#th-ref-1">[1]</a></sup><sup><a href="#th-ref-8">[8]</a></sup> สวิตช์ในแท็บ Skills คือที่ปิด ฝั่ง CLI ใช้ <code>hermes skills config</code> ("Interactive enable/disable configuration for skills by platform") และถ้าอยากเริ่มจากศูนย์ <code>hermes skills opt-out</code> หยุดการ seed ในอนาคตโดยไม่ลบอะไรบนดิสก์<sup><a href="#th-ref-4">[4]</a></sup><sup><a href="#th-ref-1">[1]</a></sup></blockquote>
+
+    <h2 id="th-mcp" lang="en">3. MCP — Add a Server from the Screen or from config.yaml</h2>
+
+    <p>คำตอบตรง ๆ: มีสองทางเข้า — <strong>หน้า MCP ในแอป</strong> (ตั้งแต่ v0.21.0 server ที่ตั้งไว้กับแคตตาล็อกอยู่หน้าเดียวกัน) หรือ<strong>เขียนคีย์ <code>mcp_servers:</code> ใน config.yaml</strong> ด้วยมือ<sup><a href="#th-ref-10">[10]</a></sup><sup><a href="#th-ref-3">[3]</a></sup> ทั้งสองทางลงเอยที่เดียวกัน: Hermes ค้นพบเครื่องมือของ server ตอนเชื่อมต่อ แล้วลงทะเบียนเป็น <code>mcp_&lt;server_name&gt;_&lt;tool_name&gt;</code> พร้อม toolset ชื่อ <code>mcp-&lt;server&gt;</code> ให้จัดการเป็นกลุ่มได้<sup><a href="#th-ref-3">[3]</a></sup></p>
+
+    <h3>จากหน้าจอ — หน้า MCP (v0.21.0)</h3>
+
+    <p>release notes ของ v0.21.0 บรรยายหน้านี้ไว้ในย่อหน้าเดียว ผมแยกออกมาเป็นรายการเพื่อให้รู้ว่าจะมองหาอะไร: "MCP servers and the catalog merged into one coherent desktop page" พร้อม drag-in "paste anything" import, background health checks ที่เตือนให้ re-auth ก่อนที่ tool call จะล้ม, overlay ต้นทุน/การใช้งานที่แสดง "schema token estimates and 30-day usage per server" และ <code>hermes://</code> deep links ที่ติดตั้ง MCP server "with explicit confirmation"<sup><a href="#th-ref-10">[10]</a></sup> เอกสาร Desktop นับ "MCP servers" เป็นหนึ่งใน settings panes และ command palette (<code>Cmd/Ctrl+K</code>) เปิดหน้าใดหรือส่วนการตั้งค่าใดก็ได้จากคีย์บอร์ด<sup><a href="#th-ref-2">[2]</a></sup></p>
+
+    <ol>
+        <li>เปิดหน้า MCP: <code>Cmd/Ctrl+K</code> แล้วพิมพ์ MCP หรือเข้าจาก Settings สิ่งที่เห็น: server ที่ตั้งไว้แล้วกับแคตตาล็อกในหน้าเดียว<sup><a href="#th-ref-10">[10]</a></sup> แคตตาล็อกนี้คือชุดที่ทีม Nous ตรวจแล้ว merge เข้ามา (เก็บใน <code>optional-mcps/</code> ของ repo ไม่มีช่องทางส่งจากชุมชน) และเอกสารระบุชัดว่า <strong>ปิดไว้โดยปริยาย — ติดตั้งเฉพาะที่จะใช้จริง</strong> ฝั่ง CLI คือ <code>hermes mcp catalog</code> และ <code>hermes mcp install &lt;name&gt;</code><sup><a href="#th-ref-3">[3]</a></sup></li>
+        <li>เพิ่ม server ด้วยวิธีใดวิธีหนึ่ง — เลือกจากแคตตาล็อก วาง config ที่ก๊อปมาจากเอกสารของ server ลงไป (นี่คือ "paste anything" import) หรือคลิกลิงก์ <code>hermes://</code> จากหน้าเว็บของผู้ให้บริการ ซึ่งแอปจะ<strong>ถามยืนยันก่อนเสมอ</strong> — อ่านให้ครบว่ามันจะรันคำสั่งอะไรก่อนกดตกลง<sup><a href="#th-ref-10">[10]</a></sup></li>
+        <li>รอผล health check เบื้องหลัง: ถ้า server ต้อง re-auth หน้านี้จะเตือนก่อนที่ tool call จะล้ม<sup><a href="#th-ref-10">[10]</a></sup> สิ่งที่ควรเช็กพร้อมกัน: ตัวเลข schema token estimate ของ server นั้นใน overlay — นี่คือราคาที่ทุกเทิร์นจะจ่าย (ตอนที่ 6)</li>
+        <li>กลับไปที่แชต แล้วสั่งงานที่ server ทำได้ สิ่งที่เห็น: ใน tool activity ชื่อเครื่องมือขึ้นต้นด้วย <code>mcp_</code> ตามด้วยชื่อ server — เอกสารบอกว่าปกติเราไม่ต้องเรียกชื่อเต็มเอง Hermes เห็นเครื่องมือและเลือกใช้ระหว่างคิดเอง<sup><a href="#th-ref-3">[3]</a></sup></li>
+    </ol>
+
+    <h3>จาก YAML — mcp_servers: ใน config.yaml</h3>
+
+    <ol>
+        <li>เปิด <code>~/.hermes/config.yaml</code> แล้วเพิ่มบล็อก <code>mcp_servers:</code> ตัวอย่างแรกคือ stdio server ที่เอกสารใช้ใน Quick start — filesystem server ที่รันผ่าน <code>npx</code> และเปิดให้เข้าถึงไดเรกทอรีเดียว (เปลี่ยน <code>/home/user/projects</code> เป็นโฟลเดอร์ของคุณ)<sup><a href="#th-ref-3">[3]</a></sup></li>
+        <li>หรือ server ระยะไกลแบบ HTTP ที่มี header ยืนยันตัวตน — ตัวอย่างขั้นต่ำจากเอกสารเช่นกัน<sup><a href="#th-ref-3">[3]</a></sup> ใส่ค่าลับผ่านตัวแปรสภาพแวดล้อมแทนการเขียนตรง ๆ ในไฟล์ถ้าทำได้</li>
+        <li>ทดสอบก่อนใช้: <code>hermes mcp test filesystem</code> ("Test connection to an MCP server") และ <code>hermes mcp list</code> ดูรายการที่ตั้งไว้<sup><a href="#th-ref-4">[4]</a></sup> ถ้าไม่เชื่อมต่อ เอกสารให้เช็ก <code>node --version</code> และ <code>npx --version</code> ก่อน<sup><a href="#th-ref-3">[3]</a></sup></li>
+        <li>ถ้าแชตเปิดค้างอยู่ พิมพ์ <code>/reload-mcp</code> — โหลด server จาก config ใหม่และ re-probe เครื่องมือ เพราะชุดเครื่องมือของ session ถูกตรึงไว้ จะรับของใหม่ก็ต่อเมื่อ <code>/reload-mcp</code>, <code>/new</code> หรือเกิด context compaction<sup><a href="#th-ref-3">[3]</a></sup></li>
+        <li>เรียกใช้: พิมพ์ prompt ตัวอย่างจากเอกสาร "List the files in /home/user/projects and summarize the repo structure." สิ่งที่เห็น: agent เรียก <code>mcp_filesystem_read_file</code> หรือเครื่องมือญาติของมัน ตามตารางชื่อในเอกสาร<sup><a href="#th-ref-3">[3]</a></sup></li>
+        <li>ปิดชั่วคราวโดยไม่ลบ: <code>enabled: false</code> ในบล็อกของ server นั้น — เอกสารระบุว่านี่คือสาเหตุหนึ่งที่ "tools not appearing"<sup><a href="#th-ref-3">[3]</a></sup></li>
+    </ol>
+
+    <pre><code># ~/.hermes/config.yaml — stdio server (ตัวอย่าง Quick start ของเอกสาร)
+mcp_servers:
+  filesystem:
+    command: "npx"
+    args: ["-y", "@modelcontextprotocol/server-filesystem", "/home/user/projects"]</code></pre>
+
+    <pre><code># ~/.hermes/config.yaml — HTTP server ระยะไกล (ตัวอย่างขั้นต่ำของเอกสาร)
+mcp_servers:
+  company_api:
+    url: "https://mcp.internal.example.com"
+    headers:
+      Authorization: "Bearer ***"</code></pre>
+
+    <pre><code># ทดสอบ ดูรายการ แล้วโหลดใหม่ในแชต
+hermes mcp list
+hermes mcp test filesystem
+/reload-mcp</code></pre>
+
+    <p>ปุ่มที่มักถูกลืมคือปุ่มกลาง: ไม่ต้องปิดทั้ง server ก็ลดราคาได้ เอกสารให้กรอง<strong>รายเครื่องมือ</strong>ด้วย <code>tools.include</code> (ลงทะเบียนเฉพาะที่ระบุ) หรือ <code>tools.exclude</code> (ลงทะเบียนทุกตัวยกเว้นที่ระบุ) ใส่ glob ได้ และถ้าเขียนทั้งสองคีย์ <code>include</code> ชนะ<sup><a href="#th-ref-3">[3]</a></sup> นี่คือทางออกของ server ที่ generate เครื่องมือจาก OpenAPI เป็นพัน ๆ ตัว — เอกสารยกตัวอย่าง <code>cloudflare</code> ที่มีราว 3,300 endpoint tools และใช้ block-list แทน checklist<sup><a href="#th-ref-3">[3]</a></sup> ฝั่ง CLI <code>hermes mcp configure &lt;name&gt;</code> เปิด checklist เดิมกลับมาให้ติ๊กใหม่ โดยติ๊กค้างไว้ตามที่เลือกครั้งก่อน<sup><a href="#th-ref-3">[3]</a></sup><sup><a href="#th-ref-4">[4]</a></sup></p>
+
+    <pre><code># ~/.hermes/config.yaml — ลงทะเบียนเฉพาะเครื่องมือที่ใช้จริง (ตัวอย่าง whitelist ของเอกสาร)
+mcp_servers:
+  github:
+    command: "npx"
+    args: ["-y", "@modelcontextprotocol/server-github"]
+    env:
+      GITHUB_PERSONAL_ACCESS_TOKEN: "***"
+    tools:
+      include: [create_issue, list_issues]</code></pre>
+
+    <div class="alert">
+        <strong>ค่าลับไม่ไหลลงไปเอง:</strong> subprocess ของ stdio MCP server ได้รับเฉพาะ <code>PATH, HOME, USER, LANG, LC_ALL, TERM, SHELL, TMPDIR</code> บวกตัวแปร <code>XDG_*</code> — ตัวแปรอื่นทั้งหมด (API key, token) ถูกตัดทิ้ง จะส่งอะไรให้ server ต้องเขียนไว้ใน <code>env:</code> ของบล็อกนั้นเท่านั้น<sup><a href="#th-ref-5">[5]</a></sup> ขาออก ข้อความ error จากเครื่องมือ MCP ถูกกรองก่อนถึงโมเดล: GitHub PAT (<code>ghp_…</code>), คีย์แบบ <code>sk-…</code>, Bearer token และพารามิเตอร์ <code>token=</code>, <code>key=</code>, <code>API_KEY=</code>, <code>password=</code>, <code>secret=</code> ถูกแทนด้วย <code>[REDACTED]</code><sup><a href="#th-ref-5">[5]</a></sup> และแคตตาล็อกก็ไม่ใช่เกราะสมบูรณ์ — v0.21.0 ถอดทั้งรายการใน catalog และ skill ของ Blender MCP ออก "after an upstream compromise"<sup><a href="#th-ref-10">[10]</a></sup> อ่านก่อนติดตั้งเสมอ ภาพรวมของ threat model อยู่ใน <a href="/blog/hermes-security">Hermes #4 Security</a>
+    </div>
+
+    <blockquote><strong>💡 MCP ไปอีกทางได้ด้วย:</strong> <code>hermes mcp serve</code> ทำให้ Hermes เองกลายเป็น MCP server ให้ agent ตัวอื่นต่อเข้ามา<sup><a href="#th-ref-4">[4]</a></sup> ผมเล่าเรื่อง "MCP both ways" ไว้ใน <a href="/blog/hermes-integrations">Hermes #5 Integrations</a> — ในตอนนี้เรายังอยู่ที่ขาเข้าเท่านั้น</blockquote>
+
+    <h2 id="th-memory" lang="en">4. Memory — Read, Edit and Reset MEMORY.md and USER.md</h2>
+
+    <p>คำตอบตรง ๆ: ความจำถาวรของ Hermes คือไฟล์ Markdown สองไฟล์ที่มีเพดาน — <code>MEMORY.md</code> 2,200 ตัวอักษร และ <code>USER.md</code> 1,375 ตัวอักษร ใน <code>~/.hermes/memories/</code> — และเมื่อเต็ม เครื่องมือ <code>memory</code> จะคืน error ไม่ใช่ทิ้งรายการเก่าเงียบ ๆ<sup><a href="#th-ref-6">[6]</a></sup> ใน Desktop เราอ่านและแก้มันจาก <strong>Memory Graph</strong> (เอกสารเรียกทั้ง Memory Graph และ Star Map) ส่วนสวิตช์ระดับโปรไฟล์อยู่ในหน้า <strong>Settings → Memory &amp; Context</strong> ซึ่งเอกสารระบุชื่อไว้แต่ไม่ได้ไล่รายละเอียดแต่ละปุ่ม<sup><a href="#th-ref-2">[2]</a></sup></p>
+
+    <h3>อ่าน</h3>
+
+    <p>สิ่งที่ agent เห็นทุกเทิร์นคือบล็อกแบบนี้ใน system prompt — มีหัวบอกว่าเป็น store ไหน ใช้ไปกี่เปอร์เซ็นต์ และรายการคั่นด้วยเครื่องหมาย <code>§</code> (ตัดมาจากตัวอย่างในเอกสาร)<sup><a href="#th-ref-6">[6]</a></sup>:</p>
+
+    <pre><code>MEMORY (your personal notes) [67% — 1,474/2,200 chars]
+User's project is a Rust web service at ~/code/myapi using Axum + SQLx
+§
+This machine runs Ubuntu 22.04, has Docker and Podman installed
+§
+User prefers concise responses, dislikes verbose explanations</code></pre>
+
+    <p>กฎข้อเดียวที่ต้องจำเมื่ออ่าน: บล็อกนี้เป็น <strong>frozen snapshot</strong> — ถ่ายครั้งเดียวตอนเริ่ม session และไม่เปลี่ยนกลาง session เพื่อรักษา prefix cache ของโมเดล ถ้า agent บันทึกความจำระหว่างคุย ไฟล์บนดิสก์เปลี่ยนทันที แต่ prompt จะเห็นของใหม่ใน session ถัดไป<sup><a href="#th-ref-6">[6]</a></sup> นี่คือคำตอบของคำถามในย่อหน้าแรกของบทความ: มันจำแล้ว แต่ session เดิมยังอ่านของเก่าอยู่ — เปิด session ใหม่แล้วดู</p>
+
+    <h3>แก้และล้าง</h3>
+
+    <ol>
+        <li>เปิด Memory Graph: command palette → <strong>Memory Graph</strong>, คลิกรายการในแถบสถานะ หรือพิมพ์ <code>/journey</code> ในแชต (alias <code>/learning</code>, <code>/memory-graph</code>) สิ่งที่เห็น: กราฟโหนดของ skill และความจำที่ซูมได้ มีไทม์ไลน์ กรองได้ All / Used / Learned<sup><a href="#th-ref-2">[2]</a></sup></li>
+        <li>คลิกโหนดแล้วแก้หรือลบได้จากแผงนั้นโดยตรง — เอกสารระบุผลต่างกันตามชนิด: "skills are archived, memories removed" คือ skill ถูกเก็บเข้าคลัง (กู้คืนได้) ส่วนก้อนความจำถูกลบจริง<sup><a href="#th-ref-2">[2]</a></sup></li>
+        <li>ทำจาก CLI ก็ได้ผลเดียวกัน: <code>hermes journey list</code> แสดง id ของโหนด (ก้อนความจำใช้รูปแบบ <code>memory:&lt;source&gt;:&lt;index&gt;</code>), <code>hermes journey edit &lt;node&gt;</code> เปิดเนื้อหาใน <code>$EDITOR</code>, <code>hermes journey delete &lt;node&gt; [-y]</code> ลบโดยไม่ถามซ้ำถ้าใส่ <code>-y</code><sup><a href="#th-ref-6">[6]</a></sup></li>
+        <li>อยากให้การบันทึกทุกครั้งผ่านมือคนก่อน: ตั้ง <code>memory.write_approval: true</code> — ใน CLI การเขียนเบื้องหน้าจะถามทันที ส่วนช่องทางอื่นและการทบทวนเบื้องหลังจะเข้าคิว ตรวจด้วย <code>/memory pending</code>, <code>/memory approve &lt;id&gt;</code>, <code>/memory reject &lt;id&gt;</code> หรือเปิด-ปิดสดด้วย <code>/memory approval on</code><sup><a href="#th-ref-6">[6]</a></sup></li>
+        <li>ล้าง: ถ้าต้องการปิดทั้งระบบ ตั้ง <code>memory_enabled: false</code> และ <code>user_profile_enabled: false</code> ทั้งคู่ — เอกสารระบุว่าเมื่อปิดทั้งสอง เครื่องมือ <code>memory</code> จะหายจาก schema และ prompt จะไม่พูดถึงเครื่องมือที่ใช้ไม่ได้<sup><a href="#th-ref-6">[6]</a></sup> ถ้าแค่อยากเริ่มจำใหม่จากศูนย์ วิธีที่ผมใช้คือลบโหนดทั้งหมดผ่าน journey หรือย้ายสองไฟล์ใน <code>memories/</code> ออกไปเก็บไว้ที่อื่น แล้วเปิด session ใหม่ — เอกสารไม่ได้ให้คำสั่ง "reset memory" แยกไว้ต่างหาก</li>
+    </ol>
+
+    <pre><code># ~/.hermes/config.yaml — ค่าเริ่มต้นตามเอกสาร
+memory:
+  memory_enabled: true
+  user_profile_enabled: true
+  memory_char_limit: 2200   # ≈ 800 tokens
+  user_char_limit: 1375     # ≈ 500 tokens
+  write_approval: false     # true = ต้องอนุมัติก่อนบันทึกทุกครั้ง
+
+display:
+  memory_notifications: on  # off | on | verbose</code></pre>
+
+    <p>ถ้าสองไฟล์นี้ไม่พอ Hermes มีชั้น <strong>external memory provider</strong> เป็น plugin ที่เลือกได้<strong>ทีละหนึ่ง</strong> โดยความจำในตัวยังทำงานคู่กันเสมอ — เอกสารหน้า providers เปิดด้วยตัวเลข 8 ตัว (Honcho, OpenViking, Mem0, Hindsight, Holographic, RetainDB, ByteRover, Supermemory) แต่ตารางเปรียบเทียบท้ายหน้ามี Memori เป็นแถวที่เก้า<sup><a href="#th-ref-7">[7]</a></sup> เปิดใช้ด้วย <code>hermes memory setup</code> ดูสถานะด้วย <code>hermes memory status</code> ปิดด้วย <code>hermes memory off</code> หรือตั้ง <code>memory.provider:</code> ใน config.yaml หรือเลือกจาก <code>hermes plugins</code> → Provider Plugins → Memory Provider<sup><a href="#th-ref-7">[7]</a></sup><sup><a href="#th-ref-4">[4]</a></sup> ผมยังยืนตามคำแนะนำใน <a href="/blog/hermes-memory">Hermes #3 Memory</a>: รีดประโยชน์จากสองไฟล์กับ session search ให้สุดก่อน ค่อยเพิ่ม provider เมื่อเจอปัญหาที่สองชั้นนั้นตอบไม่ได้จริง ๆ</p>
+
+    <div class="alert info">
+        <strong>หนึ่ง agent ต่อหนึ่ง Hermes home:</strong> เอกสารเตือนไว้ตรง ๆ ว่าอย่าชี้ agent สองตัวไปที่ home เดียวกัน เพราะการเขียนความจำเป็นอัตโนมัติและโหลดกลับเข้า prompt ตอนเริ่ม session — สองตัวเขียนสลับกันจะได้สภาพที่ไม่มีใครตั้งใจ ให้ agent ตัวที่สองมีโปรไฟล์ของตัวเอง (ทำไว้แล้วใน <a href="/blog/hermes-desktop-profiles">#3 Profiles</a>) และถ้าต้องแชร์ความจำจริง ๆ ให้ใช้ external provider<sup><a href="#th-ref-6">[6]</a></sup>
+    </div>
+
+    <blockquote><strong>💡 เพดานคือฟีเจอร์:</strong> เอกสารแนะนำให้เริ่มรวบรายการเมื่อความจำเกิน 80% ของความจุ ซึ่งดูได้จากหัวบล็อกใน prompt<sup><a href="#th-ref-6">[6]</a></sup> เวลาเห็นตัวเลขนั้นใน Memory Graph ผมถือเป็นสัญญาณให้เปิดดูรายการทีละก้อน — ไม่ใช่สัญญาณให้ขยายเพดาน เหตุผลที่ตัวเลขนี้เล็กโดยตั้งใจอยู่ใน <a href="/blog/hermes-memory">Hermes #3 Memory</a></blockquote>
+
+    <h2 id="th-which-when" lang="en">5. Which One, When — Five Extension Points Compared</h2>
+
+    <p>คำตอบตรง ๆ: <strong>ข้อเท็จจริงที่ต้องอยู่ใน context ตลอดเวลา</strong> → memory · <strong>ขั้นตอนที่ยาวและใช้เป็นครั้งคราว</strong> → skill · <strong>ความสามารถในการลงมือทำกับระบบภายนอก</strong> → MCP server · <strong>หน้าจอหรือแผงใหม่ในแอป</strong> → Desktop plugin ซึ่งเป็นคนละระบบกับสามอย่างแรกโดยสิ้นเชิง ตารางนี้วางทั้งห้าช่องทางเทียบกันตามที่อยู่บนดิสก์ หน้าจอใน Desktop คำสั่ง CLI และราคาที่จ่ายเป็น context</p>
+
+    <div class="table-wrapper">
+        <table>
+            <thead>
+                <tr>
+                    <th>Extension</th>
+                    <th>Lives at</th>
+                    <th>Desktop surface</th>
+                    <th>CLI</th>
+                    <th>Context cost</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td><strong>Skill</strong></td>
+                    <td><code>~/.hermes/skills/&lt;category&gt;/&lt;name&gt;/SKILL.md</code><sup><a href="#th-ref-1">[1]</a></sup></td>
+                    <td>แท็บ Skills (สวิตช์ + แคตตาล็อก Install) เปิดด้วย <code>Cmd/Ctrl+K</code><sup><a href="#th-ref-2">[2]</a></sup></td>
+                    <td><code>hermes skills …</code>, <code>/&lt;skill-name&gt;</code>, <code>/learn</code><sup><a href="#th-ref-1">[1]</a></sup></td>
+                    <td>รายชื่อของทุก skill ราว 3k tokens ทุกเทิร์น เนื้อหาเต็มเฉพาะเมื่อโหลด<sup><a href="#th-ref-1">[1]</a></sup></td>
+                </tr>
+                <tr>
+                    <td><strong>MCP server</strong></td>
+                    <td><code>mcp_servers:</code> ใน <code>~/.hermes/config.yaml</code><sup><a href="#th-ref-3">[3]</a></sup></td>
+                    <td>หน้า MCP — servers + catalog + overlay ต้นทุน (v0.21.0)<sup><a href="#th-ref-10">[10]</a></sup></td>
+                    <td><code>hermes mcp add|test|list</code>, <code>/reload-mcp</code><sup><a href="#th-ref-4">[4]</a></sup></td>
+                    <td>schema ของเครื่องมือทุกเทิร์น — หน้า MCP แสดง schema token estimate ต่อ server<sup><a href="#th-ref-10">[10]</a></sup></td>
+                </tr>
+                <tr>
+                    <td><strong>MEMORY.md</strong></td>
+                    <td><code>~/.hermes/memories/MEMORY.md</code><sup><a href="#th-ref-6">[6]</a></sup></td>
+                    <td>Memory Graph; Settings → Memory &amp; Context<sup><a href="#th-ref-2">[2]</a></sup></td>
+                    <td><code>hermes journey list|edit|delete</code>, <code>/memory</code><sup><a href="#th-ref-6">[6]</a></sup></td>
+                    <td>≤ 2,200 ตัวอักษร ≈ 800 tokens ทุกเทิร์น<sup><a href="#th-ref-6">[6]</a></sup></td>
+                </tr>
+                <tr>
+                    <td><strong>USER.md</strong></td>
+                    <td><code>~/.hermes/memories/USER.md</code><sup><a href="#th-ref-6">[6]</a></sup></td>
+                    <td>เหมือน MEMORY.md<sup><a href="#th-ref-2">[2]</a></sup></td>
+                    <td>เหมือน MEMORY.md<sup><a href="#th-ref-6">[6]</a></sup></td>
+                    <td>≤ 1,375 ตัวอักษร ≈ 500 tokens ทุกเทิร์น<sup><a href="#th-ref-6">[6]</a></sup></td>
+                </tr>
+                <tr>
+                    <td><strong>Desktop plugin</strong></td>
+                    <td><code>$HERMES_HOME/desktop-plugins/&lt;id&gt;/plugin.js</code><sup><a href="#th-ref-11">[11]</a></sup></td>
+                    <td>Settings → Plugins; <code>Cmd/Ctrl+K</code> → Reload desktop plugins<sup><a href="#th-ref-11">[11]</a></sup></td>
+                    <td>— (ไฟล์ ESM ไฟล์เดียว โหลดใหม่เองเมื่อบันทึก)<sup><a href="#th-ref-11">[11]</a></sup></td>
+                    <td>ไม่ใช่หมวดใดใน Context Usage — เอกสารอธิบายว่าเป็น ESM ที่รันใน renderer realm ของแอป<sup><a href="#th-ref-11">[11]</a></sup><sup><a href="#th-ref-2">[2]</a></sup></td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <p>แถวสุดท้ายคือแถวที่คนสับสนบ่อยที่สุด <strong>Desktop plugin ไม่ได้ทำให้ agent รู้อะไรเพิ่ม</strong> — มันเพิ่ม pane, หน้า, รายการในแถบสถานะ หรือคำสั่งใน palette ให้กับ<em>แอป</em> เป็นไฟล์ ESM ไฟล์เดียวที่แอปโหลดภายในไม่กี่วินาทีและ hot-reload ทุกครั้งที่บันทึก จัดการได้ใน Settings → Plugins<sup><a href="#th-ref-2">[2]</a></sup><sup><a href="#th-ref-11">[11]</a></sup> ส่วน "Agent plugins" ในหน้าเดียวกันคือ plugin ฝั่ง backend อีกระบบหนึ่ง<sup><a href="#th-ref-2">[2]</a></sup> ถ้าจะลองเขียน plugin ให้แอป ผมเขียนตัวอย่างและข้อจำกัดไว้ใน <a href="/blog/hermes-desktop-fleet">Hermes #10 Desktop &amp; Fleet</a></p>
+
+    <div class="alert danger">
+        <strong>อย่าโหลด plugin.js จากคนที่คุณไม่ไว้ใจ:</strong> เอกสาร SDK เขียนตรง ๆ ว่า plugin ที่โหลดแล้ว "is evaluated as ESM in the renderer realm with full app authority" และการแยกที่ loader ให้คือ "error isolation only" — มันทำให้แอปพังไม่ได้ แต่ทำได้ทุกอย่างที่แอปทำได้ การตรวจ <code>integrity</code> แค่พิสูจน์ว่าไบต์ตรงกับ hash ไม่ได้ sandbox อะไร<sup><a href="#th-ref-11">[11]</a></sup>
+    </div>
+
+    <h2 id="th-context-cost" lang="en">6. See What Each One Costs in Context</h2>
+
+    <p>คำตอบตรง ๆ: มิเตอร์ <strong>Context usage</strong> ที่แถบสถานะด้านล่างของหน้าแชตแสดง "% full" ของ context window แบบสด และเมื่อคลิกจะเปิด popover <strong>Context Usage</strong> ที่แยก token ตามหมวด — system prompt, tool definitions, skills, memory, rules, MCP, subagent definitions และตัวบทสนทนาเอง — เอกสารบอกจุดประสงค์ไว้ว่า "so you can see exactly what's eating the window before compression kicks in"<sup><a href="#th-ref-2">[2]</a></sup> สามหมวดในนั้นคือสามลิ้นชักของบทความนี้พอดี</p>
+
+    <ol>
+        <li>มองที่แถบสถานะ: มิเตอร์ context อยู่ตรงนั้น ถ้าไม่เห็น คลิกขวาที่แถบแล้วเลือก <strong>Show in status bar</strong> → context meter (แถบทั้งแถบซ่อน/แสดงด้วย <code>Cmd/Ctrl+Shift+S</code>)<sup><a href="#th-ref-2">[2]</a></sup></li>
+        <li>คลิกมิเตอร์ สิ่งที่เห็น: popover แยกหมวด อ่านสามแถว — <strong>skills</strong> (ฝั่ง CLI เรียกว่า skills index), <strong>memory</strong> (สองไฟล์) และ <strong>MCP</strong> (schema ของเครื่องมือทุก server ที่เปิดอยู่)<sup><a href="#th-ref-2">[2]</a></sup><sup><a href="#th-ref-8">[8]</a></sup> ถ้าแถว MCP ใหญ่ผิดคาด ให้ไปข้อถัดไป</li>
+        <li>เปิดหน้า MCP: overlay ต้นทุน/การใช้งานแสดง schema token estimate และการใช้งาน 30 วันย้อนหลัง<strong>ต่อ server</strong> — server ที่ schema ใหญ่แต่ 30 วันไม่มีใครเรียก คือตัวที่ผมจะจัดการก่อน — ลองตัดเครื่องมือที่ไม่ใช้ออกด้วย <code>hermes mcp configure &lt;name&gt;</code> หรือ <code>tools.include</code> ก่อน แล้วค่อยตั้ง <code>enabled: false</code> ถ้ายังไม่ได้ใช้จริง ๆ<sup><a href="#th-ref-10">[10]</a></sup><sup><a href="#th-ref-3">[3]</a></sup></li>
+        <li>ฝั่ง CLI/TUI ใช้ <code>/context</code> (alias <code>/ctx</code>) — แสดงตารางประมาณการรายหมวดชุดเดียวกัน และ <code>/context all</code> เพิ่มรายละเอียดราย skill และราย toolset ส่วน <code>/usage</code> แสดง token, ประมาณการค่าใช้จ่าย และ — ถ้าผู้ให้บริการรองรับ — โควตาที่เหลือของบัญชี<sup><a href="#th-ref-8">[8]</a></sup></li>
+    </ol>
+
+    <pre><code># ในแชต (CLI/TUI) — ตัวเลขชุดเดียวกับ popover ใน Desktop
+/context        # หมวด: system prompt, tool definitions, rules, skills index, MCP, subagents, memory, conversation
+/context all    # เพิ่มต้นทุนราย skill / ราย toolset
+/usage          # token, ประมาณการค่าใช้จ่าย, โควตาบัญชี (ถ้ามี)
+/new            # เริ่ม session ใหม่เมื่อมิเตอร์เต็ม (alias /reset)</code></pre>
+
+    <blockquote><strong>💡 จากชุมชน — หนึ่ง session ต่อหนึ่งหัวข้อ:</strong> ผู้ใช้หนัก ๆ ที่ทำ walkthrough แนะนำตรงกันว่าให้แยก session ตามหัวข้อ ปักหมุดและจัดโฟลเดอร์ แล้วกด <code>/new</code> เมื่อมิเตอร์ที่แถบล่างเต็ม เพราะทุกข้อความส่งทั้งเธรดกลับไปที่โมเดลอีกครั้ง — ค่าใช้จ่ายจึงโตตามความยาวของบทสนทนา ไม่ใช่ตามจำนวนคำถาม<sup><a href="#th-ref-12">[12]</a></sup> เอกสารยืนยันครึ่งหนึ่งของเรื่องนี้ไว้ในตารางเทียบ memory กับ session search: ความจำถาวรมี "Token cost: Fixed per session (~1,300 tokens)" ส่วนบทสนทนาคือส่วนที่โต<sup><a href="#th-ref-6">[6]</a></sup></blockquote>
+
+    <p>ลำดับที่ผมใช้ลดตัวเลขในมิเตอร์ ไล่จากถูกสุด: ปิดสวิตช์ skill ที่ไม่ใช้ในแท็บ Skills → ตัดเครื่องมือ MCP ที่ไม่ใช้ด้วย <code>tools.include</code> แล้วจึงตั้ง <code>enabled: false</code> ให้ server ที่นาน ๆ ใช้ที ตามด้วย <code>/reload-mcp</code> → ปล่อยให้ memory เต็มแล้วรวบ ไม่ใช่ขยายเพดาน → และเมื่อทั้งหมดยังไม่พอ <code>/new</code> ตอนถัดไป <a href="/blog/hermes-desktop-automation">#6 Automation &amp; Agents</a> จะได้ใช้ตัวเลขชุดนี้อีกครั้ง เพราะ cron job และ subagent แต่ละตัวก็มี context ของตัวเองที่ต้องจ่าย</p>
+
+    <h2 id="th-summary">7. สรุป</h2>
+
+    <p>ในบทความนี้เราเปิดสามลิ้นชักของ Hermes Desktop ทีละลิ้นชัก: ติดตั้ง skill จากแคตตาล็อกและจาก hub แล้วเขียนเองหนึ่งตัวจาก frontmatter ไม่กี่บรรทัด, เพิ่ม MCP server ทั้งจากหน้า MCP ที่ v0.21.0 รวมไว้หน้าเดียวและจากบล็อก <code>mcp_servers:</code> ที่ยกมาจากเอกสารทั้งบรรทัด, อ่าน-แก้-ล้าง MEMORY.md กับ USER.md จาก Memory Graph และจาก <code>hermes journey</code> แล้วปิดท้ายด้วยมิเตอร์ที่บอกว่าแต่ละลิ้นชักกิน context เท่าไร สิ่งที่อยากให้ติดตัวไปคือประโยคเดียว: <strong>ทุกอย่างที่ agent รู้เพิ่ม มีราคาเป็น token ทุกเทิร์น</strong> — ลิ้นชักที่ดีจึงไม่ใช่ลิ้นชักที่ใส่ได้เยอะที่สุด แต่คือลิ้นชักที่รู้ว่าอะไรควรอยู่ในนั้น</p>
+
+    <p>ตอนถัดไป <a href="/blog/hermes-desktop-automation">#6 Automation &amp; Agents — งานที่รันเองและตรวจเอง</a> จะเอาทั้งสามลิ้นชักไปใช้กับงานที่ไม่มีเรานั่งอยู่หน้าจอ: cron job ที่ตั้งแต่ v0.21.0 "load and update persistent memory like every other agent" และ subagent ที่ส่งคำสั่งแทรกได้ระหว่างทาง<sup><a href="#th-ref-10">[10]</a></sup></p>
+
+    <div class="key-takeaways">
+        <h3>🎯 สิ่งสำคัญที่ต้องจำ</h3>
+        <ul>
+            <li><strong>Three drawers</strong> = skill (ความรู้โหลดเมื่อต้องใช้ ที่ <code>~/.hermes/skills/</code>), MCP server (เครื่องมือภายนอกใต้ <code>mcp_servers:</code>) และ memory (สองไฟล์ที่มีเพดานใน <code>~/.hermes/memories/</code>) — ทั้งหมดเป็นของ Hermes Agent, Desktop เพิ่มหน้าจอให้</li>
+            <li><strong>Skills tab</strong> = สวิตช์ enable/disable ต่อ skill + แคตตาล็อก Install คลิกเดียว ส่วน hub (<code>hermes skills browse|search|inspect|install</code>) เปิดแหล่ง official, skills-sh, well-known, github และ URL</li>
+            <li><strong>SKILL.md</strong> = YAML frontmatter (<code>name</code>, <code>description</code>, <code>version</code>, <code>metadata.hermes</code>) + สี่หัวข้อ When to Use / Procedure / Pitfalls / Verification — เขียนเองได้ในโฟลเดอร์เดียว</li>
+            <li><strong>MCP page (v0.21.0)</strong> = servers + catalog หน้าเดียว, paste-anything import, health check, overlay schema-token และ 30-day usage, <code>hermes://</code> ที่ถามยืนยันก่อนเสมอ — ฝั่ง YAML ใช้ <code>hermes mcp test</code> แล้ว <code>/reload-mcp</code></li>
+            <li><strong>Env filtering</strong> = stdio MCP server ได้แค่ <code>PATH HOME USER LANG LC_ALL TERM SHELL TMPDIR XDG_*</code> + สิ่งที่เขียนใน <code>env:</code> และ error ถูกกรองค่าลับก่อนถึงโมเดล</li>
+            <li><strong>Memory Graph</strong> = ที่อ่าน แก้ และลบโหนดความจำใน Desktop (<code>/journey</code>); CLI คือ <code>hermes journey list|edit|delete</code>; snapshot แช่แข็งจึงเห็นของใหม่ใน session ถัดไป</li>
+            <li><strong>Context meter</strong> = คลิกที่แถบสถานะเพื่อดู skills / memory / MCP แยกหมวด; <code>/context all</code> ราย skill; ปิดสิ่งที่ไม่ใช้ก่อน แล้วค่อย <code>/new</code></li>
+        </ul>
+    </div>
+
+    <section class="references" aria-labelledby="th-references">
+        <h2 id="th-references">อ้างอิง</h2>
+        <p class="references__note">ทุกแหล่งอ้างอิงตรวจสอบและเข้าถึงเมื่อ 7 กันยายน 2569 (2026-09-07) ซีรีส์นี้ใช้ป้ายกำกับหลักฐานสี่แบบ — <strong>Docs</strong> เอกสารทางการของ Hermes Agent · <strong>Release</strong> บันทึกการออกรุ่นหรือ commit/PR ที่ merge แล้ว · <strong>Issue</strong> issue หรือ PR ที่ยังเปิดอยู่ · <strong>Community</strong> แหล่งจากชุมชนที่ไม่ใช่ทางการ</p>
+        <ol class="references__list">
+            <li id="th-ref-1"><span class="ref-tag ref-tag--standard">Docs</span> Nous Research. <cite>Skills System</cite>. <a href="https://hermes-agent.nousresearch.com/docs/user-guide/features/skills">hermes-agent.nousresearch.com</a> — เข้าถึง 2026-09-07. <span class="ref-supports">รองรับ: นิยาม "on-demand knowledge documents" และความเข้ากันได้กับ agentskills.io · <code>~/.hermes/skills/</code> เป็น "primary directory and source of truth" · รายการ Level 0 ราว 3k tokens และการโหลดเนื้อหาเต็มเมื่อต้องใช้ · คำสั่ง <code>hermes skills browse|search|inspect|install|list|check|update|audit</code> ทุกบรรทัดในตอนที่ 2 · ตารางแหล่งของ hub (official, skills-sh, well-known, url, github, clawhub, lobehub, browse-sh) · ตัวอย่าง frontmatter ของ SKILL.md และสี่หัวข้อในเนื้อหา · ผังโฟลเดอร์ skill · slash command อัตโนมัติและ "Just the skill name loads it" · <code>hermes skills opt-out</code></span></li>
+            <li id="th-ref-2"><span class="ref-tag ref-tag--standard">Docs</span> Nous Research. <cite>Hermes Desktop</cite>. <a href="https://hermes-agent.nousresearch.com/docs/user-guide/desktop">hermes-agent.nousresearch.com</a> — เข้าถึง 2026-09-07. <span class="ref-supports">รองรับ: ประโยค "same config, same API keys, same sessions, same skills, same memory" · แท็บ Skills ที่มีสวิตช์ enable/disable และแคตตาล็อกพร้อมปุ่ม Install ที่ "flips the row into the installed list" · Memory Graph (command palette หรือแถบสถานะ) กรอง All / Used / Learned และ Star Map ผ่าน <code>/journey</code> ที่ "skills are archived, memories removed" · มิเตอร์ Context usage และหมวดใน popover Context Usage · "Show in status bar" และ <code>Cmd/Ctrl+Shift+S</code> · terminal ในแอป <code>Ctrl+`</code> · command palette <code>Cmd/Ctrl+K</code> · "MCP servers" ในรายการ settings panes · หน้า Settings → Memory &amp; Context · path ของ desktop plugin, hot-reload, Settings → Plugins และส่วน Agent plugins</span></li>
+            <li id="th-ref-3"><span class="ref-tag ref-tag--standard">Docs</span> Nous Research. <cite>MCP (Model Context Protocol)</cite>. <a href="https://hermes-agent.nousresearch.com/docs/user-guide/features/mcp">hermes-agent.nousresearch.com</a> — เข้าถึง 2026-09-07. <span class="ref-supports">รองรับ: บล็อก <code>mcp_servers:</code> ตัวอย่าง filesystem (stdio) และ company_api (HTTP) ทุกบรรทัด · ชื่อเครื่องมือ <code>mcp_&lt;server_name&gt;_&lt;tool_name&gt;</code> และตัวอย่าง <code>mcp_filesystem_read_file</code> · toolset <code>mcp-&lt;server&gt;</code> · <code>/reload-mcp</code> และประโยคที่ว่าชุดเครื่องมือของ session ถูกตรึงจนกว่าจะ reload, <code>/new</code> หรือ compaction · prompt ตัวอย่างใน Quick start · การเช็ก <code>node --version</code> / <code>npx --version</code> · <code>enabled: false</code> เป็นสาเหตุที่เครื่องมือไม่ปรากฏ · "Hermes sees the tool and chooses it during normal reasoning" · หัวข้อ "Catalog: one-click install for Nous-approved MCPs" — ตรวจและ merge โดยทีม Nous, เก็บใน <code>optional-mcps/</code>, ไม่มีช่องทางส่งจากชุมชน และ "disabled by default" · <code>tools.include</code> / <code>tools.exclude</code> พร้อม glob และกฎ include ชนะ · ตัวอย่าง <code>cloudflare</code> ~3,300 endpoint tools · <code>hermes mcp configure</code> ที่เปิด checklist เดิมพร้อมค่าที่เลือกไว้</span></li>
+            <li id="th-ref-4"><span class="ref-tag ref-tag--standard">Docs</span> Nous Research. <cite>CLI Commands Reference</cite>. <a href="https://hermes-agent.nousresearch.com/docs/reference/cli-commands">hermes-agent.nousresearch.com</a> — เข้าถึง 2026-09-07. <span class="ref-supports">รองรับ: ตารางคำสั่งย่อยของ <code>hermes mcp</code> — <code>test &lt;name&gt;</code> ("Test connection to an MCP server"), <code>list</code>, <code>add</code>, <code>serve</code>, <code>catalog</code>, <code>install &lt;name&gt;</code>, <code>configure &lt;name&gt;</code> · ตารางของ <code>hermes skills</code> รวม <code>list</code> ("List installed skills") และ <code>config</code> ("Interactive enable/disable configuration for skills by platform") · <code>hermes memory setup|status|off</code> · <code>hermes plugins</code> กับส่วน Provider Plugins</span></li>
+            <li id="th-ref-5"><span class="ref-tag ref-tag--standard">Docs</span> Nous Research. <cite>Security</cite>. <a href="https://hermes-agent.nousresearch.com/docs/user-guide/security">hermes-agent.nousresearch.com</a> — เข้าถึง 2026-09-07. <span class="ref-supports">รองรับ: ส่วน MCP Credential Handling — รายการตัวแปร <code>PATH, HOME, USER, LANG, LC_ALL, TERM, SHELL, TMPDIR</code> บวก <code>XDG_*</code> ที่ส่งให้ subprocess ของ stdio MCP และตัวแปรใน <code>env:</code> ที่ส่งเพิ่ม · รูปแบบที่ถูกแทนด้วย <code>[REDACTED]</code> ในข้อความ error</span></li>
+            <li id="th-ref-6"><span class="ref-tag ref-tag--standard">Docs</span> Nous Research. <cite>Persistent Memory</cite>. <a href="https://hermes-agent.nousresearch.com/docs/user-guide/features/memory">hermes-agent.nousresearch.com</a> — เข้าถึง 2026-09-07. <span class="ref-supports">รองรับ: ตาราง MEMORY.md 2,200 ตัวอักษร (~800 tokens) และ USER.md 1,375 ตัวอักษร (~500 tokens) ใน <code>~/.hermes/memories/</code> · frozen snapshot ตอนเริ่ม session · error เมื่อเต็มแทนการทิ้งเงียบ ๆ และคำแนะนำให้รวบเมื่อเกิน 80% · ตัวอย่างบล็อก MEMORY ใน system prompt · บล็อก config <code>memory:</code> และ <code>display.memory_notifications</code> · ผลของการปิด <code>memory_enabled</code> และ <code>user_profile_enabled</code> พร้อมกัน · <code>hermes journey list|edit|delete</code> และรูปแบบ id <code>memory:&lt;source&gt;:&lt;index&gt;</code> · Star Map ในแอป Desktop · <code>write_approval</code> และ <code>/memory pending|approve|reject|approval</code> · <code>skills.write_approval</code> กับ <code>/skills pending|diff|approve</code> · คำเตือน "One agent per Hermes home" · ตาราง session_search vs memory ที่ระบุ "Fixed per session (~1,300 tokens)"</span></li>
+            <li id="th-ref-7"><span class="ref-tag ref-tag--standard">Docs</span> Nous Research. <cite>Memory Providers</cite>. <a href="https://hermes-agent.nousresearch.com/docs/user-guide/features/memory-providers">hermes-agent.nousresearch.com</a> — เข้าถึง 2026-09-07. <span class="ref-supports">รองรับ: "ships with 8 external memory provider plugins" · เปิดได้ทีละหนึ่งและความจำในตัวยังทำงานคู่กัน · <code>hermes memory setup|status|off</code>, <code>memory.provider:</code> และเส้นทาง <code>hermes plugins</code> → Provider Plugins → Memory Provider · ตารางเปรียบเทียบเก้าแถวที่มี Memori</span></li>
+            <li id="th-ref-8"><span class="ref-tag ref-tag--standard">Docs</span> Nous Research. <cite>Slash Commands Reference</cite>. <a href="https://hermes-agent.nousresearch.com/docs/reference/slash-commands">hermes-agent.nousresearch.com</a> — เข้าถึง 2026-09-07. <span class="ref-supports">รองรับ: <code>/context</code> (alias <code>/ctx</code>) กับหมวด system prompt, tool definitions, rules, skills index, MCP, subagents, memory, conversation และ <code>/context all</code> ที่เพิ่มราย skill / ราย toolset · <code>/usage</code> · <code>/new</code> (alias <code>/reset</code>) · <code>/learn</code> · <code>/journey</code> ในแอป Desktop (Star Map panel) · <code>/reload-mcp</code> · <code>/reload-skills</code> ("Re-scan <code>~/.hermes/skills/</code> for newly installed or removed skills")</span></li>
+            <li id="th-ref-9"><span class="ref-tag ref-tag--standard">Docs</span> Nous Research. <cite>Bundled Skills Catalog</cite> และ <cite>Optional Skills Catalog</cite>. <a href="https://hermes-agent.nousresearch.com/docs/reference/skills-catalog">hermes-agent.nousresearch.com</a> · <a href="https://hermes-agent.nousresearch.com/docs/reference/optional-skills-catalog">optional-skills-catalog</a> — เข้าถึง 2026-09-07 (นับแถวจากไฟล์ต้นทางของทั้งสองหน้า). <span class="ref-supports">รองรับ: skill ที่ seed มากับการติดตั้ง 61 ตัวใน 12 หมวด · optional skill ทางการอีก 136 ตัวใน 22 หมวดที่ "not active by default" และติดตั้งด้วย <code>hermes skills install official/&lt;category&gt;/&lt;skill&gt;</code> · ตัวเลขที่ใช้อธิบายช่วง 71–150 ที่คลิปของชุมชนนับได้</span></li>
+            <li id="th-ref-10"><span class="ref-tag ref-tag--study">Release</span> Nous Research. <cite>Hermes Agent v0.21.0 (v2026.8.31) — The Pantheon Release</cite>. <a href="https://github.com/NousResearch/hermes-agent/releases/tag/v2026.8.31">github.com/NousResearch/hermes-agent</a> — เผยแพร่ 2026-08-31, เข้าถึง 2026-09-07 ผ่าน GitHub API. <span class="ref-supports">รองรับ: ย่อหน้า "The MCP command center" ทั้งย่อหน้า — หน้าเดียวรวม servers กับ catalog, "paste anything" import, background health checks, "schema token estimates and 30-day usage per server", <code>hermes://</code> deep links "with explicit confirmation" · การถอด Blender MCP "after an upstream compromise" · "Cron agents now load and update persistent memory like every other agent" · รุ่นและวันที่ออก</span></li>
+            <li id="th-ref-11"><span class="ref-tag ref-tag--standard">Docs</span> Nous Research. <cite>Desktop Plugin SDK</cite>. <a href="https://hermes-agent.nousresearch.com/docs/developer-guide/desktop-plugin-sdk">hermes-agent.nousresearch.com</a> — เข้าถึง 2026-09-07. <span class="ref-supports">รองรับ: plugin เป็นไฟล์ ESM ไฟล์เดียวที่ <code>$HERMES_HOME/desktop-plugins/&lt;id&gt;/plugin.js</code> โหลดภายในไม่กี่วินาทีและ hot-reload ทุกครั้งที่บันทึก · ⌘K → "Reload desktop plugins" · Settings → Plugins · ส่วน Security model — "evaluated as ESM in the renderer realm with full app authority", "error isolation only" และ <code>integrity</code> ที่ไม่ใช่ sandbox</span></li>
+            <li id="th-ref-12"><span class="ref-tag ref-tag--synthesis">Community</span> Finn, A. <cite>Hermes Agent just WON (Hermes desktop app)</cite>. YouTube, <a href="https://www.youtube.com/watch?v=tiFJmVhkF_s">youtube.com</a> — เผยแพร่ 2026-06-03, เข้าถึง 2026-09-07 (ชื่อคลิป ช่อง และวันที่เผยแพร่ตรวจซ้ำวันนี้ผ่าน YouTube oEmbed และค่า <code>uploadDate</code> ในหน้า watch; ตัวเลขในคลิปมาจากบันทึกถอดความของซีรีส์เมื่อ 2026-09-06 — วันที่เข้าถึงนี้ YouTube ปฏิเสธคำขอ transcript จึงไม่ได้ตรวจซ้ำ). <span class="ref-supports">รองรับ: ตัวเลข "มากกว่า 150 skills" ที่ติดมากับการติดตั้งและคำแนะนำให้ปิด skill ที่ไม่ใช้ · แนวปฏิบัติหนึ่ง session ต่อหนึ่งหัวข้อ ปักหมุด จัดโฟลเดอร์ และ <code>/new</code> เมื่อมิเตอร์เต็ม พร้อมคำอธิบายว่าทุกข้อความส่งทั้งเธรดซ้ำ · ทั้งหมดเป็นความเห็นของผู้ใช้ ไม่ใช่ตัวเลขทางการ</span></li>
+            <li id="th-ref-13"><span class="ref-tag ref-tag--synthesis">Community</span> Wanderloots. <cite>Full Hermes Agent Tutorial (Desktop) — A Useful Agentic AI Workflow</cite>. YouTube, <a href="https://www.youtube.com/watch?v=GL67DEf2nyI">youtube.com</a> — เผยแพร่ 2026-07-01, เข้าถึง 2026-09-07 (ชื่อคลิป ช่อง และวันที่เผยแพร่ตรวจซ้ำวันนี้ผ่าน YouTube oEmbed และค่า <code>uploadDate</code> ในหน้า watch; ตัวเลขในคลิปมาจากบันทึกถอดความของซีรีส์เมื่อ 2026-09-06 ซึ่งวันนี้เรียกดูซ้ำไม่ได้). <span class="ref-supports">รองรับ: ตัวเลข "71 skills built into this" ในรุ่นที่ผู้สร้างใช้ และการเปิดโฟลเดอร์ <code>memories/</code> ให้ดูว่ามีบรรทัดใหม่ในไฟล์โปรไฟล์ผู้ใช้ไม่กี่วินาทีหลังบอกความชอบกับ agent · เป็นภาพประกอบจากผู้ใช้ ไม่ใช่ตัวเลขทางการ</span></li>
+        </ol>
+    </section>
+    </div>
+
+    <div class="l-en" lang="en">
+
+    <p>🤔 <strong>If you told Hermes yesterday that you prefer short answers, and today it is still writing you essays — did it forget, or did it never remember in the first place?</strong></p>
+
+    <p>The previous post — <a href="/blog/hermes-desktop-council">#4 The Council — Check Before Deliver</a> — set up a council that checks an answer before it reaches us. That was about the <strong>quality of what the agent says</strong>. This post steps back one pace to look at its <strong>raw material</strong>: what the agent knows, which tools it can reach, and what it remembers from one day to the next — because the best council in the world can only check what the agent has to offer.</p>
+
+    <p>The one-line answer: Hermes has <strong>three drawers</strong> for adding knowledge — a <strong>skill</strong> is a knowledge document loaded on demand, an <strong>MCP server</strong> is an external tool declared in config.yaml, and <strong>memory</strong> is two files with a character cap — all three open from the Hermes Desktop screen, and everything you put into them has a price in context that you can read off the meter at the bottom of the chat. This post walks one drawer at a time: what to click, what to type, what you see, and what to check.</p>
+
+    <h2 id="en-three-drawers">1. Three Ways to Make the Agent Know More — Skills, MCP and Memory</h2>
+
+    <p>The direct answer first: the three mechanisms differ in the <strong>shape of the knowledge</strong> and in <strong>when it enters the context</strong>, but they share one destination — the prompt the model sees on every turn — and all three are Hermes Agent capabilities, not Desktop-specific ones. The Desktop docs say it plainly: the app is built around the same agent as the CLI — "same config, same API keys, same sessions, same skills, same memory".<sup><a href="#en-ref-2">[2]</a></sup> What Desktop adds is a <strong>screen</strong> for each drawer.</p>
+
+    <ul>
+        <li><strong>Skills</strong> — the official docs define them as "on-demand knowledge documents the agent can load when needed", compatible with the open agentskills.io standard, living in <code>~/.hermes/skills/</code>, "the primary directory and source of truth".<sup><a href="#en-ref-1">[1]</a></sup> The agent sees only the name, description and category of every skill (around 3k tokens) and loads the full content only for the one it actually needs.<sup><a href="#en-ref-1">[1]</a></sup></li>
+        <li><strong>MCP servers</strong> — external tools speaking the Model Context Protocol, declared under the <code>mcp_servers:</code> key in <code>~/.hermes/config.yaml</code>, either as a local subprocess (stdio) or a remote endpoint (HTTP). Every discovered tool is registered as <code>mcp_&lt;server_name&gt;_&lt;tool_name&gt;</code> so it cannot collide with a built-in.<sup><a href="#en-ref-3">[3]</a></sup></li>
+        <li><strong>Memory</strong> — two files in <code>~/.hermes/memories/</code>: <code>MEMORY.md</code>, the agent's own notes (capped at 2,200 characters ≈ 800 tokens), and <code>USER.md</code>, our profile (capped at 1,375 characters ≈ 500 tokens). Both are injected into the system prompt as a snapshot frozen at session start.<sup><a href="#en-ref-6">[6]</a></sup></li>
+    </ul>
+
+    <figure class="figure">
+      <a href="../images/hermes-desktop-fig-05-skills-mcp-memory.png">
+        <img class="figure__img" src="../images/hermes-desktop-fig-05-skills-mcp-memory.png" alt="Diagram of three boxes, Skills, MCP and Memory, in a row, with arrows from all three merging into a navy system-prompt bar and a dark-teal-outlined meter box on the right showing three bars." width="1400" height="840" loading="lazy" decoding="async">
+      </a>
+      <figcaption class="figure__caption">Figure 1 · Three drawers that feed the agent — skills loaded on demand, MCP for external tools, two memory files — all flowing into the context, and measurable with the Context-usage meter.</figcaption>
+    </figure>
+
+    <p>The theory behind each drawer is already written up in the analytical series, and I will not repeat it: the loop in which the agent writes its own skills and the Curator that tidies up is in <a href="/blog/hermes-skills">Hermes #6 Skills</a>; the philosophy of bounded memory and the FTS5 search layer is in <a href="/blog/hermes-memory">Hermes #3 Memory</a>; and MCP in both directions, OAuth included, is in <a href="/blog/hermes-integrations">Hermes #5 Integrations</a>. This post is purely practical: which drawer to open, and where to click.</p>
+
+    <div class="alert info">
+        <strong>Version used in this post:</strong> Hermes Agent v0.21.0 (tag <code>v2026.8.31</code>, released 31 August 2026), the release in which the Desktop app's MCP page was merged into a single page.<sup><a href="#en-ref-10">[10]</a></sup> The docs' MCP page did not yet describe that UI on the access date, so the labels and behaviour of the MCP page in section 3 lean on the release notes; the Skills tab, the Memory Graph and the context meter come straight from the Desktop docs.<sup><a href="#en-ref-2">[2]</a></sup>
+    </div>
+
+    <h2 id="en-skills">2. Skills — Install One from the Hub, Write One Yourself</h2>
+
+    <p>The direct answer: in Desktop the <strong>Skills</strong> tab lists your installed skills with enable/disable toggles, and below them the optional-skills catalog that ships with Hermes, each entry with a one-click <strong>Install</strong> button.<sup><a href="#en-ref-2">[2]</a></sup> To go beyond the built-in catalog — searching skills.sh, GitHub or a plain URL — you use the hub through the <code>hermes skills</code> command, which you can type in the terminal embedded in the app (<code>Ctrl+`</code> opens the terminal panel in the right sidebar).<sup><a href="#en-ref-2">[2]</a></sup></p>
+
+    <h3>Install one from the hub</h3>
+
+    <ol>
+        <li>Open the <strong>Skills</strong> tab — the docs group it with the management panes, and the command palette (<code>Cmd/Ctrl+K</code>) opens any page or settings section from the keyboard. What you see: the list of installed skills, each row with a toggle, and the optional-skills catalog below it.<sup><a href="#en-ref-2">[2]</a></sup></li>
+        <li>Click <strong>Install</strong> on a catalog entry. What you see: the docs say the button "flips the row into the installed list once it finishes" — the row moves up into the installed list when done.<sup><a href="#en-ref-2">[2]</a></sup></li>
+        <li>For other sources, open the in-app terminal with <code>Ctrl+`</code> and always explore before installing: <code>hermes skills browse --source official</code> shows the official catalog, <code>hermes skills search kubernetes</code> searches every source, <code>hermes skills inspect openai/skills/k8s</code> previews the details before installing.<sup><a href="#en-ref-1">[1]</a></sup> The sources the hub supports, per the docs, are <code>official</code>, <code>skills-sh</code>, <code>well-known</code>, <code>url</code>, <code>github</code> and the community aggregators <code>clawhub</code>, <code>lobehub</code>, <code>browse-sh</code>.<sup><a href="#en-ref-1">[1]</a></sup></li>
+        <li>Install: <code>hermes skills install openai/skills/k8s</code> — the docs annotate it "Install with security scan". What you see: the skill lands in <code>~/.hermes/skills/</code>, and <code>hermes skills list --source hub</code> lists the ones that came from the hub.<sup><a href="#en-ref-1">[1]</a></sup></li>
+        <li>Back in the chat box, type the skill as a slash command, <code>/&lt;skill-name&gt;</code>, followed by your request — every installed skill automatically becomes a slash command, and if you type just the skill name the agent loads it and asks what you need.<sup><a href="#en-ref-1">[1]</a></sup> What you see: the skill is loaded into context for the turn that invoked it, not every turn.</li>
+        <li>Keep it maintained: <code>hermes skills check</code> asks whether upstream has a newer version, <code>hermes skills update</code> installs it, <code>hermes skills audit</code> re-runs the security scan over everything.<sup><a href="#en-ref-1">[1]</a></sup></li>
+    </ol>
+
+    <pre><code># Explore first, install second — every command works in the Desktop terminal
+hermes skills browse --source official
+hermes skills search kubernetes
+hermes skills inspect openai/skills/k8s
+hermes skills install openai/skills/k8s
+hermes skills list --source hub
+hermes skills check
+hermes skills update
+hermes skills audit</code></pre>
+
+    <h3>Write one yourself</h3>
+
+    <p>A skill is a folder whose required file is <code>SKILL.md</code>. The docs' example tree groups them by category, e.g. <code>~/.hermes/skills/devops/deploy-k8s/SKILL.md</code>, with <code>references/</code>, <code>scripts/</code>, <code>templates/</code>, <code>examples/</code> and <code>assets/</code> as optional supporting folders.<sup><a href="#en-ref-1">[1]</a></sup> The head of the file is YAML frontmatter in this shape (excerpted from the docs' example, which marks <code>platforms</code>, the conditional-activation keys and <code>config</code> as optional)<sup><a href="#en-ref-1">[1]</a></sup>:</p>
+
+    <pre><code>---
+name: my-skill
+description: Brief description of what this skill does
+version: 1.0.0
+platforms: [macos, linux]     # optional — restrict to specific operating systems
+metadata:
+  hermes:
+    tags: [python, automation]
+    category: devops
+    requires_toolsets: [terminal]   # optional — activate only when this toolset exists
+---
+
+# Skill Title
+
+## When to Use
+## Procedure
+## Pitfalls
+## Verification</code></pre>
+
+    <ol>
+        <li>Create the folder and the file: <code>mkdir -p ~/.hermes/skills/devops/my-skill</code>, then create <code>SKILL.md</code> inside it.</li>
+        <li>Paste the frontmatter at the top, set <code>name</code> to match the folder name, and write a <code>description</code> that says "when to use", because the name and description are the only things the agent sees in the Level 0 list before deciding to load it.<sup><a href="#en-ref-1">[1]</a></sup></li>
+        <li>Write the body under the docs' four headings — When to Use (trigger conditions), Procedure (the steps), Pitfalls (known failure modes and fixes), Verification (how to confirm it worked).<sup><a href="#en-ref-1">[1]</a></sup></li>
+        <li>Confirm: if a chat is already open, type <code>/reload-skills</code> first — it re-scans <code>~/.hermes/skills/</code> for newly installed or removed skills.<sup><a href="#en-ref-8">[8]</a></sup> Then <code>hermes skills list</code> must show the new name, the Skills tab in Desktop must list it with a toggle, and <code>/my-skill</code> in chat must load it.<sup><a href="#en-ref-1">[1]</a></sup><sup><a href="#en-ref-4">[4]</a></sup></li>
+    </ol>
+
+    <p>Before moving on, two numbers that show how big this drawer is — and both come from the docs rather than from counting by hand: the <strong>Bundled Skills Catalog</strong> lists <strong>61 skills in 12 categories</strong> (apple, devops, research, web …) seeded into every profile at install time, while the <strong>Official Optional Skills Catalog</strong> lists another <strong>136 in 22 categories</strong> that are <em>not</em> active by default and have to be installed with <code>hermes skills install official/&lt;category&gt;/&lt;skill&gt;</code>.<sup><a href="#en-ref-9">[9]</a></sup> Those two sets are exactly what the Skills tab shows you: the installed list on top, the catalog waiting for an Install below it.<sup><a href="#en-ref-2">[2]</a></sup></p>
+
+    <div class="alert">
+        <strong>The agent writes skills too:</strong> Hermes has a <code>skill_manage</code> tool and a <code>/learn</code> command that distils a directory, a URL or the conversation you just had into a <code>SKILL.md</code>.<sup><a href="#en-ref-8">[8]</a></sup> Before letting it write freely on a machine you rely on, I recommend setting <code>skills.write_approval: true</code> in config.yaml so every write queues for review with <code>/skills pending</code>, <code>/skills diff &lt;id&gt;</code>, <code>/skills approve &lt;id&gt;</code>.<sup><a href="#en-ref-6">[6]</a></sup> The reasoning, and the order to switch things on, is in <a href="/blog/hermes-skills">Hermes #6 Skills</a>.
+    </div>
+
+    <blockquote><strong>💡 From the community — disable what you do not use:</strong> creators doing walkthroughs count different numbers of skills on their own machines — one clip says "71 skills built into this", another says "over 150" — and all of them give the same advice: turn off the skills you do not use (iMessage, Find My, Apple Reminders …).<sup><a href="#en-ref-12">[12]</a></sup><sup><a href="#en-ref-13">[13]</a></sup> Those two figures are what users report, not official numbers, and the spread between them is explained by the two catalog pages above: 61 seeded for you, another 136 you can add.<sup><a href="#en-ref-9">[9]</a></sup> The principle underneath the advice is documented: the Level 0 list of every skill costs around 3k tokens, and <code>/context all</code> shows the cost per skill.<sup><a href="#en-ref-1">[1]</a></sup><sup><a href="#en-ref-8">[8]</a></sup> The toggles in the Skills tab are where you switch them off; on the CLI it is <code>hermes skills config</code> ("Interactive enable/disable configuration for skills by platform"), and to start from zero, <code>hermes skills opt-out</code> stops future seeding without deleting anything on disk.<sup><a href="#en-ref-4">[4]</a></sup><sup><a href="#en-ref-1">[1]</a></sup></blockquote>
+
+    <h2 id="en-mcp">3. MCP — Add a Server from the Screen or from config.yaml</h2>
+
+    <p>The direct answer: there are two doors — the <strong>MCP page in the app</strong> (since v0.21.0, your configured servers and the catalog share one page) or <strong>writing the <code>mcp_servers:</code> key in config.yaml</strong> by hand.<sup><a href="#en-ref-10">[10]</a></sup><sup><a href="#en-ref-3">[3]</a></sup> Both end in the same place: Hermes discovers the server's tools on connect and registers them as <code>mcp_&lt;server_name&gt;_&lt;tool_name&gt;</code>, with a toolset named <code>mcp-&lt;server&gt;</code> so you can manage them as a group.<sup><a href="#en-ref-3">[3]</a></sup></p>
+
+    <h3>From the screen — the MCP page (v0.21.0)</h3>
+
+    <p>The v0.21.0 release notes describe this page in a single paragraph; I have split it into a list so you know what to look for: "MCP servers and the catalog merged into one coherent desktop page", with drag-in "paste anything" import, background health checks that nudge you to re-auth before a tool call fails, a cost/usage overlay showing "schema token estimates and 30-day usage per server", and <code>hermes://</code> deep links that install an MCP server "with explicit confirmation".<sup><a href="#en-ref-10">[10]</a></sup> The Desktop docs count "MCP servers" among the settings panes, and the command palette (<code>Cmd/Ctrl+K</code>) opens any page or settings section from the keyboard.<sup><a href="#en-ref-2">[2]</a></sup></p>
+
+    <ol>
+        <li>Open the MCP page: <code>Cmd/Ctrl+K</code> and type MCP, or go in through Settings. What you see: your configured servers and the catalog on one page.<sup><a href="#en-ref-10">[10]</a></sup> That catalog is the set the Nous team has reviewed and merged (it lives under <code>optional-mcps/</code> in the repo, with no community submission tier), and the docs are explicit that entries are <strong>disabled by default — install only what you actually want</strong>. On the CLI it is <code>hermes mcp catalog</code> and <code>hermes mcp install &lt;name&gt;</code>.<sup><a href="#en-ref-3">[3]</a></sup></li>
+        <li>Add a server one of three ways — pick a catalog entry, paste the config you copied from the server's own docs (this is the "paste anything" import), or click a <code>hermes://</code> link on a vendor's page, which the app <strong>always confirms first</strong> — read exactly what it is about to run before you accept.<sup><a href="#en-ref-10">[10]</a></sup></li>
+        <li>Wait for the background health check: if the server needs re-authentication, this page warns you before a tool call fails.<sup><a href="#en-ref-10">[10]</a></sup> Check at the same time: that server's schema token estimate in the overlay — this is the price every turn will pay (section 6).</li>
+        <li>Go back to the chat and ask for something the server can do. What you see: in the tool activity, a tool name beginning with <code>mcp_</code> followed by the server name — the docs say you normally never call the full name yourself; Hermes sees the tool and chooses it during normal reasoning.<sup><a href="#en-ref-3">[3]</a></sup></li>
+    </ol>
+
+    <h3>From YAML — mcp_servers: in config.yaml</h3>
+
+    <ol>
+        <li>Open <code>~/.hermes/config.yaml</code> and add an <code>mcp_servers:</code> block. The first example is the stdio server the docs use in their Quick start — a filesystem server run through <code>npx</code> with access to a single directory (replace <code>/home/user/projects</code> with your own folder).<sup><a href="#en-ref-3">[3]</a></sup></li>
+        <li>Or a remote HTTP server with an authentication header — also the docs' minimal example.<sup><a href="#en-ref-3">[3]</a></sup> Put secrets in an environment variable rather than in the file where you can.</li>
+        <li>Test before using: <code>hermes mcp test filesystem</code> ("Test connection to an MCP server") and <code>hermes mcp list</code> to see what is configured.<sup><a href="#en-ref-4">[4]</a></sup> If it does not connect, the docs have you check <code>node --version</code> and <code>npx --version</code> first.<sup><a href="#en-ref-3">[3]</a></sup></li>
+        <li>If a chat is already open, type <code>/reload-mcp</code> — it reloads the servers from config and re-probes the tools, because a session's tool set is otherwise frozen and only picks up new things on <code>/reload-mcp</code>, <code>/new</code> or context compaction.<sup><a href="#en-ref-3">[3]</a></sup></li>
+        <li>Use it: type the docs' example prompt, "List the files in /home/user/projects and summarize the repo structure." What you see: the agent calls <code>mcp_filesystem_read_file</code> or one of its siblings, per the naming table in the docs.<sup><a href="#en-ref-3">[3]</a></sup></li>
+        <li>Switch off without deleting: <code>enabled: false</code> in that server's block — the docs list it as one reason for "tools not appearing".<sup><a href="#en-ref-3">[3]</a></sup></li>
+    </ol>
+
+    <pre><code># ~/.hermes/config.yaml — stdio server (the docs' Quick start example)
+mcp_servers:
+  filesystem:
+    command: "npx"
+    args: ["-y", "@modelcontextprotocol/server-filesystem", "/home/user/projects"]</code></pre>
+
+    <pre><code># ~/.hermes/config.yaml — remote HTTP server (the docs' minimal example)
+mcp_servers:
+  company_api:
+    url: "https://mcp.internal.example.com"
+    headers:
+      Authorization: "Bearer ***"</code></pre>
+
+    <pre><code># Test, list, then reload inside the chat
+hermes mcp list
+hermes mcp test filesystem
+/reload-mcp</code></pre>
+
+    <p>The knob people forget is the middle one: you do not have to switch a whole server off to cut its price. The docs let you filter <strong>per tool</strong> with <code>tools.include</code> (register only these) or <code>tools.exclude</code> (register everything but these); both accept glob patterns, and if you write both keys, <code>include</code> wins.<sup><a href="#en-ref-3">[3]</a></sup> This is the way out for servers that generate thousands of tools from an OpenAPI surface — the docs cite <code>cloudflare</code> at roughly 3,300 endpoint tools, which ships a block-list instead of a checklist.<sup><a href="#en-ref-3">[3]</a></sup> On the CLI, <code>hermes mcp configure &lt;name&gt;</code> reopens that same checklist with your current selection pre-checked.<sup><a href="#en-ref-3">[3]</a></sup><sup><a href="#en-ref-4">[4]</a></sup></p>
+
+    <pre><code># ~/.hermes/config.yaml — register only the tools you actually use (the docs' whitelist example)
+mcp_servers:
+  github:
+    command: "npx"
+    args: ["-y", "@modelcontextprotocol/server-github"]
+    env:
+      GITHUB_PERSONAL_ACCESS_TOKEN: "***"
+    tools:
+      include: [create_issue, list_issues]</code></pre>
+
+    <div class="alert">
+        <strong>Secrets do not leak down by themselves:</strong> a stdio MCP server's subprocess receives only <code>PATH, HOME, USER, LANG, LC_ALL, TERM, SHELL, TMPDIR</code> plus any <code>XDG_*</code> variable — every other variable (API keys, tokens) is stripped, so anything you want the server to have must be written in that block's <code>env:</code>.<sup><a href="#en-ref-5">[5]</a></sup> On the way out, error messages from MCP tools are filtered before they reach the model: GitHub PATs (<code>ghp_…</code>), <code>sk-…</code> keys, Bearer tokens and the parameters <code>token=</code>, <code>key=</code>, <code>API_KEY=</code>, <code>password=</code>, <code>secret=</code> are replaced with <code>[REDACTED]</code>.<sup><a href="#en-ref-5">[5]</a></sup> And the catalog is not a complete shield — v0.21.0 removed both the Blender MCP catalog entry and its skill "after an upstream compromise".<sup><a href="#en-ref-10">[10]</a></sup> Read before you install, always. The threat model as a whole is in <a href="/blog/hermes-security">Hermes #4 Security</a>.
+    </div>
+
+    <blockquote><strong>💡 MCP runs the other way too:</strong> <code>hermes mcp serve</code> turns Hermes itself into an MCP server for other agents to connect to.<sup><a href="#en-ref-4">[4]</a></sup> I tell the "MCP both ways" story in <a href="/blog/hermes-integrations">Hermes #5 Integrations</a> — in this post we stay on the inbound side.</blockquote>
+
+    <h2 id="en-memory">4. Memory — Read, Edit and Reset MEMORY.md and USER.md</h2>
+
+    <p>The direct answer: Hermes's persistent memory is two capped Markdown files — <code>MEMORY.md</code> at 2,200 characters and <code>USER.md</code> at 1,375 characters, in <code>~/.hermes/memories/</code> — and when one is full the <code>memory</code> tool returns an error rather than silently dropping old entries.<sup><a href="#en-ref-6">[6]</a></sup> In Desktop we read and edit them from the <strong>Memory Graph</strong> (the docs call it both Memory Graph and Star Map), while the profile-level switches sit on the <strong>Settings → Memory &amp; Context</strong> page, which the docs name but do not walk through control by control.<sup><a href="#en-ref-2">[2]</a></sup></p>
+
+    <h3>Read</h3>
+
+    <p>What the agent sees on every turn is a block like this in the system prompt — a header saying which store it is and how full, and entries separated by the <code>§</code> sign (excerpted from the docs' example)<sup><a href="#en-ref-6">[6]</a></sup>:</p>
+
+    <pre><code>MEMORY (your personal notes) [67% — 1,474/2,200 chars]
+User's project is a Rust web service at ~/code/myapi using Axum + SQLx
+§
+This machine runs Ubuntu 22.04, has Docker and Podman installed
+§
+User prefers concise responses, dislikes verbose explanations</code></pre>
+
+    <p>The one rule to remember when reading it: this block is a <strong>frozen snapshot</strong> — captured once at session start and never changed mid-session, to preserve the model's prefix cache. If the agent saves a memory during a conversation, the file on disk changes immediately, but the prompt sees the new content in the next session.<sup><a href="#en-ref-6">[6]</a></sup> That is the answer to the question in this post's first paragraph: it did remember, but the old session is still reading the old snapshot — open a new session and look.</p>
+
+    <h3>Edit and reset</h3>
+
+    <ol>
+        <li>Open the Memory Graph: command palette → <strong>Memory Graph</strong>, click the status-bar item, or type <code>/journey</code> in chat (aliases <code>/learning</code>, <code>/memory-graph</code>). What you see: a zoomable node graph of skills and memories with a timeline, filterable by All / Used / Learned.<sup><a href="#en-ref-2">[2]</a></sup></li>
+        <li>Click a node and edit or delete it right from the panel — the docs spell out the different outcomes: "skills are archived, memories removed", i.e. a skill goes to the archive (restorable) while a memory chunk is actually deleted.<sup><a href="#en-ref-2">[2]</a></sup></li>
+        <li>The CLI does the same: <code>hermes journey list</code> prints the node ids (memory chunks use the form <code>memory:&lt;source&gt;:&lt;index&gt;</code>), <code>hermes journey edit &lt;node&gt;</code> opens the content in <code>$EDITOR</code>, <code>hermes journey delete &lt;node&gt; [-y]</code> deletes without a second prompt if you pass <code>-y</code>.<sup><a href="#en-ref-6">[6]</a></sup></li>
+        <li>To route every save through a human first: set <code>memory.write_approval: true</code> — in the CLI, foreground writes prompt inline, while other channels and the background review are staged; review with <code>/memory pending</code>, <code>/memory approve &lt;id&gt;</code>, <code>/memory reject &lt;id&gt;</code>, or flip the gate live with <code>/memory approval on</code>.<sup><a href="#en-ref-6">[6]</a></sup></li>
+        <li>Reset: to switch the whole system off, set both <code>memory_enabled: false</code> and <code>user_profile_enabled: false</code> — the docs say that with both off the <code>memory</code> tool disappears from the schema and the prompt never mentions a tool it cannot use.<sup><a href="#en-ref-6">[6]</a></sup> If you only want to start remembering from zero, what I do is delete every node through the journey, or move the two files out of <code>memories/</code> somewhere safe, and open a new session — the docs do not offer a separate "reset memory" command.</li>
+    </ol>
+
+    <pre><code># ~/.hermes/config.yaml — the documented defaults
+memory:
+  memory_enabled: true
+  user_profile_enabled: true
+  memory_char_limit: 2200   # ≈ 800 tokens
+  user_char_limit: 1375     # ≈ 500 tokens
+  write_approval: false     # true = require approval before every save
+
+display:
+  memory_notifications: on  # off | on | verbose</code></pre>
+
+    <p>If the two files are not enough, Hermes has an <strong>external memory provider</strong> layer as plugins you select <strong>one at a time</strong>, with the built-in memory always running alongside — the providers page opens with the number 8 (Honcho, OpenViking, Mem0, Hindsight, Holographic, RetainDB, ByteRover, Supermemory), while the comparison table at the bottom has Memori as a ninth row.<sup><a href="#en-ref-7">[7]</a></sup> Enable one with <code>hermes memory setup</code>, check with <code>hermes memory status</code>, switch off with <code>hermes memory off</code>, or set <code>memory.provider:</code> in config.yaml, or pick it from <code>hermes plugins</code> → Provider Plugins → Memory Provider.<sup><a href="#en-ref-7">[7]</a></sup><sup><a href="#en-ref-4">[4]</a></sup> I still stand by the advice in <a href="/blog/hermes-memory">Hermes #3 Memory</a>: get the most out of the two files plus session search first, and add a provider only when you hit a problem those two layers genuinely cannot answer.</p>
+
+    <div class="alert info">
+        <strong>One agent per Hermes home:</strong> the docs warn outright not to point two agents at the same home directory, because memory writes are automatic and load back into the prompt at session start — two writers taking turns end up in a state nobody intended. Give the second agent its own profile (already done in <a href="/blog/hermes-desktop-profiles">#3 Profiles</a>), and if they truly need shared memory, use an external provider.<sup><a href="#en-ref-6">[6]</a></sup>
+    </div>
+
+    <blockquote><strong>💡 The cap is the feature:</strong> the docs recommend consolidating entries once memory is above 80% of capacity, which you can read off the block header in the prompt.<sup><a href="#en-ref-6">[6]</a></sup> When I see that number in the Memory Graph I take it as a cue to open the entries one by one — not as a cue to raise the cap. Why the number is deliberately small is in <a href="/blog/hermes-memory">Hermes #3 Memory</a>.</blockquote>
+
+    <h2 id="en-which-when">5. Which One, When — Five Extension Points Compared</h2>
+
+    <p>The direct answer: <strong>a fact that must be in context at all times</strong> → memory · <strong>a long procedure used now and then</strong> → skill · <strong>the ability to act on an external system</strong> → MCP server · <strong>a new screen or pane in the app</strong> → Desktop plugin, which is an entirely different system from the first three. The table lays all five side by side: where each lives on disk, its Desktop surface, its CLI, and the price it pays in context.</p>
+
+    <div class="table-wrapper">
+        <table>
+            <thead>
+                <tr>
+                    <th>Extension</th>
+                    <th>Lives at</th>
+                    <th>Desktop surface</th>
+                    <th>CLI</th>
+                    <th>Context cost</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td><strong>Skill</strong></td>
+                    <td><code>~/.hermes/skills/&lt;category&gt;/&lt;name&gt;/SKILL.md</code><sup><a href="#en-ref-1">[1]</a></sup></td>
+                    <td>Skills tab (toggles + catalog Install), opened with <code>Cmd/Ctrl+K</code><sup><a href="#en-ref-2">[2]</a></sup></td>
+                    <td><code>hermes skills …</code>, <code>/&lt;skill-name&gt;</code>, <code>/learn</code><sup><a href="#en-ref-1">[1]</a></sup></td>
+                    <td>The list of every skill, about 3k tokens per turn; full content only when loaded<sup><a href="#en-ref-1">[1]</a></sup></td>
+                </tr>
+                <tr>
+                    <td><strong>MCP server</strong></td>
+                    <td><code>mcp_servers:</code> in <code>~/.hermes/config.yaml</code><sup><a href="#en-ref-3">[3]</a></sup></td>
+                    <td>MCP page — servers + catalog + cost overlay (v0.21.0)<sup><a href="#en-ref-10">[10]</a></sup></td>
+                    <td><code>hermes mcp add|test|list</code>, <code>/reload-mcp</code><sup><a href="#en-ref-4">[4]</a></sup></td>
+                    <td>Tool schemas every turn — the MCP page shows a schema token estimate per server<sup><a href="#en-ref-10">[10]</a></sup></td>
+                </tr>
+                <tr>
+                    <td><strong>MEMORY.md</strong></td>
+                    <td><code>~/.hermes/memories/MEMORY.md</code><sup><a href="#en-ref-6">[6]</a></sup></td>
+                    <td>Memory Graph; Settings → Memory &amp; Context<sup><a href="#en-ref-2">[2]</a></sup></td>
+                    <td><code>hermes journey list|edit|delete</code>, <code>/memory</code><sup><a href="#en-ref-6">[6]</a></sup></td>
+                    <td>≤ 2,200 characters ≈ 800 tokens, every turn<sup><a href="#en-ref-6">[6]</a></sup></td>
+                </tr>
+                <tr>
+                    <td><strong>USER.md</strong></td>
+                    <td><code>~/.hermes/memories/USER.md</code><sup><a href="#en-ref-6">[6]</a></sup></td>
+                    <td>Same as MEMORY.md<sup><a href="#en-ref-2">[2]</a></sup></td>
+                    <td>Same as MEMORY.md<sup><a href="#en-ref-6">[6]</a></sup></td>
+                    <td>≤ 1,375 characters ≈ 500 tokens, every turn<sup><a href="#en-ref-6">[6]</a></sup></td>
+                </tr>
+                <tr>
+                    <td><strong>Desktop plugin</strong></td>
+                    <td><code>$HERMES_HOME/desktop-plugins/&lt;id&gt;/plugin.js</code><sup><a href="#en-ref-11">[11]</a></sup></td>
+                    <td>Settings → Plugins; <code>Cmd/Ctrl+K</code> → Reload desktop plugins<sup><a href="#en-ref-11">[11]</a></sup></td>
+                    <td>— (a single ESM file that hot-reloads on save)<sup><a href="#en-ref-11">[11]</a></sup></td>
+                    <td>Not one of the Context Usage categories — the docs describe it as ESM running in the app's renderer realm<sup><a href="#en-ref-11">[11]</a></sup><sup><a href="#en-ref-2">[2]</a></sup></td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <p>The last row is the one people confuse most often. <strong>A Desktop plugin does not make the agent know anything more</strong> — it adds a pane, a page, a status-bar item or a palette command to the <em>app</em>. It is a single ESM file the app loads within seconds and hot-reloads on every save, managed in Settings → Plugins.<sup><a href="#en-ref-2">[2]</a></sup><sup><a href="#en-ref-11">[11]</a></sup> The "Agent plugins" section on the same page is the backend-side plugin system, a different thing again.<sup><a href="#en-ref-2">[2]</a></sup> If you want to try writing a plugin for the app, I wrote up an example and the limits in <a href="/blog/hermes-desktop-fleet">Hermes #10 Desktop &amp; Fleet</a>.</p>
+
+    <div class="alert danger">
+        <strong>Never load a plugin.js from someone you do not trust:</strong> the SDK docs say outright that a loaded plugin "is evaluated as ESM in the renderer realm with full app authority", and that the isolation the loader provides is "error isolation only" — it cannot crash the app, but it can do anything the app can. The <code>integrity</code> check only proves the bytes match a hash; it does not sandbox anything.<sup><a href="#en-ref-11">[11]</a></sup>
+    </div>
+
+    <h2 id="en-context-cost">6. See What Each One Costs in Context</h2>
+
+    <p>The direct answer: the <strong>Context usage</strong> meter in the status bar at the bottom of the chat shows a live "% full" of the context window, and clicking it opens the <strong>Context Usage</strong> popover with a token breakdown by category — system prompt, tool definitions, skills, memory, rules, MCP, subagent definitions and the conversation itself — which the docs say exists "so you can see exactly what's eating the window before compression kicks in".<sup><a href="#en-ref-2">[2]</a></sup> Three of those categories are exactly this post's three drawers.</p>
+
+    <ol>
+        <li>Look at the status bar: the context meter is there. If you cannot see it, right-click the bar and choose <strong>Show in status bar</strong> → context meter (the whole bar hides and shows with <code>Cmd/Ctrl+Shift+S</code>).<sup><a href="#en-ref-2">[2]</a></sup></li>
+        <li>Click the meter. What you see: the popover by category. Read three rows — <strong>skills</strong> (the CLI calls it the skills index), <strong>memory</strong> (the two files) and <strong>MCP</strong> (the tool schemas of every enabled server).<sup><a href="#en-ref-2">[2]</a></sup><sup><a href="#en-ref-8">[8]</a></sup> If the MCP row is unexpectedly large, go to the next step.</li>
+        <li>Open the MCP page: the cost/usage overlay shows the schema token estimate and the last 30 days of usage <strong>per server</strong> — a server with a large schema and no calls in 30 days is the one I deal with first — trim the tools you never call with <code>hermes mcp configure &lt;name&gt;</code> or <code>tools.include</code> before reaching for <code>enabled: false</code>.<sup><a href="#en-ref-10">[10]</a></sup><sup><a href="#en-ref-3">[3]</a></sup></li>
+        <li>On the CLI/TUI use <code>/context</code> (alias <code>/ctx</code>) — it shows the same estimated per-category table, and <code>/context all</code> adds per-skill and per-toolset detail; <code>/usage</code> shows tokens, an estimated cost breakdown and — where the provider supports it — the account's remaining quota.<sup><a href="#en-ref-8">[8]</a></sup></li>
+    </ol>
+
+    <pre><code># In chat (CLI/TUI) — the same numbers as the Desktop popover
+/context        # categories: system prompt, tool definitions, rules, skills index, MCP, subagents, memory, conversation
+/context all    # adds per-skill / per-toolset cost
+/usage          # tokens, estimated cost, account quota (where available)
+/new            # start a fresh session when the meter fills (alias /reset)</code></pre>
+
+    <blockquote><strong>💡 From the community — one session per topic:</strong> heavy users doing walkthroughs agree on keeping one session per topic, pinning and foldering them, and pressing <code>/new</code> when the meter at the bottom fills, because every message sends the whole thread back to the model — so cost grows with the length of the conversation, not with the number of questions.<sup><a href="#en-ref-12">[12]</a></sup> The docs confirm half of that in their memory-versus-session-search table: persistent memory has "Token cost: Fixed per session (~1,300 tokens)"; the conversation is the part that grows.<sup><a href="#en-ref-6">[6]</a></sup></blockquote>
+
+    <p>The order I use to bring the meter down, cheapest first: switch off unused skills in the Skills tab → trim unused MCP tools with <code>tools.include</code>, then set <code>enabled: false</code> on a server you rarely use, then <code>/reload-mcp</code> → let memory fill and consolidate it rather than raising the cap → and when all of that is still not enough, <code>/new</code>. The next post, <a href="/blog/hermes-desktop-automation">#6 Automation &amp; Agents</a>, will use these numbers again, because every cron job and every subagent has a context of its own to pay for.</p>
+
+    <h2 id="en-summary">7. Summary</h2>
+
+    <p>In this post we opened Hermes Desktop's three drawers one at a time: installed a skill from the catalog and from the hub, then wrote one ourselves from a few lines of frontmatter; added an MCP server both from the MCP page that v0.21.0 merged into one and from an <code>mcp_servers:</code> block lifted line for line from the docs; read, edited and reset MEMORY.md and USER.md from the Memory Graph and from <code>hermes journey</code>; and closed with the meter that says what each drawer costs in context. The one sentence to take away: <strong>everything the agent knows in addition has a price in tokens on every turn</strong> — so a good drawer is not the one that holds the most, but the one that knows what belongs in it.</p>
+
+    <p>The next post, <a href="/blog/hermes-desktop-automation">#6 Automation &amp; Agents — Work That Runs and Checks Itself</a>, takes all three drawers into work that happens while nobody is at the screen: cron jobs that since v0.21.0 "load and update persistent memory like every other agent", and subagents that can be steered mid-flight.<sup><a href="#en-ref-10">[10]</a></sup></p>
+
+    <div class="key-takeaways">
+        <h3>🎯 Key Takeaways</h3>
+        <ul>
+            <li><strong>Three drawers</strong> = skill (on-demand knowledge in <code>~/.hermes/skills/</code>), MCP server (an external tool under <code>mcp_servers:</code>) and memory (two capped files in <code>~/.hermes/memories/</code>) — all belong to Hermes Agent; Desktop adds the screens</li>
+            <li><strong>Skills tab</strong> = an enable/disable toggle per skill plus a one-click Install catalog; the hub (<code>hermes skills browse|search|inspect|install</code>) opens the official, skills-sh, well-known, github and URL sources</li>
+            <li><strong>SKILL.md</strong> = YAML frontmatter (<code>name</code>, <code>description</code>, <code>version</code>, <code>metadata.hermes</code>) plus four headings, When to Use / Procedure / Pitfalls / Verification — writable by hand in a single folder</li>
+            <li><strong>MCP page (v0.21.0)</strong> = servers + catalog on one page, paste-anything import, health checks, a schema-token and 30-day-usage overlay, <code>hermes://</code> links that always confirm first — on the YAML side, <code>hermes mcp test</code> then <code>/reload-mcp</code></li>
+            <li><strong>Env filtering</strong> = a stdio MCP server gets only <code>PATH HOME USER LANG LC_ALL TERM SHELL TMPDIR XDG_*</code> plus what you write in <code>env:</code>, and errors are scrubbed of secrets before they reach the model</li>
+            <li><strong>Memory Graph</strong> = where you read, edit and delete memory nodes in Desktop (<code>/journey</code>); the CLI is <code>hermes journey list|edit|delete</code>; the snapshot is frozen, so new content shows up in the next session</li>
+            <li><strong>Context meter</strong> = click the status bar to see skills / memory / MCP by category; <code>/context all</code> per skill; disable what you do not use first, then <code>/new</code></li>
+        </ul>
+    </div>
+
+    <section class="references" aria-labelledby="en-references">
+        <h2 id="en-references">References</h2>
+        <p class="references__note">Every source was verified and accessed on 7 September 2026 (2026-09-07). This series uses four evidence labels — <strong>Docs</strong> official Hermes Agent documentation · <strong>Release</strong> release notes or a merged commit/PR · <strong>Issue</strong> an open issue or PR · <strong>Community</strong> a non-official community source.</p>
+        <ol class="references__list">
+            <li id="en-ref-1"><span class="ref-tag ref-tag--standard">Docs</span> Nous Research. <cite>Skills System</cite>. <a href="https://hermes-agent.nousresearch.com/docs/user-guide/features/skills">hermes-agent.nousresearch.com</a> — accessed 2026-09-07. <span class="ref-supports">Supports: the "on-demand knowledge documents" definition and agentskills.io compatibility · <code>~/.hermes/skills/</code> as the "primary directory and source of truth" · the Level 0 list at about 3k tokens and on-demand loading of full content · every <code>hermes skills browse|search|inspect|install|list|check|update|audit</code> line in section 2 · the hub source table (official, skills-sh, well-known, url, github, clawhub, lobehub, browse-sh) · the SKILL.md frontmatter example and the four body headings · the skill directory tree · automatic slash commands and "Just the skill name loads it" · <code>hermes skills opt-out</code></span></li>
+            <li id="en-ref-2"><span class="ref-tag ref-tag--standard">Docs</span> Nous Research. <cite>Hermes Desktop</cite>. <a href="https://hermes-agent.nousresearch.com/docs/user-guide/desktop">hermes-agent.nousresearch.com</a> — accessed 2026-09-07. <span class="ref-supports">Supports: the sentence "same config, same API keys, same sessions, same skills, same memory" · the Skills tab with enable/disable toggles and the catalog whose Install button "flips the row into the installed list" · the Memory Graph (command palette or status bar) with the All / Used / Learned filter, and the Star Map via <code>/journey</code> where "skills are archived, memories removed" · the Context-usage meter and the categories in the Context Usage popover · "Show in status bar" and <code>Cmd/Ctrl+Shift+S</code> · the in-app terminal on <code>Ctrl+`</code> · the command palette on <code>Cmd/Ctrl+K</code> · "MCP servers" in the list of settings panes · the Settings → Memory &amp; Context page · the desktop plugin path, hot reload, Settings → Plugins and the Agent plugins section</span></li>
+            <li id="en-ref-3"><span class="ref-tag ref-tag--standard">Docs</span> Nous Research. <cite>MCP (Model Context Protocol)</cite>. <a href="https://hermes-agent.nousresearch.com/docs/user-guide/features/mcp">hermes-agent.nousresearch.com</a> — accessed 2026-09-07. <span class="ref-supports">Supports: every line of the <code>mcp_servers:</code> filesystem (stdio) and company_api (HTTP) examples · the <code>mcp_&lt;server_name&gt;_&lt;tool_name&gt;</code> naming and the <code>mcp_filesystem_read_file</code> example · the <code>mcp-&lt;server&gt;</code> toolset · <code>/reload-mcp</code> and the sentence that a session's tool set stays frozen until a reload, <code>/new</code> or compaction · the Quick start example prompt · the <code>node --version</code> / <code>npx --version</code> check · <code>enabled: false</code> as a reason tools do not appear · "Hermes sees the tool and chooses it during normal reasoning" · the "Catalog: one-click install for Nous-approved MCPs" section — reviewed and merged by Nous staff, stored under <code>optional-mcps/</code>, no community submission tier, and "disabled by default" · <code>tools.include</code> / <code>tools.exclude</code> with glob support and the include-wins precedence · the <code>cloudflare</code> example at ~3,300 endpoint tools · <code>hermes mcp configure</code> reopening the checklist with the current selection pre-checked</span></li>
+            <li id="en-ref-4"><span class="ref-tag ref-tag--standard">Docs</span> Nous Research. <cite>CLI Commands Reference</cite>. <a href="https://hermes-agent.nousresearch.com/docs/reference/cli-commands">hermes-agent.nousresearch.com</a> — accessed 2026-09-07. <span class="ref-supports">Supports: the <code>hermes mcp</code> subcommand table — <code>test &lt;name&gt;</code> ("Test connection to an MCP server"), <code>list</code>, <code>add</code>, <code>serve</code>, <code>catalog</code>, <code>install &lt;name&gt;</code>, <code>configure &lt;name&gt;</code> · the <code>hermes skills</code> table including <code>list</code> ("List installed skills") and <code>config</code> ("Interactive enable/disable configuration for skills by platform") · <code>hermes memory setup|status|off</code> · <code>hermes plugins</code> and its Provider Plugins section</span></li>
+            <li id="en-ref-5"><span class="ref-tag ref-tag--standard">Docs</span> Nous Research. <cite>Security</cite>. <a href="https://hermes-agent.nousresearch.com/docs/user-guide/security">hermes-agent.nousresearch.com</a> — accessed 2026-09-07. <span class="ref-supports">Supports: the MCP Credential Handling section — the <code>PATH, HOME, USER, LANG, LC_ALL, TERM, SHELL, TMPDIR</code> list plus <code>XDG_*</code> passed to stdio MCP subprocesses, and the <code>env:</code> variables passed in addition · the patterns replaced with <code>[REDACTED]</code> in error messages</span></li>
+            <li id="en-ref-6"><span class="ref-tag ref-tag--standard">Docs</span> Nous Research. <cite>Persistent Memory</cite>. <a href="https://hermes-agent.nousresearch.com/docs/user-guide/features/memory">hermes-agent.nousresearch.com</a> — accessed 2026-09-07. <span class="ref-supports">Supports: the table giving MEMORY.md 2,200 characters (~800 tokens) and USER.md 1,375 characters (~500 tokens) in <code>~/.hermes/memories/</code> · the frozen snapshot at session start · the error-on-full behaviour instead of silent dropping, and the advice to consolidate above 80% · the MEMORY block example in the system prompt · the <code>memory:</code> config block and <code>display.memory_notifications</code> · the effect of disabling <code>memory_enabled</code> and <code>user_profile_enabled</code> together · <code>hermes journey list|edit|delete</code> and the <code>memory:&lt;source&gt;:&lt;index&gt;</code> id form · the Star Map in the Desktop app · <code>write_approval</code> and <code>/memory pending|approve|reject|approval</code> · <code>skills.write_approval</code> with <code>/skills pending|diff|approve</code> · the "One agent per Hermes home" caution · the session_search vs memory table stating "Fixed per session (~1,300 tokens)"</span></li>
+            <li id="en-ref-7"><span class="ref-tag ref-tag--standard">Docs</span> Nous Research. <cite>Memory Providers</cite>. <a href="https://hermes-agent.nousresearch.com/docs/user-guide/features/memory-providers">hermes-agent.nousresearch.com</a> — accessed 2026-09-07. <span class="ref-supports">Supports: "ships with 8 external memory provider plugins" · one active at a time with the built-in memory always alongside · <code>hermes memory setup|status|off</code>, <code>memory.provider:</code> and the <code>hermes plugins</code> → Provider Plugins → Memory Provider path · the nine-row comparison table that includes Memori</span></li>
+            <li id="en-ref-8"><span class="ref-tag ref-tag--standard">Docs</span> Nous Research. <cite>Slash Commands Reference</cite>. <a href="https://hermes-agent.nousresearch.com/docs/reference/slash-commands">hermes-agent.nousresearch.com</a> — accessed 2026-09-07. <span class="ref-supports">Supports: <code>/context</code> (alias <code>/ctx</code>) with the categories system prompt, tool definitions, rules, skills index, MCP, subagents, memory, conversation, and <code>/context all</code> adding per-skill / per-toolset detail · <code>/usage</code> · <code>/new</code> (alias <code>/reset</code>) · <code>/learn</code> · <code>/journey</code> in the Desktop app (Star Map panel) · <code>/reload-mcp</code> · <code>/reload-skills</code> ("Re-scan <code>~/.hermes/skills/</code> for newly installed or removed skills")</span></li>
+            <li id="en-ref-9"><span class="ref-tag ref-tag--standard">Docs</span> Nous Research. <cite>Bundled Skills Catalog</cite> and <cite>Optional Skills Catalog</cite>. <a href="https://hermes-agent.nousresearch.com/docs/reference/skills-catalog">hermes-agent.nousresearch.com</a> · <a href="https://hermes-agent.nousresearch.com/docs/reference/optional-skills-catalog">optional-skills-catalog</a> — accessed 2026-09-07 (rows counted from the source files of both pages). <span class="ref-supports">Supports: the 61 bundled skills in 12 categories seeded at install · the further 136 official optional skills in 22 categories that are "not active by default" and install with <code>hermes skills install official/&lt;category&gt;/&lt;skill&gt;</code> · the figures that explain the 71-to-150 spread the community clips report</span></li>
+            <li id="en-ref-10"><span class="ref-tag ref-tag--study">Release</span> Nous Research. <cite>Hermes Agent v0.21.0 (v2026.8.31) — The Pantheon Release</cite>. <a href="https://github.com/NousResearch/hermes-agent/releases/tag/v2026.8.31">github.com/NousResearch/hermes-agent</a> — published 2026-08-31, accessed 2026-09-07 via the GitHub API. <span class="ref-supports">Supports: the whole "The MCP command center" paragraph — one page merging servers and catalog, "paste anything" import, background health checks, "schema token estimates and 30-day usage per server", <code>hermes://</code> deep links "with explicit confirmation" · the removal of the Blender MCP entry "after an upstream compromise" · "Cron agents now load and update persistent memory like every other agent" · the version and release date</span></li>
+            <li id="en-ref-11"><span class="ref-tag ref-tag--standard">Docs</span> Nous Research. <cite>Desktop Plugin SDK</cite>. <a href="https://hermes-agent.nousresearch.com/docs/developer-guide/desktop-plugin-sdk">hermes-agent.nousresearch.com</a> — accessed 2026-09-07. <span class="ref-supports">Supports: a plugin as a single ESM file at <code>$HERMES_HOME/desktop-plugins/&lt;id&gt;/plugin.js</code>, loaded within seconds and hot-reloaded on every save · ⌘K → "Reload desktop plugins" · Settings → Plugins · the Security model section — "evaluated as ESM in the renderer realm with full app authority", "error isolation only", and <code>integrity</code> not being a sandbox</span></li>
+            <li id="en-ref-12"><span class="ref-tag ref-tag--synthesis">Community</span> Finn, A. <cite>Hermes Agent just WON (Hermes desktop app)</cite>. YouTube, <a href="https://www.youtube.com/watch?v=tiFJmVhkF_s">youtube.com</a> — published 2026-06-03, accessed 2026-09-07 (title, channel and publication date re-verified today through YouTube oEmbed and the watch page's <code>uploadDate</code>; the figures spoken in the clip come from the series' 2026-09-06 transcript notes — YouTube refused transcript retrieval on the access date, so they were not re-checked). <span class="ref-supports">Supports: the "over 150 skills" count shipped with an install and the advice to disable unused skills · the one-session-per-topic practice — pin, folder, and <code>/new</code> when the meter fills — with the explanation that every message resends the whole thread · all of it user opinion, not an official figure</span></li>
+            <li id="en-ref-13"><span class="ref-tag ref-tag--synthesis">Community</span> Wanderloots. <cite>Full Hermes Agent Tutorial (Desktop) — A Useful Agentic AI Workflow</cite>. YouTube, <a href="https://www.youtube.com/watch?v=GL67DEf2nyI">youtube.com</a> — published 2026-07-01, accessed 2026-09-07 (title, channel and publication date re-verified today through YouTube oEmbed and the watch page's <code>uploadDate</code>; the figure spoken in the clip comes from the series' 2026-09-06 transcript notes, which could not be re-fetched today). <span class="ref-supports">Supports: the "71 skills built into this" count in the version the creator used, and opening the <code>memories/</code> folder to show a new line in the user-profile file seconds after telling the agent a preference · a user's illustration, not an official figure</span></li>
+        </ol>
+    </section>
+    </div>
+
+    <div class="post-series-footer">
+      <span class="l-th">บทความจากซีรีส์ Hermes Desktop Hands-On 2026</span><span class="l-en" lang="en">From the Hermes Desktop Hands-On 2026 series</span>
+    </div>
+
+    <nav aria-label="Hermes Desktop Hands-On">
+    <div class="series-nav">
+      <h3>💻 Hermes Desktop Hands-On 2026</h3>
+      <div class="series-links">
+        <a href="/blog/hermes-desktop-install">#1 First Run</a>
+        <a href="/blog/hermes-desktop-local-models">#2 Local Models</a>
+        <a href="/blog/hermes-desktop-profiles">#3 Profiles</a>
+        <a href="/blog/hermes-desktop-council">#4 Council</a>
+        <span class="current" aria-current="page">#5 Skills &amp; MCP</span>
+        <a href="/blog/hermes-desktop-automation">#6 Automation</a>
+        <a href="/blog/hermes-desktop-safety">#7 Recovery</a>
+      </div>
+    </div>
+    </nav>
+
+  </article>
+
+  </main>
+
+  <footer class="blog-footer">
+    <nav class="blog-footer__nav" aria-label="Site">
+      <a href="../index.html">Home</a>
+      <a href="./">Blog</a>
+      <a href="../publications/">Publications</a>
+      <a href="../books/">Books</a>
+      <a href="../projects/">Projects</a>
+      <a href="../news/">News</a>
+      <a href="../index.html#contact">Contact</a>
+    </nav>
+    <a href="./">← Back to Blog</a>
+    <span>© 2026 Anirach Mingkhwan — Associate Professor, KMUTNB</span>
+  </footer>
+
+</body>
+</html>

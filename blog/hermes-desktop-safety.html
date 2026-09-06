@@ -1,0 +1,1140 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Safety, Remote &amp; Recovery — ปลอดภัย ต่อระยะไกล กู้คืนได้ | Anirach Mingkhwan</title>
+  <meta name="description" content="ตั้งค่า approvals, ต่อ Hermes Desktop เข้ากับเครื่องระยะไกล และกู้คืนเมื่อพัง — logs, diagnostics, TCC identity, update และ uninstall สามระดับ">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=Sarabun:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      color-scheme: light;
+      /* ink */
+      --navy: #11304b; --slate: #334155; --slate-light: #526174; --gray: #94a3b8;
+      /* ground */
+      --bg: #faf7f0; --white: #ffffff; --code-bg: #1e293b;
+      /* accent */
+      --blue: #226299; --blue-dark: #1a4d7a; --blue-light: #4992b9;
+      /* brand — sampled from the book covers. --gold is decorative on light grounds (2.2:1); --gold-dark is its text form. */
+      --gold: #c4a46c; --gold-dark: #7a5f22; --cloud: #dee7e6; --parchment: #e9e1c4; --focus: #226299;
+      /* status — use only these six, never invent a seventh */
+      --green: #22c55e; --red: #ef4444; --amber: #f59e0b;
+      --cyan: #06b6d4; --purple: #226299; --purple-dark: #1a4d7a;
+      /* type */
+      --font: 'Inter', 'Sarabun', -apple-system, BlinkMacSystemFont, sans-serif;
+      --mono: 'JetBrains Mono', 'Fira Code', 'Sarabun', monospace;
+      /* form */
+      --radius: 12px; --radius-sm: 8px; --radius-lg: 16px;
+      --measure: 720px; --wide: 860px;
+      --transition: 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+    html { scroll-behavior: smooth; }
+    body { font-family: var(--font); font-size: 17px; line-height: 1.8; color: var(--slate); background: var(--bg); -webkit-font-smoothing: antialiased; }
+    .blog-nav { position: fixed; top: 0; left: 0; right: 0; z-index: 100; background: rgba(248,250,252,0.85); backdrop-filter: blur(20px); border-bottom: 1px solid rgba(0,0,0,0.05); }
+    .blog-nav__inner { max-width: 860px; margin: 0 auto; padding: 0 2rem; height: 56px; display: flex; align-items: center; justify-content: space-between; }
+    .blog-nav__back { font-size: 0.85rem; font-weight: 500; color: var(--blue); text-decoration: none; }
+    .blog-nav__back:hover { color: #1a4d7a; }
+    .blog-nav__title { font-size: 0.85rem; font-weight: 600; color: var(--navy); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 50%; }
+    /* ── HERO ── house .post-hero on the approved Deep Blue gradient (page-design
+       §5 / INV-28). Ink is inverted for the dark ground: white title/meta, tag
+       pills white on 18% white — the openclaw-production treatment. The
+       background value must stay byte-identical to the approved string. */
+    .post-hero { padding: 8rem 2rem 3rem; background: linear-gradient(135deg, #11304b 0%, #1a4d7a 45%, #226299 100%); color: #fff; text-align: center; }
+    .post-hero__tags { display: flex; gap: 0.5rem; justify-content: center; margin-bottom: 1.25rem; flex-wrap: wrap; }
+    .post-hero__tag { display: inline-block; font-size: 0.72rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.1em; color: #fff; background: rgba(255,255,255,0.18); padding: 0.35rem 0.9rem; border-radius: 20px; }
+    .post-hero__title { font-size: clamp(1.8rem, 5vw, 3rem); font-weight: 800; color: #fff; line-height: 1.2; margin-bottom: 1rem; max-width: 720px; margin-left: auto; margin-right: auto; }
+    .post-hero__sub { font-size: 1.05rem; max-width: 640px; margin: 0 auto 1.5rem; line-height: 1.7; color: #fff; }
+    .post-hero__meta { font-size: 0.85rem; color: #fff; display: flex; align-items: center; justify-content: center; gap: 1.5rem; flex-wrap: wrap; }
+    .post-hero__series { font-weight: 600; color: #fff; }
+    /* the switch pill and the focus ring both sit on the dark hero: the pill is
+       a light chip so its labels keep their light-ground colours, and --focus
+       re-points to gold here (blue collapses on blue — the footer/pre
+       precedent). */
+    .post-hero { --focus: var(--gold); }
+    .post-hero__cover {
+      aspect-ratio: 1 / 1;
+      max-width: 380px;
+      margin: 2.5rem auto 0;
+      border-radius: var(--radius-lg, 16px);
+      overflow: hidden;
+      box-shadow: 0 20px 60px rgba(17,48,75,0.14);
+    }
+    .post-hero__cover img { width: 100%; height: 100%; object-fit: cover; display: block; }
+    .post-body { max-width: 720px; margin: 0 auto; padding: 3rem 2rem 6rem; }
+    .post-body h2 { font-size: 1.6rem; font-weight: 800; color: var(--navy); margin: 3rem 0 1rem; padding-bottom: 0.5rem; border-bottom: 2px solid rgba(34,98,153,0.15); }
+    .post-body h3 { font-size: 1.25rem; font-weight: 700; color: var(--navy); margin: 2.25rem 0 0.75rem; }
+    .post-body p { margin-bottom: 1.25rem; }
+    .post-body strong { font-weight: 700; color: var(--navy); }
+    .post-body a { color: var(--blue); text-decoration: underline; text-decoration-thickness: 1px; text-underline-offset: 2px; }
+    .post-body ul, .post-body ol { margin: 0.5rem 0 1.25rem 1.5rem; }
+    .post-body li { margin-bottom: 0.4rem; }
+    .post-body blockquote { background: rgba(34,98,153,0.06); border-left: 4px solid var(--blue); padding: 1rem 1.25rem; border-radius: 0 10px 10px 0; margin: 1.25rem 0; font-size: 0.95rem; color: var(--navy); }
+    .post-body hr { border: none; height: 1px; background: linear-gradient(90deg, transparent, rgba(34,98,153,0.2), transparent); margin: 3rem 0; }
+    /* ── CODE ── */
+    .post-body pre { background: var(--code-bg); border-radius: 12px; padding: 1.5rem; margin: 1.25rem 0 1.5rem; overflow-x: auto; border: 1px solid rgba(255,255,255,0.05); }
+    .post-body pre code { font-family: var(--mono); font-size: 0.85rem; color: #e2e8f0; line-height: 1.7; background: none; padding: 0; white-space: pre-wrap; }
+    .post-body code { font-family: var(--mono); font-size: 0.88em; background: rgba(34,98,153,0.08); color: var(--blue-dark); padding: 0.15em 0.45em; border-radius: 5px; }
+    /* ── TABLES ── */
+    .table-wrapper { overflow-x: auto; margin: 1.5rem 0; border-radius: 0.5rem; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1); }
+    table { width: 100%; border-collapse: collapse; background: white; }
+    th { background: #226299; color: white; padding: 1rem; text-align: left; font-weight: 600; }
+    td { padding: 1rem; border-bottom: 1px solid #e5e7eb; }
+    .post-body table { display: block; width: 100%; overflow-x: auto; }
+    /* ── ALERTS ── */
+    .alert { background: #fef3cd; border: 1px solid #facc15; border-radius: 0.5rem; padding: 1rem; margin: 1.5rem 0; }
+    .alert.danger { background: #fee2e2; border-color: #ef4444; }
+    .alert.info { background: #e0f2fe; border-color: #06b6d4; }
+    .alert.success { background: #d1fae5; border-color: #10b981; }
+    /* ── KEY TAKEAWAYS ── */
+    .key-takeaways { background: linear-gradient(135deg, #f3f4f6 0%, #e5e7eb 100%); border-radius: 1rem; padding: 2rem; margin: 3rem 0; }
+    .key-takeaways h3 { color: #226299; margin-bottom: 1.5rem; }
+    .post-series-footer { text-align: center; font-size: 0.85rem; color: var(--slate-light); font-style: italic; margin-top: 2rem; padding-top: 2rem; border-top: 1px solid #e2e8f0; }
+    .blog-footer { background: var(--navy); padding: 2rem 0; text-align: center; }
+    .blog-footer a { color: var(--gold); text-decoration: none; font-weight: 600; font-size: 0.9rem; }
+    .blog-footer span { color: var(--gray); font-size: 0.8rem; display: block; margin-top: 0.4rem; }
+    @media (max-width: 600px) {
+      .post-hero { padding: 7rem 1.25rem 2.5rem; }
+      .post-body { padding: 2rem 1.25rem 4rem; }
+      .post-hero__meta { flex-direction: column; gap: 0.4rem; }
+      .post-body h2 { font-size: 1.4rem; }
+      .post-body h3 { font-size: 1.15rem; }
+      .post-body pre { padding: 1rem; border-radius: 8px; }
+    }
+
+    :focus-visible { outline: 2px solid var(--focus); outline-offset: 3px; border-radius: 2px; }
+    /* the ring sits on the page ground (3px offset). Inside the navy footers
+       and code blocks var(--blue) collapses to 2.12:1, so those scopes
+       re-point --focus to gold (5.73:1 on navy). */
+    .footer, .blog-footer, pre { --focus: var(--gold); }
+    :focus:not(:focus-visible) { outline: none; }
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after {
+        animation-duration: .01ms !important; animation-iteration-count: 1 !important;
+        transition-duration: .01ms !important; scroll-behavior: auto !important;
+      }
+    }
+    h1, h2, h3, .post-hero__title, .card__title { text-wrap: balance; }
+
+    .post-body img, .post-body svg { max-width: 100%; height: auto; }
+
+    /* ── SKIP LINK ── a11y-perf R5: the link and the landmark it targets are a
+       pair — useless without both halves. Off-screen until focused, then the
+       first tab stop on every page. */
+    .skip-link { position: absolute; left: -9999px; }
+    .skip-link:focus {
+      left: 1rem; top: 1rem; z-index: 999;
+      background: var(--navy); color: #fff;
+      padding: 0.75rem 1.25rem; border-radius: var(--radius-sm);
+      font-weight: 600; text-decoration: none;
+    }
+
+    /* ── POST WAYFINDING ── the wordmark is the home link; the footer carries
+       the full destination row. */
+    .blog-nav__home {
+      font-size: 0.9rem; font-weight: 800; color: var(--navy);
+      text-decoration: none; margin-right: 1rem;
+    }
+    .blog-nav__home:hover { color: var(--blue); }
+    .blog-nav__inner > .blog-nav__back { margin-right: auto; }
+    .blog-footer__nav {
+      display: flex; flex-wrap: wrap; justify-content: center; gap: 0.35rem 1.25rem;
+      max-width: 860px; margin: 0 auto 1.25rem; padding: 0 2rem 1.25rem;
+      border-bottom: 1px solid rgba(255,255,255,0.12);
+    }
+    .blog-footer__nav a { color: var(--gold); font-size: 0.85rem; font-weight: 600; text-decoration: none; }
+    .blog-footer__nav a:hover { color: #fff; text-decoration: underline; }
+
+    html { scroll-padding-top: 5rem; }
+    [id] { scroll-margin-top: 5rem; }
+
+    /* Thai needs more room than Latin at the same nominal size. */
+    .post-body:lang(th) { font-size: 18px; line-height: 1.85; }
+    .post-body p, .post-body li, .post-body blockquote { text-wrap: pretty; }
+
+    /* ---- side-scroll affordance ----
+       pre blocks and tables can exceed 720px. These layers paint a shadow ONLY
+       where there is more content in that direction; when fully scrolled the
+       cover slides over the shadow and hides it. No JavaScript, no wrapper. */
+    .post-body pre, .post-body table {
+      overflow-x: auto;
+      background-image:
+        linear-gradient(to right, var(--code-bg, #0f172a) 30%, rgba(15,23,42,0)),
+        linear-gradient(to left, var(--code-bg, #0f172a) 30%, rgba(15,23,42,0)),
+        radial-gradient(farthest-side at 0 50%, rgba(0,0,0,.28), rgba(0,0,0,0)),
+        radial-gradient(farthest-side at 100% 50%, rgba(0,0,0,.28), rgba(0,0,0,0));
+      background-position: 0 0, 100% 0, 0 0, 100% 0;
+      background-repeat: no-repeat;
+      background-size: 40px 100%, 40px 100%, 14px 100%, 14px 100%;
+      background-attachment: local, local, scroll, scroll;
+    }
+    .post-body table {
+      background-image:
+        linear-gradient(to right, var(--white, #fff) 30%, rgba(255,255,255,0)),
+        linear-gradient(to left, var(--white, #fff) 30%, rgba(255,255,255,0)),
+        radial-gradient(farthest-side at 0 50%, rgba(17,48,75,.16), rgba(17,48,75,0)),
+        radial-gradient(farthest-side at 100% 50%, rgba(17,48,75,.16), rgba(17,48,75,0));
+      background-position: 0 0, 100% 0, 0 0, 100% 0;
+      background-repeat: no-repeat;
+      background-size: 40px 100%, 40px 100%, 14px 100%, 14px 100%;
+      background-attachment: local, local, scroll, scroll;
+    }
+
+    /* ---- table of contents ---- */
+    .post-toc {
+      max-width: 720px;
+      margin: 2rem auto 0;
+      padding: 1rem 1.25rem;
+      background: rgba(34,98,153,0.05);
+      border: 1px solid rgba(34,98,153,0.14);
+      border-left: 3px solid var(--gold, #c4a46c);
+      border-radius: 10px;
+      font-size: 0.92rem;
+    }
+    .post-toc > summary {
+      cursor: pointer;
+      font-weight: 700;
+      color: var(--navy);
+      list-style: none;
+    }
+    .post-toc > summary::-webkit-details-marker { display: none; }
+    .post-toc > summary::before {
+      content: "\25B8";
+      display: inline-block;
+      margin-right: 0.5rem;
+      transition: transform 0.2s ease;
+      color: var(--gold-dark, #7a5f22);
+    }
+    .post-toc[open] > summary::before { transform: rotate(90deg); }
+    .post-toc > summary:focus-visible { outline: 3px solid var(--focus, #226299); outline-offset: 3px; }
+    .post-toc ol { margin: 0.85rem 0 0.25rem; padding-left: 1.4rem; }
+    .post-toc li { margin-bottom: 0.4rem; line-height: 1.5; }
+    .post-toc a { color: var(--slate); text-decoration: none; }
+    .post-toc a:hover, .post-toc a:focus-visible { color: var(--blue-dark, #1a4d7a); text-decoration: underline; }
+    @media (max-width: 600px) { .post-toc { margin: 1.25rem 1rem 0; } }
+
+    /* ---- cross-document view transitions ---- */
+    @view-transition { navigation: auto; }
+    .nav, .blog-nav { view-transition-name: site-nav; }
+    .footer, .blog-footer { view-transition-name: site-footer; }
+    @media (prefers-reduced-motion: reduce) {
+      ::view-transition-group(*),
+      ::view-transition-old(*),
+      ::view-transition-new(*) { animation: none !important; }
+    }
+
+    /* ── SERIES STRIP — Hermes Agent in Practice ──
+       Same class and inner-wrapper shape as the OpenClaw strip because the
+       linter's RE_SNAV recognises exactly `series-nav` + a nested div; a
+       renamed strip would read as "no nav" and fail INV-08. All content
+       checks (INV-03 family) iterate the SERIES7 list only, so this strip's
+       labels are convention, not contract. House-styled, not the island CSS. */
+    .series-nav {
+      max-width: 720px; margin: 2rem auto 0; padding: 1.1rem 1.4rem;
+      background: rgba(255,255,255,0.75); border: 1px solid rgba(34,98,153,0.15);
+      border-left: 3px solid var(--gold); border-radius: 12px;
+    }
+    .series-nav h3 {
+      font-size: 0.78rem; font-weight: 700; text-transform: uppercase;
+      letter-spacing: 0.08em; color: var(--gold-dark); margin-bottom: 0.6rem;
+    }
+    .series-links { display: flex; flex-wrap: wrap; gap: 0.5rem; }
+    .series-links a, .series-links .current {
+      font-size: 0.82rem; font-weight: 600; padding: 0.35rem 0.8rem;
+      border-radius: 50px; text-decoration: none;
+    }
+    .series-links a { color: var(--blue-dark); background: rgba(34,98,153,0.08); }
+    .series-links a:hover { background: rgba(34,98,153,0.16); }
+    .series-links .current { color: #fff; background: var(--blue-dark); }
+    @media (max-width: 600px) { .series-nav { margin: 1.5rem 1rem 0; } }
+
+    /* ── FIGURE — the sanctioned diagram component (page-design §4 Content).
+       Diagrams are PNGs; this repo built them out of divs twice and reverted
+       twice. The image is wrapped in a link to itself so a phone can pinch a
+       1400px drawing without a line of JavaScript. */
+    .figure { margin: 2.5rem 0; }
+    .figure__img { width: 100%; height: auto; display: block;
+                   border-radius: var(--radius); border: 1px solid rgba(0,0,0,0.06); }
+    .figure__caption { font-size: 0.85rem; color: var(--slate-light);
+                       text-align: center; margin-top: 0.75rem; }
+
+    /* ── REFERENCES — every material number in this series carries its source.
+       The tags are the book's own four evidence labels. */
+    .references { margin-top: 3rem; padding-top: 2rem; border-top: 1px solid #e2e8f0; }
+    .references__note { font-size: 0.85rem; color: var(--slate-light); margin-bottom: 1rem; }
+    .references__list { padding-left: 1.4rem; font-size: 0.9rem; line-height: 1.75; }
+    .references__list li { margin-bottom: 0.7rem; }
+    .ref-tag { display: inline-block; font-size: 0.7rem; font-weight: 700;
+               letter-spacing: 0.06em; text-transform: uppercase; padding: 0.1rem 0.5rem;
+               border-radius: 50px; margin-right: 0.4rem; vertical-align: 0.05em;
+               background: rgba(34,98,153,0.1); color: var(--blue-dark); }
+    /* All four labels get a rule.  --standard and --study shipped without one
+       on 2026-09-05, so 158 of 306 tags fell through to the base blue and the
+       two labels were indistinguishable.  Ratios on --bg: 6.70 / 6.92 / 7.36 /
+       4.81:1, all AA at this size. */
+    .ref-tag--law { background: rgba(239,68,68,0.12); color: #991b1b; }
+    .ref-tag--standard { background: rgba(34,98,153,0.12); color: var(--blue-dark); }
+    .ref-tag--study { background: rgba(34,197,94,0.18); color: #14532d; }
+    .ref-tag--synthesis { background: rgba(196,164,108,0.22); color: var(--gold-dark); }
+    .ref-supports { display: block; color: var(--slate-light); font-size: 0.85rem; }
+
+    /* ── LANGUAGE SWITCH — pure CSS, zero JavaScript (INV-38) ──
+       One visually-hidden checkbox as a direct child of body, BEFORE the main landmark,
+       so `#langSwitch:checked ~ main …` reaches every content block. The two
+       tracks are paired blocks: .l-th (default) and .l-en (hidden until
+       checked; display:revert restores block for divs, inline for spans).
+       Naming stays clear of INV-12's menu-token regex (hamburger|burger|
+       nav__toggle|nav-toggle|navtoggle|menu-toggle|menu__toggle) — verified.
+       No JS also means no persistence across posts; each post opens in Thai. */
+    .lang-switch-box { position: absolute; left: -9999px; }
+    .l-en { display: none; }
+    #langSwitch:checked ~ main .l-en { display: revert; }
+    #langSwitch:checked ~ main .l-th { display: none; }
+    .lang-switch {
+      display: inline-flex; align-items: center; gap: 0.55rem;
+      margin-top: 1.4rem; padding: 0.4rem 1.1rem; border-radius: 50px;
+      background: rgba(255,255,255,0.85); border: 1px solid rgba(255,255,255,0.4);
+      cursor: pointer; font-size: 0.85rem; user-select: none;
+    }
+    .lang-switch span { color: var(--slate-light); font-weight: 600; transition: color 0.2s; }
+    .lang-switch .lang-sep { color: var(--gray); font-weight: 400; }
+    .lang-switch .lang-th { color: var(--navy); font-weight: 800; }
+    #langSwitch:checked ~ main .lang-switch .lang-th { color: var(--slate-light); font-weight: 600; }
+    #langSwitch:checked ~ main .lang-switch .lang-en { color: var(--navy); font-weight: 800; }
+    .lang-switch:hover { border-color: #fff; }
+    #langSwitch:focus-visible ~ main .lang-switch {
+      outline: 2px solid var(--focus); outline-offset: 3px;
+    }
+  </style>
+  <!-- social -->
+  <link rel="canonical" href="https://anirach.com/blog/hermes-desktop-safety.html">
+  <meta property="og:type" content="article">
+  <meta property="og:url" content="https://anirach.com/blog/hermes-desktop-safety.html">
+  <meta property="og:site_name" content="Anirach Mingkhwan">
+  <meta property="og:locale" content="th_TH">
+  <meta property="og:locale:alternate" content="en_US">
+  <meta property="article:published_time" content="2026-09-07">
+  <meta property="article:author" content="https://anirach.com/">
+  <meta property="og:title" content="Safety, Remote &amp; Recovery — ปลอดภัย ต่อระยะไกล กู้คืนได้">
+  <meta property="og:description" content="ตั้งค่า approvals, ต่อ Hermes Desktop เข้ากับเครื่องระยะไกล และกู้คืนเมื่อพัง — logs, diagnostics, TCC identity, update และ uninstall สามระดับ">
+  <meta property="og:image" content="https://anirach.com/images/hermes-desktop-safety-og.jpg">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
+  <meta property="og:image:alt" content="Safety, Remote &amp; Recovery — ปลอดภัย ต่อระยะไกล กู้คืนได้">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:image" content="https://anirach.com/images/hermes-desktop-safety-og.jpg">
+  <meta name="twitter:image:alt" content="Safety, Remote &amp; Recovery — ปลอดภัย ต่อระยะไกล กู้คืนได้">
+  <meta name="robots" content="max-image-preview:large">
+  <meta name="theme-color" content="#11304b">
+  <link rel="icon" href="/favicon.ico" sizes="any">
+  <link rel="apple-touch-icon" href="/apple-touch-icon.png">
+  <!-- /social -->
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "BlogPosting",
+    "headline": "Safety, Remote & Recovery — ปลอดภัย ต่อระยะไกล กู้คืนได้",
+    "author": {
+      "@type": "Person",
+      "@id": "https://anirach.com/#person",
+      "name": "Anirach Mingkhwan",
+      "url": "https://anirach.com/"
+    },
+    "datePublished": "2026-09-07",
+    "dateModified": "2026-09-07",
+    "image": "https://anirach.com/images/hermes-desktop-safety-og.jpg",
+    "inLanguage": [
+      "th",
+      "en"
+    ],
+    "mainEntityOfPage": "https://anirach.com/blog/hermes-desktop-safety.html"
+  }
+  </script>
+</head>
+<body>
+<a href="#main" class="skip-link">Skip to content</a>
+<input type="checkbox" id="langSwitch" class="lang-switch-box" aria-label="Switch language: Thai / English">
+
+  <nav class="blog-nav">
+    <div class="blog-nav__inner">
+      <a href="../index.html" class="blog-nav__home">Anirach</a>
+      <a href="./" class="blog-nav__back">‹ Blog</a>
+      <div class="blog-nav__title">Safety, Remote &amp; Recovery</div>
+    </div>
+  </nav>
+
+  <main id="main">
+
+  <header class="post-hero">
+    <div class="post-hero__tags">
+      <span class="post-hero__tag">Hermes Desktop</span>
+      <span class="post-hero__tag">Safety</span>
+      <span class="post-hero__tag">Troubleshooting</span>
+    </div>
+    <h1 class="post-hero__title"><span class="l-th">Safety, Remote &amp; Recovery — ปลอดภัย ต่อระยะไกล กู้คืนได้</span><span class="l-en" lang="en">Safety, Remote &amp; Recovery — Safe Hands, Remote Hosts, and Getting Back Up</span></h1>
+    <p class="post-hero__sub"><span class="l-th">ตั้ง approvals ให้ถูกโหมด รู้ว่าปุ่ม YOLO ทำอะไร ต่อ Desktop เข้ากับ Hermes บนเครื่องอื่นผ่าน Remote gateway หรือ SSH แล้วกู้คืนเมื่อพัง — logs, diagnostics, TCC identity, update และ uninstall สามระดับ 🛟</span><span class="l-en" lang="en">Set approvals to the right mode, know what the YOLO toggle does, attach the Desktop to a Hermes on another machine over a Remote gateway or SSH, and recover when it breaks — logs, diagnostics, TCC identity, update and the three uninstall scopes 🛟</span></p>
+    <div class="post-hero__meta">
+      <span>By <strong>Anirach Mingkhwan</strong></span>
+      <span class="post-hero__series">Hermes Desktop Hands-On 2026 • Post #7</span>
+      <span><time datetime="2026-09-07">7 Sep 2026</time></span>
+      <span>24 min read</span>
+    </div>
+    <label for="langSwitch" class="lang-switch" title="สลับภาษา · Switch language"><span class="lang-th">ไทย</span><span class="lang-sep">·</span><span class="lang-en" lang="en">English</span></label>
+    <div class="post-hero__cover">
+      <img src="../images/hermes-desktop-safety-cover.jpg" alt="Safety, Remote &amp; Recovery — ปลอดภัย ต่อระยะไกล กู้คืนได้" width="800" height="800" loading="eager" fetchpriority="high" decoding="async">
+    </div>
+  </header>
+
+  <article class="post-body">
+
+    <details class="post-toc l-th" open>
+      <summary>ในบทความนี้</summary>
+      <ol>
+          <li><a href="#th-three-dials">1. สามหน้าปัดที่ทำให้ desktop agent ปลอดภัย</a></li>
+          <li><a href="#th-approvals-procedure">2. ขั้นตอน — ตั้ง approvals และ deny rules</a></li>
+          <li><a href="#th-checkpoints">3. Checkpoints และ /rollback — ทางถอยที่ต้องมีก่อนจะต้องใช้</a></li>
+          <li><a href="#th-remote-procedure">4. ขั้นตอน — ต่อ Desktop เข้ากับ Hermes บนเครื่องอื่น</a></li>
+          <li><a href="#th-when-it-breaks">5. ตารางอ้างอิง — เมื่อมันพัง</a></li>
+          <li><a href="#th-logs-diagnostics">6. Logs และ diagnostics — อ่านที่ไหน ส่งอะไร ให้ใคร</a></li>
+          <li><a href="#th-update-uninstall">7. Update และ uninstall สามระดับ</a></li>
+          <li><a href="#th-summary">8. สรุป — ปิดซีรีส์</a></li>
+      </ol>
+    </details>
+    <details class="post-toc l-en" open>
+      <summary>In this post</summary>
+      <ol>
+          <li><a href="#en-three-dials">1. Three Dials That Keep a Desktop Agent Safe</a></li>
+          <li><a href="#en-approvals-procedure">2. Procedure — Set Approvals and Deny Rules</a></li>
+          <li><a href="#en-checkpoints">3. Checkpoints and /rollback — a Way Back Before You Need One</a></li>
+          <li><a href="#en-remote-procedure">4. Procedure — Attach the Desktop to a Hermes on Another Machine</a></li>
+          <li><a href="#en-when-it-breaks">5. Reference Table — When It Breaks</a></li>
+          <li><a href="#en-logs-diagnostics">6. Logs and Diagnostics — Where to Read, What to Send, and to Whom</a></li>
+          <li><a href="#en-update-uninstall">7. Update, and the Three Ways to Uninstall</a></li>
+          <li><a href="#en-summary">8. Summary — Closing the Series</a></li>
+      </ol>
+    </details>
+    <div class="l-th">
+
+    <p>🤔 <strong>ถ้า agent ที่คุณติดตั้งไว้เมื่อหกตอนก่อน สั่ง recursive delete ผิดไดเรกทอรีตอนตีสอง — อะไรกันแน่ที่จะหยุดมันได้? และถ้าเช้าวันรุ่งขึ้นแอปเปิดไม่ขึ้น คุณจะไปดูที่ไหนก่อน?</strong></p>
+
+    <p>ตอนที่แล้ว <a href="/blog/hermes-desktop-automation">#6 Automation &amp; Agents</a> ทิ้ง agent ที่ทำงานตอนคุณไม่อยู่ไว้ให้ — cron jobs, Bot Mode routines, subagents ที่บังคับทิศได้กลางทาง agent ที่ทำงานโดยไม่มีใครเฝ้า คือ agent ที่ต้องการสามสิ่งซึ่งวันแรกยังไม่จำเป็น: รั้วที่มันพูดหว่านล้อมให้เปิดไม่ได้ คำตอบชัด ๆ ว่า "คำสั่งนี้กำลังรันอยู่บนเครื่องไหน" และทางกลับเมื่อบางอย่างพัง</p>
+
+    <p>คำตอบหนึ่งบรรทัด: หน้าปัดสามอัน — โหมด approvals, write guards กับ hardline blocklist, และเส้นแบ่งการรันคำสั่ง (execution boundary) — บวกบันไดกู้คืนที่เริ่มจาก <code>hermes logs desktop</code> ไปจบที่ uninstall สามระดับ นี่คือตอนสุดท้ายของซีรีส์ และเป็นคู่ลงมือทำของ <a href="/blog/hermes-security">#4 Security</a>: ตอนนั้นเป็นเจ้าของ threat model ตอนนี้เป็นเจ้าของสิ่งที่คุณคลิก พิมพ์ และตรวจ</p>
+
+    <h2 id="th-three-dials">1. สามหน้าปัดที่ทำให้ desktop agent ปลอดภัย</h2>
+
+    <p>desktop agent ปลอดภัยได้ด้วยการตั้งค่าสามตัวที่เรียกชื่อได้ <code>approvals.mode</code> — <code>smart</code>, <code>manual</code> หรือ <code>off</code> — ตัดสินว่ามนุษย์จะได้เห็นคำสั่งอันตรายก่อนมันรันหรือไม่ write guards กับ hardline blocklist ปฏิเสธของชุดเล็ก ๆ ชุดหนึ่งโดยไม่สนโหมด และ execution boundary ตัดสินว่าเครื่องไหนเป็นคนรันคำสั่งจริง ๆ ปุ่มอื่นทุกปุ่มบนหน้า Safety คือรายละเอียดปลีกย่อยของหนึ่งในสามอย่างนี้<sup><a href="#th-ref-1">[1]</a></sup></p>
+
+    <figure class="figure">
+      <a href="../images/hermes-desktop-fig-07-safety-remote-recovery.png">
+        <img class="figure__img" src="../images/hermes-desktop-fig-07-safety-remote-recovery.png" alt="แผนภาพมีหน้าปัดสามตำแหน่ง smart manual off ที่มุมซ้ายบน กล่อง Desktop ชี้ลูกศรหนาไปยังกล่อง remote host ที่มุมขวาบน และแถวชิปสี่ขั้นด้านล่างจาก hermes logs desktop ถึง uninstall" width="1400" height="840" loading="lazy" decoding="async">
+      </a>
+      <figcaption class="figure__caption">รูปที่ 1 · สามหน้าปัดของความปลอดภัย — โหมด approvals, เส้นแบ่งว่าคำสั่งรันที่เครื่องไหน และบันไดกู้คืนจาก log ถึง uninstall สามระดับ</figcaption>
+    </figure>
+
+    <h3>หน้าปัดที่หนึ่ง — โหมด approvals</h3>
+
+    <p>ก่อนคำสั่ง shell จะรัน Hermes เทียบมันกับรายการรูปแบบอันตราย — recursive delete, <code>chmod 777</code>, <code>mkfs</code>, SQL <code>DROP</code>, การ pipe ของที่ดาวน์โหลดมาเข้า shell, การ kill gateway และอีกราวสามสิบรูปแบบ ถ้าตรง คำสั่งจะถูกส่งไปชั้น approval และ <code>approvals.mode</code> คือตัวบอกว่าจะเกิดอะไรขึ้นที่นั่น<sup><a href="#th-ref-1">[1]</a></sup> ใน <strong>smart</strong> (ค่าเริ่มต้น) LLM ตัวช่วยจะประเมินความเสี่ยง: คำสั่งความเสี่ยงต่ำถูกอนุมัติอัตโนมัติเฉพาะคำสั่งนั้น คำสั่งที่อันตรายจริงถูกปฏิเสธอัตโนมัติ และกรณีก้ำกึ่งส่งขึ้นมาถามคุณ <strong>manual</strong> ถามคุณทุกครั้ง <strong>off</strong> ปิดการตรวจทั้งหมด — เอกสารบอกว่าเทียบเท่ากับการรันด้วย <code>--yolo</code><sup><a href="#th-ref-1">[1]</a></sup></p>
+
+    <p>มีเพื่อนร่วมทางสองตัวที่สำคัญไม่แพ้โหมดเอง บริบทที่ไม่มีคนเฝ้า (headless) มีสวิตช์ของตัวเอง — <code>cron_mode</code>, <code>single_query_mode</code> และ <code>unattended_mode</code> ทั้งหมดตั้งต้นเป็น <code>deny</code> ดังนั้น cron job หรือ webhook session ที่ชนรูปแบบอันตรายจะถูกบล็อก แทนที่จะรอมนุษย์ที่ไม่ได้อยู่ตรงนั้น<sup><a href="#th-ref-1">[1]</a></sup> และ prompt ขออนุมัติมีนาฬิกา: ถ้าไม่มีใครตอบภายใน <code>timeout</code> (300 วินาทีโดยค่าเริ่มต้น) คำสั่งจะถูกปฏิเสธ เอกสารเรียกคุณสมบัตินี้ว่า fail-closed และเป็นคุณสมบัติที่ผมตรวจก่อนอย่างอื่นบนเครื่องใดก็ตามที่ถือ credential จริง<sup><a href="#th-ref-1">[1]</a></sup></p>
+
+    <h3>หน้าปัดที่สอง — write guards และ hardline blocklist</h3>
+
+    <p>การปฏิเสธบางอย่างไม่ขึ้นกับโหมดเลย <code>write_file</code> และ <code>patch</code> ถูกบล็อกแข็งจากที่เก็บ credential — <code>~/.ssh/</code>, <code>~/.aws/</code>, <code>~/.kube/</code>, <code>/etc/sudoers</code>, <code>~/.netrc</code>, <code>auth.json</code> กับ <code>.env</code> ของ Hermes เอง, <code>mcp-tokens/</code>, <code>pairing/</code> และไฟล์ <code>.env</code> ไม่ว่าจะอยู่ที่ไหนบนดิสก์ — โดยไม่มี prompt และ override จากหน้าแชตไม่ได้ ถ้าคุณอยากได้รั้วมากกว่า denylist <code>HERMES_WRITE_SAFE_ROOT</code> จำกัดเครื่องมือสองตัวนั้นให้เขียนได้เฉพาะไดเรกทอรีที่คุณระบุ<sup><a href="#th-ref-1">[1]</a></sup> เหนือขึ้นไปคือ hardline blocklist: <code>rm -rf /</code> และตัวแปรของมัน, bash fork bomb, <code>mkfs</code> บนอุปกรณ์ root ที่ mount อยู่, <code>dd</code> ลงดิสก์จริง และการ pipe URL ที่ไม่น่าเชื่อถือเข้า <code>sh</code> มันสะดุดก่อนชั้น approval จะเห็นคำสั่งเสียอีก รอด <code>--yolo</code>, <code>approvals.mode: off</code>, โหมด <code>approve</code> ของ cron และการคลิก "allow always" ได้ทั้งหมด และไม่มี flag ให้ override<sup><a href="#th-ref-1">[1]</a></sup></p>
+
+    <p>ระหว่างสองอย่างนั้นคือหน้าปัดที่คุณหมุนจริง ๆ: <code>approvals.deny</code> รายการ glob pattern ที่บล็อกคำสั่งที่ตรงกันโดยไม่มีเงื่อนไข — ก่อน YOLO และก่อน <code>mode: off</code> จะถูกถามด้วยซ้ำ เอกสารเรียกมันว่า yolo-with-exceptions: ให้ agent ทำได้ทุกอย่าง ยกเว้นสิ่งเหล่านี้ ตลอดไป<sup><a href="#th-ref-1">[1]</a></sup></p>
+
+    <h3>หน้าปัดที่สาม — execution boundary</h3>
+
+    <p>หน้าปัดที่สามคืออันที่คนลืม เพราะมันไม่ได้อยู่บนหน้า Safety <code>terminal.backend</code> บอกว่าคำสั่ง shell รันที่ไหน: <code>local</code> และ <code>ssh</code> ยังเปิดการตรวจคำสั่งอันตราย ส่วน <code>docker</code>, <code>singularity</code>, <code>modal</code>, <code>daytona</code> และ <code>vercel_sandbox</code> ข้ามการตรวจไป เพราะ container เองคือเส้นแบ่ง<sup><a href="#th-ref-1">[1]</a></sup> การเชื่อมต่อแบบ Remote gateway ย้ายไปไกลกว่า backend README ของแอป desktop เองพูดไว้ในประโยคเดียวที่ผมขอยกมาทั้งประโยคแทนการถอดความ: "In remote mode the gateway host is the execution boundary: agent tools, terminal commands, and file operations run against the remote Hermes host, not the computer displaying the Desktop UI."<sup><a href="#th-ref-9">[9]</a></sup> หัวข้อ 4 คือขั้นตอนของสิ่งนั้นพอดี</p>
+
+    <blockquote><strong>💡 ทฤษฎีอยู่ที่ไหน:</strong> นโยบายความปลอดภัยของ repository ระบุเส้นแบ่งที่รับน้ำหนักไว้เพียงเส้นเดียว และ §2.2 กล่าวมันด้วยประโยคที่กำกับหน้าปัดทั้งสาม — "The only security boundary against an adversarial LLM is the operating system." ชั้น approval, การ redact และ scanner ทุกตัวถูกเรียกในนั้นว่า heuristic: มีประโยชน์ แต่ไม่ใช่การกักกัน<sup><a href="#th-ref-8">[8]</a></sup> <a href="/blog/hermes-security">#4 Security</a> เดินผ่านนโยบายนั้นทีละชั้น และครอบคลุมกรณีที่ใกล้ตัวคนไทยที่สุด — Hermes instance ในโหมด YOLO ที่รันโดยไม่มีคนเฝ้าในเครือข่ายหน่วยงานรัฐ ผมจะไม่เล่าซ้ำที่นี่ อ่านที่นั่น แล้วกลับมาหมุนหน้าปัด</blockquote>
+
+    <h2 id="th-approvals-procedure">2. ขั้นตอน — ตั้ง approvals และ deny rules</h2>
+
+    <p>ตั้งโหมดที่ <strong>Settings → Safety</strong> เพิ่ม deny rules สำหรับคำสั่งที่ไม่อยากเห็นเลย ปล่อย timeout 300 วินาทีไว้ให้มัน fail closed หาปุ่ม YOLO ในแถบสถานะให้เจอเพื่อจะจำได้ตอนมันเปิดอยู่ แล้วทดสอบด้วยคำสั่งที่รู้ว่าถูกตั้งธง ขอบันทึกความซื่อตรงไว้ก่อนหนึ่งข้อ: เอกสารทางการระบุ Safety ไว้ในรายการหน้า settings รายโปรไฟล์ แต่ไม่เคยอธิบายว่าในหน้านั้นมีอะไร ขั้นตอนข้างล่างจึงเรียกชื่อคีย์ในไฟล์ config — หน้าจอสะท้อนคีย์เหล่านั้น<sup><a href="#th-ref-2">[2]</a></sup></p>
+
+    <ol>
+        <li>เปิด Settings ด้วย <code>Cmd/Ctrl+,</code> แล้วเลือก <strong>Safety</strong> ถ้ามีสองโปรไฟล์ขึ้นไป แถวชิป <strong>Applies to</strong> จะโผล่ที่หัวหน้า ค่าเริ่มต้นตามโปรไฟล์ที่ใช้งานอยู่ และการสลับโปรไฟล์หลักของแอปจะรีเซ็ตมัน ดังนั้นเลือกโปรไฟล์ที่ตั้งใจก่อนแตะอะไร<sup><a href="#th-ref-2">[2]</a></sup></li>
+        <li>เลือกโหมด approval — <code>smart</code>, <code>manual</code> หรือ <code>off</code> กฎของผมเอง: <code>manual</code> บนเครื่องที่ถือ credential จริงจนกว่าจะไว้ใจ workflow นั้น <code>smart</code> สำหรับงานประจำวัน และ <code>off</code> เฉพาะใน container ที่ทิ้งได้เท่านั้น<sup><a href="#th-ref-1">[1]</a></sup></li>
+        <li>ถ้าอยากแก้ไฟล์มากกว่า คีย์ชุดเดียวกันอยู่ใต้ <code>approvals:</code> ใน <code>~/.hermes/config.yaml</code> การเปลี่ยนมีผลทันที — cache ของ config อิงเวลาที่ไฟล์ถูกแก้ — จึงไม่ต้องเริ่ม session ใหม่<sup><a href="#th-ref-1">[1]</a></sup></li>
+        <li>เพิ่ม deny rules สำหรับสิ่งที่ห้ามรันไม่ว่าโหมดไหน ใส่เครื่องหมายคำพูดครอบทุก pattern — <code>*</code> นำหน้าเปล่า ๆ เป็น YAML alias และ parse ไม่ผ่าน — และจำไว้ว่ามันจับคู่แบบไม่สนตัวพิมพ์เล็กใหญ่กับข้อความคำสั่งทั้งบรรทัด และมีผลกับ backend ที่แตะ host ได้เท่านั้น<sup><a href="#th-ref-1">[1]</a></sup></li>
+        <li>ปล่อย <code>timeout: 300</code> ไว้ เมื่อ prompt ถูกทิ้งไว้ไม่มีคำตอบนานเท่านั้น คำสั่งจะถูกปฏิเสธ ตัวเลขที่ต่ำลงทำให้การเดินไปชงกาแฟปลอดภัยขึ้น ไม่ใช่เสี่ยงขึ้น<sup><a href="#th-ref-1">[1]</a></sup></li>
+        <li>หาปุ่ม YOLO มันอยู่ในแถบสถานะด้านล่างหน้าแชต และเป็นรายการต่อ session — "flip YOLO on or off for just this session (matching the TUI)"<sup><a href="#th-ref-2">[2]</a></sup> สวิตช์เดียวกันมีอีกสามวิธีเขียน: <code>/yolo</code> ในแชต, <code>hermes --yolo</code> ตอนเปิด หรือ <code>HERMES_YOLO_MODE=1</code> ใน environment เมื่อมันเปิด ตัวสลับจะพิมพ์ <code>⚡ YOLO mode ON — all commands auto-approved. Use with caution.</code> ทุก session ถัดไปจะเปิดด้วยแถบสีแดง <code>⚠ YOLO mode — all approval prompts bypassed</code> และชิ้นส่วน <code>⚠ YOLO</code> ค้างอยู่ในแถบสถานะจนกว่าคุณจะปิดมัน<sup><a href="#th-ref-1">[1]</a></sup></li>
+        <li>ทดสอบ — ในโหมด <code>manual</code> เพราะ <code>smart</code> อาจตัดสินว่าการลบไดเรกทอรีชั่วคราวเป็นความเสี่ยงต่ำแล้วปล่อยผ่าน ขอให้ agent ลบไดเรกทอรีชั่วคราวแบบ recursive <code>rm -rf /tmp/hermes-test</code> เป็น recursive delete ซึ่งเป็นหนึ่งในรูปแบบที่ถูกตั้งธง จับตาดู prompt ขออนุมัติ: ชื่อรูปแบบ คำสั่งตรง ๆ และตัวเลือกสี่อย่าง <strong>once</strong>, <strong>session</strong>, <strong>always</strong>, <strong>deny</strong> เอกสารแสดงหน้าตาของ CLI ส่วน Desktop เสนอการตัดสินใจชุดเดียวกัน ถ้าคำสั่งรันโดยไม่ถาม แปลว่า YOLO เปิดอยู่หรือโหมดเป็น <code>off</code><sup><a href="#th-ref-1">[1]</a></sup> (บันทึกการออกรุ่น v0.21.0 ระบุตัวตรวจคำตัดสิน approval แบบ dry-run สำหรับ CLI แต่ยังไม่อยู่ในเอกสารอ้างอิง CLI ผมจึงทดสอบในแชตแทน<sup><a href="#th-ref-10">[10]</a></sup>)</li>
+        <li>ทางเลือก: ผ่านไปสองสามสัปดาห์ค่อยรัน <code>hermes approvals suggest</code> มันขุดคำสั่งที่คุณเคยอนุมัติจากฐานข้อมูล session มาเป็นข้อเสนอ allowlist ไม่ apply อะไรเลยถ้าไม่ส่ง <code>--apply</code> และไม่เคยเสนอกลุ่มคำสั่งทำลายล้าง — <code>rm -rf build/</code> ที่อนุมัติมาร้อยครั้งก็ยังไม่ได้รายการ <code>rm</code><sup><a href="#th-ref-1">[1]</a></sup></li>
+    </ol>
+
+    <p>บล็อก <code>approvals:</code> ยกมาตรง ๆ จากหน้า Security:</p>
+
+<pre><code># ~/.hermes/config.yaml
+approvals:
+  mode: smart                     # smart | manual | off
+  timeout: 300                    # วินาทีที่รอคำตอบจากผู้ใช้ (ค่าเริ่มต้น: 300)
+  cron_mode: deny                 # deny | approve — cron job ทำอย่างไรเมื่อชนคำสั่งอันตราย
+  single_query_mode: deny         # deny | approve — session แบบ single-query (-q) ทำอย่างไรเมื่อชนคำสั่งอันตราย
+  unattended_mode: deny           # deny | approve — session จาก webhook/API ทำอย่างไรเมื่อชนคำสั่งอันตราย
+  mcp_reload_confirm: true        # /reload-mcp ถามก่อนล้าง cache ของ MCP tool
+  destructive_slash_confirm: true # /clear, /new, /reset, /undo ถามก่อนทิ้ง state</code></pre>
+
+    <p>และ deny rules โดยใช้ตัวอย่างสามข้อของเอกสารเอง:</p>
+
+<pre><code># ~/.hermes/config.yaml — ถูกถามก่อน --yolo, /yolo และ approvals.mode: off
+approvals:
+  deny:
+    - "git push --force*"
+    - "*curl*|*sh*"
+    - "dd if=* of=/dev/*"</code></pre>
+
+    <div class="alert danger">
+        <strong>YOLO ปิดการตรวจความปลอดภัยของคำสั่งอันตรายทุกอย่างสำหรับ session นั้น:</strong> เอกสารพูดด้วยตัวหนา — "YOLO mode disables all dangerous command safety checks for the session — except the hardline blocklist." กฎ <code>approvals.deny</code> ของคุณคืออีกสิ่งเดียวที่รอดจากมัน เพราะถูกถามก่อน มันเป็นรายการต่อ session มันคือหนึ่งคลิกในแถบสถานะ และมันคือสวิตช์ที่ #4 บันทึกไว้ว่าถูกใช้แบบไม่มีคนเฝ้าในเครือข่ายจริง อย่าเปิดมันในที่ที่ agent เอื้อมถึง credential ที่คุณไม่อยากเสีย<sup><a href="#th-ref-1">[1]</a></sup>
+    </div>
+
+    <h3>execution backend</h3>
+
+    <p>หน้าปัดที่สามตั้งใน <code>~/.hermes/config.yaml</code> ใต้ <code>terminal.backend</code> ผมหาหน้าเอกสาร Desktop ที่บันทึกปุ่มควบคุมสำหรับมันไม่เจอ จึงแก้ไฟล์แล้วเริ่ม session ใหม่หลังจากนั้น ค่าเจ็ดค่าคือค่าที่อยู่ในตารางเปรียบเทียบของหน้า Security:<sup><a href="#th-ref-1">[1]</a></sup></p>
+
+<pre><code># ~/.hermes/config.yaml
+terminal:
+  backend: docker    # local | ssh | docker | singularity | modal | daytona | vercel_sandbox
+                     # local และ ssh ยังตรวจคำสั่งอันตราย อีกห้าตัวข้ามการตรวจ</code></pre>
+
+    <div class="alert">
+        <strong>backend ย้าย shell ไม่ได้ย้าย agent:</strong> นโยบายความปลอดภัยแม่นยำเรื่องสิ่งที่ backend ที่ไม่ใช่ค่าเริ่มต้นกักได้ — "anything the agent does by issuing shell or file operations" — และสิ่งที่กักไม่ได้: "everything the agent does in its own Python process" รวมถึงเครื่องมือ code-execution, subprocess ของ MCP และ plugin<sup><a href="#th-ref-8">[8]</a></sup> วิดีโอลงมือทำของผู้ใช้จริงคนหนึ่งพูดประเด็นเดียวกันด้วยภาษาชาวบ้าน: ใช้ SSH backend คือคุณส่ง terminal ออกไปที่ VPS แต่คำขอไปยังผู้ให้บริการโมเดลยังออกจาก laptop ของคุณอยู่ดี<sup><a href="#th-ref-14">[14]</a></sup> ถ้าจะย้าย agent ทั้งตัว — เครื่องมือ ไฟล์ credential และการเรียกโมเดล — ต้องต่อ Desktop เข้ากับ remote gateway แทน ซึ่งคือหัวข้อ 4
+    </div>
+
+    <h2 id="th-checkpoints">3. Checkpoints และ /rollback — ทางถอยที่ต้องมีก่อนจะต้องใช้</h2>
+
+    <p>Checkpoints คือปุ่ม undo ของ agent สำหรับระบบไฟล์ และมันเป็นแบบ <strong>opt-in</strong>: ค่าเริ่มต้นคือปิด เพราะ shadow store กินดิสก์เมื่อเวลาผ่านไป และผู้ใช้ส่วนใหญ่ไม่เคยพิมพ์ <code>/rollback</code> เปิดด้วย <code>checkpoints.enabled: true</code> ใน <code>config.yaml</code> (หรือ <code>hermes chat --checkpoints</code> สำหรับ CLI session เดียว) แล้ว Hermes จะถ่ายภาพโปรเจกต์ก่อน <code>write_file</code>, <code>patch</code> และคำสั่ง shell ที่ทำลายล้าง <code>/rollback &lt;N&gt;</code> กู้ไฟล์กลับและถอนเทิร์นสนทนาล่าสุด เพื่อให้บริบทของ agent ตรงกับดิสก์อีกครั้ง<sup><a href="#th-ref-6">[6]</a></sup></p>
+
+<pre><code># ~/.hermes/config.yaml — opt-in; shadow store อยู่ที่ ~/.hermes/checkpoints/store/
+checkpoints:
+  enabled: true
+  max_snapshots: 20           # ต่อโปรเจกต์
+  max_total_size_mb: 500      # เกินนี้ commit เก่าสุดถูกทิ้ง
+  max_file_size_mb: 10        # ไฟล์ใหญ่กว่านี้ถูกข้าม ไม่ถูกถ่ายภาพ</code></pre>
+
+    <p>กลไกคุ้มค่าสามสิบวินาที เพราะมันอธิบายขีดจำกัด ทุกโปรเจกต์ใช้ bare git repository ร่วมกันหนึ่งตัวใต้ <code>~/.hermes/checkpoints/store/</code> — <code>.git</code> จริงของคุณไม่ถูกแตะ — และ agent ถ่าย checkpoint ได้อย่างมากหนึ่งครั้งต่อไดเรกทอรีต่อเทิร์น ตัวกระตุ้นคือเครื่องมือไฟล์บวก <code>rm</code>, <code>rmdir</code>, <code>cp</code>, <code>install</code>, <code>mv</code>, <code>sed -i</code>, <code>truncate</code>, <code>dd</code>, <code>shred</code>, การ redirect output และ <code>git reset</code>/<code>clean</code>/<code>checkout</code> ไดเรกทอรีที่มีไฟล์เกิน 50,000 ไฟล์ รวมถึง root และ home ถูกข้าม และถ้า <code>git</code> ไม่อยู่บน <code>PATH</code> checkpoints จะปิดตัวเองเงียบ ๆ<sup><a href="#th-ref-6">[6]</a></sup></p>
+
+<pre><code>/rollback                 # ดูรายการ checkpoint พร้อมสถิติการเปลี่ยนแปลง
+/rollback diff 1          # ดูก่อนว่าอะไรเปลี่ยนไปตั้งแต่ checkpoint 1 — ทำข้อนี้ก่อน
+/rollback 1               # กู้ checkpoint 1 โดยเก็บสิ่งที่คุณแก้เองด้วยมือไว้
+/rollback 1 --all         # กู้เต็มรูปแบบ ทับสิ่งที่คุณแก้เองด้วย
+/rollback 1 src/app.py    # กู้ไฟล์เดียว
+hermes checkpoints        # ขนาด store จำนวนโปรเจกต์ รายละเอียดรายโปรเจกต์
+hermes checkpoints prune  # กวาด orphan และบังคับเพดานขนาด</code></pre>
+
+    <p>รายละเอียดสองอย่างทำให้มันปลอดภัยกว่าที่ฟังดู การกู้จะถ่ายภาพก่อนกู้ (pre-rollback snapshot) ก่อนเสมอ คุณจึง undo การ undo ได้ และ <code>/rollback &lt;N&gt;</code> กู้เฉพาะไฟล์ที่ Hermes เขียนเอง — การเขียนที่สำเร็จทุกครั้งบันทึก hash เนื้อหาไว้ใน ledger การเขียนของ agent และไฟล์ที่คุณแก้ทีหลังจะถูกข้ามและถูกแจ้งไว้ในผลลัพธ์ เว้นแต่คุณเติม <code>--all</code><sup><a href="#th-ref-6">[6]</a></sup> หน้าเอกสาร checkpoints บันทึก <code>/rollback</code> เป็น slash command ใน session และแสดงผลลัพธ์ของ CLI ส่วนแชตใน Desktop คือ session บน backend ตัวเดียวกัน และผมไม่พบอะไรที่บอกว่ามันทำงานต่างออกไปที่นั่น — พิมพ์ในแชตได้เลย</p>
+
+    <div class="alert info">
+        <strong>สิ่งที่ checkpoint ไม่ใช่:</strong> มันถ่ายภาพโปรเจกต์ที่ agent กำลังแก้ ไม่ใช่ <code>~/.hermes</code> config, session, key และ skill ถูกคุ้มครองด้วยกลไกคนละตัว — snapshot ก่อน update และ <code>hermes update --backup</code> ในหัวข้อ 7<sup><a href="#th-ref-5">[5]</a></sup>
+    </div>
+
+    <h2 id="th-remote-procedure">4. ขั้นตอน — ต่อ Desktop เข้ากับ Hermes บนเครื่องอื่น</h2>
+
+    <p>บน host ตั้ง auth provider ให้พร้อมแล้วรัน <code>hermes serve --host 0.0.0.0 --port 9119</code> การ bind กับ address ที่ไม่ใช่ loopback จะเปิด auth gate โดยอัตโนมัติ backend ที่ไม่มี provider จึงไม่ได้เปิดโล่งเฉย ๆ ใน Desktop ไปที่ <strong>Settings → Gateways → Add connection</strong> เลือก <strong>Remote gateway</strong> (URL บวก session token หรือ Nous Portal OAuth) หรือ <strong>SSH</strong> (key ของคุณ แอปเปิด tunnel และรับ dashboard token มาเอง) กด <strong>Test</strong> แล้วเปิด session — และจำไว้ว่านับจากวินาทีนั้นทุกคำสั่งรันบน host เครื่องนั้น<sup><a href="#th-ref-2">[2]</a></sup><sup><a href="#th-ref-3">[3]</a></sup></p>
+
+    <h3>บน host</h3>
+
+    <ol>
+        <li>เลือก provider ตามที่ที่ host อยู่ username/password ใช้กับ LAN ที่เชื่อถือได้หรือ VPN อย่าง Tailscale เท่านั้น สำหรับอะไรก็ตามที่เข้าถึงได้เกินเครื่องของคุณเอง เอกสารแนะนำ OAuth ผ่าน Nous Portal — ลงทะเบียน backend ด้วย <code>hermes dashboard register</code> แล้ว sign in จากแอปด้วย "Sign in with Nous Research" OIDC provider ที่ host เองก็ทำงานแบบเดียวกัน<sup><a href="#th-ref-2">[2]</a></sup></li>
+        <li>สำหรับเส้นทาง username/password ต่อท้ายตัวแปรสามตัวลง <code>~/.hermes/.env</code> ตามที่เอกสารแสดงเป๊ะ ๆ แล้วสตาร์ต backend เก็บมันไว้ใต้ <code>systemd</code> หรือ <code>tmux</code>: แอปต่อเข้าหามันแต่ไม่เคยสตาร์ตให้ และ messaging gateway เป็นอีก process ที่คุณรันคู่กันเอง<sup><a href="#th-ref-2">[2]</a></sup></li>
+        <li>ตรวจ gate ก่อนยื่น URL ให้ใคร <code>curl</code> ไปที่ status endpoint จาก laptop ของคุณ: ควรพิมพ์ <code>true</code> และมี <code>"basic"</code> (หรือ OAuth provider ของคุณ)<sup><a href="#th-ref-2">[2]</a></sup></li>
+    </ol>
+
+<pre><code># บน host ระยะไกล
+cat &gt;&gt; ~/.hermes/.env &lt;&lt;'EOF'
+HERMES_DASHBOARD_BASIC_AUTH_USERNAME=admin
+HERMES_DASHBOARD_BASIC_AUTH_PASSWORD=choose-a-strong-password
+# แนะนำ: signing secret ที่คงที่ เพื่อให้ session อยู่รอดข้าม restart
+# ถ้าไม่มี ระบบจะสุ่มคีย์ใหม่ทุกครั้งที่บูต แล้วคุณจะถูก log out
+# ทุกครั้งที่ restart
+HERMES_DASHBOARD_BASIC_AUTH_SECRET=$(openssl rand -base64 32)
+EOF
+chmod 600 ~/.hermes/.env
+
+# การ bind ที่ไม่ใช่ loopback เปิด auth gate
+hermes serve --host 0.0.0.0 --port 9119
+
+# จาก laptop ของคุณ: gate เปิดจริงไหม?
+curl -s http://&lt;host&gt;:9119/api/status | jq '.auth_required, .auth_providers'</code></pre>
+
+    <h3>ใน Desktop</h3>
+
+    <ol>
+        <li>เปิด <strong>Settings → Gateways</strong> (<code>Cmd/Ctrl+,</code> แล้ว Gateways; หรือปุ่มปลั๊กที่ปลายขวาของแถบโปรไฟล์ "Connect another Hermes gateway…"; หรือ <code>Cmd/Ctrl+K</code> แล้วพิมพ์ <em>Gateways</em>) เลื่อนลงไปที่ <strong>Registered gateways</strong> แล้วคลิก <strong>Add connection</strong><sup><a href="#th-ref-3">[3]</a></sup></li>
+        <li>เลือกชนิด <strong>Remote gateway</strong>: ชื่ออุปกรณ์ที่ไม่ซ้ำ (ยาวได้ถึง 64 ตัวอักษร ไม่ซ้ำโดยไม่สนตัวพิมพ์เล็กใหญ่), Gateway URL ของ backend ที่รันอยู่ เช่น <code>http://homelab.lan:9119</code> และ <strong>Session token</strong> หรือ <strong>OAuth</strong> <strong>SSH</strong>: ชื่อบวกช่องรวมช่องเดียวในรูป <code>user@host:22</code> ระบบใช้ SSH key ของคุณ และแอปเปิด tunnel สตาร์ต dashboard ฝั่งโน้น แล้วรับ dashboard token ผ่าน tunnel มาเอง<sup><a href="#th-ref-3">[3]</a></sup></li>
+        <li>คลิก <strong>Save connection</strong> แล้ว <strong>Test</strong> บนแถวใหม่ Test ตรวจทั้งขา HTTP และขา WebSocket ดังนั้น toast "Reachable" หมายความว่าแชตจะใช้ได้จริง — ไม่ใช่แค่ host ตอบ ping<sup><a href="#th-ref-3">[3]</a></sup></li>
+        <li>จะกด <strong>Make primary</strong> ก็ได้ Primary คือตัวสำรองของ registry สำหรับการเรียกข้าม gateway ที่ไม่ได้ระบุชื่อ gateway มันไม่สลับ workspace ของ Sessions ที่เปิดอยู่ และถ้าคุณลบมัน แอปจะถอยกลับไปใช้รายการ local<sup><a href="#th-ref-3">[3]</a></sup></li>
+        <li>สลับไปที่ gateway จากแถบข้าง Sessions — ตัวเลือก gateway แบบมีชื่อจะโผล่เมื่อลงทะเบียนไว้มากกว่าหนึ่ง — เลือกโปรไฟล์ที่ค้นพบบนนั้น แล้วเปิด session ไฟล์ เครื่องมือ ช่องทาง cron และ memory ตอนนี้ผูกกับ <code>(gateway, profile)</code> นั้น และประโยค execution boundary จากหัวข้อ 1 มีผลเต็มที่: laptop เป็นแค่จอ<sup><a href="#th-ref-3">[3]</a></sup><sup><a href="#th-ref-9">[9]</a></sup></li>
+    </ol>
+
+    <p>ทางลัดสองทาง <code>HERMES_DESKTOP_REMOTE_URL</code> ตั้งก่อนเปิดแอป จะ override URL ในแอป — คุณยังต้อง sign in จากหน้า Gateways<sup><a href="#th-ref-2">[2]</a></sup> และสำหรับการต่อ remote เครื่องเดียว ปุ่ม <strong>Connection mode → Remote gateway</strong> บนหน้าเดียวกัน — Remote URL, Sign in, Save and reconnect — ทำงานเดียวกันได้โดยไม่ต้องผ่าน registry คุณจะยังคง sign in อยู่ข้าม restart ก็ต่อเมื่อตั้ง <code>HERMES_DASHBOARD_BASIC_AUTH_SECRET</code> ไว้<sup><a href="#th-ref-2">[2]</a></sup></p>
+
+    <div class="alert">
+        <strong>ก่อนชี้สิ่งนี้ไปที่เครื่องที่มีคนใช้อยู่แล้ว:</strong> issue #40656 "Desktop remote gateway can destabilize self-hosted host when used concurrently with TUI/gateway" เปิดมาตั้งแต่ 6 มิถุนายน 2026 — P3 หนึ่งความเห็น TUI และสถานะ MCP บน host ระยะไกลของผู้รายงานกลายเป็นไม่น่าเชื่อถือขณะ Desktop ต่ออยู่กับ host เดียวกัน<sup><a href="#th-ref-13">[13]</a></sup> <a href="/blog/hermes-desktop-fleet">#10 Desktop &amp; Fleet</a> มีตาราง Connections สี่ชนิด เรื่องราวการ sign in ด้วย OIDC และคำเตือนเดียวกันนี้อยู่แล้ว ผมจึงไม่เล่าซ้ำ แนวปฏิบัติของผมเองยังเหมือนเดิม: เครื่องเฉพาะกิจหนึ่งเครื่องเป็น backend ของ Desktop
+    </div>
+
+    <h2 id="th-when-it-breaks">5. ตารางอ้างอิง — เมื่อมันพัง</h2>
+
+    <p>อ่าน log ก่อน แล้วค่อยดูตาราง ทุกแถวข้างล่างอ้างอิงหน้าเอกสาร บันทึกการออกรุ่น หรือ issue ที่ผมอ่านซ้ำเมื่อ 7 กันยายน 2026 อาการที่ผมหาแหล่งอ้างอิงไม่ได้ไม่อยู่ในนี้</p>
+
+    <div class="table-wrapper">
+        <table>
+            <thead>
+                <tr>
+                    <th>Symptom</th>
+                    <th>First check</th>
+                    <th>Command or menu</th>
+                    <th>Fix</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>แอปเปิดไม่ขึ้น</td>
+                    <td><code>HERMES_HOME/logs/desktop.log</code> — output ของ backend และ Python traceback ล่าสุด<sup><a href="#th-ref-2">[2]</a></sup></td>
+                    <td><code>hermes logs desktop</code> · <code>hermes logs gui -f</code><sup><a href="#th-ref-4">[4]</a></sup></td>
+                    <td>บังคับให้ตั้งค่าครั้งแรกใหม่ด้วย <code>rm "$HOME/.hermes/hermes-agent/.hermes-bootstrap-complete"</code>; สร้าง venv ที่พังใหม่ด้วย <code>rm -rf "$HOME/.hermes/hermes-agent/venv"</code>; แล้ว <code>hermes doctor --fix</code><sup><a href="#th-ref-2">[2]</a></sup></td>
+                </tr>
+                <tr>
+                    <td>ตัวติดตั้งค้างที่ "Build desktop app" output สดวนซ้ำ <code>retrying attempt=…</code></td>
+                    <td>GitHub ถูกบล็อกหรือถูกจำกัดความเร็ว — การ build ดาวน์โหลด Electron runtime ราว 114 MB จาก github.com<sup><a href="#th-ref-2">[2]</a></sup></td>
+                    <td><code>rm -f "$HOME/Library/Caches/electron"/electron-*.zip</code> (macOS) · <code>rm -f "$HOME/.cache/electron"/electron-*.zip</code> (Linux)</td>
+                    <td>ตัวติดตั้งล้าง zip ที่เสียแล้วลองใหม่ผ่าน npmmirror.com ให้เอง ถ้าจะใช้ mirror ของคุณเอง ตั้ง <code>ELECTRON_MIRROR</code> ก่อน build ใหม่ — การ build ไม่เคยทับค่าที่คุณตั้ง<sup><a href="#th-ref-2">[2]</a></sup></td>
+                </tr>
+                <tr>
+                    <td>ไม่มี session โหลดขึ้นมาในโปรไฟล์ไหนเลยหลัง update</td>
+                    <td>Issue #89675 (P1): backend ถูก spawn โดยไม่มี <code>--profile</code> แอปจึงไปถาม store ที่ว่างเปล่า เป็น regression ใน v0.20.4<sup><a href="#th-ref-11">[11]</a></sup></td>
+                    <td><code>hermes --version</code></td>
+                    <td>ปิดในสถานะ completed เมื่อ 23 สิงหาคม 2026 ก่อน v0.21.0 — update; ทางเลี่ยงชั่วคราวของผู้รายงานคือ web dashboard ซึ่งจัดการโปรไฟล์ได้ถูกต้อง<sup><a href="#th-ref-11">[11]</a></sup></td>
+                </tr>
+                <tr>
+                    <td>macOS ขอ Full Disk Access หรือไมโครโฟนใหม่ ทั้งที่ System Settings ยังแสดงสวิตช์เป็นเปิด</td>
+                    <td>macOS ผูกสิทธิ์กับ code-signing identity ไม่ใช่ path แอปที่ build บนเครื่องใช้ลายเซ็นที่ปักด้วย identifier ที่คงที่และปกติจะอยู่รอด แต่สิทธิ์ที่ให้ไว้ก่อนการแก้ลายเซ็นนั้น (PR #73681) ปักด้วย cdhash และไม่ตรงอีกต่อไป<sup><a href="#th-ref-2">[2]</a></sup></td>
+                    <td><code>hermes desktop --setup-tcc-identity</code><sup><a href="#th-ref-2">[2]</a></sup></td>
+                    <td>รีเซ็ตสิทธิ์ที่ค้างหนึ่งครั้ง — <code>tccutil reset All com.nousresearch.hermes</code> — แล้วให้สิทธิ์ใหม่ ถ้าอยากได้ identity ที่ยึดกับ certificate คำสั่งนี้จะสร้าง certificate แบบ self-signed ชื่อ "Hermes Local Signing" แล้ว sign แอปใหม่ สิทธิ์อยู่รอดทุก update นับจากนั้น (v0.21.0, #95091)<sup><a href="#th-ref-2">[2]</a></sup><sup><a href="#th-ref-10">[10]</a></sup></td>
+                </tr>
+                <tr>
+                    <td>Windows ค้างที่ "Updating Hermes"</td>
+                    <td><code>hermes --version</code> — ต่ำกว่า v0.21.0 (v2026.8.31) นี่คือการส่งต่อ update ของ Desktop เอง<sup><a href="#th-ref-10">[10]</a></sup></td>
+                    <td>ปิด Hermes Desktop แล้วรัน <code>hermes update</code> จาก PowerShell — มันปฏิเสธถ้ามี <code>hermes.exe</code> ตัวอื่น ซึ่งส่วนใหญ่คือ backend ที่ Desktop spawn ไว้ ถือไฟล์ executable ของ venv ค้างอยู่<sup><a href="#th-ref-5">[5]</a></sup></td>
+                    <td>การส่งต่อ update แบบ detached ของ v0.21.0 (quit → update → reopen ผ่านหน้าต่าง shim) กำจัดอาการค้างแล้ว: "Windows desktop updates no longer park on 'Updating Hermes'"<sup><a href="#th-ref-10">[10]</a></sup></td>
+                </tr>
+                <tr>
+                    <td>Renderer กิน CPU 40–73 % ตอนว่างบน Intel Mac พัดลมดังสุด</td>
+                    <td>Activity Monitor → <code>Hermes Helper (Renderer)</code>; issue #88275 (P2 ยังเปิด) บน MacBook Pro 2019 รัน v0.20.2<sup><a href="#th-ref-12">[12]</a></sup></td>
+                    <td>ทางบรรเทาบางส่วนของผู้รายงานคือ <code>desktop.disable_gpu=true</code> — คีย์ที่ไม่มีในเอกสาร ซึ่งลดลงได้ราวครึ่งหนึ่ง<sup><a href="#th-ref-12">[12]</a></sup></td>
+                    <td>ยังไม่มีการแก้ที่ merge แล้ว ณ 7 กันยายน 2026 Intel Mac อยู่นอกตารางแพลตฟอร์มที่รองรับซึ่ง <a href="/blog/hermes-desktop-fleet">#10</a> ยกมาไว้ วางแผนเผื่อไว้<sup><a href="#th-ref-12">[12]</a></sup></td>
+                </tr>
+                <tr>
+                    <td>Remote gateway ปฏิเสธการเชื่อมต่อหลัง sign in</td>
+                    <td><code>curl -s http://&lt;host&gt;:9119/api/status | jq '.auth_required, .auth_providers'</code> ต้องพิมพ์ <code>true</code> และชื่อ provider<sup><a href="#th-ref-2">[2]</a></sup></td>
+                    <td>Settings → Gateways → Open logs แล้วหา close code ของ <code>/api/ws</code> ใน <code>desktop.log</code><sup><a href="#th-ref-7">[7]</a></sup></td>
+                    <td><strong>4401</strong> = ticket ของ WebSocket ยืนยันตัวตนไม่ผ่าน — sign in ใหม่และตั้ง <code>HERMES_DASHBOARD_BASIC_AUTH_SECRET</code> ให้คงที่; <strong>4403</strong> = request guard ปฏิเสธ มักเป็น Host หรือ peer ไม่ตรงกันหลัง proxy<sup><a href="#th-ref-7">[7]</a></sup><sup><a href="#th-ref-2">[2]</a></sup></td>
+                </tr>
+                <tr>
+                    <td>การเชื่อมต่อ SSH: "The host key has CHANGED since you last connected"</td>
+                    <td>เครื่องปลายทางถูกติดตั้งใหม่หรือ key ถูกหมุน SSH fail closed และ Desktop ล็อกหน้า error overlay ค้างไว้<sup><a href="#th-ref-2">[2]</a></sup></td>
+                    <td><code>ssh-keygen -R &lt;host&gt;</code></td>
+                    <td>ยืนยันว่าการเปลี่ยนเป็นสิ่งที่คาดไว้ ล้างรายการเก่า แล้วคลิก <strong>Retry</strong> บน overlay<sup><a href="#th-ref-2">[2]</a></sup></td>
+                </tr>
+                <tr>
+                    <td>"Connection test failed" บน gateway ที่ลงทะเบียนไว้</td>
+                    <td><code>hermes serve</code> รันอยู่บน host ไหม พอร์ตเปิดไหม token ยังใช้ได้ไหม<sup><a href="#th-ref-3">[3]</a></sup></td>
+                    <td><strong>Test</strong> บนแถวนั้น ถ้า HTTP ผ่านแต่ขา WebSocket ตก ชี้ไปที่ proxy, firewall หรือ origin guard บน <code>/api/ws</code></td>
+                    <td>แก้ฝั่ง backend รัน Test ซ้ำ รอ "Reachable"<sup><a href="#th-ref-3">[3]</a></sup></td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <h2 id="th-logs-diagnostics">6. Logs และ diagnostics — อ่านที่ไหน ส่งอะไร ให้ใคร</h2>
+
+    <p>log ทั้งหมดอยู่ใน <code>~/.hermes/logs/</code> (หรือ <code>&lt;profile&gt;/logs/</code> สำหรับโปรไฟล์ที่ไม่ใช่ default) และ <code>hermes logs</code> อ่านได้ห้าไฟล์ตามชื่อ: <code>agent</code> (ค่าเริ่มต้น — การเรียก API, การส่งเครื่องมือ, วงจร session), <code>errors</code> (เฉพาะคำเตือนและข้อผิดพลาด), <code>gateway</code> (messaging), <code>gui</code> (dashboard, TUI-gateway, PTY bridge และเหตุการณ์ WebSocket) และ <code>desktop</code> (แอป Electron — การบูต output ตอน spawn backend, Python traceback ล่าสุด)<sup><a href="#th-ref-4">[4]</a></sup> อะไรก็ตามที่แอปทำตอนเริ่มทำงาน <code>desktop</code> คือที่ที่ผมดูก่อน</p>
+
+<pre><code>hermes logs desktop                  # แอป Electron: การบูต, spawn backend, Python traceback
+hermes logs gui -f                   # ตามดูเหตุการณ์ dashboard / TUI-gateway / websocket แบบสด
+hermes logs errors -n 200            # เฉพาะคำเตือนและข้อผิดพลาด 200 บรรทัดล่าสุด
+hermes logs gateway --since 1h       # messaging gateway ชั่วโมงล่าสุด
+hermes logs list                     # ไฟล์ log ทุกไฟล์พร้อมขนาด
+hermes doctor --fix                  # วินิจฉัย config และ dependency แล้วซ่อมเท่าที่ซ่อมได้
+hermes debug share --local           # พิมพ์รายงานลง terminal แทนการอัปโหลด</code></pre>
+
+    <p>เมื่อเทิร์นล้มเหลว Desktop แสดง error card ที่บอกชื่อชั้นที่ล้มเหลว — provider, custom endpoint, streaming, การยืนยันตัวตน, การเรียกเก็บเงิน, gateway, local runtime หรือดิสก์ — พร้อมปุ่มที่เข้ากับอาการ: <strong>Retry</strong>, <strong>Switch provider</strong>, <strong>Open logs</strong> (บนการเชื่อมต่อ remote หรือ Cloud ปุ่มจะอ่านว่า <strong>Open Desktop logs</strong> เพราะ log ของ agent อยู่ที่เครื่องโน้น), <strong>Send diagnostics</strong> และ <strong>Copy error details</strong><sup><a href="#th-ref-2">[2]</a></sup> Send diagnostics เป็น opt-in ทุกครั้ง: มันขอความยินยอมอย่างชัดเจน อัปโหลด bundle ที่ redact แล้วผ่าน pipeline เดียวกับ <code>hermes debug share --nous</code> ดูได้เฉพาะพนักงาน Nous ลบตัวเองหลัง 14 วัน และให้ลิงก์ส่วนตัวไว้แปะใน support thread ของคุณ บนการเชื่อมต่อ remote ฝั่ง backend จะห่อ log ของตัวเอง และ log ของ Desktop ฝั่งคุณจะแนบไปด้วยกัน<sup><a href="#th-ref-2">[2]</a></sup> ถ้าอยากเห็นว่าอะไรออกจากเครื่องของคุณ <code>hermes debug share --local</code> พิมพ์รายงานเดียวกันลง terminal การอัปโหลดถูก redact โดยค่าเริ่มต้น และ <code>--no-redact</code> มีอยู่ด้วยเหตุผลที่ผมไม่เคยต้องใช้<sup><a href="#th-ref-4">[4]</a></sup></p>
+
+    <p>ไม่มีอะไรในหัวข้อนี้เป็นการอัปโหลดเบื้องหลัง bundle เกิดขึ้นก็ต่อเมื่อคุณกดปุ่มและยืนยันในกล่องขอความยินยอมเท่านั้น เอกสารบรรยายมันเป็นการกระทำที่ชัดแจ้ง ไม่ใช่ telemetry<sup><a href="#th-ref-2">[2]</a></sup></p>
+
+    <blockquote><strong>💡 bug กับช่องโหว่ไปคนละประตู:</strong> ของที่ crash ไปใน diagnostics bundle หรือ issue สาธารณะ ช่องโหว่ไม่ใช่ นโยบายความปลอดภัยขอให้รายงานเป็นการส่วนตัวผ่าน GitHub Security Advisories หรือ <code>security@nousresearch.com</code> บอกด้วยตัวหนาว่าอย่าเปิด issue สาธารณะสำหรับมัน และไม่มี bug bounty และกำหนดกรอบ coordinated disclosure ไว้ที่ 90 วัน หรือจนกว่าจะออกตัวแก้ แล้วแต่อะไรมาก่อน<sup><a href="#th-ref-8">[8]</a></sup></blockquote>
+
+    <h2 id="th-update-uninstall">7. Update และ uninstall สามระดับ</h2>
+
+    <p>แอปตรวจหา update เบื้องหลังและเสนอ update แบบคลิกเดียวเมื่อพร้อม เมื่อมีเป้าหมาย update มากกว่าหนึ่ง — remote gateway หรือหลาย gateway ที่ลงทะเบียนไว้ — ปุ่ม update ทุกปุ่ม (<strong>Update now</strong> บนแผง About, <code>⌘K</code> → <strong>Update Hermes</strong>, toast แจ้งว่า update พร้อม) จะ update ทั้งหมดตามลำดับตายตัว: backend ที่ต่ออยู่ก่อน แล้วจึงทุก gateway ที่ลงทะเบียนและเข้าเกณฑ์ (รายการ Hermes Cloud ถูกข้ามเพราะแพลตฟอร์มดูแลให้) และแอป desktop เองเป็นตัวสุดท้าย เพราะการ update ฝั่ง client ทำให้แอปเปิดใหม่ หลัง update backend ใดก็ตาม แอปจะตรวจเวอร์ชันของตัวเองซ้ำและเสนอ <strong>Update desktop app</strong> ถ้า GUI ตามหลัง<sup><a href="#th-ref-2">[2]</a></sup></p>
+
+    <h3>update อย่างปลอดภัย ตามลำดับ</h3>
+
+    <ol>
+        <li><code>hermes update --check</code> — fetch แล้วเทียบกับ <code>origin/main</code> ไม่มีอะไรถูกแก้ และไม่มี gateway ถูก restart<sup><a href="#th-ref-5">[5]</a></sup></li>
+        <li><code>hermes update --plan</code> — พิมพ์สิ่งที่จะเกิด: ชนิดการติดตั้ง ทุก service ของ Hermes ที่รันอยู่พร้อม supervisor และเวอร์ชันที่กำลังรัน และแต่ละตัวจะถูก restart อย่างไร <code>hermes serve</code> ที่เปิดด้วยมือเพื่อรองรับ Desktop ระยะไกลก็โผล่ที่นี่ด้วย พร้อม bind address ที่บันทึกไว้ การ update จะหยุดมันก่อนสลับโค้ด แล้วเปิดใหม่บน host และพอร์ตเดิม Desktop จึงเชื่อมต่อใหม่ได้แทนที่จะถูกทิ้งค้าง<sup><a href="#th-ref-5">[5]</a></sup></li>
+        <li>ตัดสินใจเรื่อง backup snapshot ก่อน update ค่าเริ่มต้นคือ <code>quick</code> — ข้อมูล pairing, cron jobs, <code>config.yaml</code>, <code>.env</code>, <code>auth.json</code> และ state ตอนรันอื่น ๆ ถ่ายรายโปรไฟล์ สำหรับเครื่องที่คุณให้ความสำคัญ รัน <code>hermes update --backup</code> เพื่อ zip <code>HERMES_HOME</code> ทั้งก้อน หรือตั้ง <code>updates.pre_update_backup: full</code> ครั้งเดียว<sup><a href="#th-ref-5">[5]</a></sup></li>
+        <li>บน Windows ปิด Hermes Desktop ก่อน <code>hermes update</code> ปฏิเสธถ้ามี <code>hermes.exe</code> ตัวอื่นถือไฟล์ executable ของ venv ค้างอยู่ — ส่วนใหญ่คือ backend ที่ Desktop spawn ไว้ — และ guard ตัวที่สองปฏิเสธที่จะแตะ venv ขณะมี process ใดรันจาก interpreter ของมัน ตัวนั้น <code>--force</code> ข้ามไม่ได้<sup><a href="#th-ref-5">[5]</a></sup></li>
+        <li>ทีนี้กด <strong>Update now</strong> ใน About (หรือ <code>⌘K</code> → <strong>Update Hermes</strong>) ตัว update ของ Desktop รัน <code>hermes update --keep-stash</code>: การแก้ source ในเครื่องถูก stash และไม่ถูกนำกลับมาใช้เอง log จะพิมพ์คำสั่ง <code>git stash apply</code> ที่ตรงเป๊ะไว้ให้เอาคืน คาดว่าแอปจะเปิดใหม่เป็นลำดับสุดท้าย<sup><a href="#th-ref-5">[5]</a></sup></li>
+        <li>ตรวจสอบ <code>hermes --version</code> แล้วดู <code>~/.hermes/logs/update_receipts/latest.json</code> ซึ่งบันทึกแผน แต่ละขั้น สิ่งที่ถูกข้ามและเพราะอะไร และตารางเวอร์ชันสุดท้ายของทั้ง fleet — gateway ที่ยังรันโค้ดก่อน update ทำให้รอบนั้นล้มเหลวพร้อมคำสั่ง restart ที่ตรงเป๊ะ ถ้าการ rebuild Desktop ล้มเหลว คุณจะเห็น <code>⚠ Update partially complete</code> แอปตัวเดิมไม่ถูกแตะ และ <code>hermes desktop</code> จะลอง rebuild อีกครั้ง<sup><a href="#th-ref-5">[5]</a></sup></li>
+        <li>ถ้าเวอร์ชันใหม่แย่กว่า ถอยกลับ: ใน checkout <code>git checkout &lt;commit-hash&gt;</code> แล้ว <code>uv pip install -e ".[all]"</code> restart gateway และรัน <code>hermes config check</code> เพื่อจับ option ที่เวอร์ชันเก่าไม่รู้จัก<sup><a href="#th-ref-5">[5]</a></sup></li>
+    </ol>
+
+<pre><code>hermes update --check      # ผมตามหลัง origin/main ไหม? — ไม่เปลี่ยนอะไร
+hermes update --plan       # อะไรจะถูก restart และอย่างไร
+hermes update --backup     # zip HERMES_HOME ทั้งก้อนก่อน แล้วค่อย update
+hermes --version
+cat ~/.hermes/logs/update_receipts/latest.json
+
+# ถอยกลับ จาก checkout
+cd ~/.hermes/hermes-agent
+git log --oneline -10
+git checkout &lt;commit-hash&gt;
+uv pip install -e ".[all]"
+hermes gateway restart
+hermes config check</code></pre>
+
+    <div class="alert info">
+        <strong>Fleet:</strong> <strong>Settings → Gateways → Update all instances</strong> โผล่เมื่อลงทะเบียน connection ไว้มากกว่าหนึ่ง และส่ง <code>hermes update</code> ไปทุก connection ที่เข้าเกณฑ์พร้อมกัน — Local ผ่าน pipeline ของแอปเอง, Remote และ SSH บนเครื่องของมันเอง, Hermes Cloud ถูกข้ามพร้อมข้อความ "Managed by Hermes Cloud" แต่ละ instance รายงานผลแยกกัน และ backend แบบ Docker หรือ Nix ปฏิเสธอย่างสุภาพเป็นรายแถว<sup><a href="#th-ref-3">[3]</a></sup> Docker image update ในที่ไม่ได้เลย: <code>hermes update</code> ปฏิเสธด้วย exit code 2 และพิมพ์ <code>docker pull nousresearch/hermes-agent:latest</code> ให้แทน<sup><a href="#th-ref-5">[5]</a></sup>
+    </div>
+
+    <h3>uninstall สามระดับ</h3>
+
+    <p><strong>Settings → About → Danger zone</strong> เสนอสามระดับ และ terminal ก็มีสามระดับเดียวกัน <strong>Uninstall Chat GUI only</strong> ลบแอป desktop กับข้อมูลของแอปเอง agent, config และแชตของคุณยังอยู่ <strong>Uninstall GUI + agent, keep my data</strong> ลบแอปและ agent แต่เก็บ config, แชต และ secret ไว้สำหรับติดตั้งใหม่ <strong>Uninstall everything</strong> ลบแอป agent และข้อมูลผู้ใช้ทั้งหมด แอปจะปิดตัวเองเพื่อทำงานให้เสร็จ เพราะการล้างต้องลบ bundle ที่กำลังรันและ venv ของมันเอง และบน client แบบ GUI อย่างเดียวที่ต่อกับ backend ระยะไกล สองตัวเลือกที่ลบ agent จะถูกซ่อน<sup><a href="#th-ref-2">[2]</a></sup></p>
+
+<pre><code>hermes uninstall --gui --dry-run   # พิมพ์ว่าจะลบอะไร ไม่เปลี่ยนอะไร
+hermes uninstall --gui             # เฉพาะแอป desktop กับ userData ของมัน — agent, config, แชตยังอยู่
+hermes uninstall                   # GUI + agent; ~/.hermes (config, session, secret) ยังอยู่
+hermes uninstall --full            # ทุกอย่าง รวม ~/.hermes — laptop ที่คุณกำลังจะคืน</code></pre>
+
+    <p>ก่อนทำข้อสุดท้าย <code>hermes backup</code> เก็บ <code>~/.hermes</code> ทั้งก้อนรวม credential ส่วน <code>hermes profile export</code> แพ็กโปรไฟล์เดียวโดยตัด key ออกโดยตั้งใจ — export อย่างเดียวจึงไม่ใช่ backup เต็มรูปแบบ<sup><a href="#th-ref-5">[5]</a></sup> และหมายเหตุสำหรับ source checkout: <code>hermes uninstall --gui</code> ลบ <code>node_modules</code> ของ workspace และ <code>apps/desktop/{dist,release}</code> ไปด้วย ซึ่ง <code>hermes desktop</code> สร้างกลับมาได้<sup><a href="#th-ref-2">[2]</a></sup></p>
+
+    <h2 id="th-summary">8. สรุป — ปิดซีรีส์</h2>
+
+    <p>เมื่อเจ็ดตอนก่อน <a href="/blog/hermes-desktop-install">#1 Install &amp; First Run</a> เปิดด้วยแผนที่ของซีรีส์ — ติดตั้ง, โมเดลบนเครื่อง, โปรไฟล์, สภา, skills กับ MCP, automation และตอนนี้ อ่านย้อนกลับ แผนที่นั้นคือเส้นโค้งของความไว้ใจ: แต่ละตอนมอบอะไรให้ agent เพิ่มขึ้นทีละนิด — โมเดล บุคลิก เครื่องมือ ตารางเวลา — และตอนนี้คือที่ที่คุณตัดสินใจว่าความไว้ใจเหล่านั้นกี่ส่วนถูกบังคับใช้โดยระบบปฏิบัติการ ไม่ใช่โดยความหวัง ตั้งหน้าปัดสามอันก่อนตั้ง cron job ไม่ใช่หลัง</p>
+
+    <p>สิ่งที่ผมจะทำในสัปดาห์นี้ บนเครื่องที่คุณใช้จริง: ใส่ <code>approvals.mode: manual</code> กับ deny rules สองข้อ แล้วกระตุ้นคำสั่งที่ถูกตั้งธงหนึ่งคำสั่งเพื่อดู prompt; เปิด checkpoints ให้โปรเจกต์หนึ่งแล้วรัน <code>/rollback diff</code> หนึ่งครั้ง; รัน <code>hermes update --check</code> และอ่าน <code>desktop.log</code> หนึ่งครั้งตอนที่ยังไม่มีอะไรผิด เพื่อว่าวันที่บางอย่างผิด คุณจะรู้อยู่แล้วว่าปกติหน้าตาเป็นอย่างไร ถ้ามีเครื่องที่สองอยู่ในภาพ ทำให้มันเป็น backend เฉพาะกิจแล้วต่อเข้าไป — จากนั้นทุกอย่างที่ agent แตะจะอยู่ที่นั่น</p>
+
+    <p>ซีรีส์ลงมือทำจบที่นี่ ซีรีส์วิเคราะห์ยังไม่จบ <a href="/blog/hermes-security">#4 Security</a> เป็นเจ้าของ threat model และบันทึกเหตุการณ์ และ <a href="/blog/hermes-desktop-fleet">#10 Desktop &amp; Fleet</a> เป็นเจ้าของสิ่งที่องค์กรต้องมีก่อน laptop ยี่สิบเครื่องจะต่อเข้ากับ backend ตัวเดียว ทุกอย่างข้างบนคือสิ่งที่คนหนึ่งคนทำที่โต๊ะหนึ่งตัว มือข้างละหน้าปัด</p>
+
+    <div class="key-takeaways">
+        <h3>🎯 สิ่งสำคัญที่ต้องจำ</h3>
+        <ul>
+            <li><strong>approvals.mode</strong> = smart (LLM ตัวช่วยคัดกรอง), manual (ถามเสมอ) หรือ off (= <code>--yolo</code>); บริบทที่ไม่มีคนเฝ้าปฏิเสธโดยค่าเริ่มต้น และ prompt ที่ไม่มีคำตอบถูกปฏิเสธหลัง 300 วินาที — fail-closed</li>
+            <li><strong>Hardline blocklist + approvals.deny</strong> = พื้นที่อยู่ใต้ YOLO: รายการที่ฝังมากับโค้ดไม่มี flag ให้ override และ deny rules แบบ fnmatch ของคุณเองถูกถามก่อน YOLO และ <code>mode: off</code></li>
+            <li><strong>YOLO</strong> = หนึ่งคลิกในแถบสถานะ รายการต่อ session มีอีกสามวิธีเขียน (<code>/yolo</code>, <code>hermes --yolo</code>, <code>HERMES_YOLO_MODE=1</code>); มันปิดการตรวจคำสั่งอันตรายทุกอย่าง ยกเว้น blocklist และ deny rules ของคุณ</li>
+            <li><strong>Execution boundary</strong> = <code>terminal.backend</code> ย้าย shell (backend แบบ container ข้ามการตรวจ); Remote gateway ย้าย agent ทั้งตัว — "the gateway host is the execution boundary"</li>
+            <li><strong>Checkpoints</strong> = opt-in ผ่าน <code>checkpoints.enabled: true</code>; shadow git store, หนึ่ง snapshot ต่อไดเรกทอรีต่อเทิร์น และ <code>/rollback &lt;N&gt;</code> กู้ไฟล์และถอนเทิร์นล่าสุดโดยเก็บสิ่งที่คุณแก้เองไว้</li>
+            <li><strong>Remote</strong> = <code>hermes serve --host 0.0.0.0 --port 9119</code> หลัง provider (รหัสผ่านบน VPN เท่านั้น OAuth เมื่อไกลกว่านั้น) แล้ว Settings → Gateways → Add connection → Test → "Reachable"; #40656 ยังเปิดอยู่ ใช้เครื่องเฉพาะกิจ</li>
+            <li><strong>บันไดกู้คืน</strong> = <code>hermes logs desktop</code> → <code>hermes doctor --fix</code> → คำสั่ง reset สองคำสั่ง → Send diagnostics (opt-in, redact แล้ว, 14 วัน) → <code>hermes update --backup</code> → uninstall สามระดับ; <code>--setup-tcc-identity</code> รักษาสิทธิ์ macOS ข้ามการ rebuild</li>
+            <li><strong>ช่องโหว่ไปทางส่วนตัว</strong> = GitHub Security Advisories หรือ security@nousresearch.com ไม่ใช่ issue สาธารณะ; ไม่มี bug bounty</li>
+        </ul>
+    </div>
+
+    <section class="references" aria-labelledby="th-references">
+        <h2 id="th-references">อ้างอิง</h2>
+        <p class="references__note">ทุกแหล่งอ้างอิงตรวจสอบและเข้าถึงเมื่อ 7 กันยายน 2569 (2026-09-07) ซีรีส์นี้ใช้ป้ายกำกับหลักฐานสี่แบบ — <strong>Docs</strong> เอกสารทางการของ Hermes Agent · <strong>Release</strong> บันทึกการออกรุ่นหรือ commit/PR ที่ merge แล้ว · <strong>Issue</strong> issue หรือ PR ที่ยังเปิดอยู่ · <strong>Community</strong> แหล่งจากชุมชนที่ไม่ใช่ทางการ</p>
+        <ol class="references__list">
+            <li id="th-ref-1"><span class="ref-tag ref-tag--standard">Docs</span> Nous Research. <cite>Security</cite> — Hermes Agent User Guide. <a href="https://hermes-agent.nousresearch.com/docs/user-guide/security">hermes-agent.nousresearch.com</a> — เข้าถึง 2026-09-07. <span class="ref-supports">รองรับ: บล็อก <code>approvals:</code> ที่ยกมาตรง ๆ และตารางคีย์ของมัน; พฤติกรรมของ smart / manual / off; ค่าเริ่มต้นของบริบทไม่มีคนเฝ้า <code>cron_mode</code>, <code>single_query_mode</code>, <code>unattended_mode</code>; timeout 300 วินาทีแบบ fail-closed; สามวิธีเปิด YOLO กับแบนเนอร์และชิ้นส่วนในแถบสถานะ; hardline blocklist สิ่งที่มันรอด และการไม่มี flag ให้ override; ความหมายของ <code>approvals.deny</code> และ pattern ตัวอย่างสามข้อ; prompt ขออนุมัติของ CLI พร้อม once / session / always / deny; หมายเหตุเรื่อง container bypass; <code>hermes approvals suggest</code>; path ที่ห้ามเขียนและ <code>HERMES_WRITE_SAFE_ROOT</code>; ตารางเปรียบเทียบ terminal backend ที่อยู่เบื้องหลังค่าเจ็ดค่าของ <code>terminal.backend</code></span></li>
+            <li id="th-ref-2"><span class="ref-tag ref-tag--standard">Docs</span> Nous Research. <cite>Hermes Desktop</cite> — Hermes Agent User Guide. <a href="https://hermes-agent.nousresearch.com/docs/user-guide/desktop">hermes-agent.nousresearch.com</a> — เข้าถึง 2026-09-07. <span class="ref-supports">รองรับ: ปุ่ม YOLO รายการต่อ session ในแถบสถานะ; Safety ในรายการหน้า settings รายโปรไฟล์และแถวชิป Applies to; ขั้นตอน update และลำดับของมัน; uninstall สามระดับและป้ายใน Danger zone; สูตร remote backend (บล็อก <code>.env</code>, <code>hermes serve --host 0.0.0.0 --port 9119</code>, การตรวจสถานะด้วย <code>curl</code>, Sign in และ Save and reconnect, <code>HERMES_DESKTOP_REMOTE_URL</code>, คำแนะนำเรื่อง VPN และ Tailscale, OAuth ผ่าน <code>hermes dashboard register</code>); ปุ่มบน error card และเงื่อนไขของ Send diagnostics; <code>desktop.log</code>; คำสั่ง reset สามคำสั่ง; การแก้ SSH host key; การแก้การดาวน์โหลด Electron และ <code>ELECTRON_MIRROR</code>; หัวข้อ TCC การแก้ลายเซ็นแบบปักด้วย identifier (PR #73681) กับสิทธิ์เก่าที่ปักด้วย cdhash ซึ่งมันทิ้งไว้ <code>hermes desktop --setup-tcc-identity</code> และ <code>tccutil reset</code></span></li>
+            <li id="th-ref-3"><span class="ref-tag ref-tag--standard">Docs</span> Nous Research. <cite>Connecting Desktop to Many Hermes Instances</cite> — Hermes Agent User Guide. <a href="https://hermes-agent.nousresearch.com/docs/user-guide/multi-connection-desktop">hermes-agent.nousresearch.com</a> — เข้าถึง 2026-09-07. <span class="ref-supports">รองรับ: สามประตูสู่ Settings → Gateways; ขั้นตอนและช่องของ Add connection (ชื่ออุปกรณ์ที่ไม่ซ้ำ, Gateway URL, Session token หรือ OAuth, ช่อง SSH รูป <code>user@host:22</code> และ token ที่รับมา); Test และ toast "Reachable"; ความหมายของ Primary; ตัวเลือก gateway และขอบเขต <code>(gateway, profile)</code>; Update all instances และพฤติกรรมรายชนิด; แถว troubleshooting</span></li>
+            <li id="th-ref-4"><span class="ref-tag ref-tag--standard">Docs</span> Nous Research. <cite>CLI Commands</cite> — Hermes Agent Reference. <a href="https://hermes-agent.nousresearch.com/docs/reference/cli-commands">hermes-agent.nousresearch.com</a> — เข้าถึง 2026-09-07. <span class="ref-supports">รองรับ: ชื่อและไฟล์ทั้งห้าของ <code>hermes logs</code> อาร์กิวเมนต์ <code>list</code> และตัวเลือก <code>-n</code>, <code>-f</code>, <code>--since</code>; <code>hermes doctor --fix</code>; <code>hermes debug share</code> และ flag <code>--nous</code>, <code>--local</code>, <code>--no-redact</code>; flag ของ <code>hermes uninstall</code> รวมถึง <code>--dry-run</code></span></li>
+            <li id="th-ref-5"><span class="ref-tag ref-tag--standard">Docs</span> Nous Research. <cite>Updating &amp; Uninstalling</cite> — Hermes Agent Getting Started. <a href="https://hermes-agent.nousresearch.com/docs/getting-started/updating">hermes-agent.nousresearch.com</a> — เข้าถึง 2026-09-07. <span class="ref-supports">รองรับ: ขั้นตอน update, snapshot แบบ quick ก่อน update และเนื้อหาของมัน, การ rebuild desktop แบบ stage-and-swap และ <code>⚠ Update partially complete</code>, การเปิดใหม่ของ <code>hermes serve</code> ที่เปิดด้วยมือบน host และพอร์ตเดิม; <code>--check</code>, <code>--plan</code>, <code>--backup</code> และ <code>updates.pre_update_backup</code>; ใบเสร็จการ update; guard สองตัวบน Windows และ <code>--force-venv</code>; <code>--keep-stash</code> ในตัว update ของ Desktop; คำสั่งถอยกลับและ <code>hermes config check</code>; การปฏิเสธของ Docker และ exit code; <code>hermes backup</code> เทียบกับ <code>hermes profile export</code></span></li>
+            <li id="th-ref-6"><span class="ref-tag ref-tag--standard">Docs</span> Nous Research. <cite>Checkpoints and /rollback</cite> — Hermes Agent User Guide. <a href="https://hermes-agent.nousresearch.com/docs/user-guide/checkpoints-and-rollback">hermes-agent.nousresearch.com</a> — เข้าถึง 2026-09-07. <span class="ref-supports">รองรับ: checkpoints เป็น opt-in และปิดโดยค่าเริ่มต้น; <code>checkpoints.enabled: true</code> และ <code>hermes chat --checkpoints</code>; คีย์ config และค่าเริ่มต้น; path ของ shadow store; ตัวกระตุ้นและกฎหนึ่งครั้งต่อไดเรกทอรีต่อเทิร์น; รูปแบบคำสั่ง <code>/rollback</code>; snapshot ก่อนกู้; ledger การเขียนของ agent และการรักษาสิ่งที่แก้ด้วยมือ; guard ด้านความปลอดภัย; คำสั่งย่อยของ <code>hermes checkpoints</code></span></li>
+            <li id="th-ref-7"><span class="ref-tag ref-tag--standard">Docs</span> Nous Research. <cite>Hermes Web Dashboard</cite> — Hermes Agent User Guide. <a href="https://hermes-agent.nousresearch.com/docs/user-guide/features/web-dashboard">hermes-agent.nousresearch.com</a> — เข้าถึง 2026-09-07. <span class="ref-supports">รองรับ: การไล่ close code ของ <code>/api/ws</code> — 4403 (chat WebSocket ถูก request guard ปฏิเสธ เช่น Host/peer ไม่ตรง) และ 4401 (ticket ของ WebSocket ยืนยันตัวตนไม่ผ่าน) — อ่านจาก <code>desktop.log</code> ที่ใหม่</span></li>
+            <li id="th-ref-8"><span class="ref-tag ref-tag--standard">Docs</span> Nous Research. <cite>SECURITY.md — Hermes Agent Security Policy</cite>. <a href="https://github.com/NousResearch/hermes-agent/blob/main/SECURITY.md">github.com/NousResearch/hermes-agent</a> — เข้าถึง 2026-09-07. <span class="ref-supports">รองรับ: การรายงานส่วนตัวผ่าน GitHub Security Advisories หรือ security@nousresearch.com คำสั่งห้ามเปิด issue สาธารณะ การไม่มี bug bounty และกรอบ coordinated disclosure 90 วัน; ประโยค "The only security boundary against an adversarial LLM is the operating system"; ชั้น approval และการ redact ที่ถูกเรียกว่า heuristic; สิ่งที่ terminal-backend isolation กักได้และกักไม่ได้</span></li>
+            <li id="th-ref-9"><span class="ref-tag ref-tag--standard">Docs</span> Nous Research. <cite>apps/desktop/README.md — Hermes Desktop</cite>. <a href="https://github.com/NousResearch/hermes-agent/blob/main/apps/desktop/README.md">github.com/NousResearch/hermes-agent</a> — เข้าถึง 2026-09-07. <span class="ref-supports">รองรับ: ประโยคที่ยกมาว่าในโหมด remote host ของ gateway คือ execution boundary โดยเครื่องมือของ agent คำสั่ง terminal และการทำงานกับไฟล์รันกับ host ของ Hermes ระยะไกล</span></li>
+            <li id="th-ref-10"><span class="ref-tag ref-tag--study">Release</span> Nous Research. <cite>Hermes Agent v0.21.0 (v2026.8.31) — The Pantheon Release</cite>. <a href="https://github.com/NousResearch/hermes-agent/releases/tag/v2026.8.31">github.com/NousResearch/hermes-agent</a> — เผยแพร่ 2026-08-31, เข้าถึง 2026-09-07. <span class="ref-supports">รองรับ: บรรทัดเรื่อง macOS TCC identity และ #95091; การส่งต่อ update แบบ detached และประโยคว่า Windows desktop update ไม่ค้างที่ "Updating Hermes" อีกต่อไป; การกล่าวถึงตัวตรวจคำตัดสิน approval แบบ dry-run; ไฟล์คำสั่ง agent ที่ถูกคุ้มครองและการกวาด redaction ในฐานะบริบท</span></li>
+            <li id="th-ref-11"><span class="ref-tag ref-tag--law">Issue</span> NousResearch/hermes-agent. <cite>#89675 — Desktop: no sessions load for any agent profile after update — backend spawned without --profile</cite>. <a href="https://github.com/NousResearch/hermes-agent/issues/89675">github.com/NousResearch/hermes-agent</a> — เปิด 2026-08-19, ปิดในสถานะ completed 2026-08-23, เข้าถึง 2026-09-07. <span class="ref-supports">รองรับ: แถวในตารางเรื่อง session หายหลัง update — ป้าย P1, regression ใน v0.20.4, backend ที่ไม่มีโปรไฟล์ และทางเลี่ยงด้วย web dashboard ของผู้รายงาน</span></li>
+            <li id="th-ref-12"><span class="ref-tag ref-tag--law">Issue</span> NousResearch/hermes-agent. <cite>#88275 — [desktop] Renderer process burns 40-70% CPU at idle since early August — thermal throttling on macOS Intel</cite>. <a href="https://github.com/NousResearch/hermes-agent/issues/88275">github.com/NousResearch/hermes-agent</a> — เปิด 2026-08-17, ยังเปิดอยู่, เข้าถึง 2026-09-07. <span class="ref-supports">รองรับ: แถวในตารางเรื่อง renderer กิน CPU ตอนว่าง — MacBook Pro 2019, v0.20.2, ตัวเลข 40–73 %, ป้าย P2 และทางบรรเทาบางส่วน <code>desktop.disable_gpu=true</code> ของผู้รายงาน</span></li>
+            <li id="th-ref-13"><span class="ref-tag ref-tag--law">Issue</span> NousResearch/hermes-agent. <cite>#40656 — Desktop remote gateway can destabilize self-hosted host when used concurrently with TUI/gateway</cite>. <a href="https://github.com/NousResearch/hermes-agent/issues/40656">github.com/NousResearch/hermes-agent</a> — เปิด 2026-06-06, ยังเปิดอยู่, เข้าถึง 2026-09-07. <span class="ref-supports">รองรับ: คำเตือนในหัวข้อ 4 — P3 หนึ่งความเห็น และ TUI กับสถานะ MCP ที่ไม่น่าเชื่อถือของผู้รายงานขณะ Desktop ต่ออยู่กับ host เดียวกัน</span></li>
+            <li id="th-ref-14"><span class="ref-tag ref-tag--synthesis">Community</span> Kudryk, Igor. <cite>Full Guide to Hermes Agent Desktop App (best way to run Hermes?)</cite>. <a href="https://www.youtube.com/watch?v=QxotQWwB7ws">youtube.com</a> — YouTube, เข้าถึง 2026-09-07. <span class="ref-supports">รองรับ: มุมมองของผู้ใช้จริงในหัวข้อ 2 ว่า SSH execution backend ย้ายเฉพาะ terminal ขณะที่คำขอไปยังโมเดลยังออกจาก laptop — ถอดความ ไม่ได้ยกคำพูด; ข้ออ้างเชิงเทคนิคเองอิง [8]</span></li>
+        </ol>
+    </section>
+    </div>
+
+    <div class="l-en" lang="en">
+
+    <p>🤔 <strong>If the agent you installed six posts ago ran a recursive delete on the wrong directory at two in the morning — what, exactly, would have stopped it? And if the app refused to open the next morning, where would you look first?</strong></p>
+
+    <p>The previous post, <a href="/blog/hermes-desktop-automation">#6 Automation &amp; Agents</a>, left you with an agent that works while you are away — cron jobs, Bot Mode routines, subagents steered mid-flight. An agent that works unattended is precisely the one that needs three things it did not need on day one: a guardrail it cannot talk its way past, a clear answer to "which machine is this command running on", and a way back when something breaks.</p>
+
+    <p>The one-line answer: three dials — the approvals mode, the write guards and hardline blocklist, and the execution boundary — plus a recovery ladder that starts at <code>hermes logs desktop</code> and ends at three uninstall scopes. This is the last post of the series and the hands-on counterpart of <a href="/blog/hermes-security">#4 Security</a>: that post owns the threat model; this one owns what you click, type and check.</p>
+
+    <h2 id="en-three-dials">1. Three Dials That Keep a Desktop Agent Safe</h2>
+
+    <p>A desktop agent is kept safe by three settings you can name. <code>approvals.mode</code> — <code>smart</code>, <code>manual</code> or <code>off</code> — decides whether a human sees a dangerous command before it runs. The write guards and the hardline blocklist refuse a small set of things regardless of that mode. And the execution boundary decides which machine actually runs the command. Every other control on the Safety page is a refinement of one of those three.<sup><a href="#en-ref-1">[1]</a></sup></p>
+
+    <figure class="figure">
+      <a href="../images/hermes-desktop-fig-07-safety-remote-recovery.png">
+        <img class="figure__img" src="../images/hermes-desktop-fig-07-safety-remote-recovery.png" alt="Diagram with a three-position dial reading smart, manual, off at top left, a Desktop box pointing a heavy arrow to a remote-host box at top right, and a four-step row of chips along the bottom from hermes logs desktop to uninstall." width="1400" height="840" loading="lazy" decoding="async">
+      </a>
+      <figcaption class="figure__caption">Figure 1 · The three dials of safety — the approvals mode, the boundary that decides which machine runs a command, and the recovery ladder from logs to the three uninstall scopes.</figcaption>
+    </figure>
+
+    <h3>Dial one — the approvals mode</h3>
+
+    <p>Before a shell command runs, Hermes checks it against a list of dangerous patterns — recursive deletes, <code>chmod 777</code>, <code>mkfs</code>, SQL <code>DROP</code>, piping a download into a shell, killing the gateway, and about thirty more. A match goes to the approval layer, and <code>approvals.mode</code> says what happens there.<sup><a href="#en-ref-1">[1]</a></sup> In <strong>smart</strong> (the default), an auxiliary LLM rates the risk: low-risk commands are auto-approved for that one command, genuinely dangerous ones are auto-denied, and uncertain cases escalate to you. <strong>manual</strong> asks you every time. <strong>off</strong> disables the checks — the docs call it equivalent to running with <code>--yolo</code>.<sup><a href="#en-ref-1">[1]</a></sup></p>
+
+    <p>Two companions matter as much as the mode itself. Headless contexts have their own switch — <code>cron_mode</code>, <code>single_query_mode</code> and <code>unattended_mode</code> all default to <code>deny</code>, so a cron job or a webhook session that trips a dangerous pattern is blocked rather than left waiting for a human who is not there.<sup><a href="#en-ref-1">[1]</a></sup> And the approval prompt has a clock: if nobody answers within <code>timeout</code> (300 seconds by default), the command is denied. The docs' word for that is fail-closed, and it is the property I check first on any machine that holds real credentials.<sup><a href="#en-ref-1">[1]</a></sup></p>
+
+    <h3>Dial two — write guards and the hardline blocklist</h3>
+
+    <p>Some refusals do not depend on the mode at all. <code>write_file</code> and <code>patch</code> are hard-blocked from credential stores — <code>~/.ssh/</code>, <code>~/.aws/</code>, <code>~/.kube/</code>, <code>/etc/sudoers</code>, <code>~/.netrc</code>, Hermes's own <code>auth.json</code> and <code>.env</code>, <code>mcp-tokens/</code>, <code>pairing/</code>, and any <code>.env</code> file anywhere on disk — with no prompt and no override from the chat. If you want a fence rather than a denylist, <code>HERMES_WRITE_SAFE_ROOT</code> limits those two tools to the directories you list.<sup><a href="#en-ref-1">[1]</a></sup> Above that sits the hardline blocklist: <code>rm -rf /</code> and its variants, the bash fork bomb, <code>mkfs</code> on a mounted root device, <code>dd</code> onto a physical disk, and piping an untrusted URL into <code>sh</code>. It trips before the approval layer sees the command, survives <code>--yolo</code>, <code>approvals.mode: off</code>, cron's <code>approve</code> mode and an "allow always" click, and has no override flag.<sup><a href="#en-ref-1">[1]</a></sup></p>
+
+    <p>Between the two is the dial you actually turn: <code>approvals.deny</code>, a list of glob patterns that block matching commands unconditionally — before YOLO and before <code>mode: off</code> are even consulted. The docs describe it as yolo-with-exceptions: let the agent do everything, except these specific things, ever.<sup><a href="#en-ref-1">[1]</a></sup></p>
+
+    <h3>Dial three — the execution boundary</h3>
+
+    <p>The third dial is the one people forget, because it is not on the Safety page. <code>terminal.backend</code> says where shell commands run: <code>local</code> and <code>ssh</code> keep the dangerous-command check on, while <code>docker</code>, <code>singularity</code>, <code>modal</code>, <code>daytona</code> and <code>vercel_sandbox</code> skip it, because the container itself is the boundary.<sup><a href="#en-ref-1">[1]</a></sup> A Remote gateway connection moves further than a backend does. The desktop app's own README states it in one sentence I will quote rather than paraphrase: "In remote mode the gateway host is the execution boundary: agent tools, terminal commands, and file operations run against the remote Hermes host, not the computer displaying the Desktop UI."<sup><a href="#en-ref-9">[9]</a></sup> Section 4 is the procedure for exactly that.</p>
+
+    <blockquote><strong>💡 Where the theory lives:</strong> the repository's security policy names exactly one load-bearing boundary, and §2.2 states it in the sentence that frames all three dials — "The only security boundary against an adversarial LLM is the operating system." The approval gate, redaction and every scanner are named there as heuristics: useful, but not containment.<sup><a href="#en-ref-8">[8]</a></sup> <a href="/blog/hermes-security">#4 Security</a> walks that policy layer by layer and covers the case that hit closest to home for those of us in Thailand — a Hermes instance in YOLO mode, running unattended inside a government network. I will not retell it here; read it there, then come back and turn the dials.</blockquote>
+
+    <h2 id="en-approvals-procedure">2. Procedure — Set Approvals and Deny Rules</h2>
+
+    <p>Set the mode on <strong>Settings → Safety</strong>, add deny rules for the commands you never want to see, leave the 300-second timeout alone so it fails closed, find the YOLO toggle in the status bar so you recognise it when it is on, and then test with a command you know is flagged. One honesty note first: the official docs list Safety among the per-profile settings pages but never describe what it holds, so the steps below name the configuration keys — the page mirrors them.<sup><a href="#en-ref-2">[2]</a></sup></p>
+
+    <ol>
+        <li>Open Settings with <code>Cmd/Ctrl+,</code> and choose <strong>Safety</strong>. With two or more profiles, an <strong>Applies to</strong> chip row appears at the top of the page; the default follows the active profile, and switching the app's active profile resets it, so pick the profile you mean before you touch anything.<sup><a href="#en-ref-2">[2]</a></sup></li>
+        <li>Choose the approval mode — <code>smart</code>, <code>manual</code> or <code>off</code>. My own rule: <code>manual</code> on any machine that holds real credentials until I trust a workflow, <code>smart</code> for everyday work, and <code>off</code> only inside a container I can throw away.<sup><a href="#en-ref-1">[1]</a></sup></li>
+        <li>If you would rather edit the file, the same keys live under <code>approvals:</code> in <code>~/.hermes/config.yaml</code>. Changes take effect immediately — the config cache is keyed on the file's modification time — so no session restart is needed.<sup><a href="#en-ref-1">[1]</a></sup></li>
+        <li>Add deny rules for the things that must never run, whatever the mode. Quote every pattern — a bare leading <code>*</code> is a YAML alias and fails to parse — and remember they match case-insensitively against the whole command text and apply to host-reaching backends only.<sup><a href="#en-ref-1">[1]</a></sup></li>
+        <li>Leave <code>timeout: 300</code>. When a prompt goes unanswered for that long, the command is denied; a lower number makes a walk to the coffee machine safer, not riskier.<sup><a href="#en-ref-1">[1]</a></sup></li>
+        <li>Find the YOLO toggle. It sits in the status bar along the bottom of the chat, and it is per session — "flip YOLO on or off for just this session (matching the TUI)".<sup><a href="#en-ref-2">[2]</a></sup> The same switch has three other spellings: <code>/yolo</code> in the chat, <code>hermes --yolo</code> at launch, or <code>HERMES_YOLO_MODE=1</code> in the environment. When it is on the toggle prints <code>⚡ YOLO mode ON — all commands auto-approved. Use with caution.</code>, every later session opens with the red banner <code>⚠ YOLO mode — all approval prompts bypassed</code>, and a <code>⚠ YOLO</code> fragment sits in the status bar until you turn it off.<sup><a href="#en-ref-1">[1]</a></sup></li>
+        <li>Test it — in <code>manual</code> mode, because <code>smart</code> may judge a scratch-directory delete low-risk and wave it through. Ask the agent to delete a scratch directory recursively; <code>rm -rf /tmp/hermes-test</code> is a recursive delete, one of the flagged patterns. Watch for the approval prompt: the pattern name, the exact command, and the four choices <strong>once</strong>, <strong>session</strong>, <strong>always</strong>, <strong>deny</strong>. The docs show the CLI rendering; the Desktop presents the same decision. If the command ran without asking, YOLO is on or the mode is <code>off</code>.<sup><a href="#en-ref-1">[1]</a></sup> (v0.21.0's release notes list a dry-run approval checker for the CLI, but it is not in the CLI reference yet, so I test in the chat.<sup><a href="#en-ref-10">[10]</a></sup>)</li>
+        <li>Optional: after a few weeks, run <code>hermes approvals suggest</code>. It mines approved commands from the session database into allowlist proposals, applies nothing unless you pass <code>--apply</code>, and never proposes a destructive class — <code>rm -rf build/</code> approved a hundred times still yields no <code>rm</code> entry.<sup><a href="#en-ref-1">[1]</a></sup></li>
+    </ol>
+
+    <p>The <code>approvals:</code> block, verbatim from the Security page:</p>
+
+<pre><code># ~/.hermes/config.yaml
+approvals:
+  mode: smart                     # smart | manual | off
+  timeout: 300                    # seconds to wait for user response (default: 300)
+  cron_mode: deny                 # deny | approve — what cron jobs do when they hit a dangerous command
+  single_query_mode: deny         # deny | approve — what single-query (-q) sessions do on a dangerous command
+  unattended_mode: deny           # deny | approve — what webhook/API sessions do on a dangerous command
+  mcp_reload_confirm: true        # /reload-mcp asks before invalidating the MCP tool cache
+  destructive_slash_confirm: true # /clear, /new, /reset, /undo prompt before discarding state</code></pre>
+
+    <p>And the deny rules, using the docs' own three examples:</p>
+
+<pre><code># ~/.hermes/config.yaml — consulted before --yolo, /yolo and approvals.mode: off
+approvals:
+  deny:
+    - "git push --force*"
+    - "*curl*|*sh*"
+    - "dd if=* of=/dev/*"</code></pre>
+
+    <div class="alert danger">
+        <strong>YOLO disables every dangerous-command safety check for that session:</strong> the docs say it in bold — "YOLO mode disables all dangerous command safety checks for the session — except the hardline blocklist." Your <code>approvals.deny</code> rules are the one other thing that survives it, because they are consulted first. It is per session, it is one click in the status bar, and it is the switch #4 documents being used unattended inside a real network. Never turn it on where the agent can reach credentials you would mind losing.<sup><a href="#en-ref-1">[1]</a></sup>
+    </div>
+
+    <h3>The execution backend</h3>
+
+    <p>The third dial is set in <code>~/.hermes/config.yaml</code> under <code>terminal.backend</code>. I could find no Desktop page that documents a control for it, so I edit the file and start a new session afterwards. The seven values are the ones in the Security page's comparison table:<sup><a href="#en-ref-1">[1]</a></sup></p>
+
+<pre><code># ~/.hermes/config.yaml
+terminal:
+  backend: docker    # local | ssh | docker | singularity | modal | daytona | vercel_sandbox
+                     # local and ssh keep the dangerous-command check; the other five skip it</code></pre>
+
+    <div class="alert">
+        <strong>A backend relocates the shell, not the agent:</strong> the security policy is precise about what a non-default backend confines — "anything the agent does by issuing shell or file operations" — and what it does not: "everything the agent does in its own Python process", including the code-execution tool, MCP subprocesses and plugins.<sup><a href="#en-ref-8">[8]</a></sup> A practitioner walkthrough of the Desktop puts the same point in plainer words: with the SSH backend you have outsourced your terminal to the VPS, but the requests to the model provider still leave from your laptop.<sup><a href="#en-ref-14">[14]</a></sup> To move the whole agent — tools, files, credentials and model calls — you attach the Desktop to a remote gateway instead, which is section 4.
+    </div>
+
+    <h2 id="en-checkpoints">3. Checkpoints and /rollback — a Way Back Before You Need One</h2>
+
+    <p>Checkpoints are the agent's undo for the filesystem, and they are <strong>opt-in</strong>: the default is off, because the shadow store costs disk over time and most users never type <code>/rollback</code>. Turn them on with <code>checkpoints.enabled: true</code> in <code>config.yaml</code> (or <code>hermes chat --checkpoints</code> for one CLI session), and Hermes snapshots the project before <code>write_file</code>, <code>patch</code> and destructive shell commands; <code>/rollback &lt;N&gt;</code> restores the files and undoes the last conversation turn so the agent's context matches the disk again.<sup><a href="#en-ref-6">[6]</a></sup></p>
+
+<pre><code># ~/.hermes/config.yaml — opt-in; the shadow store lives in ~/.hermes/checkpoints/store/
+checkpoints:
+  enabled: true
+  max_snapshots: 20           # per project
+  max_total_size_mb: 500      # oldest commits are dropped past this
+  max_file_size_mb: 10        # larger files are skipped, not snapshotted</code></pre>
+
+    <p>The mechanics are worth thirty seconds, because they explain the limits. Every project shares one bare git repository under <code>~/.hermes/checkpoints/store/</code> — your real <code>.git</code> is never touched — and the agent takes at most one checkpoint per directory per turn. Triggers are the file tools plus <code>rm</code>, <code>rmdir</code>, <code>cp</code>, <code>install</code>, <code>mv</code>, <code>sed -i</code>, <code>truncate</code>, <code>dd</code>, <code>shred</code>, output redirects and <code>git reset</code>/<code>clean</code>/<code>checkout</code>. Directories over 50,000 files and the root and home directories are skipped, and if <code>git</code> is not on <code>PATH</code>, checkpoints silently disable themselves.<sup><a href="#en-ref-6">[6]</a></sup></p>
+
+<pre><code>/rollback                 # list checkpoints with change stats
+/rollback diff 1          # preview what changed since checkpoint 1 — do this first
+/rollback 1               # restore checkpoint 1, keeping your own hand-edits
+/rollback 1 --all         # full restore, overwriting your hand-edits too
+/rollback 1 src/app.py    # restore a single file
+hermes checkpoints        # store size, project count, per-project breakdown
+hermes checkpoints prune  # sweep orphans and enforce the size cap</code></pre>
+
+    <p>Two details make this safer than it sounds. A restore first takes a pre-rollback snapshot, so you can undo the undo. And <code>/rollback &lt;N&gt;</code> restores only the files Hermes itself wrote — every successful write records a content hash in an agent-write ledger, and a file you edited afterwards is skipped and listed, unless you add <code>--all</code>.<sup><a href="#en-ref-6">[6]</a></sup> The checkpoints page documents <code>/rollback</code> as an in-session slash command and shows the CLI's output; the Desktop chat is a session on the same backend, and I found nothing that says it behaves differently there — so type it in the chat.</p>
+
+    <div class="alert info">
+        <strong>What a checkpoint is not:</strong> it snapshots the project the agent is editing, not <code>~/.hermes</code>. Config, sessions, keys and skills are protected by a different mechanism — the pre-update snapshot and <code>hermes update --backup</code> in section 7.<sup><a href="#en-ref-5">[5]</a></sup>
+    </div>
+
+    <h2 id="en-remote-procedure">4. Procedure — Attach the Desktop to a Hermes on Another Machine</h2>
+
+    <p>On the host, put an auth provider in place and run <code>hermes serve --host 0.0.0.0 --port 9119</code>; binding to a non-loopback address engages the auth gate, so a backend without a provider does not simply open up. In the Desktop, <strong>Settings → Gateways → Add connection</strong>, pick <strong>Remote gateway</strong> (URL plus a session token or Nous Portal OAuth) or <strong>SSH</strong> (your key; the app opens the tunnel and adopts a dashboard token), press <strong>Test</strong>, then open a session — and remember that from that moment every command runs on that host.<sup><a href="#en-ref-2">[2]</a></sup><sup><a href="#en-ref-3">[3]</a></sup></p>
+
+    <h3>On the host</h3>
+
+    <ol>
+        <li>Choose the provider by where the host lives. Username/password is for a trusted LAN or a VPN such as Tailscale only; for anything reachable beyond your own machine the docs prefer OAuth through Nous Portal — register the backend with <code>hermes dashboard register</code> and sign in from the app with "Sign in with Nous Research". A self-hosted OIDC provider works the same way.<sup><a href="#en-ref-2">[2]</a></sup></li>
+        <li>For the username/password path, append the three variables to <code>~/.hermes/.env</code> exactly as the docs show, then start the backend. Keep it under <code>systemd</code> or <code>tmux</code>: the app attaches to it and never starts it for you, and a messaging gateway is a separate process you run beside it.<sup><a href="#en-ref-2">[2]</a></sup></li>
+        <li>Verify the gate before you hand the URL to anyone. <code>curl</code> the status endpoint from your laptop: it should print <code>true</code> and include <code>"basic"</code> (or your OAuth provider).<sup><a href="#en-ref-2">[2]</a></sup></li>
+    </ol>
+
+<pre><code># on the remote host
+cat &gt;&gt; ~/.hermes/.env &lt;&lt;'EOF'
+HERMES_DASHBOARD_BASIC_AUTH_USERNAME=admin
+HERMES_DASHBOARD_BASIC_AUTH_PASSWORD=choose-a-strong-password
+# Recommended: a stable signing secret so sessions survive restarts.
+# Without it a random key is generated per boot and you'll be logged out
+# on every restart.
+HERMES_DASHBOARD_BASIC_AUTH_SECRET=$(openssl rand -base64 32)
+EOF
+chmod 600 ~/.hermes/.env
+
+# the non-loopback bind engages the auth gate
+hermes serve --host 0.0.0.0 --port 9119
+
+# from your laptop: is the gate really on?
+curl -s http://&lt;host&gt;:9119/api/status | jq '.auth_required, .auth_providers'</code></pre>
+
+    <h3>In the Desktop</h3>
+
+    <ol>
+        <li>Open <strong>Settings → Gateways</strong> (<code>Cmd/Ctrl+,</code>, then Gateways; or the plug button at the right end of the profile rail, "Connect another Hermes gateway…"; or <code>Cmd/Ctrl+K</code> and type <em>Gateways</em>). Scroll to <strong>Registered gateways</strong> and click <strong>Add connection</strong>.<sup><a href="#en-ref-3">[3]</a></sup></li>
+        <li>Pick the kind. <strong>Remote gateway</strong>: a unique device name (up to 64 characters, unique case-insensitively), the Gateway URL of the running backend such as <code>http://homelab.lan:9119</code>, and <strong>Session token</strong> or <strong>OAuth</strong>. <strong>SSH</strong>: the name plus one composite field in <code>user@host:22</code> form; your SSH key is used, and the app opens the tunnel, starts the dashboard on the far side and adopts a dashboard token over it.<sup><a href="#en-ref-3">[3]</a></sup></li>
+        <li>Click <strong>Save connection</strong>, then <strong>Test</strong> on the new row. Test probes both the HTTP and the WebSocket leg, so the "Reachable" toast means chat will actually work — not merely that the host pinged.<sup><a href="#en-ref-3">[3]</a></sup></li>
+        <li>Optionally <strong>Make primary</strong>. Primary is the registry's fallback for multi-gateway calls that do not name a gateway; it does not switch the current Sessions workspace, and if you remove it the app falls back to the local entry.<sup><a href="#en-ref-3">[3]</a></sup></li>
+        <li>Switch to the gateway from the Sessions sidebar — a named gateway selector appears once more than one is registered — pick a profile discovered on it, and open a session. Files, tools, channels, cron and memory are now scoped to that <code>(gateway, profile)</code>, and the execution-boundary sentence from section 1 applies in full: the laptop is a screen.<sup><a href="#en-ref-3">[3]</a></sup><sup><a href="#en-ref-9">[9]</a></sup></li>
+    </ol>
+
+    <p>Two shortcuts. <code>HERMES_DESKTOP_REMOTE_URL</code>, set before launch, overrides the in-app URL — you still sign in from the Gateways page.<sup><a href="#en-ref-2">[2]</a></sup> And on a single-remote setup the <strong>Connection mode → Remote gateway</strong> control on the same page — Remote URL, Sign in, Save and reconnect — does the same job without the registry; you stay signed in across restarts only when <code>HERMES_DASHBOARD_BASIC_AUTH_SECRET</code> is set.<sup><a href="#en-ref-2">[2]</a></sup></p>
+
+    <div class="alert">
+        <strong>Before pointing this at a box people already use:</strong> issue #40656, "Desktop remote gateway can destabilize self-hosted host when used concurrently with TUI/gateway", has been open since 6 June 2026 — P3, one comment. The reporter's remote TUI and MCP state became unreliable while the Desktop was attached to the same host.<sup><a href="#en-ref-13">[13]</a></sup> <a href="/blog/hermes-desktop-fleet">#10 Desktop &amp; Fleet</a> already carries the four-type Connections table, the OIDC sign-in story and the same caution, so I will not repeat them; my own practice stands: a dedicated box as the Desktop backend.
+    </div>
+
+    <h2 id="en-when-it-breaks">5. Reference Table — When It Breaks</h2>
+
+    <p>Read the log first, then the table. Every row below is sourced to a docs page, a release note or an issue I re-read on 7 September 2026; symptoms I could not source are not here.</p>
+
+    <div class="table-wrapper">
+        <table>
+            <thead>
+                <tr>
+                    <th>Symptom</th>
+                    <th>First check</th>
+                    <th>Command or menu</th>
+                    <th>Fix</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>The app does not boot</td>
+                    <td><code>HERMES_HOME/logs/desktop.log</code> — backend output and recent Python tracebacks<sup><a href="#en-ref-2">[2]</a></sup></td>
+                    <td><code>hermes logs desktop</code> · <code>hermes logs gui -f</code><sup><a href="#en-ref-4">[4]</a></sup></td>
+                    <td>Force first-launch setup again with <code>rm "$HOME/.hermes/hermes-agent/.hermes-bootstrap-complete"</code>; rebuild a broken venv with <code>rm -rf "$HOME/.hermes/hermes-agent/venv"</code>; then <code>hermes doctor --fix</code><sup><a href="#en-ref-2">[2]</a></sup></td>
+                </tr>
+                <tr>
+                    <td>Installer stuck on "Build desktop app", the live output repeating <code>retrying attempt=…</code></td>
+                    <td>GitHub is blocked or throttled — the build downloads the ~114 MB Electron runtime from github.com<sup><a href="#en-ref-2">[2]</a></sup></td>
+                    <td><code>rm -f "$HOME/Library/Caches/electron"/electron-*.zip</code> (macOS) · <code>rm -f "$HOME/.cache/electron"/electron-*.zip</code> (Linux)</td>
+                    <td>The installer clears the corrupt zip and retries through npmmirror.com by itself; to use your own mirror set <code>ELECTRON_MIRROR</code> before rebuilding — the build never overrides one you set<sup><a href="#en-ref-2">[2]</a></sup></td>
+                </tr>
+                <tr>
+                    <td>No sessions load for any profile after an update</td>
+                    <td>Issue #89675 (P1): the backend was spawned without <code>--profile</code>, so the app queried an empty store; a regression in v0.20.4<sup><a href="#en-ref-11">[11]</a></sup></td>
+                    <td><code>hermes --version</code></td>
+                    <td>Closed as completed on 23 August 2026, before v0.21.0 — update; the reporter's interim workaround was the web dashboard, which handled profiles correctly<sup><a href="#en-ref-11">[11]</a></sup></td>
+                </tr>
+                <tr>
+                    <td>macOS re-prompts for Full Disk Access or the microphone, though System Settings still shows the toggle ON</td>
+                    <td>macOS keys grants to the code-signing identity, not the path. Local builds are signed with a stable identifier-pinned signature and normally persist; a grant made before that signing fix (PR #73681) is cdhash-pinned and no longer matches<sup><a href="#en-ref-2">[2]</a></sup></td>
+                    <td><code>hermes desktop --setup-tcc-identity</code><sup><a href="#en-ref-2">[2]</a></sup></td>
+                    <td>Reset the stale grant once — <code>tccutil reset All com.nousresearch.hermes</code> — then re-grant. For a certificate-anchored identity the command creates a self-signed "Hermes Local Signing" certificate and re-signs the app, and grants survive every update from then on (v0.21.0, #95091)<sup><a href="#en-ref-2">[2]</a></sup><sup><a href="#en-ref-10">[10]</a></sup></td>
+                </tr>
+                <tr>
+                    <td>Windows parks on "Updating Hermes"</td>
+                    <td><code>hermes --version</code> — below v0.21.0 (v2026.8.31) this is the Desktop's own update hand-off<sup><a href="#en-ref-10">[10]</a></sup></td>
+                    <td>Close Hermes Desktop, then <code>hermes update</code> from PowerShell — it refuses while another <code>hermes.exe</code>, most often the Desktop's spawned backend, holds the venv's executable open<sup><a href="#en-ref-5">[5]</a></sup></td>
+                    <td>v0.21.0's detached update hand-off (quit → update → reopen through a shim window) removed the parking: "Windows desktop updates no longer park on 'Updating Hermes'"<sup><a href="#en-ref-10">[10]</a></sup></td>
+                </tr>
+                <tr>
+                    <td>Renderer at 40–73 % CPU while idle on an Intel Mac; fans at maximum</td>
+                    <td>Activity Monitor → <code>Hermes Helper (Renderer)</code>; issue #88275 (P2, open) on a 2019 MacBook Pro running v0.20.2<sup><a href="#en-ref-12">[12]</a></sup></td>
+                    <td>The reporter's partial mitigation was <code>desktop.disable_gpu=true</code> — an undocumented key that roughly halved it<sup><a href="#en-ref-12">[12]</a></sup></td>
+                    <td>No merged fix as of 7 September 2026. Intel Macs sit outside the support matrix that <a href="/blog/hermes-desktop-fleet">#10</a> reproduces; plan around them<sup><a href="#en-ref-12">[12]</a></sup></td>
+                </tr>
+                <tr>
+                    <td>Remote gateway rejects the connection after sign-in</td>
+                    <td><code>curl -s http://&lt;host&gt;:9119/api/status | jq '.auth_required, .auth_providers'</code> must print <code>true</code> and the provider<sup><a href="#en-ref-2">[2]</a></sup></td>
+                    <td>Settings → Gateways → Open logs, then find the <code>/api/ws</code> close code in <code>desktop.log</code><sup><a href="#en-ref-7">[7]</a></sup></td>
+                    <td><strong>4401</strong> = the WebSocket ticket did not authenticate — sign in again and set a stable <code>HERMES_DASHBOARD_BASIC_AUTH_SECRET</code>; <strong>4403</strong> = the request guard rejected it, typically a Host or peer mismatch behind a proxy<sup><a href="#en-ref-7">[7]</a></sup><sup><a href="#en-ref-2">[2]</a></sup></td>
+                </tr>
+                <tr>
+                    <td>SSH connection: "The host key has CHANGED since you last connected"</td>
+                    <td>The remote was reinstalled or its key rotated; SSH fails closed and the Desktop latches an error overlay<sup><a href="#en-ref-2">[2]</a></sup></td>
+                    <td><code>ssh-keygen -R &lt;host&gt;</code></td>
+                    <td>Verify the change is expected, clear the old entry, then click <strong>Retry</strong> on the overlay<sup><a href="#en-ref-2">[2]</a></sup></td>
+                </tr>
+                <tr>
+                    <td>"Connection test failed" on a registered gateway</td>
+                    <td>Is <code>hermes serve</code> running on the host, the port open, the token current?<sup><a href="#en-ref-3">[3]</a></sup></td>
+                    <td><strong>Test</strong> on the row; HTTP passing while the WebSocket leg fails points at a proxy, firewall or origin guard on <code>/api/ws</code></td>
+                    <td>Fix the backend side, re-run Test, wait for "Reachable"<sup><a href="#en-ref-3">[3]</a></sup></td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <h2 id="en-logs-diagnostics">6. Logs and Diagnostics — Where to Read, What to Send, and to Whom</h2>
+
+    <p>All logs live in <code>~/.hermes/logs/</code> (or <code>&lt;profile&gt;/logs/</code> for a non-default profile), and <code>hermes logs</code> reads five of them by name: <code>agent</code> (the default — API calls, tool dispatch, session lifecycle), <code>errors</code> (warnings and errors only), <code>gateway</code> (messaging), <code>gui</code> (dashboard, TUI-gateway, PTY bridge and WebSocket events) and <code>desktop</code> (the Electron app — boot, backend spawn output, recent Python tracebacks).<sup><a href="#en-ref-4">[4]</a></sup> For anything the app does at startup, <code>desktop</code> is where I look first.</p>
+
+<pre><code>hermes logs desktop                  # the Electron app: boot, backend spawn, Python tracebacks
+hermes logs gui -f                   # follow the dashboard / TUI-gateway / websocket events
+hermes logs errors -n 200            # warnings and errors only, last 200 lines
+hermes logs gateway --since 1h       # messaging gateway, last hour
+hermes logs list                     # every log file with its size
+hermes doctor --fix                  # diagnose config and dependencies; repair what it can
+hermes debug share --local           # print the report to the terminal instead of uploading it</code></pre>
+
+    <p>When a turn fails, the Desktop shows an error card that names the failing layer — provider, custom endpoint, streaming, authentication, billing, gateway, local runtime or disk — with actions matched to it: <strong>Retry</strong>, <strong>Switch provider</strong>, <strong>Open logs</strong> (on a remote or Cloud connection it reads <strong>Open Desktop logs</strong>, because the agent's logs live on the other machine), <strong>Send diagnostics</strong> and <strong>Copy error details</strong>.<sup><a href="#en-ref-2">[2]</a></sup> Send diagnostics is opt-in each time: it asks for explicit consent, uploads a redacted bundle through the same pipeline as <code>hermes debug share --nous</code>, is viewable by Nous staff only, auto-deletes after 14 days, and hands you a private link for your support thread. On a remote connection the backend bundles its own logs and the local Desktop log rides alongside.<sup><a href="#en-ref-2">[2]</a></sup> If you would rather see what leaves your machine, <code>hermes debug share --local</code> prints the same report to the terminal; uploads are redacted by default, and <code>--no-redact</code> exists for a reason I have never needed.<sup><a href="#en-ref-4">[4]</a></sup></p>
+
+    <p>None of this is a background upload. The bundle exists only when you press the button and confirm the consent prompt; the docs describe it as an explicit action, not telemetry.<sup><a href="#en-ref-2">[2]</a></sup></p>
+
+    <blockquote><strong>💡 A bug and a vulnerability go to different doors:</strong> a crash goes in the diagnostics bundle or a public issue. A vulnerability does not. The security policy asks that you report privately, through GitHub Security Advisories or <code>security@nousresearch.com</code>, says in bold that you should not open public issues for it and that there is no bug bounty, and sets the coordinated-disclosure window at 90 days or until a fix ships, whichever comes first.<sup><a href="#en-ref-8">[8]</a></sup></blockquote>
+
+    <h2 id="en-update-uninstall">7. Update, and the Three Ways to Uninstall</h2>
+
+    <p>The app checks for updates in the background and offers a one-click update when one is ready. With more than one update target — a remote gateway, or several registered ones — every update affordance (<strong>Update now</strong> on the About panel, <code>⌘K</code> → <strong>Update Hermes</strong>, the update-ready toast) updates everything in a fixed order: the connected backend first, then every other eligible registered gateway (Hermes Cloud entries are platform-managed and skipped), and the desktop app itself last, because applying the client update relaunches the app. After any backend update the app re-checks its own version and offers <strong>Update desktop app</strong> if the GUI is behind.<sup><a href="#en-ref-2">[2]</a></sup></p>
+
+    <h3>A safe update, in order</h3>
+
+    <ol>
+        <li><code>hermes update --check</code> — fetches and compares against <code>origin/main</code>; nothing is modified and no gateway restarts.<sup><a href="#en-ref-5">[5]</a></sup></li>
+        <li><code>hermes update --plan</code> — prints what would happen: the install kind, every running Hermes service with its supervisor and running version, and how each will be restarted. A manually launched <code>hermes serve</code> powering a remote Desktop appears here too, with its recorded bind address; the update stops it before the code swap and relaunches it on the same host and port, so the Desktop reconnects instead of stranding.<sup><a href="#en-ref-5">[5]</a></sup></li>
+        <li>Decide on the backup. The default pre-update snapshot is <code>quick</code> — pairing data, cron jobs, <code>config.yaml</code>, <code>.env</code>, <code>auth.json</code> and other runtime state, taken per profile. For a machine you care about, run <code>hermes update --backup</code> for a full zip of <code>HERMES_HOME</code>, or set <code>updates.pre_update_backup: full</code> once.<sup><a href="#en-ref-5">[5]</a></sup></li>
+        <li>On Windows, close Hermes Desktop first. <code>hermes update</code> refuses while another <code>hermes.exe</code> holds the venv's executable open — most commonly the Desktop's spawned backend — and a second guard refuses to touch the venv while any process runs from its interpreter; that one is not bypassed by <code>--force</code>.<sup><a href="#en-ref-5">[5]</a></sup></li>
+        <li>Now press <strong>Update now</strong> in About (or <code>⌘K</code> → <strong>Update Hermes</strong>). The Desktop's updater runs <code>hermes update --keep-stash</code>: local source edits are stashed and never re-applied, and the log prints the exact <code>git stash apply</code> to bring them back. Expect the app to relaunch last.<sup><a href="#en-ref-5">[5]</a></sup></li>
+        <li>Verify. <code>hermes --version</code>; then <code>~/.hermes/logs/update_receipts/latest.json</code>, which records the plan, each step, what was skipped and why, and the final fleet version matrix — a gateway still on pre-update code fails the run with the exact restart command. If the Desktop rebuild failed you see <code>⚠ Update partially complete</code>; the previous app is untouched, and <code>hermes desktop</code> retries the rebuild.<sup><a href="#en-ref-5">[5]</a></sup></li>
+        <li>If the new version is worse, roll back: in the checkout, <code>git checkout &lt;commit-hash&gt;</code> then <code>uv pip install -e ".[all]"</code>, restart the gateway, and run <code>hermes config check</code> to catch options the older version does not recognise.<sup><a href="#en-ref-5">[5]</a></sup></li>
+    </ol>
+
+<pre><code>hermes update --check      # am I behind origin/main? — changes nothing
+hermes update --plan       # what would restart, and how
+hermes update --backup     # full HERMES_HOME zip first, then update
+hermes --version
+cat ~/.hermes/logs/update_receipts/latest.json
+
+# rollback, from the checkout
+cd ~/.hermes/hermes-agent
+git log --oneline -10
+git checkout &lt;commit-hash&gt;
+uv pip install -e ".[all]"
+hermes gateway restart
+hermes config check</code></pre>
+
+    <div class="alert info">
+        <strong>Fleets:</strong> <strong>Settings → Gateways → Update all instances</strong> appears once more than one connection is registered and dispatches <code>hermes update</code> to every eligible connection in parallel — Local through the app's own pipeline, Remote and SSH on their own machines, Hermes Cloud skipped with a "Managed by Hermes Cloud" note; each instance reports independently, and Docker or Nix backends refuse politely per row.<sup><a href="#en-ref-3">[3]</a></sup> A Docker image is not updatable in place at all: <code>hermes update</code> refuses with exit code 2 and prints <code>docker pull nousresearch/hermes-agent:latest</code> instead.<sup><a href="#en-ref-5">[5]</a></sup>
+    </div>
+
+    <h3>The three ways to uninstall</h3>
+
+    <p><strong>Settings → About → Danger zone</strong> offers three scopes, and the terminal has the same three. <strong>Uninstall Chat GUI only</strong> removes the desktop app and its own data; the agent, your config and your chats stay. <strong>Uninstall GUI + agent, keep my data</strong> removes the app and the agent but keeps config, chats and secrets for a reinstall. <strong>Uninstall everything</strong> removes the app, the agent and all user data. The app closes to finish the job, because the cleanup has to remove the running bundle and its own venv; and on a GUI-only client attached to a remote backend, the two agent-removing options are hidden.<sup><a href="#en-ref-2">[2]</a></sup></p>
+
+<pre><code>hermes uninstall --gui --dry-run   # print what would be removed, change nothing
+hermes uninstall --gui             # the desktop app and its userData only — agent, config, chats stay
+hermes uninstall                   # GUI + agent; ~/.hermes (config, sessions, secrets) stays
+hermes uninstall --full            # everything, including ~/.hermes — the laptop you are handing back</code></pre>
+
+    <p>Before the last one, <code>hermes backup</code> captures the whole <code>~/.hermes</code> including credentials, while <code>hermes profile export</code> packs one profile with the keys stripped by design — an export alone is not a full backup.<sup><a href="#en-ref-5">[5]</a></sup> And a note for source checkouts: <code>hermes uninstall --gui</code> also removes the workspace <code>node_modules</code> and <code>apps/desktop/{dist,release}</code>, which <code>hermes desktop</code> rebuilds.<sup><a href="#en-ref-2">[2]</a></sup></p>
+
+    <h2 id="en-summary">8. Summary — Closing the Series</h2>
+
+    <p>Seven posts ago, <a href="/blog/hermes-desktop-install">#1 Install &amp; First Run</a> opened with a map of the series — install, local models, profiles, a council, skills and MCP, automation, and this post. Read backwards, the map is a trust curve: each post handed the agent a little more — a model, a personality, tools, a schedule — and this one is where you decide how much of that trust is enforced by the operating system rather than by hope. Set the three dials before you set the cron job, not after.</p>
+
+    <p>What I would do this week, on the machine you actually use: put <code>approvals.mode: manual</code> and two deny rules in place and trigger one flagged command to see the prompt; turn checkpoints on for one project and run <code>/rollback diff</code> once; run <code>hermes update --check</code> and read <code>desktop.log</code> once while nothing is wrong, so that on the day something is wrong you already know what normal looks like. If a second machine is in the picture, make it a dedicated backend and attach to it — then everything the agent touches lives there.</p>
+
+    <p>The hands-on series ends here; the analytical one does not. <a href="/blog/hermes-security">#4 Security</a> owns the threat model and the incident record, and <a href="/blog/hermes-desktop-fleet">#10 Desktop &amp; Fleet</a> owns what an organisation needs before twenty laptops attach to one backend. Everything above is what one person does at one desk, with one hand on each dial.</p>
+
+    <div class="key-takeaways">
+        <h3>🎯 Key Takeaways</h3>
+        <ul>
+            <li><strong>approvals.mode</strong> = smart (an auxiliary LLM triages), manual (always ask) or off (= <code>--yolo</code>); headless contexts deny by default, and an unanswered prompt is denied after 300 seconds — fail-closed</li>
+            <li><strong>Hardline blocklist + approvals.deny</strong> = the floor below YOLO: the code-shipped list has no override flag, and your own fnmatch deny rules are consulted before YOLO and <code>mode: off</code></li>
+            <li><strong>YOLO</strong> = one status-bar click, per session, with three other spellings (<code>/yolo</code>, <code>hermes --yolo</code>, <code>HERMES_YOLO_MODE=1</code>); it disables every dangerous-command check except the blocklist and your deny rules</li>
+            <li><strong>Execution boundary</strong> = <code>terminal.backend</code> moves the shell (container backends skip the check); a Remote gateway moves the whole agent — "the gateway host is the execution boundary"</li>
+            <li><strong>Checkpoints</strong> = opt-in via <code>checkpoints.enabled: true</code>; a shadow git store, one snapshot per directory per turn, and <code>/rollback &lt;N&gt;</code> restores files and undoes the last turn while keeping your hand-edits</li>
+            <li><strong>Remote</strong> = <code>hermes serve --host 0.0.0.0 --port 9119</code> behind a provider (password on a VPN only, OAuth beyond it), then Settings → Gateways → Add connection → Test → "Reachable"; #40656 is still open, so use a dedicated box</li>
+            <li><strong>Recovery ladder</strong> = <code>hermes logs desktop</code> → <code>hermes doctor --fix</code> → the two reset commands → Send diagnostics (opt-in, redacted, 14 days) → <code>hermes update --backup</code> → three uninstall scopes; <code>--setup-tcc-identity</code> keeps macOS grants across rebuilds</li>
+            <li><strong>Vulnerabilities go private</strong> = GitHub Security Advisories or security@nousresearch.com, never a public issue; there is no bug bounty</li>
+        </ul>
+    </div>
+
+    <section class="references" aria-labelledby="en-references">
+        <h2 id="en-references">References</h2>
+        <p class="references__note">Every source was verified and accessed on 7 September 2026 (2026-09-07). This series uses four evidence labels — <strong>Docs</strong> official Hermes Agent documentation · <strong>Release</strong> release notes or a merged commit/PR · <strong>Issue</strong> an open issue or PR · <strong>Community</strong> a non-official community source</p>
+        <ol class="references__list">
+            <li id="en-ref-1"><span class="ref-tag ref-tag--standard">Docs</span> Nous Research. <cite>Security</cite> — Hermes Agent User Guide. <a href="https://hermes-agent.nousresearch.com/docs/user-guide/security">hermes-agent.nousresearch.com</a> — accessed 2026-09-07. <span class="ref-supports">Supports: the verbatim <code>approvals:</code> block and its key table; the smart / manual / off behaviours; the headless defaults <code>cron_mode</code>, <code>single_query_mode</code>, <code>unattended_mode</code>; the 300-second fail-closed timeout; the three ways to enable YOLO and its on-screen banner and status-bar fragment; the hardline blocklist, what it survives and its lack of an override flag; <code>approvals.deny</code> semantics and the three example patterns; the CLI approval prompt with once / session / always / deny; the container-bypass note; <code>hermes approvals suggest</code>; the protected write paths and <code>HERMES_WRITE_SAFE_ROOT</code>; the terminal-backend comparison table behind the seven <code>terminal.backend</code> values</span></li>
+            <li id="en-ref-2"><span class="ref-tag ref-tag--standard">Docs</span> Nous Research. <cite>Hermes Desktop</cite> — Hermes Agent User Guide. <a href="https://hermes-agent.nousresearch.com/docs/user-guide/desktop">hermes-agent.nousresearch.com</a> — accessed 2026-09-07. <span class="ref-supports">Supports: the per-session YOLO toggle in the status bar; Safety among the per-profile settings pages and the Applies to chip row; the update flow and its order; the three uninstall scopes and the Danger zone labels; the remote-backend recipe (the <code>.env</code> block, <code>hermes serve --host 0.0.0.0 --port 9119</code>, the <code>curl</code> status check, Sign in and Save and reconnect, <code>HERMES_DESKTOP_REMOTE_URL</code>, the VPN and Tailscale guidance, OAuth via <code>hermes dashboard register</code>); the error-card actions and the Send diagnostics terms; <code>desktop.log</code>; the three reset commands; the SSH host-key fix; the Electron download fix and <code>ELECTRON_MIRROR</code>; the TCC section, the identifier-pinned signing fix (PR #73681) and the stale cdhash-pinned grants it leaves behind, <code>hermes desktop --setup-tcc-identity</code> and <code>tccutil reset</code></span></li>
+            <li id="en-ref-3"><span class="ref-tag ref-tag--standard">Docs</span> Nous Research. <cite>Connecting Desktop to Many Hermes Instances</cite> — Hermes Agent User Guide. <a href="https://hermes-agent.nousresearch.com/docs/user-guide/multi-connection-desktop">hermes-agent.nousresearch.com</a> — accessed 2026-09-07. <span class="ref-supports">Supports: the three doors to Settings → Gateways; the Add connection steps and fields (unique device name, Gateway URL, Session token or OAuth, the <code>user@host:22</code> SSH field and the adopted token); Test and the "Reachable" toast; Primary semantics; the gateway selector and the <code>(gateway, profile)</code> scope; Update all instances and its per-kind behaviour; the troubleshooting rows</span></li>
+            <li id="en-ref-4"><span class="ref-tag ref-tag--standard">Docs</span> Nous Research. <cite>CLI Commands</cite> — Hermes Agent Reference. <a href="https://hermes-agent.nousresearch.com/docs/reference/cli-commands">hermes-agent.nousresearch.com</a> — accessed 2026-09-07. <span class="ref-supports">Supports: the five <code>hermes logs</code> names and files, the <code>list</code> argument and the <code>-n</code>, <code>-f</code>, <code>--since</code> options; <code>hermes doctor --fix</code>; <code>hermes debug share</code> and its <code>--nous</code>, <code>--local</code>, <code>--no-redact</code> flags; the <code>hermes uninstall</code> flags including <code>--dry-run</code></span></li>
+            <li id="en-ref-5"><span class="ref-tag ref-tag--standard">Docs</span> Nous Research. <cite>Updating &amp; Uninstalling</cite> — Hermes Agent Getting Started. <a href="https://hermes-agent.nousresearch.com/docs/getting-started/updating">hermes-agent.nousresearch.com</a> — accessed 2026-09-07. <span class="ref-supports">Supports: the update steps, the quick pre-update snapshot and its contents, the desktop stage-and-swap rebuild and <code>⚠ Update partially complete</code>, the relaunch of a manually launched <code>hermes serve</code> on the same host and port; <code>--check</code>, <code>--plan</code>, <code>--backup</code> and <code>updates.pre_update_backup</code>; the update receipts; the two Windows guards and <code>--force-venv</code>; <code>--keep-stash</code> in the Desktop updater; the rollback commands and <code>hermes config check</code>; the Docker refusal and its exit code; <code>hermes backup</code> versus <code>hermes profile export</code></span></li>
+            <li id="en-ref-6"><span class="ref-tag ref-tag--standard">Docs</span> Nous Research. <cite>Checkpoints and /rollback</cite> — Hermes Agent User Guide. <a href="https://hermes-agent.nousresearch.com/docs/user-guide/checkpoints-and-rollback">hermes-agent.nousresearch.com</a> — accessed 2026-09-07. <span class="ref-supports">Supports: checkpoints being opt-in and off by default; <code>checkpoints.enabled: true</code> and <code>hermes chat --checkpoints</code>; the configuration keys and their defaults; the shadow store path; the triggers and the one-per-directory-per-turn rule; the <code>/rollback</code> command forms; the pre-rollback snapshot; the agent-write ledger and hand-edit preservation; the safety guards; the <code>hermes checkpoints</code> subcommands</span></li>
+            <li id="en-ref-7"><span class="ref-tag ref-tag--standard">Docs</span> Nous Research. <cite>Hermes Web Dashboard</cite> — Hermes Agent User Guide. <a href="https://hermes-agent.nousresearch.com/docs/user-guide/features/web-dashboard">hermes-agent.nousresearch.com</a> — accessed 2026-09-07. <span class="ref-supports">Supports: the <code>/api/ws</code> close-code triage — 4403 (chat WebSocket rejected by the request guard, e.g. Host/peer mismatch) and 4401 (the WebSocket ticket did not authenticate) — read from a fresh <code>desktop.log</code></span></li>
+            <li id="en-ref-8"><span class="ref-tag ref-tag--standard">Docs</span> Nous Research. <cite>SECURITY.md — Hermes Agent Security Policy</cite>. <a href="https://github.com/NousResearch/hermes-agent/blob/main/SECURITY.md">github.com/NousResearch/hermes-agent</a> — accessed 2026-09-07. <span class="ref-supports">Supports: private reporting through GitHub Security Advisories or security@nousresearch.com, the instruction not to open public issues, the absence of a bug bounty and the 90-day coordinated-disclosure window; the sentence "The only security boundary against an adversarial LLM is the operating system"; the approval gate and redaction named as heuristics; what terminal-backend isolation confines and does not confine</span></li>
+            <li id="en-ref-9"><span class="ref-tag ref-tag--standard">Docs</span> Nous Research. <cite>apps/desktop/README.md — Hermes Desktop</cite>. <a href="https://github.com/NousResearch/hermes-agent/blob/main/apps/desktop/README.md">github.com/NousResearch/hermes-agent</a> — accessed 2026-09-07. <span class="ref-supports">Supports: the quoted sentence that in remote mode the gateway host is the execution boundary, with agent tools, terminal commands and file operations running against the remote Hermes host</span></li>
+            <li id="en-ref-10"><span class="ref-tag ref-tag--study">Release</span> Nous Research. <cite>Hermes Agent v0.21.0 (v2026.8.31) — The Pantheon Release</cite>. <a href="https://github.com/NousResearch/hermes-agent/releases/tag/v2026.8.31">github.com/NousResearch/hermes-agent</a> — published 2026-08-31, accessed 2026-09-07. <span class="ref-supports">Supports: the macOS TCC identity line and #95091; the detached update hand-off and the sentence that Windows desktop updates no longer park on "Updating Hermes"; the mention of a dry-run approval checker; the protected agent-instruction files and the redaction sweep as context</span></li>
+            <li id="en-ref-11"><span class="ref-tag ref-tag--law">Issue</span> NousResearch/hermes-agent. <cite>#89675 — Desktop: no sessions load for any agent profile after update — backend spawned without --profile</cite>. <a href="https://github.com/NousResearch/hermes-agent/issues/89675">github.com/NousResearch/hermes-agent</a> — opened 2026-08-19, closed as completed 2026-08-23, accessed 2026-09-07. <span class="ref-supports">Supports: the table row on missing sessions after an update — the P1 label, the v0.20.4 regression, the empty-profile backend, and the reporter's web-dashboard workaround</span></li>
+            <li id="en-ref-12"><span class="ref-tag ref-tag--law">Issue</span> NousResearch/hermes-agent. <cite>#88275 — [desktop] Renderer process burns 40-70% CPU at idle since early August — thermal throttling on macOS Intel</cite>. <a href="https://github.com/NousResearch/hermes-agent/issues/88275">github.com/NousResearch/hermes-agent</a> — opened 2026-08-17, open, accessed 2026-09-07. <span class="ref-supports">Supports: the table row on idle renderer CPU — the 2019 MacBook Pro, v0.20.2, the 40–73 % figures, the P2 label and the reporter's <code>desktop.disable_gpu=true</code> partial mitigation</span></li>
+            <li id="en-ref-13"><span class="ref-tag ref-tag--law">Issue</span> NousResearch/hermes-agent. <cite>#40656 — Desktop remote gateway can destabilize self-hosted host when used concurrently with TUI/gateway</cite>. <a href="https://github.com/NousResearch/hermes-agent/issues/40656">github.com/NousResearch/hermes-agent</a> — opened 2026-06-06, open, accessed 2026-09-07. <span class="ref-supports">Supports: the caution in section 4 — P3, one comment, and the reporter's unreliable TUI and MCP state while the Desktop was attached to the same host</span></li>
+            <li id="en-ref-14"><span class="ref-tag ref-tag--synthesis">Community</span> Kudryk, Igor. <cite>Full Guide to Hermes Agent Desktop App (best way to run Hermes?)</cite>. <a href="https://www.youtube.com/watch?v=QxotQWwB7ws">youtube.com</a> — YouTube, accessed 2026-09-07. <span class="ref-supports">Supports: the practitioner framing in section 2 that the SSH execution backend relocates the terminal while model requests still leave from the laptop — paraphrased, not quoted; the technical claim itself rests on [8]</span></li>
+        </ol>
+    </section>
+    </div>
+
+    <div class="post-series-footer">
+      <span class="l-th">บทความจากซีรีส์ Hermes Desktop Hands-On 2026</span><span class="l-en" lang="en">From the Hermes Desktop Hands-On 2026 series</span>
+    </div>
+
+    <nav aria-label="Hermes Desktop Hands-On">
+    <div class="series-nav">
+      <h3>💻 Hermes Desktop Hands-On 2026</h3>
+      <div class="series-links">
+        <a href="/blog/hermes-desktop-install">#1 First Run</a>
+        <a href="/blog/hermes-desktop-local-models">#2 Local Models</a>
+        <a href="/blog/hermes-desktop-profiles">#3 Profiles</a>
+        <a href="/blog/hermes-desktop-council">#4 Council</a>
+        <a href="/blog/hermes-desktop-skills-mcp">#5 Skills &amp; MCP</a>
+        <a href="/blog/hermes-desktop-automation">#6 Automation</a>
+        <span class="current" aria-current="page">#7 Recovery</span>
+      </div>
+    </div>
+    </nav>
+
+  </article>
+
+  </main>
+
+  <footer class="blog-footer">
+    <nav class="blog-footer__nav" aria-label="Site">
+      <a href="../index.html">Home</a>
+      <a href="./">Blog</a>
+      <a href="../publications/">Publications</a>
+      <a href="../books/">Books</a>
+      <a href="../projects/">Projects</a>
+      <a href="../news/">News</a>
+      <a href="../index.html#contact">Contact</a>
+    </nav>
+    <a href="./">← Back to Blog</a>
+    <span>© 2026 Anirach Mingkhwan — Associate Professor, KMUTNB</span>
+  </footer>
+
+</body>
+</html>

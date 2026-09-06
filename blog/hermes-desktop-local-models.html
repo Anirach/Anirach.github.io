@@ -1,0 +1,1306 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Local Models — โมเดลบนเครื่องของเราเอง | Anirach Mingkhwan</title>
+  <meta name="description" content="รัน Hermes Desktop ด้วยโมเดลบนเครื่องของเราเอง — managed llama.cpp แบบคลิกเดียว, LM Studio หรือ Ollama/vLLM ผ่าน Custom endpoint พร้อมกฎ 64K">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=Sarabun:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      color-scheme: light;
+      /* ink */
+      --navy: #11304b; --slate: #334155; --slate-light: #526174; --gray: #94a3b8;
+      /* ground */
+      --bg: #faf7f0; --white: #ffffff; --code-bg: #1e293b;
+      /* accent */
+      --blue: #226299; --blue-dark: #1a4d7a; --blue-light: #4992b9;
+      /* brand — sampled from the book covers. --gold is decorative on light grounds (2.2:1); --gold-dark is its text form. */
+      --gold: #c4a46c; --gold-dark: #7a5f22; --cloud: #dee7e6; --parchment: #e9e1c4; --focus: #226299;
+      /* status — use only these six, never invent a seventh */
+      --green: #22c55e; --red: #ef4444; --amber: #f59e0b;
+      --cyan: #06b6d4; --purple: #226299; --purple-dark: #1a4d7a;
+      /* type */
+      --font: 'Inter', 'Sarabun', -apple-system, BlinkMacSystemFont, sans-serif;
+      --mono: 'JetBrains Mono', 'Fira Code', 'Sarabun', monospace;
+      /* form */
+      --radius: 12px; --radius-sm: 8px; --radius-lg: 16px;
+      --measure: 720px; --wide: 860px;
+      --transition: 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+    html { scroll-behavior: smooth; }
+    body { font-family: var(--font); font-size: 17px; line-height: 1.8; color: var(--slate); background: var(--bg); -webkit-font-smoothing: antialiased; }
+    .blog-nav { position: fixed; top: 0; left: 0; right: 0; z-index: 100; background: rgba(248,250,252,0.85); backdrop-filter: blur(20px); border-bottom: 1px solid rgba(0,0,0,0.05); }
+    .blog-nav__inner { max-width: 860px; margin: 0 auto; padding: 0 2rem; height: 56px; display: flex; align-items: center; justify-content: space-between; }
+    .blog-nav__back { font-size: 0.85rem; font-weight: 500; color: var(--blue); text-decoration: none; }
+    .blog-nav__back:hover { color: #1a4d7a; }
+    .blog-nav__title { font-size: 0.85rem; font-weight: 600; color: var(--navy); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 50%; }
+    /* ── HERO ── house .post-hero on the approved Deep Blue gradient (page-design
+       §5 / INV-28). Ink is inverted for the dark ground: white title/meta, tag
+       pills white on 18% white — the openclaw-production treatment. The
+       background value must stay byte-identical to the approved string. */
+    .post-hero { padding: 8rem 2rem 3rem; background: linear-gradient(135deg, #11304b 0%, #1a4d7a 45%, #226299 100%); color: #fff; text-align: center; }
+    .post-hero__tags { display: flex; gap: 0.5rem; justify-content: center; margin-bottom: 1.25rem; flex-wrap: wrap; }
+    .post-hero__tag { display: inline-block; font-size: 0.72rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.1em; color: #fff; background: rgba(255,255,255,0.18); padding: 0.35rem 0.9rem; border-radius: 20px; }
+    .post-hero__title { font-size: clamp(1.8rem, 5vw, 3rem); font-weight: 800; color: #fff; line-height: 1.2; margin-bottom: 1rem; max-width: 720px; margin-left: auto; margin-right: auto; }
+    .post-hero__sub { font-size: 1.05rem; max-width: 640px; margin: 0 auto 1.5rem; line-height: 1.7; color: #fff; }
+    .post-hero__meta { font-size: 0.85rem; color: #fff; display: flex; align-items: center; justify-content: center; gap: 1.5rem; flex-wrap: wrap; }
+    .post-hero__series { font-weight: 600; color: #fff; }
+    /* the switch pill and the focus ring both sit on the dark hero: the pill is
+       a light chip so its labels keep their light-ground colours, and --focus
+       re-points to gold here (blue collapses on blue — the footer/pre
+       precedent). */
+    .post-hero { --focus: var(--gold); }
+    .post-hero__cover {
+      aspect-ratio: 1 / 1;
+      max-width: 380px;
+      margin: 2.5rem auto 0;
+      border-radius: var(--radius-lg, 16px);
+      overflow: hidden;
+      box-shadow: 0 20px 60px rgba(17,48,75,0.14);
+    }
+    .post-hero__cover img { width: 100%; height: 100%; object-fit: cover; display: block; }
+    .post-body { max-width: 720px; margin: 0 auto; padding: 3rem 2rem 6rem; }
+    .post-body h2 { font-size: 1.6rem; font-weight: 800; color: var(--navy); margin: 3rem 0 1rem; padding-bottom: 0.5rem; border-bottom: 2px solid rgba(34,98,153,0.15); }
+    .post-body h3 { font-size: 1.25rem; font-weight: 700; color: var(--navy); margin: 2.25rem 0 0.75rem; }
+    .post-body p { margin-bottom: 1.25rem; }
+    .post-body strong { font-weight: 700; color: var(--navy); }
+    .post-body a { color: var(--blue); text-decoration: underline; text-decoration-thickness: 1px; text-underline-offset: 2px; }
+    .post-body ul, .post-body ol { margin: 0.5rem 0 1.25rem 1.5rem; }
+    .post-body li { margin-bottom: 0.4rem; }
+    .post-body blockquote { background: rgba(34,98,153,0.06); border-left: 4px solid var(--blue); padding: 1rem 1.25rem; border-radius: 0 10px 10px 0; margin: 1.25rem 0; font-size: 0.95rem; color: var(--navy); }
+    .post-body hr { border: none; height: 1px; background: linear-gradient(90deg, transparent, rgba(34,98,153,0.2), transparent); margin: 3rem 0; }
+    /* ── CODE ── */
+    .post-body pre { background: var(--code-bg); border-radius: 12px; padding: 1.5rem; margin: 1.25rem 0 1.5rem; overflow-x: auto; border: 1px solid rgba(255,255,255,0.05); }
+    .post-body pre code { font-family: var(--mono); font-size: 0.85rem; color: #e2e8f0; line-height: 1.7; background: none; padding: 0; white-space: pre-wrap; }
+    .post-body code { font-family: var(--mono); font-size: 0.88em; background: rgba(34,98,153,0.08); color: var(--blue-dark); padding: 0.15em 0.45em; border-radius: 5px; }
+    /* ── TABLES ── */
+    .table-wrapper { overflow-x: auto; margin: 1.5rem 0; border-radius: 0.5rem; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1); }
+    table { width: 100%; border-collapse: collapse; background: white; }
+    th { background: #226299; color: white; padding: 1rem; text-align: left; font-weight: 600; }
+    td { padding: 1rem; border-bottom: 1px solid #e5e7eb; }
+    .post-body table { display: block; width: 100%; overflow-x: auto; }
+    /* ── ALERTS ── */
+    .alert { background: #fef3cd; border: 1px solid #facc15; border-radius: 0.5rem; padding: 1rem; margin: 1.5rem 0; }
+    .alert.danger { background: #fee2e2; border-color: #ef4444; }
+    .alert.info { background: #e0f2fe; border-color: #06b6d4; }
+    .alert.success { background: #d1fae5; border-color: #10b981; }
+    /* ── KEY TAKEAWAYS ── */
+    .key-takeaways { background: linear-gradient(135deg, #f3f4f6 0%, #e5e7eb 100%); border-radius: 1rem; padding: 2rem; margin: 3rem 0; }
+    .key-takeaways h3 { color: #226299; margin-bottom: 1.5rem; }
+    .post-series-footer { text-align: center; font-size: 0.85rem; color: var(--slate-light); font-style: italic; margin-top: 2rem; padding-top: 2rem; border-top: 1px solid #e2e8f0; }
+    .blog-footer { background: var(--navy); padding: 2rem 0; text-align: center; }
+    .blog-footer a { color: var(--gold); text-decoration: none; font-weight: 600; font-size: 0.9rem; }
+    .blog-footer span { color: var(--gray); font-size: 0.8rem; display: block; margin-top: 0.4rem; }
+    @media (max-width: 600px) {
+      .post-hero { padding: 7rem 1.25rem 2.5rem; }
+      .post-body { padding: 2rem 1.25rem 4rem; }
+      .post-hero__meta { flex-direction: column; gap: 0.4rem; }
+      .post-body h2 { font-size: 1.4rem; }
+      .post-body h3 { font-size: 1.15rem; }
+      .post-body pre { padding: 1rem; border-radius: 8px; }
+    }
+
+    :focus-visible { outline: 2px solid var(--focus); outline-offset: 3px; border-radius: 2px; }
+    /* the ring sits on the page ground (3px offset). Inside the navy footers
+       and code blocks var(--blue) collapses to 2.12:1, so those scopes
+       re-point --focus to gold (5.73:1 on navy). */
+    .footer, .blog-footer, pre { --focus: var(--gold); }
+    :focus:not(:focus-visible) { outline: none; }
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after {
+        animation-duration: .01ms !important; animation-iteration-count: 1 !important;
+        transition-duration: .01ms !important; scroll-behavior: auto !important;
+      }
+    }
+    h1, h2, h3, .post-hero__title, .card__title { text-wrap: balance; }
+
+    .post-body img, .post-body svg { max-width: 100%; height: auto; }
+
+    /* ── SKIP LINK ── a11y-perf R5: the link and the landmark it targets are a
+       pair — useless without both halves. Off-screen until focused, then the
+       first tab stop on every page. */
+    .skip-link { position: absolute; left: -9999px; }
+    .skip-link:focus {
+      left: 1rem; top: 1rem; z-index: 999;
+      background: var(--navy); color: #fff;
+      padding: 0.75rem 1.25rem; border-radius: var(--radius-sm);
+      font-weight: 600; text-decoration: none;
+    }
+
+    /* ── POST WAYFINDING ── the wordmark is the home link; the footer carries
+       the full destination row. */
+    .blog-nav__home {
+      font-size: 0.9rem; font-weight: 800; color: var(--navy);
+      text-decoration: none; margin-right: 1rem;
+    }
+    .blog-nav__home:hover { color: var(--blue); }
+    .blog-nav__inner > .blog-nav__back { margin-right: auto; }
+    .blog-footer__nav {
+      display: flex; flex-wrap: wrap; justify-content: center; gap: 0.35rem 1.25rem;
+      max-width: 860px; margin: 0 auto 1.25rem; padding: 0 2rem 1.25rem;
+      border-bottom: 1px solid rgba(255,255,255,0.12);
+    }
+    .blog-footer__nav a { color: var(--gold); font-size: 0.85rem; font-weight: 600; text-decoration: none; }
+    .blog-footer__nav a:hover { color: #fff; text-decoration: underline; }
+
+    html { scroll-padding-top: 5rem; }
+    [id] { scroll-margin-top: 5rem; }
+
+    /* Thai needs more room than Latin at the same nominal size. */
+    .post-body:lang(th) { font-size: 18px; line-height: 1.85; }
+    .post-body p, .post-body li, .post-body blockquote { text-wrap: pretty; }
+
+    /* ---- side-scroll affordance ----
+       pre blocks and tables can exceed 720px. These layers paint a shadow ONLY
+       where there is more content in that direction; when fully scrolled the
+       cover slides over the shadow and hides it. No JavaScript, no wrapper. */
+    .post-body pre, .post-body table {
+      overflow-x: auto;
+      background-image:
+        linear-gradient(to right, var(--code-bg, #0f172a) 30%, rgba(15,23,42,0)),
+        linear-gradient(to left, var(--code-bg, #0f172a) 30%, rgba(15,23,42,0)),
+        radial-gradient(farthest-side at 0 50%, rgba(0,0,0,.28), rgba(0,0,0,0)),
+        radial-gradient(farthest-side at 100% 50%, rgba(0,0,0,.28), rgba(0,0,0,0));
+      background-position: 0 0, 100% 0, 0 0, 100% 0;
+      background-repeat: no-repeat;
+      background-size: 40px 100%, 40px 100%, 14px 100%, 14px 100%;
+      background-attachment: local, local, scroll, scroll;
+    }
+    .post-body table {
+      background-image:
+        linear-gradient(to right, var(--white, #fff) 30%, rgba(255,255,255,0)),
+        linear-gradient(to left, var(--white, #fff) 30%, rgba(255,255,255,0)),
+        radial-gradient(farthest-side at 0 50%, rgba(17,48,75,.16), rgba(17,48,75,0)),
+        radial-gradient(farthest-side at 100% 50%, rgba(17,48,75,.16), rgba(17,48,75,0));
+      background-position: 0 0, 100% 0, 0 0, 100% 0;
+      background-repeat: no-repeat;
+      background-size: 40px 100%, 40px 100%, 14px 100%, 14px 100%;
+      background-attachment: local, local, scroll, scroll;
+    }
+
+    /* ---- table of contents ---- */
+    .post-toc {
+      max-width: 720px;
+      margin: 2rem auto 0;
+      padding: 1rem 1.25rem;
+      background: rgba(34,98,153,0.05);
+      border: 1px solid rgba(34,98,153,0.14);
+      border-left: 3px solid var(--gold, #c4a46c);
+      border-radius: 10px;
+      font-size: 0.92rem;
+    }
+    .post-toc > summary {
+      cursor: pointer;
+      font-weight: 700;
+      color: var(--navy);
+      list-style: none;
+    }
+    .post-toc > summary::-webkit-details-marker { display: none; }
+    .post-toc > summary::before {
+      content: "\25B8";
+      display: inline-block;
+      margin-right: 0.5rem;
+      transition: transform 0.2s ease;
+      color: var(--gold-dark, #7a5f22);
+    }
+    .post-toc[open] > summary::before { transform: rotate(90deg); }
+    .post-toc > summary:focus-visible { outline: 3px solid var(--focus, #226299); outline-offset: 3px; }
+    .post-toc ol { margin: 0.85rem 0 0.25rem; padding-left: 1.4rem; }
+    .post-toc li { margin-bottom: 0.4rem; line-height: 1.5; }
+    .post-toc a { color: var(--slate); text-decoration: none; }
+    .post-toc a:hover, .post-toc a:focus-visible { color: var(--blue-dark, #1a4d7a); text-decoration: underline; }
+    @media (max-width: 600px) { .post-toc { margin: 1.25rem 1rem 0; } }
+
+    /* ---- cross-document view transitions ---- */
+    @view-transition { navigation: auto; }
+    .nav, .blog-nav { view-transition-name: site-nav; }
+    .footer, .blog-footer { view-transition-name: site-footer; }
+    @media (prefers-reduced-motion: reduce) {
+      ::view-transition-group(*),
+      ::view-transition-old(*),
+      ::view-transition-new(*) { animation: none !important; }
+    }
+
+    /* ── SERIES STRIP — Hermes Agent in Practice ──
+       Same class and inner-wrapper shape as the OpenClaw strip because the
+       linter's RE_SNAV recognises exactly `series-nav` + a nested div; a
+       renamed strip would read as "no nav" and fail INV-08. All content
+       checks (INV-03 family) iterate the SERIES7 list only, so this strip's
+       labels are convention, not contract. House-styled, not the island CSS. */
+    .series-nav {
+      max-width: 720px; margin: 2rem auto 0; padding: 1.1rem 1.4rem;
+      background: rgba(255,255,255,0.75); border: 1px solid rgba(34,98,153,0.15);
+      border-left: 3px solid var(--gold); border-radius: 12px;
+    }
+    .series-nav h3 {
+      font-size: 0.78rem; font-weight: 700; text-transform: uppercase;
+      letter-spacing: 0.08em; color: var(--gold-dark); margin-bottom: 0.6rem;
+    }
+    .series-links { display: flex; flex-wrap: wrap; gap: 0.5rem; }
+    .series-links a, .series-links .current {
+      font-size: 0.82rem; font-weight: 600; padding: 0.35rem 0.8rem;
+      border-radius: 50px; text-decoration: none;
+    }
+    .series-links a { color: var(--blue-dark); background: rgba(34,98,153,0.08); }
+    .series-links a:hover { background: rgba(34,98,153,0.16); }
+    .series-links .current { color: #fff; background: var(--blue-dark); }
+    @media (max-width: 600px) { .series-nav { margin: 1.5rem 1rem 0; } }
+
+    /* ── FIGURE — the sanctioned diagram component (page-design §4 Content).
+       Diagrams are PNGs; this repo built them out of divs twice and reverted
+       twice. The image is wrapped in a link to itself so a phone can pinch a
+       1400px drawing without a line of JavaScript. */
+    .figure { margin: 2.5rem 0; }
+    .figure__img { width: 100%; height: auto; display: block;
+                   border-radius: var(--radius); border: 1px solid rgba(0,0,0,0.06); }
+    .figure__caption { font-size: 0.85rem; color: var(--slate-light);
+                       text-align: center; margin-top: 0.75rem; }
+
+    /* ── REFERENCES — every material number in this series carries its source.
+       The tags are the book's own four evidence labels. */
+    .references { margin-top: 3rem; padding-top: 2rem; border-top: 1px solid #e2e8f0; }
+    .references__note { font-size: 0.85rem; color: var(--slate-light); margin-bottom: 1rem; }
+    .references__list { padding-left: 1.4rem; font-size: 0.9rem; line-height: 1.75; }
+    .references__list li { margin-bottom: 0.7rem; }
+    .ref-tag { display: inline-block; font-size: 0.7rem; font-weight: 700;
+               letter-spacing: 0.06em; text-transform: uppercase; padding: 0.1rem 0.5rem;
+               border-radius: 50px; margin-right: 0.4rem; vertical-align: 0.05em;
+               background: rgba(34,98,153,0.1); color: var(--blue-dark); }
+    /* All four labels get a rule.  --standard and --study shipped without one
+       on 2026-09-05, so 158 of 306 tags fell through to the base blue and the
+       two labels were indistinguishable.  Ratios on --bg: 6.70 / 6.92 / 7.36 /
+       4.81:1, all AA at this size. */
+    .ref-tag--law { background: rgba(239,68,68,0.12); color: #991b1b; }
+    .ref-tag--standard { background: rgba(34,98,153,0.12); color: var(--blue-dark); }
+    .ref-tag--study { background: rgba(34,197,94,0.18); color: #14532d; }
+    .ref-tag--synthesis { background: rgba(196,164,108,0.22); color: var(--gold-dark); }
+    .ref-supports { display: block; color: var(--slate-light); font-size: 0.85rem; }
+
+    /* ── LANGUAGE SWITCH — pure CSS, zero JavaScript (INV-38) ──
+       One visually-hidden checkbox as a direct child of body, BEFORE the main landmark,
+       so `#langSwitch:checked ~ main …` reaches every content block. The two
+       tracks are paired blocks: .l-th (default) and .l-en (hidden until
+       checked; display:revert restores block for divs, inline for spans).
+       Naming stays clear of INV-12's menu-token regex (hamburger|burger|
+       nav__toggle|nav-toggle|navtoggle|menu-toggle|menu__toggle) — verified.
+       No JS also means no persistence across posts; each post opens in Thai. */
+    .lang-switch-box { position: absolute; left: -9999px; }
+    .l-en { display: none; }
+    #langSwitch:checked ~ main .l-en { display: revert; }
+    #langSwitch:checked ~ main .l-th { display: none; }
+    .lang-switch {
+      display: inline-flex; align-items: center; gap: 0.55rem;
+      margin-top: 1.4rem; padding: 0.4rem 1.1rem; border-radius: 50px;
+      background: rgba(255,255,255,0.85); border: 1px solid rgba(255,255,255,0.4);
+      cursor: pointer; font-size: 0.85rem; user-select: none;
+    }
+    .lang-switch span { color: var(--slate-light); font-weight: 600; transition: color 0.2s; }
+    .lang-switch .lang-sep { color: var(--gray); font-weight: 400; }
+    .lang-switch .lang-th { color: var(--navy); font-weight: 800; }
+    #langSwitch:checked ~ main .lang-switch .lang-th { color: var(--slate-light); font-weight: 600; }
+    #langSwitch:checked ~ main .lang-switch .lang-en { color: var(--navy); font-weight: 800; }
+    .lang-switch:hover { border-color: #fff; }
+    #langSwitch:focus-visible ~ main .lang-switch {
+      outline: 2px solid var(--focus); outline-offset: 3px;
+    }
+  </style>
+  <!-- social -->
+  <link rel="canonical" href="https://anirach.com/blog/hermes-desktop-local-models.html">
+  <meta property="og:type" content="article">
+  <meta property="og:url" content="https://anirach.com/blog/hermes-desktop-local-models.html">
+  <meta property="og:site_name" content="Anirach Mingkhwan">
+  <meta property="og:locale" content="th_TH">
+  <meta property="og:locale:alternate" content="en_US">
+  <meta property="article:published_time" content="2026-09-07">
+  <meta property="article:author" content="https://anirach.com/">
+  <meta property="og:title" content="Local Models — โมเดลบนเครื่องของเราเอง">
+  <meta property="og:description" content="รัน Hermes Desktop ด้วยโมเดลบนเครื่องของเราเอง — managed llama.cpp แบบคลิกเดียว, LM Studio หรือ Ollama/vLLM ผ่าน Custom endpoint พร้อมกฎ 64K">
+  <meta property="og:image" content="https://anirach.com/images/hermes-desktop-local-models-og.jpg">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
+  <meta property="og:image:alt" content="Local Models — โมเดลบนเครื่องของเราเอง">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:image" content="https://anirach.com/images/hermes-desktop-local-models-og.jpg">
+  <meta name="twitter:image:alt" content="Local Models — โมเดลบนเครื่องของเราเอง">
+  <meta name="robots" content="max-image-preview:large">
+  <meta name="theme-color" content="#11304b">
+  <link rel="icon" href="/favicon.ico" sizes="any">
+  <link rel="apple-touch-icon" href="/apple-touch-icon.png">
+  <!-- /social -->
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "BlogPosting",
+    "headline": "Local Models — โมเดลบนเครื่องของเราเอง",
+    "author": {
+      "@type": "Person",
+      "@id": "https://anirach.com/#person",
+      "name": "Anirach Mingkhwan",
+      "url": "https://anirach.com/"
+    },
+    "datePublished": "2026-09-07",
+    "dateModified": "2026-09-07",
+    "image": "https://anirach.com/images/hermes-desktop-local-models-og.jpg",
+    "inLanguage": [
+      "th",
+      "en"
+    ],
+    "mainEntityOfPage": "https://anirach.com/blog/hermes-desktop-local-models.html"
+  }
+  </script>
+</head>
+<body>
+<a href="#main" class="skip-link">Skip to content</a>
+<input type="checkbox" id="langSwitch" class="lang-switch-box" aria-label="Switch language: Thai / English">
+
+  <nav class="blog-nav">
+    <div class="blog-nav__inner">
+      <a href="../index.html" class="blog-nav__home">Anirach</a>
+      <a href="./" class="blog-nav__back">‹ Blog</a>
+      <div class="blog-nav__title">Local Models</div>
+    </div>
+  </nav>
+
+  <main id="main">
+
+  <header class="post-hero">
+    <div class="post-hero__tags">
+      <span class="post-hero__tag">Hermes Desktop</span>
+      <span class="post-hero__tag">Local LLM</span>
+      <span class="post-hero__tag">llama.cpp</span>
+    </div>
+    <h1 class="post-hero__title"><span class="l-th">Local Models — โมเดลบนเครื่องของเราเอง</span><span class="l-en" lang="en">Local Models — Run Hermes on Your Own Machine</span></h1>
+    <p class="post-hero__sub"><span class="l-th">สามทางสู่โมเดลบนเครื่อง — managed llama.cpp แบบคลิกเดียวใน Settings → Providers, LM Studio ที่เป็น provider ในตัว และ Custom endpoint สำหรับ Ollama/llama-server/vLLM — พร้อมกฎ 64,000 token ที่ห้ามข้าม 🧠</span><span class="l-en" lang="en">Three roads to a model on your own machine — the one-click managed llama.cpp runtime under Settings → Providers, LM Studio as a first-class provider, and the Custom endpoint for Ollama, llama-server and vLLM — plus the 64,000-token rule you cannot skip 🧠</span></p>
+    <div class="post-hero__meta">
+      <span>By <strong>Anirach Mingkhwan</strong></span>
+      <span class="post-hero__series">Hermes Desktop Hands-On 2026 • Post #2</span>
+      <span><time datetime="2026-09-07">7 Sep 2026</time></span>
+      <span>28 min read</span>
+    </div>
+    <label for="langSwitch" class="lang-switch" title="สลับภาษา · Switch language"><span class="lang-th">ไทย</span><span class="lang-sep">·</span><span class="lang-en" lang="en">English</span></label>
+    <div class="post-hero__cover">
+      <img src="../images/hermes-desktop-local-models-cover.jpg" alt="Local Models — โมเดลบนเครื่องของเราเอง" width="800" height="800" loading="eager" fetchpriority="high" decoding="async">
+    </div>
+  </header>
+
+  <article class="post-body">
+
+    <details class="post-toc l-th" open>
+      <summary>ในบทความนี้</summary>
+      <ol>
+          <li><a href="#th-three-roads">1. Three Roads to a Local Model</a></li>
+          <li><a href="#th-two-rules">2. Two Rules No Local Model May Break</a></li>
+          <li><a href="#th-which-model">3. Which Model Fits Your Memory</a></li>
+          <li><a href="#th-path-a">4. Path A — One Click: the Managed llama.cpp Runtime</a></li>
+          <li><a href="#th-path-b">5. Path B — LM Studio</a></li>
+          <li><a href="#th-path-c">6. Path C — Custom Endpoint: Ollama, llama-server, vLLM</a></li>
+          <li><a href="#th-when-wrong">7. When It Goes Wrong</a></li>
+          <li><a href="#th-local-first">8. Local First, Cloud as the Safety Net</a></li>
+          <li><a href="#th-summary">9. สรุป</a></li>
+      </ol>
+    </details>
+    <details class="post-toc l-en" open>
+      <summary>In this post</summary>
+      <ol>
+          <li><a href="#en-three-roads">1. Three Roads to a Local Model</a></li>
+          <li><a href="#en-two-rules">2. Two Rules No Local Model May Break</a></li>
+          <li><a href="#en-which-model">3. Which Model Fits Your Memory</a></li>
+          <li><a href="#en-path-a">4. Path A — One Click: the Managed llama.cpp Runtime</a></li>
+          <li><a href="#en-path-b">5. Path B — LM Studio</a></li>
+          <li><a href="#en-path-c">6. Path C — Custom Endpoint: Ollama, llama-server, vLLM</a></li>
+          <li><a href="#en-when-wrong">7. When It Goes Wrong</a></li>
+          <li><a href="#en-local-first">8. Local First, Cloud as the Safety Net</a></li>
+          <li><a href="#en-summary">9. Summary</a></li>
+      </ol>
+    </details>
+    <div class="l-th">
+
+    <p>🤔 <strong>ถ้าเครื่องบนโต๊ะเราแรงพอจะรันโมเดลขนาด 27B ได้อยู่แล้ว ทำไมไฟล์ของนักศึกษา สัญญาจ้าง หรือข้อมูลคนไข้ ยังต้องเดินทางออกไปหา API ของใครก็ไม่รู้?</strong></p>
+
+    <p>ตอนที่แล้ว — <a href="/blog/hermes-desktop-install">#1 Install &amp; First Run</a> — เราติดตั้ง Hermes Desktop จนส่งข้อความแรกได้ และเห็นว่าทุกอย่างลงมาอยู่ใน <code>~/.hermes</code> เดียวกับ CLI ตอนนั้นโมเดลที่ตอบเรายังเป็นโมเดลบนคลาวด์ ตอนนี้เราจะย้ายมันลงมาไว้บนเครื่องของเราเอง — และนี่คือตอนที่ผมคิดว่าคนไทยในสายมหาวิทยาลัย โรงพยาบาล และหน่วยงานรัฐควรอ่านมากที่สุด เพราะมันคือคำตอบของคำถามเรื่องข้อมูลที่เราหลบไม่ได้</p>
+
+    <p>คำตอบหนึ่งบรรทัด: Hermes มี <strong>สามทาง</strong>ไปสู่โมเดลบนเครื่อง — managed llama.cpp runtime ที่ติดตั้งได้จากหน้า Settings, LM Studio ที่เป็น provider ในตัว และ Custom endpoint สำหรับ Ollama/llama-server/vLLM — แต่ทั้งสามทางต้องผ่าน<strong>ประตูเดียวกัน</strong> คือ context อย่างน้อย <strong>64,000 token</strong> และ flag ที่ทำให้ server ส่ง tool call ออกมาในรูปที่ agent อ่านออก ตอนนี้จะพาเดินทีละทาง พร้อมคำสั่งจริงที่ผมดึงจากเอกสารต้นทางเมื่อวันที่ 7 กันยายน 2026</p>
+
+    <h2 id="th-three-roads" lang="en">1. Three Roads to a Local Model</h2>
+
+    <p>ตอบตรง ๆ ก่อน: Hermes ไม่ได้มีวิธี "ต่อโมเดลบนเครื่อง" วิธีเดียว แต่มีสามวิธีที่ต่างกันจริง ๆ ทั้งในสิ่งที่คุณต้องคลิก ในสิ่งที่มันเขียนลง <code>config.yaml</code> และในระดับความคุมได้ที่คุณจะได้กลับมา เลือกผิดทางไม่ได้แปลว่าใช้ไม่ได้ แต่แปลว่าคุณจะไปเจอปัญหาคนละชุดกัน</p>
+
+    <figure class="figure">
+      <a href="../images/hermes-desktop-fig-02-local-models.png">
+        <img class="figure__img" src="../images/hermes-desktop-fig-02-local-models.png" alt="แผนภาพสามกล่องทางซ้าย managed llama.cpp, LM Studio และ Custom endpoint ชี้เข้าสู่ประตูกรอบสีเขียวน้ำทะเลเข้มที่เขียนว่า 64,000 tokens แล้วออกไปยังวงกลมสีน้ำเงินเข้ม Hermes Desktop" width="1400" height="700" loading="lazy" decoding="async">
+      </a>
+      <figcaption class="figure__caption">รูปที่ 1 · สามทางสู่โมเดลบนเครื่อง ทุกทางต้องผ่านประตูเดียวกัน — context อย่างน้อย 64,000 token และ flag สำหรับ tool call</figcaption>
+    </figure>
+
+    <ul>
+        <li><strong>ทาง A — managed llama.cpp runtime</strong>: เปิด <code>Settings → Providers → Local Models</code> ในตัวแอป Hermes จะโหลด llama.cpp build ที่ตรงกับฮาร์ดแวร์ของคุณ เลือกโมเดลจาก catalog ที่ถูกตีราคากับเครื่องคุณไว้แล้ว แล้วรันเซิร์ฟเวอร์ให้เอง — ผลลัพธ์ในคอนฟิกคือ <code>model.provider: llamacpp</code> พร้อมบล็อก <code>local_runtime:</code><sup><a href="#th-ref-1">[1]</a></sup></li>
+        <li><strong>ทาง B — LM Studio</strong>: เป็น <strong>provider ชั้นหนึ่ง</strong> ของ Hermes ชื่อ <code>lmstudio</code> เลือกจาก <code>hermes model</code> → "LM Studio" ปลายทางปริยายคือ <code>http://localhost:1234/v1</code> และ Hermes จะไล่ดูโมเดลที่โหลดอยู่ให้เอง<sup><a href="#th-ref-2">[2]</a></sup></li>
+        <li><strong>ทาง C — Custom endpoint</strong>: <code>model.provider: custom</code> + <code>model.base_url</code> ชี้ไปที่ server อะไรก็ได้ที่พูด <code>/v1/chat/completions</code> ได้ — เอกสารระบุชื่อไว้ตรง ๆ ทั้ง Ollama, vLLM, llama.cpp server, SGLang, LocalAI และ Jan<sup><a href="#th-ref-2">[2]</a></sup></li>
+    </ul>
+
+    <p>สิ่งที่ทั้งสามทางมีร่วมกันคือประโยคเดียวในหน้า Custom &amp; Self-Hosted ของเอกสาร: <em>"Hermes Agent works with any OpenAI-compatible API endpoint. If a server implements <code>/v1/chat/completions</code>, you can point Hermes at it."</em><sup><a href="#th-ref-2">[2]</a></sup> นั่นแปลว่าสถาปัตยกรรมของ Hermes ไม่ได้ผูกกับผู้ให้บริการรายใด และไม่ได้ผูกกับโมเดล Hermes ของ Nous เองด้วย — เรื่องนี้จะกลับมาอีกครั้งใน<a href="#th-which-model">หัวข้อที่ 3</a></p>
+
+    <p>ทาง A เพิ่งมาใหม่และเป็นทางที่ "ไม่ต้องรู้อะไรเลย" มากที่สุด หน้าเอกสาร Local Models เขียนสัญญาไว้ชัดว่า <em>"Nothing leaves your computer: no account, no API key, and no network access after a model is downloaded."</em> — <strong>ไม่มีอะไรออกจากเครื่องคุณ ไม่ต้องมีบัญชี ไม่ต้องมี API key และไม่ต้องต่อเน็ตอีกเลยหลังโหลดโมเดลเสร็จ</strong><sup><a href="#th-ref-1">[1]</a></sup> สำหรับหน่วยงานที่ต้องตอบคำถาม PDPA ประโยคนี้มีน้ำหนักมากกว่าตัวเลข benchmark ใด ๆ</p>
+
+    <p>ส่วน<em>เหตุผล</em>ว่าทำไมองค์กรถึงควรลงมาขั้นนี้ ผมเขียนไว้เต็ม ๆ แล้วใน <a href="/blog/hermes-models-cost">#9 Models &amp; Cost</a> — ทั้งบันไดห้าขั้นตั้งแต่ Nous Portal ลงมาถึง GPU ของเราเอง และคำถาม PDPA ที่องค์กรไทยหนีไม่พ้น ตอนนี้เป็นภาคปฏิบัติของขั้นล่างสุดของบันไดนั้น: อะไรที่ต้องคลิก อะไรที่ต้องพิมพ์ และอะไรที่ต้องเช็กว่าทำงานจริง</p>
+
+    <h2 id="th-two-rules" lang="en">2. Two Rules No Local Model May Break</h2>
+
+    <p>ตอบตรง ๆ ก่อน: ไม่ว่าคุณจะเดินทางไหน มีกฎสองข้อที่ละเมิดไม่ได้ ข้อแรกเป็นตัวเลขแข็ง ๆ — context อย่างน้อย 64,000 token ถ้าน้อยกว่านั้น Hermes <em>ปฏิเสธตั้งแต่ตอนเริ่ม</em> ข้อที่สองเป็นเรื่องรูปแบบ — server ต้องแปลง tool call ของโมเดลให้เป็นโครงสร้างที่ agent อ่านออก ไม่ใช่ปล่อยออกมาเป็นข้อความธรรมดา</p>
+
+    <h3>กฎข้อที่ 1 — 64,000 token หรือไม่ต้องเริ่ม</h3>
+
+    <p>เอกสารหน้า Providers เขียนไว้ตรง ๆ ว่า <em>"Hermes Agent requires at least <strong>64,000 tokens</strong> of context for agent use with tools. Smaller windows are rejected at startup because the system prompt, tool schemas, and working conversation state need enough room for reliable multi-step workflows."</em><sup><a href="#th-ref-2">[2]</a></sup> แปลเป็นภาษาที่ใช้งานได้คือ: system prompt กับ schema ของเครื่องมือกินที่ไปแล้วก้อนใหญ่ก่อนที่คุณจะพิมพ์อะไรเลย ถ้าหน้าต่างเล็กกว่านี้ agent จะไม่เหลือที่ให้ทำงานหลายขั้นตอนได้จริง</p>
+
+    <div class="alert danger">
+        <strong>ห้ามพลาดข้อนี้:</strong> 64,000 token ไม่ใช่ "ค่าที่แนะนำ" แต่เป็น<strong>พื้นที่ตรวจตอนเริ่มระบบ</strong> — หน้าต่างที่เล็กกว่านี้ถูกปฏิเสธตั้งแต่ startup<sup><a href="#th-ref-2">[2]</a></sup> และกับดักที่เจ็บที่สุดคือกับดักที่ <em>ไม่</em> ขึ้น error: Ollama ไม่ใช้ context เต็มของโมเดลโดยปริยาย (ดู<a href="#th-when-wrong">หัวข้อที่ 7</a>) ส่วน llama-server ถ้าคุณใส่ <code>-np</code> เพื่อแบ่ง slot เอกสารเตือนว่า context จะถูก<em>หาร</em>ตามจำนวน slot — <code>-c 64000 -np 4</code> เหลือ slot ละ 16k ซึ่งต่ำกว่าเกณฑ์ทันที<sup><a href="#th-ref-2">[2]</a></sup>
+    </div>
+
+    <p>ฝั่ง managed runtime กฎข้อนี้ถูกฝังไว้ในโค้ดเลย ไม่ต้องตั้งเอง เอกสารเขียนว่า <em>"Every recommended model gets at least a 64K context window"</em> และเมื่อโมเดลใหญ่เกินหน่วยความจำ GPU Hermes จะย้ายส่วนเกินลง RAM ระบบ <em>"in the order that hurts least (expert weights first, never the attention cache)"</em> — คือยอมช้าลงเพื่อรักษาสัญญาเรื่อง context ไว้<sup><a href="#th-ref-1">[1]</a></sup> ในซอร์สโค้ดของ <code>local_runtime</code> ค่านี้เขียนเป็นค่าคงที่ชื่อ <code>FLOOR</code> เท่ากับ 64 × 1024 = 65,536 token<sup><a href="#th-ref-12">[12]</a></sup></p>
+
+    <h3>กฎข้อที่ 2 — tool call ต้องออกมาในรูปที่ agent แกะได้</h3>
+
+    <p>อาการของการละเมิดกฎข้อนี้จำง่ายมาก เพราะมันไม่ใช่ error แต่เป็นคำตอบที่ดู "เกือบถูก": โมเดลพิมพ์ JSON แบบ <code>{"name": "web_search", ...}</code> ออกมาเป็นข้อความ แทนที่จะไปเรียกเครื่องมือจริง ๆ<sup><a href="#th-ref-2">[2]</a></sup> ตารางแก้ปัญหาในเอกสารระบุ flag ต่อ server ไว้ครบ:</p>
+
+    <ul>
+        <li><strong>llama.cpp / llama-server</strong> — เติม <code>--jinja</code> เอกสารเขียนไว้แรงมากว่า <em>"Without <code>--jinja</code>, llama-server ignores the <code>tools</code> parameter entirely."</em> ตรวจได้ที่ <code>http://localhost:8080/props</code> — ต้องเห็นฟิลด์ <code>chat_template</code><sup><a href="#th-ref-2">[2]</a></sup></li>
+        <li><strong>vLLM</strong> — <code>--enable-auto-tool-choice --tool-call-parser hermes</code> โดย <code>--enable-auto-tool-choice</code> จำเป็นเพราะ Hermes ใช้ <code>tool_choice: "auto"</code> เป็นค่าปริยาย ส่วนชื่อ parser เปลี่ยนตามตระกูลโมเดล (<code>hermes</code>, <code>llama3_json</code>, <code>mistral</code>, <code>deepseek_v3</code>, <code>xlam</code>, <code>pythonic</code>)<sup><a href="#th-ref-2">[2]</a></sup></li>
+        <li><strong>SGLang</strong> — <code>--tool-call-parser qwen</code> (หรือ <code>llama3</code>, <code>llama4</code>, <code>deepseekv3</code>, <code>mistral</code>, <code>glm</code> ตามตระกูลโมเดล) ถ้าไม่ใส่ tool call จะกลับมาเป็นข้อความล้วน<sup><a href="#th-ref-2">[2]</a></sup></li>
+        <li><strong>Ollama</strong> — เปิดอยู่แล้วโดยปริยาย สิ่งที่ต้องเช็กคือ<em>โมเดล</em>รองรับหรือเปล่า ด้วย <code>ollama show &lt;model-name&gt;</code><sup><a href="#th-ref-2">[2]</a></sup></li>
+        <li><strong>LM Studio</strong> — ต้องเป็นเวอร์ชัน 0.3.6 ขึ้นไป และเลือกโมเดลที่ผ่านการฝึก tool calling มาโดยตรง (LM Studio จะติดป้าย tool ให้เห็น)<sup><a href="#th-ref-2">[2]</a></sup></li>
+    </ul>
+
+    <p>ข้อสังเกตที่ผมอยากให้ติดไว้: กฎสองข้อนี้เป็นเรื่องของ <strong>server</strong> ไม่ใช่เรื่องของโมเดล คุณอาจเลือกโมเดลที่เก่งเรื่อง tool call มาก แต่ถ้าลืม <code>--jinja</code> ผลลัพธ์จะเหมือนกับที่คุณเลือกโมเดลผิด และเวลาที่เสียไปกับการโทษโมเดลผิดตัวนั้นแพงกว่าการพิมพ์ flag เพิ่มหกตัวอักษรมาก</p>
+
+    <h2 id="th-which-model" lang="en">3. Which Model Fits Your Memory</h2>
+
+    <p>ตอบตรง ๆ ก่อน: เอกสารของ Nous ไม่ได้แนะนำโมเดลเดียว แต่แนะนำ<em>คนละชุด</em>ตามทางที่คุณเลือก — catalog ของ managed runtime มีสี่ตัว, คู่มือ Ollama แนะนำ <code>gemma4:31b</code> ตัวเดียว และคู่มือ Mac แนะนำ Qwen3.5-9B ตารางข้างล่างรวมทั้งสามชุดไว้ให้เทียบด้วยเกณฑ์เดียวกัน</p>
+
+    <p>ก่อนอ่านตาราง มีกลไกหนึ่งที่ควรรู้ก่อน: ในทาง A คุณ<em>ไม่ต้อง</em>เดาว่าโมเดลไหนพอดีกับเครื่อง เพราะเอกสารระบุว่าทุกโมเดลใน catalog ถูก <em>"priced against <strong>your machine</strong> before you download anything"</em> แล้วแสดงผลเป็นสามสี — เขียว (<em>Fits your GPU</em>) เหลือง (<em>Uses system RAM</em> คือรันได้แต่ช้าลง) และแดง (<em>Too big for this machine</em>) โดยตัวที่ไม่พอดีก็ยังแสดงอยู่พร้อมเหตุผล เพื่อให้รู้ว่าถ้าอัปเกรดเครื่องแล้วจะได้อะไรเพิ่ม<sup><a href="#th-ref-1">[1]</a></sup></p>
+
+    <div class="table-wrapper">
+        <table>
+            <thead>
+                <tr>
+                    <th>Model</th>
+                    <th>Where recommended</th>
+                    <th>Size on disk</th>
+                    <th>Memory needed</th>
+                    <th>Tool calling</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td><strong>Qwen3.8 27B</strong><br><code>qwen3.8-27b</code></td>
+                    <td>catalog ของ managed runtime — <code>unsloth/Qwen3.8-27B-GGUF</code> quant <code>UD-Q4_K_M</code></td>
+                    <td>≈15.3 GiB + ตัวอ่านภาพ (mmproj) อีก ≈0.87 GiB</td>
+                    <td>GPU 8 GB ขึ้นไปรันรุ่นเล็กได้สบาย 16 GB ขึ้นไปรันรุ่น 27–35B ได้คุณภาพสูง</td>
+                    <td>ได้ — เซิร์ฟเวอร์ที่ Hermes รันให้ ใส่ <code>--jinja</code> ไว้เสมอ</td>
+                </tr>
+                <tr>
+                    <td><strong>Qwen3.6 35B-A3B</strong><br><code>qwen3.6-35b-a3b</code></td>
+                    <td>catalog — <code>unsloth/Qwen3.6-35B-A3B-MTP-GGUF</code> ตัวเดียวใน catalog ที่ติดธง <code>validated</code></td>
+                    <td>≈21.1 GiB + mmproj ≈0.84 GiB</td>
+                    <td>อยู่ในกลุ่ม 27–35B ตามเอกสารจึงควรมี VRAM 16 GB ขึ้นไป</td>
+                    <td>ได้ — เงื่อนไขเดียวกับข้างบน</td>
+                </tr>
+                <tr>
+                    <td><strong>Qwen3.8 Flash Next</strong><br><code>qwen3.8-flash-next</code></td>
+                    <td>catalog — <code>unsloth/Qwen3.8-Flash-Next-GGUF</code> quant <code>UD-Q4_K_XL</code> แยกเป็น 4 ไฟล์</td>
+                    <td>≈103.7 GiB (รวมทั้งสี่ไฟล์)</td>
+                    <td>คำบรรยายใน catalog เขียนว่า "needs a very large GPU to run well"</td>
+                    <td>ได้ — เงื่อนไขเดียวกับข้างบน</td>
+                </tr>
+                <tr>
+                    <td><strong>DeepSeek V4 Flash</strong><br><code>deepseek-v4-flash</code></td>
+                    <td>catalog — <code>unsloth/DeepSeek-V4-Flash-0731-GGUF</code> แยกเป็น 5 ไฟล์ พร้อมโมเดลร่างอีกก้อน</td>
+                    <td>≈144.4 GiB + draft model ≈10.1 GiB</td>
+                    <td>คำบรรยายใน catalog เขียนว่า "for machines with 128GB+ memory"</td>
+                    <td>ได้ — เงื่อนไขเดียวกับข้างบน</td>
+                </tr>
+                <tr>
+                    <td><strong>gemma4:31b</strong></td>
+                    <td>คู่มือ "Run Hermes Locally with Ollama" (ทาง C)</td>
+                    <td>~20 GB (ตัวเลขของคู่มือ)</td>
+                    <td>RAM 24 GB ขึ้นไป</td>
+                    <td>ได้ — และคู่มือระบุว่าเป็น<em>ตัวเดียว</em>ในตารางนั้นที่ tool calling เชื่อถือได้</td>
+                </tr>
+                <tr>
+                    <td><strong>Qwen3.5-9B</strong> quant <code>Q4_K_M</code></td>
+                    <td>คู่มือ "Run Local LLMs on Mac" (Apple Silicon, ทาง C)</td>
+                    <td>5.3 GB (ตัวเลขของคู่มือ)</td>
+                    <td>~10 GB ที่ context 128K ถ้าบีบ KV cache เป็น 4-bit</td>
+                    <td>คู่มือไม่ได้ระบุ — ถ้ารันผ่าน llama-server ต้องใส่ <code>--jinja</code> อยู่ดี</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <p>วิธีอ่านตารางนี้ที่ผมแนะนำ: ดูคอลัมน์ <em>Memory needed</em> ก่อนคอลัมน์อื่นเสมอ เพราะมันคือข้อจำกัดที่เถียงไม่ได้ ตัวเลข "ขนาดบนดิสก์" เป็นแค่ครึ่งเดียวของเรื่อง — อีกครึ่งคือ KV cache ที่โตตาม context คู่มือ Mac ยกตัวอย่างชัดที่สุดว่าโมเดล 9B ที่ context 128K ถ้าใช้ KV cache แบบ f16 จะกิน ~16 GB แต่ถ้าบีบเป็น q8_0 เหลือ ~8 GB และ q4_0 เหลือ ~4 GB<sup><a href="#th-ref-4">[4]</a></sup> นี่คือเหตุผลที่เครื่อง 8 GB รันโมเดล 9B ได้จริง และเป็นเหตุผลที่ทาง A จัดการเรื่องนี้ให้เองโดยไม่เปิดปุ่มให้เราหมุน</p>
+
+    <p>ตัวเลขขนาดของสี่โมเดลใน catalog ผมคำนวณเองจากฟิลด์ <code>size_bytes</code> ใน <code>hermes_cli/local_runtime/catalog.json</code> บน <code>main</code> ณ วันที่ 7 กันยายน 2026 ไม่ใช่ตัวเลขที่เอกสารพิมพ์ไว้ — และเอกสารเองก็เตือนว่า catalog เป็น <em>"a curated starting point, not a boundary"</em> เพราะหน้าเดียวกันมีส่วน <strong>Find more models</strong> ที่ค้นทั้ง Hugging Face และมีปุ่ม <strong>Add model file</strong> สำหรับไฟล์ <code>.gguf</code> ที่มีอยู่แล้วบนดิสก์<sup><a href="#th-ref-1">[1]</a></sup><sup><a href="#th-ref-12">[12]</a></sup></p>
+
+    <blockquote><strong>💡 สิ่งที่ไม่มีในตารางนี้:</strong> ไม่มีโมเดล Hermes ของ Nous เองอยู่เลยสักตัว — catalog ของ managed runtime เป็น Qwen กับ DeepSeek, คู่มือ Ollama เป็น Gemma, คู่มือ Mac เป็น Qwen และหน้า Providers ยกตัวอย่างด้วย <code>qwen2.5-coder:32b</code> เอกสารการใช้งานของ Hermes Agent ไม่มีหน้าไหนแนะนำให้เอา Hermes 3/4 มารันเป็นโมเดลท้องถิ่นสำหรับงาน tool use เลย ชื่อ <code>hermes</code> ที่โผล่ใน <code>--tool-call-parser hermes</code> คือชื่อ<em>รูปแบบ</em>ของ tool call ไม่ใช่ชื่อโมเดลที่ต้องใช้ — อย่าสับสนสองเรื่องนี้เวลาเลือกซื้อ GPU</blockquote>
+
+    <h2 id="th-path-a" lang="en">4. Path A — One Click: the Managed llama.cpp Runtime</h2>
+
+    <p>ตอบตรง ๆ ก่อน: ทางนี้สั้นที่สุด — สี่คลิกจบ ติดตั้ง runtime, เลือกโมเดล, กด Download, กด Use แล้วแชตใหม่จะวิ่งบนโมเดลในเครื่องทันที เอกสารสรุปเองว่า <em>"That's the whole flow."</em> เซิร์ฟเวอร์จะสตาร์ตและหยุดพร้อมกับ Hermes และการสลับกลับไปใช้โมเดลบนคลาวด์เป็นแค่คลิกเดียวใน model picker<sup><a href="#th-ref-1">[1]</a></sup></p>
+
+    <div class="alert info">
+        <strong>ก่อนกดตาม ให้ตรวจรุ่นก่อน:</strong> ฟีเจอร์นี้เข้ามาใน repo วันที่ 1 กันยายน 2026 ด้วย commit <code>43e67d87</code> ("feat: local models — managed llama.cpp runtime with one-click desktop setup") ซึ่ง<strong>หลัง</strong> release ที่ติดแท็กล่าสุด คือ <code>v2026.8.31</code> (Hermes Agent v0.21.0, 31 สิงหาคม 2026) และในบันทึกการออกรุ่นนั้นไม่มีคำว่า local models เลย<sup><a href="#th-ref-11">[11]</a></sup><sup><a href="#th-ref-12">[12]</a></sup> ผมจึงไปตรวจของจริงในวันที่เขียน: หน้าดาวน์โหลด Hermes Desktop เสิร์ฟไฟล์ติดตั้งด้วยพารามิเตอร์ <code>build=06402ecb7ca5</code> ซึ่งเป็น commit ลงวันที่ 6 กันยายน 2026 และอยู่<em>หลัง</em> <code>43e67d87</code> ในสายเดียวกัน (นำหน้าอยู่ 5,139 commit และไม่ตามหลังเลย) — แปลว่า<strong>แอปที่โหลดวันนี้มีฟีเจอร์นี้แล้ว แม้เลขเวอร์ชันที่หน้าเว็บยังเขียนว่า v0.21.0 อยู่</strong><sup><a href="#th-ref-10">[10]</a></sup> ถ้าเปิด Settings แล้วไม่เจอ Local Models แปลว่าแอปของคุณเก่ากว่านั้น — <code>hermes update</code> จะดึงโค้ดล่าสุดและติดตั้ง dependency ใหม่ให้<sup><a href="#th-ref-5">[5]</a></sup> หรือข้ามไปใช้<a href="#th-path-b">ทาง B</a> ซึ่งไม่ผูกกับรุ่นของแอปเลย
+    </div>
+
+    <ol>
+        <li>เปิด <code>Settings → Providers → Local Models</code> (หรือเลือก <strong>Run models locally</strong> ตั้งแต่ตอน onboarding) — ในเอกสารหน้า Desktop ระบุว่า Providers pane มี Local Models view สำหรับ "installs and manages an on-device llama.cpp runtime" อยู่<sup><a href="#th-ref-6">[6]</a></sup></li>
+        <li>กด <strong>Install runtime</strong> คุณควรเห็นการดาวน์โหลดขนาดไม่กี่ร้อย MB — เอกสารบอกว่า Hermes โหลด llama.cpp build ทางการที่ตรงกับฮาร์ดแวร์ ตรวจสอบไฟล์ แล้วดูแลอัปเดตให้เอง (Windows/Linux ใช้ CUDA หรือ CPU, macOS ใช้ Metal บน Apple Silicon, ส่วน Vulkan ไว้สำหรับการ์ด AMD)<sup><a href="#th-ref-1">[1]</a></sup></li>
+        <li>เลือกโมเดลจาก catalog โดยดู<strong>สีของ Memory fit</strong> เป็นหลัก — เลือกตัวที่ขึ้นเขียวว่า <em>Fits your GPU</em> ก่อนเสมอ อย่าเพิ่งเลือกตัวเหลือง <em>Uses system RAM</em> ในการทดลองครั้งแรก</li>
+        <li>กด <strong>Download</strong> แล้วรอ ระหว่างรอให้สังเกตว่าเอกสารระบุว่าไฟล์โมเดลถูกตรวจขนาดเป็นไบต์ระหว่างโอน ถ้าโหลดไม่ครบไฟล์จะถูกลบและรายงาน ไม่ถูกนำไปใช้ครึ่ง ๆ กลาง ๆ<sup><a href="#th-ref-1">[1]</a></sup></li>
+        <li>กด <strong>Use</strong> คุณควรเห็นว่าแชตใหม่เปลี่ยนไปใช้โมเดลนี้ — เอกสารเขียนว่า "New chats now run on the local model."<sup><a href="#th-ref-1">[1]</a></sup></li>
+        <li>ส่งข้อความทดสอบที่<em>ต้องใช้เครื่องมือ</em> ไม่ใช่แค่ทักทาย เช่นประโยคที่คู่มือ Ollama ใช้เอง: "List all Python files in this directory and count the lines of code in each" — ถ้าเห็น agent เรียก terminal tool จริง แปลว่ากฎข้อที่สองผ่านแล้ว<sup><a href="#th-ref-3">[3]</a></sup></li>
+        <li>ยืนยันจากฝั่งไฟล์ด้วย <code>grep -A3 local_runtime ~/.hermes/config.yaml</code> คุณควรเห็น <code>enabled: true</code> ในบล็อกนั้น เพราะเอกสารระบุว่าปุ่ม Use เป็นตัวตั้งค่านี้ให้เอง<sup><a href="#th-ref-1">[1]</a></sup></li>
+    </ol>
+
+    <p>บล็อกที่คุณจะเห็นในไฟล์คอนฟิก หน้าเอกสารพิมพ์ไว้แบบนี้ทั้งบล็อกพร้อมคอมเมนต์:</p>
+
+    <pre><code># ~/.hermes/config.yaml — ส่วนที่ปุ่ม Use เขียนให้ (คัดลอกจากหน้าเอกสาร Local Models)
+local_runtime:
+  enabled: false     # true = start the managed server with Hermes.
+                     # The desktop "Use" button sets this automatically.
+  backend: auto      # auto | cuda | metal | vulkan | hip | cpu
+  tag: b10362        # pinned llama.cpp release; Hermes updates it with
+                     # each release after re-validation</code></pre>
+
+    <p>ส่วนการเลือกโมเดลนั้นไม่มีคีย์พิเศษอะไรเลย เอกสารเขียนว่ามันใช้ <code>model.provider: llamacpp</code> คู่กับ <code>model.default</code> — <em>"the same shape as every other provider"</em> ไฟล์โมเดลและ runtime อยู่ใต้ Hermes home ในโฟลเดอร์ <code>models/</code> และ <code>runtimes/llamacpp/</code><sup><a href="#th-ref-1">[1]</a></sup> ในโค้ด ตัว supervisor ผูกเซิร์ฟเวอร์ไว้ที่ <code>127.0.0.1</code> พอร์ตปริยาย <strong>18434</strong> (ถ้าพอร์ตชนจะเปลี่ยนเป็นพอร์ตว่างอัตโนมัติ) และสั่ง llama-server ด้วย <code>--jinja</code> เสมอ ซึ่งเป็นเหตุผลที่คอลัมน์ Tool calling ของสี่โมเดลใน<a href="#th-which-model">ตารางที่ 1</a> เป็น "ได้" ทั้งแถว<sup><a href="#th-ref-12">[12]</a></sup> อีกค่าที่มาจากโค้ดคือการปล่อยโมเดลที่ไม่ได้ใช้ออกจากหน่วยความจำหลังนิ่งครบ 15 นาที ซึ่งตรงกับที่เอกสารเขียนไว้<sup><a href="#th-ref-1">[1]</a></sup></p>
+
+    <h3>สองบั๊กของสัปดาห์แรกที่ควรรู้ก่อนกด</h3>
+
+    <p>ฟีเจอร์นี้เพิ่งอายุไม่ถึงสัปดาห์ตอนที่ผมเขียน และมี issue เปิดค้างอยู่สองใบที่กระทบคนใช้จริงโดยตรง ทั้งคู่ยังเปิดอยู่เมื่อผมตรวจในวันที่ 7 กันยายน 2026:</p>
+
+    <ul>
+        <li><strong>ตัวเลือกอัตโนมัติเลือกโมเดลใหญ่เกินเครื่อง</strong> — issue #102865 (4 กันยายน 2026) รายงานจากโน้ตบุ๊ก Linux ที่มี RTX 4070 Laptop VRAM 8 GiB กับ RAM 30 GiB ว่า catalog เลือก <code>qwen3.6-35b-a3b</code> ให้อัตโนมัติแล้วสร้าง preset ที่ <code>ctx-size = 65536</code> ผลคือ RAM เต็ม ระบบเริ่ม swap และ<em>เดสก์ท็อปทั้งเครื่องค้าง</em>จนต้องกดรีบูต ผู้รายงานสรุปสั้น ๆ ว่า "Working set &gt;&gt; available RAM → kernel swaps… → full desktop freeze" — ถ้าเครื่องคุณมี VRAM 8 GB หรือน้อยกว่า ให้เลือกโมเดลด้วยมือ อย่าเชื่อการเลือกอัตโนมัติ<sup><a href="#th-ref-13">[13]</a></sup></li>
+        <li><strong>Linux + NVIDIA เลือก backend อัตโนมัติแล้วพัง</strong> — issue #103949 (5 กันยายน 2026) ชี้ว่า <code>select_backend()</code> คืนค่า <code>cuda</code> สำหรับการ์ด NVIDIA ทุกใบที่ไม่ใช่ macOS รวมทั้ง Linux แต่ llama.cpp ไม่มีไฟล์ prebuilt CUDA สำหรับ Linux จึงได้ error <code>BinaryResolutionError: no prebuilt linux CUDA asset</code> ทางแก้ที่ผู้รายงานทดสอบจนใช้งานได้จริงคือตั้ง <code>local_runtime.backend: vulkan</code> ด้วยมือ<sup><a href="#th-ref-14">[14]</a></sup></li>
+    </ul>
+
+    <h2 id="th-path-b" lang="en">5. Path B — LM Studio</h2>
+
+    <p>ตอบตรง ๆ ก่อน: ถ้าคุณอยากได้หน้าจอกราฟิกสำหรับจัดการโมเดล และอยากให้ Hermes มองเห็นโมเดลที่โหลดไว้เองโดยไม่ต้องพิมพ์ URL ทาง B คือคำตอบ LM Studio ไม่ใช่ custom endpoint แต่เป็น provider ชั้นหนึ่งชื่อ <code>lmstudio</code> — เลือกจากเมนู <code>hermes model</code> ได้ตรง ๆ และไม่ผูกกับรุ่นของ Hermes Desktop เหมือนทาง A<sup><a href="#th-ref-2">[2]</a></sup></p>
+
+    <ol>
+        <li>ติดตั้ง LM Studio แล้วดาวน์โหลดโมเดล GGUF สักตัวที่ผ่านการฝึก tool calling มา — เอกสารระบุตระกูลที่ LM Studio ตรวจจับให้อัตโนมัติไว้ว่า Qwen 2.5, Llama 3.x, Mistral และ Hermes โดยต้องเป็น LM Studio 0.3.6 ขึ้นไป<sup><a href="#th-ref-2">[2]</a></sup></li>
+        <li>เปิดเซิร์ฟเวอร์จากแท็บ <strong>Developer</strong> (ปุ่ม Start Server) หรือใช้บรรทัดคำสั่ง <code>lms server start</code> คุณควรเห็นว่ามันขึ้นที่พอร์ต 1234<sup><a href="#th-ref-2">[2]</a></sup></li>
+        <li>ตั้ง context ให้ถึงเกณฑ์ก่อนโหลดโมเดล — คลิกไอคอนรูปเฟืองข้าง model picker ตั้ง "Context Length" เป็นอย่างน้อย 64000 แล้ว<em>โหลดโมเดลใหม่</em>ให้ค่ามีผล หรือใช้ <code>lms load model-name --context-length 64000</code><sup><a href="#th-ref-2">[2]</a></sup></li>
+        <li>ไม่แน่ใจว่าเครื่องรับไหว ให้ลองประเมินก่อนด้วย <code>lms load model-name --context-length 64000 --estimate-only</code> ถ้าเครื่องรับ 64000 ไม่ไหว เอกสารแนะนำให้เปลี่ยนไปใช้โมเดลเล็กลงที่มี context ยาวกว่า แทนที่จะลด context ลงต่ำกว่าเกณฑ์<sup><a href="#th-ref-2">[2]</a></sup></li>
+        <li>ต่อฝั่ง Hermes: บนเดสก์ท็อปตั้งค่าปริยายที่ <code>Settings → Model</code> ซึ่งเอกสารระบุว่าเป็นที่เดียวที่เขียนค่าปริยายของ profile จริง ๆ ส่วนใน terminal ให้รัน <code>hermes model</code> แล้วเลือก "LM Studio" กด Enter ผ่าน URL ปริยาย <code>http://localhost:1234/v1</code> แล้วเลือกโมเดลจากรายการที่มันค้นเจอ<sup><a href="#th-ref-2">[2]</a></sup><sup><a href="#th-ref-6">[6]</a></sup></li>
+        <li>ทดสอบด้วยคำสั่งที่ต้องใช้เครื่องมือ ไม่ใช่คำถามความรู้ทั่วไป — ให้มันไล่ไฟล์ในโฟลเดอร์แล้วนับบรรทัด ถ้ามันตอบเป็น JSON ดิบแทนที่จะลงมือทำ ให้ย้อนกลับไปดูกฎข้อที่สองใน<a href="#th-two-rules">หัวข้อที่ 2</a></li>
+    </ol>
+
+    <pre><code># เปิดเซิร์ฟเวอร์และโหลดโมเดลด้วย context 64K (คำสั่งจากหน้า Providers)
+lms server start                        # Starts on port 1234
+lms load qwen2.5-coder --context-length 64000
+
+# ถ้าใช้โหมด Just-In-Time / Auto-Evict ของ LM Studio ให้ Hermes เลิกโหลดโมเดลล่วงหน้า
+hermes config set model.lmstudio_load_mode jit
+# กลับเป็นค่าปริยาย (โหลดล่วงหน้าเอง)
+hermes config set model.lmstudio_load_mode explicit</code></pre>
+
+    <p>สองเรื่องที่ควรรู้เพิ่ม เรื่องแรกคือคีย์: ค่าปริยายของปลายทางคือ <code>http://localhost:1234/v1</code> เปลี่ยนได้ด้วยตัวแปรสภาพแวดล้อม <code>LM_BASE_URL</code><sup><a href="#th-ref-8">[8]</a></sup> ส่วน <code>LM_API_KEY</code> ใส่เฉพาะกรณีที่คุณเปิด auth บนเซิร์ฟเวอร์ของ LM Studio เอง<sup><a href="#th-ref-2">[2]</a></sup> เรื่องที่สองคือพฤติกรรมเรื่อง context ที่ละเอียดกว่าที่คิด — เอกสารเขียนว่า Hermes จะ<em>เคารพ</em>ค่า context ของโมเดลที่โหลดค้างอยู่แล้ว และในโหมดปริยาย <code>explicit</code> มันจะ<em>ไม่ส่ง</em> <code>context_length</code> ไปเลยถ้าคุณไม่ได้ตั้งไว้ฝั่ง Hermes เพื่อให้ LM Studio ใช้ค่าของตัวเอง แล้วค่อยอ่านค่าที่ LM Studio รายงานกลับมาหลังโหลดเสร็จ<sup><a href="#th-ref-2">[2]</a></sup> พูดอีกอย่างคือ ถ้าคุณตั้ง 64000 ใน LM Studio ไว้แล้ว คุณไม่ต้องไปตั้งซ้ำใน Hermes</p>
+
+    <h2 id="th-path-c" lang="en">6. Path C — Custom Endpoint: Ollama, llama-server, vLLM</h2>
+
+    <p>ตอบตรง ๆ ก่อน: ทางนี้คุมได้มากที่สุดและใช้ได้กับทุกอย่าง เพราะมันไม่ใช่การรองรับ "ผลิตภัณฑ์" ใดเป็นพิเศษ แต่เป็นการชี้ Hermes ไปที่ URL ที่พูดภาษา OpenAI ได้ ขั้นตอนฝั่ง Hermes เหมือนกันหมดไม่ว่าปลายทางจะเป็นอะไร ต่างกันแค่ URL พอร์ต และ flag ที่คุณต้องใส่ตอนสตาร์ต server</p>
+
+    <ol>
+        <li>รัน <code>hermes model</code> จาก terminal (ไม่ใช่ <code>/model</code> ในหน้าแชต — เอกสารเตือนไว้ว่า <code>/model</code> สลับได้เฉพาะสิ่งที่ตั้งค่าไว้แล้ว เพิ่ม provider ใหม่ไม่ได้)<sup><a href="#th-ref-2">[2]</a></sup></li>
+        <li>เลือกรายการ <strong>"Custom endpoint (self-hosted / VLLM / etc.)"</strong><sup><a href="#th-ref-2">[2]</a></sup></li>
+        <li>ใส่ <strong>API base URL</strong> ตามเซิร์ฟเวอร์ของคุณ เช่น <code>http://localhost:11434/v1</code> สำหรับ Ollama</li>
+        <li>ข้าม <strong>API key</strong> ไปได้เลยสำหรับเซิร์ฟเวอร์ในเครื่อง แล้วใส่ <strong>Model name</strong> — หรือเว้นว่างไว้ให้มันตรวจเองถ้ามีโมเดลโหลดอยู่ตัวเดียว<sup><a href="#th-ref-2">[2]</a></sup></li>
+        <li>ใส่ <strong>Context length</strong> ให้ตรงกับค่าจริงของเซิร์ฟเวอร์ ตัวอย่างในหน้า FAQ ใช้ <code>64000</code> พร้อมหมายเหตุว่า "Hermes minimum; set this to match your server's actual context window" — ถ้าเว้นว่างมันจะไปตรวจเอง ซึ่งเป็นจุดที่ Ollama หลอกได้ (ดู<a href="#th-when-wrong">หัวข้อที่ 7</a>)<sup><a href="#th-ref-5">[5]</a></sup></li>
+    </ol>
+
+    <p>บนเดสก์ท็อป ทางเดินที่เทียบเท่ากันอยู่ในหน้าตั้งค่า: เอกสารระบุว่าค่าปริยายของโมเดลตั้งที่ <code>Settings → Model</code> และเมื่อ turn ใดล้มเหลว การ์ดแจ้งเตือนจะมีปุ่ม <strong>Switch provider</strong> ที่พาไปยังหน้าเดียวกันสำหรับเรื่อง provider, endpoint, auth และ billing<sup><a href="#th-ref-6">[6]</a></sup> ส่วนหน้า Local Models ก็เขียนไว้ตรงกันว่า managed runtime <em>"is a default, not a requirement"</em> และคุณ "point a custom endpoint at any OpenAI-compatible server for full manual control" ได้เสมอ<sup><a href="#th-ref-1">[1]</a></sup></p>
+
+    <p>ทีนี้ฝั่งเซิร์ฟเวอร์ สามคำสั่งข้างล่างคือสามกรณีที่พบบ่อยที่สุด ผมยกมาจากเอกสารต้นทางแบบตรงตัว เปลี่ยนแค่คอมเมนต์เป็นภาษาไทย เริ่มจาก Ollama ซึ่งเป็นกรณีที่คนพลาดมากที่สุดเพราะ context ปริยายของมันเล็กเกินเกณฑ์:</p>
+
+    <pre><code># วิธีที่ 1 — ตั้งทั้งเซิร์ฟเวอร์ด้วยตัวแปรสภาพแวดล้อม (เอกสารแนะนำวิธีนี้)
+OLLAMA_CONTEXT_LENGTH=64000 ollama serve
+
+# วิธีที่ 2 — อบค่าไว้ในโมเดลของตัวเอง ค้างถาวรต่อโมเดล
+echo -e "FROM qwen2.5-coder:32b\nPARAMETER num_ctx 64000" &gt; Modelfile
+ollama create qwen2.5-coder-64k -f Modelfile
+
+# ตรวจว่าได้ผลจริง ดูคอลัมน์ CONTEXT
+ollama ps</code></pre>
+
+    <pre><code># llama-server — --jinja คือ flag ที่ขาดไม่ได้สำหรับ tool calling
+./build/bin/llama-server \
+  --jinja -fa \
+  -c 64000 \
+  -ngl 99 \
+  -m models/qwen2.5-coder-32b-instruct-Q4_K_M.gguf \
+  --port 8080 --host 0.0.0.0
+
+# ตรวจ context ที่เซิร์ฟเวอร์ใช้จริง
+curl http://localhost:8080/props | jq '.default_generation_settings.n_ctx'</code></pre>
+
+    <pre><code># vLLM — ต้องมีสอง flag นี้ ไม่งั้น tool call จะออกมาเป็นข้อความ
+vllm serve meta-llama/Llama-3.1-70B-Instruct \
+  --port 8000 \
+  --max-model-len 65536 \
+  --tensor-parallel-size 2 \
+  --enable-auto-tool-choice \
+  --tool-call-parser hermes</code></pre>
+
+    <p>ตารางข้างล่างสรุปสามทางทั้งหมดให้เทียบกันในหน้าเดียว รวมทั้งสิ่งที่แต่ละทางเขียนลงคอนฟิก ซึ่งเป็นข้อมูลที่หาที่รวมไว้ยากที่สุดเวลาต้องแก้ปัญหา</p>
+
+    <div class="table-wrapper">
+        <table>
+            <thead>
+                <tr>
+                    <th>Path</th>
+                    <th>What you click or type</th>
+                    <th>URL / port</th>
+                    <th>Config it writes</th>
+                    <th>Best for</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td><strong>Managed llama.cpp</strong> (ทาง A)</td>
+                    <td><code>Settings → Providers → Local Models</code> → Install runtime → Download → Use</td>
+                    <td><code>127.0.0.1:18434</code> (พอร์ตปริยายในโค้ด เปลี่ยนเองถ้าชน)</td>
+                    <td><code>model.provider: llamacpp</code> + <code>model.default</code> + บล็อก <code>local_runtime:</code></td>
+                    <td>คนที่อยากได้ผลลัพธ์เร็วที่สุดโดยไม่ต้องรู้เรื่อง quantization หรือ GPU layer</td>
+                </tr>
+                <tr>
+                    <td><strong>LM Studio</strong> (ทาง B)</td>
+                    <td><code>lms server start</code> แล้ว <code>hermes model</code> → "LM Studio"</td>
+                    <td><code>http://localhost:1234/v1</code> (เปลี่ยนด้วย <code>LM_BASE_URL</code>)</td>
+                    <td><code>model.provider: lmstudio</code> + <code>model.default</code></td>
+                    <td>คนที่อยากได้ GUI จัดการโมเดล และอยากให้ Hermes ค้นโมเดลที่โหลดไว้ให้เอง</td>
+                </tr>
+                <tr>
+                    <td><strong>Ollama</strong> (ทาง C)</td>
+                    <td><code>ollama pull</code> แล้ว <code>hermes model</code> → Custom endpoint</td>
+                    <td><code>http://localhost:11434/v1</code></td>
+                    <td><code>model.provider: custom</code> + <code>base_url</code> + ควรใส่ <code>context_length</code> ด้วย</td>
+                    <td>เครื่องเดียวจบ ติดตั้งง่ายที่สุด แลกกับกับดักเรื่อง context ที่ต้องรู้ทัน</td>
+                </tr>
+                <tr>
+                    <td><strong>llama-server</strong> (ทาง C)</td>
+                    <td>สั่งเองพร้อม <code>--jinja -fa -c 64000 -ngl 99</code></td>
+                    <td><code>http://localhost:8080/v1</code></td>
+                    <td><code>model.provider: custom</code> + <code>base_url</code></td>
+                    <td>Mac Apple Silicon และเครื่องที่หน่วยความจำจำกัด เพราะบีบ KV cache ได้</td>
+                </tr>
+                <tr>
+                    <td><strong>vLLM</strong> (ทาง C)</td>
+                    <td><code>vllm serve</code> พร้อมสอง flag เรื่อง tool call</td>
+                    <td><code>http://localhost:8000/v1</code></td>
+                    <td><code>model.provider: custom</code> + <code>base_url</code> + <code>context_length</code></td>
+                    <td>เซิร์ฟเวอร์ GPU ขององค์กรที่ต้องรองรับหลายคนพร้อมกัน</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <blockquote><strong>💡 Ollama มีสองร่างในโลกของ Hermes:</strong> Ollama ที่รันบนเครื่องคุณ <strong>ไม่ใช่</strong> provider — มันเข้าทาง Custom endpoint ที่ <code>http://localhost:11434/v1</code> โดยไม่ต้องใส่คีย์ ส่วน <strong>Ollama Cloud</strong> เป็น provider ชั้นหนึ่งจริง ๆ (<code>--provider ollama-cloud</code> พร้อม <code>OLLAMA_API_KEY</code>) เอกสารสรุปความต่างไว้ว่า "Use cloud for large models you can't run locally; use local for privacy or offline work." — สองอย่างนี้ตั้งค่าคนละที่ อย่าไปหา "Ollama" ในรายการ provider แล้วสงสัยว่าทำไมมันขอ API key<sup><a href="#th-ref-2">[2]</a></sup></blockquote>
+
+    <h2 id="th-when-wrong" lang="en">7. When It Goes Wrong</h2>
+
+    <p>ตอบตรง ๆ ก่อน: ปัญหาของโมเดลบนเครื่องเกือบทั้งหมดที่ผมเห็น ลงเอยที่สองเรื่อง — <strong>context ที่ไม่ใช่ค่าที่คุณคิด</strong> กับ <strong>ความเงียบตอนต้นเทิร์นที่ถูกเข้าใจผิดว่าค้าง</strong> ทั้งสองเรื่องมีอาการที่ดูเหมือน "โมเดลโง่" แต่ไม่ใช่เรื่องของโมเดลเลย</p>
+
+    <h3>Ollama ไม่ได้ใช้ context เต็มของโมเดล</h3>
+
+    <p>นี่คือกับดักที่เอกสารเรียกเองว่า <em>"the #1 source of confusion"</em> — Ollama ไม่ใช้หน้าต่าง context เต็มของโมเดลโดยปริยาย และค่าที่มันใช้ขึ้นกับ VRAM ที่มี ตารางในหน้า Providers ระบุไว้แบบนี้<sup><a href="#th-ref-2">[2]</a></sup></p>
+
+    <ul>
+        <li>VRAM น้อยกว่า 24 GB → context ปริยาย <strong>4,096 token</strong> — ต่ำกว่าเกณฑ์ของ Hermes สิบห้าเท่า</li>
+        <li>VRAM 24–48 GB → 32,768 token — ยังไม่ถึงเกณฑ์</li>
+        <li>VRAM 48 GB ขึ้นไป → 256,000 token — เกินพอ แต่เป็นเครื่องที่คนส่วนใหญ่ไม่มี</li>
+    </ul>
+
+    <p>ตัวเลขตรงนี้เป็นจุดที่แหล่งข้อมูลไม่ตรงกัน และผมคิดว่าควรบอกไว้ให้ชัดแทนที่จะเลือกตัวเลขที่ฟังดูดีกว่า: คู่มือ "Run Hermes Locally with Ollama" เขียนว่า <em>"By default, Ollama uses a 2048-token context"</em><sup><a href="#th-ref-3">[3]</a></sup> ขณะที่หน้า Providers ให้ตาราง 4,096/32,768/256,000 ตาม VRAM<sup><a href="#th-ref-2">[2]</a></sup> ทั้งสองหน้าอยู่บนเว็บเดียวกันและอัปเดตคนละรอบ — ผมเคยบันทึกความไม่ตรงกันนี้ไว้แล้วใน <a href="/blog/hermes-models-cost">#9 Models &amp; Cost</a> ตอนนั้นเทียบกับ FAQ ของ Ollama เองที่ให้ 4,096 ข้อสรุปเชิงปฏิบัติไม่เปลี่ยน: <strong>ทุกค่าที่ยกมาต่ำกว่า 64,000 ทั้งหมด</strong> ดังนั้นอย่าไปเถียงว่าค่าไหนถูก ให้ตั้งเองทุกครั้ง</p>
+
+    <p>สิ่งที่ทำให้กับดักนี้เจ็บคือมันเงียบ Issue #43900 (11 มิถุนายน 2026 ยังเปิดอยู่) อธิบายกลไกไว้ละเอียด: Hermes อ่านค่า context จาก metadata ของไฟล์ GGUF (เช่น 131,072 ของ Gemma 4) มาเก็บไว้ แต่ไม่ได้ส่งค่านั้นข้ามไปทางเส้นทาง <code>/v1/chat/completions</code> จริง ๆ เพราะฝั่ง OpenAI-compatible ของ Ollama ไม่รับฟิลด์นั้น ผลคือเมื่อบทสนทนายาวเกิน 4,096 token ทุกคำตอบจะกลับมาพร้อม <code>finish_reason="length"</code> เนื้อหาว่างหรือขาดกลางคัน แล้ววงจรลองใหม่ก็เอาชิ้นส่วนที่พังมาต่อกันจนได้ข้อความมั่ว ทั้งที่หน้าจอยังแสดงว่าใช้ context ไป <code>0 / 131.1K</code><sup><a href="#th-ref-15">[15]</a></sup></p>
+
+    <p>ซ้ำร้ายกว่านั้น การตรวจอัตโนมัติก็เชื่อไม่ได้ เพราะ FAQ ระบุว่า <em>"Ollama's <code>/api/show</code> reports the model's <em>maximum</em> context, not the effective <code>num_ctx</code> you configured"</em><sup><a href="#th-ref-5">[5]</a></sup> — Hermes จึงถามแล้วได้คำตอบที่ถูกต้องตามเอกสารของโมเดล แต่ผิดตามความจริงของเซิร์ฟเวอร์ ทางแก้เดียวที่ปลอดภัยคือ<strong>ตั้ง <code>model.context_length</code> เองให้ตรงกับค่าที่เซิร์ฟเวอร์ใช้จริง</strong> เอกสารยังไล่ลำดับการตรวจไว้ครบเก้าขั้น โดยขั้นแรกสุดคือค่าที่คุณตั้งเองใน <code>config.yaml</code> และขั้นสุดท้ายคือค่าปริยาย 128K สำหรับโมเดลที่ไม่รู้จัก<sup><a href="#th-ref-2">[2]</a></sup></p>
+
+    <h3>ความเงียบตอนต้นเทิร์นคือ prefill ไม่ใช่การค้าง</h3>
+
+    <p>เรื่องที่สองเป็นเรื่องของเวลา คู่มือ Mac อธิบายไว้ตรงที่สุดว่า Hermes ส่ง system prompt กับ schema ของเครื่องมือไปทุกครั้งที่เรียก บนฮาร์ดแวร์ที่ช้ากว่า เทิร์นแรกจึงอาจเงียบเป็น<em>นาที</em>ระหว่างที่โมเดลประมวลผล prompt ก้อนนั้นก่อนจะเริ่มพิมพ์ตัวอักษรแรก — "That's prefill at work, not a stalled session."<sup><a href="#th-ref-4">[4]</a></sup> Hermes รู้เรื่องนี้และจัดการให้ระดับหนึ่งแล้ว: FAQ ระบุว่ามันตรวจจับปลายทางในเครื่องได้เอง แล้วผ่อนเวลาหมดอายุของสตรีมจาก 120 วินาทีเป็น 1,800 วินาที (คือ 30 นาที) พร้อมปิดการตรวจจับสตรีมนิ่ง ถ้ายังไม่พอกับ context ที่ใหญ่มาก ให้ใส่ <code>HERMES_STREAM_READ_TIMEOUT=1800</code> ใน <code>~/.hermes/.env</code><sup><a href="#th-ref-5">[5]</a></sup> ฝั่ง Ollama คู่มือยังแนะนำให้ตั้ง <code>HERMES_API_TIMEOUT=1800</code> และคง <code>OLLAMA_KEEP_ALIVE=24h</code> ไว้ด้วย เพราะปริยาย Ollama จะปล่อยโมเดลออกจากหน่วยความจำหลังนิ่งห้านาที ทำให้ต้องเสียเวลาโหลดใหม่ก่อน prefill รอบถัดไป<sup><a href="#th-ref-3">[3]</a></sup></p>
+
+    <p>ทั้งหมดนี้ยังไม่ครอบคลุมทุกอาการ Issue #87697 (16 สิงหาคม 2026 ยังเปิดอยู่ ติดป้าย needs-repro) รายงานจาก Linux + Ollama ว่า Hermes ยกเลิกสตรีมเองภายในราว 1.5 วินาทีระหว่างที่โมเดลกำลังประเมิน prompt แล้วลองต่ออีกสี่ครั้งจนบริบทเสียหายและพ่น token <code>&lt;unused49&gt;</code> ออกมาเป็นสาย ผู้รายงานวิเคราะห์ต้นเหตุไว้ว่า Hermes ส่ง system prompt ก้อนใหญ่ราว 17,000 token จาก schema ของเครื่องมือ และการประเมิน prompt ขนาดนั้นบนฮาร์ดแวร์ในเครื่องกินเวลา 1.5–2.5 วินาทีก่อนตัวอักษรแรกโดยธรรมชาติ — ล็อกฝั่ง Ollama ที่แนบมาแสดง <code>task.n_tokens = 16862</code> ตรงกับคำอธิบาย<sup><a href="#th-ref-16">[16]</a></sup> ถ้าคุณเจออาการนี้ ให้รู้ไว้ว่าเป็นบั๊กที่ยังไม่ปิด ไม่ใช่การตั้งค่าของคุณผิด และเครื่องมือที่ช่วยลดขนาด prompt ก้อนนั้นได้จริงคือ <code>hermes prompt-size</code> ซึ่งคู่มือ Mac แนะนำไว้เอง<sup><a href="#th-ref-4">[4]</a></sup></p>
+
+    <h3>สองการตั้งค่าที่แก้ปัญหาส่วนใหญ่ได้</h3>
+
+    <ol>
+        <li><strong>ตั้ง context เองเสมอ</strong> — เขียน <code>model.context_length</code> ลง <code>config.yaml</code> ให้ตรงกับค่าที่เซิร์ฟเวอร์ใช้จริง อย่าปล่อยให้ตรวจเอง นี่คือขั้นแรกสุดของลำดับการตรวจ จึงชนะทุกแหล่งอื่น<sup><a href="#th-ref-2">[2]</a></sup></li>
+        <li><strong>แก้ metadata ที่ผิดด้วย <code>model_overrides</code></strong> — สำหรับโมเดลท้องถิ่นที่ทะเบียนสาธารณะไม่รู้จัก คุณสมบัติที่ Hermes เดามาอาจผิดทั้งชุด บันทึกการออกรุ่น v0.21.0 อธิบายคีย์นี้ว่าให้ "patch context windows, pricing, or capabilities for any model without waiting on a release" มาจาก PR #85560 ที่ merge เมื่อ 13 สิงหาคม 2026 โดยฟิลด์ที่ตั้งได้คือ <code>context_window</code>, <code>max_output_tokens</code>, <code>supports_tools</code>, <code>supports_vision</code>, <code>supports_reasoning</code> และ <code>model_family</code><sup><a href="#th-ref-11">[11]</a></sup></li>
+    </ol>
+
+    <pre><code># ~/.hermes/config.yaml — ตั้ง context เอง แล้วปะ metadata ที่ผิดสำหรับโมเดลท้องถิ่น
+model:
+  default: your-model
+  provider: custom
+  base_url: http://localhost:11434/v1
+  context_length: 64000
+
+model_overrides:
+  custom:my-local-vllm:
+    my-llava-model:
+      context_window: 8192
+      supports_vision: true
+    _default:            # ใช้เติมช่องว่างเท่านั้น เฉพาะโมเดลที่ catalog ไม่รู้จัก
+      context_window: 32768</code></pre>
+
+    <p>สุดท้ายคือข้อควรระวังที่ผมอยากเน้น เพราะมันวนอยู่ในเว็บบอร์ดจนหลายคนเข้าใจผิด: ในรายงานบั๊กหลายใบมีคนแนะนำให้ตั้งคีย์ชื่อ <code>model.ollama_num_ctx</code> <strong>คีย์นี้เป็นข้อความของผู้รายงานเท่านั้น ผมไม่พบมันในหน้าเอกสารใดของ Hermes Agent</strong> จึงไม่ควรถูกยกไปใช้ราวกับเป็นคีย์ทางการ ถ้าอยากบังคับ context ของ Ollama จริง ๆ ให้ทำที่ฝั่ง Ollama ด้วย <code>OLLAMA_CONTEXT_LENGTH</code> หรือ Modelfile ตาม<a href="#th-path-c">หัวข้อที่ 6</a> ซึ่งเป็นวิธีที่เอกสารรับรอง</p>
+
+    <h2 id="th-local-first" lang="en">8. Local First, Cloud as the Safety Net</h2>
+
+    <p>ตอบตรง ๆ ก่อน: คุณไม่จำเป็นต้องเลือกข้าง Hermes ให้ตั้งโมเดลในเครื่องเป็นตัวหลัก แล้วให้โมเดลบนคลาวด์เป็นตาข่ายรับเวลามีปัญหาได้ — และให้ "งานข้าง ๆ" เช่นการย่อบทสนทนาหรือการอ่านภาพ ไปอยู่คนละโมเดลกับตัวหลักได้ด้วย นี่คือรูปแบบที่ผมใช้จริงกับงานที่ข้อมูลอ่อนไหวปนกับงานทั่วไป</p>
+
+    <pre><code># ~/.hermes/config.yaml — โมเดลในเครื่องเป็นหลัก คลาวด์เป็นตาข่ายรับ
+model:
+  default: "gemma4:31b"
+  provider: "custom"
+  base_url: "http://localhost:11434/v1"
+
+fallback_providers:
+  - provider: openrouter
+    model: anthropic/claude-sonnet-4
+
+auxiliary:
+  vision:                                # งานอ่านภาพไปที่เซิร์ฟเวอร์อีกตัวในเครื่อง
+    base_url: "http://localhost:1234/v1"
+    api_key: "local-key"
+    model: "qwen2.5-vl"
+
+delegation:                              # subagent ทุกตัวไปที่เซิร์ฟเวอร์ในเครื่อง
+  model: "qwen2.5-coder"
+  base_url: "http://localhost:1234/v1"
+  api_key: "local-key"</code></pre>
+
+    <p>บล็อกแรกมาจากคู่มือ Ollama โดยตรง พร้อมประโยคสรุปเจตนาไว้ว่า "This way, 90% of your usage is free (local), and only the hard tasks hit the paid API."<sup><a href="#th-ref-3">[3]</a></sup> จะตั้งจากบรรทัดคำสั่งก็ได้ด้วย <code>hermes fallback add</code> ซึ่งใช้ตัวเลือก provider ชุดเดียวกับ <code>hermes model</code> และมีคำสั่งย่อย <code>list</code>, <code>remove</code>, <code>clear</code> ครบ<sup><a href="#th-ref-7">[7]</a></sup> สามเรื่องที่ควรรู้ก่อนวางใจกลไกนี้:</p>
+
+    <ul>
+        <li><strong>มันไม่ได้ทำงานทุกกรณี</strong> — เอกสารระบุเงื่อนไขไว้ชัด: 429 และ 500/502/503 จะสลับหลังลองซ้ำจนหมดโควตาแล้ว ส่วน 401/403/404 สลับทันทีเพราะลองไปก็ไม่มีประโยชน์ และคำตอบที่ผิดรูปหรือว่างเปล่าซ้ำ ๆ ก็นับด้วย<sup><a href="#th-ref-7">[7]</a></sup></li>
+        <li><strong>ขอบเขตเป็นรายเทิร์น ไม่ใช่ราย session</strong> — ทุกข้อความใหม่ของผู้ใช้จะกลับไปเริ่มที่โมเดลหลักเสมอ และภายในหนึ่งเทิร์นกลไกนี้ทำงานได้มากที่สุดครั้งเดียว เพื่อกันวงจรสลับไม่รู้จบ<sup><a href="#th-ref-7">[7]</a></sup></li>
+        <li><strong>มันทำให้ prompt cache หายทั้งสองทาง</strong> — เอกสารเตือนว่า cache ผูกกับโมเดล (และบนผู้ให้บริการส่วนใหญ่ผูกกับบัญชีด้วย) เมื่อสลับไปตัวสำรอง prompt ทั้งก้อนจะถูกอ่านใหม่ในราคาเต็ม และตอนกลับมาที่ตัวหลักก็อ่านใหม่อีกรอบ — session ที่เด้งไปมาจึงแพงกว่า session ที่อยู่นิ่ง ๆ อย่างรู้สึกได้<sup><a href="#th-ref-7">[7]</a></sup></li>
+    </ul>
+
+    <p>สองบล็อกท้ายในตัวอย่างข้างบนเป็นคนละกลไกกัน และผมคิดว่าเป็นสองอย่างที่ถูกใช้น้อยเกินไป <code>auxiliary.&lt;task&gt;</code> คือการแยก "งานข้าง ๆ" ออกจากโมเดลหลัก เอกสารยกตัวอย่างงานอ่านภาพกับการย่อบทสนทนาไว้ตรง ๆ และย้ำว่า <code>base_url</code> มีลำดับสูงกว่า <code>provider</code> — ใส่ URL แล้วมันจะข้ามการเลือก provider ไปเลย ส่วนค่า <code>provider: auto</code> แปลว่า "ใช้โมเดลหลัก"<sup><a href="#th-ref-7">[7]</a></sup> ส่วน <code>delegation:</code> คือการส่ง subagent ทุกตัวที่เกิดจาก <code>delegate_task</code> ไปที่โมเดลอื่น ซึ่งเป็นที่ที่ token ส่วนใหญ่ของงานหนึ่งรอบหายไป<sup><a href="#th-ref-9">[9]</a></sup> — เอกสารระบุว่า subagent สืบทอด fallback chain ของแม่มาด้วย<sup><a href="#th-ref-7">[7]</a></sup></p>
+
+    <p>ถ้าอยากไปไกลกว่านี้ คือ "หนึ่งโมเดลต่อหนึ่ง agent" แบบแยกขาดจากกันจริง ๆ — agent ตัวหนึ่งอยู่บนโมเดลในเครื่องสำหรับงานที่มีข้อมูลส่วนบุคคล อีกตัวอยู่บนคลาวด์สำหรับงานที่ต้องการความสามารถสูงสุด — กลไกที่ใช้คือ profile ซึ่งเป็น Hermes home directory แยกกันคนละอัน ตอนหน้า <a href="/blog/hermes-desktop-profiles">#3 Profiles</a> จะพาสร้างทีละขั้น รวมถึงการย้าย profile ข้ามเครื่อง</p>
+
+    <h2 id="th-summary">9. สรุป</h2>
+
+    <p>ถ้าจะสรุปตอนนี้เป็นภาพเดียว ภาพนั้นคือรูปที่ 1: สามกล่องทางซ้ายที่ต่างกันมากในเรื่องความง่าย แต่ต้องลอดประตูบานเดียวกันก่อนถึงตัว agent — context อย่างน้อย 64,000 token และ flag ที่ทำให้ tool call ออกมาในรูปที่แกะได้ ประตูบานนี้ไม่มีทางอ้อม และเกือบทุกปัญหาที่คนรายงานเข้ามาคือปัญหาของคนที่คิดว่าตัวเองผ่านประตูไปแล้วทั้งที่ยังไม่ผ่าน</p>
+
+    <p>สิ่งที่ผมแนะนำให้ทำภายในสัปดาห์นี้มีสามข้อ หนึ่ง — เปิด <code>Settings → Providers → Local Models</code> ดูว่ามีเมนูนี้หรือยัง ถ้ามี ให้ดูสีของแต่ละโมเดลใน catalog แล้วจดไว้ว่าเครื่องคุณรันตัวไหนได้เขียวบ้าง นั่นคือเพดานจริงของฮาร์ดแวร์คุณ ไม่ใช่ตัวเลขที่ใครบอกมา สอง — ถ้าคุณใช้ Ollama อยู่แล้ว ให้รัน <code>ollama ps</code> เดี๋ยวนี้แล้วดูคอลัมน์ CONTEXT ผมเดาว่าหลายคนจะเจอ 4096 และจะเข้าใจทันทีว่าทำไม agent ถึง "ลืม" ตลอด สาม — ทดสอบด้วยงานที่ต้องใช้เครื่องมือจริงหนึ่งงาน ไม่ใช่การถามความรู้ เพราะ chat ได้ไม่ได้แปลว่าทำงานได้</p>
+
+    <p>ตอนหน้า <a href="/blog/hermes-desktop-profiles">#3 Profiles</a> จะไปต่อที่คำถามที่เกิดขึ้นทันทีหลังจากคุณมีโมเดลสองตัวในมือ: แล้วจะให้ agent ตัวไหนใช้ตัวไหน โดยไม่ต้องมานั่งสลับคอนฟิกไปมาทุกครั้งที่เปลี่ยนงาน คำตอบคือ profile — home directory แยกกันคนละอัน ที่มี config, ความจำ, skill และโมเดลของตัวเอง</p>
+
+    <div class="key-takeaways">
+        <h3>🎯 สิ่งสำคัญที่ต้องจำ</h3>
+        <ul>
+            <li><strong>สามทาง หนึ่งประตู</strong> = managed llama.cpp runtime, LM Studio และ Custom endpoint ต่างกันที่ความง่ายและสิ่งที่เขียนลงคอนฟิก แต่ผ่านเกณฑ์เดียวกันคือ 64,000 token และ tool call ที่แกะได้</li>
+            <li><strong>64,000 token คือพื้น ไม่ใช่คำแนะนำ</strong> = หน้าต่างที่เล็กกว่านี้ถูกปฏิเสธตั้งแต่ startup และในโค้ดของ managed runtime ค่านี้คือค่าคงที่ <code>FLOOR</code> = 65,536</li>
+            <li><strong>flag คือเรื่องของ server ไม่ใช่ของโมเดล</strong> = <code>--jinja</code> สำหรับ llama.cpp, <code>--enable-auto-tool-choice --tool-call-parser hermes</code> สำหรับ vLLM, <code>--tool-call-parser qwen</code> สำหรับ SGLang และ LM Studio ต้อง 0.3.6 ขึ้นไป</li>
+            <li><strong>ทาง A ใหม่กว่าเลขเวอร์ชัน</strong> = commit ลงวันที่ 1 กันยายน 2026 หลังแท็ก v2026.8.31 แต่ไฟล์ติดตั้งที่หน้าเว็บเสิร์ฟวันนี้ (<code>build=06402ecb7ca5</code>) อยู่หลัง commit นั้นแล้ว — ตรวจที่หน้าจอ อย่าตรวจที่เลขเวอร์ชัน</li>
+            <li><strong>Ollama หลอกเรื่อง context ได้สองชั้น</strong> = ค่าปริยายต่ำกว่าเกณฑ์ (4,096 บนเครื่องส่วนใหญ่) และ <code>/api/show</code> รายงานค่า<em>สูงสุด</em>ไม่ใช่ค่าที่ใช้จริง — ตั้ง <code>model.context_length</code> เองทุกครั้ง</li>
+            <li><strong>เงียบตอนแรกคือ prefill</strong> = Hermes ผ่อนเวลาหมดอายุเป็น 1,800 วินาทีเมื่อเจอปลายทางในเครื่อง อย่ารีบกด Ctrl+C</li>
+            <li><strong>local เป็นหลัก cloud เป็นตาข่าย</strong> = <code>fallback_providers</code> ทำงานรายเทิร์นและครั้งเดียวต่อเทิร์น ส่วน <code>auxiliary</code> กับ <code>delegation</code> ย้ายงานข้าง ๆ และ subagent ไปคนละโมเดลได้</li>
+        </ul>
+    </div>
+
+    <section class="references" aria-labelledby="th-references">
+        <h2 id="th-references">อ้างอิง</h2>
+        <p class="references__note">ทุกแหล่งอ้างอิงตรวจสอบและเข้าถึงเมื่อ 7 กันยายน 2026 (2026-09-07) ซีรีส์นี้ใช้ป้ายกำกับหลักฐานสี่แบบ — <strong>Docs</strong> เอกสารทางการของ Hermes Agent · <strong>Release</strong> บันทึกการออกรุ่นหรือ commit/PR ที่ merge แล้ว · <strong>Issue</strong> issue หรือ PR ที่ยังเปิดอยู่ · <strong>Community</strong> แหล่งจากชุมชนที่ไม่ใช่ทางการ</p>
+        <ol class="references__list">
+            <li id="th-ref-1"><span class="ref-tag ref-tag--standard">Docs</span> Nous Research. <cite>Local Models</cite>. <a href="https://hermes-agent.nousresearch.com/docs/user-guide/local-models">hermes-agent.nousresearch.com</a> — เข้าถึง 2026-09-07. <span class="ref-supports">รองรับ: ขั้นตอนสี่ขั้น Settings → Providers → Local Models → Install runtime → Download → Use และประโยค "That's the whole flow." · ประโยค "Nothing leaves your computer" · การตีราคาโมเดลกับเครื่องเป็นสีเขียว/เหลือง/แดง · สัญญา 64K ต่อโมเดลที่แนะนำ และการวางส่วนเกินลง RAM แบบ expert weights first · การปล่อยโมเดลหลังนิ่ง 15 นาที · การตรวจขนาดไฟล์เป็นไบต์ระหว่างดาวน์โหลด · บล็อก <code>local_runtime:</code> ทั้งบล็อกพร้อมคอมเมนต์ · <code>model.provider: llamacpp</code> + <code>model.default</code> และโฟลเดอร์ <code>models/</code>, <code>runtimes/llamacpp/</code> · ชุด build CUDA/Metal/Vulkan/CPU และคำแนะนำ 8 GB / 16 GB · "a curated starting point, not a boundary", Find more models, Add model file · และประโยคว่า managed runtime "is a default, not a requirement"</span></li>
+            <li id="th-ref-2"><span class="ref-tag ref-tag--standard">Docs</span> Nous Research. <cite>Providers &amp; Custom Endpoints</cite>. <a href="https://hermes-agent.nousresearch.com/docs/integrations/providers">hermes-agent.nousresearch.com</a> — เข้าถึง 2026-09-07. <span class="ref-supports">รองรับ: ข้อความ 64,000 token ที่ถูกปฏิเสธตั้งแต่ startup แบบคำต่อคำ · ประโยค "works with any OpenAI-compatible API endpoint" · ตาราง flag ต่อ server และประโยค "Without --jinja…" พร้อมอาการ JSON ดิบ · กับดัก <code>-c 64000 -np 4</code> · คำสั่ง llama-server, vllm serve, ollama serve, Modelfile และ <code>ollama ps</code> ทั้งหมด · ตาราง context ปริยายของ Ollama ตาม VRAM 4,096/32,768/256,000 และประโยค "the #1 source of confusion" · เมนู "Custom endpoint (self-hosted / VLLM / etc.)" และคำเตือน <code>hermes model</code> เทียบ <code>/model</code> · LM Studio ในฐานะ provider <code>lmstudio</code>, <code>lms server start</code>, <code>lms load … --context-length 64000 --estimate-only</code>, ขั้นตอนไอคอนเฟือง, <code>model.lmstudio_load_mode</code>, พฤติกรรมโหมด explicit และเงื่อนไข 0.3.6 · ลำดับการตรวจ context เก้าขั้นและค่าปริยาย 128K · และความต่างระหว่าง local Ollama กับ Ollama Cloud</span></li>
+            <li id="th-ref-3"><span class="ref-tag ref-tag--standard">Docs</span> Nous Research. <cite>Run Hermes Locally with Ollama — Zero API Cost</cite>. <a href="https://hermes-agent.nousresearch.com/docs/guides/local-ollama-setup">hermes-agent.nousresearch.com</a> — เข้าถึง 2026-09-07. <span class="ref-supports">รองรับ: แถว <code>gemma4:31b</code> ในตารางโมเดล (~20 GB, RAM 24+ GB, tool calling ได้) และประโยคว่าเป็นตัวเดียวที่ tool calling เชื่อถือได้ · ประโยค "By default, Ollama uses a 2048-token context" · Modelfile <code>PARAMETER num_ctx 64000</code> · <code>OLLAMA_KEEP_ALIVE=24h</code> และการปล่อยโมเดลหลังนิ่งห้านาที · <code>HERMES_API_TIMEOUT=1800</code> · ประโยคทดสอบ "List all Python files in this directory and count the lines of code in each" · และคอนฟิกลูกผสมพร้อมประโยค "This way, 90% of your usage is free (local)…"</span></li>
+            <li id="th-ref-4"><span class="ref-tag ref-tag--standard">Docs</span> Nous Research. <cite>Run Local LLMs on Mac</cite>. <a href="https://hermes-agent.nousresearch.com/docs/guides/local-llm-on-mac">hermes-agent.nousresearch.com</a> — เข้าถึง 2026-09-07. <span class="ref-supports">รองรับ: แถว Qwen3.5-9B-Q4_K_M (5.3 GB บนดิสก์, ~10 GB ที่ context 128K พร้อม KV cache แบบบีบ) · ตาราง KV cache f16 ~16 GB / q8_0 ~8 GB / q4_0 ~4 GB · คำแนะนำให้ลด context ได้แต่ต้องไม่ต่ำกว่าเกณฑ์ 64K · คำอธิบาย prefill "That's prefill at work, not a stalled session." · และคำแนะนำให้ใช้ <code>hermes prompt-size</code></span></li>
+            <li id="th-ref-5"><span class="ref-tag ref-tag--standard">Docs</span> Nous Research. <cite>FAQ</cite>. <a href="https://hermes-agent.nousresearch.com/docs/reference/faq">hermes-agent.nousresearch.com</a> — เข้าถึง 2026-09-07. <span class="ref-supports">รองรับ: ตัวอย่าง <code>hermes model</code> → Custom endpoint พร้อมช่อง Context length 64000 และหมายเหตุ "Hermes minimum; set this to match your server's actual context window" · ประโยคว่า <code>/api/show</code> ของ Ollama รายงานค่าสูงสุดไม่ใช่ <code>num_ctx</code> ที่ตั้งไว้ · การผ่อน read timeout จาก 120s เป็น 1800s สำหรับปลายทางในเครื่องพร้อมการปิด stale stream detection และ <code>HERMES_STREAM_READ_TIMEOUT=1800</code> · และคำอธิบายว่า <code>hermes update</code> ดึงโค้ดล่าสุดและติดตั้ง dependency ใหม่</span></li>
+            <li id="th-ref-6"><span class="ref-tag ref-tag--standard">Docs</span> Nous Research. <cite>Hermes Desktop</cite>. <a href="https://hermes-agent.nousresearch.com/docs/user-guide/desktop">hermes-agent.nousresearch.com</a> — เข้าถึง 2026-09-07. <span class="ref-supports">รองรับ: ประโยคว่า Providers settings pane มี Local Models view ที่ "installs and manages an on-device llama.cpp runtime" · ประโยคว่าค่าปริยายของโมเดลตั้งที่ Settings → Model และเป็นที่เดียวที่เขียนค่านั้น · และปุ่ม Switch provider บนการ์ดแจ้งความล้มเหลวที่พาไปหน้า provider/endpoint/auth/billing</span></li>
+            <li id="th-ref-7"><span class="ref-tag ref-tag--standard">Docs</span> Nous Research. <cite>Fallback Providers</cite>. <a href="https://hermes-agent.nousresearch.com/docs/user-guide/features/fallback-providers">hermes-agent.nousresearch.com</a> — เข้าถึง 2026-09-07. <span class="ref-supports">รองรับ: คำสั่งย่อย <code>add</code>, <code>list</code>, <code>remove</code>, <code>clear</code> ของ <code>hermes fallback</code> และรูปร่างของ <code>fallback_providers:</code> · เงื่อนไขที่กลไกทำงาน 429, 500/502/503, 401/403/404 และคำตอบผิดรูป · ขอบเขตรายเทิร์นและครั้งเดียวต่อเทิร์น · คำเตือนเรื่อง prompt cache ที่หายทั้งขาไปและขากลับ · รูปร่าง <code>auxiliary:</code> พร้อมตัวอย่าง vision ที่ชี้ไป <code>http://localhost:1234/v1</code> และประโยคว่า <code>base_url</code> มีลำดับสูงกว่า <code>provider</code> · และบล็อก <code>delegation:</code> พร้อมข้อความว่า subagent สืบทอด fallback chain ของแม่</span></li>
+            <li id="th-ref-8"><span class="ref-tag ref-tag--standard">Docs</span> Nous Research. <cite>Environment Variables</cite>. <a href="https://hermes-agent.nousresearch.com/docs/reference/environment-variables">hermes-agent.nousresearch.com</a> — เข้าถึง 2026-09-07. <span class="ref-supports">รองรับ: ค่าปริยายของ <code>LM_BASE_URL</code> คือ <code>http://localhost:1234/v1</code> · และ <code>OLLAMA_BASE_URL</code> ที่เป็นปลายทางของ Ollama Cloud (ค่าปริยาย <code>https://ollama.com/v1</code>) ซึ่งยืนยันว่าเป็นคนละเส้นทางกับ Ollama ในเครื่อง</span></li>
+            <li id="th-ref-9"><span class="ref-tag ref-tag--standard">Docs</span> Nous Research. <cite>Subagent Delegation</cite>. <a href="https://hermes-agent.nousresearch.com/docs/user-guide/features/delegation">hermes-agent.nousresearch.com</a> — เข้าถึง 2026-09-07. <span class="ref-supports">รองรับ: บล็อก <code>delegation:</code> ที่ชี้ไปเซิร์ฟเวอร์ในเครื่องด้วย <code>model: "qwen2.5-coder"</code>, <code>base_url</code> และ <code>api_key</code> แบบคำต่อคำ · และประโยคที่ว่า subagent คือที่ที่ token ส่วนใหญ่ของงานหนึ่งรอบหายไป — "the children are where the tokens go — a parallel batch of subagents typically burns the large majority of a run's total tokens"</span></li>
+            <li id="th-ref-10"><span class="ref-tag ref-tag--standard">Docs</span> Nous Research. <cite>Hermes Desktop — download page</cite>. <a href="https://hermes-agent.nousresearch.com/desktop">hermes-agent.nousresearch.com</a> — เข้าถึง 2026-09-07. <span class="ref-supports">รองรับ: ลิงก์ดาวน์โหลด <code>Hermes-Setup.dmg</code> และ <code>Hermes-Setup.exe</code> ที่ต่อท้ายด้วย <code>?build=06402ecb7ca5</code> ในวันที่เข้าถึง · ป้ายเวอร์ชันท้ายหน้า "Hermes Agent v0.21.0" · และรายการแพลตฟอร์ม macOS 12+, Windows 10/11, Linux ผ่าน terminal</span></li>
+            <li id="th-ref-11"><span class="ref-tag ref-tag--study">Release</span> Nous Research. <cite>Hermes Agent v0.21.0 (v2026.8.31) — release notes</cite>. <a href="https://github.com/NousResearch/hermes-agent/releases/tag/v2026.8.31">github.com</a> — เผยแพร่ 2026-08-31, เข้าถึง 2026-09-07. <span class="ref-supports">รองรับ: แท็กและวันที่ของรุ่นที่ใหม่ที่สุดในวันเขียน และข้อเท็จจริงว่าบันทึกการออกรุ่นนี้ไม่ได้กล่าวถึง managed local-model runtime เลย · คำอธิบาย <code>model_overrides</code> ว่า "patch context windows, pricing, or capabilities for any model without waiting on a release" พร้อมการอ้าง PR #85560 ซึ่ง merge เมื่อ 2026-08-13 และรายชื่อฟิลด์ที่ตั้งได้</span></li>
+            <li id="th-ref-12"><span class="ref-tag ref-tag--study">Release</span> Nous Research. <cite>commit 43e67d87 — "feat: local models — managed llama.cpp runtime with one-click desktop setup"</cite>. <a href="https://github.com/NousResearch/hermes-agent/commit/43e67d87">github.com</a> — commit 2026-09-01, เข้าถึง 2026-09-07. <span class="ref-supports">รองรับ: วันที่และชื่อ commit ที่นำ managed runtime เข้ามา (117 ไฟล์) และความจริงว่ามันอยู่หลังแท็ก v2026.8.31 · การเทียบสายว่า <code>06402ecb7ca5</code> นำหน้า commit นี้อยู่ 5,139 commit และไม่ตามหลังเลย · และไฟล์ที่ commit นี้เพิ่มซึ่งผมอ่านจาก <code>main</code> ในวันเดียวกัน — <code>hermes_cli/local_runtime/catalog.json</code> (ชื่อ, repo, quant และ <code>size_bytes</code> ของสี่โมเดลที่ใช้คำนวณคอลัมน์ขนาดในตารางที่ 1), <code>supervisor.py</code> (พอร์ตปริยาย 18434 บน 127.0.0.1, <code>--jinja</code> ในคำสั่งสตาร์ต, การปล่อยโมเดลหลังนิ่ง 15 นาที) และ <code>context_policy.py</code> (ค่าคงที่ <code>FLOOR</code> = 64 × 1024)</span></li>
+            <li id="th-ref-13"><span class="ref-tag ref-tag--law">Issue</span> NousResearch/hermes-agent. <cite>Issue #102865 — Desktop Local Models: catalog auto-pick spawns infeasible config (35B/64K ctx on 8GB VRAM+30GB RAM) → full desktop freeze via swap thrash</cite>. <a href="https://github.com/NousResearch/hermes-agent/issues/102865">github.com</a> — เปิด 2026-09-04, ยังเปิดอยู่เมื่อตรวจ 2026-09-07. <span class="ref-supports">รองรับ: เครื่องที่รายงาน (RTX 4070 Laptop VRAM 8 GiB + RAM 30 GiB, Linux) · การที่ catalog เลือก <code>qwen3.6-35b-a3b</code> ให้อัตโนมัติพร้อม preset <code>ctx-size = 65536</code> · และประโยค "Working set &gt;&gt; available RAM → kernel swaps… → full desktop freeze" ที่จบด้วยการต้องรีบูตเครื่อง · ขอบเขต: เป็นรายงานของผู้ใช้ ยังไม่มีการแก้จากผู้ดูแลปรากฏในวันที่ตรวจ</span></li>
+            <li id="th-ref-14"><span class="ref-tag ref-tag--law">Issue</span> NousResearch/hermes-agent. <cite>Issue #103949 — local_runtime: select_backend() returns 'cuda' on Linux+NVIDIA but no Linux CUDA prebuilt exists</cite>. <a href="https://github.com/NousResearch/hermes-agent/issues/103949">github.com</a> — เปิด 2026-09-05, ยังเปิดอยู่เมื่อตรวจ 2026-09-07. <span class="ref-supports">รองรับ: ข้อความ error <code>BinaryResolutionError: no prebuilt linux CUDA asset</code> · สาเหตุว่า <code>select_backend()</code> คืน <code>cuda</code> ให้ NVIDIA ทุกใบที่ไม่ใช่ macOS · และทางแก้ที่ผู้รายงานทดสอบแล้วคือบังคับ <code>vulkan</code> · ขอบเขต: ทดสอบบน Ubuntu 26.04 + RTX 5070 Ti หนึ่งเครื่อง ยังไม่มี PR ที่ merge แล้วในวันที่ตรวจ</span></li>
+            <li id="th-ref-15"><span class="ref-tag ref-tag--law">Issue</span> NousResearch/hermes-agent. <cite>Issue #43900 — Ollama local models silently capped at 4096-token context</cite>. <a href="https://github.com/NousResearch/hermes-agent/issues/43900">github.com</a> — เปิด 2026-06-11, ยังเปิดอยู่เมื่อตรวจ 2026-09-07. <span class="ref-supports">รองรับ: กลไกที่ Hermes อ่านค่า context จาก GGUF (131,072 ของ Gemma 4) แต่ไม่ได้ส่ง <code>num_ctx</code> ข้ามเส้นทาง OpenAI-compatible · ผลลัพธ์ <code>finish_reason="length"</code> เนื้อหาว่างหรือขาด และการต่อชิ้นส่วนที่พังจนได้ข้อความมั่ว · และหน้าจอที่ยังแสดง <code>0 / 131.1K</code> · ขอบเขต: เป็นรายงานของผู้ใช้ ติดป้าย P2 และยังไม่ปิด</span></li>
+            <li id="th-ref-16"><span class="ref-tag ref-tag--law">Issue</span> NousResearch/hermes-agent. <cite>Issue #87697 — Hermes Client cancels local LLM streams after ~1.5s during prompt evaluation</cite>. <a href="https://github.com/NousResearch/hermes-agent/issues/87697">github.com</a> — เปิด 2026-08-16, ยังเปิดอยู่เมื่อตรวจ 2026-09-07. <span class="ref-supports">รองรับ: การยกเลิกสตรีมที่ราว 1.5 วินาที การลองต่ออีกสี่ครั้ง และ token <code>&lt;unused49&gt;</code> ที่ออกมาเป็นสาย · การวิเคราะห์ของผู้รายงานว่า system prompt ราว 17,000 token จาก schema ของเครื่องมือใช้เวลาประเมิน 1.5–2.5 วินาทีก่อนตัวอักษรแรก · และล็อกฝั่ง Ollama ที่แสดง <code>task.n_tokens = 16862</code> · ขอบเขต: ติดป้าย needs-repro เป็นรายงานเครื่องเดียวบน Linux + Gemma 4 26B และยังไม่มีการยืนยันจากผู้ดูแล</span></li>
+        </ol>
+    </section>
+    </div>
+
+    <div class="l-en" lang="en">
+
+    <p>🤔 <strong>If the machine on your desk can already run a 27B model, why do your students' files, your contracts, or your patient records still have to travel out to somebody else's API?</strong></p>
+
+    <p>The previous post — <a href="/blog/hermes-desktop-install">#1 Install &amp; First Run</a> — installed Hermes Desktop up to your first message, and showed that everything lands in the same <code>~/.hermes</code> the CLI uses. At that point the model answering you was still in the cloud. Now we move it down onto your own machine — and this is the post I think Thai readers in universities, hospitals and government offices should read most closely, because it is the answer to the data question we do not get to dodge.</p>
+
+    <p>The one-line answer: Hermes has <strong>three roads</strong> to a local model — a managed llama.cpp runtime you install from the Settings pane, LM Studio as a first-class provider, and the Custom endpoint for Ollama, llama-server and vLLM — but all three pass through <strong>the same gate</strong>: at least <strong>64,000 tokens</strong> of context, and the flags that make the server emit tool calls in a shape the agent can parse. This post walks each road with the real commands, taken from the primary docs as I fetched them on 7 September 2026.</p>
+
+    <h2 id="en-three-roads">1. Three Roads to a Local Model</h2>
+
+    <p>The direct answer first: Hermes does not have one way to "connect a local model" — it has three genuinely different ones, differing in what you click, in what they write into <code>config.yaml</code>, and in how much control you get back. Picking the wrong road does not mean it will not work; it means you will meet a different set of problems.</p>
+
+    <figure class="figure">
+      <a href="../images/hermes-desktop-fig-02-local-models.png">
+        <img class="figure__img" src="../images/hermes-desktop-fig-02-local-models.png" alt="Diagram of three boxes on the left, managed llama.cpp, LM Studio and Custom endpoint, pointing into a dark-teal-outlined gate labelled 64,000 tokens and then on to a navy disc labelled Hermes Desktop." width="1400" height="700" loading="lazy" decoding="async">
+      </a>
+      <figcaption class="figure__caption">Figure 1 · Three roads to a local model, all through one gate — at least 64,000 tokens of context and the right tool-call flags.</figcaption>
+    </figure>
+
+    <ul>
+        <li><strong>Path A — the managed llama.cpp runtime</strong>: open <code>Settings → Providers → Local Models</code> in the app, and Hermes downloads the llama.cpp build that matches your hardware, offers a catalog already priced against your machine, and runs the server for you — the result in config is <code>model.provider: llamacpp</code> plus a <code>local_runtime:</code> block.<sup><a href="#en-ref-1">[1]</a></sup></li>
+        <li><strong>Path B — LM Studio</strong>: a <strong>first-class provider</strong> named <code>lmstudio</code>, chosen from <code>hermes model</code> → "LM Studio", with the default endpoint <code>http://localhost:1234/v1</code>; Hermes auto-discovers the models you have loaded.<sup><a href="#en-ref-2">[2]</a></sup></li>
+        <li><strong>Path C — the Custom endpoint</strong>: <code>model.provider: custom</code> plus <code>model.base_url</code> pointed at any server that speaks <code>/v1/chat/completions</code> — the docs name Ollama, vLLM, the llama.cpp server, SGLang, LocalAI and Jan outright.<sup><a href="#en-ref-2">[2]</a></sup></li>
+    </ul>
+
+    <p>What all three share is one sentence on the Custom &amp; Self-Hosted page of the docs: <em>"Hermes Agent works with any OpenAI-compatible API endpoint. If a server implements <code>/v1/chat/completions</code>, you can point Hermes at it."</em><sup><a href="#en-ref-2">[2]</a></sup> That means the architecture is tied to no vendor — and, as it turns out, not to Nous's own Hermes models either, a point that comes back in <a href="#en-which-model">section 3</a>.</p>
+
+    <p>Path A is the newest and the one that asks you to know the least. The Local Models page states the promise plainly: <em>"Nothing leaves your computer: no account, no API key, and no network access after a model is downloaded."</em> — <strong>nothing leaves your machine; no account, no API key, and no network access at all once the model is downloaded</strong>.<sup><a href="#en-ref-1">[1]</a></sup> For an organisation that has to answer a PDPA question, that sentence carries more weight than any benchmark number.</p>
+
+    <p>The <em>reasons</em> an organisation should come down to this rung I wrote out in full in <a href="/blog/hermes-models-cost">#9 Models &amp; Cost</a> — the five-rung ladder from Nous Portal down to your own GPUs, and the PDPA question no Thai organisation gets to skip. This post is the hands-on half of the bottom rung: what to click, what to type, and what to check actually works.</p>
+
+    <h2 id="en-two-rules">2. Two Rules No Local Model May Break</h2>
+
+    <p>The direct answer first: whichever road you take, two rules cannot be broken. The first is a hard number — at least 64,000 tokens of context, and anything smaller is <em>rejected at startup</em>. The second is about shape — the server must turn the model's tool calls into a structure the agent can read, rather than letting them out as ordinary text.</p>
+
+    <h3>Rule 1 — 64,000 tokens, or it will not start</h3>
+
+    <p>The Providers page says it outright: <em>"Hermes Agent requires at least <strong>64,000 tokens</strong> of context for agent use with tools. Smaller windows are rejected at startup because the system prompt, tool schemas, and working conversation state need enough room for reliable multi-step workflows."</em><sup><a href="#en-ref-2">[2]</a></sup> Translated into working terms: the system prompt and the tool schemas take a large bite before you type anything at all. A smaller window leaves the agent no room to actually run a multi-step task.</p>
+
+    <div class="alert danger">
+        <strong>Do not miss this one:</strong> 64,000 tokens is not "recommended" — it is a <strong>startup check</strong>, and smaller windows are refused before the session begins.<sup><a href="#en-ref-2">[2]</a></sup> The cruellest trap is the one that raises <em>no</em> error: Ollama does not use a model's full context by default (see <a href="#en-when-wrong">section 7</a>), and on llama-server, if you add <code>-np</code> to split slots, the docs warn that the context is <em>divided</em> across them — <code>-c 64000 -np 4</code> leaves 16k per slot, instantly below the floor.<sup><a href="#en-ref-2">[2]</a></sup>
+    </div>
+
+    <p>On the managed runtime the rule is baked into the code, so there is nothing to set. The docs state that <em>"Every recommended model gets at least a 64K context window"</em>, and that when a model is larger than GPU memory Hermes places the overflow in system RAM <em>"in the order that hurts least (expert weights first, never the attention cache)"</em> — trading speed to protect the context guarantee.<sup><a href="#en-ref-1">[1]</a></sup> In the <code>local_runtime</code> source the value is a constant named <code>FLOOR</code>, equal to 64 × 1024 = 65,536 tokens.<sup><a href="#en-ref-12">[12]</a></sup></p>
+
+    <h3>Rule 2 — tool calls must come out in a shape the agent can parse</h3>
+
+    <p>Breaking this rule has a very memorable symptom, because it is not an error but an answer that looks "almost right": the model prints JSON such as <code>{"name": "web_search", ...}</code> as a message instead of actually calling the tool.<sup><a href="#en-ref-2">[2]</a></sup> The troubleshooting table in the docs lists the flag for every server:</p>
+
+    <ul>
+        <li><strong>llama.cpp / llama-server</strong> — add <code>--jinja</code>. The docs put it strongly: <em>"Without <code>--jinja</code>, llama-server ignores the <code>tools</code> parameter entirely."</em> Verify at <code>http://localhost:8080/props</code> — the <code>chat_template</code> field must be present.<sup><a href="#en-ref-2">[2]</a></sup></li>
+        <li><strong>vLLM</strong> — <code>--enable-auto-tool-choice --tool-call-parser hermes</code>. The first is required because Hermes uses <code>tool_choice: "auto"</code> by default; the parser name changes with the model family (<code>hermes</code>, <code>llama3_json</code>, <code>mistral</code>, <code>deepseek_v3</code>, <code>xlam</code>, <code>pythonic</code>).<sup><a href="#en-ref-2">[2]</a></sup></li>
+        <li><strong>SGLang</strong> — <code>--tool-call-parser qwen</code> (or <code>llama3</code>, <code>llama4</code>, <code>deepseekv3</code>, <code>mistral</code>, <code>glm</code> for other families). Without it, tool calls come back as plain text.<sup><a href="#en-ref-2">[2]</a></sup></li>
+        <li><strong>Ollama</strong> — enabled by default; what you must check is whether the <em>model</em> supports it, with <code>ollama show &lt;model-name&gt;</code>.<sup><a href="#en-ref-2">[2]</a></sup></li>
+        <li><strong>LM Studio</strong> — must be version 0.3.6 or later, with a model trained for native tool calling (LM Studio shows those with a tool badge).<sup><a href="#en-ref-2">[2]</a></sup></li>
+    </ul>
+
+    <p>The observation I want you to keep: both rules are about the <strong>server</strong>, not the model. You can pick an excellent tool-calling model and still get exactly the symptoms of a bad one because you forgot <code>--jinja</code> — and the hours spent blaming the wrong component cost far more than typing six extra characters.</p>
+
+    <h2 id="en-which-model">3. Which Model Fits Your Memory</h2>
+
+    <p>The direct answer first: the Nous docs do not recommend one model — they recommend <em>a different set per road</em>. The managed runtime's catalog holds four; the Ollama guide recommends exactly one, <code>gemma4:31b</code>; the Mac guide recommends Qwen3.5-9B. The table below puts all three sets side by side on the same criteria.</p>
+
+    <p>Before the table, one mechanism worth knowing: on Path A you do <em>not</em> have to guess what fits, because the docs state that every catalog model is <em>"priced against <strong>your machine</strong> before you download anything"</em> and shown in three colours — green (<em>Fits your GPU</em>), amber (<em>Uses system RAM</em>: it works, but slower) and red (<em>Too big for this machine</em>). Models that do not fit stay visible with the reason, so you always know what a hardware upgrade would unlock.<sup><a href="#en-ref-1">[1]</a></sup></p>
+
+    <div class="table-wrapper">
+        <table>
+            <thead>
+                <tr>
+                    <th>Model</th>
+                    <th>Where recommended</th>
+                    <th>Size on disk</th>
+                    <th>Memory needed</th>
+                    <th>Tool calling</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td><strong>Qwen3.8 27B</strong><br><code>qwen3.8-27b</code></td>
+                    <td>managed runtime catalog — <code>unsloth/Qwen3.8-27B-GGUF</code>, quant <code>UD-Q4_K_M</code></td>
+                    <td>≈15.3 GiB, plus a vision adapter (mmproj) of ≈0.87 GiB</td>
+                    <td>a GPU with 8 GB+ runs the small catalog models comfortably; 16 GB+ runs the 27–35B ones at high quality</td>
+                    <td>Yes — the server Hermes runs for you always carries <code>--jinja</code></td>
+                </tr>
+                <tr>
+                    <td><strong>Qwen3.6 35B-A3B</strong><br><code>qwen3.6-35b-a3b</code></td>
+                    <td>catalog — <code>unsloth/Qwen3.6-35B-A3B-MTP-GGUF</code>, the only entry carrying the <code>validated</code> flag</td>
+                    <td>≈21.1 GiB, plus mmproj ≈0.84 GiB</td>
+                    <td>in the 27–35B band, so the docs' 16 GB+ VRAM guidance applies</td>
+                    <td>Yes — same reason as above</td>
+                </tr>
+                <tr>
+                    <td><strong>Qwen3.8 Flash Next</strong><br><code>qwen3.8-flash-next</code></td>
+                    <td>catalog — <code>unsloth/Qwen3.8-Flash-Next-GGUF</code>, quant <code>UD-Q4_K_XL</code>, split across 4 files</td>
+                    <td>≈103.7 GiB (all four files together)</td>
+                    <td>the catalog's own description: "needs a very large GPU to run well"</td>
+                    <td>Yes — same reason as above</td>
+                </tr>
+                <tr>
+                    <td><strong>DeepSeek V4 Flash</strong><br><code>deepseek-v4-flash</code></td>
+                    <td>catalog — <code>unsloth/DeepSeek-V4-Flash-0731-GGUF</code>, split across 5 files, with a draft model beside it</td>
+                    <td>≈144.4 GiB, plus a draft model of ≈10.1 GiB</td>
+                    <td>the catalog's own description: "for machines with 128GB+ memory"</td>
+                    <td>Yes — same reason as above</td>
+                </tr>
+                <tr>
+                    <td><strong>gemma4:31b</strong></td>
+                    <td>the guide "Run Hermes Locally with Ollama" (Path C)</td>
+                    <td>~20 GB (the guide's own figure)</td>
+                    <td>24+ GB of RAM</td>
+                    <td>Yes — and the guide calls it the <em>only</em> entry in its table with reliable tool calling</td>
+                </tr>
+                <tr>
+                    <td><strong>Qwen3.5-9B</strong>, quant <code>Q4_K_M</code></td>
+                    <td>the guide "Run Local LLMs on Mac" (Apple Silicon, Path C)</td>
+                    <td>5.3 GB (the guide's own figure)</td>
+                    <td>~10 GB at 128K context with a 4-bit quantized KV cache</td>
+                    <td>the guide does not say — and through llama-server you need <code>--jinja</code> regardless</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <p>How I would read this table: look at <em>Memory needed</em> before anything else, because it is the constraint you cannot argue with. The size-on-disk figure is only half the story — the other half is the KV cache, which grows with context. The Mac guide makes this clearest: for a 9B model at 128K context, an f16 KV cache costs ~16 GB, q8_0 ~8 GB, and q4_0 ~4 GB.<sup><a href="#en-ref-4">[4]</a></sup> That is why an 8 GB machine really can run a 9B model — and why Path A handles this for you rather than exposing a knob.</p>
+
+    <p>The four catalog sizes I computed myself from the <code>size_bytes</code> fields in <code>hermes_cli/local_runtime/catalog.json</code> on <code>main</code> as of 7 September 2026; they are not numbers the docs print. The docs themselves warn that the catalog is <em>"a curated starting point, not a boundary"</em> — the same page carries a <strong>Find more models</strong> section that searches all of Hugging Face, and an <strong>Add model file</strong> button for a <code>.gguf</code> you already have on disk.<sup><a href="#en-ref-1">[1]</a></sup><sup><a href="#en-ref-12">[12]</a></sup></p>
+
+    <blockquote><strong>💡 What is not in this table:</strong> not one of Nous's own Hermes models. The managed catalog is Qwen and DeepSeek, the Ollama guide is Gemma, the Mac guide is Qwen, and the Providers page's example is <code>qwen2.5-coder:32b</code>. No page of the Hermes Agent documentation recommends running Hermes 3/4 weights locally for tool use. The word <code>hermes</code> in <code>--tool-call-parser hermes</code> is the name of a tool-call <em>format</em>, not of a model you must use — do not conflate the two when you are costing out a GPU.</blockquote>
+
+    <h2 id="en-path-a">4. Path A — One Click: the Managed llama.cpp Runtime</h2>
+
+    <p>The direct answer first: this is the shortest road — four clicks. Install the runtime, pick a model, hit Download, hit Use, and new chats run on the local model. The docs sum it up themselves: <em>"That's the whole flow."</em> The server starts and stops with Hermes, and switching back to a cloud provider is one click in the model picker.<sup><a href="#en-ref-1">[1]</a></sup></p>
+
+    <div class="alert info">
+        <strong>Check your build before you follow along:</strong> this feature entered the repo on 1 September 2026 with commit <code>43e67d87</code> ("feat: local models — managed llama.cpp runtime with one-click desktop setup"), which is <strong>after</strong> the newest tagged release, <code>v2026.8.31</code> (Hermes Agent v0.21.0, 31 August 2026) — and those release notes never mention local models at all.<sup><a href="#en-ref-11">[11]</a></sup><sup><a href="#en-ref-12">[12]</a></sup> So I checked the shipping artefact on the day of writing: the Hermes Desktop download page serves its installers with the parameter <code>build=06402ecb7ca5</code>, a commit dated 6 September 2026 that sits <em>after</em> <code>43e67d87</code> on the same line (5,139 commits ahead, none behind) — meaning <strong>the app you download today already carries this feature, even though the page's version label still reads v0.21.0</strong>.<sup><a href="#en-ref-10">[10]</a></sup> If your Settings has no Local Models entry, your app is older than that — <code>hermes update</code> pulls the latest code and reinstalls dependencies<sup><a href="#en-ref-5">[5]</a></sup> — or skip to <a href="#en-path-b">Path B</a>, which is not tied to the app's build at all.
+    </div>
+
+    <ol>
+        <li>Open <code>Settings → Providers → Local Models</code> (or choose <strong>Run models locally</strong> during onboarding) — the Desktop page of the docs states that the Providers pane holds a Local Models view that "installs and manages an on-device llama.cpp runtime".<sup><a href="#en-ref-6">[6]</a></sup></li>
+        <li>Click <strong>Install runtime</strong>. You should see a download of a few hundred MB — the docs say Hermes fetches the official llama.cpp build for your hardware, verifies it, and keeps it updated (CUDA or CPU on Windows and Linux, Metal on Apple Silicon, and Vulkan builds for AMD cards).<sup><a href="#en-ref-1">[1]</a></sup></li>
+        <li>Pick a model from the catalog by reading the <strong>Memory fit colour</strong> first — take a green <em>Fits your GPU</em> row before anything else, and do not start your first experiment on an amber <em>Uses system RAM</em> one.</li>
+        <li>Click <strong>Download</strong> and wait. While you wait, note that the docs say model downloads are byte-size checked during the transfer: an incomplete download is deleted and reported, never half-used.<sup><a href="#en-ref-1">[1]</a></sup></li>
+        <li>Click <strong>Use</strong>. You should see new chats switch to this model — the docs' wording is "New chats now run on the local model."<sup><a href="#en-ref-1">[1]</a></sup></li>
+        <li>Send a test message that <em>requires a tool</em>, not a greeting — for example the sentence the Ollama guide itself uses: "List all Python files in this directory and count the lines of code in each". If you watch the agent actually invoke the terminal tool, rule two has passed.<sup><a href="#en-ref-3">[3]</a></sup></li>
+        <li>Confirm from the file side with <code>grep -A3 local_runtime ~/.hermes/config.yaml</code>. You should see <code>enabled: true</code> in that block, because the docs state the Use button sets it automatically.<sup><a href="#en-ref-1">[1]</a></sup></li>
+    </ol>
+
+    <p>The block you will find in the config file is printed in the docs in full, comments included:</p>
+
+    <pre><code># ~/.hermes/config.yaml — what the Use button writes (copied from the Local Models page)
+local_runtime:
+  enabled: false     # true = start the managed server with Hermes.
+                     # The desktop "Use" button sets this automatically.
+  backend: auto      # auto | cuda | metal | vulkan | hip | cpu
+  tag: b10362        # pinned llama.cpp release; Hermes updates it with
+                     # each release after re-validation</code></pre>
+
+    <p>Model selection needs no special key at all. The docs say it uses <code>model.provider: llamacpp</code> together with <code>model.default</code> — <em>"the same shape as every other provider"</em> — and that model files and runtime builds live under the Hermes home in <code>models/</code> and <code>runtimes/llamacpp/</code>.<sup><a href="#en-ref-1">[1]</a></sup> In the source, the supervisor binds the server to <code>127.0.0.1</code> on default port <strong>18434</strong> (falling back to a free port if that one is taken) and always launches llama-server with <code>--jinja</code>, which is why the Tool calling column for all four catalog models in <a href="#en-which-model">Table 1</a> reads Yes.<sup><a href="#en-ref-12">[12]</a></sup> The same source carries the 15-minute idle unload the docs describe.<sup><a href="#en-ref-1">[1]</a></sup></p>
+
+    <h3>Two first-week bugs to know about before you click</h3>
+
+    <p>The feature was less than a week old as I wrote this, and two open issues affect real users directly. Both were still open when I checked on 7 September 2026:</p>
+
+    <ul>
+        <li><strong>The auto-pick chooses a model too big for the machine</strong> — issue #102865 (4 September 2026) reports from a Linux laptop with an RTX 4070 Laptop (8 GiB VRAM) and 30 GiB of RAM that the catalog auto-selected <code>qwen3.6-35b-a3b</code> and generated a preset at <code>ctx-size = 65536</code>. RAM filled, the kernel began swapping, and <em>the entire desktop froze</em> until a hard reboot. The reporter's summary is blunt: "Working set &gt;&gt; available RAM → kernel swaps… → full desktop freeze". On 8 GB of VRAM or less, choose the model by hand rather than trusting the recommendation.<sup><a href="#en-ref-13">[13]</a></sup></li>
+        <li><strong>Linux + NVIDIA picks a backend that cannot exist</strong> — issue #103949 (5 September 2026) shows that <code>select_backend()</code> returns <code>cuda</code> for every NVIDIA card off macOS, Linux included, but llama.cpp ships no prebuilt Linux CUDA asset, so it fails with <code>BinaryResolutionError: no prebuilt linux CUDA asset</code>. The workaround the reporter tested end-to-end is to set <code>local_runtime.backend: vulkan</code> by hand.<sup><a href="#en-ref-14">[14]</a></sup></li>
+    </ul>
+
+    <h2 id="en-path-b">5. Path B — LM Studio</h2>
+
+    <p>The direct answer first: if you want a graphical way to manage models and want Hermes to discover whatever you have loaded without typing a URL, Path B is the answer. LM Studio is not a custom endpoint but a first-class provider named <code>lmstudio</code> — pick it straight from the <code>hermes model</code> menu, and unlike Path A it is not tied to your Hermes Desktop build.<sup><a href="#en-ref-2">[2]</a></sup></p>
+
+    <ol>
+        <li>Install LM Studio and download a GGUF trained for tool calling — the docs name the families LM Studio auto-detects: Qwen 2.5, Llama 3.x, Mistral and Hermes, on LM Studio 0.3.6 or later.<sup><a href="#en-ref-2">[2]</a></sup></li>
+        <li>Start the server from the <strong>Developer</strong> tab (Start Server), or from the command line with <code>lms server start</code>. You should see it come up on port 1234.<sup><a href="#en-ref-2">[2]</a></sup></li>
+        <li>Set the context to the floor before loading the model — click the gear icon next to the model picker, set "Context Length" to at least 64000, then <em>reload the model</em> for the change to take effect; or use <code>lms load model-name --context-length 64000</code>.<sup><a href="#en-ref-2">[2]</a></sup></li>
+        <li>If you are unsure the machine can hold it, estimate first with <code>lms load model-name --context-length 64000 --estimate-only</code>. If 64000 will not fit, the docs advise switching to a smaller model with a longer context rather than dropping below the floor.<sup><a href="#en-ref-2">[2]</a></sup></li>
+        <li>Wire up the Hermes side: on the desktop, set the default at <code>Settings → Model</code>, which the docs describe as the only place that writes a profile's real default; in a terminal, run <code>hermes model</code>, choose "LM Studio", press Enter to accept the default URL <code>http://localhost:1234/v1</code>, and pick one of the discovered models.<sup><a href="#en-ref-2">[2]</a></sup><sup><a href="#en-ref-6">[6]</a></sup></li>
+        <li>Test with something that needs a tool, not a general-knowledge question — have it list the files in a folder and count their lines. If it answers with raw JSON instead of acting, go back to rule two in <a href="#en-two-rules">section 2</a>.</li>
+    </ol>
+
+    <pre><code># Start the server and load a model with a 64K context (commands from the Providers page)
+lms server start                        # Starts on port 1234
+lms load qwen2.5-coder --context-length 64000
+
+# If you use LM Studio's Just-In-Time / Auto-Evict mode, stop Hermes preloading models itself
+hermes config set model.lmstudio_load_mode jit
+# Back to the default (Hermes preloads explicitly)
+hermes config set model.lmstudio_load_mode explicit</code></pre>
+
+    <p>Two things worth adding. The first is credentials: the default endpoint is <code>http://localhost:1234/v1</code>, overridable with the environment variable <code>LM_BASE_URL</code>,<sup><a href="#en-ref-8">[8]</a></sup> while <code>LM_API_KEY</code> is only needed if you have turned on auth in LM Studio's own server.<sup><a href="#en-ref-2">[2]</a></sup> The second is a subtler behaviour around context: the docs say Hermes <em>preserves</em> the context of an already-loaded LM Studio instance, and that in the default <code>explicit</code> mode it <em>omits</em> <code>context_length</code> entirely unless you configured one on the Hermes side, letting LM Studio apply its own model setting, and then uses only the context length LM Studio reports after loading.<sup><a href="#en-ref-2">[2]</a></sup> In other words: if you have already set 64000 in LM Studio, you do not need to set it again in Hermes.</p>
+
+    <h2 id="en-path-c">6. Path C — Custom Endpoint: Ollama, llama-server, vLLM</h2>
+
+    <p>The direct answer first: this road gives the most control and works with everything, because it is not support for a particular product — it is pointing Hermes at a URL that speaks OpenAI. The Hermes side is identical whatever sits at the other end; only the URL, the port, and the flags you pass when starting the server change.</p>
+
+    <ol>
+        <li>Run <code>hermes model</code> from a terminal, not <code>/model</code> inside a chat — the docs warn that <code>/model</code> can only switch between things you have already configured and cannot add a new provider.<sup><a href="#en-ref-2">[2]</a></sup></li>
+        <li>Choose the entry <strong>"Custom endpoint (self-hosted / VLLM / etc.)"</strong>.<sup><a href="#en-ref-2">[2]</a></sup></li>
+        <li>Enter the <strong>API base URL</strong> for your server — for example <code>http://localhost:11434/v1</code> for Ollama.</li>
+        <li>Skip the <strong>API key</strong> for a local server, then enter the <strong>Model name</strong> — or leave it blank to auto-detect if only one model is loaded.<sup><a href="#en-ref-2">[2]</a></sup></li>
+        <li>Enter a <strong>Context length</strong> that matches what the server really uses. The FAQ's worked example uses <code>64000</code> with the note "Hermes minimum; set this to match your server's actual context window" — leave it blank and Hermes will detect it, which is exactly where Ollama can mislead it (see <a href="#en-when-wrong">section 7</a>).<sup><a href="#en-ref-5">[5]</a></sup></li>
+    </ol>
+
+    <p>On the desktop the equivalent path lives in the settings: the docs place the model default at <code>Settings → Model</code>, and when a turn fails the error card offers a <strong>Switch provider</strong> button that jumps to the same place for provider, endpoint, auth and billing failures.<sup><a href="#en-ref-6">[6]</a></sup> The Local Models page agrees from the other side — the managed runtime <em>"is a default, not a requirement"</em>, and you can always "point a custom endpoint at any OpenAI-compatible server for full manual control".<sup><a href="#en-ref-1">[1]</a></sup></p>
+
+    <p>Now the server side. The three commands below are the three most common cases, taken verbatim from the primary docs with only the comments rewritten. Start with Ollama, which is where most people come unstuck, because its default context is below the floor:</p>
+
+    <pre><code># Option 1 — set it server-wide with an environment variable (the docs' recommended route)
+OLLAMA_CONTEXT_LENGTH=64000 ollama serve
+
+# Option 2 — bake it into your own model; persistent, per model
+echo -e "FROM qwen2.5-coder:32b\nPARAMETER num_ctx 64000" &gt; Modelfile
+ollama create qwen2.5-coder-64k -f Modelfile
+
+# Verify it took effect — read the CONTEXT column
+ollama ps</code></pre>
+
+    <pre><code># llama-server — --jinja is the flag you cannot omit for tool calling
+./build/bin/llama-server \
+  --jinja -fa \
+  -c 64000 \
+  -ngl 99 \
+  -m models/qwen2.5-coder-32b-instruct-Q4_K_M.gguf \
+  --port 8080 --host 0.0.0.0
+
+# Check the context the server is really running with
+curl http://localhost:8080/props | jq '.default_generation_settings.n_ctx'</code></pre>
+
+    <pre><code># vLLM — both of these flags are required, or tool calls come back as text
+vllm serve meta-llama/Llama-3.1-70B-Instruct \
+  --port 8000 \
+  --max-model-len 65536 \
+  --tensor-parallel-size 2 \
+  --enable-auto-tool-choice \
+  --tool-call-parser hermes</code></pre>
+
+    <p>The table below puts all three roads on one page, including what each writes into config — the piece of information that is hardest to find in one place when you are debugging.</p>
+
+    <div class="table-wrapper">
+        <table>
+            <thead>
+                <tr>
+                    <th>Path</th>
+                    <th>What you click or type</th>
+                    <th>URL / port</th>
+                    <th>Config it writes</th>
+                    <th>Best for</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td><strong>Managed llama.cpp</strong> (Path A)</td>
+                    <td><code>Settings → Providers → Local Models</code> → Install runtime → Download → Use</td>
+                    <td><code>127.0.0.1:18434</code> (the source's default port; it moves if that one is taken)</td>
+                    <td><code>model.provider: llamacpp</code> + <code>model.default</code> + a <code>local_runtime:</code> block</td>
+                    <td>anyone who wants a working local model fastest, without learning quantization or GPU layers</td>
+                </tr>
+                <tr>
+                    <td><strong>LM Studio</strong> (Path B)</td>
+                    <td><code>lms server start</code>, then <code>hermes model</code> → "LM Studio"</td>
+                    <td><code>http://localhost:1234/v1</code> (change with <code>LM_BASE_URL</code>)</td>
+                    <td><code>model.provider: lmstudio</code> + <code>model.default</code></td>
+                    <td>people who want a GUI for managing models, and Hermes to discover what is loaded</td>
+                </tr>
+                <tr>
+                    <td><strong>Ollama</strong> (Path C)</td>
+                    <td><code>ollama pull</code>, then <code>hermes model</code> → Custom endpoint</td>
+                    <td><code>http://localhost:11434/v1</code></td>
+                    <td><code>model.provider: custom</code> + <code>base_url</code>, and you should set <code>context_length</code> too</td>
+                    <td>one machine, simplest possible install — at the price of the context trap you must know about</td>
+                </tr>
+                <tr>
+                    <td><strong>llama-server</strong> (Path C)</td>
+                    <td>run it yourself with <code>--jinja -fa -c 64000 -ngl 99</code></td>
+                    <td><code>http://localhost:8080/v1</code></td>
+                    <td><code>model.provider: custom</code> + <code>base_url</code></td>
+                    <td>Apple Silicon Macs and memory-constrained machines, because you can quantize the KV cache</td>
+                </tr>
+                <tr>
+                    <td><strong>vLLM</strong> (Path C)</td>
+                    <td><code>vllm serve</code> with the two tool-call flags</td>
+                    <td><code>http://localhost:8000/v1</code></td>
+                    <td><code>model.provider: custom</code> + <code>base_url</code> + <code>context_length</code></td>
+                    <td>an organisation's GPU server that has to serve several people at once</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <blockquote><strong>💡 Ollama has two identities in the Hermes world:</strong> the Ollama running on your machine is <strong>not</strong> a provider — it comes in through the Custom endpoint at <code>http://localhost:11434/v1</code> with no key. <strong>Ollama Cloud</strong>, by contrast, really is a first-class provider (<code>--provider ollama-cloud</code> with <code>OLLAMA_API_KEY</code>). The docs draw the line themselves: "Use cloud for large models you can't run locally; use local for privacy or offline work." They are configured in two different places — do not look for "Ollama" in the provider list and then wonder why it wants an API key.<sup><a href="#en-ref-2">[2]</a></sup></blockquote>
+
+    <h2 id="en-when-wrong">7. When It Goes Wrong</h2>
+
+    <p>The direct answer first: nearly every local-model problem I have seen comes down to two things — <strong>a context window that is not the number you think it is</strong>, and <strong>silence at the start of a turn mistaken for a hang</strong>. Both present as "the model is stupid", and neither is about the model at all.</p>
+
+    <h3>Ollama does not use the model's full context</h3>
+
+    <p>This is the trap the docs themselves call <em>"the #1 source of confusion"</em> — Ollama does not use a model's full context window by default, and the value it does use depends on available VRAM. The table on the Providers page reads as follows.<sup><a href="#en-ref-2">[2]</a></sup></p>
+
+    <ul>
+        <li>Less than 24 GB of VRAM → default context <strong>4,096 tokens</strong> — fifteen times below the Hermes floor.</li>
+        <li>24–48 GB → 32,768 tokens — still below the floor.</li>
+        <li>48 GB and above → 256,000 tokens — plenty, on a machine most people do not have.</li>
+    </ul>
+
+    <p>This is a point where the sources disagree, and I would rather say so than pick the nicer number. The guide "Run Hermes Locally with Ollama" says <em>"By default, Ollama uses a 2048-token context"</em>,<sup><a href="#en-ref-3">[3]</a></sup> while the Providers page gives the 4,096 / 32,768 / 256,000 table keyed to VRAM.<sup><a href="#en-ref-2">[2]</a></sup> Both pages sit on the same site and were updated on different cycles — I recorded the same disagreement in <a href="/blog/hermes-models-cost">#9 Models &amp; Cost</a>, where the comparison was against Ollama's own FAQ figure of 4,096. The practical conclusion does not change: <strong>every one of those values is below 64,000</strong>, so do not argue about which is right — set it yourself, every time.</p>
+
+    <p>What makes the trap painful is that it is silent. Issue #43900 (11 June 2026, still open) documents the mechanism in detail: Hermes reads the context from the GGUF metadata (131,072 for Gemma 4, say) and stores it, but never sends that value across the <code>/v1/chat/completions</code> route, because Ollama's OpenAI-compatible side does not accept the field. Once the conversation passes 4,096 tokens, every answer comes back with <code>finish_reason="length"</code> and empty or truncated content, and the retry loop then stitches broken fragments into garbled output — while the UI still shows <code>0 / 131.1K</code> of context used.<sup><a href="#en-ref-15">[15]</a></sup></p>
+
+    <p>Worse, auto-detection cannot save you, because the FAQ states that <em>"Ollama's <code>/api/show</code> reports the model's <em>maximum</em> context, not the effective <code>num_ctx</code> you configured"</em>.<sup><a href="#en-ref-5">[5]</a></sup> Hermes asks, and gets an answer that is correct about the model and wrong about the server. The only safe fix is to <strong>set <code>model.context_length</code> yourself to match what the server actually runs</strong>. The docs lay out the full nine-step resolution chain, in which your own value in <code>config.yaml</code> is step one and a 128K default for unknown models is the last resort.<sup><a href="#en-ref-2">[2]</a></sup></p>
+
+    <h3>Silence at the start of a turn is prefill, not a hang</h3>
+
+    <p>The second problem is about time. The Mac guide puts it most directly: Hermes sends its system prompt and tool schemas on every call, so on slower hardware the first turn can involve <em>minutes</em> of silence while the model processes that prompt before generating anything — "That's prefill at work, not a stalled session."<sup><a href="#en-ref-4">[4]</a></sup> Hermes knows this and already compensates: the FAQ states that it auto-detects local endpoints and relaxes streaming timeouts, raising the read timeout from 120s to 1800s (that is 30 minutes) and disabling stale-stream detection; if very large contexts still time out, set <code>HERMES_STREAM_READ_TIMEOUT=1800</code> in <code>~/.hermes/.env</code>.<sup><a href="#en-ref-5">[5]</a></sup> On the Ollama side the guide also recommends <code>HERMES_API_TIMEOUT=1800</code> and keeping <code>OLLAMA_KEEP_ALIVE=24h</code>, because by default Ollama unloads idle models after five minutes, adding a full reload before the next prefill.<sup><a href="#en-ref-3">[3]</a></sup></p>
+
+    <p>That still does not cover every symptom. Issue #87697 (16 August 2026, still open, labelled needs-repro) reports from Linux plus Ollama that Hermes cancels its own stream after roughly 1.5 seconds while the model is still evaluating the prompt, then makes four continuation attempts that corrupt the context into a run of <code>&lt;unused49&gt;</code> tokens. The reporter's root-cause analysis is that Hermes sends a large system prompt of about 17,000 tokens from the tool schemas, and evaluating a prompt that size on local hardware naturally takes 1.5–2.5 seconds before the first text token — the attached Ollama log shows <code>task.n_tokens = 16862</code>, which matches.<sup><a href="#en-ref-16">[16]</a></sup> If you hit this, know that it is an unfixed bug rather than your configuration, and that the tool which genuinely shrinks that prompt is <code>hermes prompt-size</code>, which the Mac guide recommends.<sup><a href="#en-ref-4">[4]</a></sup></p>
+
+    <h3>Two settings that fix most of it</h3>
+
+    <ol>
+        <li><strong>Always set the context yourself</strong> — write <code>model.context_length</code> into <code>config.yaml</code> to match what the server really uses, rather than leaving it to detection. This is step one of the resolution chain, so it beats every other source.<sup><a href="#en-ref-2">[2]</a></sup></li>
+        <li><strong>Patch wrong metadata with <code>model_overrides</code></strong> — for a local model no public registry knows, the capabilities Hermes infers may be wrong across the board. The v0.21.0 release notes describe this key as letting you "patch context windows, pricing, or capabilities for any model without waiting on a release", from PR #85560, merged on 13 August 2026; the settable fields are <code>context_window</code>, <code>max_output_tokens</code>, <code>supports_tools</code>, <code>supports_vision</code>, <code>supports_reasoning</code> and <code>model_family</code>.<sup><a href="#en-ref-11">[11]</a></sup></li>
+    </ol>
+
+    <pre><code># ~/.hermes/config.yaml — set the context yourself, then patch wrong metadata for a local model
+model:
+  default: your-model
+  provider: custom
+  base_url: http://localhost:11434/v1
+  context_length: 64000
+
+model_overrides:
+  custom:my-local-vllm:
+    my-llava-model:
+      context_window: 8192
+      supports_vision: true
+    _default:            # fill-gap only: models the catalog does not know
+      context_window: 32768</code></pre>
+
+    <p>Finally, a caution I want to underline, because it circulates on forums until people take it as fact: several bug reports suggest setting a key called <code>model.ollama_num_ctx</code>. <strong>That key appears only in reporters' own text; I found it on no page of the Hermes Agent documentation</strong>, so it should not be repeated as though it were official. If you want to force Ollama's context, do it on the Ollama side with <code>OLLAMA_CONTEXT_LENGTH</code> or a Modelfile as in <a href="#en-path-c">section 6</a> — that is the route the docs actually support.</p>
+
+    <h2 id="en-local-first">8. Local First, Cloud as the Safety Net</h2>
+
+    <p>The direct answer first: you do not have to choose a side. Hermes lets you make the local model your primary and keep a cloud model as the net that catches failures — and lets "side jobs", such as compressing a conversation or reading an image, run on a different model from the main one. This is the shape I actually use where sensitive work sits alongside ordinary work.</p>
+
+    <pre><code># ~/.hermes/config.yaml — local as primary, cloud as the safety net
+model:
+  default: "gemma4:31b"
+  provider: "custom"
+  base_url: "http://localhost:11434/v1"
+
+fallback_providers:
+  - provider: openrouter
+    model: anthropic/claude-sonnet-4
+
+auxiliary:
+  vision:                                # image work goes to a second local server
+    base_url: "http://localhost:1234/v1"
+    api_key: "local-key"
+    model: "qwen2.5-vl"
+
+delegation:                              # every subagent goes to a local server
+  model: "qwen2.5-coder"
+  base_url: "http://localhost:1234/v1"
+  api_key: "local-key"</code></pre>
+
+    <p>The first block comes straight from the Ollama guide, which states the intent in one line: "This way, 90% of your usage is free (local), and only the hard tasks hit the paid API."<sup><a href="#en-ref-3">[3]</a></sup> You can also configure it from the command line with <code>hermes fallback add</code>, which reuses the same provider picker as <code>hermes model</code> and comes with <code>list</code>, <code>remove</code> and <code>clear</code> subcommands.<sup><a href="#en-ref-7">[7]</a></sup> Three things to know before you trust the mechanism:</p>
+
+    <ul>
+        <li><strong>It does not fire for everything</strong> — the docs are explicit: 429 and 500/502/503 switch only after retries are exhausted; 401/403/404 switch immediately, because retrying is pointless; and repeatedly malformed or empty responses count too.<sup><a href="#en-ref-7">[7]</a></sup></li>
+        <li><strong>The scope is per turn, not per session</strong> — every new user message starts with the primary model restored, and within a single turn fallback activates at most once, which stops cascading failover loops.<sup><a href="#en-ref-7">[7]</a></sup></li>
+        <li><strong>It costs you the prompt cache in both directions</strong> — the docs warn that caches are keyed to the model (and on most providers the account), so the switch re-reads the whole history at full price, and the first request back on the primary is another full re-read; a session that bounces between providers is noticeably more expensive than one that stays put.<sup><a href="#en-ref-7">[7]</a></sup></li>
+    </ul>
+
+    <p>The last two blocks in the example are different mechanisms, and both are, I think, under-used. <code>auxiliary.&lt;task&gt;</code> separates the side jobs from the main model; the docs give image work and conversation compression as the examples, and stress that <code>base_url</code> takes precedence over <code>provider</code> — set a URL and provider resolution is bypassed entirely, while <code>provider: auto</code> means "use the main model".<sup><a href="#en-ref-7">[7]</a></sup> <code>delegation:</code> sends every subagent spawned by <code>delegate_task</code> to another model, which matters because that is where most of a run's tokens go<sup><a href="#en-ref-9">[9]</a></sup> — and the docs note that subagents inherit the parent's fallback chain.<sup><a href="#en-ref-7">[7]</a></sup></p>
+
+    <p>If you want to go further — one model per agent, genuinely separated, with one agent on a local model for work involving personal data and another on the cloud for maximum capability — the mechanism is the profile, which is a separate Hermes home directory of its own. The next post, <a href="/blog/hermes-desktop-profiles">#3 Profiles</a>, builds one step by step, including moving a profile between machines.</p>
+
+    <h2 id="en-summary">9. Summary</h2>
+
+    <p>If this post reduces to one picture, that picture is Figure 1: three boxes on the left that differ enormously in how easy they are, all of which must pass through one gate before reaching the agent — at least 64,000 tokens of context, and the flags that make tool calls parseable. There is no way around that gate, and almost every problem people report is the problem of someone who believes they are already through it when they are not.</p>
+
+    <p>Three things I would do this week. One — open <code>Settings → Providers → Local Models</code> and see whether the menu is even there. If it is, look at the colour of every catalog row and write down which models come up green. That is your hardware's real ceiling, not a number somebody quoted at you. Two — if you already run Ollama, run <code>ollama ps</code> right now and read the CONTEXT column. My guess is that many readers will find 4096, and will understand immediately why their agent keeps "forgetting". Three — test with one real tool-using task rather than a knowledge question, because being able to chat is not being able to work.</p>
+
+    <p>The next post, <a href="/blog/hermes-desktop-profiles">#3 Profiles</a>, takes up the question that arrives the moment you hold two models: which agent should use which, without editing config every time the work changes. The answer is the profile — a separate home directory with its own config, memory, skills and model.</p>
+
+    <div class="key-takeaways">
+        <h3>🎯 Key Takeaways</h3>
+        <ul>
+            <li><strong>Three roads, one gate</strong> = the managed llama.cpp runtime, LM Studio and the Custom endpoint differ in ease and in what they write to config, but all meet the same bar: 64,000 tokens and parseable tool calls</li>
+            <li><strong>64,000 tokens is a floor, not advice</strong> = smaller windows are rejected at startup, and in the managed runtime's source the value is the constant <code>FLOOR</code> = 65,536</li>
+            <li><strong>The flags belong to the server, not the model</strong> = <code>--jinja</code> for llama.cpp, <code>--enable-auto-tool-choice --tool-call-parser hermes</code> for vLLM, <code>--tool-call-parser qwen</code> for SGLang, and LM Studio 0.3.6 or later</li>
+            <li><strong>Path A is newer than the version number</strong> = the commit is dated 1 September 2026, after tag v2026.8.31, but the installer the site serves today (<code>build=06402ecb7ca5</code>) already sits after it — check the screen, not the version label</li>
+            <li><strong>Ollama misleads about context twice</strong> = its default is below the floor (4,096 on most machines), and <code>/api/show</code> reports the <em>maximum</em> rather than the value in use — set <code>model.context_length</code> yourself every time</li>
+            <li><strong>Early silence is prefill</strong> = Hermes relaxes the read timeout to 1,800 seconds when it detects a local endpoint, so do not reach for Ctrl+C</li>
+            <li><strong>Local primary, cloud net</strong> = <code>fallback_providers</code> is turn-scoped and fires at most once per turn, while <code>auxiliary</code> and <code>delegation</code> move side jobs and subagents onto other models</li>
+        </ul>
+    </div>
+
+    <section class="references" aria-labelledby="en-references">
+        <h2 id="en-references">References</h2>
+        <p class="references__note">Every source was verified and accessed on 7 September 2026 (2026-09-07). This series uses four evidence labels — <strong>Docs</strong> official Hermes Agent documentation · <strong>Release</strong> release notes or a merged commit/PR · <strong>Issue</strong> an open issue or PR · <strong>Community</strong> a non-official community source.</p>
+        <ol class="references__list">
+            <li id="en-ref-1"><span class="ref-tag ref-tag--standard">Docs</span> Nous Research. <cite>Local Models</cite>. <a href="https://hermes-agent.nousresearch.com/docs/user-guide/local-models">hermes-agent.nousresearch.com</a> — accessed 2026-09-07. <span class="ref-supports">Supports: the four-step flow Settings → Providers → Local Models → Install runtime → Download → Use and the sentence "That's the whole flow." · the sentence "Nothing leaves your computer" · the green/amber/red memory-fit pricing against your machine · the 64K guarantee for every recommended model and the expert-weights-first overflow policy · the 15-minute idle unload · byte-size checking of downloads · the whole <code>local_runtime:</code> block with its comments · <code>model.provider: llamacpp</code> + <code>model.default</code> and the <code>models/</code> and <code>runtimes/llamacpp/</code> folders · the CUDA/Metal/Vulkan/CPU build set and the 8 GB / 16 GB guidance · "a curated starting point, not a boundary", Find more models, Add model file · and the statement that the managed runtime "is a default, not a requirement".</span></li>
+            <li id="en-ref-2"><span class="ref-tag ref-tag--standard">Docs</span> Nous Research. <cite>Providers &amp; Custom Endpoints</cite>. <a href="https://hermes-agent.nousresearch.com/docs/integrations/providers">hermes-agent.nousresearch.com</a> — accessed 2026-09-07. <span class="ref-supports">Supports: the 64,000-token startup rejection, quoted verbatim · the sentence "works with any OpenAI-compatible API endpoint" · the per-server flag table, the "Without --jinja…" sentence and the raw-JSON symptom · the <code>-c 64000 -np 4</code> trap · the llama-server, vllm serve, ollama serve, Modelfile and <code>ollama ps</code> commands in full · Ollama's VRAM-keyed default-context table of 4,096/32,768/256,000 and the phrase "the #1 source of confusion" · the menu entry "Custom endpoint (self-hosted / VLLM / etc.)" and the <code>hermes model</code> versus <code>/model</code> warning · LM Studio as the <code>lmstudio</code> provider, <code>lms server start</code>, <code>lms load … --context-length 64000 --estimate-only</code>, the gear-icon steps, <code>model.lmstudio_load_mode</code>, the explicit-mode behaviour and the 0.3.6 requirement · the nine-step context resolution chain and the 128K default · and the difference between local Ollama and Ollama Cloud.</span></li>
+            <li id="en-ref-3"><span class="ref-tag ref-tag--standard">Docs</span> Nous Research. <cite>Run Hermes Locally with Ollama — Zero API Cost</cite>. <a href="https://hermes-agent.nousresearch.com/docs/guides/local-ollama-setup">hermes-agent.nousresearch.com</a> — accessed 2026-09-07. <span class="ref-supports">Supports: the <code>gemma4:31b</code> row of the model table (~20 GB, 24+ GB RAM, tool calling yes) and the statement that it is the only entry with reliable tool calling · the sentence "By default, Ollama uses a 2048-token context" · the Modelfile with <code>PARAMETER num_ctx 64000</code> · <code>OLLAMA_KEEP_ALIVE=24h</code> and the five-minute idle unload · <code>HERMES_API_TIMEOUT=1800</code> · the test prompt "List all Python files in this directory and count the lines of code in each" · and the hybrid config with the line "This way, 90% of your usage is free (local)…".</span></li>
+            <li id="en-ref-4"><span class="ref-tag ref-tag--standard">Docs</span> Nous Research. <cite>Run Local LLMs on Mac</cite>. <a href="https://hermes-agent.nousresearch.com/docs/guides/local-llm-on-mac">hermes-agent.nousresearch.com</a> — accessed 2026-09-07. <span class="ref-supports">Supports: the Qwen3.5-9B-Q4_K_M row (5.3 GB on disk, ~10 GB at 128K context with a quantized KV cache) · the KV-cache table of f16 ~16 GB / q8_0 ~8 GB / q4_0 ~4 GB · the advice to reduce context only while staying at or above the 64K floor · the prefill explanation "That's prefill at work, not a stalled session." · and the recommendation to use <code>hermes prompt-size</code>.</span></li>
+            <li id="en-ref-5"><span class="ref-tag ref-tag--standard">Docs</span> Nous Research. <cite>FAQ</cite>. <a href="https://hermes-agent.nousresearch.com/docs/reference/faq">hermes-agent.nousresearch.com</a> — accessed 2026-09-07. <span class="ref-supports">Supports: the <code>hermes model</code> → Custom endpoint worked example with a Context length of 64000 and the note "Hermes minimum; set this to match your server's actual context window" · the statement that Ollama's <code>/api/show</code> reports the maximum context rather than the configured <code>num_ctx</code> · the relaxation of the read timeout from 120s to 1800s for local endpoints, with stale-stream detection disabled, and <code>HERMES_STREAM_READ_TIMEOUT=1800</code> · and the description of <code>hermes update</code> as pulling the latest code and reinstalling dependencies.</span></li>
+            <li id="en-ref-6"><span class="ref-tag ref-tag--standard">Docs</span> Nous Research. <cite>Hermes Desktop</cite>. <a href="https://hermes-agent.nousresearch.com/docs/user-guide/desktop">hermes-agent.nousresearch.com</a> — accessed 2026-09-07. <span class="ref-supports">Supports: the statement that the Providers settings pane holds a Local Models view that "installs and manages an on-device llama.cpp runtime" · the statement that the model default is set at Settings → Model and that this is the only place that writes it · and the Switch provider button on the failed-turn error card, which jumps to the provider/endpoint/auth/billing settings.</span></li>
+            <li id="en-ref-7"><span class="ref-tag ref-tag--standard">Docs</span> Nous Research. <cite>Fallback Providers</cite>. <a href="https://hermes-agent.nousresearch.com/docs/user-guide/features/fallback-providers">hermes-agent.nousresearch.com</a> — accessed 2026-09-07. <span class="ref-supports">Supports: the <code>add</code>, <code>list</code>, <code>remove</code> and <code>clear</code> subcommands of <code>hermes fallback</code> and the shape of <code>fallback_providers:</code> · the trigger conditions 429, 500/502/503, 401/403/404 and malformed responses · the per-turn, at-most-once scope · the prompt-cache warning covering both the switch and the return · the <code>auxiliary:</code> shape with the vision example pointed at <code>http://localhost:1234/v1</code> and the statement that <code>base_url</code> takes precedence over <code>provider</code> · and the <code>delegation:</code> block plus the statement that subagents inherit the parent's fallback chain.</span></li>
+            <li id="en-ref-8"><span class="ref-tag ref-tag--standard">Docs</span> Nous Research. <cite>Environment Variables</cite>. <a href="https://hermes-agent.nousresearch.com/docs/reference/environment-variables">hermes-agent.nousresearch.com</a> — accessed 2026-09-07. <span class="ref-supports">Supports: the default value of <code>LM_BASE_URL</code>, <code>http://localhost:1234/v1</code> · and <code>OLLAMA_BASE_URL</code> as the Ollama Cloud endpoint (default <code>https://ollama.com/v1</code>), which confirms that it is a different route from local Ollama.</span></li>
+            <li id="en-ref-9"><span class="ref-tag ref-tag--standard">Docs</span> Nous Research. <cite>Subagent Delegation</cite>. <a href="https://hermes-agent.nousresearch.com/docs/user-guide/features/delegation">hermes-agent.nousresearch.com</a> — accessed 2026-09-07. <span class="ref-supports">Supports: the <code>delegation:</code> block pointed at a local server with <code>model: "qwen2.5-coder"</code>, <code>base_url</code> and <code>api_key</code>, quoted verbatim · and the sentence that subagents are where a run's tokens go — "the children are where the tokens go — a parallel batch of subagents typically burns the large majority of a run's total tokens".</span></li>
+            <li id="en-ref-10"><span class="ref-tag ref-tag--standard">Docs</span> Nous Research. <cite>Hermes Desktop — download page</cite>. <a href="https://hermes-agent.nousresearch.com/desktop">hermes-agent.nousresearch.com</a> — accessed 2026-09-07. <span class="ref-supports">Supports: the <code>Hermes-Setup.dmg</code> and <code>Hermes-Setup.exe</code> download links carrying <code>?build=06402ecb7ca5</code> on the date of access · the version label in the page footer, "Hermes Agent v0.21.0" · and the platform list macOS 12+, Windows 10/11 and Linux via the terminal.</span></li>
+            <li id="en-ref-11"><span class="ref-tag ref-tag--study">Release</span> Nous Research. <cite>Hermes Agent v0.21.0 (v2026.8.31) — release notes</cite>. <a href="https://github.com/NousResearch/hermes-agent/releases/tag/v2026.8.31">github.com</a> — published 2026-08-31, accessed 2026-09-07. <span class="ref-supports">Supports: the tag and date of the newest release on the day of writing, and the fact that these notes make no mention of a managed local-model runtime · the description of <code>model_overrides</code> as letting you "patch context windows, pricing, or capabilities for any model without waiting on a release", with its citation of PR #85560, merged 2026-08-13, and the list of settable fields.</span></li>
+            <li id="en-ref-12"><span class="ref-tag ref-tag--study">Release</span> Nous Research. <cite>commit 43e67d87 — "feat: local models — managed llama.cpp runtime with one-click desktop setup"</cite>. <a href="https://github.com/NousResearch/hermes-agent/commit/43e67d87">github.com</a> — committed 2026-09-01, accessed 2026-09-07. <span class="ref-supports">Supports: the date and title of the commit that brought the managed runtime in (117 files) and the fact that it lands after tag v2026.8.31 · the ancestry comparison showing <code>06402ecb7ca5</code> is 5,139 commits ahead of it and none behind · and the files this commit added, which I read on <code>main</code> the same day — <code>hermes_cli/local_runtime/catalog.json</code> (the names, repos, quantizations and <code>size_bytes</code> of the four models behind the size column of Table 1), <code>supervisor.py</code> (default port 18434 on 127.0.0.1, <code>--jinja</code> in the launch command, the 15-minute idle unload) and <code>context_policy.py</code> (the constant <code>FLOOR</code> = 64 × 1024).</span></li>
+            <li id="en-ref-13"><span class="ref-tag ref-tag--law">Issue</span> NousResearch/hermes-agent. <cite>Issue #102865 — Desktop Local Models: catalog auto-pick spawns infeasible config (35B/64K ctx on 8GB VRAM+30GB RAM) → full desktop freeze via swap thrash</cite>. <a href="https://github.com/NousResearch/hermes-agent/issues/102865">github.com</a> — opened 2026-09-04, still open when checked on 2026-09-07. <span class="ref-supports">Supports: the reported machine (RTX 4070 Laptop with 8 GiB VRAM and 30 GiB RAM, Linux) · the catalog auto-selecting <code>qwen3.6-35b-a3b</code> with a preset at <code>ctx-size = 65536</code> · and the sentence "Working set &gt;&gt; available RAM → kernel swaps… → full desktop freeze", ending in a forced reboot · Boundary: this is a user report; no maintainer fix was visible on the date checked.</span></li>
+            <li id="en-ref-14"><span class="ref-tag ref-tag--law">Issue</span> NousResearch/hermes-agent. <cite>Issue #103949 — local_runtime: select_backend() returns 'cuda' on Linux+NVIDIA but no Linux CUDA prebuilt exists</cite>. <a href="https://github.com/NousResearch/hermes-agent/issues/103949">github.com</a> — opened 2026-09-05, still open when checked on 2026-09-07. <span class="ref-supports">Supports: the error text <code>BinaryResolutionError: no prebuilt linux CUDA asset</code> · the cause, that <code>select_backend()</code> returns <code>cuda</code> for every NVIDIA card off macOS · and the reporter's tested workaround of forcing <code>vulkan</code> · Boundary: tested on one Ubuntu 26.04 machine with an RTX 5070 Ti, with no merged PR on the date checked.</span></li>
+            <li id="en-ref-15"><span class="ref-tag ref-tag--law">Issue</span> NousResearch/hermes-agent. <cite>Issue #43900 — Ollama local models silently capped at 4096-token context</cite>. <a href="https://github.com/NousResearch/hermes-agent/issues/43900">github.com</a> — opened 2026-06-11, still open when checked on 2026-09-07. <span class="ref-supports">Supports: the mechanism by which Hermes reads the context from the GGUF (131,072 for Gemma 4) but never sends <code>num_ctx</code> over the OpenAI-compatible route · the resulting <code>finish_reason="length"</code> with empty or truncated content, and the stitching of broken fragments into garbled output · and the UI still showing <code>0 / 131.1K</code> · Boundary: a user report, labelled P2 and not yet closed.</span></li>
+            <li id="en-ref-16"><span class="ref-tag ref-tag--law">Issue</span> NousResearch/hermes-agent. <cite>Issue #87697 — Hermes Client cancels local LLM streams after ~1.5s during prompt evaluation</cite>. <a href="https://github.com/NousResearch/hermes-agent/issues/87697">github.com</a> — opened 2026-08-16, still open when checked on 2026-09-07. <span class="ref-supports">Supports: the stream cancellation at around 1.5 seconds, the four continuation attempts, and the run of <code>&lt;unused49&gt;</code> tokens · the reporter's analysis that a system prompt of about 17,000 tokens from the tool schemas takes 1.5–2.5 seconds to evaluate before the first token · and the attached Ollama log line showing <code>task.n_tokens = 16862</code> · Boundary: labelled needs-repro, a single-machine report on Linux with Gemma 4 26B, unconfirmed by maintainers.</span></li>
+        </ol>
+    </section>
+    </div>
+
+    <div class="post-series-footer">
+      <span class="l-th">บทความจากซีรีส์ Hermes Desktop Hands-On 2026</span><span class="l-en" lang="en">From the Hermes Desktop Hands-On 2026 series</span>
+    </div>
+
+    <nav aria-label="Hermes Desktop Hands-On">
+    <div class="series-nav">
+      <h3>💻 Hermes Desktop Hands-On 2026</h3>
+      <div class="series-links">
+        <a href="/blog/hermes-desktop-install">#1 First Run</a>
+        <span class="current" aria-current="page">#2 Local Models</span>
+        <a href="/blog/hermes-desktop-profiles">#3 Profiles</a>
+        <a href="/blog/hermes-desktop-council">#4 Council</a>
+        <a href="/blog/hermes-desktop-skills-mcp">#5 Skills &amp; MCP</a>
+        <a href="/blog/hermes-desktop-automation">#6 Automation</a>
+        <a href="/blog/hermes-desktop-safety">#7 Recovery</a>
+      </div>
+    </div>
+    </nav>
+
+  </article>
+
+  </main>
+
+  <footer class="blog-footer">
+    <nav class="blog-footer__nav" aria-label="Site">
+      <a href="../index.html">Home</a>
+      <a href="./">Blog</a>
+      <a href="../publications/">Publications</a>
+      <a href="../books/">Books</a>
+      <a href="../projects/">Projects</a>
+      <a href="../news/">News</a>
+      <a href="../index.html#contact">Contact</a>
+    </nav>
+    <a href="./">← Back to Blog</a>
+    <span>© 2026 Anirach Mingkhwan — Associate Professor, KMUTNB</span>
+  </footer>
+
+</body>
+</html>

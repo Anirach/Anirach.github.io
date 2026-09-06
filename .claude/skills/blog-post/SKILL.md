@@ -20,7 +20,7 @@ description: End-to-end recipe for adding, editing, or removing a post in blog/ 
 > posts) and the 2026-09-05 AI Transformation launch (20 posts, built by
 > `scripts/build_series.py`), themselves on top of the 2026-09-01 Life (9) and Hermes (10)
 > launches. Every count in this file and in `references/` was recomputed on that date:
-> **76 posts, 5 series, 87 HTML files on disk (86 enumerated), 61 checks**. Where a count
+> **83 posts, 6 series, 94 HTML files on disk (93 enumerated), 61 checks**. Where a count
 > below still reads 37 or 47 it is deliberately describing the corpus at a named past
 > commit — a *present-tense* 37 anywhere in this skill is a bug; report it.
 
@@ -52,7 +52,7 @@ was caused by your change.
 Baseline on a clean `main` (2026-09-05, after the AI Transformation launch):
 
 ```
-posts=76  cards=76  series-nav=46  post-nav=24  no-nav=6
+posts=83  cards=83  series-nav=53  post-nav=24  no-nav=6
 
 CLEAN — no new wiring breakage (0 warn).
 ```
@@ -144,9 +144,9 @@ A post must never carry two patterns. `verify-wiring.py` fails on `BOTH`.
 
 Every post needs a cover **and a 1200×630 share card**, and the post's cover must be the
 same file its card shows. That is the one cover rule that is currently 100% green across
-all 76 posts — keep it that way.
+all 83 posts — keep it that way.
 
-- Put the file in `images/` as **`images/<slug>-cover.jpg`**. All 76 post covers are JPG
+- Put the file in `images/` as **`images/<slug>-cover.jpg`**. All 83 post covers are JPG
   since `ec2827b`/`21c8a55`, and since the drawn-cover system of 2026-08-26 they are also
   small: average 43 KB, largest 54 KB, none over the 90 KB ceiling INV-35 enforces. Never
   PNG for a photo or an illustration — PNG is for diagrams only. 64 of 76 posts use the
@@ -197,7 +197,7 @@ Transformation posts do not use it — `build_series.py` lifts its skeleton from
 Then fill every `{{PLACEHOLDER}}`. The skeleton, in order, is:
 
 ```
-<!DOCTYPE html> / <html lang="th">          ← all 76 posts are lang="th"; the 10 English
+<!DOCTYPE html> / <html lang="th">          ← all 83 posts are lang="th"; the 10 English
 <head>                                          pages are the 6 nav-bearing index pages
   <title>{EN title} — {TH subtitle} | Anirach Mingkhwan</title>      and the 4 books/ detail pages
   <meta name="description" content="{Thai, ~1 sentence}">
@@ -225,7 +225,7 @@ their `<main>` moved up on 2026-09-03.
 
 Non-negotiables, each because something on disk got them wrong:
 
-- **`lang="th"`.** All 76 posts are `th` and the page-level `lang` never flips — it cannot,
+- **`lang="th"`.** All 83 posts are `th` and the page-level `lang` never flips — it cannot,
   without JavaScript; the EN track is `lang="en"` wrappers behind the CSS switch. The 10
   English pages are the 6 nav-bearing index pages (`index.html`, `blog/index.html`,
   `books/`, `news/`, `projects/`, `publications/`) and the 4 `books/` detail pages.
@@ -247,7 +247,7 @@ Non-negotiables, each because something on disk got them wrong:
   which is why `twitter:card` is always `summary_large_image` — only a square image
   would need `summary` (the large card crops ~48% off one).
 - **`<nav class="blog-nav">` with `<a href="./" class="blog-nav__back">‹ Blog</a>`.**
-  **All 76 posts carry it**, and all 76 use `href="./"` — the eleven that had no back link
+  **All 83 posts carry it**, and all 83 use `href="./"` — the eleven that had no back link
   (including openclaw-memory and openclaw-skills, which had no route to the blog index at
   all) were converted during the 2026-08-26 island→house sweep. INV-29 now fails any post
   that cannot reach the rest of the site. Never write a bare directory href: the trailing
@@ -359,7 +359,7 @@ prose, so any automated check would be noise. Apply them while writing, not in a
 
 ## Step 4b — the English track
 
-**All 76 posts are bilingual, so a new one is not finished until it has an English
+**All 83 posts are bilingual, so a new one is not finished until it has an English
 track.** Write the Thai article first and get it right; the English track is a faithful
 mirror of finished prose, not a parallel draft.
 
