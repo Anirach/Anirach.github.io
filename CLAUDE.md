@@ -25,7 +25,7 @@ Deploy by pushing to `main` — GitHub Pages auto-deploys. There is no `.nojekyl
 ```
 /
 ├── index.html          # Portfolio landing page — the ONLY consumer of style.css
-├── style.css           # Landing-page styles — the canonical 24-token :root block (same tokens every other page redefines in its own embedded <style>), plus the scroll-driven reveal and nav animations that replaced script.js
+├── style.css           # Landing-page styles — the canonical 29-token :root block (same tokens every other page redefines in its own embedded <style>), plus the scroll-driven reveal and nav animations that replaced script.js
 │                       # NOTE: there is no script.js. It was deleted 2026-08-26 (bb9c7dc);
 │                       #   the site is zero-JavaScript and INV-38 fails the build on any
 │                       #   <script> that is not application/ld+json. See "Zero JavaScript" below.
@@ -176,8 +176,8 @@ touches a shipped file, and it rewrites nothing but the chip strip — that is t
 
 - **Language**: `<html lang="th">` on all 76 posts — Thai is the default track; the EN track is `lang="en"` wrappers behind the CSS switch, and the page-level `lang` never flips (it cannot, without JavaScript). All 6 nav-bearing index pages (`index.html`, `blog/index.html`, `books/index.html`, `publications/index.html`, `projects/index.html`, `news/index.html`) and the 4 `books/` detail pages are `lang="en"`. Headings and technical terms in English, body prose in Thai (marked with `<span lang="th">` on the section pages).
 - **CSS variables**: defined per-file in each blog page's own `:root`. Re-keyed to the book covers on 2026-08-26 (`scripts/retoken.py`, 28 tokens in 49 blocks): `--navy: #11304b`, `--blue: #226299` (a TEXT colour now — 6.4:1 on white), `--blue-dark: #1a4d7a`, `--blue-light: #4992b9` (**borders only**), `--slate: #334155`, `--slate-light: #526174`, `--bg: #faf7f0`, brand `--gold: #c4a46c` / `--gold-dark: #7a5f22` / `--cloud` / `--parchment`, and `--focus` (re-pointed to gold inside footers and `<pre>`, where the blue ring collapses to 2.12:1). `--font` (Inter + Sarabun for Thai), `--mono` (JetBrains Mono + Sarabun). Longer posts add semantic accents (`--green`, `--amber`, `--purple`, `--code-bg`); the 20 AI
-Transformation posts add a 29th token, `--coral: #c2410c`, which their covers and figures are drawn in. Copy the `:root` from the nearest sibling post rather than inventing one. `openclaw-101.html` predates this and uses raw hex throughout.
-- **Fonts**: Google Fonts `<link>` per page — Inter 300–900, **Sarabun 400/600/700 for Thai** (looped, the Thai body-prose convention; added 2026-08-26 to 39 pages — the 10 island posts load no webfont at all and are deferred to the island conversion), plus JetBrains Mono 400–600 on posts with code.
+Transformation posts add a 30th token, `--coral: #c2410c`, which their covers and figures are drawn in. Copy the `:root` from the nearest sibling post rather than inventing one. `openclaw-101.html` predates this and uses raw hex throughout.
+- **Fonts**: Google Fonts `<link>` per page — Inter 300–900 and **Sarabun 400/500/600/700/800 for Thai** (looped, the Thai body-prose convention), plus JetBrains Mono 400–600 on the 67 pages with code. All **87** pages now load a webfont and all 87 request the same five-weight Sarabun string with `display=swap`: the sweep began 2026-08-26 on 39 pages, the 10 island posts were folded in by the island→house conversion, and the 2026-09-03 bilingual sweep widened 400/600/700 to five weights because the EN track needs the intermediate weights the Thai track never used.
 - **Diagrams**: render as PNG in `images/` and `<img>` them in. Inline HTML/CSS and ASCII-art diagrams have repeatedly broken layout and were replaced (`c270892`, `4ae2660`) — do not reintroduce them.
 - **Images**: covers are `images/<slug>-cover.png|jpg`, referenced from posts as `../images/...` and from `blog/index.html` as `../images/...`. Card `<img>` tags carry an inline `style="background: linear-gradient(...)"` fallback.
 - **Reveal animations**: `data-reveal` attribute — landing page only, driven by a scroll-driven CSS animation in `style.css` (`@keyframes reveal` + `animation-timeline: view()`), never by JavaScript.
@@ -349,15 +349,21 @@ The canonical URL form is fixed and everything derives from it:
 | blog post | `https://anirach.com/blog/<slug>.html` — **with** the extension |
 | book detail | `https://anirach.com/books/<slug>.html` |
 
-`.html` won over the extensionless form because 136 of the site's own links already use it, it is
+`.html` won over the extensionless form because the site's own links overwhelmingly use it (404
+internal `.html` hrefs today, against the chip strips' extensionless links), it is
 the real on-disk path, and extensionless URLs 404 on the documented local dev server. The
 `.series-nav` chips still link extensionless — that is fine and deliberate (INV-03 enforces it for
 the OpenClaw seven, INV-03c for the other three strips); the canonical tag is what resolves the
 duplicate.
 
-**`twitter:card` is chosen by cover shape**, not by preference: `summary_large_image` only at
-≥1.5:1, otherwise `summary`. 25 of the 37 post covers are square, and a square cover in a large
-card loses ~48% of its height — including the caption band these covers carry along the top.
+**`twitter:card` follows the share card, not the cover** — and since every post now has a
+dedicated 1200×630 share card, all 77 blog pages are `summary_large_image`. The rule that produced
+that uniformity is worth keeping in mind, because it is why the share-card system exists at all:
+`summary_large_image` is only honest at ≥1.5:1, and 76 of the 77 plain covers are square, so a
+cover promoted straight into a large card would lose ~48% of its height — including the caption
+band these covers carry along the top. Nothing in `check_site.py` validates the VALUE of
+`twitter:card` (INV-27 only requires the tag to be present), so this stays a convention rather than
+an enforced invariant.
 
 **All 76 posts and all four books use a dedicated share card** rather than their own cover
 (`images/<slug>-og.jpg`, 1200×630, 80 files): the posts since the 2026-08-26 drawn-cover system

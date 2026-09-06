@@ -260,5 +260,5 @@ sentence enforces the second.
 
 ```bash
 python3 .claude/skills/site-check/scripts/check_site.py --check INV-27
-grep -c '<loc>' sitemap.xml    # must equal the page count (47 today, excluding 404.html)
+grep -c '<loc>' sitemap.xml    # must equal the page count (86 today, excluding 404.html)
 ```

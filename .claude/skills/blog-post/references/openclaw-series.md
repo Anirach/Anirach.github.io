@@ -8,28 +8,44 @@ blog/openclaw-agent-teams.html  blog/openclaw-integrations.html  blog/openclaw-p
 blog/openclaw-memory.html
 ```
 
-These 7 are the roughest corner of the site. They were hand-written before the DevOps
-template settled, and they still account for most of the drift metrics in the repo.
-Steering a new post here costs 10 file edits instead of 4 — prefer the DevOps template
-unless the post genuinely belongs to this narrative arc.
+These 7 were the roughest corner of the site. They were hand-written before the DevOps
+template settled and for months supplied most of the repo's drift metrics — **that debt is
+now fully paid** and the residual cost is structural, not cosmetic: the chip strip is a
+fixed literal duplicated seven times, so steering a new post here costs 7 extra file edits.
+Prefer the DevOps template unless the post genuinely belongs to this narrative arc.
 
-**Two of their old problems are fixed. Do not re-report them.** All 7 now carry the
-canonical 24-token `:root` (`6670480`, INV-22 PASSes) and the 4-line a11y block
-(`e8da9da`), and the 14 broken absolute links are gone (`b9fb125`, INV-05 PASSes).
-Re-verified 2026-08-10 against `7867c00`.
+**Their old problems are ALL fixed. Do not re-report any of them.** Re-verified
+**2026-09-06**:
 
-## What makes them different from every other post
-
-| | Other posts (30 non-numbered; 25 with `.post-nav`) | Numbered OpenClaw posts (7) |
+| Old defect | Fixed by | Guard, green today |
 |---|---|---|
-| Header | `<nav class="blog-nav">` with `href="./"` in 26 of 30 | hand-rolled; **no `<nav class="blog-nav">` / `.blog-nav__back`** — 5 of 7 link back with a bare site-absolute `href="/blog"`; openclaw-memory.html and openclaw-skills.html have no back link at all |
-| Nav | `.post-nav` prev/next pair, relative `foo.html` | `.series-nav` chip strip, site-absolute `/blog/<slug>` (no `.html`) |
-| CSS vars | canonical `:root`, all 30 | **canonical `:root`, all 7** — same block, since `6670480`. `grep -c ':root' blog/openclaw-*.html` → `1` for every file. |
-| `<meta name="description">` | present | missing in 5 of 7 (101, agent-teams, memory, security, skills) |
-| Footer | `<footer class="blog-footer">` | `<footer class="footer">` ×5, bare `<footer>` ×2 (security, skills); copyright not standardised — 101 / agent-teams `© 2026 anirach.com • Built with ❤️ for the AI community`; memory `&copy; 2026 Anirach Mingkhwan. สงวนลิขสิทธิ์ทุกประการ.`; security / production `&copy; 2026 Anirach Mingkhwan. All rights reserved.`; integrations `&copy; 2024 …`; skills `&copy; 2026 anirach.com \| OpenClaw for Organizations Series` |
+| no `:root` in 7 of them | `6670480` (canonical block; 24 tokens then, 29 now) | INV-22 |
+| no a11y block | `e8da9da` | — |
+| 14 broken site-absolute links | `b9fb125` | INV-05 |
+| 5 of 7 missing `<meta name="description">` | 2026-08-26 metadata sweep | INV-14 / INV-27 |
+| hand-rolled headers, no `.blog-nav__back` | 2026-08-26 island→house conversion | INV-29 |
+| `<footer class="footer">` ×5, bare `<footer>` ×2, six different copyright strings | 2026-08-26 (`08cfd95`) | INV-15 / INV-16 |
+| four different ordinal-badge markups, `บทที่ 3` in `openclaw-memory` | Phase 3 + `01332eb` | INV-20a/20b/20c |
+| `openclaw-integrations`'s drifted `<h3>` | `01332eb` | INV-03b |
+| monolingual | 2026-09-03 sweep (`scripts/bilingualize.py --all`) | `check_visibility.py` S1 |
+
+## What still makes them different from every other post
+
+| | Other posts (69 non-numbered) | Numbered OpenClaw posts (7) |
+|---|---|---|
+| Header | `<nav class="blog-nav">` with `href="./"` — **all 76 posts, these 7 included** | same |
+| Footer | `<footer class="blog-footer">` — **all 76** | same |
+| Nav | `.post-nav` prev/next pair (24), a different series' chip strip (39), or none (6) | `.series-nav` chip strip, site-absolute `/blog/<slug>` (no `.html`) |
+| Badge | most posts have none; Hermes and AI Transformation write `• Post #N` in `.post-hero__series` | `.post-hero__tag` "OpenClaw for Organizations 2026 • Post #N", all 7 |
+| CSS vars | canonical `:root`, all of them | canonical `:root`, all 7 — same block. `grep -c ':root' blog/openclaw-*.html` → `1` for every file. |
 
 Verify any of the above with e.g.
 `grep -c ':root' blog/openclaw-*.html` and `grep -l 'blog-nav' blog/openclaw-*.html`.
+
+**They are also the only strip INV-03 checks by name.** INV-03/03b/20a iterate a hardcoded
+`SERIES7` list; the Hermes, Life and AI Transformation strips are covered by INV-03c
+instead, which needs no table. Both are FAIL severity — a strip edited in one file and not
+the rest blocks the push either way.
 
 ## The 7-chip strip is a fixed literal — copy it verbatim
 
@@ -66,22 +82,33 @@ whatever the neighbouring lines in the file you are editing already use — do n
 "normalise" one file in isolation, that is drift.
 
 The extensionless `/blog/<slug>` form works because GitHub Pages resolves it to
-`<slug>.html`. All **42** such hrefs currently resolve (`check_site.py` INV-09 PASSes).
-Do not "fix" them to `.html`.
+`<slug>.html`. These 7 strips contribute **42** such hrefs (6 links × 7 files); the Hermes,
+Life and AI Transformation strips add their own, and every one of them resolves
+(`check_site.py` INV-09 PASSes). Do not "fix" them to `.html` — the canonical tag in the
+head is what resolves the duplicate, and it deliberately uses the `.html` form.
 
 ## Adding an 8th numbered post
 
 1. Pick the ordinal and slug. The strip is order-sensitive; inserting in the middle
    renumbers every label after it, so append as `#8` unless the user insists.
 2. Edit **all 7 existing files** plus the new one: extend `.series-links` with
-   `<a href="/blog/openclaw-<new>">#8 <Label></a>` at the end of the list.
-3. In the new file the `#8` entry is the `<span class="current">`.
-4. Add the ordinal badge in the body. There is no single convention — the 7 files use
-   four different markups (`.series-badge` ×4, `.series-info` ×1, bare `<p>` ×1,
-   `<strong>` ×1) and `openclaw-memory.html` writes `บทที่ 3` rather than `Post #3`.
-   Use `<div class="series-badge">Post #8</div>`, the plurality form.
-5. Card goes at the **top** of `#series-openclaw` in `blog/index.html`, and both
-   counters get recomputed (see SKILL.md).
+   `<a href="/blog/openclaw-<new>">#8 <Label></a>` at the end of the list. The strip is
+   flat — do **not** copy the AI Transformation series' `.series-links--grouped` shape.
+3. In the new file the `#8` entry is the `<span class="current">`. INV-03 compares the
+   full 8-label sequence in order across all 8 files, so a typo in one is a violation.
+4. Add the ordinal badge in the hero. There **is** a single convention now, since Phase 3
+   (2026-08-26) converged all four old markups onto it and INV-20b/20c guard it:
+   `<span class="post-hero__tag">OpenClaw for Organizations 2026 • Post #8</span>`.
+   The old forms (`.series-badge` ×4, `.series-info` ×1, bare `<p>` ×1, `<strong>` ×1, and
+   `openclaw-memory.html`'s `บทที่ 3`) are gone — do not resurrect one.
+5. Give it **both language tracks** like every other post: `python3
+   scripts/bilingualize.py --post openclaw-<new>`, then `--fill`, then `--verify` until it
+   prints OK. The chip strip and the ordinal badge stay **monolingual** — INV-03 and
+   INV-20a read them with regexes that truncate on a nested tag.
+6. Card goes at the **top** of `#series-openclaw` in `blog/index.html`, and three counter
+   sites get recomputed: the hero `Articles` stat, `#series-openclaw`'s `.series-count`,
+   and its `.blog-jump` chip's trailing `· N` (INV-02f — `--fix` repairs the first two, not
+   the chip).
 
 ## The 14 broken links these files used to carry — **FIXED, do not re-report**
 
@@ -96,17 +123,19 @@ grep -c 'href="/about\|href="/projects\|href="/research\|href="/teaching\|href="
 python3 .claude/skills/site-check/scripts/check_site.py | grep 'INV-05 '   # → PASS
 ```
 
-What remains is the **back link**, which is a separate thing: 5 of the 7
-(`openclaw-101`, `agent-teams`, `integrations`, `production` ×2, `security`) reach the
-index with a bare site-absolute `href="/blog"` rather than the house
-`<a href="./" class="blog-nav__back">‹ Blog</a>`, and `openclaw-memory` /
-`openclaw-skills` have no route to the blog index at all. `/blog` resolves (GitHub Pages
-serves `blog/index.html`), so this is inconsistency, not breakage. Fix it in a file you
-are already editing; do not sweep it as a side effect of adding a post.
+The **back link** was the last piece and it is done too: all 7 now open with the house
+`<nav class="blog-nav">` carrying `<a href="./" class="blog-nav__back">‹ Blog</a>`, like
+the other 69 posts. The only surviving site-absolute form is one footer link in
+`openclaw-production.html` (`href="/blog/"` — with the trailing slash, which is the point:
+bare `/blog` cost two redirects, one of them an https→http downgrade). Never write a bare
+directory href.
 
-## Two `#series-openclaw` cards that are NOT part of this strip
+## Six `#series-openclaw` cards that are NOT part of this strip
 
-`claude-code-architecture.html` and `openclaw-memory-architecture.html` sit in the
-OpenClaw section of `blog/index.html` but carry DevOps `.post-nav` chrome. They are not
-numbered, they are not in the strip, and they are unreachable from the DevOps chain walk.
-That is intentional. See `references/known-exceptions.md`.
+`#series-openclaw` holds 13 cards: these 7 numbered posts plus 6 standalone ones —
+`beyond-plugins`, `claude-code-architecture`, `idle-self-improvement`, `obsidian-ai-jarvis`,
+`openclaw-memory-architecture`, `openclaw-migration`. They are not numbered, not in the
+strip, and carry **no nav block at all**. Two of them (`claude-code-architecture`,
+`openclaw-memory-architecture`) wore DevOps `.post-nav` chrome until `f5e53fb` deleted it
+on 2026-08-26; INV-17 fails an OpenClaw card that grows it back, and INV-08 fails a post
+outside `NO_NAV_POSTS` that has no nav. See `references/known-exceptions.md`.

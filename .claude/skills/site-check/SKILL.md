@@ -1,6 +1,6 @@
 ---
 name: site-check
-description: Runs the cross-file integrity linter for the anirach.com static site (76 self-contained posts in blog/, no build step, no tests, no CI) and explains how to repair every failure it reports. This repo has zero tooling — this skill IS the test suite. Use it before any push, and immediately after ANY edit under blog/, images/, index.html, style.css, or script.js — every page carries its own copy of the nav, the CSS and the counters, so even a one-line edit silently desynchronises blog/index.html card counts, the post-nav prev/next chain, the 7-entry OpenClaw series strip, or a cover image. Also use it when adding or renaming a blog post, when the user says "check the site", "did I break anything", "is the blog consistent", "verify before deploy", "run the tests", or when reviewing a diff that touches blog/index.html. Run it BEFORE the edit too, to confirm the tree is green (0 new, 0 known since 2026-08-26), so any violation the run after your edit reports is yours.
+description: Runs the cross-file integrity linter for the anirach.com static site (76 self-contained bilingual posts in blog/ across 5 series, no build step, no tests, no CI) and explains how to repair every failure its 61 checks report. This repo has zero tooling — this skill IS the test suite. Use it before any push, and immediately after ANY edit under blog/, images/, index.html, or style.css — every page carries its own copy of the nav, the CSS and the counters, so even a one-line edit silently desynchronises blog/index.html card counts, the .blog-jump chips, the post-nav prev/next chain, one of the four .series-nav strips, or a cover image. Also use it when adding or renaming a blog post, when the user says "check the site", "did I break anything", "is the blog consistent", "verify before deploy", "run the tests", or when reviewing a diff that touches blog/index.html. Run it BEFORE the edit too, to confirm the tree is green (0 new, 0 known since 2026-08-26), so any violation the run after your edit reports is yours.
 ---
 
 # site-check — the site's only test suite
@@ -46,13 +46,19 @@ it is the only flag that writes.
 python3 .claude/skills/site-check/scripts/check_site.py --fix
 ```
 
-`--fix` recomputes all four counter sites in `blog/index.html` — the two `.blog-hero__stat` values
-(Series, Articles) and both `.series-count` spans (`#series-openclaw`, `#series-devops`) — from the
-actual `class="card"` counts, and rewrites only the ones that are wrong (**0 of 4 today**: 37 cards,
-2 series-sections, 13 + 24). It reports the already-correct ones as `ok … (already correct)`. It is
-idempotent and touches no other file. Nothing else is auto-fixable — every other failure needs a
-judgement call about which of two files is wrong. Line numbers are deliberately not quoted here;
-`blog/index.html` is edited often and `--fix` prints the current ones.
+`--fix` recomputes **seven** counter sites in `blog/index.html` — the two `.blog-hero__stat` values
+(Series, Articles) and all five `.series-count` spans (`#series-ai-transformation`, `#series-hermes`,
+`#series-openclaw`, `#series-devops`, `#series-life`) — from the actual `class="card"` counts, and
+rewrites only the ones that are wrong (**0 of 7 today**: 76 cards, 5 series-sections,
+20 + 10 + 13 + 24 + 9). The `.series-count` loop is generic — it walks whatever
+`<section class="series-section">` blocks it finds — so a sixth series is picked up for free. It
+reports the already-correct ones as `ok … (already correct)`. It is idempotent and touches no other
+file.
+
+**The eighth counter site, the `.blog-jump` chip strip, is NOT auto-fixable** — INV-02f reports it,
+you edit it by hand. Nothing else is auto-fixable either: every other failure needs a judgement call
+about which of two files is wrong. Line numbers are deliberately not quoted here; `blog/index.html`
+is edited often and `--fix` prints the current ones.
 
 **Run it twice around every edit.** Confirm it is green before you touch anything, then compare.
 The tree exits 0 today **and is violation-free** (see below), so the script passing IS the signal;
@@ -65,10 +71,23 @@ change the exit code, so read the per-check status lines, not just the exit stat
 ## Expected `[known]` on today's tree — none
 
 A clean checkout **exits 0 with 0 violations**: `checks run 61 / clean 61 / known baseline 0 /
-violations 0 new, 0 known`. Verified 2026-08-26 at `21d5cfc` (2026-09-05: now 86 enumerated files, 76 posts, 5 series after the AI Transformation launch, which brought INV-02f, INV-03c and INV-03d with it; 2026-09-01 was 66 files, 56 posts, 4 series after Life + Hermes) — then 47 HTML files, 37 posts, `books/`
-holding four detail pages; 61 checks, 42 fail / 17 warn / 2 info. `BASELINE = {}` holds only
-retirement comments. There is no table of expected debt to compare against any more: **any
-violation the script prints is new**, and any fail-severity one blocks the push.
+violations 0 new, 0 known`. Re-verified **2026-09-06**; the banner reads
+`86 HTML files | 76 posts | 195 files in images/ | 76 cards in blog/index.html`, and the check
+inventory is **61 checks, 42 fail / 17 warn / 2 info** (`--list` prints it).
+
+The shape it is measured against has moved three times since the baseline was emptied — the counts
+matter because half the checks below quote one:
+
+| Date | Tree (file counts are ENUMERATED pages — `404.html` is always excluded) | Checks |
+|---|---|---|
+| 2026-08-26 `21d5cfc` | 47 pages, 37 posts, 2 series, `books/` holding four detail pages | 58 (39 fail / 17 warn / 2 info) |
+| 2026-09-01 | 66 pages, 56 posts, 4 series (Life 9 + Hermes 10 launched) | 58 |
+| 2026-09-03 | unchanged in shape; the last 37 posts became bilingual, so all 56 were | 58 |
+| 2026-09-05 | **86 pages** (87 HTML files on disk), **76 posts**, **5 series** (AI Transformation, 20) | **61** (42/17/2) — INV-02f, INV-03c, INV-03d landed with it |
+
+`BASELINE = {}` holds only retirement comments. There is no table of expected debt to compare
+against any more: **any violation the script prints is new**, and any fail-severity one blocks the
+push.
 
 The last 29 baselined violations were paid down honestly in seven commits on 2026-08-26
 (`01332eb` → `21d5cfc`; read those messages for the per-check story). Retired, in order: INV-03b
@@ -113,12 +132,17 @@ Then re-run with `--fix` to resync counts.
 
 **Failure means** somebody hand-incremented. That is exactly how 33 drifted from 37.
 
-**Repair:** run `--fix`, or edit `blog/index.html:221` and `:235`. Never bump a counter by hand when
-adding a post — recompute:
+There are five `.series-count` spans today, one per series: 20 + 10 + 13 + 24 + 9 = 76.
+
+**Repair:** run `--fix` — it recomputes all seven sites and prints the current line numbers.
+Never bump a counter by hand when adding a post; recompute:
 
 ```bash
-grep -c 'class="card"' blog/index.html
+grep -o 'class="card"' blog/index.html | wc -l   # 77 matches, one of which is a comment → 76 cards
 ```
+
+The comment is deliberate: it warns that the featured post is `class="feature"`, never
+`class="card"`, because a 77th real match would inflate every counter and duplicate a feed item.
 
 ### INV-02f — the `.blog-jump` chips match the sections they anchor
 
@@ -272,9 +296,11 @@ Do not "fix" a missing diagram by inlining markup; regenerate the PNG.
 **Repair for 07a:** add a `covers.tsv` row and draw the missing cover. Do **not** silently re-point
 one card to a different existing image — that produces a card whose picture contradicts the article.
 
-**Do not enforce `<slug>-cover.*`.** Only 23 of 37 posts follow that pattern; 14 deliberately use
-short names (`iac-cover.jpg`, `auth-cover.jpg`, `sre-cover.jpg`, `cicd-cover.png`, `linux-cli-cover.jpg`
-…). A literal slug rule produces 14 false positives. The enforceable form is INV-07d below.
+**Do not enforce `<slug>-cover.*`.** 64 of the 76 posts follow that pattern; **12** deliberately use
+short names (`iac-cover.jpg`, `auth-cover.jpg`, `sre-cover.jpg`, `cicd-cover.jpg`,
+`linux-cli-cover.jpg`, `api-lifecycle-cover.jpg`, `security-cover.jpg`, `gitops-cover.jpg`,
+`kubernetes-cover.jpg`, `monitoring-cover.jpg`, `networking-cover.jpg`, `testing-cover.jpg`).
+A literal slug rule produces 12 false positives. The enforceable form is INV-07d below.
 
 ### INV-07d — if `images/<slug>-cover.*` exists, the post must use it
 
@@ -283,20 +309,28 @@ repoint the post.
 
 ### INV-08 — nav-pattern exclusivity
 
-The partition is exact: **7** `.series-nav` + **24** `.post-nav` + **6** no-nav = 37 (since
-2026-08-26 — `git-branching` joined the `.post-nav` set, `claude-code-architecture` and
-`openclaw-memory-architecture` left it). No file may carry two patterns.
+The partition is exact: **46** `.series-nav` + **24** `.post-nav` + **6** no-nav = **76**. The 46
+breaks down as 20 AI Transformation + 10 Hermes + 9 Life + 7 numbered OpenClaw. (It was 7/24/6 = 37
+until the 2026-09-01 Life and Hermes launches and the 2026-09-05 AI Transformation launch;
+`git-branching` joined the `.post-nav` set and `claude-code-architecture` /
+`openclaw-memory-architecture` left it on 2026-08-26.) No file may carry two patterns.
 
 **Failure means** you pasted a chip strip into a DevOps post or a prev/next pair into a series post.
 **Repair:** delete the wrong one. Which pattern a post gets is decided by which section its card
-lives in, not by taste.
+lives in, not by taste. There are **four** strip shapes, and they are not interchangeable: three
+flat `.series-links` strips (OpenClaw 7, Hermes 10, Life 9) and one grouped
+`.series-links--grouped` strip of four labelled `.series-links__group` blocks of five
+(AI Transformation, 20).
 
 ### INV-09 — extensionless `/blog/<slug>` links resolve
 
-42 such hrefs across the 7 series posts; each must exist once `.html` is appended. GitHub Pages
-serves them, but only if the file is really there.
+Every `.series-nav` chip uses this form; each must exist once `.html` is appended. GitHub Pages
+serves them, but only if the file is really there. The OpenClaw seven contribute 42 (6 links × 7
+files); Hermes, Life and AI Transformation contribute their own.
 
-**Repair:** if a slug 404s, the file was renamed — update all 7 copies of the strip, not one.
+**Repair:** if a slug 404s, the file was renamed — update **every** copy of that series' strip, not
+one: 7 for OpenClaw, 10 for Hermes, 9 for Life, and for AI Transformation
+`python3 scripts/build_series.py --restrip` rather than 20 hand edits.
 
 ### INV-11 — exactly one `<h1>` per post
 
@@ -306,15 +340,26 @@ keep `.post-hero__title`.
 
 ### INV-12 — every menu-toggle control is actually wired
 
-0 today. The site ships **two** legitimate mobile-menu patterns and the check knows both:
+0 today. The site ships **two** mobile-menu patterns and, since `script.js` was deleted, both are
+pure CSS — but the check still recognises three shapes, because the third is what a regression
+would look like:
 
-- **JS-driven** — `index.html:32` `<button class="nav__hamburger" id="hamburger">`, wired by
-  `script.js`. A page carrying this shape must contain a `<script>` tag.
-- **Pure CSS** — `<input type="checkbox" id="navToggle" class="nav__toggle">` +
-  `<label for="navToggle" class="nav__burger">` on `blog/index.html` and the eight sibling
-  section pages (the four other section indexes plus the four `books/` detail pages), which load
-  no JS at all. Both halves must be present, and the `for=` must name the
-  checkbox's `id`, or the tap does nothing.
+- **`:target`** — `index.html` alone. `<a href="#menu" class="nav__hamburger">` plus
+  `.nav__links:target { display: flex; }` in `style.css:816`. It is an anchor, not the
+  `<button id="hamburger">` `script.js` used to wire.
+- **Checkbox** — `<input type="checkbox" id="navToggle" class="nav__toggle">` +
+  `<label for="navToggle" class="nav__burger">` on **10 pages**: `blog/index.html`, the four other
+  section indexes, the four `books/` detail pages and `404.html`. Both halves must be present, and
+  the `for=` must name the checkbox's `id`, or the tap does nothing.
+- **JS-driven** — a `button`/`a`/`div`/`span` carrying a menu token on a page with no `<script>`.
+  Nothing on the site is this today; the branch exists so a re-added dead button is reported.
+
+**A caveat worth knowing before trusting that third branch.** `has_js` is literally
+`"<script" in s`, and 79 pages carry a `application/ld+json` block — which the browser never
+executes. So on any page with JSON-LD (including `index.html`) the JS-driven branch cannot fire,
+and it is the `:target` rule in `style.css` that actually makes that menu work. The branch is only
+live on a JSON-LD-free page. Do not read INV-12 PASS on `index.html` as proof its hamburger is
+wired; INV-38 is the check that keeps real JavaScript out.
 
 The check used to grep the literal string `hamburger`. After Task 9 converted four pages to the
 checkbox pattern, that string survived in `index.html` alone, so the check policed **1 page out of
@@ -419,25 +464,25 @@ automatically; INV-26 is the one check that ties them to their index.
 
 Surface these; fix them deliberately, not opportunistically. A linter that fails the build on
 cosmetics gets switched off. The real split is 42 fail / 17 warn / 2 info across 61 checks —
-`--list` prints each check's severity. Every row below reads 0 today; the "repair" column is
-what to keep it at 0.
+`--list` prints each check's severity, and the counts were re-verified 2026-09-06. Every row below
+reads 0 today; the "repair" column is what to keep it at 0.
 
 | id | rule | today | repair |
 |----|------|-------|--------|
-| INV-03b | series-nav `<h3>` identical across the 7 | 0 | All seven say `📚 OpenClaw for Organizations 2026` (`openclaw-integrations` was the outlier until `01332eb`). |
+| INV-03b | series-nav `<h3>` identical across the 7 | 0 | All seven say `📚 OpenClaw for Organizations 2026` (`openclaw-integrations` was the outlier until `01332eb`). It iterates `SERIES7` only; the other three strips' headings — `⚡ Hermes Agent in Practice 2026` ×10, `🌅 Life Thought &amp; Philosophy 2026` ×9, `🧭 AI Transformation for Organizations 2026` ×20 — are covered by INV-03c at FAIL level. |
 | INV-04c | `.post-nav` container is `<div>` | 0 | All 24 use `<div class="post-nav">`; the last `<nav>` containers went in `08cfd95`. `RE_PNAV_OPEN` still matches `(div\|nav)` on purpose so a `<nav>` regression is reported, not hidden. |
 | INV-04d | `.post-nav__dir` ∈ {`← Previous`, `Next →`} | 0 | `claude-code-architecture`'s `Related` / `See also` block was deleted in `f5e53fb` (the post is no-nav now, and lost those two links). |
 | INV-06a | every file in `images/` (and the repo root) is referenced | 0 | The 9 template leftovers were deleted 2026-08-26. Confirm with `grep -r` before deleting any future orphan. |
 | INV-10 | `.post-nav__title` matches the target's card title | 0 | Copy the card title from `blog/index.html` verbatim, Thai subtitle included (`73032cb` rewrote the last five). `verify-wiring.py` agrees one-for-one. |
-| INV-13 | `lang` attrs | 0 | Green: the 6 nav-bearing index pages and the 4 `books/` detail pages are `lang="en"`, all 37 posts `lang="th"`. |
-| INV-14 | every post has `<meta name="description">` | 0 | All 47 pages carry one since the 2026-08-26 metadata sweep; INV-27 enforces it at fail level. |
+| INV-13 | `lang` attrs | 0 | Green: the 10 English pages (6 nav-bearing index pages + 4 `books/` detail pages) are `lang="en"`, all **76** posts `lang="th"`. The page-level `lang` never flips for the EN track — that track is `lang="en"` wrappers inside `<main>`, behind the CSS switch. |
+| INV-14 | every post has `<meta name="description">` | 0 | All **86** enumerated pages carry one since the 2026-08-26 metadata sweep; INV-27 enforces it at fail level. |
 | INV-15 | footer copyright year uniform **in posts** | 0 | One string, one encoding (the literal `©`, never `&copy;`) on every page since 2026-08-26. The script reports one violation per non-modal cohort. |
-| INV-16 | footer container class uniform | 0 | 37 of 37 posts open with `<footer class="blog-footer">` (the last three `post-footer` posts converged in `08cfd95`). A second cohort is reported as new. |
+| INV-16 | footer container class uniform | 0 | **76 of 76** posts open with `<footer class="blog-footer">` (the last three `post-footer` posts converged in `08cfd95`). A second cohort is reported as new. |
 | INV-17 | a card's section matches its nav family | 0 | `claude-code-architecture` and `openclaw-memory-architecture` sit in `#series-openclaw` and no longer carry a DevOps `post-nav` (`f5e53fb`). |
 | INV-18 | no `#series-devops` card uses the chip strip | 0 | Green. (The mirror rule, INV-19, is fail-level — see above.) |
 | INV-20b | ordinal badge uses one consistent markup form | 0 | All seven use one `.post-hero__tag` line since Phase 3 (2026-08-26). |
 | INV-20c | badge is worded "Post #N" | 0 | `openclaw-memory` wrote `บทที่ 3` until `01332eb`. |
-| INV-22 | every post defines its own `:root` | 0 | Green since `6670480` landed the canonical block (28 tokens since the 2026-08-26 re-key) in all 42 files with embedded CSS, `style.css` included (INV-22b, info-level, is green for the same reason). Baseline entries deleted — a post that loses its `:root` is now reported as new. |
+| INV-22 | every post defines its own `:root` | 0 | Green since `6670480` landed the canonical block (24 tokens then, **29** after the 2026-08-26 re-key) in every file with embedded CSS — **86 pages today plus `style.css`, 87 `:root` blocks**; `index.html` is the one page with none, by design, its CSS living entirely in `style.css` (INV-22b, info-level, is green for the same reason). The 20 AI Transformation posts add a 30th token, `--coral`, *after* the canonical block — the same per-post accent pattern `--docker-blue` uses. Baseline entries deleted — a post that loses its `:root` is now reported as new. |
 | INV-24 | the 6 nav-bearing pages agree on the footer `©` year and all carry a meta description | 0 | INV-14/15/16 iterate `site.posts` only, so `blog/index.html` and the landing pages sat outside every footer/meta check — which is how a `© 2025` footer survived on `blog/index.html` while the others read 2026. The year is checked for **consistency** (modal year wins), never against a hardcoded literal, so 1 January is not a linter event. |
 
 Full drift inventory with counts and the reason each cohort exists: `references/drift-budget.md`.
@@ -469,14 +514,27 @@ INV-04a/04f defect — was deleted in the same commit; it is a no-nav post too.
 ## Adding or renaming a post
 
 Read `references/adding-a-post.md` before touching `blog/`. It has the exact card block, the
-three-edit chain rewiring recipe, and the copy-paste series strip. The one-line summary: copy a
-DevOps post that already has `<nav class="blog-nav">` + `.post-nav` as your template — the 7
-OpenClaw series posts were the un-templated corner of the site and accounted for most of the
-warn-level drift the table above used to carry, before Phase 3 and `01332eb` normalised them.
+three-edit chain rewiring recipe, the copy-paste OpenClaw strip, and the generated-series path.
+
+The one-line summary depends on which of the five series the post joins:
+
+- **DevOps** — copy a post that already has `<nav class="blog-nav">` + `.post-nav`, insert the
+  card at the top of `#series-devops`, rewire three things.
+- **Hermes / Life / OpenClaw** — copy a sibling, then add the new chip to **every** existing
+  member's strip (10 / 9 / 7 files) and mark the new post's own chip `current`. INV-03 covers the
+  OpenClaw seven by name; INV-03c covers the other two.
+- **AI Transformation** — do not hand-edit anything. Add the manifest row to
+  `scripts/series/ai-transformation.json`, then
+  `python3 scripts/build_series.py --post <slug>` and `--restrip`. Hand-editing 20 grouped strips
+  is the failure INV-03c exists to catch, not the procedure.
+
+Every post is bilingual, so any of these is a **two-track** edit; `python3
+scripts/bilingualize.py --verify <slug>` is the per-file check that catches an unmirrored one,
+and it is the only check that can see a half-converted post while a sweep is in flight.
 
 ## If you edit the script
 
-Five regex traps, each of which produced a *wrong pass or a false alarm* in a real audit. A wrong
+Six regex traps, each of which produced a *wrong pass or a false alarm* in a real audit. A wrong
 regex makes the linter lie in the dangerous direction: it reports working chains as broken and
 invites "fixes" that destroy real links — or, worse, it silently narrows a check's domain to
 nothing and reports PASS forever.
@@ -505,6 +563,14 @@ INERT = r'<(style|script|pre|code)\b[^>]*>.*?</\1>'       # blank_inert(): marku
    a CSS rule that merely names a class, or example markup inside a code sample, is counted as a
    real element. `blank_inert` blanks `<style>`/`<script>`/`<pre>`/`<code>` bodies while preserving
    byte offsets, so reported line numbers stay correct.
+6. **Never end a nested container at a fixed number of closing tags.** `RE_SNAV` ended a
+   `.series-nav` strip at the first `</div></div>`, which is correct for the three flat strips and
+   would have silently truncated the AI Transformation strip the moment anyone wrapped its chips one
+   level deeper — 5 chips of 20, with every strip check above it passing on a quarter of the
+   evidence. `Site._parse_navs` walks div depth via `series_nav_body()` now, and **INV-03d
+   fault-injects a nested grouped strip to prove it**. Do not simplify the walker back into a regex;
+   read the INV-03d entry in `references/drift-budget.md` first, because the first draft of that
+   self-check asserted something false about the shipped markup.
 
 Title comparison for INV-10 must be `html.unescape(re.sub(r'\s+',' ',t)).strip()`, then emoji-stripped
 (`[\U0001F000-\U0001FAFF☀-➿️]`), then `.strip().strip('—-').strip()` — see `norm_title` in
@@ -528,8 +594,8 @@ Every new or modified check must be proven failable by fault injection **on a co
 
 ### INV-27 — the social / canonical head block
 
-Added 2026-08-26 with the metadata sweep. Nothing in this repo generates a `<head>`; all 47
-enumerated pages carry a hand-copied one, and a wrong canonical or a stale `og:url` is invisible
+Added 2026-08-26 with the metadata sweep. Nothing in this repo generates a `<head>` (except
+`build_series.py`, for its own 20 posts); all **86** enumerated pages carry a hand-copied one, and a wrong canonical or a stale `og:url` is invisible
 in a browser — it only shows up in a search result or a LINE preview, where nobody on this project
 ever looks. So INV-27 **derives** every value it can and compares the file against the derivation,
 never one hand-typed tag against another:
@@ -538,7 +604,7 @@ never one hand-typed tag against another:
 |---|---|
 | `canonical` + `og:url` | the file's own path — `/blog/<slug>.html`, `/books/<slug>.html`, `/<dir>/`, `/`. Never `/index.html`, never extensionless. |
 | `og:image:width` / `:height` | the real pixel size, read out of the JPEG SOF / PNG IHDR marker with `struct`. **Pillow is not a dependency and must never become one.** |
-| `og:locale` | the same `blog/`-prefix rule INV-13 uses for `lang=` — `th_TH` on posts, `en_US` on the 10 English pages |
+| `og:locale` | the same `blog/`-prefix rule INV-13 uses for `lang=` — `th_TH` on posts, `en_US` on the 10 English pages. Since every post is bilingual, all 76 also carry a 14th line, `og:locale:alternate` `en_US`; `check_visibility.py` S1 (not INV-27) is what ties that and the JSON-LD `inLanguage: ["th","en"]` to the presence of `class="l-en"` in the markup |
 | `og:site_name` | the one constant: `Anirach Mingkhwan` |
 
 It also requires `og:title`, `og:description`, `og:type`, `twitter:card` and a `<meta name="description">`
@@ -622,10 +688,10 @@ system was being built:
 
 | Branch | Why it matters |
 |---|---|
-| every post has a row | a post added later keeps whatever cover it was born with, and the family gains a silent outlier |
-| cover is exactly 800×800 | 74 `<img>` tags hard-code those numbers — a different canvas renders squeezed (INV-33's trap, one level up) |
-| share card exists at 1200×630 | `og:image` points at `<slug>-og.jpg`; a missing one is a broken share preview no page visibly shows |
-| cover ≤ 90 KB | the whole point was the weight; flat drawn art has no business exceeding it, and one that does is usually a photo that slipped in |
+| every post has a row | 76 posts, 76 rows; a post added later keeps whatever cover it was born with, and the family gains a silent outlier |
+| cover is exactly 800×800 | the post `<img>` and its card both hard-code those numbers — a different canvas renders squeezed (INV-33's trap, one level up) |
+| share card exists at 1200×630 | `og:image` points at `<slug>-og.jpg`; a missing one is a broken share preview no page visibly shows. 80 of them on disk: 76 posts + the four books |
+| cover ≤ 90 KB | the whole point was the weight; flat drawn art has no business exceeding it, and one that does is usually a photo that slipped in. Today's 76 average 43 KB, largest 54 KB |
 
 All four were fault-injected before the check was trusted.
 
@@ -636,11 +702,13 @@ than repo invariants:
    `navy`/`deep` covers; Deep Blue (dark) heroes take `cloud`/`parchment`. The site shipped the
    opposite once — a teal cover on a teal hero, which vanished. The checker reads each post's
    ACTUAL `.post-hero` gradient rather than a second table that could drift.
-2. **No two posts may share a motif — one drawing per post, 37 of them.** This replaced a weaker
+2. **No two posts may share a motif — one drawing per post, 76 of them.** This replaced a weaker
    "no two ADJACENT cards share ground+motif" rule on 2026-09-01. The weaker rule passed happily
-   while five generic motifs were spread over 37 posts, which is exactly how the listing ended up
-   with six near-identical grey wireframes; the owner reported it with screenshots. Uniqueness is
-   now structural: `MOTIFS` has one named function per slug and `--check` rejects a repeat.
+   while five generic motifs were spread over the then-37 posts, which is exactly how the listing
+   ended up with six near-identical grey wireframes; the owner reported it with screenshots.
+   Uniqueness is now structural: `MOTIFS` has one named function per slug and `--check` rejects a
+   repeat. `scripts/covers.tsv` carries **76 rows**, one per post — adding a post means adding a
+   row, never editing the renderer.
 
 `cream` (#faf7f0) was designed in and then **retired**: cards are `var(--white)`, so a cream cover
 had no visible edge and read as a missing image.
@@ -655,7 +723,8 @@ repo root and INV-06a correctly reported it as an unreferenced published image:
 
 ```bash
 python3 scripts/make_cover.py --check      # validate the table, draw nothing
-python3 scripts/make_cover.py --all        # 37 covers + 37 share cards, ~2s
+python3 scripts/make_cover.py --all        # 76 covers + 76 share cards
+python3 scripts/make_cover.py <slug>       # just one post's pair
 python3 scripts/make_cover.py --contact    # .covers/contact-sheet.jpg
 ```
 
@@ -667,7 +736,7 @@ Three places stated when a post was published and, until 2026-08-26, only two we
 |---|---|
 | `feed.xml` `<pubDate>` | generated from `git log --diff-filter=A` — correct |
 | head `article:published_time` | the same git date — correct |
-| **the visible text** | the literal string **"March 2026"** on all 37, hand-typed, month-precision |
+| **the visible text** | the literal string **"March 2026"** on all 37 posts as they then stood, hand-typed, month-precision |
 
 The corpus actually spans **7–24 March 2026**. A reader saw one date, a feed reader another, and
 "newest" could not be computed from the page at all — which the featured card on `blog/index.html`

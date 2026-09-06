@@ -9,46 +9,86 @@
   hardcoded 720px/16px) and was deleted on 2026-08-10. Do not recreate it.
   If you change this file, nothing else needs syncing — that is the point.
 
-  Verified current against the sweeps that shaped the corpus:
-    6670480  canonical :root tokens in every file
-    ec2827b, 21c8a55  covers re-encoded to JPG, all <=200 KB
-    635eb94/4a31036  heading ladder (card titles are h4)
-    e8da9da  :focus-visible, prefers-reduced-motion, color-scheme,
-             text-wrap, aspect-ratio, width/height/loading/decoding
-  Diff this file's <style> against blog/api-request-lifecycle.html before
-  trusting it after any future sweep.
+  ── THIS FILE IS NOT LINTED ────────────────────────────────────────────
+  It does not live in blog/, so check_site.py, check_visibility.py and
+  verify-wiring.py never see it. That is exactly how it rotted between
+  2026-08-26 and 2026-09-05 (no skip link, no <main>, monolingual, three-weight
+  Sarabun, pre-re-key --purple). After ANY sweep that touches blog/, diff this
+  file against the two skeletons below and fix it in the same commit:
+      diff <(awk '/<style>/,/<\/style>/' .claude/skills/page-design/assets/post-template.html) \
+           <(awk '/<style>/,/<\/style>/' blog/hermes-101.html)
+  ────────────────────────────────────────────────────────────────────────
+
+  ── THE 20 AI TRANSFORMATION POSTS DO NOT USE THIS TEMPLATE ─────────────
+  They are GENERATED. `scripts/build_series.py` emits all twenty from
+  `scripts/series/ai-transformation.json` plus per-post content sheets in
+  `.bilingual/`, lifting its <style> block from blog/hermes-101.html at RUN
+  TIME. A 21st post in that series is NOT a copy of this file — it is:
+      1. a manifest row in scripts/series/ai-transformation.json
+      2. python3 scripts/build_series.py --post <slug>
+      3. python3 scripts/build_series.py --restrip   (rewrites the 20-chip
+         grouped strip in the other twenty; nothing else in a shipped file)
+  Hand-copying this template into that series would give it the ungrouped
+  chip strip and break INV-03c/INV-03d. Use this file for the OTHER four
+  series and for standalones only.
+  ────────────────────────────────────────────────────────────────────────
+
+  Verified current against shipped reality on 2026-09-06 (77 files in blog/,
+  76 of them posts; every count below re-derived, not remembered):
+    77/77  class="skip-link" + <main id="main">        (INV-30)
+    76/76  the pure-CSS TH ⇄ EN switch (.l-th / .l-en) (check_visibility S1)
+    76/76  <details class="post-toc"> ×2, one per track
+    76/76  .blog-nav__home + .blog-footer__nav          (INV-29)
+    77/77  Sarabun:wght@400;500;600;700;800&display=swap
+    87/87  :root blocks, 29 tokens, zero value deviations (page-design §1)
+    76/76  hero cover 800×800 square (scripts/make_cover.py) — NOT 16/9
+    76/76  hero gradient is Sunrise (33) or Deep Blue (43), and nothing else (INV-28)
 
   TO USE:
-    1. cp this to blog/<slug>.html   (lang="th" — posts are Thai, index pages are en)
+    1. cp this to blog/<slug>.html   (lang="th" — posts are Thai-default; the
+       10 English pages are the 6 nav-bearing index pages + 4 books/ details)
     2. Replace every {{PLACEHOLDER}}. Leave no {{ }} behind.
-    3. Pick ONE hero gradient from page-design/SKILL.md §5 — do not invent one.
-       This file ships the "Default / light" family, the plurality (11 uses).
-    4. Pick ONE footer nav pattern: .post-nav (DevOps chain) or .series-nav
-       (numbered OpenClaw) or delete both (standalone). Never two.
+    3. Pick ONE hero gradient — Sunrise (shipped below) or Deep Blue. INV-28
+       allows no third family. Deep Blue also swaps the hero ink and TWO lines
+       of the language-pill CSS; both are marked "DEEP BLUE" below.
+    4. Pick ONE nav pattern: .post-nav (DevOps chain, ships live below,
+       OUTSIDE </main>) or .series-nav (numbered series, commented below,
+       INSIDE <main>) or delete both (standalone). Never two — INV-08.
        Read blog-post/SKILL.md Step 7 before writing prev/next by hand — the
        chain is DERIVED from card order in blog/index.html, never authored.
-    5. Cover -> images/ as JPG, <=1600px wide, <=200 KB. Never PNG for a photo
-       or AI cover (PNG is for diagrams only). Never reuse another post's cover —
-       every card has its own since the 2026-08-26 drawn-cover system; INV-07a
+    5. Write BOTH language tracks. A monolingual post would be the only one
+       on the site, and check_visibility.py S1 keys off the substring
+       class="l-en" — the markup and the JSON-LD inLanguage array must land
+       in the same commit.
+    6. Cover -> images/<slug>-cover.jpg, 800×800, JPG, <=200 KB, plus the
+       1200×630 share card images/<slug>-og.jpg. scripts/make_cover.py draws
+       both together; INV-35 checks both. Never PNG for a photo or AI cover
+       (PNG is for diagrams only). Never reuse another post's cover — INV-07a
        fails the build on any new sharing.
-    6. Add a .card to the right .blog-grid in blog/index.html. Card markup and
-       the exact indentation are in blog-post/SKILL.md Step 5.
-    7. RECOMPUTE, never increment, the counters in blog/index.html:
-         .blog-hero__stat  "N Articles"     = total class="card" count
-         .blog-hero__stat  "N Categories"   = number of <div class="category">
-         .category__count  (#cat-technology) = cards in that category
-         .series-count     (#series-openclaw / #series-devops)
-       All five are enforced by check_site.py INV-02a..INV-02e.
-    8. Fill the SOCIAL block in <head> ({{SLUG}}, {{DATE}}, titles) and the JSON-LD
-       BlogPosting block right after the /social delimiter. og:image/twitter:image is the
-       dedicated 1200x630 share card images/<slug>-og.jpg (scripts/make_cover.py
-       draws it beside the cover — INV-35 checks both), and {{DATE}} must be the
-       same YYYY-MM-DD in article:published_time, JSON-LD datePublished and the
-       hero's <time datetime>. INV-27 fails on a mismatch; so does
-       scripts/check_visibility.py --strict.
-    9. python3 .claude/skills/site-check/scripts/check_site.py     -> 0 new FAIL
-       python3 .claude/skills/blog-post/assets/verify-wiring.py    -> no FAIL lines
-       python3 scripts/check_visibility.py --strict                -> 0 FAIL
+
+  STILL YOURS TO WIRE BY HAND — none of it is in this file, and nothing
+  computes any of it. A post that exists only as blog/<slug>.html is invisible:
+    · the .card anchor in the right .series-section of blog/index.html
+      (markup + exact indentation: blog-post/SKILL.md Step 5; the card title
+      is <h3>, and the featured post is class="feature", never class="card")
+    · the hand-typed counters — blog/index.html's hero "N Series" / "N Articles"
+      and that section's .series-count, plus the .blog-jump chip's trailing "· N".
+      RECOMPUTE, never increment. INV-02a/b/c/d/e/f fail the build; --fix repairs
+      what it can.
+    · images/<slug>-cover.jpg (800×800) AND images/<slug>-og.jpg (1200×630)
+    · feed.xml        — python3 scripts/gen_feed.py      (INV-31)
+    · sitemap.xml     — python3 scripts/gen_sitemap.py   (INV-32; run it in the
+                        commit AFTER the content commit so a git lastmod exists)
+    · llms.txt        — add the post by hand; check_visibility.py L2 gates it
+    · the nav pattern for its series — for the numbered OpenClaw seven, the new
+      chip goes in ALL SEVEN files; for DevOps, edit the two neighbours' prev/next
+    · the JSON-LD block and the "social"-delimited block in <head> below
+
+  THEN, from the repo root:
+    python3 .claude/skills/site-check/scripts/check_site.py     -> 0 new FAIL
+    python3 .claude/skills/blog-post/assets/verify-wiring.py    -> no FAIL lines
+    python3 scripts/check_visibility.py --strict                -> 0 FAIL
+    python3 docs/openclaw/check-news-sync.py                    -> only if news moved
   ══════════════════════════════════════════════════════════════════════════
 -->
 <html lang="th">
@@ -56,7 +96,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>{{TITLE_EN}} — {{SUBTITLE_TH}} | Anirach Mingkhwan</title>
-  <!-- Thai, ~1 sentence. 6 posts still lack this; do not become the 7th. -->
+  <!-- Thai, ~1 sentence, 70–160 chars. INV-27 fails on a missing or empty one. -->
   <meta name="description" content="{{ONE_SENTENCE_THAI_SUMMARY}}">
   <!-- ── SOCIAL ── enforced by check_site.py INV-27. The block below is wrapped in
        the literal "social" / "/social" comment delimiters so a sweep can replace it
@@ -71,14 +111,15 @@
                            scripts/check_visibility.py --strict fails on a mismatch.
        og:image / twitter:image = the dedicated 1200x630 share card
                            images/{{SLUG}}-og.jpg (scripts/make_cover.py draws it
-                           beside the square cover; INV-35 checks both). The
+                           beside the 800x800 square cover; INV-35 checks both). The
                            width/height below are its REAL pixel size — INV-27 reads
                            the JPEG header and fails on a mismatch. Facebook needs
                            them to render the very first share.
        twitter:card      = summary_large_image, always — every share card is 1200x630
                            (1.9:1). Only a square image would need "summary".
-       Bilingual posts (the pure-CSS TH/EN switch) add, directly after og:locale:
-                           <meta property="og:locale:alternate" content="en_US">
+       og:locale:alternate = en_US, directly after og:locale. It is NOT optional any
+                           more: every post is bilingual, and check_visibility.py S1
+                           fails when class="l-en" is in the markup without it.
        No microdata attributes anywhere — they were removed sitewide on 2026-09-02
        in favour of the JSON-LD block below; never re-add them.
        Run the sweep instead of hand-typing this:
@@ -89,6 +130,7 @@
   <meta property="og:url" content="https://anirach.com/blog/{{SLUG}}.html">
   <meta property="og:site_name" content="Anirach Mingkhwan">
   <meta property="og:locale" content="th_TH">
+  <meta property="og:locale:alternate" content="en_US">
   <meta property="article:published_time" content="{{DATE}}">
   <meta property="article:author" content="https://anirach.com/">
   <meta property="og:title" content="{{TITLE_EN}} — {{SUBTITLE_TH}}">
@@ -106,11 +148,16 @@
   <link rel="apple-touch-icon" href="/apple-touch-icon.png">
   <!-- /social -->
   <!-- JSON-LD BlogPosting — required on every post since the 2026-09-02 visibility
-       overhaul; sits immediately after the /social delimiter. The type attribute is
-       double-quoted "application/ld+json" — the one script type INV-38 allows (the
-       browser parses it as data, never executes it). datePublished == dateModified ==
-       {{DATE}} on first publish; bump dateModified on a substantive edit. Bilingual
-       posts use "inLanguage": ["th", "en"] instead of "th".
+       overhaul; sits immediately after the /social delimiter, OUTSIDE the delimiters
+       so a social sweep cannot wipe it. The type attribute is double-quoted
+       "application/ld+json" — the one script type INV-38 allows (the browser parses
+       it as data, never executes it), and its whitelist regex requires the DOUBLE
+       quotes. datePublished == dateModified == {{DATE}} on first publish; bump
+       dateModified on a substantive edit.
+       "inLanguage" is the ARRAY ["th","en"] because every post is bilingual. Scalar
+       "th" is the regression, not the default — check_visibility.py S1 treats the
+       substring class="l-en" as the definition of "bilingual" and fails when the
+       markup and this array disagree.
        Validated by: python3 scripts/check_visibility.py --strict -->
   <script type="application/ld+json">
   {
@@ -126,19 +173,29 @@
     "datePublished": "{{DATE}}",
     "dateModified": "{{DATE}}",
     "image": "https://anirach.com/images/{{SLUG}}-og.jpg",
-    "inLanguage": "th",
+    "inLanguage": [
+      "th",
+      "en"
+    ],
     "mainEntityOfPage": "https://anirach.com/blog/{{SLUG}}.html"
   }
   </script>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=Sarabun:wght@400;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <!-- Sarabun carries the Thai track and must ship FIVE weights — 400;500;600;700;800,
+       the string on all 87 pages. The old three-weight 400;600;700 left Thai 500 and
+       800 to synthetic emboldening, which loops badly on Sarabun's Thai glyphs.
+       Drop the JetBrains Mono family if the post has no code. Keep &display=swap. -->
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=Sarabun:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
-    /* ── TOKENS — canonical, byte-identical in all 42 files. Do not edit. ──
-       Add a per-post brand token AFTER this block, never inside it:
-       e.g. --docker-blue: #2496ed;  (blog/docker-compose.html does exactly this) */
+    /* ── TOKENS — the canonical 29, byte-identical in all 87 :root blocks. ──
+       Source of truth is style.css:5, and every shipped post agrees with it.
+       Do not edit. Add a per-post brand token AFTER this block, never inside it:
+       e.g. --docker-blue: #2496ed;  (blog/docker-compose.html does exactly this).
+       --coral: #c2410c is a 30th token, series-scoped: ONLY the 20 generated AI
+       Transformation posts declare it, right after --gold-dark. Do not add it here. */
     :root {
       color-scheme: light;
       /* ink */
@@ -149,9 +206,13 @@
       --blue: #226299; --blue-dark: #1a4d7a; --blue-light: #4992b9;
       /* brand — sampled from the book covers. --gold is decorative on light grounds (2.2:1); --gold-dark is its text form. */
       --gold: #c4a46c; --gold-dark: #7a5f22; --cloud: #dee7e6; --parchment: #e9e1c4; --focus: #226299;
-      /* status — use only these six, never invent a seventh */
+      /* status — use only these six, never invent a seventh.
+         --purple/--purple-dark were RE-POINTED TO THE BLUES by the 2026-08-26
+         re-key ("the end of violet", d44adb9). The NAMES survive so the seven
+         OpenClaw posts' .series-nav rules still resolve; nothing renders violet
+         any more. #8b5cf6/#7c3aed are the pre-re-key values — never restore them. */
       --green: #22c55e; --red: #ef4444; --amber: #f59e0b;
-      --cyan: #06b6d4; --purple: #8b5cf6; --purple-dark: #7c3aed;
+      --cyan: #06b6d4; --purple: #226299; --purple-dark: #1a4d7a;
       /* type */
       --font: 'Inter', 'Sarabun', -apple-system, BlinkMacSystemFont, sans-serif;
       --mono: 'JetBrains Mono', 'Fira Code', 'Sarabun', monospace;
@@ -162,13 +223,28 @@
     }
 
     /* ── BASE ── */
-    html { scroll-behavior: smooth; }
+    html { scroll-behavior: smooth; scroll-padding-top: 5rem; }
+    /* the nav bar is fixed at 56px; without these two an in-page TOC jump lands
+       with the target heading hidden underneath it. */
+    [id] { scroll-margin-top: 5rem; }
     body {
       font-family: var(--font); font-size: 17px; line-height: 1.8;
       color: var(--slate); background: var(--bg); -webkit-font-smoothing: antialiased;
     }
 
-    /* ── NAV ── */
+    /* ── SKIP LINK ── a11y-perf R5: the link and the landmark it targets are a
+       pair — useless without both halves, and INV-30 fails a page carrying one
+       without the other. Off-screen until focused, then the first tab stop. ── */
+    .skip-link { position: absolute; left: -9999px; }
+    .skip-link:focus {
+      left: 1rem; top: 1rem; z-index: 999;
+      background: var(--navy); color: #fff;
+      padding: 0.75rem 1.25rem; border-radius: var(--radius-sm);
+      font-weight: 600; text-decoration: none;
+    }
+
+    /* ── NAV ── .blog-nav__home is the "Anirach" wordmark. INV-29 FAILS a post
+       without it (and without .blog-footer__nav below): no post may be a dead end. */
     .blog-nav {
       position: fixed; top: 0; left: 0; right: 0; z-index: 100;
       background: rgba(248,250,252,0.85); backdrop-filter: blur(20px);
@@ -178,21 +254,43 @@
       max-width: var(--wide); margin: 0 auto; padding: 0 2rem; height: 56px;
       display: flex; align-items: center; justify-content: space-between;
     }
+    .blog-nav__home {
+      font-size: 0.9rem; font-weight: 800; color: var(--navy);
+      text-decoration: none; margin-right: 1rem;
+    }
+    .blog-nav__home:hover { color: var(--blue); }
+    .blog-nav__inner > .blog-nav__back { margin-right: auto; }
     .blog-nav__back {
       font-size: 0.85rem; font-weight: 500; color: var(--blue-dark);
       text-decoration: none; display: flex; align-items: center; gap: 0.4rem;
     }
-    .blog-nav__back:hover { color: #1a4d7a; }
+    .blog-nav__back:hover { color: var(--blue); }
     .blog-nav__title {
       font-size: 0.85rem; font-weight: 600; color: var(--navy);
       overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 50%;
     }
 
-    /* ── HERO ──
-       PICK ONE gradient from page-design/SKILL.md §5. This is Default / light.
-       The three text colours below are the a11y-perf R4 values for THIS
-       gradient — var(--blue) on #e9e1c4 is 2.99:1 and fails AA. If you swap in
-       a dark gradient family, swap these to #fff and re-check against
+    /* ── HERO ── SUNRISE, the light family (page-design §5). INV-28 allows exactly
+       two: Sunrise (below) and Deep Blue. There is no third, so this is a choice
+       between two strings, not an invitation to mix a gradient.
+
+       DEEP BLUE swap — replace the .post-hero background with
+         linear-gradient(135deg, #11304b 0%, #1a4d7a 45%, #226299 100%)
+       then set colour to #fff on .post-hero, __title, __sub, __meta and __series,
+       make __tag  color:#fff; background:rgba(255,255,255,0.18), add
+         .post-hero { --focus: var(--gold); }
+       (blue-on-blue collapses to 2.12:1 — the footer/<pre> precedent), and swap
+       the TWO pill lines marked "DEEP BLUE" in the LANGUAGE SWITCH block below.
+
+       The Sunrise ink below is measured against the DARKEST stop of its own
+       gradient, #e9e1c4 (--parchment), which is the worst case:
+         var(--slate-light) #526174  4.83:1   AA body        (__meta)
+         var(--blue-dark)   #1a4d7a  6.72:1   AA+            (__series)
+         var(--blue-dark) on the 10% blue tag pill  5.88:1    (__tag)
+       Note --blue #226299 measures only 4.29:1 on that tag pill at the parchment
+       end, which is why the tag is --blue-dark here. The old comment claiming
+       "var(--blue) on #e9e1c4 is 2.99:1" was a PRE-RE-KEY number and is dead:
+       today's --blue is 4.90:1 on parchment. Re-measure, do not quote from memory —
        a11y-perf/references/contrast.md section C. */
     .post-hero {
       padding: 8rem 2rem 3rem;
@@ -201,6 +299,7 @@
     }
     .post-hero__tags { display: flex; gap: 0.5rem; justify-content: center; margin-bottom: 1.25rem; flex-wrap: wrap; }
     .post-hero__tag {
+      display: inline-block;
       font-size: 0.7rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.1em;
       color: var(--blue-dark); background: rgba(34,98,153,0.1);
       padding: 0.3rem 0.75rem; border-radius: 20px;
@@ -210,20 +309,119 @@
       line-height: 1.2; margin-bottom: 1rem;
       max-width: var(--measure); margin-left: auto; margin-right: auto;
     }
-    .post-hero__meta {
-      font-size: 0.85rem; color: #475569;          /* 5.08:1 on #e9e1c4 */
-      display: flex; align-items: center; justify-content: center; gap: 1.5rem;
+    /* optional one-line standfirst; 41 of 76 posts carry it. Delete both rule and
+       markup if the post does not need one. */
+    .post-hero__sub {
+      font-size: 1.05rem; max-width: 640px; margin: 0 auto 1.5rem;
+      line-height: 1.7; color: var(--slate);
     }
-    .post-hero__series { font-weight: 600; color: #1a4d7a; }   /* 5.30:1 on #e9e1c4 */
+    .post-hero__meta {
+      font-size: 0.85rem; color: var(--slate-light);
+      display: flex; align-items: center; justify-content: center; gap: 1.5rem; flex-wrap: wrap;
+    }
+    .post-hero__series { font-weight: 600; color: var(--blue-dark); }
+    /* The cover is SQUARE — 800x800, drawn by scripts/make_cover.py. The 16/9 box
+       this template shipped until 2026-09-06 letterboxed away the caption band
+       these covers carry along the top. 76 of 76 posts use 1 / 1. */
     .post-hero__cover {
-      max-width: 380px; margin: 2.5rem auto 0; aspect-ratio: 16 / 9;
-      border-radius: var(--radius-lg); overflow: hidden;
-      box-shadow: 0 20px 60px rgba(34,98,153,0.15);
+      aspect-ratio: 1 / 1;
+      max-width: 380px;
+      margin: 2.5rem auto 0;
+      border-radius: var(--radius-lg, 16px);
+      overflow: hidden;
+      box-shadow: 0 20px 60px rgba(17,48,75,0.14);
     }
     .post-hero__cover img { width: 100%; height: 100%; object-fit: cover; display: block; }
 
+    /* ── LANGUAGE SWITCH — pure CSS, zero JavaScript (INV-38) ──
+       One visually-hidden checkbox as a direct child of body, BEFORE the main landmark,
+       so `#langSwitch:checked ~ main …` reaches every content block. The two
+       tracks are paired blocks: .l-th (default) and .l-en (hidden until
+       checked; display:revert restores block for divs, inline for spans).
+       Naming stays clear of INV-12's menu-token regex (hamburger|burger|
+       nav__toggle|nav-toggle|navtoggle|menu-toggle|menu__toggle) — verified.
+       No JS also means no persistence across posts; each post opens in Thai.
+
+       Three consequences, each of which has bitten once:
+       · A general sibling combinator reaches NOTHING above itself. Anything the
+         switch must reach lives inside <main> — which is why <main> wraps the HERO,
+         not just the article. deployment-hosting, openclaw-memory-architecture and
+         vibe-coding-devops-process were restructured for this on 2026-09-03.
+       · `display: revert`, never `block` — .l-en is used on <div>, <details> AND
+         <span>; block would break the inline spans in the <h1> and the meta line.
+       · NAVIGATION BELONGS TO NEITHER TRACK. The .post-nav pair sits outside
+         </main> and could never be reached by the switch anyway; the .series-nav
+         chips, the hero ordinal badge and the card titles stay monolingual because
+         INV-03, INV-10 and gen_feed.py read them with regexes that concatenate or
+         truncate on a nested tag. Never put .l-th / .l-en inside them. */
+    .lang-switch-box { position: absolute; left: -9999px; }
+    .l-en { display: none; }
+    #langSwitch:checked ~ main .l-en { display: revert; }
+    #langSwitch:checked ~ main .l-th { display: none; }
+    .lang-switch {
+      display: inline-flex; align-items: center; gap: 0.55rem;
+      margin-top: 1.4rem; padding: 0.4rem 1.1rem; border-radius: 50px;
+      /* DEEP BLUE (line 1 of 2): background: rgba(255,255,255,0.85); border: 1px solid rgba(255,255,255,0.4); */
+      background: rgba(255,255,255,0.7); border: 1px solid rgba(34,98,153,0.25);
+      cursor: pointer; font-size: 0.85rem; user-select: none;
+    }
+    .lang-switch span { color: var(--slate-light); font-weight: 600; transition: color 0.2s; }
+    .lang-switch .lang-sep { color: var(--gray); font-weight: 400; }
+    .lang-switch .lang-th { color: var(--navy); font-weight: 800; }
+    #langSwitch:checked ~ main .lang-switch .lang-th { color: var(--slate-light); font-weight: 600; }
+    #langSwitch:checked ~ main .lang-switch .lang-en { color: var(--navy); font-weight: 800; }
+    /* DEEP BLUE (line 2 of 2): .lang-switch:hover { border-color: #fff; } */
+    .lang-switch:hover { border-color: var(--blue); }
+    #langSwitch:focus-visible ~ main .lang-switch {
+      outline: 2px solid var(--focus); outline-offset: 3px;
+    }
+
+    /* ── TABLE OF CONTENTS ── a collapsible <details>, one per language track
+       (152 across the 76 posts). Its <ol> links only into its OWN track: the
+       Thai copy points at #th-… ids, the English copy at #en-… . Namespacing is
+       not decoration — both copies of the article are in the DOM at once, and
+       duplicate ids would make every anchor land on the Thai heading. ── */
+    .post-toc {
+      max-width: var(--measure);
+      margin: 2rem auto 0;
+      padding: 1rem 1.25rem;
+      background: rgba(34,98,153,0.05);
+      border: 1px solid rgba(34,98,153,0.14);
+      border-left: 3px solid var(--gold, #c4a46c);
+      border-radius: 10px;
+      font-size: 0.92rem;
+    }
+    .post-toc > summary {
+      cursor: pointer;
+      font-weight: 700;
+      color: var(--navy);
+      list-style: none;
+    }
+    .post-toc > summary::-webkit-details-marker { display: none; }
+    .post-toc > summary::before {
+      content: "\25B8";
+      display: inline-block;
+      margin-right: 0.5rem;
+      transition: transform 0.2s ease;
+      color: var(--gold-dark, #7a5f22);
+    }
+    .post-toc[open] > summary::before { transform: rotate(90deg); }
+    .post-toc > summary:focus-visible { outline: 3px solid var(--focus, #226299); outline-offset: 3px; }
+    .post-toc ol { margin: 0.85rem 0 0.25rem; padding-left: 1.4rem; }
+    .post-toc li { margin-bottom: 0.4rem; line-height: 1.5; }
+    .post-toc a { color: var(--slate); text-decoration: none; }
+    .post-toc a:hover, .post-toc a:focus-visible { color: var(--blue-dark, #1a4d7a); text-decoration: underline; }
+    @media (max-width: 600px) { .post-toc { margin: 1.25rem 1rem 0; } }
+
     /* ── BODY ── */
     .post-body { max-width: var(--measure); margin: 0 auto; padding: 3rem 2rem 6rem; }
+    /* Thai needs more room than Latin at the same nominal size. :lang(th) matches
+       .post-body itself, inherited from <html lang="th"> — so BOTH tracks render at
+       18px; the lang="en" on the English wrapper is for assistive tech and for any
+       :lang() rule you scope to descendants, not a font-size opt-out. */
+    .post-body:lang(th) { font-size: 18px; line-height: 1.85; }
+    .post-body p, .post-body li, .post-body blockquote { text-wrap: pretty; }
+    .post-body img, .post-body svg { max-width: 100%; height: auto; }
     .post-body h2 {
       font-size: 1.6rem; font-weight: 800; color: var(--navy);
       margin: 3rem 0 1rem; padding-bottom: 0.5rem;
@@ -238,6 +436,11 @@
     .post-body a {
       color: var(--blue-dark); text-decoration: underline;
       text-decoration-thickness: 1px; text-underline-offset: 2px;
+    }
+    .post-body blockquote {
+      background: rgba(34,98,153,0.06); border-left: 4px solid var(--blue);
+      padding: 1rem 1.25rem; border-radius: 0 10px 10px 0; margin: 1.25rem 0;
+      font-size: 0.95rem; color: var(--navy);
     }
     .post-body hr {
       border: none; height: 1px; margin: 3rem 0;
@@ -263,7 +466,37 @@
       padding: 0.15rem 0.4rem; border-radius: var(--radius-sm); font-size: 0.9em;
     }
 
-    /* ── CALLOUT ── */
+    /* ── SIDE-SCROLL AFFORDANCE ── 67 posts carry it. <pre> blocks and tables can
+       exceed the 720px measure. These layers paint a shadow ONLY where there is more
+       content in that direction; when fully scrolled the cover slides over the shadow
+       and hides it. No JavaScript, no wrapper element. Delete if the post has neither. */
+    .post-body pre, .post-body table {
+      overflow-x: auto;
+      background-image:
+        linear-gradient(to right, var(--code-bg, #0f172a) 30%, rgba(15,23,42,0)),
+        linear-gradient(to left, var(--code-bg, #0f172a) 30%, rgba(15,23,42,0)),
+        radial-gradient(farthest-side at 0 50%, rgba(0,0,0,.28), rgba(0,0,0,0)),
+        radial-gradient(farthest-side at 100% 50%, rgba(0,0,0,.28), rgba(0,0,0,0));
+      background-position: 0 0, 100% 0, 0 0, 100% 0;
+      background-repeat: no-repeat;
+      background-size: 40px 100%, 40px 100%, 14px 100%, 14px 100%;
+      background-attachment: local, local, scroll, scroll;
+    }
+    .post-body table {
+      background-image:
+        linear-gradient(to right, var(--white, #fff) 30%, rgba(255,255,255,0)),
+        linear-gradient(to left, var(--white, #fff) 30%, rgba(255,255,255,0)),
+        radial-gradient(farthest-side at 0 50%, rgba(17,48,75,.16), rgba(17,48,75,0)),
+        radial-gradient(farthest-side at 100% 50%, rgba(17,48,75,.16), rgba(17,48,75,0));
+      background-position: 0 0, 100% 0, 0 0, 100% 0;
+      background-repeat: no-repeat;
+      background-size: 40px 100%, 40px 100%, 14px 100%, 14px 100%;
+      background-attachment: local, local, scroll, scroll;
+    }
+
+    /* ── CALLOUT ── the house box. page-design §4 froze the noun list: when you need
+       a new treatment it is .callout--<modifier>, never a 14th box class. (.alert is
+       at 346 uses and is the rename target, not a pattern to copy.) */
     .callout {
       border-left: 3px solid var(--blue); background: rgba(34,98,153,0.06);
       border-radius: var(--radius); padding: 1.25rem 1.5rem; margin: 2rem 0;
@@ -297,6 +530,31 @@
       font-size: 0.85rem; color: var(--slate-light); text-align: center; margin-top: 0.75rem;
     }
 
+    /* ── SERIES NAV (chip strip) ── keep this rule set only if you use the
+       .series-nav markup; delete it with the markup otherwise. The class name and
+       the nested-div shape are contract: the linter's RE_SNAV recognises exactly
+       `series-nav` + a nested div, and a renamed strip reads as "no nav" (INV-08).
+       INV-03c additionally requires every member of a strip to carry the IDENTICAL
+       strip, mark exactly itself current, and link only to members. */
+    .series-nav {
+      max-width: var(--measure); margin: 2rem auto 0; padding: 1.1rem 1.4rem;
+      background: rgba(255,255,255,0.75); border: 1px solid rgba(34,98,153,0.15);
+      border-left: 3px solid var(--gold); border-radius: var(--radius);
+    }
+    .series-nav h3 {
+      font-size: 0.78rem; font-weight: 700; text-transform: uppercase;
+      letter-spacing: 0.08em; color: var(--gold-dark); margin-bottom: 0.6rem;
+    }
+    .series-links { display: flex; flex-wrap: wrap; gap: 0.5rem; }
+    .series-links a, .series-links .current {
+      font-size: 0.82rem; font-weight: 600; padding: 0.35rem 0.8rem;
+      border-radius: 50px; text-decoration: none;
+    }
+    .series-links a { color: var(--blue-dark); background: rgba(34,98,153,0.08); }
+    .series-links a:hover { background: rgba(34,98,153,0.16); }
+    .series-links .current { color: #fff; background: var(--blue-dark); }
+    @media (max-width: 600px) { .series-nav { margin: 1.5rem 1rem 0; } }
+
     /* ── POST NAV + FOOTER ── */
     .post-nav {
       max-width: var(--measure); margin: 0 auto; padding: 0 2rem 3rem;
@@ -318,9 +576,17 @@
     .blog-footer { background: var(--navy); padding: 2rem 0; text-align: center; }
     .blog-footer a { color: var(--gold); text-decoration: none; font-weight: 600; font-size: 0.9rem; }
     .blog-footer span { color: var(--gray); font-size: 0.8rem; display: block; margin-top: 0.4rem; }
+    /* the 7-destination row — the other half of INV-29 */
+    .blog-footer__nav {
+      display: flex; flex-wrap: wrap; justify-content: center; gap: 0.35rem 1.25rem;
+      max-width: var(--wide); margin: 0 auto 1.25rem; padding: 0 2rem 1.25rem;
+      border-bottom: 1px solid rgba(255,255,255,0.12);
+    }
+    .blog-footer__nav a { color: var(--gold); font-size: 0.85rem; font-weight: 600; text-decoration: none; }
+    .blog-footer__nav a:hover { color: #fff; text-decoration: underline; }
 
-    /* ── A11Y / MOTION / WRAP — the e8da9da sweep block. Present in all 42
-          files verbatim; keep it byte-identical so a grep sweep still finds it. ── */
+    /* ── A11Y / MOTION / WRAP — the e8da9da sweep block. Present in every post
+          verbatim; keep it byte-identical so a grep sweep still finds it. ── */
     :focus-visible { outline: 2px solid var(--focus); outline-offset: 3px; border-radius: 2px; }
     /* the ring sits on the page ground (3px offset). Inside the navy footers
        and code blocks var(--blue) collapses to 2.12:1, so those scopes
@@ -335,6 +601,18 @@
     }
     h1, h2, h3, .post-hero__title, .card__title { text-wrap: balance; }
 
+    /* ── CROSS-DOCUMENT VIEW TRANSITIONS ── progressive enhancement, ignored by
+       browsers that lack it. The two named elements are the chrome that persists
+       between pages, so it does not flash on navigation. ── */
+    @view-transition { navigation: auto; }
+    .nav, .blog-nav { view-transition-name: site-nav; }
+    .footer, .blog-footer { view-transition-name: site-footer; }
+    @media (prefers-reduced-motion: reduce) {
+      ::view-transition-group(*),
+      ::view-transition-old(*),
+      ::view-transition-new(*) { animation: none !important; }
+    }
+
     /* ── RESPONSIVE — 768 then 600, no other breakpoints ── */
     @media (max-width: 768px) {
       .post-hero { padding: 6.5rem 1.5rem 2.5rem; }
@@ -345,55 +623,130 @@
       .post-hero { padding: 6rem 1.25rem 2rem; }
       .post-body { padding: 2rem 1.25rem 3.5rem; }
       .post-hero__meta { flex-direction: column; gap: 0.4rem; }
+      .post-body h2 { font-size: 1.4rem; }
+      .post-body h3 { font-size: 1.15rem; }
+      .post-body pre { padding: 1rem; border-radius: var(--radius-sm); }
       .compare { grid-template-columns: 1fr; }
       .post-nav { flex-direction: column; }
     }
   </style>
 </head>
 <body>
+<!-- The skip link is the FIRST focusable thing on the page and targets #main below.
+     INV-30 fails a page that has one without the other. -->
+<a href="#main" class="skip-link">Skip to content</a>
+<!-- The language checkbox is a DIRECT CHILD OF <body>, BEFORE <main>. Every rule
+     that drives the switch is `#langSwitch:checked ~ main …`, and a general sibling
+     combinator reaches nothing above itself — move this line inside anything and the
+     whole switch silently stops working with no error anywhere. -->
+<input type="checkbox" id="langSwitch" class="lang-switch-box" aria-label="Switch language: Thai / English">
 
   <nav class="blog-nav">
     <div class="blog-nav__inner">
+      <a href="../index.html" class="blog-nav__home">Anirach</a>
       <a href="./" class="blog-nav__back">‹ Blog</a>
       <div class="blog-nav__title">{{SHORT_TITLE_EN}}</div>
     </div>
   </nav>
 
-  <!-- .post-hero__title is the file's ONLY <h1>. Do not repeat the title inside
-       .post-body — deployment-hosting.html did and still has two (INV-11). -->
+  <!-- <main> WRAPS THE HERO, not just the article. The hero holds the <h1> spans and
+       the ไทย · English pill, and all three are switch-driven. Three posts had to be
+       restructured on 2026-09-03 for exactly this. -->
+  <main id="main">
+
+  <!-- .post-hero__title is the file's ONLY <h1> (INV-11). The two languages are a
+       SPAN PAIR inside that one heading — never two <h1> elements, never an <h1>
+       per track. deployment-hosting.html once had two and it was removed. -->
   <header class="post-hero">
     <div class="post-hero__tags">
       <span class="post-hero__tag">{{TAG_1}}</span>
       <span class="post-hero__tag">{{TAG_2}}</span>
       <span class="post-hero__tag">{{TAG_3}}</span>
     </div>
-    <h1 class="post-hero__title">{{TITLE_EN}} — {{SUBTITLE_TH}}</h1>
+    <h1 class="post-hero__title"><span class="l-th">{{TITLE_TH}}</span><span class="l-en" lang="en">{{TITLE_EN}}</span></h1>
+    <!-- optional standfirst; delete the <p> and its CSS rule together -->
+    <p class="post-hero__sub"><span class="l-th">{{STANDFIRST_TH}}</span><span class="l-en" lang="en">{{STANDFIRST_EN}}</span></p>
+    <!-- The meta line is MONOLINGUAL by convention: the series name and ordinal are
+         read by INV-10 and gen_feed.py with regexes that truncate on a nested tag. -->
     <div class="post-hero__meta">
       <span>By <strong>Anirach Mingkhwan</strong></span>
       <span class="post-hero__series">DevOps &amp; Vibe Coding 2026</span>
       <!-- {{DATE}} = the same YYYY-MM-DD as article:published_time and the JSON-LD
            datePublished; {{DATE_DISPLAY}} is its human form, e.g. "1 Sep 2026" -->
       <span><time datetime="{{DATE}}">{{DATE_DISPLAY}}</time></span>
+      <span>{{N}} min read</span>
     </div>
+    <!-- the ไทย · English pill. A <label for="langSwitch">, so the hidden checkbox
+         stays the only interactive element and the whole thing is keyboard-reachable
+         through it. Keep it on one line — a newline between the spans renders as a
+         stray space inside the pill. -->
+    <label for="langSwitch" class="lang-switch" title="สลับภาษา · Switch language"><span class="lang-th">ไทย</span><span class="lang-sep">·</span><span class="lang-en" lang="en">English</span></label>
     <div class="post-hero__cover">
       <!-- LCP element: eager + fetchpriority, never loading="lazy".
-           width/height are the SOURCE pixel size (sips -g pixelWidth -g pixelHeight). -->
-      <img src="../images/{{SLUG}}-cover.jpg" alt="{{DESCRIPTIVE_ALT_TEXT_EN}}"
-           width="1600" height="900" loading="eager" fetchpriority="high" decoding="async">
+           width/height are the SOURCE pixel size — 800x800 for every cover
+           make_cover.py draws (sips -g pixelWidth -g pixelHeight to confirm). -->
+      <img src="../images/{{SLUG}}-cover.jpg" alt="{{DESCRIPTIVE_ALT_TEXT}}"
+           width="800" height="800" loading="eager" fetchpriority="high" decoding="async">
     </div>
   </header>
+
+  <!-- ══ NAV PATTERN A — .series-nav chip strip ═══════════════════════════════
+       For a numbered series (OpenClaw 7, Hermes 10, Life 9). It lives INSIDE
+       <main>, right after the hero, and its links are ABSOLUTE and EXTENSIONLESS
+       (/blog/<slug>) — that is deliberate and enforced (INV-03 / INV-03c); the
+       canonical <link> in <head> is what resolves the duplicate URL.
+       Uncomment this and DELETE the .post-nav block after </main>. Never both (INV-08).
+       Adding a post to a numbered series means editing EVERY member's strip.
+       The chips are monolingual — no .l-th / .l-en inside them, ever.
+
+  <nav aria-label="{{SERIES_NAME}}">
+  <div class="series-nav">
+    <h3>{{SERIES_EMOJI}} {{SERIES_NAME}} 2026</h3>
+    <div class="series-links">
+        <span class="current" aria-current="page">#1 {{CHIP_LABEL_SELF}}</span>
+        <a href="/blog/{{SLUG_2}}">#2 {{CHIP_LABEL_2}}</a>
+        <a href="/blog/{{SLUG_3}}">#3 {{CHIP_LABEL_3}}</a>
+    </div>
+  </div>
+  </nav>
+       ═══════════════════════════════════════════════════════════════════════ -->
 
   <!-- House prose style: English headings and technical terms, Thai explanatory
        prose, code-switched within the sentence. Full conventions in
        blog-post/SKILL.md Step 4. Open with a callback + 🤔 hook + one-line answer;
-       close with <h2>สรุป</h2> and a <ul> of <strong>Term</strong> = Thai one-liner. -->
+       close with <h2>สรุป</h2> and a <ul> of <strong>Term</strong> = Thai one-liner.
+       The English track is a TRANSLATION of the same argument, not a summary. -->
   <article class="post-body">
+
+    <!-- TWO TOCs, one per track. Same headings, different ids: the Thai copy links
+         #th-…, the English copy #en-… . Both are <details open>. -->
+    <details class="post-toc l-th" open>
+      <summary>ในบทความนี้</summary>
+      <ol>
+          <li><a href="#th-one">{{SECTION_1_TH}}</a></li>
+          <li><a href="#th-two">{{SECTION_2_TH}}</a></li>
+          <li><a href="#th-summary">สรุป</a></li>
+      </ol>
+    </details>
+    <details class="post-toc l-en" open>
+      <summary>In this post</summary>
+      <ol>
+          <li><a href="#en-one">{{SECTION_1_EN}}</a></li>
+          <li><a href="#en-two">{{SECTION_2_EN}}</a></li>
+          <li><a href="#en-summary">Summary</a></li>
+      </ol>
+    </details>
+
+    <!-- ══ THAI TRACK — the default; shown when the checkbox is unchecked ══ -->
+    <div class="l-th">
+
+    <p>🤔 <strong>{{THAI_HOOK_QUESTION}}</strong></p>
 
     <p>{{THAI_LEDE}}</p>
 
     <hr>
 
-    <h2>{{SECTION_HEADING_EN}} คืออะไร?</h2>
+    <h2 id="th-one">1. {{SECTION_HEADING_EN}} คืออะไร?</h2>
     <p><strong>{{TERM_EN}}</strong> {{EXPLANATION_TH}} โดยใช้ <code>{{command}}</code></p>
 
     <aside class="callout callout--info">
@@ -406,6 +759,8 @@
 <pre><code># {{CODE_COMMENT_TH}}
 {{CODE_LINE}}</code></pre>
 
+    <h2 id="th-two">2. {{SECTION_2_HEADING_EN}}</h2>
+
     <table>
       <thead><tr><th>{{COL_1_EN}}</th><th>{{COL_2_EN}}</th><th>{{COL_3_EN}}</th></tr></thead>
       <tbody>
@@ -414,34 +769,97 @@
     </table>
 
     <!-- Diagrams are PNGs in images/ — never inline HTML/CSS, never ASCII art.
-         Both were tried and reverted (f4f7e1b, 4fc85af -> c270892, 4ae2660). -->
+         Both were tried and reverted (f4f7e1b, 4fc85af -> c270892, 4ae2660).
+         scripts/make_figure.py draws them 1400px wide; the height varies, so read
+         the real one out of the file rather than guessing.
+         ONE drawing serves both tracks — draw it language-neutral, or draw two and
+         put each inside its own track. Never leave a figure outside both. -->
     <figure class="figure">
-      <img class="figure__img" src="../images/{{SLUG}}-arch.png" alt="{{DIAGRAM_ALT_EN}}"
-           width="1600" height="900" loading="lazy" decoding="async">
-      <figcaption class="figure__caption">{{DIAGRAM_CAPTION}}</figcaption>
+      <img class="figure__img" src="../images/{{SLUG}}-arch.png" alt="{{DIAGRAM_ALT_TH}}"
+           width="1400" height="{{FIGURE_H}}" loading="lazy" decoding="async">
+      <figcaption class="figure__caption">{{DIAGRAM_CAPTION_TH}}</figcaption>
     </figure>
 
     <hr>
 
-    <h2>สรุป</h2>
+    <h2 id="th-summary">สรุป</h2>
     <p>{{CLOSING_PARAGRAPH_TH}}:</p>
     <ul>
       <li><strong>{{KEY_TERM_EN}}</strong> = {{ONE_LINE_TH}}</li>
       <li><strong>{{KEY_TERM_EN}}</strong> = {{ONE_LINE_TH}} 🐕</li>
     </ul>
 
+    </div>
+    <!-- ══ ENGLISH TRACK — hidden until the checkbox is checked ══
+         lang="en" on the wrapper is what keeps .post-body:lang(th) off this copy
+         and tells a screen reader which voice to use. -->
+    <div class="l-en" lang="en">
+
+    <p>🤔 <strong>{{ENGLISH_HOOK_QUESTION}}</strong></p>
+
+    <p>{{ENGLISH_LEDE}}</p>
+
+    <hr>
+
+    <h2 id="en-one">1. What Is {{SECTION_HEADING_EN}}?</h2>
+    <p><strong>{{TERM_EN}}</strong> {{EXPLANATION_EN}}, using <code>{{command}}</code></p>
+
+    <aside class="callout callout--info">
+      <div class="callout__title">💡 The short version</div>
+      <p>{{ANALOGY_EN}}</p>
+    </aside>
+
+    <h3>{{SUBHEADING_EN}}</h3>
+    <p>{{LEAD_IN_EN_ENDING_WITH_COLON}}:</p>
+<pre><code># {{CODE_COMMENT_EN}}
+{{CODE_LINE}}</code></pre>
+
+    <h2 id="en-two">2. {{SECTION_2_HEADING_EN}}</h2>
+
+    <table>
+      <thead><tr><th>{{COL_1_EN}}</th><th>{{COL_2_EN}}</th><th>{{COL_3_EN}}</th></tr></thead>
+      <tbody>
+        <tr><td><strong>{{ROW_LABEL_EN}}</strong></td><td>{{CELL_EN}}</td><td>{{CELL_EN}}</td></tr>
+      </tbody>
+    </table>
+
+    <figure class="figure">
+      <img class="figure__img" src="../images/{{SLUG}}-arch.png" alt="{{DIAGRAM_ALT_EN}}"
+           width="1400" height="{{FIGURE_H}}" loading="lazy" decoding="async">
+      <figcaption class="figure__caption">{{DIAGRAM_CAPTION_EN}}</figcaption>
+    </figure>
+
+    <hr>
+
+    <h2 id="en-summary">Summary</h2>
+    <p>{{CLOSING_PARAGRAPH_EN}}:</p>
+    <ul>
+      <li><strong>{{KEY_TERM_EN}}</strong> = {{ONE_LINE_EN}}</li>
+      <li><strong>{{KEY_TERM_EN}}</strong> = {{ONE_LINE_EN}} 🐕</li>
+    </ul>
+
+    </div>
+
+    <!-- The series footer is inside <main>, so it CAN carry both tracks — and does
+         in every shipped post. Delete it for a standalone. -->
     <div class="post-series-footer">
-      บทความจากซีรีส์ DevOps &amp; Vibe Coding 2026
+      <span class="l-th">บทความจากซีรีส์ DevOps &amp; Vibe Coding 2026</span><span class="l-en" lang="en">An article from the DevOps &amp; Vibe Coding 2026 series</span>
     </div>
 
   </article>
 
-  <!-- Pick ONE footer nav pattern, or delete both. Never mix — INV-08.
+  </main>
+
+  <!-- ══ NAV PATTERN B — .post-nav prev/next pair ═════════════════════════════
+       For the DevOps chain. It sits OUTSIDE </main> in all 24 shipped posts, which
+       is also why it can never be bilingual: the switch cannot reach it, so a
+       .l-en here would be permanently invisible. Keep the labels monolingual.
+       It is a <div>, never a <nav> — INV-04c.
        PREV = the card BELOW this one in #series-devops.
-       NEXT = the card ABOVE it, or "./" if this post is the new top card.
+       NEXT = the card ABOVE it. Both chain ends point at "./".
        Each title is the target's card__title from blog/index.html verbatim,
-       minus trailing emoji. INV-10 reports any label that drifts, at warn
-       level (0 stale today; the last 5 were rewritten 2026-08-26). -->
+       minus trailing emoji. INV-10 reports any label that drifts, at warn level.
+       DELETE this whole block if you used NAV PATTERN A above. Never two — INV-08. -->
   <div class="post-nav">
     <a href="{{PREV_SLUG}}.html" class="post-nav__link">
       <div class="post-nav__dir">← Previous</div>
@@ -453,7 +871,19 @@
     </a>
   </div>
 
+  <!-- INV-29's second half: the 7-destination row. Without it the post's only exit
+       is /blog/. Keep all seven links and the trailing-slash forms — a bare /blog
+       costs two redirects, one of them an https→http downgrade. -->
   <footer class="blog-footer">
+    <nav class="blog-footer__nav" aria-label="Site">
+      <a href="../index.html">Home</a>
+      <a href="./">Blog</a>
+      <a href="../publications/">Publications</a>
+      <a href="../books/">Books</a>
+      <a href="../projects/">Projects</a>
+      <a href="../news/">News</a>
+      <a href="../index.html#contact">Contact</a>
+    </nav>
     <a href="./">← Back to Blog</a>
     <span>© 2026 Anirach Mingkhwan — Associate Professor, KMUTNB</span>
   </footer>

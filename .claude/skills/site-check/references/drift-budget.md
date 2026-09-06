@@ -4,14 +4,20 @@ Open this when the user wants to pay down cosmetic inconsistency, or when you ne
 warn-level violation is pre-existing. **None is, today.** Every count below was computed from the
 tree; re-verify with the quoted command before repeating a number.
 
-Baseline shape (2026-08-26, `21d5cfc`): 37 posts in `blog/`, 38 HTML files in `blog/`, 47
-repo-wide — `index.html` plus five section directories (`books/` split into `publications/`
-(academic) + `books/` (fiction) on 2026-08-23, and `books/` now carries four per-book detail
-pages beside its index, plus two downloadable PDFs). Nav partition: 7 `.series-nav` + 24 `.post-nav`
-+ 6 no-nav. The linter runs 58 checks (39 fail / 17 warn / 2 info) and reports
-`checks run 58 / clean 58 / known baseline 0 / violations 0 new, 0 known`. `BASELINE` in
+Current shape, re-measured **2026-09-06**: **76 posts** in `blog/` across five series
+(20 AI Transformation + 10 Hermes + 13 OpenClaw + 24 DevOps + 9 Life), **77 HTML files in `blog/`**,
+**87 repo-wide / 86 enumerated** (`404.html` is deliberately outside `site.pages`) — `index.html`
+plus five section directories (`books/` split into `publications/` (academic) + `books/` (fiction)
+on 2026-08-23, and `books/` carries four per-book detail pages beside its index, plus three
+downloadable PDFs). Nav partition: **46** `.series-nav` + **24** `.post-nav` + **6** no-nav = 76.
+All 76 posts are bilingual. The linter runs **61 checks (42 fail / 17 warn / 2 info)** and reports
+`checks run 61 / clean 61 / known baseline 0 / violations 0 new, 0 known`. `BASELINE` in
 `check_site.py` is an empty table holding only retirement comments — **the tree is clean, and any
 violation of any severity is new.**
+
+The shape this file was first written against (2026-08-26, `21d5cfc`) was 37 posts, 38 files in
+`blog/`, 47 repo-wide, a 7/24/6 nav partition and 58 checks. Every count in the "Already paid"
+section below is about that tree and stays as written; the counts above are today's.
 
 **If you ever add a baseline key, delete it from `BASELINE` in `check_site.py` in the same commit
 you pay it down.** INV-25 fails the build on any baseline key that no longer matches a live
@@ -37,8 +43,11 @@ Empty. There is no standing drift: every check in the linter returns clean on it
 baseline entry, so the next violation of any kind fails the build as new. Do not re-create this
 inventory from memory — run `check_site.py` and read what it prints.
 
-Header variants (informational, no INV id) are gone too: all 37 posts carry `<nav class="blog-nav">`
-with the `href="./"` back link.
+Header variants (informational, no INV id) are gone too: all **76** posts carry
+`<nav class="blog-nav">` with the `href="./"` back link, and all 76 open
+`<footer class="blog-footer">`. The 2026-09-01 (Life, Hermes), 2026-09-03 (bilingual) and
+2026-09-05 (AI Transformation) launches each added posts without adding a warn-level cohort —
+verified by the run above, not assumed.
 
 ## Suggested order to pay it down
 
@@ -71,8 +80,10 @@ Already paid — each one's BASELINE key is gone, do not resurrect them:
 
 ## 2026-09-05 — three checks added for the AI Transformation launch
 
-Checks 58 → 61. All three landed green on the tree as it stood, which is the point: they were
-written to close surfaces nothing was watching, not to paper over a failure.
+Checks 58 → 61 (39 → 42 fail; the warn and info counts are unchanged at 17 and 2). All three landed
+green on the tree as it stood, which is the point: they were written to close surfaces nothing was
+watching, not to paper over a failure. Each was fault-injected on a copy of the repo before being
+trusted, per the standing rule in site-check SKILL.md — the evidence is below.
 
 **INV-03c — non-SERIES7 strip consistency (FAIL).** The `.series-nav` content checks
 (INV-03/03b/20) iterate the hardcoded `SERIES7` list, so the Hermes (10 chips), Life (9) and now
@@ -89,6 +100,19 @@ Fault-injected before being trusted, on Hermes:
 | one chip label mistyped in one file (`#4 Security` → `#4 Secrity`) | `hermes-memory.html\|shape` names the file, the strip, the chip index and both values |
 | a chip re-pointed at `/blog/openclaw-101` in all 10 files | `\|shape` on the self-marked post **and** `\|closure` — INV-09 stays silent because the target file exists, which is exactly the gap |
 | clean tree | silent; Hermes 10/10 and Life 9/9 agree |
+
+Re-run on the **grouped** AI Transformation strip, 2026-09-06, on a `--root` copy of the repo (the
+same two branches, this time against the 20-member strip the check was written for):
+
+| Injection | Result |
+|---|---|
+| `#5 Portfolio` → `#5 Portfolo` in `ai-transformation-workflow.html` only | `✗ ai-transformation-workflow.html strip '🧭 AI Transformation for Organizations 2026' differs from its 19 sibling(s) at chip 5` — with both tuples printed |
+| `python3 scripts/build_series.py --series ai-transformation --restrip` on that injected tree | prints one line per post, repairs the one that drifted, leaves 19 `unchanged`, and INV-03c returns to PASS. **This is the repair, not twenty hand edits.** |
+| `/blog/ai-transformation-portfolio` → `/blog/openclaw-101` in all 20 files | two violations: the `shape` one on `ai-transformation-portfolio.html` (whose own chip is `current` and so cannot have been rewritten) **and** `strip … links /blog/openclaw-101, but that post does not carry this strip`. **INV-09 PASSes throughout** — the target file exists — which is precisely why INV-03c had to be written |
+
+The `shape` comparison proves "same strip everywhere" and "each marks itself" in one operation
+because the check substitutes each post's own href for its `current` chip before comparing. A
+20-member strip and a 10-member strip therefore need no per-series table.
 
 **INV-03d — parser self-check (FAIL).** `_parse_navs` now finds the strip with a div-depth walk
 (`series_nav_body`) instead of `RE_SNAV`'s first `</div></div>`. The self-check's fourth probe is
@@ -111,4 +135,16 @@ defence in depth for the shipped markup, not a hard requirement of it.
 counter and not a nav pattern, so every existing check looked straight past it; the Life launch
 forgot its chip twice (`dae4304`). The check now requires each chip to anchor a real
 `series-section`, its trailing `· N` to equal that section's card count, and each section to have
-exactly one chip. Tests: change a count → fires; delete a chip → fires; clean → silent.
+exactly one chip. The `/feed.xml` chip is not a section chip and is ignored.
+
+All three branches fault-injected on a `--root` copy, re-verified 2026-09-06:
+
+| Injection | Result |
+|---|---|
+| delete the AI Transformation chip | `✗ #series-ai-transformation has 0 jump chip(s), want exactly 1` |
+| `#series-life · 9` → `· 8` | `✗ jump chip #series-life says 8, section holds 9 card(s)` |
+| add `<a href="#series-nonexistent">👻 Ghost Series · 3</a>` | `✗ jump chip #series-nonexistent anchors no <section class="series-section">` |
+| clean tree | silent |
+
+**`--fix` cannot repair this strip** — it recomputes the two hero stats and the five
+`.series-count` spans and stops there. The chip is hand-edited, in the same commit as the card.
