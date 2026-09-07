@@ -734,8 +734,15 @@ def restrip(man):
 
 
 def index_fragment(man):
+    """Emit the series' blog/index.html section in the 2026-09-07 redesign shape:
+    numbered row cards in READING ORDER (manifest order, #1 first), the EN/TH
+    title split into lang-correct spans, group labels for a grouped series, no
+    byline/tags/Read-arrow.  Must stay byte-compatible with what
+    scripts/reindex_blog.py emits — that script re-derives the whole page, so
+    the cheapest check is to paste this fragment and run reindex_blog.py: a
+    zero diff means the two agree."""
     date = man["date"]
-    out = ["    <!-- %s Series -->" % man["title"],
+    out = ["    <!-- %s -->" % man["title"],
            '    <section class="series-section" id="%s">' % man["section_id"],
            '      <div class="series-header">',
            '        <div class="series-header__left">',
@@ -744,44 +751,57 @@ def index_fragment(man):
            "        </div>",
            '        <span class="series-count">%d articles</span>' % len(man["posts"]),
            "      </div>",
-           '      <p class="series-description">%s — <span lang="th">%s</span></p>'
+           '      <p class="series-description">%s <span lang="th">%s</span></p>'
            % (htmlmod.escape(man["description"]["en"]), htmlmod.escape(man["description"]["th"])),
            '      <div class="blog-grid">']
-    for p in reversed(man["posts"]):
-        out += ['        <!-- Card: %s -->' % p["nav_title"],
+
+    groups = {g["key"]: g["label"] for g in man.get("groups", [])}
+
+    def card(p):
+        th_title = p["title"]["th"]
+        if " — " in th_title:
+            en, th = th_title.split(" — ", 1)
+            title = ('<span class="card__en">%s</span><span class="card__sep"> — </span>'
+                     '<span class="card__th" lang="th">%s</span>'
+                     % (htmlmod.escape(en), htmlmod.escape(th)))
+        else:
+            title = '<span class="card__en">%s</span>' % htmlmod.escape(th_title)
+        en_cmt = th_title.split(" — ", 1)[0] if " — " in th_title else th_title
+        return ['      <!-- Card: %s -->' % en_cmt,
                 '      <a href="%s.html" class="card">' % p["slug"],
+                '        <span class="card__num">%02d</span>' % p["n"],
                 '        <div class="card__image">',
                 '          <img src="../images/%s" alt="" width="800" height="800" '
                 'loading="lazy" decoding="async">' % p["cover"],
                 "        </div>",
                 '        <div class="card__body">',
-                '          <div class="card__tags">']
-        out += ['            <span class="card__tag">%s</span>' % htmlmod.escape(t)
-                for t in p["tags"]]
-        out += ["          </div>",
-                '          <h3 class="card__title"><span lang="th">%s</span></h3>'
-                % htmlmod.escape(p["title"]["th"]),
+                '          <h3 class="card__title">%s</h3>' % title,
                 '          <p class="card__excerpt"><span lang="th">%s</span></p>'
                 % htmlmod.escape(p["description"]),
-                '          <div class="card__footer">',
-                '            <div class="card__author">',
-                '              <img src="../images/profile.jpg" alt="" class="card__avatar" '
-                'width="800" height="800" loading="lazy" decoding="async">',
-                "              <div>",
-                '                <div class="card__author-name">Anirach Mingkhwan</div>',
-                '                <div class="card__meta"><time datetime="%s">%s</time> '
-                '· %d min read</div>' % (date, pretty_date(date), p["read_min"]),
-                "              </div>",
-                "            </div>",
-                '            <span class="card__read">Read →</span>',
-                "          </div>", "        </div>", "      </a>"]
+                '          <p class="card__meta"><time datetime="%s">%s</time> '
+                '· %d min read</p>' % (date, pretty_date(date), p["read_min"]),
+                "        </div>", "      </a>"]
+
+    if groups:
+        for g in man["groups"]:
+            en_l, th_l = g["label"].split(" · ", 1)
+            out.append('      <p class="blog-grid__label">%s · <span lang="th">%s</span></p>'
+                       % (htmlmod.escape(en_l), htmlmod.escape(th_l)))
+            for p in man["posts"]:
+                if p.get("group") == g["key"]:
+                    out += card(p)
+    else:
+        for p in man["posts"]:
+            out += card(p)
+
     out += ["      </div>", "    </section>"]
     frag = "\n".join(out) + "\n"
     write(os.path.join(WORKDIR, man["series"] + ".index.html"), frag)
-    chip = '      <a href="#%s">%s %s · %d</a>' % (
-        man["section_id"], man["icon"], htmlmod.escape(man["title"]), len(man["posts"]))
+    chip = '      <a href="#%s">%s · %d</a>' % (
+        man["section_id"], htmlmod.escape(man.get("chip_label", man["title"])), len(man["posts"]))
     print(frag)
-    print("\n--- jump chip (first in .blog-jump) ---\n" + chip)
+    print("\n--- jump chip (goes in the sticky .blog-jump series bar; no emoji — "
+          "INV-02f reads chip text with [^<]*) ---\n" + chip)
     return 0
 
 

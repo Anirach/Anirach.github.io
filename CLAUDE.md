@@ -103,15 +103,22 @@ fails on any empty `.category` band a future commit adds.
 
 **The featured post is `class="feature"`, never `class="card"`.** Three separate regexes count
 `class="card"` (`check_site.py` RE_CARD, `scripts/gen_feed.py`, blog-post's `verify-wiring.py`), so
-a 77th match would inflate every counter and put a duplicate item in the feed. It spotlights the
-newest post by git first-commit date — today `ai-transformation-layers`, post #1 of the AI
-Transformation series (a 20-way same-day tie, broken editorially: the opener that states the
-thesis). **Card order IS the prev/next chain and must never move.**
+an 84th match would inflate every counter and put a duplicate item in the feed. It spotlights the
+newest post by git first-commit date under a "Start here" kicker — today
+`hermes-desktop-install`, post #1 of the Hermes Desktop series.
 
-The heading ladder is `h1` hero → `h2` series (and the feature) → `h3` card title. It was a level
-deeper until the category band went. `check_site.py` and `verify-wiring.py` read
+**Since the 2026-09-07 index redesign, every series renders in READING ORDER (#1 first), as
+numbered row cards** — ordinal · 72px thumb · EN/TH split-lang title · one-line excerpt · date +
+read time; no byline, tags or "Read →". The page is emitted by `scripts/reindex_blog.py`
+(idempotent — re-run it rather than hand-fixing ordering), and the sticky `.blog-jump` series bar
+sits between the hero and `<main>`. **The `#series-devops` card order IS the prev/next chain,
+direct, not reversed** — a new DevOps post is appended at the END of its section, and
+`check_site.py devops_chain()` / `verify-wiring.py` both derive the chain from that order.
+
+The heading ladder is `h1` hero → `h2` (the "Start here" kicker + 6 series) → `h3` (the feature
+title + 83 card titles). `check_site.py` and `verify-wiring.py` read
 `<(h[1-6]) class="card__title">` and follow any re-cut; `gen_feed.py` hard-coded `<h4>` and was
-made level-agnostic in the same commit — a stale level there silently empties the feed.
+made level-agnostic — a stale level there silently empties the feed.
 
 ### Four mutually exclusive in-post navigation patterns
 

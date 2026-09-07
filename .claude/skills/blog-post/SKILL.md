@@ -415,14 +415,17 @@ meta description, `og:title`/`og:description`/`og:image:alt`/`twitter:image:alt`
 
 ## Step 5 — the card in `blog/index.html`
 
-New cards go at the **top** of their `.blog-grid` (there are five, one per
-`.series-section`), immediately after the `<div class="blog-grid">` line — i.e. before the
-existing first `<!-- Card: … -->` comment. No line numbers: grep for the section id, they
-move. Newest-first is not cosmetic — for the DevOps series,
-`reversed(#series-devops card order)` **is** the prev/next chain, verified byte-identical
-over all 24 nodes. Put the card in the wrong place and the chain is wrong. For AI
-Transformation, do not write the card by hand at all:
-`python3 scripts/build_series.py --index-fragment` emits all of them from the manifest.
+**Since the 2026-09-07 redesign the page shows every series in READING ORDER (#1 first)
+as numbered row cards**, and a new card goes at the **END** of its section's numbered run
+(a new post is the highest number). No line numbers: grep for the section id, they move.
+Order is not cosmetic — for the DevOps series, the `#series-devops` card order **is** the
+prev/next chain, direct (not reversed; that inverted with the redesign), verified
+byte-identical over all 24 nodes. Put the card in the wrong place and the chain is wrong —
+and `python3 scripts/reindex_blog.py --repo . --out blog/index.html` re-derives ordering
+(and the whole page) mechanically; prefer running it over hand-placing a card. For AI
+Transformation and Hermes Desktop, do not write the card by hand at all:
+`python3 scripts/build_series.py --index-fragment` emits all of them from the manifest,
+byte-identical to what `reindex_blog.py` produces.
 
 **Card order is also the order the reader meets the series, so it never moves for
 cosmetic reasons.** The one card that is not a `.card` is the featured post
@@ -432,37 +435,30 @@ Copy this exactly, including the odd indentation (the comment is indented 8, the
 — every card on the page is like that; do not tidy it):
 
 ```html
-        <!-- Card: {Short English Name} -->
+      <!-- Card: {Short English Name} -->
       <a href="{slug}.html" class="card">
+        <span class="card__num">{NN, zero-padded ordinal; empty span with aria-hidden="true" for a standalone}</span>
         <div class="card__image">
-          <img src="../images/{cover-file}" alt="{Short English Name}" style="background: linear-gradient(135deg, #1a4d7a, #7c3aed, #06b6d4);">
+          <img src="../images/{cover-file}" alt="" width="800" height="800" loading="lazy" decoding="async">
         </div>
         <div class="card__body">
-          <div class="card__tags">
-            <span class="card__tag">{Tag 1}</span>
-            <span class="card__tag">{Tag 2}</span>
-            <span class="card__tag">{Tag 3}</span>
-          </div>
-          <h3 class="card__title">{EN Title} — {TH subtitle} {emoji}</h3>
-          <p class="card__excerpt">{one Thai sentence, no trailing period}</p>
-          <div class="card__footer">
-            <div class="card__author">
-              <img src="../images/profile.jpg" alt="Anirach" class="card__avatar">
-              <div>
-                <div class="card__author-name">Anirach Mingkhwan</div>
-              </div>
-            </div>
-            <span class="card__read">Read →</span>
-          </div>
+          <h3 class="card__title"><span class="card__en">{EN Title}</span><span class="card__sep"> — </span><span class="card__th" lang="th">{TH subtitle}</span></h3>
+          <p class="card__excerpt"><span lang="th">{one Thai sentence, no trailing period}</span></p>
+          <p class="card__meta"><time datetime="{YYYY-MM-DD}">{D Mon YYYY}</time> · {N} min read</p>
         </div>
       </a>
 ```
 
-- **`<h3>`, not `<h4>`.** Task 11 (`635eb94` + `4a31036`) gave `blog/index.html` a real
-  heading ladder, and deleting the `.category` bands on 2026-08-26 cut it one level
-  shallower: `h1` hero → `h2` series titles (and the feature) → `h3` ×76 `.card__title`.
-  All 76 cards on disk are `h3` (`grep -c '<h3 class="card__title">' blog/index.html` →
-  76). Any tool that greps for card titles must use `<h[1-6] class="card__title">` with a
+The 2026-09-07 redesign removed the byline, avatar, tag row and "Read →" from every card;
+the title is split into lang-correct EN/TH spans (the `.card__sep` is `display:none` but
+its text keeps the concatenated title byte-identical for `gen_feed.py` and INV-10), and
+titles carry **no trailing emoji** (the post `<h1>` may keep its own). The `<time>` must
+match the post's `article:published_time` (INV-36).
+
+- **`<h3>`, not `<h4>`.** The ladder today (post-redesign): `h1` hero → `h2` (the
+  "Start here" kicker + 6 `.series-title`) → `h3` (the `.feature__title` + 83
+  `.card__title`). All 83 cards are `h3`
+  (`grep -c '<h3 class="card__title">' blog/index.html` → 83). Any tool that greps for card titles must use `<h[1-6] class="card__title">` with a
   backreference — hardcoding the level is what blinded `verify-wiring.py`, and what
   emptied `gen_feed.py` until it was made level-agnostic in the same commit as the re-cut.
 - The `href` is relative with `.html` — `blog/index.html` never uses the extensionless
@@ -528,11 +524,12 @@ python3 .claude/skills/site-check/scripts/check_site.py --fix
 
 ## Step 7 — rewire the neighbours (DevOps series only)
 
-The chain is derived from card order, so never hand-author it. With the card already at
-the top of `#series-devops`:
+The chain is derived from card order (direct, since the 2026-09-07 reading-order
+redesign), so never hand-author it. With the card already at the **END** of
+`#series-devops`:
 
-**Appending at the top** (the normal case). Let `T` be the post that was previously the
-top card, i.e. the old chain tail.
+**Appending at the end** (the normal case). Let `T` be the post that was previously the
+last card, i.e. the old chain tail.
 
 1. New post: `prev → T.html`, `next → "./"`.
 2. `T.html`: change its `next` from `"./"` to `<newslug>.html`. `T`'s `prev` is untouched.
@@ -540,14 +537,19 @@ top card, i.e. the old chain tail.
 Today `T` is `vibe-coding-devops-process.html`, whose `next` href is `"./"`.
 
 **Inserting into the middle** — the case that breaks things. If the new card lands between
-card `A` (above it) and card `B` (below it) in `#series-devops`, then in chain order `B`
-comes before the new post and `A` comes after. **Three files change, not one:**
+card `A` (above it) and card `B` (below it) in `#series-devops`, then in chain order `A`
+comes before the new post and `B` comes after (chain order = card order). **Three files
+change, not one:**
 
 | File | `prev` | `next` |
 |---|---|---|
-| `<newslug>.html` | `B.html` | `A.html` |
-| `B.html` | unchanged | `A.html` → `<newslug>.html` |
-| `A.html` | `B.html` → `<newslug>.html` | unchanged |
+| `<newslug>.html` | `A.html` | `B.html` |
+| `A.html` | unchanged | `B.html` → `<newslug>.html` |
+| `B.html` | `A.html` → `<newslug>.html` | unchanged |
+
+After a mid-chain insert, renumber: the visible `.card__num` ordinals of every card after
+the insertion point shift by one — one more reason to run `reindex_blog.py` (it renumbers
+the DevOps section from the chain automatically) instead of editing by hand.
 
 Forgetting either neighbour leaves an asymmetric edge: one post's `next` points forward
 while the target's `prev` still points past it. The verifier catches this as
@@ -601,7 +603,7 @@ Adding a DevOps post touches **9 committed files** (10 with a diagram) in 8 step
    `post-nav`, `blog-footer`, **and the English track** (Step 4b —
    `python3 scripts/bilingualize.py --post <slug>`, then `--fill`, then `--verify` until
    it prints OK).
-3. `blog/index.html` — card at the top of the right `.blog-grid` with an
+3. `blog/index.html` — card at the end of the right section's numbered run with an
    `<h3 class="card__title">`, plus the hero `Articles` stat, the section's
    `.series-count` and that section's `.blog-jump` chip count all **recomputed**.
 4. The old top card's post file — its `next` changes from `"./"` to the new slug

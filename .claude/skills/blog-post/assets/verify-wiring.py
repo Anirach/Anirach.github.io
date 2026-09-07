@@ -182,7 +182,9 @@ for p in sorted(nav):
     for dr, href in nav[p]["other"]:
         warns.append(f"{p} uses non-standard post-nav__dir {dr!r} -> {href}")
 
-expected = list(reversed(CARD.findall(sections.get("series-devops", ""))))
+expected = list(CARD.findall(sections.get("series-devops", "")))
+# Reading order since the 2026-09-07 index redesign: card order IS chain order
+# (it was reversed(card order) while the grid ran newest-first).
 for i, f in enumerate(expected):
     want_prev = expected[i - 1] if i else None
     want_next = expected[i + 1] if i + 1 < len(expected) else "./"

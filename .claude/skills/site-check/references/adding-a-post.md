@@ -42,49 +42,45 @@ sweep is in flight — the sitewide linters see one tree and cannot tell.
 
 ## Adding a DevOps post
 
-### 1. Add the card at the TOP of `#series-devops`
+### 1. Add the card at the END of `#series-devops`
 
-`reversed(#series-devops card order)` **is** the prev/next chain — verified byte-identical over 24
-nodes. `blog/index.html` is canonical; the per-post navs are derived. Newest post = first card =
-chain tail.
+The `#series-devops` card order **is** the prev/next chain — direct since the 2026-09-07
+reading-order redesign (it was reversed before that), verified byte-identical over 24 nodes.
+`blog/index.html` is canonical; the per-post navs are derived. Newest post = LAST card = chain
+tail = highest `.card__num` ordinal. The card shape also changed with the redesign — copy a
+sibling row card from the live section (ordinal span, split EN/TH title, `.card__meta` with
+`<time>`), or better, run `python3 scripts/reindex_blog.py` after adding the post and let it
+place and number the card.
 
 Exact card shape (grep `id="series-devops"` for the section — no line numbers, they move every
 launch; the anchor pattern `<a href="…" class="card">` with that attribute order is what the
-counters and INV-01 match on). The card title and excerpt are deliberately **monolingual**:
-`gen_feed.py` would concatenate two tracks into `"ThaiEnglish"` in the feed.
+counters and INV-01 match on). The title is split into lang-correct EN/TH spans — the hidden
+`.card__sep` keeps the concatenated text identical for `gen_feed.py` and INV-10 — and the card
+carries no byline, tags, or "Read →" since the 2026-09-07 redesign. No trailing emoji in the
+title (the post `<h1>` may keep its own).
 
 ```html
-        <!-- Card: Your Title -->
+      <!-- Card: Your Title -->
       <a href="your-post.html" class="card">
+        <span class="card__num">25</span>
         <div class="card__image">
-          <img src="../images/your-cover.jpg" alt="Your Title" style="background: linear-gradient(135deg, #4f46e5, #7c3aed, #06b6d4);">
+          <img src="../images/your-cover.jpg" alt="" width="800" height="800" loading="lazy" decoding="async">
         </div>
         <div class="card__body">
-          <div class="card__tags">
-            <span class="card__tag">DevOps</span>
-          </div>
-          <h3 class="card__title">Your Title — Thai subtitle ⚡</h3>
-          <p class="card__excerpt">Thai one-paragraph excerpt.</p>
-          <div class="card__footer">
-            <div class="card__author">
-              <img src="../images/profile.jpg" alt="Anirach" class="card__avatar">
-              <div>
-                <div class="card__author-name">Anirach Mingkhwan</div>
-              </div>
-            </div>
-            <span class="card__read">Read →</span>
-          </div>
+          <h3 class="card__title"><span class="card__en">Your Title</span><span class="card__sep"> — </span><span class="card__th" lang="th">Thai subtitle</span></h3>
+          <p class="card__excerpt"><span lang="th">Thai one-sentence excerpt.</span></p>
+          <p class="card__meta"><time datetime="2026-09-07">7 Sep 2026</time> · 12 min read</p>
         </div>
       </a>
 ```
 
 ### 2. Rewire exactly three things
 
-Let `old_top` be the post that was first in `#series-devops` before you inserted
+Let `old_tail` be the post that was LAST in `#series-devops` before you appended
 (`vibe-coding-devops-process.html` today — its next is `"./"`, marking it as the current tail).
 
-1. `your-post.prev = old_top.html`
-2. `old_top.next = your-post.html`  ← replaces its `href="./"`
+1. `your-post.prev = old_tail.html`
+2. `old_tail.next = your-post.html`  ← replaces its `href="./"`
 3. `your-post.next = "./"`  ← the terminal moves to you
 
 Nothing else changes. Never hand-author chain order; derive it from the card order.

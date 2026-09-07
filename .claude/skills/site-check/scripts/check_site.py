@@ -690,10 +690,14 @@ class Site(object):
         return [(m.start(), m.end()) for m in RE_CODE_SPAN.finditer(blank_noncontent(s))]
 
     def devops_chain(self):
-        """The canonical DevOps reading order IS reversed(#series-devops card
-        order) — verified byte-identical over 24 nodes.  blog/index.html is the
-        single source of truth for the chain; never hand-author it."""
-        return list(reversed(self.section_cards.get("series-devops", [])))
+        """The canonical DevOps reading order IS the #series-devops card order —
+        verified byte-identical over 24 nodes.  blog/index.html is the single
+        source of truth for the chain; never hand-author it.  (Until the
+        2026-09-07 index redesign the cards ran newest-first and the chain was
+        reversed(card order); the redesign put every series in reading order,
+        so the identity is now direct.  A new DevOps post is appended at the
+        END of the section.)"""
+        return list(self.section_cards.get("series-devops", []))
 
 
 # ---------------------------------------------------------------------------
@@ -1060,7 +1064,7 @@ def _(site):
     return out
 
 
-@check("INV-04e", "prev/next chain == reversed(#series-devops card order)")
+@check("INV-04e", "prev/next chain == #series-devops card order (reading order)")
 def _(site):
     expect = site.devops_chain()
     nav = site.nav

@@ -226,17 +226,20 @@ way.
 `class="post-nav__link" style="text-align:right;"` appears in `blog/cicd-pipeline.html`,
 `blog/frontend-performance.html`, `blog/web-architecture.html`. That is legal; don't strip it.
 
-### INV-04e — chain order == `reversed(#series-devops card order)`
+### INV-04e — chain order == `#series-devops card order` (reading order)
 
-This is the repo's hidden source of truth: reversing the 24 card hrefs inside
-`<section class="series-section" id="series-devops">` reproduces the prev/next chain **byte for
-byte**. `blog/index.html` is therefore canonical and the per-post navs are derived data.
+This is the repo's hidden source of truth: the 24 card hrefs inside
+`<section class="series-section" id="series-devops">` reproduce the prev/next chain **byte for
+byte**, in the same direction — the 2026-09-07 index redesign put every series in reading order
+(#1 first), so the old `reversed()` is gone from `devops_chain()` and from `verify-wiring.py`.
+`blog/index.html` is therefore canonical and the per-post navs are derived data.
 
 **Failure means** the index and the navs disagree about reading order. Trust the index; rewrite the
-navs.
+navs — or run `python3 scripts/reindex_blog.py --repo . --out blog/index.html`, which re-derives
+card order (and DevOps ordinals) from the chain itself.
 
-**Repair:** see `references/adding-a-post.md` — insert the new card at the **top** of
-`#series-devops`, then rewire only three things: `newpost.prev = old_top`, `old_top.next = newpost`,
+**Repair:** see `references/adding-a-post.md` — insert the new card at the **END** of
+`#series-devops`, then rewire only three things: `newpost.prev = old_tail`, `old_tail.next = newpost`,
 `newpost.next = "./"` (moving the `"./"` terminal off the previous tail). The chain terminates
 with `"./"` at **both** ends — `CHAIN_TERMINAL_PREV` on the head (`git-branching.prev`) and
 `CHAIN_TERMINAL_NEXT` on the tail — and both are the blog index.
@@ -519,7 +522,8 @@ three-edit chain rewiring recipe, the copy-paste OpenClaw strip, and the generat
 The one-line summary depends on which of the five series the post joins:
 
 - **DevOps** — copy a post that already has `<nav class="blog-nav">` + `.post-nav`, insert the
-  card at the top of `#series-devops`, rewire three things.
+  card at the END of `#series-devops` (reading order — the new post is the highest ordinal),
+  rewire three things.
 - **Hermes / Life / OpenClaw** — copy a sibling, then add the new chip to **every** existing
   member's strip (10 / 9 / 7 files) and mark the new post's own chip `current`. INV-03 covers the
   OpenClaw seven by name; INV-03c covers the other two.

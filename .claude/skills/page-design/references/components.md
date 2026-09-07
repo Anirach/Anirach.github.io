@@ -234,36 +234,37 @@ No emoji in `<h2>`. At most about one emoji per section overall (SKILL.md anti-p
 (76 cards in `blog/index.html`, `card__tag` ×257 sitewide) — the model for all future component
 naming. Reproduced from disk, including the inline placeholder gradient.
 
+Since the **2026-09-07 index redesign** the blog card is a numbered ROW card in reading
+order — ordinal, 72px square thumb, EN/TH split-lang title, one-line excerpt, date + read
+time. The byline, avatar, tag row and "Read →" are gone from the listing (`news/` and
+`publications/` keep their own `card--row`/`card--feature` variants unchanged). The page is
+emitted by `scripts/reindex_blog.py`; the two generated series' fragments
+(`build_series.py --index-fragment`) are byte-identical to it.
+
 ```html
 <a href="openclaw-migration.html" class="card">
+  <span class="card__num" aria-hidden="true"></span>   <!-- "NN" for series members; empty+hidden for a standalone -->
   <div class="card__image">
     <img src="../images/openclaw-migration-cover.jpg" alt="" width="800" height="800"
          loading="lazy" decoding="async">
   </div>
   <div class="card__body">
-    <div class="card__tags">
-      <span class="card__tag">OpenClaw</span>
-      <span class="card__tag">Migration</span>
-      <span class="card__tag">DevOps</span>
-    </div>
-    <h3 class="card__title"><span lang="th">Self-Transferring OpenClaw Bot — ย้าย AI Agent ข้ามเครื่องแบบไม่พลาด 🚚</span></h3>
+    <h3 class="card__title"><span class="card__en">Self-Transferring OpenClaw Bot</span><span class="card__sep"> — </span><span class="card__th" lang="th">ย้าย AI Agent ข้ามเครื่องแบบไม่พลาด</span></h3>
     <p class="card__excerpt"><span lang="th">คู่มือย้าย bot จาก VPS Ubuntu ไป Mac Studio แบบ step-by-step — backup, transfer, restore พร้อม self-check script ให้ bot ตรวจตัวเอง</span></p>
-    <div class="card__footer">
-      <div class="card__author">
-        <img src="../images/profile.jpg" alt="" class="card__avatar" width="800" height="800"
-             loading="lazy" decoding="async">
-        <div><div class="card__author-name">Anirach Mingkhwan</div></div>
-      </div>
-      <span class="card__read">Read →</span>
-    </div>
+    <p class="card__meta"><time datetime="2026-03-20">20 Mar 2026</time> · 14 min read</p>
   </div>
 </a>
 ```
 
+`.card__sep` is `display: none` but its text keeps the concatenated title byte-identical
+for `gen_feed.py` and INV-10; the ordinal is audible (part of the link name) on numbered
+rows. No trailing emoji in card titles — `norm_title` strips them for comparison anyway,
+and the post's own `<h1>` may keep its emoji.
+
 **The title is `<h3>` today, and the level has moved twice.** It was `h2` originally; Task 11
-(`635eb94`) pushed it to `h4` under 3 `.category` bands; the bands were deleted on 2026-08-26 and
-the ladder tightened back to `h1` page title → `h2` (the `.feature__title` + 5 `.series-title`) →
-`h3` ×76 `.card__title`. Any tool that greps for card titles must write
+(`635eb94`) pushed it to `h4` under 3 `.category` bands; the bands were deleted on 2026-08-26.
+The ladder since the 2026-09-07 redesign: `h1` page title → `h2` (the "Start here"
+`.section-kicker` + 6 `.series-title`) → `h3` (the `.feature__title` + 83 `.card__title`). Any tool that greps for card titles must write
 `<h[1-6] class="card__title">` and close it with a backreference — `verify-wiring.py` was blind for
 exactly this reason, and `gen_feed.py` had `<h4>` hard-coded and silently emitted an empty feed.
 

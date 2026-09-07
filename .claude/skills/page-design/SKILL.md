@@ -419,17 +419,27 @@ Footers    .post-series-footer  .post-nav  .series-nav  .series-links
                                           own guard that its parser survives the nesting.)
            .blog-footer  .blog-footer__nav  (the 7-destination row, d44adb9 — the other
                                           half of INV-29)
-Listing    .card  .card__image|__body|__tags|__tag|__title|__excerpt|__footer|__author|__read
+Listing    .card  .card__num|__image|__body|__title|__en|__sep|__th|__excerpt|__meta
+                                          (blog/index.html row card since the 2026-09-07
+                                          redesign — numbered, split-lang title, no byline.
+                                          news/, publications/, projects/, books/ keep the
+                                          older __tags|__footer|__author|__read parts in
+                                          their card--row / card--feature variants)
            .card__image--pair               (dual-jacket plate — every card on books/index.html
                                           since the 2026-08-24 dual-cover sweep; 7daf3a4 introduced it)
-           .feature  .feature__media|__body|__eyebrow|__title|__excerpt
+           .spotlight  .section-kicker  .feature  .feature__media|__body|__eyebrow|__title|__excerpt
                                           (479f112 — the ONE spotlit post at the top of
                                           blog/index.html. It is deliberately NOT .card:
                                           three separate regexes count class="card",
                                           so a .feature wearing that class would inflate
                                           every counter and duplicate a feed item.)
-           .blog-grid  .blog-jump           (the hero chip strip, one chip per series —
-                                          INV-02f keeps it honest)
+           .blog-grid  .blog-grid__label  .blog-jump
+                                          (since 2026-09-07 .blog-jump is the STICKY series
+                                          bar between the hero and <main> — text chips, no
+                                          emoji, one per series; INV-02f keeps the counts
+                                          honest. .blog-grid__label is the in-grid group
+                                          label: the four AI Transformation arcs and the
+                                          OpenClaw "Standalone posts" run.)
            .series-section  .series-header  .series-header__left
            .series-title  .series-icon  .series-description  .series-count
            .latest  .latest__inner  .latest__heading  .latest__list  .latest__date
@@ -470,7 +480,7 @@ partitioned nothing, and it was deleted on 2026-08-26 along with the two empty p
 
 ```bash
 python3 -c "import re,collections; s=open('blog/index.html').read(); print(collections.Counter(int(m.group(1)) for m in re.finditer(r'<h([1-6])\b[^>]*>', s)))"
-# → Counter({3: 76, 2: 6, 1: 1})
+# → Counter({3: 84, 2: 7, 1: 1})   (2026-09-07 redesign: +feature h3, +"Start here" kicker h2)
 ```
 
 **Card titles are `h3`.** They were `h2` before Task 11, `h4` between Task 11 and the band
