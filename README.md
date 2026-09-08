@@ -4,7 +4,7 @@
 
 🌐 **Live: [anirach.com](https://anirach.com)**
 
-A hand-written static site — seven top-level pages, four per-book detail pages, and 93 self-contained blog posts catalogued on two pages: Tutorials (`/blog/`, six technical series) and Thoughts (`/thoughts/`, nine essays on living well). No build system, no package manager, no dependencies, no JavaScript framework. Push to `main` and GitHub Pages publishes it.
+A hand-written static site — seven top-level pages, four per-book detail pages, and 103 self-contained blog posts catalogued on two pages: Tutorials (`/blog/`, six technical series) and Thoughts (`/thoughts/`, nineteen essays on living well and working well). No build system, no package manager, no dependencies, no JavaScript framework. Push to `main` and GitHub Pages publishes it.
 
 ---
 

@@ -44,7 +44,14 @@ def first_commit_date(rel: str) -> str:
         ["git", "log", "--diff-filter=A", "--format=%ad",
          "--date=format:%a, %d %b %Y %H:%M:%S +0700", "--follow", "--", rel],
         cwd=ROOT, capture_output=True, text=True).stdout.strip()
-    return out.split("\n")[-1] if out else "Sat, 07 Mar 2026 09:00:00 +0700"
+    if out:
+        return out.split("\n")[-1]
+    # Not committed yet: date it today, like gen_sitemap.py does for a dirty
+    # file, so a freshly built post agrees with its own article:published_time
+    # (INV-36) before the launch commit instead of after it.
+    import datetime
+    now = datetime.datetime.now(datetime.timezone(datetime.timedelta(hours=7)))
+    return now.strftime("%a, %d %b %Y 09:00:00 +0700")
 
 
 def build() -> str:

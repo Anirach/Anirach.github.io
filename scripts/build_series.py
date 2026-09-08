@@ -18,7 +18,10 @@ So the mechanical half is code and the editorial half is not:
              grammar bilingualize.py already uses for its answer sheets.  A
              writer writes sections; ids, anchors, figures, tracks, the switch
              and the whole head are none of their business.
-  skeleton   blog/hermes-101.html, read at RUN TIME.  The <style> block is
+  skeleton   blog/hermes-101.html (or another post named by the manifest — the
+             Working Philosophies series reads blog/morning-waking.html, the
+             Sunrise reference; "extra_css" adds any rule that skeleton lacks),
+             read at RUN TIME.  The <style> block is
              byte-identical across all ten Hermes posts, so it is a real
              template rather than a copy that will rot; --check diffs what it
              lifted so a future edit to the reference is noticed, not silently
@@ -207,6 +210,11 @@ def series_css(man):
         parts.append(REFERENCES_CSS)
     if groups(man):
         parts.append(GROUPED_STRIP_CSS)
+    # A skeleton from another family may lack a rule this builder's markup
+    # needs — the Life skeleton (Sunrise) never had a .post-hero__sub, because
+    # the hand-written Life essays carry no sub-line. The manifest supplies it.
+    if man.get("extra_css"):
+        parts.append("\n" + man["extra_css"].rstrip("\n") + "\n")
     return "".join(parts)
 
 

@@ -834,7 +834,7 @@ Ordered by how much they degrade a screen-reader pass:
 2026-08-26 and the `.blog-jump` strip added one back. **All six are correct today** and
 `check_site.py` INV-02a–INV-02f all PASS with no baseline entries: **5 Series, 76 Articles**,
 `#series-ai-transformation` 20, `#series-hermes` 10, `#series-openclaw` 13,
-`#series-devops` 24 (blog/index.html) and `#series-life` 9 essays (thoughts/index.html, since 2026-09-08) — plus INV-02g for the series tiles' counts and reading times, and INV-02f, which checks that each `.blog-jump`
+`#series-devops` 24 (blog/index.html) and, on thoughts/index.html since 2026-09-08, `#series-working` 10 essays + `#series-life` 9 essays — plus INV-02g for the series tiles' counts and reading times, and INV-02f, which checks that each `.blog-jump`
 chip's trailing `· N` equals its section's card count.
 
 ```bash

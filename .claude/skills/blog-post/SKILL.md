@@ -93,11 +93,13 @@ copy at `assets/post-template.html`; it rotted three sweeps behind and was delet
 | **Hermes Agent in Practice** | `#series-hermes` | 10 | `.series-nav` 10-chip strip, absolute `/blog/<slug>` links | copy `blog/hermes-101.html` |
 | **OpenClaw for Organizations** | `#series-openclaw` | 13 (7 numbered + 6 standalone) | the 7 numbered posts carry the `.series-nav` 7-chip strip; the other 6 carry **no nav at all** | copy `blog/openclaw-skills.html`; read `references/openclaw-series.md` first |
 | **DevOps & Vibe Coding** | `#series-devops` | 24 | `.post-nav` prev/next pair, relative `foo.html` links | `TEMPLATE` — **the default** |
+| **Working Philosophies** — carded on **`thoughts/index.html`** | `#series-working` | 10 | `.series-nav` flat 10-chip strip | **generated** — `python3 scripts/build_series.py --series working`; manifest `scripts/series/working.json`, skeleton `blog/morning-waking.html` (Sunrise) |
 | **Life Thought & Philosophy** — carded on **`thoughts/index.html`** (2026-09-08), never on the blog index | `#series-life` | 9 | `.series-nav` 9-chip strip, absolute `/blog/<slug>` links; back links `../thoughts/` | copy `blog/morning-waking.html` |
 
-Card sections sum to the total: 10 + 7 + 20 + 10 + 13 + 24 + 9 = **93**. The nav partition (what
-`verify-wiring.py` prints) is **63 series-nav + 24 post-nav + 6 no-nav = 93** — the 63 being
-10 AI-Core + 7 Hermes Desktop + 20 AI Transformation + 10 Hermes + 9 Life + 7 numbered OpenClaw. All 24
+Card sections sum to the total: 10 + 7 + 20 + 10 + 13 + 24 + 10 + 9 = **103**. The nav partition
+(what `verify-wiring.py` prints) is **73 series-nav + 24 post-nav + 6 no-nav = 103** — the 73 being
+10 AI-Core + 7 Hermes Desktop + 20 AI Transformation + 10 Hermes + 10 Working Philosophies + 9 Life
++ 7 numbered OpenClaw. All 24
 `#series-devops` cards carry a `.post-nav` (the chain head `git-branching.html` included,
 since 2026-08-26); the 6 no-nav posts are all `#series-openclaw` cards.
 

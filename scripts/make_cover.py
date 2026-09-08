@@ -2977,6 +2977,312 @@ def ac_dial(d, b, c, o):
     circ(d, kx, ty, kr * 0.42, fill=c["core"])
 
 
+# --------------------------------------------------------------------------
+# Working Philosophies (wp_) -- one working week, Monday to Friday, on the
+# Life family's navy/deep grounds with the gold accent.  Line-work in c["ln"],
+# the one lit thing in c["hi"]; no two motifs share a subject with a Life cover
+# (lp_beforedark has the ajar door, lp_truenorth the compass, lp_waking the
+# candles -- so the Friday door comes with a window, the Thursday line with a
+# tape measure, and the Wednesday fire is a ring of stones, not a candle).
+# --------------------------------------------------------------------------
+def _shoe(d, cx, cy, sw, sh, c, fill=None):
+    """One shoe outline seen from above, toe up."""
+    d.rounded_rectangle([cx - sw / 2, cy - sh / 2, cx + sw / 2, cy + sh / 2],
+                        radius=sw * 0.45, outline=c["ln"], width=6, fill=fill)
+    d.arc([cx - sw / 2, cy - sh / 2, cx + sw / 2, cy - sh / 2 + sw], 180, 360,
+          fill=c["ln2"], width=4)
+
+
+def wp_stand(d, b, c, o):
+    """Two shoes on one floor tile, a map pin over them -- you are here.
+    Monday's first question is a location, not a verdict."""
+    x0, y0, x1, y1 = b
+    w, h = x1 - x0, y1 - y0
+    cx, cy = (x0 + x1) / 2, y0 + h * 0.62
+    # the tile: a flat diamond on the floor, faint fill
+    d.polygon([(cx, cy - h * 0.26), (cx + w * 0.42, cy), (cx, cy + h * 0.26),
+               (cx - w * 0.42, cy)], fill=c["fill"], outline=c["ln2"])
+    d.line([(cx, cy - h * 0.26), (cx + w * 0.42, cy), (cx, cy + h * 0.26),
+            (cx - w * 0.42, cy), (cx, cy - h * 0.26)], fill=c["ln"], width=6)
+    # the shoes, slightly splayed
+    _shoe(d, cx - w * 0.07, cy - h * 0.02, w * 0.09, h * 0.24, c, fill=c["core"])
+    _shoe(d, cx + w * 0.07, cy - h * 0.02, w * 0.09, h * 0.24, c, fill=c["core"])
+    # the pin above, gold, with its point on the tile's centre line
+    px, py = cx, cy - h * 0.40
+    r = h * 0.11
+    d.polygon([(px - r * 0.9, py), (px + r * 0.9, py), (px, py + r * 2.1)], fill=c["hi"])
+    circ(d, px, py, r, fill=c["hi"])
+    circ(d, px, py, r * 0.42, fill=c["bg"])
+    # a short dotted trail leaving the tile toward the right edge
+    for i in range(5):
+        circ(d, cx + w * 0.30 + i * w * 0.045, cy + h * 0.06 - i * h * 0.02, h * 0.012,
+             fill=c["ln2"])
+
+
+def wp_weather(d, b, c, o):
+    """Rain hatching on the left, an umbrella under it, a clearing arc on the
+    right -- the building's weather is not your doing."""
+    x0, y0, x1, y1 = b
+    w, h = x1 - x0, y1 - y0
+    # rain: short diagonal strokes across the top-left two thirds
+    for i in range(14):
+        for j in range(3):
+            rx = x0 + w * 0.02 + i * w * 0.05 + j * w * 0.017
+            ry = y0 + h * 0.05 + j * h * 0.16
+            if rx < x0 + w * 0.68:
+                d.line([(rx, ry), (rx - w * 0.018, ry + h * 0.07)], fill=c["ln2"], width=4)
+    # umbrella: canopy chord, ribs, stick and hooked handle
+    ux, uy = x0 + w * 0.36, y0 + h * 0.56
+    R = w * 0.30
+    d.chord([ux - R, uy - R, ux + R, uy + R], 180, 360, fill=c["hif"], outline=c["hi"], width=7)
+    for k in (-0.66, -0.33, 0.0, 0.33, 0.66):
+        d.line([(ux, uy), (ux + R * k, uy - R * math.sqrt(max(0.0, 1 - k * k)))],
+               fill=c["hi"], width=3)
+    d.line([(ux - R, uy), (ux + R, uy)], fill=c["hi"], width=7)
+    d.line([(ux, uy), (ux, uy + h * 0.30)], fill=c["ln"], width=7)
+    d.arc([ux - w * 0.06, uy + h * 0.24, ux + w * 0.06, uy + h * 0.36], 0, 180, fill=c["ln"], width=7)
+    # a clearing: sun arc rising at the right, above a short horizon
+    sx, sy = x1 - w * 0.17, y0 + h * 0.40
+    d.chord([sx - h * 0.13, sy - h * 0.13, sx + h * 0.13, sy + h * 0.13], 180, 360,
+            fill=c["hif"], outline=c["ln"], width=5)
+    d.line([(sx - h * 0.22, sy), (sx + h * 0.22, sy)], fill=c["ln"], width=5)
+
+
+def wp_brick(d, b, c, o):
+    """Three courses of a wall and the next brick, lit, held just above its
+    place by a trowel -- think one brick when the work is heavy."""
+    x0, y0, x1, y1 = b
+    w, h = x1 - x0, y1 - y0
+    bw, bh, gap = w * 0.20, h * 0.11, w * 0.012
+    base = y1 - h * 0.06
+    for row in range(3):
+        yb = base - row * (bh + gap)
+        off = (bw + gap) / 2 if row % 2 else 0
+        xb = x0 + w * 0.04 + off
+        while xb + bw * 0.3 < x0 + w * 0.80:
+            bx1 = min(xb + bw, x0 + w * 0.80)
+            d.rectangle([xb, yb - bh, bx1, yb], fill=c["fill"], outline=c["ln"], width=5)
+            xb += bw + gap
+    # the gap waiting in the top course, and the lit brick above it
+    slot_x = x0 + w * 0.04 + 2 * (bw + gap)
+    top = base - 2 * (bh + gap)
+    d.rectangle([slot_x, top - bh, slot_x + bw, top], fill=c["bg"], outline=c["ln2"], width=4)
+    lift = h * 0.20
+    d.rectangle([slot_x, top - bh - lift, slot_x + bw, top - lift], fill=c["hi"])
+    # trowel: handle up-right, blade a small triangle under the brick's corner
+    tx, ty = slot_x + bw + w * 0.05, top - bh - lift + bh * 0.5
+    d.polygon([(tx, ty - h * 0.03), (tx + w * 0.11, ty), (tx, ty + h * 0.06)], fill=c["core"])
+    d.line([(tx + w * 0.11, ty), (tx + w * 0.20, ty - h * 0.12)], fill=c["ln"], width=9)
+    # three fall-lines showing the brick's drop
+    for k in (0.25, 0.5, 0.75):
+        xk = slot_x + bw * k
+        d.line([(xk, top - lift + h * 0.02), (xk, top - bh - h * 0.02)], fill=c["hif"], width=3)
+
+
+def wp_corridor(d, b, c, o):
+    """A corridor in one-point perspective with a closed door at the end, and
+    a speech bubble hanging in it -- the narrator that talks at 3 a.m."""
+    x0, y0, x1, y1 = b
+    w, h = x1 - x0, y1 - y0
+    vx, vy = (x0 + x1) / 2, y0 + h * 0.46
+    # floor and ceiling edges converging on the vanishing point
+    d.line([(x0, y1), (vx - w * 0.06, vy + h * 0.10)], fill=c["ln"], width=6)
+    d.line([(x1, y1), (vx + w * 0.06, vy + h * 0.10)], fill=c["ln"], width=6)
+    d.line([(x0, y0 + h * 0.10), (vx - w * 0.06, vy - h * 0.16)], fill=c["ln2"], width=5)
+    d.line([(x1, y0 + h * 0.10), (vx + w * 0.06, vy - h * 0.16)], fill=c["ln2"], width=5)
+    # the far door, closed, with a strip of light beneath it
+    d.rectangle([vx - w * 0.06, vy - h * 0.16, vx + w * 0.06, vy + h * 0.10],
+                fill=c["fill"], outline=c["ln"], width=5)
+    d.line([(vx - w * 0.06, vy + h * 0.10), (vx + w * 0.06, vy + h * 0.10)], fill=c["hi"], width=5)
+    circ(d, vx + w * 0.035, vy - h * 0.02, h * 0.008, fill=c["ln"])
+    # side doors, receding
+    for k, sc in ((0.10, 1.0), (0.24, 0.7)):
+        dh = h * 0.36 * sc
+        dy = vy + h * 0.10 + (y1 - vy - h * 0.10) * (1 - sc) * 0.9
+        d.rectangle([x0 + w * k, dy - dh, x0 + w * k + w * 0.05 * sc, dy], outline=c["ln2"], width=4)
+        d.rectangle([x1 - w * k - w * 0.05 * sc, dy - dh, x1 - w * k, dy], outline=c["ln2"], width=4)
+    # the bubble, gold outline, three dots, tail pointing down the corridor
+    bx0, by0, bx1, by1 = x0 + w * 0.56, y0 + h * 0.14, x0 + w * 0.92, y0 + h * 0.36
+    rr(d, (bx0, by0, bx1, by1), h * 0.05, fill=c["bg"], outline=c["hi"], w=6)
+    d.polygon([(bx0 + w * 0.08, by1 - 2), (bx0 + w * 0.15, by1 - 2), (bx0 + w * 0.06, by1 + h * 0.06)],
+              fill=c["bg"], outline=c["hi"])
+    d.line([(bx0 + w * 0.08, by1), (bx0 + w * 0.06, by1 + h * 0.06), (bx0 + w * 0.15, by1)],
+           fill=c["hi"], width=6)
+    for k in (0.3, 0.5, 0.7):
+        circ(d, bx0 + (bx1 - bx0) * k, (by0 + by1) / 2, h * 0.016, fill=c["hi"])
+
+
+def wp_plateau(d, b, c, o):
+    """Steps climbing to a flat, a signpost planted on the flat pointing on,
+    and the path resuming as dots -- stuck is a place you can leave."""
+    x0, y0, x1, y1 = b
+    w, h = x1 - x0, y1 - y0
+    base = y1 - h * 0.08
+    pts = [(x0, base)]
+    x, y = x0 + w * 0.06, base
+    for i in range(4):
+        pts += [(x, y), (x, y - h * 0.11)]
+        y -= h * 0.11
+        x += w * 0.11
+    pts += [(x, y), (x1 - w * 0.02, y)]
+    d.line(pts, fill=c["ln"], width=7)
+    # the flat, faintly filled beneath
+    d.polygon([(x, y), (x1 - w * 0.02, y), (x1 - w * 0.02, base), (x, base)], fill=c["dimf"])
+    # signpost on the flat, board pointing right, in gold
+    sx = x + w * 0.16
+    d.line([(sx, y), (sx, y - h * 0.32)], fill=c["ln"], width=7)
+    bx0, by0 = sx - w * 0.02, y - h * 0.30
+    d.polygon([(bx0, by0), (bx0 + w * 0.22, by0), (bx0 + w * 0.27, by0 + h * 0.05),
+               (bx0 + w * 0.22, by0 + h * 0.10), (bx0, by0 + h * 0.10)], fill=c["hi"])
+    # the path, resuming as dots beyond the post and rising off the flat
+    for i in range(6):
+        circ(d, sx + w * 0.10 + i * w * 0.05, y - h * 0.02 - i * i * h * 0.008, h * 0.012, fill=c["hi"])
+
+
+def wp_smallfire(d, b, c, o):
+    """A ring of stones, two logs, one small flame and its spark -- morale is
+    a fire you keep small and lit, not a bonfire you rebuild each morning."""
+    x0, y0, x1, y1 = b
+    w, h = x1 - x0, y1 - y0
+    cx, cy = (x0 + x1) / 2, y0 + h * 0.66
+    # stones in an ellipse
+    for i in range(11):
+        a = i * 2 * math.pi / 11
+        sx, sy = cx + w * 0.30 * math.cos(a), cy + h * 0.12 * math.sin(a)
+        d.ellipse([sx - w * 0.035, sy - h * 0.022, sx + w * 0.035, sy + h * 0.022],
+                  fill=c["fill"], outline=c["ln"], width=4)
+    # two logs crossed
+    d.line([(cx - w * 0.17, cy + h * 0.04), (cx + w * 0.15, cy - h * 0.06)], fill=c["ln"], width=12)
+    d.line([(cx - w * 0.15, cy - h * 0.06), (cx + w * 0.17, cy + h * 0.04)], fill=c["ln"], width=12)
+    # the flame: small, one tongue, gold with a paler core
+    fy = cy - h * 0.10
+    d.polygon([(cx, fy - h * 0.24), (cx + w * 0.07, fy - h * 0.08), (cx + w * 0.05, fy + h * 0.02),
+               (cx, fy + h * 0.04), (cx - w * 0.05, fy + h * 0.02), (cx - w * 0.07, fy - h * 0.08)],
+              fill=c["hi"])
+    d.polygon([(cx, fy - h * 0.12), (cx + w * 0.03, fy - h * 0.03), (cx, fy + h * 0.02),
+               (cx - w * 0.03, fy - h * 0.03)], fill=c["bg"])
+    # a spark, and the night: three small stars high and to the sides
+    circ(d, cx + w * 0.10, fy - h * 0.30, h * 0.014, fill=c["hi"])
+    for sx, sy in ((x0 + w * 0.12, y0 + h * 0.12), (x1 - w * 0.14, y0 + h * 0.08), (x1 - w * 0.06, y0 + h * 0.30)):
+        d.line([(sx - h * 0.02, sy), (sx + h * 0.02, sy)], fill=c["ln2"], width=3)
+        d.line([(sx, sy - h * 0.02), (sx, sy + h * 0.02)], fill=c["ln2"], width=3)
+
+
+def wp_line(d, b, c, o):
+    """A line drawn across the floor, one shoe stopped at its edge, and the
+    tape measure that drew it -- the line is set on a clear day."""
+    x0, y0, x1, y1 = b
+    w, h = x1 - x0, y1 - y0
+    ly = y0 + h * 0.58
+    # the floor: two faint perspective lines
+    d.line([(x0, y1 - h * 0.04), (x0 + w * 0.30, ly + h * 0.02)], fill=c["dimf"], width=4)
+    d.line([(x1, y1 - h * 0.04), (x1 - w * 0.30, ly + h * 0.02)], fill=c["dimf"], width=4)
+    # the line itself, gold, slightly rising left to right
+    d.line([(x0 + w * 0.06, ly + h * 0.02), (x1 - w * 0.06, ly - h * 0.02)], fill=c["hi"], width=9)
+    # the shoe, toe just short of the line
+    _shoe(d, x0 + w * 0.34, ly + h * 0.19, w * 0.10, h * 0.26, c, fill=c["core"])
+    # the tape measure, top right: a rounded body, a tongue of tape, tick marks
+    tx, ty = x1 - w * 0.20, y0 + h * 0.24
+    rr(d, (tx - w * 0.09, ty - h * 0.09, tx + w * 0.09, ty + h * 0.09), h * 0.04,
+       fill=c["fill"], outline=c["ln"], w=6)
+    circ(d, tx, ty, h * 0.02, fill=c["ln"])
+    d.line([(tx - w * 0.09, ty + h * 0.05), (tx - w * 0.38, ty + h * 0.05)], fill=c["ln"], width=6)
+    for i in range(7):
+        xx = tx - w * 0.12 - i * w * 0.04
+        d.line([(xx, ty + h * 0.05), (xx, ty + h * (0.02 if i % 2 else 0.005))], fill=c["ln2"], width=3)
+
+
+def wp_scale(d, b, c, o):
+    """A balance with a level beam; one pan holds a written page -- a fair
+    fight is fought with facts and asks, not heat."""
+    x0, y0, x1, y1 = b
+    w, h = x1 - x0, y1 - y0
+    cx = (x0 + x1) / 2
+    base = y1 - h * 0.08
+    d.line([(cx - w * 0.16, base), (cx + w * 0.16, base)], fill=c["ln"], width=8)
+    d.line([(cx, base), (cx, y0 + h * 0.18)], fill=c["ln"], width=8)
+    beam_y = y0 + h * 0.22
+    d.line([(cx - w * 0.36, beam_y), (cx + w * 0.36, beam_y)], fill=c["ln"], width=8)
+    d.polygon([(cx - w * 0.03, beam_y), (cx + w * 0.03, beam_y), (cx, beam_y - h * 0.06)], fill=c["hi"])
+    for side in (-1, 1):
+        px = cx + side * w * 0.33
+        py = beam_y + h * 0.38
+        for k in (-0.11, 0.11):
+            d.line([(px, beam_y), (px + w * k, py)], fill=c["ln2"], width=3)
+        d.chord([px - w * 0.14, py - h * 0.06, px + w * 0.14, py + h * 0.10], 0, 180,
+                fill=c["fill"], outline=c["ln"], width=5)
+        d.line([(px - w * 0.14, py), (px + w * 0.14, py)], fill=c["ln"], width=5)
+    # the page on the right pan, gold, with three written lines
+    px, py = cx + w * 0.33, beam_y + h * 0.38
+    d.rectangle([px - w * 0.06, py - h * 0.13, px + w * 0.06, py - h * 0.005], fill=c["hi"])
+    for k in (0.3, 0.55, 0.8):
+        yy = py - h * 0.13 + h * 0.125 * k
+        d.line([(px - w * 0.04, yy), (px + w * 0.04 - (w * 0.03 if k > 0.7 else 0), yy)], fill=c["bg"], width=3)
+
+
+def wp_doorwindow(d, b, c, o):
+    """A closed door and an open window side by side, light coming through the
+    window -- stay and mend, or go; both are decisions, and both let air in."""
+    x0, y0, x1, y1 = b
+    w, h = x1 - x0, y1 - y0
+    base = y1 - h * 0.06
+    d.line([(x0, base), (x1, base)], fill=c["ln2"], width=5)
+    # the door, left
+    dx0, dx1 = x0 + w * 0.10, x0 + w * 0.38
+    d.rectangle([dx0, base - h * 0.74, dx1, base], fill=c["fill"], outline=c["ln"], width=6)
+    d.rectangle([dx0 + w * 0.04, base - h * 0.66, dx1 - w * 0.04, base - h * 0.42], outline=c["ln2"], width=4)
+    d.rectangle([dx0 + w * 0.04, base - h * 0.34, dx1 - w * 0.04, base - h * 0.08], outline=c["ln2"], width=4)
+    circ(d, dx1 - w * 0.06, base - h * 0.38, h * 0.014, fill=c["hi"])
+    # the window, right: frame, one sash swung open, light rays outward
+    wx0, wy0, wx1, wy1 = x0 + w * 0.56, base - h * 0.70, x0 + w * 0.92, base - h * 0.30
+    d.rectangle([wx0, wy0, wx1, wy1], fill=c["hif"], outline=c["ln"], width=6)
+    d.line([((wx0 + wx1) / 2, wy0), ((wx0 + wx1) / 2, wy1)], fill=c["ln"], width=5)
+    d.line([(wx0, (wy0 + wy1) / 2), (wx1, (wy0 + wy1) / 2)], fill=c["ln"], width=5)
+    # the open sash: a parallelogram swung out to the right
+    mx = (wx0 + wx1) / 2
+    d.polygon([(mx, wy0), (wx1 + w * 0.06, wy0 + h * 0.05), (wx1 + w * 0.06, wy1 - h * 0.05), (mx, wy1)],
+              fill=c["bg"], outline=c["hi"])
+    d.line([(mx, wy0), (wx1 + w * 0.06, wy0 + h * 0.05), (wx1 + w * 0.06, wy1 - h * 0.05), (mx, wy1)],
+           fill=c["hi"], width=6)
+    # light on the floor below the window
+    d.polygon([(wx0 + w * 0.02, base), (wx1 + w * 0.10, base), (wx1 - w * 0.02, wy1 + h * 0.02),
+               (wx0 + w * 0.06, wy1 + h * 0.02)], fill=c["hif"])
+
+
+def wp_carryhome(d, b, c, o):
+    """A satchel and a lit lantern on a path that runs to a small house on
+    the horizon -- what a working week may follow you home."""
+    x0, y0, x1, y1 = b
+    w, h = x1 - x0, y1 - y0
+    hy = y0 + h * 0.52
+    d.line([(x0, hy), (x1, hy)], fill=c["ln2"], width=5)
+    # the house, small, on the horizon at right
+    hx = x1 - w * 0.16
+    d.polygon([(hx - w * 0.09, hy), (hx - w * 0.09, hy - h * 0.13), (hx, hy - h * 0.22),
+               (hx + w * 0.09, hy - h * 0.13), (hx + w * 0.09, hy)], fill=c["fill"], outline=c["ln"])
+    d.line([(hx - w * 0.09, hy - h * 0.13), (hx, hy - h * 0.22), (hx + w * 0.09, hy - h * 0.13)],
+           fill=c["ln"], width=5)
+    d.rectangle([hx - w * 0.02, hy - h * 0.07, hx + w * 0.02, hy], fill=c["hi"])
+    # the path: two lines converging on the house door
+    d.line([(x0 + w * 0.10, y1 - h * 0.04), (hx - w * 0.03, hy)], fill=c["ln2"], width=4)
+    d.line([(x0 + w * 0.60, y1 - h * 0.04), (hx + w * 0.03, hy)], fill=c["ln2"], width=4)
+    # the satchel, foreground left: body, flap, strap
+    sx, sy = x0 + w * 0.26, y1 - h * 0.16
+    rr(d, (sx - w * 0.16, sy - h * 0.22, sx + w * 0.16, sy), h * 0.03, fill=c["fill"], outline=c["ln"], w=6)
+    d.polygon([(sx - w * 0.16, sy - h * 0.22), (sx + w * 0.16, sy - h * 0.22),
+               (sx + w * 0.16, sy - h * 0.12), (sx - w * 0.16, sy - h * 0.12)], fill=c["core"])
+    d.arc([sx - w * 0.10, sy - h * 0.38, sx + w * 0.10, sy - h * 0.14], 180, 360, fill=c["ln"], width=6)
+    circ(d, sx, sy - h * 0.14, h * 0.012, fill=c["hi"])
+    # the lantern beside it, lit
+    lx, ly = x0 + w * 0.60, y1 - h * 0.16
+    d.rectangle([lx - w * 0.05, ly - h * 0.18, lx + w * 0.05, ly], outline=c["ln"], width=5)
+    d.line([(lx - w * 0.07, ly - h * 0.18), (lx + w * 0.07, ly - h * 0.18)], fill=c["ln"], width=5)
+    d.arc([lx - w * 0.04, ly - h * 0.28, lx + w * 0.04, ly - h * 0.16], 180, 360, fill=c["ln"], width=5)
+    d.polygon([(lx, ly - h * 0.15), (lx + w * 0.025, ly - h * 0.08), (lx, ly - h * 0.03),
+               (lx - w * 0.025, ly - h * 0.08)], fill=c["hi"])
+    circ(d, lx, ly - h * 0.09, h * 0.09, fill=None, outline=c["hif"], w=8)
+
+
 MOTIFS = {
     "oc_os": oc_os, "oc_team": oc_team, "oc_memory": oc_memory,
     "oc_security": oc_security, "oc_integrations": oc_integrations,
@@ -2991,6 +3297,10 @@ MOTIFS = {
     "dv_iac": dv_iac, "dv_cloud": dv_cloud, "dv_deploy": dv_deploy,
     "dv_webarch": dv_webarch, "dv_frontend": dv_frontend, "dv_vibe": dv_vibe,
     "lp_waking": lp_waking, "lp_working": lp_working, "lp_noon": lp_noon,
+    "wp_stand": wp_stand, "wp_weather": wp_weather, "wp_brick": wp_brick,
+    "wp_corridor": wp_corridor, "wp_plateau": wp_plateau, "wp_smallfire": wp_smallfire,
+    "wp_line": wp_line, "wp_scale": wp_scale, "wp_doorwindow": wp_doorwindow,
+    "wp_carryhome": wp_carryhome,
     "lp_firstfire": lp_firstfire, "lp_highheat": lp_highheat,
     "lp_longlight": lp_longlight, "lp_truenorth": lp_truenorth,
     "lp_openhand": lp_openhand, "lp_beforedark": lp_beforedark,

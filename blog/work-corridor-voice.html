@@ -1,0 +1,545 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>เสียงในโถงทางเดิน — จัดการผู้บรรยายในหัว | Anirach Mingkhwan</title>
+  <meta name="description" content="เสียงที่เล่าเรื่องที่ทำงานซ้ำตอนตีสามไม่ใช่ความคิด แต่คือความกังวลที่แต่งตัวเป็นความคิด — วิธีแยกสองอย่าง นัดเวลาให้ความกังวล และคำถาม นี่คือความคิดหรือคืองาน">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=Sarabun:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      color-scheme: light;
+      /* ink */
+      --navy: #11304b; --slate: #334155; --slate-light: #526174; --gray: #94a3b8;
+      /* ground */
+      --bg: #faf7f0; --white: #ffffff; --code-bg: #1e293b;
+      /* accent */
+      --blue: #226299; --blue-dark: #1a4d7a; --blue-light: #4992b9;
+      /* brand — sampled from the book covers. --gold is decorative on light grounds (2.2:1); --gold-dark is its text form. */
+      --gold: #c4a46c; --gold-dark: #7a5f22; --cloud: #dee7e6; --parchment: #e9e1c4; --focus: #226299;
+      /* status — use only these six, never invent a seventh */
+      --green: #22c55e; --red: #ef4444; --amber: #f59e0b;
+      --cyan: #06b6d4; --purple: #226299; --purple-dark: #1a4d7a;
+      /* type */
+      --font: 'Inter', 'Sarabun', -apple-system, BlinkMacSystemFont, sans-serif;
+      --mono: 'JetBrains Mono', 'Fira Code', 'Sarabun', monospace;
+      /* form */
+      --radius: 12px; --radius-sm: 8px; --radius-lg: 16px;
+      --measure: 720px; --wide: 860px;
+      --transition: 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+    html { scroll-behavior: smooth; }
+    body { font-family: var(--font); font-size: 17px; line-height: 1.8; color: var(--slate); background: var(--bg); -webkit-font-smoothing: antialiased; }
+    .blog-nav { position: fixed; top: 0; left: 0; right: 0; z-index: 100; background: rgba(248,250,252,0.85); backdrop-filter: blur(20px); border-bottom: 1px solid rgba(0,0,0,0.05); }
+    .blog-nav__inner { max-width: 860px; margin: 0 auto; padding: 0 2rem; height: 56px; display: flex; align-items: center; justify-content: space-between; }
+    .blog-nav__back { font-size: 0.85rem; font-weight: 500; color: var(--blue); text-decoration: none; }
+    .blog-nav__back:hover { color: #1a4d7a; }
+    .blog-nav__title { font-size: 0.85rem; font-weight: 600; color: var(--navy); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 50%; }
+    .post-hero { padding: 8rem 2rem 3rem; background: linear-gradient(135deg, #eef3f3 0%, #dee7e6 50%, #e9e1c4 100%); text-align: center; }
+    .post-hero__tags { display: flex; gap: 0.5rem; justify-content: center; margin-bottom: 1.25rem; flex-wrap: wrap; }
+    .post-hero__tag { font-size: 0.7rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.1em; color: var(--blue); background: rgba(34,98,153,0.1); padding: 0.3rem 0.75rem; border-radius: 20px; }
+    .post-hero__title { font-size: clamp(1.8rem, 5vw, 3rem); font-weight: 800; color: var(--navy); line-height: 1.2; margin-bottom: 1rem; max-width: 720px; margin-left: auto; margin-right: auto; }
+    .post-hero__meta { font-size: 0.85rem; color: var(--slate-light); display: flex; align-items: center; justify-content: center; gap: 1.5rem; flex-wrap: wrap; }
+    .post-hero__series { font-weight: 600; color: var(--blue); }
+    .post-hero__cover {
+      aspect-ratio: 1 / 1;
+      max-width: 380px;
+      margin: 2.5rem auto 0;
+      border-radius: var(--radius-lg, 16px);
+      overflow: hidden;
+      box-shadow: 0 20px 60px rgba(17,48,75,0.14);
+    }
+    .post-hero__cover img { width: 100%; height: 100%; object-fit: cover; display: block; }
+    .post-body { max-width: 720px; margin: 0 auto; padding: 3rem 2rem 6rem; }
+    .post-body h2 { font-size: 1.6rem; font-weight: 800; color: var(--navy); margin: 3rem 0 1rem; padding-bottom: 0.5rem; border-bottom: 2px solid rgba(34,98,153,0.15); }
+    .post-body h3 { font-size: 1.25rem; font-weight: 700; color: var(--navy); margin: 2.25rem 0 0.75rem; }
+    .post-body p { margin-bottom: 1.25rem; }
+    .post-body strong { font-weight: 700; color: var(--navy); }
+    .post-body a { color: var(--blue); text-decoration: underline; text-decoration-thickness: 1px; text-underline-offset: 2px; }
+    .post-body ul, .post-body ol { margin: 0.5rem 0 1.25rem 1.5rem; }
+    .post-body li { margin-bottom: 0.4rem; }
+    .post-body blockquote { background: rgba(34,98,153,0.06); border-left: 4px solid var(--blue); padding: 1rem 1.25rem; border-radius: 0 10px 10px 0; margin: 1.25rem 0; font-size: 0.95rem; color: var(--navy); }
+    .post-body hr { border: none; height: 1px; background: linear-gradient(90deg, transparent, rgba(34,98,153,0.2), transparent); margin: 3rem 0; }
+    .post-series-footer { text-align: center; font-size: 0.85rem; color: var(--slate-light); font-style: italic; margin-top: 2rem; padding-top: 2rem; border-top: 1px solid #e2e8f0; }
+    .blog-footer { background: var(--navy); padding: 2rem 0; text-align: center; }
+    .blog-footer a { color: var(--gold); text-decoration: none; font-weight: 600; font-size: 0.9rem; }
+    .blog-footer span { color: var(--gray); font-size: 0.8rem; display: block; margin-top: 0.4rem; }
+    @media (max-width: 600px) {
+      .post-hero { padding: 7rem 1.25rem 2.5rem; }
+      .post-body { padding: 2rem 1.25rem 4rem; }
+      .post-hero__meta { flex-direction: column; gap: 0.4rem; }
+    }
+
+    :focus-visible { outline: 2px solid var(--focus); outline-offset: 3px; border-radius: 2px; }
+    /* the ring sits on the page ground (3px offset). Inside the navy footers
+       and code blocks var(--blue) collapses to 2.12:1, so those scopes
+       re-point --focus to gold (5.73:1 on navy). */
+    .footer, .blog-footer, pre { --focus: var(--gold); }
+    :focus:not(:focus-visible) { outline: none; }
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after {
+        animation-duration: .01ms !important; animation-iteration-count: 1 !important;
+        transition-duration: .01ms !important; scroll-behavior: auto !important;
+      }
+    }
+    h1, h2, h3, .post-hero__title, .card__title { text-wrap: balance; }
+
+    .post-body img, .post-body svg { max-width: 100%; height: auto; }
+
+    /* ── SKIP LINK ── a11y-perf R5: the link and the landmark it targets are a
+       pair — useless without both halves. Off-screen until focused, then the
+       first tab stop on every page. */
+    .skip-link { position: absolute; left: -9999px; }
+    .skip-link:focus {
+      left: 1rem; top: 1rem; z-index: 999;
+      background: var(--navy); color: #fff;
+      padding: 0.75rem 1.25rem; border-radius: var(--radius-sm);
+      font-weight: 600; text-decoration: none;
+    }
+
+    /* ── POST WAYFINDING ── the wordmark is the home link; the footer carries
+       the full destination row. */
+    .blog-nav__home {
+      font-size: 0.9rem; font-weight: 800; color: var(--navy);
+      text-decoration: none; margin-right: 1rem;
+    }
+    .blog-nav__home:hover { color: var(--blue); }
+    .blog-nav__inner > .blog-nav__back { margin-right: auto; }
+    .blog-footer__nav {
+      display: flex; flex-wrap: wrap; justify-content: center; gap: 0.35rem 1.25rem;
+      max-width: 860px; margin: 0 auto 1.25rem; padding: 0 2rem 1.25rem;
+      border-bottom: 1px solid rgba(255,255,255,0.12);
+    }
+    .blog-footer__nav a { color: var(--gold); font-size: 0.85rem; font-weight: 600; text-decoration: none; }
+    .blog-footer__nav a:hover { color: #fff; text-decoration: underline; }
+
+    html { scroll-padding-top: 5rem; }
+    [id] { scroll-margin-top: 5rem; }
+
+    /* Thai needs more room than Latin at the same nominal size. */
+    .post-body:lang(th) { font-size: 18px; line-height: 1.85; }
+    .post-body p, .post-body li, .post-body blockquote { text-wrap: pretty; }
+
+    @media (max-width: 600px) {
+      .post-body h2 { font-size: 1.4rem; }
+      .post-body h3 { font-size: 1.15rem; }
+    }
+
+    /* ---- table of contents ---- */
+    .post-toc {
+      max-width: 720px;
+      margin: 2rem auto 0;
+      padding: 1rem 1.25rem;
+      background: rgba(34,98,153,0.05);
+      border: 1px solid rgba(34,98,153,0.14);
+      border-left: 3px solid var(--gold, #c4a46c);
+      border-radius: 10px;
+      font-size: 0.92rem;
+    }
+    .post-toc > summary {
+      cursor: pointer;
+      font-weight: 700;
+      color: var(--navy);
+      list-style: none;
+    }
+    .post-toc > summary::-webkit-details-marker { display: none; }
+    .post-toc > summary::before {
+      content: "\25B8";
+      display: inline-block;
+      margin-right: 0.5rem;
+      transition: transform 0.2s ease;
+      color: var(--gold-dark, #7a5f22);
+    }
+    .post-toc[open] > summary::before { transform: rotate(90deg); }
+    .post-toc > summary:focus-visible { outline: 3px solid var(--focus, #226299); outline-offset: 3px; }
+    .post-toc ol { margin: 0.85rem 0 0.25rem; padding-left: 1.4rem; }
+    .post-toc li { margin-bottom: 0.4rem; line-height: 1.5; }
+    .post-toc a { color: var(--slate); text-decoration: none; }
+    .post-toc a:hover, .post-toc a:focus-visible { color: var(--blue-dark, #1a4d7a); text-decoration: underline; }
+    @media (max-width: 600px) { .post-toc { margin: 1.25rem 1rem 0; } }
+
+    /* ---- cross-document view transitions ---- */
+    @view-transition { navigation: auto; }
+    .nav, .blog-nav { view-transition-name: site-nav; }
+    .footer, .blog-footer { view-transition-name: site-footer; }
+    @media (prefers-reduced-motion: reduce) {
+      ::view-transition-group(*),
+      ::view-transition-old(*),
+      ::view-transition-new(*) { animation: none !important; }
+    }
+
+    /* ── SERIES STRIP — Life Thought & Philosophy ──
+       Same class and inner-wrapper shape as the OpenClaw strip because the
+       linter's RE_SNAV recognises exactly `series-nav` + a nested div; a
+       renamed strip would read as "no nav" and fail INV-08. All content
+       checks (INV-03 family) iterate the SERIES7 list only, so this strip's
+       labels are convention, not contract. House-styled, not the island CSS. */
+    .series-nav {
+      max-width: 720px; margin: 2rem auto 0; padding: 1.1rem 1.4rem;
+      background: rgba(255,255,255,0.75); border: 1px solid rgba(34,98,153,0.15);
+      border-left: 3px solid var(--gold); border-radius: 12px;
+    }
+    .series-nav h3 {
+      font-size: 0.78rem; font-weight: 700; text-transform: uppercase;
+      letter-spacing: 0.08em; color: var(--gold-dark); margin-bottom: 0.6rem;
+    }
+    .series-links { display: flex; flex-wrap: wrap; gap: 0.5rem; }
+    .series-links a, .series-links .current {
+      font-size: 0.82rem; font-weight: 600; padding: 0.35rem 0.8rem;
+      border-radius: 50px; text-decoration: none;
+    }
+    .series-links a { color: var(--blue-dark); background: rgba(34,98,153,0.08); }
+    .series-links a:hover { background: rgba(34,98,153,0.16); }
+    .series-links .current { color: #fff; background: var(--blue-dark); }
+    @media (max-width: 600px) { .series-nav { margin: 1.5rem 1rem 0; } }
+
+    /* ── FIGURE — the sanctioned diagram component (page-design §4 Content).
+       Diagrams are PNGs; this repo built them out of divs twice and reverted
+       twice. The image is wrapped in a link to itself so a phone can pinch a
+       1400px drawing without a line of JavaScript. */
+    .figure { margin: 2.5rem 0; }
+    .figure__img { width: 100%; height: auto; display: block;
+                   border-radius: var(--radius); border: 1px solid rgba(0,0,0,0.06); }
+    .figure__caption { font-size: 0.85rem; color: var(--slate-light);
+                       text-align: center; margin-top: 0.75rem; }
+
+    /* the hero sub-line — the Sunrise skeleton has none; --slate-light is 4.83:1
+       on the gradient's worst stop (a11y-perf §6) */
+    .post-hero__sub { font-size: 1.05rem; max-width: 640px; margin: 0 auto 1.5rem; line-height: 1.7; color: var(--slate-light); }
+
+    /* ── LANGUAGE SWITCH — pure CSS, zero JavaScript (INV-38) ──
+       One visually-hidden checkbox as a direct child of body, BEFORE the main landmark,
+       so `#langSwitch:checked ~ main …` reaches every content block. The two
+       tracks are paired blocks: .l-th (default) and .l-en (hidden until
+       checked; display:revert restores block for divs, inline for spans).
+       Naming stays clear of INV-12's menu-token regex (hamburger|burger|
+       nav__toggle|nav-toggle|navtoggle|menu-toggle|menu__toggle) — verified.
+       No JS also means no persistence across posts; each post opens in Thai. */
+    .lang-switch-box { position: absolute; left: -9999px; }
+    .l-en { display: none; }
+    #langSwitch:checked ~ main .l-en { display: revert; }
+    #langSwitch:checked ~ main .l-th { display: none; }
+    .lang-switch {
+      display: inline-flex; align-items: center; gap: 0.55rem;
+      margin-top: 1.4rem; padding: 0.4rem 1.1rem; border-radius: 50px;
+      background: rgba(255,255,255,0.7); border: 1px solid rgba(34,98,153,0.25);
+      cursor: pointer; font-size: 0.85rem; user-select: none;
+    }
+    .lang-switch span { color: var(--slate-light); font-weight: 600; transition: color 0.2s; }
+    .lang-switch .lang-sep { color: var(--gray); font-weight: 400; }
+    .lang-switch .lang-th { color: var(--navy); font-weight: 800; }
+    #langSwitch:checked ~ main .lang-switch .lang-th { color: var(--slate-light); font-weight: 600; }
+    #langSwitch:checked ~ main .lang-switch .lang-en { color: var(--navy); font-weight: 800; }
+    .lang-switch:hover { border-color: var(--blue); }
+    #langSwitch:focus-visible ~ main .lang-switch {
+      outline: 2px solid var(--focus); outline-offset: 3px;
+    }
+
+    /* ── ESSAY FURNITURE ── */
+    /* the epigraph — an homage to the book's "two lamps", quiet and centred */
+    .post-body .lamps {
+      background: none; border-left: none; border-radius: 0;
+      max-width: 620px; margin: 0 auto 2.5rem; padding: 0 1rem;
+      text-align: center; font-style: italic; font-size: 1.02rem;
+      line-height: 1.85; color: var(--slate);
+    }
+    .post-body .lamps cite {
+      display: block; font-style: normal;
+      margin-top: 0.6rem; font-size: 0.78rem;
+      color: var(--slate-light); letter-spacing: 0.04em;
+    }
+    /* the same-day practice */
+    .practice {
+      background: rgba(196,164,108,0.13); border-left: 4px solid var(--gold-dark);
+      border-radius: 0 10px 10px 0; padding: 1.15rem 1.35rem; margin: 1.75rem 0;
+    }
+    .practice p { margin-bottom: 0.5rem; }
+    .practice p:last-child { margin-bottom: 0; }
+    /* the question to carry */
+    .carry {
+      margin: 3rem auto 0; max-width: 560px; text-align: center;
+      padding: 1.6rem 1.25rem;
+      border-top: 1px solid rgba(34,98,153,0.2);
+      border-bottom: 1px solid rgba(34,98,153,0.2);
+    }
+    .carry .carry-label {
+      display: block; font-size: 0.72rem; font-weight: 700;
+      letter-spacing: 0.12em; text-transform: uppercase;
+      color: var(--gold-dark); margin-bottom: 0.6rem;
+    }
+    .carry p { font-size: 1.12rem; font-weight: 600; font-style: italic; color: var(--navy); margin: 0; }
+    /* the companion-book pointer */
+    .book-link {
+      margin: 2.25rem 0 0; padding: 1rem 1.25rem;
+      background: rgba(34,98,153,0.05); border: 1px solid rgba(34,98,153,0.14);
+      border-radius: 10px; font-size: 0.92rem;
+    }
+    .book-link p { margin: 0; }
+  </style>
+  <!-- social -->
+  <link rel="canonical" href="https://anirach.com/blog/work-corridor-voice.html">
+  <meta property="og:type" content="article">
+  <meta property="og:url" content="https://anirach.com/blog/work-corridor-voice.html">
+  <meta property="og:site_name" content="Anirach Mingkhwan">
+  <meta property="og:locale" content="th_TH">
+  <meta property="og:locale:alternate" content="en_US">
+  <meta property="article:published_time" content="2026-09-08">
+  <meta property="article:author" content="https://anirach.com/">
+  <meta property="og:title" content="เสียงในโถงทางเดิน — จัดการผู้บรรยายในหัว">
+  <meta property="og:description" content="เสียงที่เล่าเรื่องที่ทำงานซ้ำตอนตีสามไม่ใช่ความคิด แต่คือความกังวลที่แต่งตัวเป็นความคิด — วิธีแยกสองอย่าง นัดเวลาให้ความกังวล และคำถาม นี่คือความคิดหรือคืองาน">
+  <meta property="og:image" content="https://anirach.com/images/work-corridor-voice-og.jpg">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
+  <meta property="og:image:alt" content="เสียงในโถงทางเดิน — จัดการผู้บรรยายในหัว">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:image" content="https://anirach.com/images/work-corridor-voice-og.jpg">
+  <meta name="twitter:image:alt" content="เสียงในโถงทางเดิน — จัดการผู้บรรยายในหัว">
+  <meta name="robots" content="max-image-preview:large">
+  <meta name="theme-color" content="#11304b">
+  <link rel="icon" href="/favicon.ico" sizes="any">
+  <link rel="apple-touch-icon" href="/apple-touch-icon.png">
+  <!-- /social -->
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "BlogPosting",
+    "headline": "เสียงในโถงทางเดิน — จัดการผู้บรรยายในหัว",
+    "author": {
+      "@type": "Person",
+      "@id": "https://anirach.com/#person",
+      "name": "Anirach Mingkhwan",
+      "url": "https://anirach.com/"
+    },
+    "datePublished": "2026-09-08",
+    "dateModified": "2026-09-08",
+    "image": "https://anirach.com/images/work-corridor-voice-og.jpg",
+    "inLanguage": [
+      "th",
+      "en"
+    ],
+    "mainEntityOfPage": "https://anirach.com/blog/work-corridor-voice.html"
+  }
+  </script>
+</head>
+<body>
+<a href="#main" class="skip-link">Skip to content</a>
+<input type="checkbox" id="langSwitch" class="lang-switch-box" aria-label="Switch language: Thai / English">
+
+  <nav class="blog-nav">
+    <div class="blog-nav__inner">
+      <a href="../index.html" class="blog-nav__home">Anirach</a>
+      <a href="../thoughts/" class="blog-nav__back">‹ Thoughts</a>
+      <div class="blog-nav__title">The Voice in the Corridor · เสียงในโถงทางเดิน</div>
+    </div>
+  </nav>
+
+  <main id="main">
+
+  <header class="post-hero">
+    <div class="post-hero__tags">
+      <span class="post-hero__tag">Work</span>
+      <span class="post-hero__tag">Philosophy</span>
+      <span class="post-hero__tag">Tuesday</span>
+    </div>
+    <h1 class="post-hero__title"><span class="l-th">เสียงในโถงทางเดิน — จัดการผู้บรรยายในหัว</span><span class="l-en" lang="en">The Voice in the Corridor — Managing the Narrator in Your Head</span></h1>
+    <p class="post-hero__sub"><span class="l-th">ตอนตีสามมีเสียงหนึ่งเล่าเรื่องที่ทำงานซ้ำให้ฟัง มันไม่ใช่ความคิด มันคือความกังวลที่แต่งตัวเป็นความคิด — วิธีแยกสองอย่างนี้ นัดเวลาให้ความกังวล และถามว่านี่คือความคิดหรือคืองาน</span><span class="l-en" lang="en">At three in the morning a voice replays the office. It is not thinking; it is worry dressed as thinking — on telling the two apart, giving worry an appointment, and asking &quot;is this a thought or a task?&quot;</span></p>
+    <div class="post-hero__meta">
+      <span>By <strong>Anirach Mingkhwan</strong></span>
+      <span class="post-hero__series">Working Philosophies 2026 • Essay #4</span>
+      <span><time datetime="2026-09-08">8 Sep 2026</time></span>
+      <span>4 min read</span>
+    </div>
+    <label for="langSwitch" class="lang-switch" title="สลับภาษา · Switch language"><span class="lang-th">ไทย</span><span class="lang-sep">·</span><span class="lang-en" lang="en">English</span></label>
+    <div class="post-hero__cover">
+      <img src="../images/work-corridor-voice-cover.jpg" alt="เสียงในโถงทางเดิน — จัดการผู้บรรยายในหัว" width="800" height="800" loading="eager" fetchpriority="high" decoding="async">
+    </div>
+  </header>
+
+  <article class="post-body">
+
+    <details class="post-toc l-th" open>
+      <summary>ในบทความนี้</summary>
+      <ol>
+          <li><a href="#th-think">ความคิดกับความกังวล ต่างกันตรงไหน</a></li>
+          <li><a href="#th-appointment">นัดเวลาให้ความกังวล</a></li>
+          <li><a href="#th-convert">นี่คือความคิด หรือคืองาน</a></li>
+          <li><a href="#th-notyou">เสียงนั้นไม่ใช่เรา</a></li>
+          <li><a href="#th-practice">ข้อปฏิบัติสัปดาห์นี้</a></li>
+          <li><a href="#th-carry">คำถามติดตัว</a></li>
+      </ol>
+    </details>
+    <details class="post-toc l-en" open>
+      <summary>In this post</summary>
+      <ol>
+          <li><a href="#en-think">Thinking and worrying — where they differ</a></li>
+          <li><a href="#en-appointment">Give worry an appointment</a></li>
+          <li><a href="#en-convert">Is this a thought, or a task?</a></li>
+          <li><a href="#en-notyou">The voice is not you</a></li>
+          <li><a href="#en-practice">Try this week</a></li>
+          <li><a href="#en-carry">A question to carry</a></li>
+      </ol>
+    </details>
+    <div class="l-th">
+
+    <blockquote class="lamps">
+      <p>วันนี้ข้าพเจ้าหนีพ้นจากความกังวล — ไม่สิ ข้าพเจ้าโยนมันทิ้งต่างหาก เพราะมันไม่ได้อยู่ข้างนอก มันอยู่ในตัวข้าพเจ้าเอง ในวิธีที่ข้าพเจ้ามองสิ่งต่าง ๆ</p>
+      <cite class="lamps-cite">ถอดความจาก มาร์คัส ออเรลิอัส, «บันทึกส่วนตัว» เล่ม ๙ ข้อ ๑๓</cite>
+    </blockquote>
+
+    <p>ตีสาม เพดานห้องนอน และเสียงหนึ่งที่เล่าเรื่องที่ทำงานซ้ำให้ฟัง ประชุมเมื่อบ่าย ประโยคที่ควรพูดแต่ไม่ได้พูด การนำเสนอพรุ่งนี้ที่ล้มเหลวได้สิบสองแบบ ทีละแบบ อย่างละเอียด</p>
+    <p>เสียงนั้นฟังดูเหมือนการคิด มันใช้คำแบบเดียวกับการคิด มันดูขยัน ดูรับผิดชอบ ดูเหมือนคนที่เอางานกลับมาทำต่อที่บ้าน แต่ลองสังเกตให้ดี หลังจากผ่านไปหนึ่งชั่วโมง เรามีอะไรที่ไม่เคยมีตอนเที่ยงคืนบ้างไหม ไม่มี มีแต่เรื่องเดิม เล่ารอบที่สิบเอ็ด</p>
+    <p>ผมเรียกมันว่า<strong>เสียงในโถงทางเดิน</strong> — เสียงที่ยืนอยู่นอกห้องที่งานเกิดขึ้นจริง และพากย์เรื่องข้างในผ่านประตูปิด บทที่สองของวันอังคารว่าด้วยวิธีอยู่กับเสียงนี้ ไม่ใช่วิธีกำจัด เพราะกำจัดไม่ได้ แต่วิธีไม่ให้มันเป็นคนคุมโต๊ะ</p>
+
+    <h2 id="th-think">ความคิดกับความกังวล ต่างกันตรงไหน</h2>
+    <p>ทั้งสองอย่างเกิดขึ้นในหัวเดียวกัน ใช้ภาษาเดียวกัน และเรื่องเดียวกัน แต่ต่างกันที่ทิศทาง</p>
+    <p><strong>ความคิดเคลื่อนที่</strong> มันเดินไปหาการกระทำหรือการตัดสินใจ แล้วมันจบ «พรุ่งนี้สไลด์ที่หกอ่อน ต้องเพิ่มตัวเลขไตรมาสก่อน» — จบ นั่นคือความคิด มันใช้เวลาสามสิบวินาทีและทิ้งงานหนึ่งชิ้นไว้ให้</p>
+    <p><strong>ความกังวลหมุนเป็นวง</strong> มันกลับมาที่จุดเดิม ด้วยถ้อยคำเดิม โดยไม่ทิ้งอะไรไว้เลยนอกจากความเหนื่อย «ถ้าพรุ่งนี้พังจะเป็นอย่างไร เขาจะคิดว่าเราไม่พร้อม ไม่พร้อมจริง ๆ ด้วย ถ้าพรุ่งนี้พังจะเป็นอย่างไร» วงนี้หมุนได้ทั้งคืนโดยไม่แตะสไลด์ที่หกเลย</p>
+    <p>วิธีทดสอบง่ายที่สุด ตั้งเวลาสิบนาที แล้วถามตอนหมดเวลาว่า มีอะไรใหม่ในมือไหม — การตัดสินใจหนึ่งอย่าง งานหนึ่งชิ้น ข้อมูลหนึ่งอย่างที่ต้องไปหา ถ้ามี นั่นคือความคิด ทำต่อได้ ถ้าไม่มี นั่นคือความกังวลที่ใส่เสื้อของความคิดมา และมันจะไม่ให้อะไรเพิ่มในสิบนาทีถัดไปเช่นกัน</p>
+    <p>เรื่องยากคือความกังวลมักแต่งตัวเป็นความขยัน คนที่นอนไม่หลับเพราะงานรู้สึกว่าตัวเองรับผิดชอบกว่าคนที่หลับ ทั้งที่คนหลับจะมาถึงที่ทำงานพร้อมสมองที่วางอิฐได้ ส่วนคนที่ตื่นทั้งคืนมาถึงพร้อมเสียงในโถงทางเดินที่ดังกว่าเดิม</p>
+
+    <h2 id="th-appointment">นัดเวลาให้ความกังวล</h2>
+    <p>นักจิตวิทยาพฤติกรรมมีวิธีหนึ่งที่ฟังดูตลกแต่ใช้ได้ผลจริงมาหลายสิบปี — <strong>นัดเวลาให้ความกังวล</strong> เลือกเวลาหนึ่งในแต่ละวัน ยี่สิบนาที เช่นห้าโมงเย็น มีกระดาษหนึ่งแผ่นกับปากกา นั่นคือเวลาที่อนุญาตให้กังวลได้เต็มที่</p>
+    <p>ระหว่างวัน ทุกครั้งที่เสียงในโถงทางเดินเริ่มพากย์ ให้ทำสองอย่าง เขียนประโยคของมันลงกระดาษหนึ่งบรรทัด แล้วบอกมันว่า «ห้าโมง» ไม่เถียง ไม่ปลอบ ไม่วิเคราะห์ แค่จดแล้วนัด</p>
+    <p>พอถึงห้าโมง นั่งลงอ่านรายการ สิ่งที่คนส่วนใหญ่พบในสัปดาห์แรกคือความประหลาดใจ — รายการยาว แต่ครึ่งหนึ่งตายไปแล้วตั้งแต่ก่อนถึงห้าโมง ปัญหาที่ดูใหญ่ตอนสิบโมง ตอนห้าโมงกลายเป็นเรื่องที่แก้ไปแล้ว หรือไม่เคยเป็นปัญหา ส่วนที่ยังมีชีวิตอยู่ค่อยเอามาทำต่อในหัวข้อถัดไป</p>
+    <p>ทำไมวิธีนี้ถึงใช้ได้ ผมคิดว่าเพราะความกังวลไม่ได้ต้องการคำตอบ มันต้องการ<em>การรับรู้</em> การจดคือการบอกมันว่าได้ยินแล้ว การนัดคือการบอกว่าจะกลับมา และเมื่อมันเชื่อทั้งสองอย่าง มันยอมเงียบพอให้ทำงานได้</p>
+    <p>ส่วนตีสาม กฎมีข้อเดียวและไม่มีข้อยกเว้น เขียนลงกระดาษข้างเตียง แล้วนอน ห้ามคิดต่อ ห้ามหาทางแก้ ห้ามหยิบโทรศัพท์ ตีสามไม่ใช่เวลาที่มนุษย์ตัดสินใจอะไรได้ดี ตีสามเป็นเวลาที่ทุกปัญหาใหญ่กว่าความจริงสามเท่า</p>
+
+    <h2 id="th-convert">นี่คือความคิด หรือคืองาน</h2>
+    <p>ตอนห้าโมง กับรายการที่ยังมีชีวิตอยู่ในมือ มีทักษะหนึ่งที่ต้องฝึก คือการ<strong>แปลง</strong> ทุกประโยคที่เสียงพูดออกมา แปลงได้เป็นหนึ่งในสามอย่าง</p>
+    <ul>
+      <li><strong>งาน</strong> — «เขาจะคิดว่ารายงานอ่อน» แปลงเป็น «ส่งฉบับร่างให้พี่คนนั้นอ่านสิบนาทีก่อนส่งจริง» เขียนลงรายการที่ต้องทำ แล้วเสียงประโยคนั้นหมดหน้าที่</li>
+      <li><strong>อากาศ</strong> — «ถ้าบริษัทปรับโครงสร้างอีกรอบจะเป็นอย่างไร» แปลงเป็นอะไรไม่ได้ เพราะไม่มีอิฐก้อนไหนวางลงไปในฟ้าได้ เอาไปไว้วงนอกตามบทของวันจันทร์ แล้วปล่อย</li>
+      <li><strong>ตายแล้ว</strong> — เรื่องที่จบไปแล้ว ประโยคที่พูดพลาดไปเมื่อสามวันก่อน ไม่มีงาน ไม่มีอากาศ มีแต่การเล่าซ้ำ ขีดฆ่า</li>
+    </ul>
+    <p>สังเกตว่าเสียงในโถงทางเดินเกือบไม่เคยพูดเป็นงาน มันพูดเป็นความรู้สึกและคำพยากรณ์ «เราช้าไป» ไม่ใช่งาน แต่ «เขียนรายการอิฐสามก้อนที่เหลือ» คืองาน «เขาไม่พอใจเรา» ไม่ใช่งาน แต่ «ถามเขาตรง ๆ พรุ่งนี้ว่ามีอะไรที่อยากให้ทำต่างไปไหม» คืองาน การแปลงคือการเอาคำพยากรณ์ที่ตรวจไม่ได้ ไปเป็นการกระทำที่ตรวจได้</p>
+    <p>และมีสิ่งหนึ่งที่ควรระวัง คือทำการแปลงในเวลาที่มีแสง ไม่ใช่ตอนตีสาม การแปลงต้องการสมองที่นอนแล้ว</p>
+
+    <h2 id="th-notyou">เสียงนั้นไม่ใช่เรา</h2>
+    <p>ข้อสุดท้ายสำคัญที่สุดและพูดยากที่สุด เสียงในโถงทางเดินไม่ใช่เรา มันเป็นเสียงที่เราได้ยิน ไม่ใช่เสียงที่เราเป็น</p>
+    <p>ลองฟังมันดี ๆ สักครั้ง จะพบว่ามันมีบทพูดที่เขียนไว้นานแล้ว บางประโยคเป็นเสียงครูคนหนึ่งเมื่อยี่สิบปีก่อน บางประโยคเป็นเสียงหัวหน้าคนแรก บางประโยคเป็นเสียงที่บ้าน มันพากย์ด้วยคำเดิม น้ำเสียงเดิม ไม่ว่าเรื่องจะเปลี่ยนไปแค่ไหน นั่นคือหลักฐานว่ามันไม่ได้กำลังวิเคราะห์สถานการณ์วันนี้จริง ๆ มันแค่เปิดเทปเก่า</p>
+    <p>รู้อย่างนี้แล้วเราได้สิทธิ์สองอย่าง อย่างแรกคือได้ยินโดยไม่ต้องเชื่อฟัง เหมือนได้ยินเพื่อนร่วมงานที่ชอบทำนายหายนะ — รับฟัง พยักหน้า แล้วทำงานต่อ อย่างที่สองคือ<strong>เก็บส่วนที่จริง</strong> เพราะบางครั้งในเทปเก่านั้นมีประโยคเดียวที่ถูก «สไลด์ที่หกอ่อนจริง» เอาประโยคนั้นไป ทิ้งความดังไว้</p>
+    <p>และถ้าจะให้เสียงในหัวพูดกับเราสักอย่าง ให้มันพูดแบบที่เราจะพูดกับรุ่นน้องคนหนึ่งที่ตื่นตีสามเพราะงานพรุ่งนี้ — เราจะไม่บอกเขาว่าเขาไม่พร้อม เราจะบอกว่านอนเถอะ พรุ่งนี้ไปด้วยกัน ถ้าเรามีน้ำใจแบบนั้นให้คนอื่นได้ เราก็ค้างมันกับตัวเองอยู่</p>
+
+    <h2 id="th-practice">ข้อปฏิบัติสัปดาห์นี้</h2>
+    <div class="practice">
+      <p><strong>นัดเวลาให้ความกังวลหนึ่งนัดต่อวัน</strong> เวลาเดิมทุกวัน ยี่สิบนาที กระดาษหนึ่งแผ่น ระหว่างวันพกการ์ดใบเล็กไว้ในกระเป๋า เสียงพูดอะไร จดหนึ่งบรรทัด บอกมันว่า «ห้าโมง» แล้วหยิบอิฐต่อ</p>
+      <p>ถึงเวลานัด อ่านทุกบรรทัดแล้วเขียนตัวอักษรหนึ่งตัวข้างหลัง ง = งาน ใส่ลงรายการ ฟ = ฟ้า ปล่อย ต = ตายแล้ว ขีดฆ่า นับตอนท้ายสัปดาห์ว่าแต่ละตัวมีเท่าไร</p>
+      <p>ตีสาม กระดาษข้างเตียงเท่านั้น จดแล้วนอน แปลงตอนมีแสง</p>
+    </div>
+
+    <h2 id="th-carry">คำถามติดตัว</h2>
+    <p>คำถามวันนี้เอาไว้ถามตอนได้ยินเสียงนั้นครั้งถัดไป</p>
+    <aside class="carry">
+      <span class="carry-label">คำถามติดตัว · วันอังคาร</span>
+      <p>ถ้าเสียงในหัวเป็นเพื่อนร่วมงานคนหนึ่ง เราจะให้เขานั่งโต๊ะข้าง ๆ ไหม</p>
+    </aside>
+    <div class="book-link">
+      <p>ซีรีส์นี้เป็นภาคสัปดาห์ทำงานของ <a href="../thoughts/">Thoughts</a> — เดินคู่กับซีรีส์ «แสงของวันหนึ่ง» ที่เดินครบหนึ่งวันของชีวิต อ่านฟรีทั้งสองชุด</p>
+    </div>
+    </div>
+
+    <div class="l-en" lang="en">
+
+    <blockquote class="lamps">
+      <p>&ldquo;Today I escaped anxiety. Or no &mdash; I discarded it, because it was within me, in my own perceptions, not outside.&rdquo;</p>
+      <cite class="lamps-cite">after Marcus Aurelius, <em>Meditations</em> 9.13</cite>
+    </blockquote>
+
+    <p>Three in the morning, the bedroom ceiling, and a voice replaying the office. The meeting this afternoon. The sentence you should have said and did not. Tomorrow&rsquo;s presentation failing in twelve different ways, one at a time, in detail.</p>
+    <p>The voice sounds like thinking. It uses the same words as thinking. It seems diligent, responsible, like someone who brings the work home. But watch it closely. After an hour, do you have anything you did not have at midnight? No. You have the same story, told for the eleventh time.</p>
+    <p>I call it <strong>the voice in the corridor</strong> &mdash; a voice standing outside the room where the work actually happens, narrating through a closed door. Tuesday&rsquo;s second essay is about living with that voice: not getting rid of it, because you cannot, but keeping it from running the desk.</p>
+
+    <h2 id="en-think">Thinking and worrying &mdash; where they differ</h2>
+    <p>Both happen in the same head, in the same language, about the same things. They differ in direction.</p>
+    <p><strong>Thinking moves.</strong> It walks toward an action or a decision, and then it ends. &ldquo;Slide six is weak; add last quarter&rsquo;s numbers&rdquo; &mdash; done. That is thinking. It takes thirty seconds and leaves one task behind.</p>
+    <p><strong>Worrying circles.</strong> It returns to the same point, in the same words, leaving nothing behind but fatigue. &ldquo;What if tomorrow goes wrong &mdash; they&rsquo;ll think I&rsquo;m not ready &mdash; I&rsquo;m really not &mdash; what if tomorrow goes wrong.&rdquo; That circle can turn all night without touching slide six once.</p>
+    <p>The simplest test: set a timer for ten minutes, and when it rings ask whether you have anything new in hand &mdash; a decision, a task, one fact to look up. If yes, it was thinking; carry on. If no, it was worry wearing thinking&rsquo;s clothes, and it will give you nothing in the next ten minutes either.</p>
+    <p>The hard part is that worry usually dresses as diligence. The person kept awake by work feels more responsible than the person who sleeps &mdash; though the sleeper arrives with a brain that can lay bricks, and the one who lay awake arrives with the corridor voice louder than before.</p>
+
+    <h2 id="en-appointment">Give worry an appointment</h2>
+    <p>Behavioural psychologists have a method that sounds faintly ridiculous and has worked for decades: <strong>schedule the worry.</strong> Pick one time each day &mdash; twenty minutes, say five in the afternoon &mdash; with a sheet of paper and a pen. That is the time worrying is fully permitted.</p>
+    <p>During the day, whenever the corridor voice starts narrating, do two things. Write its sentence on one line of the paper. Then tell it, &ldquo;five o&rsquo;clock.&rdquo; No arguing, no soothing, no analysis. Note it, and book it.</p>
+    <p>At five, sit down and read the list. What most people find in the first week is a surprise: the list is long, but half of it died before five o&rsquo;clock arrived. The problem that loomed at ten in the morning had been solved by five, or had never been a problem. The lines still alive go on to the next section.</p>
+    <p>Why does this work? I think because worry does not want an answer. It wants <em>acknowledgement</em>. Writing it down tells it it has been heard; booking it tells it you will come back. Once it believes both, it goes quiet enough to let you work.</p>
+    <p>As for three in the morning, there is one rule and no exceptions. Write it on the paper beside the bed, and sleep. No thinking it through, no solving, no phone. Three a.m. is not an hour at which human beings decide anything well. It is the hour when every problem is three times its real size.</p>
+
+    <h2 id="en-convert">Is this a thought, or a task?</h2>
+    <p>At five o&rsquo;clock, with the surviving lines in hand, there is one skill to practise: <strong>conversion</strong>. Every sentence the voice speaks converts into one of three things.</p>
+    <ul>
+      <li><strong>A task</strong> &mdash; &ldquo;They&rsquo;ll think the report is weak&rdquo; converts to &ldquo;send the draft to Nok for a ten-minute read before it goes.&rdquo; It goes on the to-do list, and that sentence has done its job.</li>
+      <li><strong>Weather</strong> &mdash; &ldquo;What if the company restructures again?&rdquo; converts to nothing, because no brick can be laid in the sky. It goes in the outer ring, as in Monday&rsquo;s essay, and is let go.</li>
+      <li><strong>Dead</strong> &mdash; the thing already over, the sentence misspoken three days ago. No task, no weather, only a replay. Cross it out.</li>
+    </ul>
+    <p>Notice that the corridor voice almost never speaks in tasks. It speaks in feelings and forecasts. &ldquo;I&rsquo;m behind&rdquo; is not a task; &ldquo;list the three bricks left&rdquo; is. &ldquo;She&rsquo;s unhappy with me&rdquo; is not a task; &ldquo;ask her tomorrow, directly, whether she wants anything done differently&rdquo; is. Conversion means taking a forecast that cannot be checked and turning it into an action that can.</p>
+    <p>One caution: do the converting in daylight, never at three in the morning. Conversion needs a brain that has slept.</p>
+
+    <h2 id="en-notyou">The voice is not you</h2>
+    <p>The last point matters most and is the hardest to say. The voice in the corridor is not you. It is a voice you hear, not a voice you are.</p>
+    <p>Listen to it carefully just once and you will find it has a script written long ago. Some lines are a teacher&rsquo;s voice from twenty years back. Some are a first boss. Some come from home. It narrates in the same words and the same tone no matter how much the situation changes &mdash; which is the proof that it is not really analysing today at all. It is playing an old tape.</p>
+    <p>Knowing this gives you two rights. The first is to hear without obeying, as you would hear a colleague who loves predicting disaster: listen, nod, go back to work. The second is to <strong>keep the true part</strong>, because sometimes the old tape contains one line that is right &mdash; &ldquo;slide six really is weak.&rdquo; Take that line. Leave the volume.</p>
+    <p>And if the voice in your head must say something to you, let it say what you would say to a junior colleague awake at three because of tomorrow. You would not tell them they are not ready. You would tell them to sleep, that you will go in together. If you have that kindness to give to others, you owe it to yourself.</p>
+
+    <h2 id="en-practice">Try this week</h2>
+    <div class="practice">
+      <p><strong>One worry appointment a day</strong>, same time every day, twenty minutes, one sheet of paper. During the day carry a small card in your pocket: whatever the voice says, one line, then &ldquo;five o&rsquo;clock,&rdquo; then back to the brick.</p>
+      <p>At the appointment, read every line and write one letter after it. T for task &mdash; onto the list. W for weather &mdash; let go. D for dead &mdash; cross out. At the end of the week, count how many of each you had.</p>
+      <p>At three a.m., only the paper by the bed. Write, then sleep. Convert in daylight.</p>
+    </div>
+
+    <h2 id="en-carry">A question to carry</h2>
+    <p>Today&rsquo;s question is for the next time you hear that voice.</p>
+    <aside class="carry">
+      <span class="carry-label">A question to carry &middot; Tuesday</span>
+      <p>If the voice in your head were a colleague, would you let it sit at the next desk?</p>
+    </aside>
+    <div class="book-link">
+      <p>This series is the working-week half of <a href="../thoughts/">Thoughts</a> &mdash; it walks beside the <em>One Day of Light</em> essays, which walk one whole day of a life. Both are free to read.</p>
+    </div>
+    </div>
+
+    <div class="post-series-footer">
+      <span class="l-th">บทความจากซีรีส์ Working Philosophies — หนึ่งสัปดาห์ทำงานในสิบบทความ</span><span class="l-en" lang="en">From the Working Philosophies series — one working week in ten essays</span>
+    </div>
+
+    <nav aria-label="Working Philosophies">
+    <div class="series-nav">
+      <h3>🧭 Working Philosophies 2026</h3>
+      <div class="series-links">
+        <a href="/blog/work-where-you-stand">#1 ยืนตรงไหน · Where You Stand</a>
+        <a href="/blog/work-whose-weather">#2 ฟ้าของใคร · Whose Weather</a>
+        <a href="/blog/work-one-brick">#3 อิฐหนึ่งก้อน · One Brick</a>
+        <span class="current" aria-current="page">#4 เสียงในโถง · The Corridor Voice</span>
+        <a href="/blog/work-stuck-is-a-place">#5 ติดอยู่คือสถานที่ · Stuck Is a Place</a>
+        <a href="/blog/work-small-fire">#6 ไฟกองเล็ก · A Small Fire</a>
+        <a href="/blog/work-the-line">#7 เส้นที่ไม่ข้าม · The Line</a>
+        <a href="/blog/work-fair-fight">#8 สู้อย่างเป็นธรรม · A Fair Fight</a>
+        <a href="/blog/work-door-and-window">#9 ประตูกับหน้าต่าง · Door and Window</a>
+        <a href="/blog/work-carry-home">#10 สิ่งที่พกกลับบ้าน · Carry Home</a>
+      </div>
+    </div>
+    </nav>
+
+  </article>
+
+  </main>
+
+  <footer class="blog-footer">
+    <nav class="blog-footer__nav" aria-label="Site">
+      <a href="../index.html">Home</a>
+      <a href="./">Tutorials</a>
+      <a href="../thoughts/">Thoughts</a>
+      <a href="../publications/">Publications</a>
+      <a href="../books/">Books</a>
+      <a href="../projects/">Projects</a>
+      <a href="../news/">News</a>
+      <a href="../index.html#contact">Contact</a>
+    </nav>
+    <a href="../thoughts/">← Back to Thoughts</a>
+    <span>© 2026 Anirach Mingkhwan — Associate Professor, KMUTNB</span>
+  </footer>
+
+</body>
+</html>
