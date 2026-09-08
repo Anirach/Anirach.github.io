@@ -2675,6 +2675,308 @@ def at_spiral(d, b, c, o):
     circ(d, pts[-1][0], pts[-1][1], h * 0.085, fill=c["hi"], outline=None)
 
 
+# --------------------------------------------------------------------------
+# AI-Core motifs -- green diagram primitives on cloud/parchment (2026-09-08).
+# Same discipline as the AT set: flat primitives, one navy core mass, the
+# accent (green) as the lit ink; the vs notes keep each drawing apart from
+# the AT/HD vocabulary it is closest to.
+# --------------------------------------------------------------------------
+def ac_quadrant(d, b, c, o):
+    """A 2x2 field of four DETACHED rounded tiles with clear gutters, three
+    quiet with faint ring marks, the top-right lit in green around a small
+    solid navy core dot -- classification, and the AI-core cell found.  vs
+    at_core (ONE rectangle divided by rules, a dashed bracket, an origin
+    marker): no shared frame, no bracket -- four separate tiles, and the
+    mark sits INSIDE the lit one."""
+    x0, y0, x1, y1 = b
+    w, h = x1 - x0, y1 - y0
+    gap = h * 0.10
+    tw = min((w - gap) / 2, h * 1.4)
+    th = (h - gap) / 2
+    gx0 = (x0 + x1) / 2 - tw - gap / 2
+    for r_ in range(2):
+        for k in range(2):
+            tx = gx0 + k * (tw + gap)
+            ty = y0 + r_ * (th + gap)
+            lit = (r_ == 0 and k == 1)
+            rr(d, (tx, ty, tx + tw, ty + th), h * 0.05,
+               fill=c["hif"] if lit else (c["fill"] if (r_ + k) % 2 else c["dimf"]),
+               outline=c["hi"] if lit else c["ln2"], w=8 if lit else 5)
+            if lit:
+                circ(d, tx + tw / 2, ty + th / 2, h * 0.075, fill=c["core"])
+            else:
+                circ(d, tx + tw / 2, ty + th / 2, h * 0.055,
+                     fill=None, outline=c["ln2"], w=5)
+
+
+def ac_strata(d, b, c, o):
+    """Three broad translucent strata bands, staggered and OVERLAPPING so the
+    seams show through, the middle era lit green, two navy rivet dots pinning
+    the two seams -- three eras, one deployed system.  vs at_spine (six
+    closed bars pierced by a spine) and oc_memarch's labelled strata: only
+    three bands, nothing pierces them, and they overlap."""
+    x0, y0, x1, y1 = b
+    w, h = x1 - x0, y1 - y0
+    bh = h * 0.44
+    ov = h * 0.16
+    step = bh - ov
+    fills = [c["dimf"], c["hif"], c["fill"]]
+    for i in range(3):
+        bx0 = x0 + w * 0.04 * (2 - i)
+        bx1 = x1 - w * 0.04 * i
+        by0 = y0 + i * step
+        rr(d, (bx0, by0, bx1, by0 + bh), h * 0.09, fill=fills[i],
+           outline=c["hi"] if i == 1 else c["ln2"], w=7 if i == 1 else 5)
+    circ(d, x0 + w * 0.30, y0 + step + ov / 2, h * 0.055, fill=c["core"])
+    circ(d, x0 + w * 0.62, y0 + 2 * step + ov / 2, h * 0.055, fill=c["core"])
+
+
+def ac_seams(d, b, c, o):
+    """A chip package seen flat -- pins on all four sides around a solid navy
+    die -- five thin crack lines radiating from its edges and ONE pin lit
+    green where a guarantee still holds.  vs hd_cartridge (a chip sliding
+    into a slot beside a gauge): nothing moves here; the page's only
+    CRACKS."""
+    x0, y0, x1, y1 = b
+    w, h = x1 - x0, y1 - y0
+    cx, cy = (x0 + x1) / 2, (y0 + y1) / 2
+    s = h * 0.38
+    pl = s * 0.30
+
+    def crack(px_, py_, ang, ln_):
+        pts = [(px_, py_)]
+        seg = ln_ / 3.0
+        for i in range(3):
+            aa = ang + (0.45 if i % 2 else -0.45)
+            px_ += seg * math.cos(aa)
+            py_ += seg * math.sin(aa)
+            pts.append((px_, py_))
+        d.line(pts, fill=c["ln"], width=4, joint="curve")
+
+    crack(cx + s, cy - s * 0.30, -0.20, w * 0.21)
+    crack(cx + s, cy + s * 0.55, 0.30, w * 0.18)
+    crack(cx - s, cy - s * 0.50, math.pi + 0.22, w * 0.21)
+    crack(cx - s, cy + s * 0.30, math.pi - 0.26, w * 0.18)
+    crack(cx + s * 0.55, cy - s, -0.85, h * 0.16)
+    rr(d, (cx - s, cy - s, cx + s, cy + s), s * 0.16,
+       fill=(255, 255, 255, 235), outline=c["ln"], w=7)
+    ds = s * 0.42
+    rr(d, (cx - ds, cy - ds, cx + ds, cy + ds), s * 0.08, fill=c["core"])
+    for k in (-0.55, 0.0, 0.55):
+        lit = k == -0.55
+        d.line([(cx + s, cy + s * k), (cx + s + pl, cy + s * k)],
+               fill=c["hi"] if lit else c["ln"], width=8 if lit else 6)
+        if lit:
+            circ(d, cx + s + pl, cy + s * k, h * 0.035, fill=c["hi"])
+        d.line([(cx - s, cy + s * k), (cx - s - pl, cy + s * k)], fill=c["ln"], width=6)
+        d.line([(cx + s * k, cy - s), (cx + s * k, cy - s - pl)], fill=c["ln"], width=6)
+        d.line([(cx + s * k, cy + s), (cx + s * k, cy + s + pl)], fill=c["ln"], width=6)
+
+
+def ac_manifest(d, b, c, o):
+    """One document sheet -- a solid navy header bar, six short rows each
+    pinned at its left by a green dot, a gold tie knot draped over the
+    top-right corner -- and three loose source tiles feeding into its edge:
+    everything the run depends on, pinned in one manifest.  vs at_contract
+    (a sheet split into two inks with a seal) and at_ledger (tabs on a bar):
+    one column of PINNED rows, and the page's only knot."""
+    x0, y0, x1, y1 = b
+    w, h = x1 - x0, y1 - y0
+    sx0, sx1 = x0 + w * 0.02, x0 + w * 0.55
+    sy0, sy1 = y0 + h * 0.02, y1 - h * 0.02
+    rr(d, (sx0, sy0, sx1, sy1), h * 0.05, fill=(255, 255, 255, 235),
+       outline=c["ln"], w=7)
+    rr(d, (sx0 + w * 0.03, sy0 + h * 0.07, sx1 - w * 0.03, sy0 + h * 0.17),
+       h * 0.03, fill=c["core"])
+    for k in range(6):
+        yy = sy0 + h * (0.27 + k * 0.115)
+        circ(d, sx0 + w * 0.045, yy, h * 0.024, fill=c["hi"])
+        d.line([(sx0 + w * 0.075, yy),
+                (sx1 - w * (0.05 + 0.05 * (k % 3)), yy)], fill=c["ln2"], width=6)
+    for i, fy in enumerate((0.16, 0.48, 0.80)):
+        tx = x0 + w * 0.80
+        ty = y0 + h * fy
+        d.line(_hd_bez((tx, ty), (x0 + w * 0.68, ty), (sx1, y0 + h * 0.48)),
+               fill=c["ln2"], width=5)
+        rr(d, (tx, ty - h * 0.07, x1 - w * 0.02, ty + h * 0.07), h * 0.025,
+           fill=c["fill"] if i % 2 else c["dimf"], outline=c["ln2"], w=5)
+    kr = h * 0.055
+    circ(d, sx1, sy0 + h * 0.02, kr, fill=None, outline=c["gold"], w=6)
+    d.line(_hd_bez((sx1 + kr, sy0 + h * 0.02), (sx1 + kr * 2.4, sy0 + h * 0.10),
+                   (sx1 + kr * 1.2, sy0 + h * 0.22)), fill=c["gold"], width=5)
+    d.line(_hd_bez((sx1, sy0 + h * 0.02 + kr), (sx1 - kr * 1.8, sy0 + h * 0.14),
+                   (sx1 - kr * 0.6, sy0 + h * 0.24)), fill=c["gold"], width=5)
+
+
+def ac_gauge(d, b, c, o):
+    """A semicircular gauge: ticks along the arc, a shaded green error band
+    between two radii, and a navy needle out of a solid navy hub resting
+    INSIDE the band -- calibration for the fallible savant.  vs dv_sre's
+    dial (a 99.9% numeral and a burn-down beside it) and lp_truenorth's
+    compass rose: no numerals, no rose -- the page's only shaded error
+    BAND."""
+    x0, y0, x1, y1 = b
+    w, h = x1 - x0, y1 - y0
+    cx, cy = (x0 + x1) / 2, y1 - h * 0.06
+    r = min(h * 0.78, w * 0.36)
+    d.pieslice([cx - r, cy - r, cx + r, cy + r], 292, 338, fill=c["hif"])
+    d.pieslice([cx - r * 0.60, cy - r * 0.60, cx + r * 0.60, cy + r * 0.60],
+               290, 340, fill=c["bg"])
+    d.arc([cx - r, cy - r, cx + r, cy + r], 180, 360, fill=c["ln2"], width=10)
+    d.arc([cx - r, cy - r, cx + r, cy + r], 292, 338, fill=c["hi"], width=14)
+    for k in range(9):
+        a = math.radians(180 + k * 22.5)
+        d.line([(cx + r * 1.06 * math.cos(a), cy + r * 1.06 * math.sin(a)),
+                (cx + r * 1.16 * math.cos(a), cy + r * 1.16 * math.sin(a))],
+               fill=c["ln2"], width=5)
+    na = math.radians(316)
+    d.line([(cx, cy), (cx + r * 0.82 * math.cos(na), cy + r * 0.82 * math.sin(na))],
+           fill=c["ln"], width=9)
+    circ(d, cx, cy, h * 0.09, fill=c["core"])
+
+
+def ac_loop(d, b, c, o):
+    """A rounded rectangular circuit with four ring stations at its corners,
+    the first solid navy, an arrowhead riding the top run and one green
+    diamond gate astride the bottom run -- specify, constrain, generate,
+    verify, and the gate every action must clear.  vs hm_loop (an arrow
+    closing round a page), at_engine (a necklace round a hub) and
+    at_incident (a BROKEN ring): a rectangular loop, and the page's only
+    diamond gate."""
+    x0, y0, x1, y1 = b
+    w, h = x1 - x0, y1 - y0
+    lx0, ly0 = x0 + w * 0.10, y0 + h * 0.16
+    lx1, ly1 = x1 - w * 0.10, y1 - h * 0.16
+    rr(d, (lx0, ly0, lx1, ly1), h * 0.09, fill=None, outline=c["ln"], w=8)
+    ax = (lx0 + lx1) / 2
+    d.polygon([(ax + h * 0.10, ly0), (ax - h * 0.06, ly0 - h * 0.075),
+               (ax - h * 0.06, ly0 + h * 0.075)], fill=c["ln"])
+    for i, (nx, ny) in enumerate(((lx0, ly0), (lx1, ly0), (lx1, ly1), (lx0, ly1))):
+        if i == 0:
+            circ(d, nx, ny, h * 0.105, fill=c["core"])
+        else:
+            circ(d, nx, ny, h * 0.105, fill=(255, 255, 255, 235),
+                 outline=c["ln"], w=7)
+    gx_, gy_ = (lx0 + lx1) / 2, ly1
+    gs = h * 0.155
+    d.polygon([(gx_, gy_ - gs), (gx_ + gs, gy_), (gx_, gy_ + gs), (gx_ - gs, gy_)],
+              fill=c["hif"], outline=c["hi"], width=8)
+    circ(d, gx_, gy_, h * 0.035, fill=c["hi"])
+
+
+def ac_seal(d, b, c, o):
+    """A contract sheet with ruled lines, one solid navy signature bar, and a
+    green circular seal with two gold ribbon tails at its foot -- the
+    assurance contract, signed and sealed.  vs at_contract (a sheet SPLIT
+    into navy bars and dashed coral bars, bare seal) and ac_manifest's
+    pinned rows: full-width rules in one ink, and the page's only ribbon."""
+    x0, y0, x1, y1 = b
+    w, h = x1 - x0, y1 - y0
+    sx0, sx1 = x0 + w * 0.06, x1 - w * 0.06
+    sw = sx1 - sx0
+    rr(d, (sx0, y0 + h * 0.01, sx1, y1 - h * 0.01), h * 0.05,
+       fill=(255, 255, 255, 235), outline=c["ln"], w=7)
+    for k in range(4):
+        yy = y0 + h * (0.15 + k * 0.13)
+        d.line([(sx0 + sw * 0.06, yy), (sx1 - sw * 0.06, yy)], fill=c["ln2"], width=5)
+    rr(d, (sx0 + sw * 0.06, y1 - h * 0.31, sx0 + sw * 0.42, y1 - h * 0.20),
+       h * 0.03, fill=c["core"])
+    scx, scy = sx1 - sw * 0.13, y1 - h * 0.30
+    sr = h * 0.14
+    for dxr in (-0.5, 0.5):
+        d.polygon([(scx + sr * dxr * 0.6, scy + sr * 0.5),
+                   (scx + sr * dxr * 1.5, scy + sr * 1.9),
+                   (scx + sr * dxr * 0.1, scy + sr * 1.55)], fill=c["gold"])
+    circ(d, scx, scy, sr, fill=c["hif"], outline=c["hi"], w=8)
+    circ(d, scx, scy, sr * 0.5, fill=None, outline=c["hi"], w=6)
+
+
+def ac_rails(d, b, c, o):
+    """Five horizontal rails running edge to edge from one solid navy origin
+    bar, three green gate posts astride three DIFFERENT rails -- hard gates
+    on some seams only.  vs at_rails (five VERTICAL tiles inside a coral
+    envelope, one navy gate) and at_lanes (a path stepping across lanes):
+    the rails lie flat, no envelope, no path -- only gates."""
+    x0, y0, x1, y1 = b
+    w, h = x1 - x0, y1 - y0
+    rails = [y0 + h * (0.08 + i * 0.21) for i in range(5)]
+    rr(d, (x0, y0 + h * 0.01, x0 + w * 0.042, y1 - h * 0.01), w * 0.012,
+       fill=c["core"])
+    for ry in rails:
+        d.line([(x0 + w * 0.042, ry), (x1, ry)], fill=c["ln2"], width=6)
+    gw_, gh_ = w * 0.052, h * 0.21
+    for ri, fx in ((0, 0.30), (2, 0.55), (3, 0.80)):
+        gx_ = x0 + w * fx
+        ry = rails[ri]
+        rr(d, (gx_ - gw_ / 2, ry - gh_ / 2, gx_ + gw_ / 2, ry + gh_ / 2),
+           gw_ * 0.35, fill=c["hi"])
+        d.line([(gx_ - gw_ * 0.16, ry), (gx_ + gw_ * 0.16, ry)],
+               fill=c["bg"], width=5)
+
+
+def ac_scale(d, b, c, o):
+    """A two-pan balance, its beam tipped: the lower pan carries a
+    green-filled block (the full system), the higher pan the same block as a
+    bare outline (the ablated one) -- paired comparison, weighed.  Post and
+    foot are the drawing's one solid navy mass.  vs dv_quality's magnifier
+    and at_supply's meter: the page's only BALANCE."""
+    x0, y0, x1, y1 = b
+    w, h = x1 - x0, y1 - y0
+    cx = (x0 + x1) / 2
+    py0 = y0 + h * 0.12
+    rr(d, (cx - w * 0.011, py0, cx + w * 0.011, y1 - h * 0.08), w * 0.008,
+       fill=c["core"])
+    rr(d, (cx - w * 0.10, y1 - h * 0.10, cx + w * 0.10, y1 - h * 0.02),
+       h * 0.025, fill=c["core"])
+    span = min(w * 0.33, h * 1.05)
+    tilt = h * 0.09
+    bl = (cx - span, py0 + tilt)
+    br_ = (cx + span, py0 - tilt)
+    d.line([bl, br_], fill=c["ln"], width=9)
+    circ(d, cx, py0, h * 0.05, fill=c["core"])
+    for (ex, ey), full in ((bl, True), (br_, False)):
+        pr = min(w * 0.13, h * 0.40)
+        py = ey + h * 0.36
+        d.line([(ex, ey), (ex - pr * 0.85, py)], fill=c["ln2"], width=5)
+        d.line([(ex, ey), (ex + pr * 0.85, py)], fill=c["ln2"], width=5)
+        d.pieslice([ex - pr, py - pr, ex + pr, py + pr], 0, 180,
+                   fill=c["fill"], outline=c["ln"], width=6)
+        s = pr * 0.52
+        if full:
+            rr(d, (ex - s, py - s * 1.75, ex + s, py - h * 0.005), s * 0.2,
+               fill=c["hif"], outline=c["hi"], w=7)
+        else:
+            rr(d, (ex - s, py - s * 1.75, ex + s, py - h * 0.005), s * 0.2,
+               fill=None, outline=c["ln2"], w=6)
+
+
+def ac_dial(d, b, c, o):
+    """A straight slider: one track with four detent marks, the run up to the
+    knob filled green, a gold marker over the chosen stop, and the knob -- a
+    green ring around a solid navy centre -- resting on the THIRD detent:
+    the autonomy slider, set deliberately.  vs ac_gauge's arc-and-needle and
+    dv_sre's dial: a STRAIGHT track, nothing swings; vs at_track's six
+    segments and flag: one continuous slide."""
+    x0, y0, x1, y1 = b
+    w, h = x1 - x0, y1 - y0
+    ty = y0 + h * 0.48
+    th_ = h * 0.09
+    tx0, tx1 = x0 + w * 0.03, x1 - w * 0.03
+    rr(d, (tx0, ty - th_ / 2, tx1, ty + th_ / 2), th_ / 2,
+       fill=c["dimf"], outline=c["ln2"], w=5)
+    dets = [tx0 + (tx1 - tx0) * f for f in (0.14, 0.38, 0.62, 0.86)]
+    kx = dets[2]
+    rr(d, (tx0, ty - th_ / 2, kx, ty + th_ / 2), th_ / 2,
+       fill=c["hif"], outline=c["hi"], w=6)
+    for dx_ in dets:
+        d.line([(dx_, ty + h * 0.16), (dx_, ty + h * 0.28)], fill=c["ln2"], width=6)
+    d.polygon([(kx, ty - h * 0.24), (kx - h * 0.075, ty - h * 0.38),
+               (kx + h * 0.075, ty - h * 0.38)], fill=c["gold"])
+    kr = h * 0.155
+    circ(d, kx, ty, kr, fill=(255, 255, 255, 235), outline=c["hi"], w=9)
+    circ(d, kx, ty, kr * 0.42, fill=c["core"])
+
+
 MOTIFS = {
     "oc_os": oc_os, "oc_team": oc_team, "oc_memory": oc_memory,
     "oc_security": oc_security, "oc_integrations": oc_integrations,
@@ -2710,6 +3012,10 @@ MOTIFS = {
     "at_rails": at_rails, "at_gate": at_gate, "at_incident": at_incident,
     "at_ledger": at_ledger, "at_supply": at_supply, "at_track": at_track,
     "at_scorecard": at_scorecard, "at_spiral": at_spiral,
+    "ac_quadrant": ac_quadrant, "ac_strata": ac_strata,
+    "ac_seams": ac_seams, "ac_manifest": ac_manifest,
+    "ac_gauge": ac_gauge, "ac_loop": ac_loop, "ac_seal": ac_seal,
+    "ac_rails": ac_rails, "ac_scale": ac_scale, "ac_dial": ac_dial,
 }
 
 

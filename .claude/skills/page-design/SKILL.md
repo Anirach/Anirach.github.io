@@ -480,7 +480,7 @@ partitioned nothing, and it was deleted on 2026-08-26 along with the two empty p
 
 ```bash
 python3 -c "import re,collections; s=open('blog/index.html').read(); print(collections.Counter(int(m.group(1)) for m in re.finditer(r'<h([1-6])\b[^>]*>', s)))"
-# → Counter({3: 84, 2: 7, 1: 1})   (2026-09-07 redesign: +feature h3, +"Start here" kicker h2)
+# → Counter({3: 94, 2: 8, 1: 1})   (redesign ladder; 93 cards + feature at h3, 7 series + kicker at h2)
 ```
 
 **Card titles are `h3`.** They were `h2` before Task 11, `h4` between Task 11 and the band

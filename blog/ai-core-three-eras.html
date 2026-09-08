@@ -1,0 +1,1179 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Software 1.0 · 2.0 · 3.0 — สามยุคซ้อนกันในระบบเดียว | Anirach Mingkhwan</title>
+  <meta name="description" content="สามยุคของซอฟต์แวร์ไม่แทนที่กันแต่ซ้อนกันในระบบเดียว — ทำบัญชี artifact ระบุชั้นที่คุมพฤติกรรม และอ่านลายเซ็นความล้มเหลวของ 1.0, 2.0 และ 3.0 ให้ออก">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=Sarabun:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      color-scheme: light;
+      /* ink */
+      --navy: #11304b; --slate: #334155; --slate-light: #526174; --gray: #94a3b8;
+      /* ground */
+      --bg: #faf7f0; --white: #ffffff; --code-bg: #1e293b;
+      /* accent */
+      --blue: #226299; --blue-dark: #1a4d7a; --blue-light: #4992b9;
+      /* brand — sampled from the book covers. --gold is decorative on light grounds (2.2:1); --gold-dark is its text form. */
+      --gold: #c4a46c; --gold-dark: #7a5f22; --cloud: #dee7e6; --parchment: #e9e1c4; --focus: #226299;
+      /* status — use only these six, never invent a seventh */
+      --green: #22c55e; --red: #ef4444; --amber: #f59e0b;
+      --cyan: #06b6d4; --purple: #226299; --purple-dark: #1a4d7a;
+      /* type */
+      --font: 'Inter', 'Sarabun', -apple-system, BlinkMacSystemFont, sans-serif;
+      --mono: 'JetBrains Mono', 'Fira Code', 'Sarabun', monospace;
+      /* form */
+      --radius: 12px; --radius-sm: 8px; --radius-lg: 16px;
+      --measure: 720px; --wide: 860px;
+      --transition: 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+    html { scroll-behavior: smooth; }
+    body { font-family: var(--font); font-size: 17px; line-height: 1.8; color: var(--slate); background: var(--bg); -webkit-font-smoothing: antialiased; }
+    .blog-nav { position: fixed; top: 0; left: 0; right: 0; z-index: 100; background: rgba(248,250,252,0.85); backdrop-filter: blur(20px); border-bottom: 1px solid rgba(0,0,0,0.05); }
+    .blog-nav__inner { max-width: 860px; margin: 0 auto; padding: 0 2rem; height: 56px; display: flex; align-items: center; justify-content: space-between; }
+    .blog-nav__back { font-size: 0.85rem; font-weight: 500; color: var(--blue); text-decoration: none; }
+    .blog-nav__back:hover { color: #1a4d7a; }
+    .blog-nav__title { font-size: 0.85rem; font-weight: 600; color: var(--navy); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 50%; }
+    /* ── HERO ── house .post-hero on the approved Deep Blue gradient (page-design
+       §5 / INV-28). Ink is inverted for the dark ground: white title/meta, tag
+       pills white on 18% white — the openclaw-production treatment. The
+       background value must stay byte-identical to the approved string. */
+    .post-hero { padding: 8rem 2rem 3rem; background: linear-gradient(135deg, #11304b 0%, #1a4d7a 45%, #226299 100%); color: #fff; text-align: center; }
+    .post-hero__tags { display: flex; gap: 0.5rem; justify-content: center; margin-bottom: 1.25rem; flex-wrap: wrap; }
+    .post-hero__tag { display: inline-block; font-size: 0.72rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.1em; color: #fff; background: rgba(255,255,255,0.18); padding: 0.35rem 0.9rem; border-radius: 20px; }
+    .post-hero__title { font-size: clamp(1.8rem, 5vw, 3rem); font-weight: 800; color: #fff; line-height: 1.2; margin-bottom: 1rem; max-width: 720px; margin-left: auto; margin-right: auto; }
+    .post-hero__sub { font-size: 1.05rem; max-width: 640px; margin: 0 auto 1.5rem; line-height: 1.7; color: #fff; }
+    .post-hero__meta { font-size: 0.85rem; color: #fff; display: flex; align-items: center; justify-content: center; gap: 1.5rem; flex-wrap: wrap; }
+    .post-hero__series { font-weight: 600; color: #fff; }
+    /* the switch pill and the focus ring both sit on the dark hero: the pill is
+       a light chip so its labels keep their light-ground colours, and --focus
+       re-points to gold here (blue collapses on blue — the footer/pre
+       precedent). */
+    .post-hero { --focus: var(--gold); }
+    .post-hero__cover {
+      aspect-ratio: 1 / 1;
+      max-width: 380px;
+      margin: 2.5rem auto 0;
+      border-radius: var(--radius-lg, 16px);
+      overflow: hidden;
+      box-shadow: 0 20px 60px rgba(17,48,75,0.14);
+    }
+    .post-hero__cover img { width: 100%; height: 100%; object-fit: cover; display: block; }
+    .post-body { max-width: 720px; margin: 0 auto; padding: 3rem 2rem 6rem; }
+    .post-body h2 { font-size: 1.6rem; font-weight: 800; color: var(--navy); margin: 3rem 0 1rem; padding-bottom: 0.5rem; border-bottom: 2px solid rgba(34,98,153,0.15); }
+    .post-body h3 { font-size: 1.25rem; font-weight: 700; color: var(--navy); margin: 2.25rem 0 0.75rem; }
+    .post-body p { margin-bottom: 1.25rem; }
+    .post-body strong { font-weight: 700; color: var(--navy); }
+    .post-body a { color: var(--blue); text-decoration: underline; text-decoration-thickness: 1px; text-underline-offset: 2px; }
+    .post-body ul, .post-body ol { margin: 0.5rem 0 1.25rem 1.5rem; }
+    .post-body li { margin-bottom: 0.4rem; }
+    .post-body blockquote { background: rgba(34,98,153,0.06); border-left: 4px solid var(--blue); padding: 1rem 1.25rem; border-radius: 0 10px 10px 0; margin: 1.25rem 0; font-size: 0.95rem; color: var(--navy); }
+    .post-body hr { border: none; height: 1px; background: linear-gradient(90deg, transparent, rgba(34,98,153,0.2), transparent); margin: 3rem 0; }
+    /* ── CODE ── */
+    .post-body pre { background: var(--code-bg); border-radius: 12px; padding: 1.5rem; margin: 1.25rem 0 1.5rem; overflow-x: auto; border: 1px solid rgba(255,255,255,0.05); }
+    .post-body pre code { font-family: var(--mono); font-size: 0.85rem; color: #e2e8f0; line-height: 1.7; background: none; padding: 0; white-space: pre-wrap; }
+    .post-body code { font-family: var(--mono); font-size: 0.88em; background: rgba(34,98,153,0.08); color: var(--blue-dark); padding: 0.15em 0.45em; border-radius: 5px; }
+    /* ── TABLES ── */
+    .table-wrapper { overflow-x: auto; margin: 1.5rem 0; border-radius: 0.5rem; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1); }
+    table { width: 100%; border-collapse: collapse; background: white; }
+    th { background: #226299; color: white; padding: 1rem; text-align: left; font-weight: 600; }
+    td { padding: 1rem; border-bottom: 1px solid #e5e7eb; }
+    .post-body table { display: block; width: 100%; overflow-x: auto; }
+    /* ── ALERTS ── */
+    .alert { background: #fef3cd; border: 1px solid #facc15; border-radius: 0.5rem; padding: 1rem; margin: 1.5rem 0; }
+    .alert.danger { background: #fee2e2; border-color: #ef4444; }
+    .alert.info { background: #e0f2fe; border-color: #06b6d4; }
+    .alert.success { background: #d1fae5; border-color: #10b981; }
+    /* ── KEY TAKEAWAYS ── */
+    .key-takeaways { background: linear-gradient(135deg, #f3f4f6 0%, #e5e7eb 100%); border-radius: 1rem; padding: 2rem; margin: 3rem 0; }
+    .key-takeaways h3 { color: #226299; margin-bottom: 1.5rem; }
+    .post-series-footer { text-align: center; font-size: 0.85rem; color: var(--slate-light); font-style: italic; margin-top: 2rem; padding-top: 2rem; border-top: 1px solid #e2e8f0; }
+    .blog-footer { background: var(--navy); padding: 2rem 0; text-align: center; }
+    .blog-footer a { color: var(--gold); text-decoration: none; font-weight: 600; font-size: 0.9rem; }
+    .blog-footer span { color: var(--gray); font-size: 0.8rem; display: block; margin-top: 0.4rem; }
+    @media (max-width: 600px) {
+      .post-hero { padding: 7rem 1.25rem 2.5rem; }
+      .post-body { padding: 2rem 1.25rem 4rem; }
+      .post-hero__meta { flex-direction: column; gap: 0.4rem; }
+      .post-body h2 { font-size: 1.4rem; }
+      .post-body h3 { font-size: 1.15rem; }
+      .post-body pre { padding: 1rem; border-radius: 8px; }
+    }
+
+    :focus-visible { outline: 2px solid var(--focus); outline-offset: 3px; border-radius: 2px; }
+    /* the ring sits on the page ground (3px offset). Inside the navy footers
+       and code blocks var(--blue) collapses to 2.12:1, so those scopes
+       re-point --focus to gold (5.73:1 on navy). */
+    .footer, .blog-footer, pre { --focus: var(--gold); }
+    :focus:not(:focus-visible) { outline: none; }
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after {
+        animation-duration: .01ms !important; animation-iteration-count: 1 !important;
+        transition-duration: .01ms !important; scroll-behavior: auto !important;
+      }
+    }
+    h1, h2, h3, .post-hero__title, .card__title { text-wrap: balance; }
+
+    .post-body img, .post-body svg { max-width: 100%; height: auto; }
+
+    /* ── SKIP LINK ── a11y-perf R5: the link and the landmark it targets are a
+       pair — useless without both halves. Off-screen until focused, then the
+       first tab stop on every page. */
+    .skip-link { position: absolute; left: -9999px; }
+    .skip-link:focus {
+      left: 1rem; top: 1rem; z-index: 999;
+      background: var(--navy); color: #fff;
+      padding: 0.75rem 1.25rem; border-radius: var(--radius-sm);
+      font-weight: 600; text-decoration: none;
+    }
+
+    /* ── POST WAYFINDING ── the wordmark is the home link; the footer carries
+       the full destination row. */
+    .blog-nav__home {
+      font-size: 0.9rem; font-weight: 800; color: var(--navy);
+      text-decoration: none; margin-right: 1rem;
+    }
+    .blog-nav__home:hover { color: var(--blue); }
+    .blog-nav__inner > .blog-nav__back { margin-right: auto; }
+    .blog-footer__nav {
+      display: flex; flex-wrap: wrap; justify-content: center; gap: 0.35rem 1.25rem;
+      max-width: 860px; margin: 0 auto 1.25rem; padding: 0 2rem 1.25rem;
+      border-bottom: 1px solid rgba(255,255,255,0.12);
+    }
+    .blog-footer__nav a { color: var(--gold); font-size: 0.85rem; font-weight: 600; text-decoration: none; }
+    .blog-footer__nav a:hover { color: #fff; text-decoration: underline; }
+
+    html { scroll-padding-top: 5rem; }
+    [id] { scroll-margin-top: 5rem; }
+
+    /* Thai needs more room than Latin at the same nominal size. */
+    .post-body:lang(th) { font-size: 18px; line-height: 1.85; }
+    .post-body p, .post-body li, .post-body blockquote { text-wrap: pretty; }
+
+    /* ---- side-scroll affordance ----
+       pre blocks and tables can exceed 720px. These layers paint a shadow ONLY
+       where there is more content in that direction; when fully scrolled the
+       cover slides over the shadow and hides it. No JavaScript, no wrapper. */
+    .post-body pre, .post-body table {
+      overflow-x: auto;
+      background-image:
+        linear-gradient(to right, var(--code-bg, #0f172a) 30%, rgba(15,23,42,0)),
+        linear-gradient(to left, var(--code-bg, #0f172a) 30%, rgba(15,23,42,0)),
+        radial-gradient(farthest-side at 0 50%, rgba(0,0,0,.28), rgba(0,0,0,0)),
+        radial-gradient(farthest-side at 100% 50%, rgba(0,0,0,.28), rgba(0,0,0,0));
+      background-position: 0 0, 100% 0, 0 0, 100% 0;
+      background-repeat: no-repeat;
+      background-size: 40px 100%, 40px 100%, 14px 100%, 14px 100%;
+      background-attachment: local, local, scroll, scroll;
+    }
+    .post-body table {
+      background-image:
+        linear-gradient(to right, var(--white, #fff) 30%, rgba(255,255,255,0)),
+        linear-gradient(to left, var(--white, #fff) 30%, rgba(255,255,255,0)),
+        radial-gradient(farthest-side at 0 50%, rgba(17,48,75,.16), rgba(17,48,75,0)),
+        radial-gradient(farthest-side at 100% 50%, rgba(17,48,75,.16), rgba(17,48,75,0));
+      background-position: 0 0, 100% 0, 0 0, 100% 0;
+      background-repeat: no-repeat;
+      background-size: 40px 100%, 40px 100%, 14px 100%, 14px 100%;
+      background-attachment: local, local, scroll, scroll;
+    }
+
+    /* ---- table of contents ---- */
+    .post-toc {
+      max-width: 720px;
+      margin: 2rem auto 0;
+      padding: 1rem 1.25rem;
+      background: rgba(34,98,153,0.05);
+      border: 1px solid rgba(34,98,153,0.14);
+      border-left: 3px solid var(--gold, #c4a46c);
+      border-radius: 10px;
+      font-size: 0.92rem;
+    }
+    .post-toc > summary {
+      cursor: pointer;
+      font-weight: 700;
+      color: var(--navy);
+      list-style: none;
+    }
+    .post-toc > summary::-webkit-details-marker { display: none; }
+    .post-toc > summary::before {
+      content: "\25B8";
+      display: inline-block;
+      margin-right: 0.5rem;
+      transition: transform 0.2s ease;
+      color: var(--gold-dark, #7a5f22);
+    }
+    .post-toc[open] > summary::before { transform: rotate(90deg); }
+    .post-toc > summary:focus-visible { outline: 3px solid var(--focus, #226299); outline-offset: 3px; }
+    .post-toc ol { margin: 0.85rem 0 0.25rem; padding-left: 1.4rem; }
+    .post-toc li { margin-bottom: 0.4rem; line-height: 1.5; }
+    .post-toc a { color: var(--slate); text-decoration: none; }
+    .post-toc a:hover, .post-toc a:focus-visible { color: var(--blue-dark, #1a4d7a); text-decoration: underline; }
+    @media (max-width: 600px) { .post-toc { margin: 1.25rem 1rem 0; } }
+
+    /* ---- cross-document view transitions ---- */
+    @view-transition { navigation: auto; }
+    .nav, .blog-nav { view-transition-name: site-nav; }
+    .footer, .blog-footer { view-transition-name: site-footer; }
+    @media (prefers-reduced-motion: reduce) {
+      ::view-transition-group(*),
+      ::view-transition-old(*),
+      ::view-transition-new(*) { animation: none !important; }
+    }
+
+    /* ── SERIES STRIP — Hermes Agent in Practice ──
+       Same class and inner-wrapper shape as the OpenClaw strip because the
+       linter's RE_SNAV recognises exactly `series-nav` + a nested div; a
+       renamed strip would read as "no nav" and fail INV-08. All content
+       checks (INV-03 family) iterate the SERIES7 list only, so this strip's
+       labels are convention, not contract. House-styled, not the island CSS. */
+    .series-nav {
+      max-width: 720px; margin: 2rem auto 0; padding: 1.1rem 1.4rem;
+      background: rgba(255,255,255,0.75); border: 1px solid rgba(34,98,153,0.15);
+      border-left: 3px solid var(--gold); border-radius: 12px;
+    }
+    .series-nav h3 {
+      font-size: 0.78rem; font-weight: 700; text-transform: uppercase;
+      letter-spacing: 0.08em; color: var(--gold-dark); margin-bottom: 0.6rem;
+    }
+    .series-links { display: flex; flex-wrap: wrap; gap: 0.5rem; }
+    .series-links a, .series-links .current {
+      font-size: 0.82rem; font-weight: 600; padding: 0.35rem 0.8rem;
+      border-radius: 50px; text-decoration: none;
+    }
+    .series-links a { color: var(--blue-dark); background: rgba(34,98,153,0.08); }
+    .series-links a:hover { background: rgba(34,98,153,0.16); }
+    .series-links .current { color: #fff; background: var(--blue-dark); }
+    @media (max-width: 600px) { .series-nav { margin: 1.5rem 1rem 0; } }
+
+    /* ── FIGURE — the sanctioned diagram component (page-design §4 Content).
+       Diagrams are PNGs; this repo built them out of divs twice and reverted
+       twice. The image is wrapped in a link to itself so a phone can pinch a
+       1400px drawing without a line of JavaScript. */
+    .figure { margin: 2.5rem 0; }
+    .figure__img { width: 100%; height: auto; display: block;
+                   border-radius: var(--radius); border: 1px solid rgba(0,0,0,0.06); }
+    .figure__caption { font-size: 0.85rem; color: var(--slate-light);
+                       text-align: center; margin-top: 0.75rem; }
+
+    /* ── REFERENCES — every material number in this series carries its source.
+       The tags are the book's own four evidence labels. */
+    .references { margin-top: 3rem; padding-top: 2rem; border-top: 1px solid #e2e8f0; }
+    .references__note { font-size: 0.85rem; color: var(--slate-light); margin-bottom: 1rem; }
+    .references__list { padding-left: 1.4rem; font-size: 0.9rem; line-height: 1.75; }
+    .references__list li { margin-bottom: 0.7rem; }
+    .ref-tag { display: inline-block; font-size: 0.7rem; font-weight: 700;
+               letter-spacing: 0.06em; text-transform: uppercase; padding: 0.1rem 0.5rem;
+               border-radius: 50px; margin-right: 0.4rem; vertical-align: 0.05em;
+               background: rgba(34,98,153,0.1); color: var(--blue-dark); }
+    /* All four labels get a rule.  --standard and --study shipped without one
+       on 2026-09-05, so 158 of 306 tags fell through to the base blue and the
+       two labels were indistinguishable.  Ratios on --bg: 6.70 / 6.92 / 7.36 /
+       4.81:1, all AA at this size. */
+    .ref-tag--law { background: rgba(239,68,68,0.12); color: #991b1b; }
+    .ref-tag--standard { background: rgba(34,98,153,0.12); color: var(--blue-dark); }
+    .ref-tag--study { background: rgba(34,197,94,0.18); color: #14532d; }
+    .ref-tag--synthesis { background: rgba(196,164,108,0.22); color: var(--gold-dark); }
+    .ref-supports { display: block; color: var(--slate-light); font-size: 0.85rem; }
+
+    /* ── LANGUAGE SWITCH — pure CSS, zero JavaScript (INV-38) ──
+       One visually-hidden checkbox as a direct child of body, BEFORE the main landmark,
+       so `#langSwitch:checked ~ main …` reaches every content block. The two
+       tracks are paired blocks: .l-th (default) and .l-en (hidden until
+       checked; display:revert restores block for divs, inline for spans).
+       Naming stays clear of INV-12's menu-token regex (hamburger|burger|
+       nav__toggle|nav-toggle|navtoggle|menu-toggle|menu__toggle) — verified.
+       No JS also means no persistence across posts; each post opens in Thai. */
+    .lang-switch-box { position: absolute; left: -9999px; }
+    .l-en { display: none; }
+    #langSwitch:checked ~ main .l-en { display: revert; }
+    #langSwitch:checked ~ main .l-th { display: none; }
+    .lang-switch {
+      display: inline-flex; align-items: center; gap: 0.55rem;
+      margin-top: 1.4rem; padding: 0.4rem 1.1rem; border-radius: 50px;
+      background: rgba(255,255,255,0.85); border: 1px solid rgba(255,255,255,0.4);
+      cursor: pointer; font-size: 0.85rem; user-select: none;
+    }
+    .lang-switch span { color: var(--slate-light); font-weight: 600; transition: color 0.2s; }
+    .lang-switch .lang-sep { color: var(--gray); font-weight: 400; }
+    .lang-switch .lang-th { color: var(--navy); font-weight: 800; }
+    #langSwitch:checked ~ main .lang-switch .lang-th { color: var(--slate-light); font-weight: 600; }
+    #langSwitch:checked ~ main .lang-switch .lang-en { color: var(--navy); font-weight: 800; }
+    .lang-switch:hover { border-color: #fff; }
+    #langSwitch:focus-visible ~ main .lang-switch {
+      outline: 2px solid var(--focus); outline-offset: 3px;
+    }
+  </style>
+  <!-- social -->
+  <link rel="canonical" href="https://anirach.com/blog/ai-core-three-eras.html">
+  <meta property="og:type" content="article">
+  <meta property="og:url" content="https://anirach.com/blog/ai-core-three-eras.html">
+  <meta property="og:site_name" content="Anirach Mingkhwan">
+  <meta property="og:locale" content="th_TH">
+  <meta property="og:locale:alternate" content="en_US">
+  <meta property="article:published_time" content="2026-09-08">
+  <meta property="article:author" content="https://anirach.com/">
+  <meta property="og:title" content="Software 1.0 · 2.0 · 3.0 — สามยุคซ้อนกันในระบบเดียว">
+  <meta property="og:description" content="สามยุคของซอฟต์แวร์ไม่แทนที่กันแต่ซ้อนกันในระบบเดียว — ทำบัญชี artifact ระบุชั้นที่คุมพฤติกรรม และอ่านลายเซ็นความล้มเหลวของ 1.0, 2.0 และ 3.0 ให้ออก">
+  <meta property="og:image" content="https://anirach.com/images/ai-core-three-eras-og.jpg">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
+  <meta property="og:image:alt" content="Software 1.0 · 2.0 · 3.0 — สามยุคซ้อนกันในระบบเดียว">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:image" content="https://anirach.com/images/ai-core-three-eras-og.jpg">
+  <meta name="twitter:image:alt" content="Software 1.0 · 2.0 · 3.0 — สามยุคซ้อนกันในระบบเดียว">
+  <meta name="robots" content="max-image-preview:large">
+  <meta name="theme-color" content="#11304b">
+  <link rel="icon" href="/favicon.ico" sizes="any">
+  <link rel="apple-touch-icon" href="/apple-touch-icon.png">
+  <!-- /social -->
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "BlogPosting",
+    "headline": "Software 1.0 · 2.0 · 3.0 — สามยุคซ้อนกันในระบบเดียว",
+    "author": {
+      "@type": "Person",
+      "@id": "https://anirach.com/#person",
+      "name": "Anirach Mingkhwan",
+      "url": "https://anirach.com/"
+    },
+    "datePublished": "2026-09-08",
+    "dateModified": "2026-09-08",
+    "image": "https://anirach.com/images/ai-core-three-eras-og.jpg",
+    "inLanguage": [
+      "th",
+      "en"
+    ],
+    "mainEntityOfPage": "https://anirach.com/blog/ai-core-three-eras.html"
+  }
+  </script>
+</head>
+<body>
+<a href="#main" class="skip-link">Skip to content</a>
+<input type="checkbox" id="langSwitch" class="lang-switch-box" aria-label="Switch language: Thai / English">
+
+  <nav class="blog-nav">
+    <div class="blog-nav__inner">
+      <a href="../index.html" class="blog-nav__home">Anirach</a>
+      <a href="./" class="blog-nav__back">‹ Blog</a>
+      <div class="blog-nav__title">Software 1.0 · 2.0 · 3.0</div>
+    </div>
+  </nav>
+
+  <main id="main">
+
+  <header class="post-hero">
+    <div class="post-hero__tags">
+      <span class="post-hero__tag">Software 3.0</span>
+      <span class="post-hero__tag">Architecture</span>
+      <span class="post-hero__tag">Artifacts</span>
+    </div>
+    <h1 class="post-hero__title"><span class="l-th">Software 1.0 · 2.0 · 3.0 — สามยุคซ้อนกันในระบบเดียว</span><span class="l-en" lang="en">Software 1.0 · 2.0 · 3.0 — Three Eras, One Deployed System</span></h1>
+    <p class="post-hero__sub"><span class="l-th">โค้ด โมเดล และ context ที่ประกอบตอนรัน — สามชั้นที่กำหนดพฤติกรรมร่วมกันในระบบเดียว พร้อมวิธีไล่หา artifact ที่คุมพฤติกรรม และลายเซ็นความล้มเหลวของแต่ละชั้น</span><span class="l-en" lang="en">Code, model, and runtime-assembled context — three overlapping layers that jointly determine behaviour, how to find which artifact carries it, and each layer&#x27;s failure signature.</span></p>
+    <div class="post-hero__meta">
+      <span>By <strong>Anirach Mingkhwan</strong></span>
+      <span class="post-hero__series">Engineering AI-Core Systems 2026 • Post #2</span>
+      <span><time datetime="2026-09-08">8 Sep 2026</time></span>
+      <span>17 min read</span>
+    </div>
+    <label for="langSwitch" class="lang-switch" title="สลับภาษา · Switch language"><span class="lang-th">ไทย</span><span class="lang-sep">·</span><span class="lang-en" lang="en">English</span></label>
+    <div class="post-hero__cover">
+      <img src="../images/ai-core-three-eras-cover.jpg" alt="Software 1.0 · 2.0 · 3.0 — สามยุคซ้อนกันในระบบเดียว" width="800" height="800" loading="eager" fetchpriority="high" decoding="async">
+    </div>
+  </header>
+
+  <article class="post-body">
+
+    <details class="post-toc l-th" open>
+      <summary>ในบทความนี้</summary>
+      <ol>
+          <li><a href="#th-three-layers">สามยุคของซอฟต์แวร์เป็นชั้นซ้อนกันในเส้นทางเรียกเดียว — ตาราง 3 ของเปเปอร์ครบห้ามิติ พร้อมลายเซ็นความล้มเหลวของแต่ละชั้น</a></li>
+          <li><a href="#th-intentional-programming">คานงัดของวิศวกรย้ายจาก control flow สู่ dataset สู่ context — และการเขียนโปรแกรมแบบ intentional</a></li>
+          <li><a href="#th-seven-steps">ลงมือทำ 7 ขั้น — จากบัญชี artifact สู่ layer map ที่มีชีวิต</a></li>
+          <li><a href="#th-kramkraft">Layer map ของน้องคราม — สิบสาม artifact จริง กับยุค ที่เก็บ version และลายเซ็นความล้มเหลว</a></li>
+          <li><a href="#th-validation-check">Validation check — เจ็ดคำถามผ่าน/ไม่ผ่าน ที่ทุกข้อต้องตอบด้วย artifact</a></li>
+          <li><a href="#th-road-ahead">ก้าวต่อไป — จากแผนที่ชั้นของระบบ สู่รอยต่อที่การรับประกันเดิมพัง</a></li>
+      </ol>
+    </details>
+    <details class="post-toc l-en" open>
+      <summary>In this post</summary>
+      <ol>
+          <li><a href="#en-three-layers">The three eras of software are stacked layers in one call path — the paper's Table 3 in all five dimensions, with each layer's failure signature</a></li>
+          <li><a href="#en-intentional-programming">The engineer's leverage moves from control flow to dataset to context — and programming becomes intentional</a></li>
+          <li><a href="#en-seven-steps">The seven steps — from an artifact inventory to a living layer map</a></li>
+          <li><a href="#en-kramkraft">Nong Kram's layer map — thirteen real artifacts, each with its era, its versioning home and its failure signature</a></li>
+          <li><a href="#en-validation-check">Validation check — seven pass/fail questions, every one answered with an artifact</a></li>
+          <li><a href="#en-road-ahead">The road ahead — from the map of your system's layers to the seams where the old guarantees break</a></li>
+      </ol>
+    </details>
+    <div class="l-th">
+
+    <p>🤔 <strong>ถ้าพรุ่งนี้เช้าน้องครามตอบสิทธิ์คืนเงินผิดหนึ่งเคส คุณจะเปิดอะไรก่อน — โค้ดใน <code>src/</code> โมเดลที่ vendor โฮสต์ หรือ system prompt?</strong></p>
+
+    <p>ตอนที่แล้ว <a href="/blog/ai-core-what-is">What Is an AI-Core System?</a> เราจำแนกระบบด้วยสองแกน — อำนาจตัดสินใจ กับ ความขาดไม่ได้ของโมเดล — แล้ววางน้องคราม ผู้ช่วยตอบลูกค้าของร้านเซรามิกครามคราฟต์ ลงช่อง AI-core: model output ควบคุม external action ผ่าน tool <code>refund</code> และการทดสอบถอดโมเดลออกทำให้ task success ร่วงต่ำกว่า threshold ที่ประกาศไว้ล่วงหน้า ช่องนั้นมากับภาระเต็มรูปแบบ — hard mediation, semantic evaluation, tracing, fallback — แต่ก่อนจะล้อมกรอบอะไรได้จริง ต้องตอบคำถามพื้นฐานกว่านั้นก่อน: ระบบที่เรากำลังจะล้อมประกอบด้วยอะไรบ้าง และพฤติกรรมของมัน "อาศัยอยู่ใน" ไฟล์ไหน</p>
+
+    <p>คำตอบของทั้งบทความมาจากบทที่ 3 ของเปเปอร์: ระบบที่มี AI เป็นแกนหนึ่งระบบ มีซอฟต์แวร์สามยุคซ้อนกันอยู่ในเส้นทางเรียกเดียว — <strong>Software 1.0</strong> โค้ดชัดแจ้งที่วิศวกรเขียนเอง <strong>Software 2.0</strong> น้ำหนักที่ optimiser เรียนรู้จาก dataset และ <strong>Software 3.0</strong> บริบทที่ประกอบขึ้นตอนรันแล้วส่งให้โมเดลแช่แข็งตีความ สามชั้นนี้ไม่ใช่สถาปัตยกรรมคู่แข่งที่ต้องเลือกข้าง แต่ทำงานพร้อมกันในคำขอเดียวของลูกค้าคนเดียว แต่ละชั้นมีผู้เขียนของมันเอง มี artifact หลักของมันเอง มีวิธีประกันคุณภาพของมันเอง และเมื่อพัง มันพังด้วยลายเซ็นคนละแบบ งานของตอนนี้คือทำแผนที่ระบบของคุณลงสามชั้นนั้น ทีละ artifact แล้วเขียนออกมาเป็นเอกสารที่ทีมใช้ triage เหตุการณ์จริงได้</p>
+
+    <h2 id="th-three-layers">1. สามยุคไม่แทนที่กัน — มันซ้อนกันในระบบเดียว</h2>
+
+    <p>ข้อสรุปของหัวข้อนี้พูดได้ในประโยคเดียว: Software 1.0, 2.0 และ 3.0 ไม่ใช่ลำดับวิวัฒนาการที่รุ่นใหม่กลืนรุ่นเก่า แต่เป็นชั้นที่ซ้อนทับกัน (overlapping layers) ในเส้นทางเรียกเดียวของระบบที่ deploy จริง<sup><a href="#th-ref-1">[1]</a></sup> คำถามเดียวของลูกค้า — "ขอคืนเงินออร์เดอร์ #1042 ได้ไหม" — เดินผ่านทั้งสามชั้นในเวลาไม่กี่ร้อยมิลลิวินาที และการเข้าใจว่าแต่ละช่วงของเส้นทางนั้นอยู่ชั้นไหน คือรากของทุกตอนที่เหลือในซีรีส์นี้</p>
+
+    <p><strong>Software 1.0</strong> คือชั้นที่เรารู้จักดีที่สุด: ตรรกะชัดแจ้งที่วิศวกรเขียนเป็น source code — route ของ API, การต่อฐานข้อมูล, ฟังก์ชัน <code>refund()</code> ที่ยิงจริงไปยัง payment processor ความไม่แน่นอนหลักของชั้นนี้คือความผิดพลาดของมนุษย์ในตรรกะ และวิธีประกันคุณภาพของมันโตมาหลายสิบปีจนแข็งแรง: type system, code review, ชุดทดสอบ และ formal proof สำหรับส่วนที่วิกฤต เมื่อชั้นนี้พัง มันพังแบบ <em>bug</em> — ตรรกะผิดที่ reproduce ได้ อ่านได้จาก stack trace<sup><a href="#th-ref-1">[1]</a></sup></p>
+
+    <p><strong>Software 2.0</strong> คือชั้นขององค์ประกอบที่เรียนรู้ — คำที่ Karpathy ตั้งไว้ตั้งแต่ปี 2017<sup><a href="#th-ref-2">[2]</a></sup> ผู้เขียน artifact ของชั้นนี้ไม่ใช่มนุษย์แต่เป็น optimiser: วิศวกรคัด dataset และนิยาม objective แล้วกระบวนการฝึกเขียน weights ออกมาให้ ในระบบของเราชั้นนี้คือโมเดลภาษา <code>M_v</code> ที่ถูกแช่แข็งและ pin รุ่น กับ embedding model ของฝั่ง retrieval ความไม่แน่นอนหลักไม่ใช่ตรรกะผิดแต่คือการ generalise นอกขอบข้อมูลฝึก ลายเซ็นความล้มเหลวของมันคือ poor generalisation และ distribution shift และวินัยการประกันคุณภาพของยุคนี้ก็มีรูปธรรมของมันเอง — held-out evaluation กับ rubric ความพร้อม production อย่าง ML Test Score<sup><a href="#th-ref-4">[4]</a></sup> ซึ่งเปเปอร์ต่อยอดต่อไปยังชั้นที่สาม</p>
+
+    <p><strong>Software 3.0</strong> คือชั้นที่ใหม่จริงและถูกเข้าใจน้อยที่สุด: บริบทที่ประกอบขึ้น <em>ตอนรัน</em> — system prompt, ข้อความของลูกค้า, passage ที่ retrieval หยิบมา, ผลของ tool — ทั้งหมดถูกประกอบเป็น input หนึ่งก้อนแล้วส่งให้โมเดลแช่แข็งตีความ<sup><a href="#th-ref-3">[3]</a></sup> artifact ของชั้นนี้คือ assembled context, tool schema และ orchestration policy จุดที่คนมักเข้าใจผิดคือความแปรผัน: ความสุ่มจากการ sample ตัดทิ้งได้ด้วย deterministic decoding แต่ drift จาก retrieval และจากการเปลี่ยนรุ่นโมเดล <em>ตัดไม่ได้</em> เมื่อชั้นนี้พัง มันพังเป็น <strong>อาการแต่งข้อเท็จจริง</strong> (hallucination), drift และ <strong>การฉีดคำสั่งแฝง</strong> (prompt injection) — และการวินิจฉัยต้องใช้ invocation trace ฉบับเต็ม เพราะความล้มเหลวอาจไม่เกิดซ้ำเมื่อรันใหม่<sup><a href="#th-ref-1">[1]</a></sup></p>
+
+    <figure class="figure">
+      <a href="../images/ai-core-fig-02-three-eras.png">
+        <img class="figure__img" src="../images/ai-core-fig-02-three-eras.png" alt="สามแถบซ้อนกันของ Software 1.0 โค้ดชัดแจ้ง 2.0 องค์ประกอบที่เรียนรู้ และ 3.0 บริบทประกอบตอนรัน พร้อมแถว artifact หลัก วิธีประกันคุณภาพ และลายเซ็นความล้มเหลวของแต่ละชั้น" width="1400" height="700" loading="lazy" decoding="async">
+      </a>
+      <figcaption class="figure__caption">สามยุคเป็นชั้นซ้อนกันในระบบเดียว — คานงัดของวิศวกรย้ายจาก control flow สู่ dataset และ loss สู่ context ตอนรัน</figcaption>
+    </figure>
+
+    <p>ตาราง 3 ของเปเปอร์วางสามชั้นนี้เทียบกันครบห้ามิติ ผมย่อสาระสำคัญของมันไว้ตรงนี้ — ตารางนี้คือกระดูกสันหลังของ layer map ที่เราจะสร้างในหัวข้อ <a href="#th-seven-steps">3</a></p>
+
+    <div class="table-wrapper">
+        <table>
+            <thead>
+                <tr>
+                    <th>มิติ</th>
+                    <th>Software 1.0 — โค้ดชัดแจ้ง</th>
+                    <th>Software 2.0 — องค์ประกอบที่เรียนรู้</th>
+                    <th>Software 3.0 — บริบทประกอบตอนรัน</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td><strong>ใครเขียนพฤติกรรม</strong></td>
+                    <td>วิศวกรเขียนตรรกะด้วยมือ ทีละบรรทัด</td>
+                    <td>optimiser เขียน weights จาก dataset + objective ที่วิศวกรคัดและนิยาม</td>
+                    <td>โค้ดประกอบบริบท + retrieval ประกอบ input ตอนรัน แล้วโมเดลแช่แข็งสังเคราะห์พฤติกรรมส่วนนั้น</td>
+                </tr>
+                <tr>
+                    <td><strong>Artifact หลัก และความแปรผันตอนรัน</strong></td>
+                    <td>source code — พฤติกรรมตายตัวตาม input ที่ประกาศ</td>
+                    <td>weights (แช่แข็ง ณ วัน deploy) — ตัวฟังก์ชันนิ่ง แต่ input โลกจริงเลื่อนได้</td>
+                    <td>assembled context, tool schema, orchestration policy — เปลี่ยนทุกคำขอ; ความสุ่มจาก sampling ตัดได้ด้วย deterministic decoding แต่ drift จาก retrieval และรุ่นโมเดลตัดไม่ได้</td>
+                </tr>
+                <tr>
+                    <td><strong>ความไม่แน่นอนหลัก และวิธีประกัน</strong></td>
+                    <td>ความผิดพลาดของมนุษย์ในตรรกะ — types, review, tests, proof สำหรับส่วนวิกฤต</td>
+                    <td>การ generalise นอกขอบข้อมูลฝึก — held-out evaluation และวินัยความพร้อม production</td>
+                    <td>พฤติกรรมเชิงความหมายของโมเดลต่อบริบทที่ประกอบ — golden set, rails ตอนรัน และ tracing (เนื้อหาตอน #7–#9)</td>
+                </tr>
+                <tr>
+                    <td><strong>พื้นผิวการเปลี่ยนแปลง และการมองเห็นความล้มเหลว</strong></td>
+                    <td>การเปลี่ยนคือ code diff; ความล้มเหลว reproduce ได้จาก stack trace</td>
+                    <td>การเปลี่ยนคือ dataset ใหม่ retrain หรือรุ่นโมเดลใหม่; มองเห็นผ่าน metric รวมและ data snapshot</td>
+                    <td>การเปลี่ยนคือแก้ prompt, corpus, schema หรือ config — บ่อยครั้งไม่มี diff ในโค้ดเลย; ความล้มเหลวอาจไม่เกิดซ้ำเมื่อ resample จึงต้องใช้ invocation trace ฉบับเต็ม</td>
+                </tr>
+                <tr>
+                    <td><strong>ลายเซ็นความล้มเหลว</strong></td>
+                    <td>bug — ตรรกะผิด</td>
+                    <td>poor generalisation, distribution shift</td>
+                    <td>อาการแต่งข้อเท็จจริง, drift, การฉีดคำสั่งแฝง</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <p>อ่านตารางแล้วสิ่งที่ต้องไม่พลาดคือคำว่า <em>ซ้อนกัน</em> ไม่ใช่ <em>แทนที่กัน</em> คำขอคืนเงินหนึ่งคำขอ: FastAPI route (1.0) รับข้อความ โค้ดประกอบบริบท (1.0) เรียก retrieval ที่พึ่ง embedding model (2.0) หยิบ passage จาก corpus แล้วประกอบเป็น context (3.0) ส่งให้ <code>M_v</code> (2.0) ตีความ ผลที่ได้อาจเป็น tool call ที่ต้องผ่าน schema (3.0) ก่อนโค้ด <code>refund()</code> (1.0) สร้างผลจริง — สามยุคสลับกันคุมเส้นทางเดียวหลายรอบในไม่กี่ร้อยมิลลิวินาที</p>
+
+    <h3>ชั้น 1.0 ไม่เคยหายไป — และห้ามหายไป</h3>
+
+    <p>เปเปอร์ย้ำเรื่องนี้ชัดเจนและผมอยากย้ำซ้ำ: ต่อให้ระบบ "เป็น 3.0" แค่ไหน โค้ดยุค 1.0 ยังถือสามสิ่งที่ระบบทั้งหมดพึ่งพา — control flow, interface และการผ่านตัวกลาง (mediation) ของทุกผลกระทบ<sup><a href="#th-ref-1">[1]</a></sup> ตัวที่ตัดสินว่า tool call ได้รับอนุญาตหรือไม่ ตัวที่ validate schema ตัวที่เขียน trace — ทั้งหมดคือโค้ดชัดแจ้งที่เขียนโดยมนุษย์ ทดสอบแบบ 1.0 และรีวิวแบบ 1.0 ทุกการ์ดทุกรางที่ซีรีส์นี้จะสร้างในตอนหลัง ๆ ล้วนเป็นซอฟต์แวร์ยุคแรกทั้งสิ้น</p>
+
+    <blockquote>💡 มุมมองของผม: วิธีจับทีมที่หลงคิดว่าตัวเอง "ย้ายไป Software 3.0 แล้ว" คือถามคำถามเดียว — ถ้าพรุ่งนี้ guard ที่คุม <code>refund</code> ปล่อยรายการที่ไม่ควรปล่อย ใครแก้ และแก้ที่ไฟล์ไหน คำตอบจะเป็นวิศวกรกับไฟล์ .py เสมอ ไม่ใช่ prompt engineer กับ dashboard เพราะสิ่งที่ล้มไม่ใช่ความสามารถของโมเดล แต่คือโค้ด 1.0 ที่เราไม่ได้เขียนให้แน่นพอ ทีมที่เลิกลงทุนกับชั้น 1.0 เพราะคิดว่ามัน "ตกยุค" กำลังรื้อพื้นห้องที่ตัวเองยืนอยู่</blockquote>
+
+    <h2 id="th-intentional-programming">2. คานงัดย้ายที่ — imperative, declarative, intentional</h2>
+
+    <p>ข้อสรุปของหัวข้อนี้: สิ่งที่เปลี่ยนข้ามสามยุคไม่ใช่ "ภาษาที่ใช้เขียน" แต่คือ <em>ตำแหน่งของคานงัด</em> ของวิศวกร — จาก control flow ในยุค 1.0 ไปที่ dataset กับ loss ในยุค 2.0 และมาอยู่ที่บริบทตอนรันในยุค 3.0 ซึ่งเปเปอร์เรียกงานชิ้นนี้ว่า <strong>วิศวกรรมบริบท</strong> (context engineering)<sup><a href="#th-ref-1">[1]</a></sup> เข้าใจตำแหน่งคานงัดผิด แปลว่าออกแรงผิดที่ทั้งโปรเจกต์</p>
+
+    <p>มองผ่านเลนส์ "วิธีระบุพฤติกรรม" จะเห็นการย้ายชัดที่สุด ยุค 1.0 เราเขียนแบบ <em>imperative</em> — สั่งเครื่องทีละขั้นว่าทำอะไร ยุค 2.0 เราเขียนแบบ <em>declarative</em> — ประกาศ objective บน dataset แล้วให้ optimiser หาฟังก์ชันเอง ยุค 3.0 เราเขียนแบบที่เปเปอร์เรียกว่า <em>intentional</em> — ประกาศสี่สิ่งต่อไปนี้ แล้วมอบการสังเคราะห์พฤติกรรมส่วนนั้นให้แกนโมเดล<sup><a href="#th-ref-1">[1]</a></sup> Karpathy สรุปภาพเดียวกันในการบรรยายปี 2025 ว่ารอบนี้ซอฟต์แวร์กำลังเปลี่ยนอีกครั้ง — โปรแกรมจำนวนมากขึ้นเรื่อย ๆ ถูก "เขียน" ด้วยภาษาธรรมชาติที่ป้อนให้โมเดล<sup><a href="#th-ref-3">[3]</a></sup></p>
+
+    <ul>
+        <li><strong>เจตนา (intent)</strong> — ระบบนี้พยายามทำอะไรให้ใคร ภายใต้กติกาอะไร — สำหรับน้องครามคือ system prompt ที่นิยามบทบาท ขอบเขต และน้ำเสียง</li>
+        <li><strong>ตัวอย่าง (exemplars)</strong> — คำตอบที่ดีหน้าตาเป็นอย่างไร — golden examples ของบทสนทนาที่เราอยากให้เกิดซ้ำ</li>
+        <li><strong>ความรู้ยึดเหนี่ยว (grounding knowledge)</strong> — ข้อเท็จจริงที่คำตอบต้องอิง — corpus นโยบายใน <code>policy/</code> และแคตตาล็อกใน <code>catalog/</code></li>
+        <li><strong>การกระทำที่อนุญาต (permitted actions)</strong> — ระบบแตะโลกจริงได้ทางไหนบ้าง — tool schema ของ <code>refund</code> ที่ประกาศ parameter และขอบเขตไว้ล่วงหน้า</li>
+    </ul>
+
+    <p>ผลพวงเชิงวินัยของภาพนี้คือประเด็นที่แพงที่สุดของทั้งตอน: prompt, retrieval corpus, golden examples และ eval suite เป็น artifact ที่ <em>กำหนดพฤติกรรม</em> (behaviour-determining) เคียงข้างโค้ด — เปลี่ยนบรรทัดเดียวใน system prompt เปลี่ยนพฤติกรรมของระบบได้เท่ากับหรือมากกว่าเปลี่ยนโค้ดหนึ่งฟังก์ชัน — ดังนั้นมันต้องได้รับวินัยเดียวกับโค้ดครบทั้งชุด: อยู่ใน version control ผ่าน review ก่อน merge และมีชุดทดสอบของตัวเอง<sup><a href="#th-ref-1">[1]</a></sup> repo ของน้องครามหลังยอมรับความจริงข้อนี้หน้าตาแบบนี้</p>
+
+    <pre><code># โครง repo ของน้องคราม — artifact 3.0 อยู่เคียงข้างโค้ด ในวินัยเดียวกัน
+kramkraft-assistant/
+├── src/                    # 1.0 — control flow, interfaces, mediation
+│   ├── api/routes.py       #   endpoint รับแชทจากเว็บและ LINE
+│   ├── tools/refund.py     #   ตัวสร้างผลจริง (effectful)
+│   └── context/assemble.py #   โค้ดประกอบบริบท
+├── prompts/
+│   └── system.th.md        # 3.0 — กำหนดพฤติกรรม เท่าโค้ด
+├── policy/                 # 3.0 — corpus นโยบายคืนสินค้า/ขนส่ง
+├── catalog/                # 3.0 — snapshot หน้าโปรดักต์
+├── schemas/
+│   └── refund.json         # 3.0 — พรมแดนของ tool call
+├── eval/
+│   └── golden.jsonl        # 3.0 — ชุดทดสอบทองคำของงานหลัก
+└── manifest.lock           # pin ทุกชิ้นเข้าด้วยกัน (เรื่องของตอน #4)
+</code></pre>
+
+    <p>แต่บรรทัดถัดมาของเปเปอร์สำคัญเท่ากัน และมักถูกอ่านข้าม: artifact เหล่านี้ <em>ไม่ได้กลายเป็น source code</em> โค้ดยังถือ control flow, interface และ mediation ที่ทุกอย่างพึ่งพา<sup><a href="#th-ref-1">[1]</a></sup> prompt เท่าโค้ด <em>ในวินัย</em> ไม่ใช่แทนโค้ด <em>ในหน้าที่</em> — ข้อความในบริบทเป็นคำแนะนำต่อโมเดล ไม่ใช่ข้อจำกัดต่อระบบ และเส้นแบ่งนั้นคือเหตุผลที่ตอน #8 ต้องมีอยู่</p>
+
+    <blockquote>💡 มุมมองของผม: กติกาย่อที่ผมใช้ในทีมคือประโยคเดียว — "อะไรก็ตามที่แก้แล้วคำตอบของระบบเปลี่ยน สิ่งนั้นคือโปรแกรม และต้องอยู่ในวินัยของโปรแกรม" ใช้ประโยคนี้ไล่ทีละไฟล์แล้วรายการ artifact ที่ต้อง version จะยาวกว่าที่ทีมส่วนใหญ่คิดราวหนึ่งเท่าตัว โดยเฉพาะของที่ซ่อนอยู่ใน dashboard ของ vendor ซึ่งแก้ได้โดยไม่ทิ้งร่องรอยอะไรเลย</blockquote>
+
+    <h2 id="th-seven-steps">3. ลงมือทำ 7 ขั้น</h2>
+
+    <p>ผลลัพธ์ของเจ็ดขั้นนี้คือ <em>layer map</em> — เอกสารหนึ่งไฟล์ที่ตอบว่า artifact ไหนอยู่ยุคไหน ถูก version ที่ไหน และพังแล้วหน้าตาเป็นอย่างไร — ซึ่งจะกลายเป็นเครื่องมือ triage ชิ้นแรกของทีม และเป็นฐานให้ตอนถัด ๆ ไปทั้งหมด ทุกขั้นเดินด้วยน้องครามเป็นตัวอย่างจริง</p>
+
+    <h3>ขั้นที่ 1 — ทำบัญชีทุก artifact ทั้งใน repo และตอนรัน</h3>
+
+    <p>เปิดบัญชีสองคอลัมน์: คอลัมน์แรกคือทุกอย่างที่ <code>git ls-files</code> มองเห็น คอลัมน์ที่สองคือทุกอย่างที่กำหนดพฤติกรรมตอนรันแต่ <em>ไม่</em> อยู่ในผลลัพธ์คำสั่งนั้น คอลัมน์ที่สองคือของจริงของขั้นนี้ เพราะระบบ AI-core เกือบทุกระบบมีพฤติกรรมส่วนใหญ่อาศัยอยู่นอก repo โดยที่ทีมไม่ทันสังเกต บัญชีของน้องครามรอบแรกออกมาแบบนี้</p>
+
+    <pre><code>$ git ls-files          # ฝั่งที่อยู่ใน repo — เห็นครบ diff ได้ ตรวจได้
+src/api/routes.py  src/tools/refund.py  src/context/assemble.py ...
+
+# ฝั่งที่กำหนดพฤติกรรมแต่ไม่โผล่ในคำสั่งข้างบน — ต้องจดให้หมด:
+#  1. system prompt       -> แก้ใน dashboard ของ vendor
+#  2. retrieval top-k     -> ตั้งใน console เมื่อสามเดือนก่อน ไม่มีใครจำค่า
+#  3. catalog             -> export มือจาก backoffice ทุกต้นเดือน
+#  4. รุ่นของ M_v         -> ชี้ "latest" อยู่ ไม่ได้ pin
+</code></pre>
+
+    <h3>ขั้นที่ 2 — ระบุยุคของแต่ละ artifact</h3>
+
+    <p>ไล่บัญชีจากขั้นที่ 1 แล้วติดป้ายยุคให้ทุกแถวตามตาราง 3: ป้ายบอกทันทีว่า artifact ตัวนั้นต้องการวินัยแบบไหน ทดสอบแบบไหน และจะพังแบบไหน กติกาการติดป้ายตรงไปตรงมา<sup><a href="#th-ref-1">[1]</a></sup></p>
+
+    <ul>
+        <li><strong>1.0</strong> — โค้ดและ config ที่คุม control flow: route, ตัวประกอบบริบท, <code>refund()</code>, ตัว validate — ของน้องครามคือทุกไฟล์ใน <code>src/</code></li>
+        <li><strong>2.0</strong> — weights และ embeddings: โมเดล <code>M_v</code> ที่ pin รุ่น และ embedding model ของ retrieval — เราไม่ได้ฝึกเอง แต่มันเป็นชั้น 2.0 ของระบบเราอยู่ดี</li>
+        <li><strong>3.0</strong> — prompt, corpus, tool schema และ orchestration policy: <code>prompts/system.th.md</code>, <code>policy/</code>, <code>catalog/</code>, <code>schemas/refund.json</code> และกติกาว่าเมื่อไรเสนอ refund ได้</li>
+    </ul>
+
+    <h3>ขั้นที่ 3 — หา behaviour-determining set ของงานอันดับหนึ่ง</h3>
+
+    <p>เลือกงานที่สำคัญที่สุดหนึ่งงานแล้วถามทีละ artifact ว่า "ถ้าแก้ตัวนี้ คำตอบของงานนี้เปลี่ยนไหม" เซตของตัวที่ตอบว่าเปลี่ยนคือ behaviour-determining set — โปรแกรมตัวจริงของงานนั้น งานอันดับหนึ่งของน้องครามคือ "ตอบสิทธิ์คืนเงินให้ถูกตามนโยบาย" และเซตของมันคือ: system prompt, corpus ใน <code>policy/</code> พร้อม snapshot ของมัน, retrieval config, รุ่นของ <code>M_v</code>, decoding config และ <code>schemas/refund.json</code> — ขณะที่โค้ด logging, หน้า CSS ของเว็บ หรือแม้แต่ <code>catalog/</code> ไม่อยู่ในเซตของงานนี้ (แต่อยู่ในเซตของงาน "ตอบข้อมูลสินค้า") การรู้เซตต่องานสำคัญเพราะมันบอกว่า regression test ของงานไหนต้องรันเมื่อไฟล์ไหนเปลี่ยน</p>
+
+    <h3>ขั้นที่ 4 — ชี้ให้ชัดว่าคานงัดวิศวกรรมของคุณอยู่ตรงไหนจริง</h3>
+
+    <p>ระบบส่วนใหญ่ที่ผู้อ่านซีรีส์นี้ดูแลใช้โมเดล hosted ที่แช่แข็ง — เราแก้ weights ไม่ได้ แปลว่าคานงัดยุค 2.0 <em>ไม่ใช่ของเรา</em> สิ่งที่ขยับได้จริงมีสองชั้น: ชั้น 3.0 (prompt, corpus, retrieval config, exemplars) สำหรับปรับพฤติกรรม และชั้น 1.0 (mediation, validation, routing) สำหรับจำกัดความเสียหาย ของน้องครามผมเขียนลำดับการแก้ปัญหาไว้ในเอกสารเลย: เจอคำตอบผิดให้ดู corpus ก่อน แล้วดู retrieval config แล้วจึงดู prompt ส่วนการเปลี่ยนรุ่นโมเดลเป็นงาน release ที่ต้องรัน golden set ใหม่ทั้งชุด ไม่ใช่ hotfix — เพราะหลักฐานพฤติกรรมของบริบทผูกกับรุ่นโมเดลที่ตีความมัน<sup><a href="#th-ref-1">[1]</a></sup></p>
+
+    <h3>ขั้นที่ 5 — แยกสิ่งที่ version แล้ว ออกจากสิ่งที่ลอยอยู่</h3>
+
+    <p>กลับไปที่บัญชีขั้นที่ 1 แล้วขีดเส้นแบ่ง: อะไร version แล้ว อะไร "ลอย" — แก้ได้โดยไม่มี diff ไม่มี review ไม่มีทางย้อน ประโยคที่ผมอยากให้จำจากขั้นนี้: <em>prompt ที่แก้ใน dashboard คือการเปลี่ยนโปรแกรมที่ไม่มีใครรีวิว</em> มันคือ deploy ที่ไม่มีบันทึก และวันที่พฤติกรรมระบบเปลี่ยนกลางสัปดาห์ จะไม่มีหลักฐานว่าใครเปลี่ยนอะไร น้องครามปิดช่องนี้ในหนึ่งเช้า</p>
+
+    <pre><code>$ mkdir -p prompts schemas
+$ # วางข้อความรุ่นล่าสุดจาก dashboard ลงไฟล์ — จากนี้ repo คือแหล่งความจริง
+$ git add prompts/system.th.md schemas/refund.json retrieval.yaml
+$ git commit -m "Move behaviour-determining artifacts into the repo"
+$ # กติกาใหม่: dashboard เป็นกระจกอ่านอย่างเดียว deployment อ่านจาก repo เท่านั้น
+</code></pre>
+
+    <h3>ขั้นที่ 6 — เรียนรู้ลายเซ็นความล้มเหลวของแต่ละชั้น และหลักฐานที่การ debug ต้องใช้</h3>
+
+    <p>สามชั้นพังคนละแบบ และต้องการหลักฐานคนละชนิดในการวินิจฉัย ทีมที่แยกสามลายเซ็นนี้ไม่ออกจะ debug ผิดชั้นเสมอ — อาการคลาสสิกคือไล่อ่านโค้ดสามวันเพื่อหา "bug" ที่แท้จริงคือ corpus เก่ากว่านโยบายจริง ซ้อมจำแนกด้วยเหตุการณ์สมมติสามเคสของน้องคราม<sup><a href="#th-ref-1">[1]</a></sup></p>
+
+    <ul>
+        <li><strong>เคส 1.0 — bug:</strong> <code>refund()</code> ปัดเศษสตางค์ผิด ทุกออร์เดอร์ที่ยอดลงท้าย .50 reproduce ได้ร้อยเปอร์เซ็นต์ — หลักฐานที่ต้องใช้: stack trace กับ unit test หนึ่งตัว</li>
+        <li><strong>เคส 2.0 — poor generalisation:</strong> embedding model หยิบ passage ผิดเมื่อลูกค้าพิมพ์คำว่า "เคลือบคราม" สลับกับ "เคลือบน้ำเงิน" — หลักฐานที่ต้องใช้: data snapshot ของ query จริงกับ recall metric ไม่ใช่ stack trace เพราะไม่มีอะไร throw</li>
+        <li><strong>เคส 3.0 — hallucination:</strong> น้องครามแต่งเงื่อนไข "คืนได้ภายใน 45 วัน" ที่ไม่มีในนโยบายไหนเลย รันซ้ำสิบครั้งเกิดสองครั้ง — หลักฐานที่ต้องใช้: invocation trace ฉบับเต็มของครั้งที่พลาด — บริบทที่ประกอบจริง passage ที่หยิบจริง และ output ดิบ เพราะการ resample อาจไม่เห็นอาการอีกเลย</li>
+    </ul>
+
+    <h3>ขั้นที่ 7 — เขียน layer map เป็นเอกสารที่มีชีวิต</h3>
+
+    <p>รวมทุกขั้นเข้าเป็นตารางเดียวใน <code>docs/layer-map.md</code>: หนึ่งแถวต่อหนึ่ง artifact สี่คอลัมน์ — ชื่อ, ยุค, version อยู่ที่ไหน, ลายเซ็นความล้มเหลว — พร้อมหัวข้อ behaviour-determining set ต่องานหลัก แล้วผูกมันเข้ากับ workflow: PR ใดเพิ่ม artifact ที่กำหนดพฤติกรรมตัวใหม่ ต้องเพิ่มแถวใน map ก่อนถึงจะ merge ได้ เอกสารที่ไม่โตตามระบบจะกลายเป็นเรื่องแต่งภายในหนึ่งไตรมาส — และ map ฉบับเต็มของน้องครามคือหัวข้อถัดไป</p>
+
+    <h2 id="th-kramkraft">4. Layer map ของน้องคราม</h2>
+
+    <p>นี่คือ artifact ของตอนนี้ฉบับเต็ม — <code>docs/layer-map.md</code> ของครามคราฟต์หลังเดินครบเจ็ดขั้น สิบสามแถว สามยุค คัดลอกโครงไปใช้ได้ทันที (ตัวเลขและชื่อไฟล์เป็นของบทเรียน ไม่ใช่ของเปเปอร์)</p>
+
+    <div class="table-wrapper">
+        <table>
+            <thead>
+                <tr>
+                    <th>Artifact</th>
+                    <th>ยุค</th>
+                    <th>Version อยู่ที่ไหน</th>
+                    <th>ลายเซ็นความล้มเหลว</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td><code>src/api/routes.py</code> — endpoint เว็บ + LINE</td>
+                    <td>1.0</td>
+                    <td>git</td>
+                    <td>HTTP 500 พร้อม stack trace ชี้บรรทัด</td>
+                </tr>
+                <tr>
+                    <td><code>src/tools/refund.py</code> — ตัวสร้างผลจริง</td>
+                    <td>1.0</td>
+                    <td>git + บังคับ review สองคน</td>
+                    <td>ยอดเงินผิดแบบ reproduce ได้ / exception</td>
+                </tr>
+                <tr>
+                    <td><code>src/context/assemble.py</code> — โค้ดประกอบบริบท</td>
+                    <td>1.0</td>
+                    <td>git</td>
+                    <td>บริบทประกอบผิดรูป — จับได้ด้วย unit test</td>
+                </tr>
+                <tr>
+                    <td><code>M_v</code> — โมเดล hosted แช่แข็ง</td>
+                    <td>2.0</td>
+                    <td>pin รุ่นใน <code>manifest.lock</code></td>
+                    <td>ความสามารถไม่สม่ำเสมอข้ามงาน; พฤติกรรมเปลี่ยนยกระบบเมื่อรุ่นขยับ</td>
+                </tr>
+                <tr>
+                    <td>embedding model ของ retrieval</td>
+                    <td>2.0</td>
+                    <td>pin รุ่นใน <code>manifest.lock</code></td>
+                    <td>recall ตกในคำเฉพาะทาง — เห็นจาก data snapshot</td>
+                </tr>
+                <tr>
+                    <td>decoding config — temperature, seed</td>
+                    <td>3.0</td>
+                    <td>git (<code>decoding.yaml</code>)</td>
+                    <td>คำตอบแกว่งระหว่างรันทั้งที่ input เดิม</td>
+                </tr>
+                <tr>
+                    <td><code>prompts/system.th.md</code> — system prompt</td>
+                    <td>3.0</td>
+                    <td>git — เพิ่งย้ายจาก dashboard (ขั้นที่ 5)</td>
+                    <td>กติกา/น้ำเสียงเปลี่ยนทั้งระบบ โดยไม่มี diff ในโค้ด</td>
+                </tr>
+                <tr>
+                    <td><code>policy/</code> — นโยบายคืนสินค้า + ขนส่ง</td>
+                    <td>3.0</td>
+                    <td>git + snapshot id ต่อ release</td>
+                    <td>ตอบนโยบายฉบับเก่า — drift ระหว่าง corpus กับความจริง</td>
+                </tr>
+                <tr>
+                    <td><code>catalog/</code> — snapshot หน้าโปรดักต์</td>
+                    <td>3.0</td>
+                    <td>export อัตโนมัติ + commit รายสัปดาห์</td>
+                    <td>บอกราคาหรือสต๊อกผิดอย่างมั่นใจ</td>
+                </tr>
+                <tr>
+                    <td><code>schemas/refund.json</code> — tool schema</td>
+                    <td>3.0</td>
+                    <td>git</td>
+                    <td>call ผิดรูปหลุดผ่าน หรือถูกรูปแต่ผิดเจตนา</td>
+                </tr>
+                <tr>
+                    <td>retrieval config — top-k, ranker, filter</td>
+                    <td>3.0</td>
+                    <td>git (<code>retrieval.yaml</code>) — เคยลอยใน console</td>
+                    <td>ชุด passage เปลี่ยน คำตอบเปลี่ยน ทั้งที่ corpus เดิม</td>
+                </tr>
+                <tr>
+                    <td>orchestration policy — เมื่อไรเสนอ refund / ส่งต่อคน</td>
+                    <td>3.0</td>
+                    <td>git (<code>policy.yaml</code>)</td>
+                    <td>route ผิด — เสนอ refund ในเคสที่ควรถึงมือมนุษย์</td>
+                </tr>
+                <tr>
+                    <td><code>eval/golden.jsonl</code> — <strong>ชุดทดสอบทองคำ</strong> (golden set) 40 ข้อ</td>
+                    <td>3.0</td>
+                    <td>git</td>
+                    <td>ความล้มเหลวของมันคือความเงียบ — regression ที่ไม่มีใครเห็น</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <p>สิ่งที่ map เผยให้ทีมครามคราฟต์เห็นในวันแรกมีสองอย่าง หนึ่ง — artifact ที่กำหนดพฤติกรรมมากที่สุดสองตัว (system prompt กับ retrieval config) เคยเป็นของที่ลอยอยู่นอก repo ทั้งคู่ สอง — งานอันดับหนึ่งของร้านพึ่ง artifact ยุค 3.0 ถึงเจ็ดแถวจากสิบสาม แปลว่าการทดสอบแบบ 1.0 ที่มีอยู่ครอบคลุมพฤติกรรมจริงของระบบไม่ถึงครึ่ง ชุดทดสอบทองคำ 40 ข้อ (ตัวเลขของบทเรียน) จึงถูกตั้งต้นในตอนนี้ และจะถูกใช้งานหนักจริงในตอน #9</p>
+
+    <h2 id="th-validation-check">5. Validation check — ตรวจ layer map ของระบบคุณ</h2>
+
+    <p>กติกาของเปเปอร์ที่ซีรีส์นี้ใช้ทุกตอน: ทุกคำถามตรวจต้องตอบด้วย <em>artifact</em> ที่หยิบมาแสดงได้ ไม่ใช่คำคุณศัพท์<sup><a href="#th-ref-1">[1]</a></sup> รันเจ็ดข้อนี้กับระบบของคุณเอง — ข้อไหนไม่มีของให้แสดง ข้อนั้นคือไม่ผ่าน ไม่ว่าทีมจะรู้สึกมั่นใจแค่ไหน</p>
+
+    <div class="table-wrapper">
+        <table>
+            <thead>
+                <tr>
+                    <th>คำถามตรวจ</th>
+                    <th>ผ่านเมื่อ</th>
+                    <th>Artifact ที่ต้องแสดง</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>บัญชี artifact ครอบคลุมทั้ง repo และ runtime หรือไม่</td>
+                    <td>ทุกสิ่งที่กำหนดพฤติกรรมมีแถวของตัวเอง รวมของที่เคยอยู่ใน dashboard</td>
+                    <td><code>docs/layer-map.md</code> ฉบับล่าสุด คอลัมน์ยุคครบทุกแถว</td>
+                </tr>
+                <tr>
+                    <td>มี artifact กำหนดพฤติกรรมตัวใดอยู่นอก version control หรือไม่</td>
+                    <td>ชี้ path ใน repo กับ commit ล่าสุดของ system prompt ได้ภายในหนึ่งนาที</td>
+                    <td>path จริง เช่น <code>prompts/system.th.md</code> + ผลของ <code>git log -1</code> ต่อไฟล์นั้น</td>
+                </tr>
+                <tr>
+                    <td>รู้ behaviour-determining set ของงานอันดับหนึ่งหรือไม่</td>
+                    <td>ระบุได้ว่าแก้ไฟล์ไหนแล้วคำตอบของงานนั้นเปลี่ยน และไฟล์ไหนไม่เกี่ยว</td>
+                    <td>หัวข้อ top task ใน layer map ที่ไล่รายชื่อ artifact ของเซตนั้น</td>
+                </tr>
+                <tr>
+                    <td>corpus ที่ระบบใช้ตอบมี version หรือไม่</td>
+                    <td>บอกได้ว่า deployment ปัจจุบันอ่าน corpus snapshot ไหน</td>
+                    <td>snapshot id / commit ของ <code>policy/</code> และ <code>catalog/</code> ที่ production ใช้อยู่จริง</td>
+                </tr>
+                <tr>
+                    <td>การแก้ prompt ครั้งล่าสุดผ่านการรีวิวหรือไม่</td>
+                    <td>การเปลี่ยน system prompt มี diff มีผู้รีวิว และมีเหตุผลใน commit</td>
+                    <td>PR หรือ merge commit ล่าสุดที่แตะ <code>prompts/</code></td>
+                </tr>
+                <tr>
+                    <td>ทีมแยกลายเซ็นความล้มเหลวสามชั้นออกจากกันได้หรือไม่</td>
+                    <td>incident ถูกจำแนกชั้นก่อนเริ่ม debug และหลักฐานที่ขอถูกชนิด</td>
+                    <td>บันทึก incident (หรือผลซ้อม) สามรายการ จำแนกชั้นพร้อมชนิดหลักฐานที่ใช้ปิด</td>
+                </tr>
+                <tr>
+                    <td>layer map เป็นเอกสารที่มีชีวิตหรือเป็นของที่ทำครั้งเดียว</td>
+                    <td>PR ที่เพิ่ม artifact ใหม่แตะ map ในชุด diff เดียวกัน</td>
+                    <td>history ของ <code>docs/layer-map.md</code> เทียบวันที่เพิ่ม artifact ล่าสุดของระบบ</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <h2 id="th-road-ahead">6. ก้าวต่อไป</h2>
+
+    <p>ตอนนี้ให้เครื่องมือหนึ่งชิ้นที่เรียบง่ายแต่เปลี่ยนวิธีคุยของทีม: layer map ที่บอกว่าพฤติกรรมของระบบอาศัยอยู่ที่ไหน ใคร version มัน และพังแล้วหน้าตาเป็นอย่างไร สามยุคของซอฟต์แวร์ไม่ใช่ป้ายยุคสมัยให้เลือกข้าง แต่เป็นสามชั้นในระบบเดียวที่ต้องการวินัยคนละชุด — และการรู้ว่า incident ตรงหน้าเป็นชั้นไหน คือครึ่งแรกของการแก้มันให้ถูกที่</p>
+
+    <p>สิ่งที่ตอนนี้จงใจ <em>ไม่</em> ตอบคือคำถามว่า <em>ตรงไหน</em> ที่การรับประกันแบบเดิมของเราพังลง — เรารู้แล้วว่าชั้น 3.0 พังเป็นอาการแต่งข้อเท็จจริงและการฉีดคำสั่งแฝง แต่ยังไม่ได้อธิบายว่าโครงสร้างอะไรของแกนโมเดลทำให้อาการเหล่านั้น <em>เป็นไปได้ตั้งแต่แรก</em> คำตอบต้องการแบบจำลองความคิดอีกชุด: มองแกน AI เป็นระบบปฏิบัติการ — weights คือ CPU, context window คือ RAM ที่ไม่มี memory protection, retrieval คือไฟล์ซิสเต็มที่ไม่มีสัญญาการอ่านที่นิ่ง — แล้วไล่ดูรอยต่อที่อุปมานั้นแตก ซึ่งคือเนื้อหาทั้งตอนของ <a href="/blog/ai-core-os-model">#3 The AI-OS Mental Model</a></p>
+
+    <div class="alert info">
+        <strong>🧭 Artifact ที่ตอนนี้ส่งต่อ:</strong> <code>docs/layer-map.md</code> ของน้องคราม — สิบสามแถว สามยุค พร้อม behaviour-determining set ของงานคืนเงิน ตอนถัดไปจะหยิบแถวยุค 3.0 ของ map นี้ไปวางบนอุปมา AI-OS เพื่อชี้ว่ารอยต่อไหนของแต่ละแถวคือจุดที่การรับประกันแบบเดิมใช้ไม่ได้ และตอน #4 จะยกระดับคอลัมน์ "version อยู่ที่ไหน" ทั้งคอลัมน์เป็น release manifest ฉบับเดียว</div>
+
+    <div class="key-takeaways">
+        <h3>🎯 สิ่งสำคัญที่ต้องจำ</h3>
+        <ul>
+            <li><strong>สามยุคซ้อนกัน</strong> = 1.0 โค้ดชัดแจ้ง · 2.0 weights ที่เรียนรู้ · 3.0 บริบทประกอบตอนรัน — เป็นชั้นในเส้นทางเรียกเดียว ไม่ใช่สถาปัตยกรรมคู่แข่ง</li>
+            <li><strong>ชั้น 1.0 ไม่หายไป</strong> = โค้ดยังถือ control flow, interface และ mediation ของทุกผลกระทบ — การ์ดทุกตัวของตอนหลัง ๆ คือซอฟต์แวร์ 1.0</li>
+            <li><strong>คานงัดย้ายที่</strong> = control flow → dataset + loss → วิศวกรรมบริบท — ออกแรงผิดชั้นคือออกแรงฟรี</li>
+            <li><strong>Intentional programming</strong> = ประกาศเจตนา + ตัวอย่าง + ความรู้ยึดเหนี่ยว + การกระทำที่อนุญาต แล้วมอบการสังเคราะห์ให้แกนโมเดล</li>
+            <li><strong>Artifact กำหนดพฤติกรรม</strong> = prompt, corpus, golden examples, eval suite ต้องได้วินัยเท่าโค้ด — แต่ไม่ได้กลายเป็น source code</li>
+            <li><strong>สามลายเซ็นความล้มเหลว</strong> = bug (stack trace) · poor generalisation (data snapshot) · hallucination/drift/injection (invocation trace ฉบับเต็ม) — จำแนกชั้นก่อน แล้วค่อย debug</li>
+        </ul>
+    </div>
+
+    <section class="references" aria-labelledby="th-references">
+        <h2 id="th-references">อ้างอิง</h2>
+        <p class="references__note">ตรวจสอบทุกแหล่งเมื่อ 8 กันยายน 2026 (เวลาประเทศไทย) · ป้ายหลักฐานสี่แบบ: <strong>Law</strong> ตัวบทกฎหมายหรือประกาศทางการ · <strong>Standard</strong> มาตรฐานหรือกรอบทางการที่เผยแพร่แล้ว · <strong>Study</strong> งานวิจัยหรือสัญญาณภาคสนาม · <strong>Synthesis</strong> การสังเคราะห์ของผู้เขียนหรือแหล่งที่ไม่ใช่งานวิจัย</p>
+        <ol class="references__list">
+            <li id="th-ref-1"><span class="ref-tag ref-tag--synthesis">Synthesis</span> Anirach Mingkhwan. <cite>Engineering AI-Core Systems: A Reference Architecture and Assurance Contract for Software 3.0</cite> — CreativeLAB, FITM, KMUTNB, 2026. เอกสารที่ผู้เขียนจัดหาให้ ยังไม่ตีพิมพ์ ไม่มี URL สาธารณะ จึงไม่มีลิงก์และไม่มีวันเข้าถึง. <span class="ref-supports">รองรับ: ตาราง 3 ครบห้ามิติ (ผู้เขียนพฤติกรรม, artifact หลักและความแปรผันตอนรัน, ความไม่แน่นอนหลักและวิธีประกัน, พื้นผิวการเปลี่ยนแปลงและการมองเห็นความล้มเหลว, ลายเซ็นความล้มเหลว) ประเด็นว่าสามยุคเป็นชั้นซ้อนกันในเส้นทางเรียกเดียวโดยชั้น 1.0 ยังถือ control flow, interface และ mediation การย้ายคานงัดสู่วิศวกรรมบริบท นิยาม intentional programming สี่องค์ประกอบ กติกาว่า artifact กำหนดพฤติกรรมต้องได้วินัยเท่าโค้ดแต่ไม่กลายเป็น source code และข้อสังเกตว่าความล้มเหลวชั้น 3.0 ต้องใช้ invocation trace ฉบับเต็มเพราะอาจไม่เกิดซ้ำเมื่อ resample</span></li>
+            <li id="th-ref-2"><span class="ref-tag ref-tag--synthesis">Synthesis</span> Karpathy, A. <cite>Software 2.0</cite> — บทความบน Medium, 2017. อ้างเชิงบรรณานุกรม ไม่แนบ URL. <span class="ref-supports">รองรับ: ที่มาของคำว่า Software 2.0 และภาพว่า artifact ของยุคนี้คือ weights ที่ optimiser เขียนจาก dataset และ objective ที่วิศวกรคัด</span></li>
+            <li id="th-ref-3"><span class="ref-tag ref-tag--synthesis">Synthesis</span> Karpathy, A. <cite>Software Is Changing (Again)</cite> — การบรรยายที่ AI Startup School, 2025. อ้างเชิงบรรณานุกรม ไม่แนบ URL. <span class="ref-supports">รองรับ: การเรียกชั้นที่สามว่า Software 3.0 และภาพว่าโปรแกรมจำนวนมากขึ้นถูกเขียนด้วยภาษาธรรมชาติที่ป้อนให้โมเดลตีความ</span></li>
+            <li id="th-ref-4"><span class="ref-tag ref-tag--study">Study</span> Breck, E., Cai, S., Nielsen, E., Salib, M., Sculley, D. <cite>The ML Test Score: A Rubric for ML Production Readiness and Technical Debt Reduction</cite> — IEEE Big Data 2017. <a href="https://doi.org/10.1109/bigdata.2017.8258038">doi.org</a> — เข้าถึง 2026-09-08. <span class="ref-supports">รองรับ: วินัยความพร้อม production ของยุค 2.0 — rubric การทดสอบข้อมูล โมเดล และ infrastructure ของระบบ ML — ซึ่งเป็นฐานที่เปเปอร์ต่อยอดไปสู่การประกันคุณภาพของชั้น 3.0</span></li>
+        </ol>
+    </section>
+    </div>
+
+    <div class="l-en" lang="en">
+
+    <p>🤔 <strong>If Nong Kram answers one refund-eligibility question wrongly tomorrow morning, what do you open first — the code in <code>src/</code>, the model your vendor hosts, or the system prompt?</strong></p>
+
+    <p>The previous post, <a href="/blog/ai-core-what-is">What Is an AI-Core System?</a>, classified systems along two axes — decision authority and model indispensability — and placed Nong Kram, the customer assistant of the KramKraft ceramics shop, in the AI-core quadrant: model output controls an external action through the <code>refund</code> tool, and the removal ablation drops task success below the predeclared threshold. That quadrant comes with the full set of obligations — hard mediation, semantic evaluation, tracing, fallback — but before anything can actually be wrapped in an envelope, a more basic question has to be answered first: what does the system we are about to wrap consist of, and which files does its behaviour actually <em>live in</em>?</p>
+
+    <p>The whole post's answer comes from Section 3 of the paper: one AI-core system carries three eras of software stacked in a single call path — <strong>Software 1.0</strong>, explicit code the engineer writes by hand; <strong>Software 2.0</strong>, weights an optimiser learns from a dataset; and <strong>Software 3.0</strong>, context assembled at runtime and handed to a frozen model to interpret. These three are not rival architectures to choose between: they run together inside a single customer request. Each layer has its own author, its own principal artifact, its own assurance method, and — when it breaks — its own failure signature. The work of this post is to map your system onto those three layers, one artifact at a time, and write the result down as a document your team can actually triage incidents with.</p>
+
+    <h2 id="en-three-layers">1. The Eras Do Not Replace Each Other — They Stack in One System</h2>
+
+    <p>The conclusion of this section fits in one sentence: Software 1.0, 2.0 and 3.0 are not an evolutionary sequence in which each generation swallows the last — they are overlapping layers in the single deployed call path of a real system.<sup><a href="#en-ref-1">[1]</a></sup> One customer question — "can I get a refund on order #1042?" — walks through all three layers in a few hundred milliseconds, and knowing which layer each stretch of that path belongs to is the root of every remaining post in this series.</p>
+
+    <p><strong>Software 1.0</strong> is the layer we know best: explicit logic an engineer writes as source code — the API routes, the database wiring, the <code>refund()</code> function that actually hits the payment processor. Its dominant uncertainty is human error in the logic, and its assurance methods have hardened over decades: type systems, code review, test suites, and formal proof for the critical parts. When this layer breaks, it breaks as a <em>bug</em> — wrong logic that reproduces deterministically and reads straight off a stack trace.<sup><a href="#en-ref-1">[1]</a></sup></p>
+
+    <p><strong>Software 2.0</strong> is the layer of learned components — the term Karpathy coined back in 2017.<sup><a href="#en-ref-2">[2]</a></sup> The author of this layer's artifact is not a human but an optimiser: engineers curate the dataset and define the objective, and the training process writes the weights. In our system this layer is the frozen, version-pinned language model <code>M_v</code>, plus the embedding model on the retrieval side. Its dominant uncertainty is not wrong logic but generalisation beyond the training distribution; its failure signature is poor generalisation and distribution shift; and its era grew a concrete assurance discipline of its own — held-out evaluation and production-readiness rubrics such as the ML Test Score<sup><a href="#en-ref-4">[4]</a></sup> — which the paper extends onward to the third layer.</p>
+
+    <p><strong>Software 3.0</strong> is the layer that is genuinely new and least understood: context assembled <em>at runtime</em> — the system prompt, the customer's message, the passages retrieval pulled in, tool results — composed into one input and handed to a frozen model to interpret.<sup><a href="#en-ref-3">[3]</a></sup> Its artifacts are the assembled context, the tool schemas and the orchestration policy. The point people most often get wrong is variability: the randomness of sampling can be removed with deterministic decoding, but drift from retrieval and from model-version changes <em>cannot</em>. When this layer breaks, it breaks as <strong>hallucination</strong>, drift and <strong>prompt injection</strong> — and diagnosis needs the full invocation trace, because the failure may not recur under resampling.<sup><a href="#en-ref-1">[1]</a></sup></p>
+
+    <figure class="figure">
+      <a href="../images/ai-core-fig-02-three-eras.png">
+        <img class="figure__img" src="../images/ai-core-fig-02-three-eras.png" alt="Three overlapping bands for Software 1.0 explicit code, 2.0 learned components, and 3.0 runtime-assembled context, with each layer&#x27;s principal artifacts, assurance method and failure signature." width="1400" height="700" loading="lazy" decoding="async">
+      </a>
+      <figcaption class="figure__caption">The eras are overlapping layers in one system — the engineer&#x27;s leverage moves from control flow, to dataset and loss, to runtime context.</figcaption>
+    </figure>
+
+    <p>The paper's Table 3 lays the three layers side by side across five dimensions. I condense its essentials here — this table is the backbone of the layer map we build in section <a href="#en-seven-steps">3</a>.</p>
+
+    <div class="table-wrapper">
+        <table>
+            <thead>
+                <tr>
+                    <th>Dimension</th>
+                    <th>Software 1.0 — explicit code</th>
+                    <th>Software 2.0 — learned components</th>
+                    <th>Software 3.0 — runtime-assembled context</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td><strong>Who authors the behaviour</strong></td>
+                    <td>An engineer writes the logic by hand, line by line</td>
+                    <td>An optimiser writes the weights from a dataset and objective the engineer curated and defined</td>
+                    <td>Assembly code and retrieval compose the input at runtime, and the frozen model synthesises that part of the behaviour</td>
+                </tr>
+                <tr>
+                    <td><strong>Principal artifact and runtime variability</strong></td>
+                    <td>Source code — behaviour fixed given its declared inputs</td>
+                    <td>Weights (frozen at deployment) — the function stays still, but real-world inputs drift</td>
+                    <td>Assembled context, tool schemas, orchestration policy — different on every request; sampling randomness removable by deterministic decoding, but retrieval and model-version drift are not</td>
+                </tr>
+                <tr>
+                    <td><strong>Dominant uncertainty and assurance method</strong></td>
+                    <td>Human error in the logic — types, review, tests, proof for critical parts</td>
+                    <td>Generalisation beyond the training distribution — held-out evaluation and production-readiness discipline</td>
+                    <td>The model's semantic behaviour given the assembled context — golden sets, runtime rails and tracing (the subjects of posts #7–#9)</td>
+                </tr>
+                <tr>
+                    <td><strong>Change surface and failure observability</strong></td>
+                    <td>A change is a code diff; failures reproduce from a stack trace</td>
+                    <td>A change is a new dataset, a retrain or a new model version; visible through aggregate metrics and data snapshots</td>
+                    <td>A change is an edit to a prompt, corpus, schema or config — often with no code diff at all; failures may not recur under resampling, so the full invocation trace is required</td>
+                </tr>
+                <tr>
+                    <td><strong>Failure signature</strong></td>
+                    <td>Bug — wrong logic</td>
+                    <td>Poor generalisation, distribution shift</td>
+                    <td>Hallucination, drift, prompt injection</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <p>The word not to miss when reading that table is <em>stacked</em>, not <em>replaced</em>. One refund request: a FastAPI route (1.0) receives the message; the assembly code (1.0) calls retrieval, which leans on an embedding model (2.0) to pull passages from the corpus and compose them into a context (3.0); <code>M_v</code> (2.0) interprets it; the result may be a tool call that must pass its schema (3.0) before the <code>refund()</code> code (1.0) creates the real effect — three eras trade control of one path several times inside a few hundred milliseconds.</p>
+
+    <h3>The 1.0 layer never disappears — and must never be allowed to</h3>
+
+    <p>The paper is explicit about this and I want to repeat it: however "3.0" a system becomes, era-1.0 code still holds the three things the whole system depends on — control flow, the interfaces, and the mediation of every effect.<sup><a href="#en-ref-1">[1]</a></sup> The thing that decides whether a tool call is authorised, the thing that validates the schema, the thing that writes the trace — all of it is explicit, human-written code, tested the 1.0 way and reviewed the 1.0 way. Every guard and every rail this series builds in the later posts is first-era software.</p>
+
+    <blockquote>💡 My view: the way to catch a team that believes it has "moved to Software 3.0" is one question — if the guard around <code>refund</code> releases a transaction tomorrow that it should not have, who fixes it, and in which file? The answer is always an engineer and a .py file, never a prompt engineer and a dashboard, because what failed was not the model's capability but 1.0 code we did not write tightly enough. A team that stops investing in its 1.0 layer because it feels "legacy" is tearing up the floor it is standing on.</blockquote>
+
+    <h2 id="en-intentional-programming">2. The Leverage Moves — Imperative, Declarative, Intentional</h2>
+
+    <p>The conclusion of this section: what changes across the three eras is not "the language you write in" but <em>where the engineer's leverage sits</em> — on control flow in 1.0, on the dataset and the loss in 2.0, and on runtime context in 3.0, the work the paper names <strong>context engineering</strong>.<sup><a href="#en-ref-1">[1]</a></sup> Misjudge where the leverage is and the whole project pushes in the wrong place.</p>
+
+    <p>The move is sharpest through the lens of "how behaviour is specified". In 1.0 we write <em>imperatively</em> — telling the machine what to do, step by step. In 2.0 we write <em>declaratively</em> — declaring an objective over a dataset and letting the optimiser find the function. In 3.0 we write in the mode the paper calls <em>intentional</em> — declaring the four things below and delegating the synthesis of that part of the behaviour to the model core.<sup><a href="#en-ref-1">[1]</a></sup> Karpathy drew the same picture in his 2025 talk: software is changing again, and a growing share of programs is now "written" in natural language fed to a model.<sup><a href="#en-ref-3">[3]</a></sup></p>
+
+    <ul>
+        <li><strong>Intent</strong> — what the system is trying to do, for whom, under which rules — for Nong Kram, the system prompt that defines the role, the scope and the tone</li>
+        <li><strong>Exemplars</strong> — what a good answer looks like — golden examples of the conversations we want to see repeated</li>
+        <li><strong>Grounding knowledge</strong> — the facts an answer must rest on — the policy corpus in <code>policy/</code> and the catalogue in <code>catalog/</code></li>
+        <li><strong>Permitted actions</strong> — the only ways the system may touch the world — the <code>refund</code> tool schema declaring its parameters and bounds in advance</li>
+    </ul>
+
+    <p>The disciplinary consequence of this picture is the most expensive point of the whole post: prompts, the retrieval corpus, golden examples and eval suites are <em>behaviour-determining</em> artifacts alongside the code — one changed line in the system prompt shifts the system's behaviour as much as, or more than, one changed function — so they must receive the full discipline code gets: version control, review before merge, and test suites of their own.<sup><a href="#en-ref-1">[1]</a></sup> This is what Nong Kram's repo looks like after accepting that fact.</p>
+
+    <pre><code># Nong Kram's repo layout — 3.0 artifacts beside the code, under the same discipline
+kramkraft-assistant/
+├── src/                    # 1.0 — control flow, interfaces, mediation
+│   ├── api/routes.py       #   chat endpoints for web and LINE
+│   ├── tools/refund.py     #   the effectful part — creates real effects
+│   └── context/assemble.py #   the context-assembly code
+├── prompts/
+│   └── system.th.md        # 3.0 — determines behaviour, as much as code does
+├── policy/                 # 3.0 — return-policy and shipping corpus
+├── catalog/                # 3.0 — product-page snapshot
+├── schemas/
+│   └── refund.json         # 3.0 — the boundary of the tool call
+├── eval/
+│   └── golden.jsonl        # 3.0 — the golden set for the top task
+└── manifest.lock           # pins everything together (post #4's subject)
+</code></pre>
+
+    <p>But the paper's next line matters just as much, and is the one most often skipped: these artifacts <em>do not become the source code</em>. Code retains the control flow, the interfaces and the mediation everything depends on.<sup><a href="#en-ref-1">[1]</a></sup> A prompt is code's equal <em>in discipline</em>, not code's replacement <em>in function</em> — text in the context is advice to the model, not a constraint on the system, and that dividing line is the reason post #8 has to exist.</p>
+
+    <blockquote>💡 My view: the shorthand rule I use with my teams is a single sentence — "anything that changes the system's answer when you edit it is the program, and belongs under the program's discipline." Walk your files with that sentence and the list of artifacts that need versioning comes out roughly twice as long as most teams expect — especially the ones hiding in a vendor dashboard, where an edit leaves no trace at all.</blockquote>
+
+    <h2 id="en-seven-steps">3. The Seven Steps</h2>
+
+    <p>The output of these seven steps is a <em>layer map</em> — one file that answers which artifact sits in which era, where it is versioned, and what it looks like when it breaks — which becomes the team's first triage tool and the base every later post builds on. Every step walks with Nong Kram as the live example.</p>
+
+    <h3>Step 1 — Inventory every artifact in your repo and your runtime</h3>
+
+    <p>Open a two-column ledger: the first column is everything <code>git ls-files</code> can see; the second is everything that determines behaviour at runtime but does <em>not</em> appear in that command's output. The second column is the real point of this step, because nearly every AI-core system has most of its behaviour living outside the repo without the team noticing. Nong Kram's first pass came out like this.</p>
+
+    <pre><code>$ git ls-files          # the in-repo side — visible, diffable, reviewable
+src/api/routes.py  src/tools/refund.py  src/context/assemble.py ...
+
+# The side that determines behaviour but is absent above — write down all of it:
+#  1. system prompt       -> edited in the vendor's dashboard
+#  2. retrieval top-k     -> set in a console three months ago, value forgotten
+#  3. catalog             -> exported by hand from the backoffice every month
+#  4. version of M_v      -> pointing at "latest", not pinned
+</code></pre>
+
+    <h3>Step 2 — Assign each artifact to an era</h3>
+
+    <p>Walk the ledger from step 1 and label every row with its era, Table 3 in hand: the label immediately says which discipline the artifact needs, how it is tested, and how it will fail. The labelling rule is straightforward.<sup><a href="#en-ref-1">[1]</a></sup></p>
+
+    <ul>
+        <li><strong>1.0</strong> — code and config that hold control flow: the routes, the context assembler, <code>refund()</code>, the validators — for Nong Kram, everything under <code>src/</code></li>
+        <li><strong>2.0</strong> — weights and embeddings: the version-pinned model <code>M_v</code> and the retrieval embedding model — we did not train them, but they are our system's 2.0 layer all the same</li>
+        <li><strong>3.0</strong> — prompts, corpus, tool schemas and orchestration policy: <code>prompts/system.th.md</code>, <code>policy/</code>, <code>catalog/</code>, <code>schemas/refund.json</code>, and the rules for when a refund may be proposed</li>
+    </ul>
+
+    <h3>Step 3 — Find the behaviour-determining set for your top task</h3>
+
+    <p>Pick your single most important task and ask, artifact by artifact: "if I edit this, does the answer to this task change?" The set of artifacts that answer yes is the behaviour-determining set — the real program of that task. Nong Kram's top task is "answer refund eligibility correctly against policy", and its set is: the system prompt, the corpus in <code>policy/</code> together with its snapshot, the retrieval config, the version of <code>M_v</code>, the decoding config, and <code>schemas/refund.json</code> — while the logging code, the site's CSS, and even <code>catalog/</code> are outside this task's set (though <code>catalog/</code> is inside the set of the "answer product questions" task). Knowing the set per task matters because it tells you which task's regression tests must run when which file changes.</p>
+
+    <h3>Step 4 — Mark where your engineering leverage actually is</h3>
+
+    <p>Most systems this series' readers operate use a frozen hosted model — the weights are not ours to edit, which means the 2.0-era leverage is <em>not ours</em>. What actually moves is two layers: the 3.0 layer (prompt, corpus, retrieval config, exemplars) for shaping behaviour, and the 1.0 layer (mediation, validation, routing) for bounding the damage. For Nong Kram I wrote the repair order straight into the document: on a wrong answer, look at the corpus first, then the retrieval config, then the prompt — and a model-version change is a release that reruns the whole golden set, never a hotfix, because behavioural evidence about a context is tied to the model version that interprets it.<sup><a href="#en-ref-1">[1]</a></sup></p>
+
+    <h3>Step 5 — Mark what is versioned today and what is floating</h3>
+
+    <p>Return to the step-1 ledger and draw the line: what is versioned, and what is "floating" — editable with no diff, no review and no way back. The sentence I want remembered from this step: <em>a prompt edited in a dashboard is a program change nobody reviewed.</em> It is a deploy with no record, and on the day the system's behaviour changes mid-week there will be no evidence of who changed what. Nong Kram closed this hole in one morning.</p>
+
+    <pre><code>$ mkdir -p prompts schemas
+$ # paste the latest dashboard text into files — the repo is the source of truth now
+$ git add prompts/system.th.md schemas/refund.json retrieval.yaml
+$ git commit -m "Move behaviour-determining artifacts into the repo"
+$ # new rule: the dashboard is a read-only mirror; deployment reads from the repo only
+</code></pre>
+
+    <h3>Step 6 — Learn each layer's failure signature, and the evidence its debugging needs</h3>
+
+    <p>The three layers break in three different ways and need three different kinds of evidence to diagnose. A team that cannot tell the three signatures apart will debug the wrong layer every time — the classic symptom is three days spent reading code hunting a "bug" that is really a corpus older than the actual policy. Drill the classification with three invented Nong Kram incidents.<sup><a href="#en-ref-1">[1]</a></sup></p>
+
+    <ul>
+        <li><strong>A 1.0 case — bug:</strong> <code>refund()</code> rounds satang incorrectly; every order ending in .50 reproduces it, one hundred percent of the time — the evidence needed: a stack trace and one unit test</li>
+        <li><strong>A 2.0 case — poor generalisation:</strong> the embedding model retrieves the wrong passages when customers write "indigo glaze" one way rather than another — the evidence needed: a data snapshot of real queries and a recall metric, not a stack trace, because nothing throws</li>
+        <li><strong>A 3.0 case — hallucination:</strong> Nong Kram invents a "returns within 45 days" condition that exists in no policy anywhere; ten reruns reproduce it twice — the evidence needed: the full invocation trace of the failing run — the context actually assembled, the passages actually retrieved, the raw output — because resampling may never show the symptom again</li>
+    </ul>
+
+    <h3>Step 7 — Write the layer map as a living document</h3>
+
+    <p>Fold every step into one table in <code>docs/layer-map.md</code>: one row per artifact, four columns — name, era, where it is versioned, failure signature — plus a behaviour-determining-set heading per top task. Then wire it into the workflow: any PR that adds a new behaviour-determining artifact must add its row to the map before it can merge. A document that does not grow with the system turns into fiction within a quarter — and Nong Kram's full map is the next section.</p>
+
+    <h2 id="en-kramkraft">4. Nong Kram's Layer Map</h2>
+
+    <p>This is the post's artifact in full — KramKraft's <code>docs/layer-map.md</code> after walking all seven steps: thirteen rows, three eras. Copy the skeleton directly (the numbers and file names are the tutorial's, not the paper's).</p>
+
+    <div class="table-wrapper">
+        <table>
+            <thead>
+                <tr>
+                    <th>Artifact</th>
+                    <th>Era</th>
+                    <th>Versioned where</th>
+                    <th>Failure signature</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td><code>src/api/routes.py</code> — web + LINE endpoints</td>
+                    <td>1.0</td>
+                    <td>git</td>
+                    <td>HTTP 500 with a stack trace naming the line</td>
+                </tr>
+                <tr>
+                    <td><code>src/tools/refund.py</code> — creates the real effect</td>
+                    <td>1.0</td>
+                    <td>git + mandatory two-person review</td>
+                    <td>Reproducible wrong amounts / exceptions</td>
+                </tr>
+                <tr>
+                    <td><code>src/context/assemble.py</code> — context-assembly code</td>
+                    <td>1.0</td>
+                    <td>git</td>
+                    <td>Malformed assembled context — caught by a unit test</td>
+                </tr>
+                <tr>
+                    <td><code>M_v</code> — frozen hosted model</td>
+                    <td>2.0</td>
+                    <td>version pinned in <code>manifest.lock</code></td>
+                    <td>Uneven competence across tasks; system-wide behaviour change when the version moves</td>
+                </tr>
+                <tr>
+                    <td>retrieval embedding model</td>
+                    <td>2.0</td>
+                    <td>version pinned in <code>manifest.lock</code></td>
+                    <td>Recall drops on domain terms — visible in a data snapshot</td>
+                </tr>
+                <tr>
+                    <td>decoding config — temperature, seed</td>
+                    <td>3.0</td>
+                    <td>git (<code>decoding.yaml</code>)</td>
+                    <td>Answers wobble between runs on identical input</td>
+                </tr>
+                <tr>
+                    <td><code>prompts/system.th.md</code> — system prompt</td>
+                    <td>3.0</td>
+                    <td>git — just moved out of the dashboard (step 5)</td>
+                    <td>Rules or tone change system-wide with no code diff</td>
+                </tr>
+                <tr>
+                    <td><code>policy/</code> — returns + shipping policy</td>
+                    <td>3.0</td>
+                    <td>git + a snapshot id per release</td>
+                    <td>Answers cite the old policy — drift between corpus and reality</td>
+                </tr>
+                <tr>
+                    <td><code>catalog/</code> — product-page snapshot</td>
+                    <td>3.0</td>
+                    <td>automated export + weekly commit</td>
+                    <td>States a wrong price or stock level, confidently</td>
+                </tr>
+                <tr>
+                    <td><code>schemas/refund.json</code> — tool schema</td>
+                    <td>3.0</td>
+                    <td>git</td>
+                    <td>A malformed call slips through, or a well-formed call carries the wrong intent</td>
+                </tr>
+                <tr>
+                    <td>retrieval config — top-k, ranker, filters</td>
+                    <td>3.0</td>
+                    <td>git (<code>retrieval.yaml</code>) — used to float in a console</td>
+                    <td>The retrieved set changes, so answers change, on an unchanged corpus</td>
+                </tr>
+                <tr>
+                    <td>orchestration policy — when to propose a refund / hand off to a human</td>
+                    <td>3.0</td>
+                    <td>git (<code>policy.yaml</code>)</td>
+                    <td>Wrong routing — a refund proposed in a case that should reach a human</td>
+                </tr>
+                <tr>
+                    <td><code>eval/golden.jsonl</code> — the <strong>golden set</strong>, 40 cases</td>
+                    <td>3.0</td>
+                    <td>git</td>
+                    <td>Its failure mode is silence — a regression nobody sees</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <p>The map showed the KramKraft team two things on day one. First — the two most behaviour-determining artifacts in the system (the system prompt and the retrieval config) had both been floating outside the repo. Second — the shop's top task depends on era-3.0 artifacts in seven of the thirteen rows, which means the existing 1.0-style tests covered less than half of the system's real behaviour. The 40-case golden set (a tutorial number) is seeded in this post, and gets worked hard in post #9.</p>
+
+    <h2 id="en-validation-check">5. Validation Check — Audit Your Own Layer Map</h2>
+
+    <p>The paper's rule, applied in every post of this series: every audit question must be answered with an <em>artifact</em> you can produce, never with an adjective.<sup><a href="#en-ref-1">[1]</a></sup> Run these seven against your own system — any row with nothing to show is a fail, however confident the team feels.</p>
+
+    <div class="table-wrapper">
+        <table>
+            <thead>
+                <tr>
+                    <th>Audit question</th>
+                    <th>Pass when</th>
+                    <th>Artifact to produce</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>Does the artifact inventory cover both the repo and the runtime?</td>
+                    <td>Everything that determines behaviour has its own row, including what used to live in dashboards</td>
+                    <td>The latest <code>docs/layer-map.md</code>, era column filled on every row</td>
+                </tr>
+                <tr>
+                    <td>Does any behaviour-determining artifact live outside version control?</td>
+                    <td>You can point to the repo path and latest commit of your system prompt within one minute</td>
+                    <td>A real path such as <code>prompts/system.th.md</code> + the output of <code>git log -1</code> on that file</td>
+                </tr>
+                <tr>
+                    <td>Do you know the behaviour-determining set of your top task?</td>
+                    <td>You can say which files change that task's answer when edited, and which are irrelevant</td>
+                    <td>The top-task heading in the layer map listing that set's artifacts</td>
+                </tr>
+                <tr>
+                    <td>Does the corpus the system answers from have a version?</td>
+                    <td>You can name the corpus snapshot the current deployment reads</td>
+                    <td>The snapshot id / commit of <code>policy/</code> and <code>catalog/</code> that production actually uses</td>
+                </tr>
+                <tr>
+                    <td>Did the last prompt change go through review?</td>
+                    <td>The latest system-prompt change has a diff, a reviewer, and a reason in the commit</td>
+                    <td>The most recent PR or merge commit touching <code>prompts/</code></td>
+                </tr>
+                <tr>
+                    <td>Can the team tell the three failure signatures apart?</td>
+                    <td>Incidents are classified by layer before debugging starts, and the right kind of evidence is requested</td>
+                    <td>Three incident records (or drill results), classified by layer, each naming the evidence type that closed it</td>
+                </tr>
+                <tr>
+                    <td>Is the layer map a living document or a one-off?</td>
+                    <td>A PR adding a new artifact touches the map in the same diff</td>
+                    <td>The history of <code>docs/layer-map.md</code> against the date the system's latest artifact was added</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <h2 id="en-road-ahead">6. The Road Ahead</h2>
+
+    <p>This post delivers one tool that is simple but changes how the team talks: a layer map that says where the system's behaviour lives, who versions it, and what it looks like when it breaks. The three eras of software are not period labels to pick a side over — they are three layers of one system, each demanding its own discipline, and knowing which layer the incident in front of you belongs to is the first half of fixing it in the right place.</p>
+
+    <p>What this post deliberately does <em>not</em> answer is <em>where</em> our old guarantees break down. We now know the 3.0 layer fails as hallucination and prompt injection, but we have not yet explained what structural property of the model core makes those failures <em>possible in the first place</em>. That answer needs another mental model: treat the AI core as an operating system — the weights as a CPU, the context window as RAM with no memory protection, retrieval as a file system with no stable read contract — and then walk the seams where the analogy cracks. That is the whole of <a href="/blog/ai-core-os-model">#3 The AI-OS Mental Model</a>.</p>
+
+    <div class="alert info">
+        <strong>🧭 The artifact this post hands forward:</strong> Nong Kram's <code>docs/layer-map.md</code> — thirteen rows, three eras, plus the behaviour-determining set of the refund task. The next post takes this map's 3.0 rows and lays them on the AI-OS analogy to mark which seam of each row is where a classical guarantee stops holding — and post #4 promotes the entire "versioned where" column into a single release manifest.</div>
+
+    <div class="key-takeaways">
+        <h3>🎯 Key Takeaways</h3>
+        <ul>
+            <li><strong>Three stacked eras</strong> = 1.0 explicit code · 2.0 learned weights · 3.0 runtime-assembled context — layers in one call path, never rival architectures</li>
+            <li><strong>The 1.0 layer stays</strong> = code retains control flow, the interfaces, and the mediation of every effect — every guard in the later posts is 1.0 software</li>
+            <li><strong>The leverage moves</strong> = control flow → dataset + loss → context engineering — pushing on the wrong layer is wasted force</li>
+            <li><strong>Intentional programming</strong> = declare intent + exemplars + grounding knowledge + permitted actions, and delegate the synthesis to the model core</li>
+            <li><strong>Behaviour-determining artifacts</strong> = prompts, corpus, golden examples and eval suites deserve code's full discipline — but they do not become the source code</li>
+            <li><strong>Three failure signatures</strong> = bug (stack trace) · poor generalisation (data snapshot) · hallucination/drift/injection (full invocation trace) — classify the layer first, then debug</li>
+        </ul>
+    </div>
+
+    <section class="references" aria-labelledby="en-references">
+        <h2 id="en-references">References</h2>
+        <p class="references__note">All sources checked 8 September 2026 (Asia/Bangkok) · Four evidence labels: <strong>Law</strong> statute or official notification · <strong>Standard</strong> a published standard or official framework · <strong>Study</strong> research or a field signal · <strong>Synthesis</strong> the author's own synthesis or a non-research source.</p>
+        <ol class="references__list">
+            <li id="en-ref-1"><span class="ref-tag ref-tag--synthesis">Synthesis</span> Anirach Mingkhwan. <cite>Engineering AI-Core Systems: A Reference Architecture and Assurance Contract for Software 3.0</cite> — CreativeLAB, FITM, KMUTNB, 2026. An author-supplied document, unpublished, with no public URL, and therefore no link and no access date. <span class="ref-supports">Supports: Table 3 in all five dimensions (who authors the behaviour, principal artifact and runtime variability, dominant uncertainty and assurance method, change surface and failure observability, failure signature); the point that the eras are overlapping layers in one deployed call path with the 1.0 layer retaining control flow, interfaces and mediation; the move of leverage to context engineering; the four-part definition of intentional programming; the rule that behaviour-determining artifacts deserve code's discipline yet do not become the source code; and the observation that 3.0-layer failures need the full invocation trace because they may not recur under resampling</span></li>
+            <li id="en-ref-2"><span class="ref-tag ref-tag--synthesis">Synthesis</span> Karpathy, A. <cite>Software 2.0</cite> — Medium essay, 2017. Cited bibliographically, no URL attached. <span class="ref-supports">Supports: the origin of the term Software 2.0 and the picture of this era's artifact as weights written by an optimiser from a dataset and objective the engineer curated</span></li>
+            <li id="en-ref-3"><span class="ref-tag ref-tag--synthesis">Synthesis</span> Karpathy, A. <cite>Software Is Changing (Again)</cite> — talk at AI Startup School, 2025. Cited bibliographically, no URL attached. <span class="ref-supports">Supports: naming the third layer Software 3.0 and the picture that a growing share of programs is written in natural language handed to a model to interpret</span></li>
+            <li id="en-ref-4"><span class="ref-tag ref-tag--study">Study</span> Breck, E., Cai, S., Nielsen, E., Salib, M., Sculley, D. <cite>The ML Test Score: A Rubric for ML Production Readiness and Technical Debt Reduction</cite> — IEEE Big Data 2017. <a href="https://doi.org/10.1109/bigdata.2017.8258038">doi.org</a> — accessed 2026-09-08. <span class="ref-supports">Supports: the 2.0-era production-readiness discipline — the rubric for testing data, models and infrastructure in ML systems — which the paper extends toward assurance of the 3.0 layer</span></li>
+        </ol>
+    </section>
+    </div>
+
+    <div class="post-series-footer">
+      <span class="l-th">บทความจากซีรีส์ Engineering AI-Core Systems 2026</span><span class="l-en" lang="en">From the Engineering AI-Core Systems 2026 series</span>
+    </div>
+
+    <nav aria-label="Engineering AI-Core Systems">
+    <div class="series-nav">
+      <h3>🛡️ Engineering AI-Core Systems 2026</h3>
+      <div class="series-links">
+        <a href="/blog/ai-core-what-is">#1 What Is AI-Core</a>
+        <span class="current" aria-current="page">#2 Three Eras</span>
+        <a href="/blog/ai-core-os-model">#3 AI-OS Seams</a>
+        <a href="/blog/ai-core-context-engineering">#4 Context Control</a>
+        <a href="/blog/ai-core-fallible-savant">#5 Fallible Savant</a>
+        <a href="/blog/ai-core-control-loop">#6 Control Loop</a>
+        <a href="/blog/ai-core-assurance-contract">#7 Assurance Contract</a>
+        <a href="/blog/ai-core-five-rails">#8 Five Rails</a>
+        <a href="/blog/ai-core-validation">#9 Validation</a>
+        <a href="/blog/ai-core-ship-operate">#10 Ship &amp; Operate</a>
+      </div>
+    </div>
+    </nav>
+
+  </article>
+
+  </main>
+
+  <footer class="blog-footer">
+    <nav class="blog-footer__nav" aria-label="Site">
+      <a href="../index.html">Home</a>
+      <a href="./">Blog</a>
+      <a href="../publications/">Publications</a>
+      <a href="../books/">Books</a>
+      <a href="../projects/">Projects</a>
+      <a href="../news/">News</a>
+      <a href="../index.html#contact">Contact</a>
+    </nav>
+    <a href="./">← Back to Blog</a>
+    <span>© 2026 Anirach Mingkhwan — Associate Professor, KMUTNB</span>
+  </footer>
+
+</body>
+</html>

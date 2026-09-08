@@ -1,0 +1,1197 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Context Is a Control Artifact — บริบทคือส่วนหนึ่งของโปรแกรม | Anirach Mingkhwan</title>
+  <meta name="description" content="พฤติกรรมของระบบมาจากทุกพจน์ของสมการเดียว — prompts, corpus, tool schema, decoding ล้วนเป็นโปรแกรม จึงต้อง version รีวิว และปล่อยพร้อมกันใน manifest เดียว">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=Sarabun:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      color-scheme: light;
+      /* ink */
+      --navy: #11304b; --slate: #334155; --slate-light: #526174; --gray: #94a3b8;
+      /* ground */
+      --bg: #faf7f0; --white: #ffffff; --code-bg: #1e293b;
+      /* accent */
+      --blue: #226299; --blue-dark: #1a4d7a; --blue-light: #4992b9;
+      /* brand — sampled from the book covers. --gold is decorative on light grounds (2.2:1); --gold-dark is its text form. */
+      --gold: #c4a46c; --gold-dark: #7a5f22; --cloud: #dee7e6; --parchment: #e9e1c4; --focus: #226299;
+      /* status — use only these six, never invent a seventh */
+      --green: #22c55e; --red: #ef4444; --amber: #f59e0b;
+      --cyan: #06b6d4; --purple: #226299; --purple-dark: #1a4d7a;
+      /* type */
+      --font: 'Inter', 'Sarabun', -apple-system, BlinkMacSystemFont, sans-serif;
+      --mono: 'JetBrains Mono', 'Fira Code', 'Sarabun', monospace;
+      /* form */
+      --radius: 12px; --radius-sm: 8px; --radius-lg: 16px;
+      --measure: 720px; --wide: 860px;
+      --transition: 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+    html { scroll-behavior: smooth; }
+    body { font-family: var(--font); font-size: 17px; line-height: 1.8; color: var(--slate); background: var(--bg); -webkit-font-smoothing: antialiased; }
+    .blog-nav { position: fixed; top: 0; left: 0; right: 0; z-index: 100; background: rgba(248,250,252,0.85); backdrop-filter: blur(20px); border-bottom: 1px solid rgba(0,0,0,0.05); }
+    .blog-nav__inner { max-width: 860px; margin: 0 auto; padding: 0 2rem; height: 56px; display: flex; align-items: center; justify-content: space-between; }
+    .blog-nav__back { font-size: 0.85rem; font-weight: 500; color: var(--blue); text-decoration: none; }
+    .blog-nav__back:hover { color: #1a4d7a; }
+    .blog-nav__title { font-size: 0.85rem; font-weight: 600; color: var(--navy); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 50%; }
+    /* ── HERO ── house .post-hero on the approved Deep Blue gradient (page-design
+       §5 / INV-28). Ink is inverted for the dark ground: white title/meta, tag
+       pills white on 18% white — the openclaw-production treatment. The
+       background value must stay byte-identical to the approved string. */
+    .post-hero { padding: 8rem 2rem 3rem; background: linear-gradient(135deg, #11304b 0%, #1a4d7a 45%, #226299 100%); color: #fff; text-align: center; }
+    .post-hero__tags { display: flex; gap: 0.5rem; justify-content: center; margin-bottom: 1.25rem; flex-wrap: wrap; }
+    .post-hero__tag { display: inline-block; font-size: 0.72rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.1em; color: #fff; background: rgba(255,255,255,0.18); padding: 0.35rem 0.9rem; border-radius: 20px; }
+    .post-hero__title { font-size: clamp(1.8rem, 5vw, 3rem); font-weight: 800; color: #fff; line-height: 1.2; margin-bottom: 1rem; max-width: 720px; margin-left: auto; margin-right: auto; }
+    .post-hero__sub { font-size: 1.05rem; max-width: 640px; margin: 0 auto 1.5rem; line-height: 1.7; color: #fff; }
+    .post-hero__meta { font-size: 0.85rem; color: #fff; display: flex; align-items: center; justify-content: center; gap: 1.5rem; flex-wrap: wrap; }
+    .post-hero__series { font-weight: 600; color: #fff; }
+    /* the switch pill and the focus ring both sit on the dark hero: the pill is
+       a light chip so its labels keep their light-ground colours, and --focus
+       re-points to gold here (blue collapses on blue — the footer/pre
+       precedent). */
+    .post-hero { --focus: var(--gold); }
+    .post-hero__cover {
+      aspect-ratio: 1 / 1;
+      max-width: 380px;
+      margin: 2.5rem auto 0;
+      border-radius: var(--radius-lg, 16px);
+      overflow: hidden;
+      box-shadow: 0 20px 60px rgba(17,48,75,0.14);
+    }
+    .post-hero__cover img { width: 100%; height: 100%; object-fit: cover; display: block; }
+    .post-body { max-width: 720px; margin: 0 auto; padding: 3rem 2rem 6rem; }
+    .post-body h2 { font-size: 1.6rem; font-weight: 800; color: var(--navy); margin: 3rem 0 1rem; padding-bottom: 0.5rem; border-bottom: 2px solid rgba(34,98,153,0.15); }
+    .post-body h3 { font-size: 1.25rem; font-weight: 700; color: var(--navy); margin: 2.25rem 0 0.75rem; }
+    .post-body p { margin-bottom: 1.25rem; }
+    .post-body strong { font-weight: 700; color: var(--navy); }
+    .post-body a { color: var(--blue); text-decoration: underline; text-decoration-thickness: 1px; text-underline-offset: 2px; }
+    .post-body ul, .post-body ol { margin: 0.5rem 0 1.25rem 1.5rem; }
+    .post-body li { margin-bottom: 0.4rem; }
+    .post-body blockquote { background: rgba(34,98,153,0.06); border-left: 4px solid var(--blue); padding: 1rem 1.25rem; border-radius: 0 10px 10px 0; margin: 1.25rem 0; font-size: 0.95rem; color: var(--navy); }
+    .post-body hr { border: none; height: 1px; background: linear-gradient(90deg, transparent, rgba(34,98,153,0.2), transparent); margin: 3rem 0; }
+    /* ── CODE ── */
+    .post-body pre { background: var(--code-bg); border-radius: 12px; padding: 1.5rem; margin: 1.25rem 0 1.5rem; overflow-x: auto; border: 1px solid rgba(255,255,255,0.05); }
+    .post-body pre code { font-family: var(--mono); font-size: 0.85rem; color: #e2e8f0; line-height: 1.7; background: none; padding: 0; white-space: pre-wrap; }
+    .post-body code { font-family: var(--mono); font-size: 0.88em; background: rgba(34,98,153,0.08); color: var(--blue-dark); padding: 0.15em 0.45em; border-radius: 5px; }
+    /* ── TABLES ── */
+    .table-wrapper { overflow-x: auto; margin: 1.5rem 0; border-radius: 0.5rem; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1); }
+    table { width: 100%; border-collapse: collapse; background: white; }
+    th { background: #226299; color: white; padding: 1rem; text-align: left; font-weight: 600; }
+    td { padding: 1rem; border-bottom: 1px solid #e5e7eb; }
+    .post-body table { display: block; width: 100%; overflow-x: auto; }
+    /* ── ALERTS ── */
+    .alert { background: #fef3cd; border: 1px solid #facc15; border-radius: 0.5rem; padding: 1rem; margin: 1.5rem 0; }
+    .alert.danger { background: #fee2e2; border-color: #ef4444; }
+    .alert.info { background: #e0f2fe; border-color: #06b6d4; }
+    .alert.success { background: #d1fae5; border-color: #10b981; }
+    /* ── KEY TAKEAWAYS ── */
+    .key-takeaways { background: linear-gradient(135deg, #f3f4f6 0%, #e5e7eb 100%); border-radius: 1rem; padding: 2rem; margin: 3rem 0; }
+    .key-takeaways h3 { color: #226299; margin-bottom: 1.5rem; }
+    .post-series-footer { text-align: center; font-size: 0.85rem; color: var(--slate-light); font-style: italic; margin-top: 2rem; padding-top: 2rem; border-top: 1px solid #e2e8f0; }
+    .blog-footer { background: var(--navy); padding: 2rem 0; text-align: center; }
+    .blog-footer a { color: var(--gold); text-decoration: none; font-weight: 600; font-size: 0.9rem; }
+    .blog-footer span { color: var(--gray); font-size: 0.8rem; display: block; margin-top: 0.4rem; }
+    @media (max-width: 600px) {
+      .post-hero { padding: 7rem 1.25rem 2.5rem; }
+      .post-body { padding: 2rem 1.25rem 4rem; }
+      .post-hero__meta { flex-direction: column; gap: 0.4rem; }
+      .post-body h2 { font-size: 1.4rem; }
+      .post-body h3 { font-size: 1.15rem; }
+      .post-body pre { padding: 1rem; border-radius: 8px; }
+    }
+
+    :focus-visible { outline: 2px solid var(--focus); outline-offset: 3px; border-radius: 2px; }
+    /* the ring sits on the page ground (3px offset). Inside the navy footers
+       and code blocks var(--blue) collapses to 2.12:1, so those scopes
+       re-point --focus to gold (5.73:1 on navy). */
+    .footer, .blog-footer, pre { --focus: var(--gold); }
+    :focus:not(:focus-visible) { outline: none; }
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after {
+        animation-duration: .01ms !important; animation-iteration-count: 1 !important;
+        transition-duration: .01ms !important; scroll-behavior: auto !important;
+      }
+    }
+    h1, h2, h3, .post-hero__title, .card__title { text-wrap: balance; }
+
+    .post-body img, .post-body svg { max-width: 100%; height: auto; }
+
+    /* ── SKIP LINK ── a11y-perf R5: the link and the landmark it targets are a
+       pair — useless without both halves. Off-screen until focused, then the
+       first tab stop on every page. */
+    .skip-link { position: absolute; left: -9999px; }
+    .skip-link:focus {
+      left: 1rem; top: 1rem; z-index: 999;
+      background: var(--navy); color: #fff;
+      padding: 0.75rem 1.25rem; border-radius: var(--radius-sm);
+      font-weight: 600; text-decoration: none;
+    }
+
+    /* ── POST WAYFINDING ── the wordmark is the home link; the footer carries
+       the full destination row. */
+    .blog-nav__home {
+      font-size: 0.9rem; font-weight: 800; color: var(--navy);
+      text-decoration: none; margin-right: 1rem;
+    }
+    .blog-nav__home:hover { color: var(--blue); }
+    .blog-nav__inner > .blog-nav__back { margin-right: auto; }
+    .blog-footer__nav {
+      display: flex; flex-wrap: wrap; justify-content: center; gap: 0.35rem 1.25rem;
+      max-width: 860px; margin: 0 auto 1.25rem; padding: 0 2rem 1.25rem;
+      border-bottom: 1px solid rgba(255,255,255,0.12);
+    }
+    .blog-footer__nav a { color: var(--gold); font-size: 0.85rem; font-weight: 600; text-decoration: none; }
+    .blog-footer__nav a:hover { color: #fff; text-decoration: underline; }
+
+    html { scroll-padding-top: 5rem; }
+    [id] { scroll-margin-top: 5rem; }
+
+    /* Thai needs more room than Latin at the same nominal size. */
+    .post-body:lang(th) { font-size: 18px; line-height: 1.85; }
+    .post-body p, .post-body li, .post-body blockquote { text-wrap: pretty; }
+
+    /* ---- side-scroll affordance ----
+       pre blocks and tables can exceed 720px. These layers paint a shadow ONLY
+       where there is more content in that direction; when fully scrolled the
+       cover slides over the shadow and hides it. No JavaScript, no wrapper. */
+    .post-body pre, .post-body table {
+      overflow-x: auto;
+      background-image:
+        linear-gradient(to right, var(--code-bg, #0f172a) 30%, rgba(15,23,42,0)),
+        linear-gradient(to left, var(--code-bg, #0f172a) 30%, rgba(15,23,42,0)),
+        radial-gradient(farthest-side at 0 50%, rgba(0,0,0,.28), rgba(0,0,0,0)),
+        radial-gradient(farthest-side at 100% 50%, rgba(0,0,0,.28), rgba(0,0,0,0));
+      background-position: 0 0, 100% 0, 0 0, 100% 0;
+      background-repeat: no-repeat;
+      background-size: 40px 100%, 40px 100%, 14px 100%, 14px 100%;
+      background-attachment: local, local, scroll, scroll;
+    }
+    .post-body table {
+      background-image:
+        linear-gradient(to right, var(--white, #fff) 30%, rgba(255,255,255,0)),
+        linear-gradient(to left, var(--white, #fff) 30%, rgba(255,255,255,0)),
+        radial-gradient(farthest-side at 0 50%, rgba(17,48,75,.16), rgba(17,48,75,0)),
+        radial-gradient(farthest-side at 100% 50%, rgba(17,48,75,.16), rgba(17,48,75,0));
+      background-position: 0 0, 100% 0, 0 0, 100% 0;
+      background-repeat: no-repeat;
+      background-size: 40px 100%, 40px 100%, 14px 100%, 14px 100%;
+      background-attachment: local, local, scroll, scroll;
+    }
+
+    /* ---- table of contents ---- */
+    .post-toc {
+      max-width: 720px;
+      margin: 2rem auto 0;
+      padding: 1rem 1.25rem;
+      background: rgba(34,98,153,0.05);
+      border: 1px solid rgba(34,98,153,0.14);
+      border-left: 3px solid var(--gold, #c4a46c);
+      border-radius: 10px;
+      font-size: 0.92rem;
+    }
+    .post-toc > summary {
+      cursor: pointer;
+      font-weight: 700;
+      color: var(--navy);
+      list-style: none;
+    }
+    .post-toc > summary::-webkit-details-marker { display: none; }
+    .post-toc > summary::before {
+      content: "\25B8";
+      display: inline-block;
+      margin-right: 0.5rem;
+      transition: transform 0.2s ease;
+      color: var(--gold-dark, #7a5f22);
+    }
+    .post-toc[open] > summary::before { transform: rotate(90deg); }
+    .post-toc > summary:focus-visible { outline: 3px solid var(--focus, #226299); outline-offset: 3px; }
+    .post-toc ol { margin: 0.85rem 0 0.25rem; padding-left: 1.4rem; }
+    .post-toc li { margin-bottom: 0.4rem; line-height: 1.5; }
+    .post-toc a { color: var(--slate); text-decoration: none; }
+    .post-toc a:hover, .post-toc a:focus-visible { color: var(--blue-dark, #1a4d7a); text-decoration: underline; }
+    @media (max-width: 600px) { .post-toc { margin: 1.25rem 1rem 0; } }
+
+    /* ---- cross-document view transitions ---- */
+    @view-transition { navigation: auto; }
+    .nav, .blog-nav { view-transition-name: site-nav; }
+    .footer, .blog-footer { view-transition-name: site-footer; }
+    @media (prefers-reduced-motion: reduce) {
+      ::view-transition-group(*),
+      ::view-transition-old(*),
+      ::view-transition-new(*) { animation: none !important; }
+    }
+
+    /* ── SERIES STRIP — Hermes Agent in Practice ──
+       Same class and inner-wrapper shape as the OpenClaw strip because the
+       linter's RE_SNAV recognises exactly `series-nav` + a nested div; a
+       renamed strip would read as "no nav" and fail INV-08. All content
+       checks (INV-03 family) iterate the SERIES7 list only, so this strip's
+       labels are convention, not contract. House-styled, not the island CSS. */
+    .series-nav {
+      max-width: 720px; margin: 2rem auto 0; padding: 1.1rem 1.4rem;
+      background: rgba(255,255,255,0.75); border: 1px solid rgba(34,98,153,0.15);
+      border-left: 3px solid var(--gold); border-radius: 12px;
+    }
+    .series-nav h3 {
+      font-size: 0.78rem; font-weight: 700; text-transform: uppercase;
+      letter-spacing: 0.08em; color: var(--gold-dark); margin-bottom: 0.6rem;
+    }
+    .series-links { display: flex; flex-wrap: wrap; gap: 0.5rem; }
+    .series-links a, .series-links .current {
+      font-size: 0.82rem; font-weight: 600; padding: 0.35rem 0.8rem;
+      border-radius: 50px; text-decoration: none;
+    }
+    .series-links a { color: var(--blue-dark); background: rgba(34,98,153,0.08); }
+    .series-links a:hover { background: rgba(34,98,153,0.16); }
+    .series-links .current { color: #fff; background: var(--blue-dark); }
+    @media (max-width: 600px) { .series-nav { margin: 1.5rem 1rem 0; } }
+
+    /* ── FIGURE — the sanctioned diagram component (page-design §4 Content).
+       Diagrams are PNGs; this repo built them out of divs twice and reverted
+       twice. The image is wrapped in a link to itself so a phone can pinch a
+       1400px drawing without a line of JavaScript. */
+    .figure { margin: 2.5rem 0; }
+    .figure__img { width: 100%; height: auto; display: block;
+                   border-radius: var(--radius); border: 1px solid rgba(0,0,0,0.06); }
+    .figure__caption { font-size: 0.85rem; color: var(--slate-light);
+                       text-align: center; margin-top: 0.75rem; }
+
+    /* ── REFERENCES — every material number in this series carries its source.
+       The tags are the book's own four evidence labels. */
+    .references { margin-top: 3rem; padding-top: 2rem; border-top: 1px solid #e2e8f0; }
+    .references__note { font-size: 0.85rem; color: var(--slate-light); margin-bottom: 1rem; }
+    .references__list { padding-left: 1.4rem; font-size: 0.9rem; line-height: 1.75; }
+    .references__list li { margin-bottom: 0.7rem; }
+    .ref-tag { display: inline-block; font-size: 0.7rem; font-weight: 700;
+               letter-spacing: 0.06em; text-transform: uppercase; padding: 0.1rem 0.5rem;
+               border-radius: 50px; margin-right: 0.4rem; vertical-align: 0.05em;
+               background: rgba(34,98,153,0.1); color: var(--blue-dark); }
+    /* All four labels get a rule.  --standard and --study shipped without one
+       on 2026-09-05, so 158 of 306 tags fell through to the base blue and the
+       two labels were indistinguishable.  Ratios on --bg: 6.70 / 6.92 / 7.36 /
+       4.81:1, all AA at this size. */
+    .ref-tag--law { background: rgba(239,68,68,0.12); color: #991b1b; }
+    .ref-tag--standard { background: rgba(34,98,153,0.12); color: var(--blue-dark); }
+    .ref-tag--study { background: rgba(34,197,94,0.18); color: #14532d; }
+    .ref-tag--synthesis { background: rgba(196,164,108,0.22); color: var(--gold-dark); }
+    .ref-supports { display: block; color: var(--slate-light); font-size: 0.85rem; }
+
+    /* ── LANGUAGE SWITCH — pure CSS, zero JavaScript (INV-38) ──
+       One visually-hidden checkbox as a direct child of body, BEFORE the main landmark,
+       so `#langSwitch:checked ~ main …` reaches every content block. The two
+       tracks are paired blocks: .l-th (default) and .l-en (hidden until
+       checked; display:revert restores block for divs, inline for spans).
+       Naming stays clear of INV-12's menu-token regex (hamburger|burger|
+       nav__toggle|nav-toggle|navtoggle|menu-toggle|menu__toggle) — verified.
+       No JS also means no persistence across posts; each post opens in Thai. */
+    .lang-switch-box { position: absolute; left: -9999px; }
+    .l-en { display: none; }
+    #langSwitch:checked ~ main .l-en { display: revert; }
+    #langSwitch:checked ~ main .l-th { display: none; }
+    .lang-switch {
+      display: inline-flex; align-items: center; gap: 0.55rem;
+      margin-top: 1.4rem; padding: 0.4rem 1.1rem; border-radius: 50px;
+      background: rgba(255,255,255,0.85); border: 1px solid rgba(255,255,255,0.4);
+      cursor: pointer; font-size: 0.85rem; user-select: none;
+    }
+    .lang-switch span { color: var(--slate-light); font-weight: 600; transition: color 0.2s; }
+    .lang-switch .lang-sep { color: var(--gray); font-weight: 400; }
+    .lang-switch .lang-th { color: var(--navy); font-weight: 800; }
+    #langSwitch:checked ~ main .lang-switch .lang-th { color: var(--slate-light); font-weight: 600; }
+    #langSwitch:checked ~ main .lang-switch .lang-en { color: var(--navy); font-weight: 800; }
+    .lang-switch:hover { border-color: #fff; }
+    #langSwitch:focus-visible ~ main .lang-switch {
+      outline: 2px solid var(--focus); outline-offset: 3px;
+    }
+  </style>
+  <!-- social -->
+  <link rel="canonical" href="https://anirach.com/blog/ai-core-context-engineering.html">
+  <meta property="og:type" content="article">
+  <meta property="og:url" content="https://anirach.com/blog/ai-core-context-engineering.html">
+  <meta property="og:site_name" content="Anirach Mingkhwan">
+  <meta property="og:locale" content="th_TH">
+  <meta property="og:locale:alternate" content="en_US">
+  <meta property="article:published_time" content="2026-09-08">
+  <meta property="article:author" content="https://anirach.com/">
+  <meta property="og:title" content="Context Is a Control Artifact — บริบทคือส่วนหนึ่งของโปรแกรม">
+  <meta property="og:description" content="พฤติกรรมของระบบมาจากทุกพจน์ของสมการเดียว — prompts, corpus, tool schema, decoding ล้วนเป็นโปรแกรม จึงต้อง version รีวิว และปล่อยพร้อมกันใน manifest เดียว">
+  <meta property="og:image" content="https://anirach.com/images/ai-core-context-engineering-og.jpg">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
+  <meta property="og:image:alt" content="Context Is a Control Artifact — บริบทคือส่วนหนึ่งของโปรแกรม">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:image" content="https://anirach.com/images/ai-core-context-engineering-og.jpg">
+  <meta name="twitter:image:alt" content="Context Is a Control Artifact — บริบทคือส่วนหนึ่งของโปรแกรม">
+  <meta name="robots" content="max-image-preview:large">
+  <meta name="theme-color" content="#11304b">
+  <link rel="icon" href="/favicon.ico" sizes="any">
+  <link rel="apple-touch-icon" href="/apple-touch-icon.png">
+  <!-- /social -->
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "BlogPosting",
+    "headline": "Context Is a Control Artifact — บริบทคือส่วนหนึ่งของโปรแกรม",
+    "author": {
+      "@type": "Person",
+      "@id": "https://anirach.com/#person",
+      "name": "Anirach Mingkhwan",
+      "url": "https://anirach.com/"
+    },
+    "datePublished": "2026-09-08",
+    "dateModified": "2026-09-08",
+    "image": "https://anirach.com/images/ai-core-context-engineering-og.jpg",
+    "inLanguage": [
+      "th",
+      "en"
+    ],
+    "mainEntityOfPage": "https://anirach.com/blog/ai-core-context-engineering.html"
+  }
+  </script>
+</head>
+<body>
+<a href="#main" class="skip-link">Skip to content</a>
+<input type="checkbox" id="langSwitch" class="lang-switch-box" aria-label="Switch language: Thai / English">
+
+  <nav class="blog-nav">
+    <div class="blog-nav__inner">
+      <a href="../index.html" class="blog-nav__home">Anirach</a>
+      <a href="./" class="blog-nav__back">‹ Blog</a>
+      <div class="blog-nav__title">Context Is a Control Artifact</div>
+    </div>
+  </nav>
+
+  <main id="main">
+
+  <header class="post-hero">
+    <div class="post-hero__tags">
+      <span class="post-hero__tag">Context Engineering</span>
+      <span class="post-hero__tag">Release Manifest</span>
+      <span class="post-hero__tag">Versioning</span>
+    </div>
+    <h1 class="post-hero__title"><span class="l-th">Context Is a Control Artifact — บริบทคือส่วนหนึ่งของโปรแกรม</span><span class="l-en" lang="en">Context Is a Control Artifact — Version It Like Source Code</span></h1>
+    <p class="post-hero__sub"><span class="l-th">สมการเดียวบอกว่าพฤติกรรมมาจากไหน — โมเดล decoding context retrieval tools state environment — เปลี่ยนพจน์ไหนก็คือเปลี่ยนโปรแกรม ทุกพจน์จึงต้องถูก pin ไว้ใน release manifest เดียว</span><span class="l-en" lang="en">One equation says where behaviour comes from — model, decoding, context, retrieval, tools, state, environment. Changing any term changes the program, so every term is pinned in one release manifest.</span></p>
+    <div class="post-hero__meta">
+      <span>By <strong>Anirach Mingkhwan</strong></span>
+      <span class="post-hero__series">Engineering AI-Core Systems 2026 • Post #4</span>
+      <span><time datetime="2026-09-08">8 Sep 2026</time></span>
+      <span>16 min read</span>
+    </div>
+    <label for="langSwitch" class="lang-switch" title="สลับภาษา · Switch language"><span class="lang-th">ไทย</span><span class="lang-sep">·</span><span class="lang-en" lang="en">English</span></label>
+    <div class="post-hero__cover">
+      <img src="../images/ai-core-context-engineering-cover.jpg" alt="Context Is a Control Artifact — บริบทคือส่วนหนึ่งของโปรแกรม" width="800" height="800" loading="eager" fetchpriority="high" decoding="async">
+    </div>
+  </header>
+
+  <article class="post-body">
+
+    <details class="post-toc l-th" open>
+      <summary>ในบทความนี้</summary>
+      <ol>
+          <li><a href="#th-equation-one">สมการ (1) — พฤติกรรมของระบบมาจากแปดพจน์ร่วมกัน ไม่ใช่จาก prompt ตัวเดียว</a></li>
+          <li><a href="#th-everything-versioned">กฎสองข้อที่สังเกตได้ กับผลที่ตามมา — ทุกพจน์ของสมการคือโปรแกรม จึงต้องถูก version</a></li>
+          <li><a href="#th-seven-steps">ลงมือทำ 7 ขั้น — จากบัญชีแปดพจน์ สู่ release manifest ที่ pin ทุกอย่างด้วย hash</a></li>
+          <li><a href="#th-kramkraft">Artifact ของน้องคราม — release-manifest v1 ฉบับเต็ม และโครงฟังก์ชัน assemble_context()</a></li>
+          <li><a href="#th-validation-check">Validation check — เจ็ดคำถามที่ต้องตอบด้วย artifact ไม่ใช่ด้วยความมั่นใจ</a></li>
+          <li><a href="#th-road-ahead">ก้าวต่อไป — pin ครบทุกพจน์แล้ว แกนก็ยังพลาดเป็น และนั่นคือโจทย์ของตอนหน้า</a></li>
+      </ol>
+    </details>
+    <details class="post-toc l-en" open>
+      <summary>In this post</summary>
+      <ol>
+          <li><a href="#en-equation-one">Equation (1) — system behaviour comes from eight terms jointly, not from one prompt</a></li>
+          <li><a href="#en-everything-versioned">Two observable rules and their consequence — every term of the equation is the program, so every term is versioned</a></li>
+          <li><a href="#en-seven-steps">The seven steps — from an eight-term inventory to a release manifest that pins everything with hashes</a></li>
+          <li><a href="#en-kramkraft">The KramKraft artifact — release-manifest v1 in full, plus the assemble_context() skeleton</a></li>
+          <li><a href="#en-validation-check">Validation check — seven questions that must be answered with artifacts, not with confidence</a></li>
+          <li><a href="#en-road-ahead">The road ahead — every term pinned, and the core still errs: the next post's problem</a></li>
+      </ol>
+    </details>
+    <div class="l-th">
+
+    <p>🤔 <strong>ถ้าคืนนี้ vendor อัปเกรดโมเดลเป็นรุ่นใหม่แบบเงียบ ๆ โดยที่ prompt ของคุณ corpus ของคุณ และโค้ดของคุณไม่เปลี่ยนแม้แต่ตัวอักษรเดียว — พรุ่งนี้เช้า ระบบที่คุณดูแลอยู่ยังเป็น "ระบบเดิม" หรือไม่?</strong></p>
+
+    <p>ตอนที่แล้ว <a href="/blog/ai-core-os-model">The AI-OS Mental Model</a> ปิดท้ายด้วยห้ารอยต่อที่การรับประกันแบบเดิมพัง — weights คืน sample ไม่ใช่ค่าตายตัว, context window เป็น RAM ที่ไม่มี memory protection, retrieval ไม่มีสัญญา read ที่นิ่ง, tool call ถูก "ขอ" เป็นภาษาธรรมชาติ, และ agent ไม่มี privilege separation ในตัว คำถามที่ผมทิ้งค้างไว้คือ ถ้าของที่เราเทลงไปใน RAM ผืนนั้น — system prompt, ข้อความที่ retrieval ดึงมา, คำอธิบาย tool, ประวัติการสนทนา — กำหนดพฤติกรรมของระบบได้มากขนาดนั้น มันมีสถานะเป็นอะไรกันแน่ในทางวิศวกรรม: เอกสารประกอบ? ค่า config ที่ ops ปรับได้ตามสะดวก? หรือโปรแกรม? เปเปอร์ตอบไว้ชัดและตอบทางเดียว: มันคือโปรแกรม<sup><a href="#th-ref-1">[1]</a></sup></p>
+
+    <p>คำตอบของทั้งตอนอยู่ในสมการเดียวกับประโยคเดียว สมการคือสมการ (1) ของเปเปอร์: Y ~ P(· | M_v, D, C, R, T, K, S, E) — พฤติกรรมที่ผู้ใช้เห็นแจกแจงตามเงื่อนไขร่วมของแปดพจน์ ไม่ใช่ตามโมเดลอย่างเดียว และไม่ใช่ตาม prompt อย่างเดียว ประโยคคือ <em>การเปลี่ยนพจน์ใดพจน์หนึ่งของ (1) คือการเปลี่ยนโปรแกรม</em> งานของ<strong>วิศวกรรมบริบท</strong> (context engineering) จึงไม่ใช่ศิลปะการเลือกถ้อยคำใน prompt แต่เป็นวินัยทางวิศวกรรมของการทำให้ทุกพจน์ระบุตัวได้ ถูก version ถูกรีวิว และถูกปล่อยพร้อมกันใน<strong>บันทึกกำกับรุ่นปล่อย</strong> (release manifest) ฉบับเดียว ในตอนนี้เราจะเดินเจ็ดขั้นจนได้ manifest ฉบับแรกของน้องคราม พร้อมโครงฟังก์ชันประกอบ context ที่บังคับให้ทั้งระบบเหลือเส้นทางผลิต context เพียงเส้นทางเดียว</p>
+
+    <h2 id="th-equation-one">1. สมการเดียวที่บอกว่าพฤติกรรมมาจากไหน</h2>
+
+    <p>ข้อสรุปของหัวข้อนี้พูดได้ในประโยคเดียว: output ของระบบที่มี AI เป็นแกนไม่ได้แจกแจงตาม "โมเดล" แต่แจกแจงตามเงื่อนไขร่วมของแปดพจน์ และ context เป็นเพียงพจน์หนึ่งในนั้น — พจน์ที่พิเศษตรงที่มันถูกประกอบขึ้นใหม่ทุกคำขอด้วยโค้ดของเราเอง เปเปอร์เขียนไว้เป็นสมการ (1):<sup><a href="#th-ref-1">[1]</a></sup></p>
+
+    <pre><code>Y ~ P( · | M_v, D, C, R, T, K, S, E )        ...(1)
+
+C = A(q, R, T, S; θ_A)</code></pre>
+
+    <figure class="figure">
+      <a href="../images/ai-core-fig-04-context-eq.png">
+        <img class="figure__img" src="../images/ai-core-fig-04-context-eq.png" alt="กายวิภาคของสมการ Y ~ P(. | Mv, D, C, R, T, K, S, E) — แปดพจน์ที่กำหนดพฤติกรรม ไหลเข้าฟังก์ชันประกอบบริบท และถูก pin ร่วมกันใน release manifest เดียว" width="1400" height="700" loading="lazy" decoding="async">
+      </a>
+      <figcaption class="figure__caption">เปลี่ยนพจน์ใดของสมการ (1) ก็คือเปลี่ยนโปรแกรม — ทุกพจน์จึงอยู่ใน manifest เดียวกันและปล่อยพร้อมกัน</figcaption>
+    </figure>
+
+    <p>คำว่า context engineering ไม่ใช่คำใหม่ — Karpathy พูดถึงการที่คานงัดของวิศวกรย้ายมาอยู่ที่บริบทตอนรันไว้ในการบรรยายปี 2025<sup><a href="#th-ref-2">[2]</a></sup> — แต่สิ่งที่เปเปอร์เพิ่มให้คือการทำให้คำนี้แข็งพอจะรับน้ำหนักทางวิศวกรรม: ระบุพจน์ให้ครบ นิยามแต่ละพจน์ให้ชัด แล้วผูกภาระ version control เข้ากับทุกพจน์เท่ากัน สำหรับนักพัฒนาที่ดูแลระบบจริง แปดพจน์นี้ไม่ใช่สัญลักษณ์ลอย ๆ — ทุกตัวชี้ไปที่ของที่จับต้องได้ในระบบของน้องคราม:</p>
+
+    <div class="table-wrapper">
+        <table>
+            <thead>
+                <tr>
+                    <th>พจน์</th>
+                    <th>คืออะไรในเปเปอร์</th>
+                    <th>ของจริงในระบบน้องคราม</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td><strong>M_v</strong></td>
+                    <td>โมเดลพร้อมรุ่น — frozen weights ที่ระบุ version</td>
+                    <td>ไม่ใช่ "โมเดลของ vendor" ลอย ๆ แต่คือ identifier ที่ล็อกรุ่นใน <code>config/model.json</code> — คืนที่ vendor อัปเกรดเงียบ ๆ คือคืนที่พจน์นี้เปลี่ยนทั้งที่ diff ของ repo ว่างเปล่า</td>
+                </tr>
+                <tr>
+                    <td><strong>D</strong></td>
+                    <td>decoding policy — วิธีดึง sample จากโมเดล</td>
+                    <td>temperature, top_p, seed, max_tokens ที่ใช้เรียกโมเดลทุกครั้ง — ล็อกได้เพื่อให้ replay ได้ แต่ล็อกแล้วก็ยังไม่ได้ล็อกความหมายที่โมเดลให้กับ context</td>
+                </tr>
+                <tr>
+                    <td><strong>C</strong></td>
+                    <td>context ที่ประกอบตอนรัน โดยโค้ด A ภายใต้ config θ_A</td>
+                    <td>ทุกตัวอักษรที่โมเดลเห็นในคำขอนั้น: system prompt + passage ที่ดึงมา + คำอธิบาย tool + history — ผลิตโดย <code>assemble_context()</code> ไม่ใช่พิมพ์มือ</td>
+                </tr>
+                <tr>
+                    <td><strong>R</strong></td>
+                    <td>retrieval — รุ่นของ corpus กับ ranker และพารามิเตอร์</td>
+                    <td>รุ่นของ <code>policy/</code> + <code>catalog/</code> กับตัวจัดอันดับและค่า top_k — เปลี่ยน ranker โดยไม่แตะ prompt เลย ชุด passage ก็เปลี่ยน และคำตอบก็เปลี่ยน</td>
+                </tr>
+                <tr>
+                    <td><strong>T</strong></td>
+                    <td>tool semantics — ความหมายของเครื่องมือที่ระบบเรียกได้</td>
+                    <td>schema ของ <code>refund(order_id, amount, reason)</code> กับพฤติกรรมจริงของมันฝั่ง order store — เปลี่ยนชื่อพารามิเตอร์หรือขยายช่วงค่า คือเปลี่ยนทั้งพฤติกรรมโมเดลและพื้นผิวผลกระทบ</td>
+                </tr>
+                <tr>
+                    <td><strong>K</strong></td>
+                    <td>orchestration code — โค้ดที่จัดลำดับการทำงาน</td>
+                    <td>ลูปแชทของน้องคราม: retrieve เมื่อไร เรียกโมเดลกี่รอบ retry อย่างไร ส่งต่อมนุษย์เมื่อไร — โค้ดชั้นนี้คือ Software 1.0 ที่ถือ control flow อยู่</td>
+                </tr>
+                <tr>
+                    <td><strong>S</strong></td>
+                    <td>session state — สถานะของบทสนทนาหนึ่ง</td>
+                    <td>history ของ session, ตัวตนลูกค้า, ผลของ tool call ก่อนหน้า — ลูกค้าคนเดิมถามประโยคเดิมใน session ใหม่ ก็เป็นอินพุตคนละตัวแล้ว</td>
+                </tr>
+                <tr>
+                    <td><strong>E</strong></td>
+                    <td>environment — สภาพแวดล้อมตอนรัน</td>
+                    <td>โลกที่ระบบยืนอยู่ขณะตอบ: เวลา, สถานะจริงของ order store, พฤติกรรมของบริการปลายทาง — พจน์ที่บันทึกได้แต่ตรึงไม่ได้ จึงยิ่งต้องบันทึก</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <h3>C ไม่ใช่ string ที่ใครพิมพ์ — C คือผลลัพธ์ของฟังก์ชัน</h3>
+
+    <p>บรรทัดที่สองของสมการสำคัญกับงานประจำวันยิ่งกว่าบรรทัดแรก C = A(q, R, T, S; θ_A) บอกว่า context ที่โมเดลเห็นในแต่ละคำขอคือ<em>ผลลัพธ์ของโค้ดประกอบ</em> A ที่รับคำถามของผู้ใช้ q ผลจาก retrieval คำอธิบาย tool และสถานะ session เข้ามา ภายใต้พารามิเตอร์ θ_A — template ที่ใช้ จำนวน passage สูงสุด จำนวน turn ของ history ที่แนบ ลำดับการวางบล็อก ถ้าวันนี้ระบบของคุณต่อ string ของ prompt จากห้าจุดในห้า handler คุณไม่ได้ "ยังไม่มี A" — คุณมี A ห้าตัวที่มองไม่เห็น ไม่มีชื่อ ไม่มี version และไม่มีใครรีวิว</p>
+
+    <p>มุมที่คนพลาดบ่อยที่สุดคือคิดว่า θ_A เป็นเรื่องจุกจิกทางเทคนิค ทั้งที่มันเป็นโปรแกรมพอ ๆ กับตัว template: เปลี่ยน max_passages จาก 6 เป็น 12 โดยไม่แตะ prompt สักคำ สิ่งที่โมเดลเห็นก็เปลี่ยน การแจกแจงของ Y ก็เปลี่ยน และพฤติกรรมที่ลูกค้าเจอก็เปลี่ยน — ทั้งหมดนั้นโดยไม่มีบรรทัดไหนของ "prompt" ขยับเลย</p>
+
+    <h3>หลักฐานของ context ผูกอยู่กับโมเดลที่ให้ความหมายมัน</h3>
+
+    <p>ประเด็นที่ลึกที่สุดของสมการ (1) ซ่อนอยู่ในรูปของมันเอง: C ยืนอยู่<em>ข้าง</em> M_v กับ D ในเครื่องหมายเงื่อนไขเดียวกัน เปเปอร์สรุปว่า context ตีความแยกจากโมเดลที่ให้ความหมายมันไม่ได้ — ตรึง C ไว้ทุกตัวอักษรแล้วเปลี่ยน M_v หรือ D การแจกแจงของ Y ก็เปลี่ยนทันที<sup><a href="#th-ref-1">[1]</a></sup> ประโยคว่า "เราทดสอบ prompt นี้แล้ว" จึงเป็นข้ออ้างร่วมของทั้งชุด (C, M_v, D, R, T, ...) ไม่ใช่ข้ออ้างของ C เดี่ยว ๆ และหลักฐานของ context จึง<em>พกข้ามรุ่นโมเดลไม่ได้</em>: prompt ที่ผ่านชุดทดสอบมาแล้วบน M_v1 ยังไม่มีหลักฐานอะไรเลยบน M_v2 จนกว่าจะรันชุดทดสอบนั้นใหม่</p>
+
+    <p>นี่คือคำตอบของคำถามที่เปิดตอน: คืนที่ vendor อัปเกรดโมเดลเงียบ ๆ พจน์ M_v เปลี่ยน — ระบบของคุณกลายเป็นโปรแกรมคนละตัวแล้วตั้งแต่ก่อนคุณตื่น หลักฐานทั้งหมดที่เคยเก็บไว้กลายเป็นหลักฐานของโปรแกรมตัวเก่า และไม่มีเครื่องมือ diff ตัวไหนใน repo ของคุณเห็นการเปลี่ยนแปลงนี้เลย ถ้าคุณไม่ได้ pin รุ่นและบันทึกมันไว้เอง</p>
+
+    <blockquote>💡 มุมมองของผม: ผมเลิกใช้คำว่า "prompt ที่ดี" แบบไม่มีบริบทไปแล้ว prompt ที่แชร์กันในอินเทอร์เน็ตมีสถานะเป็นแค่<em>สมมติฐาน</em> — มันเคยให้ผลดีที่ไหนสักแห่ง บนโมเดลรุ่นหนึ่ง decoding แบบหนึ่ง corpus แบบหนึ่ง จนกว่าคุณจะรันมันผ่านชุดทดสอบของคุณเอง บน (M_v, D, R, T) ของคุณเอง มันยังไม่มีหลักฐานสักชิ้นในระบบของคุณ กฎที่ผมใช้กับทีมสั้นมาก: ยืม prompt ได้ แต่ยืมหลักฐานไม่ได้</blockquote>
+
+    <h2 id="th-everything-versioned">2. ทุกพจน์คือโปรแกรม จึงต้องถูก version ทั้งหมด</h2>
+
+    <p>ข้อสรุปของหัวข้อนี้: prompts, โค้ดประกอบ context, retrieval config, tool schemas, ชุดประเมิน และ manifest ของโมเดล ทั้งหมดเป็นของ codebase — version ด้วยกัน รีวิวด้วยกัน ปล่อยด้วยกัน — เพราะการเปลี่ยนชิ้นใดชิ้นหนึ่งคือการ deploy โปรแกรมรุ่นใหม่ เหตุผลไม่ใช่ความเป็นระเบียบ แต่มาจากกฎสองข้อที่<em>สังเกตได้</em> ซึ่งเปเปอร์ใช้แยก "ของที่กำหนดพฤติกรรม" ออกจาก "ของประกอบฉาก"<sup><a href="#th-ref-1">[1]</a></sup></p>
+
+    <h3>กฎสองข้อที่ทำให้คำว่า "ควบคุม" เป็นเรื่องสังเกตได้</h3>
+
+    <ul>
+        <li><strong>กฎ control surface</strong> — มีพฤติกรรมที่ปล่อยแล้ว (released behaviour) อย่างน้อยหนึ่งรายการที่ output ของโมเดลเป็นตัวกำหนดอย่างมีนัย <em>ตามที่บันทึกอยู่ใน</em><strong>ร่องรอยการตัดสินใจ</strong> (decision trace) — ไม่ใช่ตามที่ทีมรู้สึกหรือสไลด์อ้าง คำตอบที่ปล่อยถึงลูกค้าและ tool call ที่ถูกอนุมัตินับทั้งคู่</li>
+        <li><strong>กฎ load-bearing</strong> — เมื่อทำ<strong>การทดสอบถอดโมเดลออก</strong> (removal ablation) แล้วแทนที่ด้วย fallback ที่ประกาศไว้ อัตราสำเร็จของงานบนชุดทดสอบคงที่ตกต่ำกว่าสัดส่วนที่<em>ประกาศล่วงหน้า</em> — โมเดลไม่ใช่ของประดับ แต่รับน้ำหนักจริง</li>
+    </ul>
+
+    <p>สองกฎนี้มาจากนิยาม AI-core ในตอนแรกของซีรีส์ แต่ผลเชิงตรรกะของมันตกลงที่หัวข้อนี้พอดี: ถ้า output ของโมเดลเป็นตัวกำหนดพฤติกรรมที่ปล่อยแล้วจริง และโมเดลขาดไม่ได้จริง ทุกสิ่งที่กำหนดรูปของ output นั้น — ทุกพจน์ของ (1) ที่ทีมแก้ไขได้ — ก็กำลังควบคุมพฤติกรรมที่ปล่อยแล้วของระบบอยู่ด้วยเช่นกัน เปเปอร์จึงสรุปข้อบังคับไว้สั้นที่สุดเท่าที่จะสั้นได้:</p>
+
+    <blockquote>prompts, โค้ดประกอบ context, retrieval config, tool schemas, ชุดประเมิน และ manifest ของโมเดล — ทั้งหมดเป็นของ codebase: version ร่วมกัน รีวิวร่วมกัน ปล่อยร่วมกัน <strong>การเปลี่ยนพจน์ใดพจน์หนึ่งของ (1) คือการเปลี่ยนโปรแกรม</strong><sup><a href="#th-ref-1">[1]</a></sup></blockquote>
+
+    <h3>รายการที่ต้องเข้า repo — และสิ่งที่โค้ดยังถือไว้</h3>
+
+    <ul>
+        <li><strong>prompts และ template ทุกไฟล์</strong> — system prompt, few-shot examples, template ของคำตอบ — ไฟล์ธรรมดาที่ diff ได้ ไม่ใช่ช่องข้อความใน console ของ vendor</li>
+        <li><strong>โค้ดประกอบ context</strong> — ฟังก์ชัน A พร้อม θ_A ทั้งชุด: template ที่เลือกใช้, จำนวน passage, จำนวน turn ของ history — config ของ A เปลี่ยนพฤติกรรมเท่ากับ template เปลี่ยน</li>
+        <li><strong>retrieval config</strong> — id รุ่นของ corpus, ชื่อ ranker กับพารามิเตอร์, และ allow-list ของแหล่งที่ยอมรับ — ครึ่งหนึ่งของพจน์ R ที่มักไม่มีใครเป็นเจ้าของ</li>
+        <li><strong>tool schemas</strong> — JSON Schema ของทุก tool พร้อมช่วงพารามิเตอร์ — ทั้งเอกสารสำหรับโมเดลและด่านตรวจสำหรับระบบ ในไฟล์เดียวกัน</li>
+        <li><strong>ชุดประเมิน</strong> — golden set, ชุด adversarial, threshold ที่ใช้ตัดสิน — เพราะ "ผ่านการทดสอบ" เป็นข้ออ้างที่ผูกกับรุ่นของชุดทดสอบด้วย</li>
+        <li><strong>model manifest</strong> — identifier ที่ล็อกรุ่นของ M_v กับ decoding policy D — พจน์สองตัวที่อยู่นอก repo โดยธรรมชาติ จึงต้องถูกดึงเข้ามาด้วยการบันทึก</li>
+    </ul>
+
+    <p>ประโยคถัดมาของเปเปอร์กันความเข้าใจผิดที่พบบ่อยที่สุดไว้พอดี: ของเหล่านี้เข้ามาอยู่<em>เคียงข้าง</em>โค้ด ด้วยวินัยเดียวกันทุกประการ แต่มันไม่ได้<em>กลายเป็น</em> source code — โค้ดยังคงถือ control flow, interface และการ mediation ที่ทุกอย่างพึ่งพิงอยู่<sup><a href="#th-ref-1">[1]</a></sup> อย่าตีความตอนนี้เป็นคำเชิญให้ย้ายตรรกะไปไว้ใน prompt ทิศทางที่ถูกคือขาเข้า: ดึงของที่เคยลอยอยู่นอกวินัยเข้ามาอยู่ใต้วินัยของโค้ด ความคาดหวังเดียวกันนี้ปรากฏใน NIST AI RMF ในภาษาของ governance: องค์ประกอบที่กำหนดพฤติกรรมของระบบ AI ต้องถูกทำบัญชี จัดทำเอกสาร และตรวจย้อนได้ตลอดวงจรชีวิต<sup><a href="#th-ref-4">[4]</a></sup></p>
+
+    <p>ภาพที่ผมอยากให้ติดตาไปจากหัวข้อนี้มีภาพเดียว: บ่ายวันศุกร์ ใครสักคนในทีมเปิด dashboard ของ vendor แก้ system prompt ตรงนั้นสองประโยคแล้วกด save — ไม่มี branch ไม่มี PR ไม่มีรีวิว ไม่มี rollback และไม่มีร่องรอยใน git ในภาษาของสมการ (1) เหตุการณ์นั้นคือการแก้พจน์ C ของโปรแกรม production แล้ว deploy ทันทีข้ามหัวทุกด่านที่องค์กรสร้างมาทั้งหมด</p>
+
+    <div class="alert info">
+        <strong>Prompt ที่แก้ใน dashboard คือ hotfix ที่ไม่ผ่านรีวิว:</strong> วิธีทดสอบใช้คำถามเดียว — "การเปลี่ยน system prompt ของเราเดินทางผ่านอะไรบ้างก่อนถึงลูกค้า" ถ้าคำตอบไม่ใช่เส้นทางเดียวกับที่โค้ดเดิน (branch → review → merge → release) แปลว่าระบบมีประตูหลังที่เปลี่ยนโปรแกรม production ได้โดยไม่มีใครเห็น และวันที่พฤติกรรมเพี้ยน คุณจะไล่ย้อนหาสาเหตุไม่ได้ เพราะการเปลี่ยนแปลงนั้นไม่เคยมีตัวตนในประวัติของระบบ</div>
+
+    <h2 id="th-seven-steps">3. ลงมือทำ 7 ขั้น</h2>
+
+    <p>เจ็ดขั้นของตอนนี้เดินจากบัญชีรายพจน์ไปจบที่ release manifest ฉบับแรก แต่ละขั้นจบด้วย artifact ที่คอมมิตเข้า repo ได้จริง ไม่ใช่มติในที่ประชุม ตัวเลขทุกตัวในตัวอย่าง (วงเงิน 2,000 บาท, top_k = 6, seed) เป็นตัวเลขของบทเรียนที่ผมตั้งให้น้องคราม ไม่ใช่ค่าที่เปเปอร์แนะนำและไม่ใช่ค่าแนะนำสากล</p>
+
+    <h3>ขั้นที่ 1 — ทำบัญชีแปดพจน์ของระบบคุณ พร้อมค่าปัจจุบันและที่อยู่</h3>
+
+    <p>เปิดไฟล์เดียว ตอบสองคำถามต่อพจน์: <em>ค่าปัจจุบันคืออะไร</em> และ <em>มันอยู่ที่ไหน</em> ทำทีละพจน์จนครบแปด ความจริงที่มักโผล่ตอนทำจริงคือบางพจน์ไม่มีใครในทีมตอบได้ — ranker ใช้ค่า default ของ vendor ที่ไม่มีใครเคยอ่าน, system prompt ตัวจริงอยู่ใน dashboard ไม่ได้อยู่ใน repo, ไม่มีใครแน่ใจว่า model identifier ล็อกรุ่นหรือเป็น alias บัญชีที่มีช่อง "ไม่รู้" คือบัญชีที่ซื่อสัตย์ และช่องเหล่านั้นคือรายการงานของขั้นถัด ๆ ไปทั้งหมด</p>
+
+    <pre><code># terms.yaml — บัญชีแปดพจน์ของสมการ (1) สำหรับน้องคราม (สภาพก่อนจัดระเบียบ)
+M_v: "hosted-llm @ ???"            # อยู่ที่: console ของ vendor — ยังไม่ยืนยันว่าล็อกรุ่น
+D:   "temp=0.3 (ใครตั้ง? เมื่อไร?)"  # อยู่ที่: กระจายอยู่ในโค้ดเรียก API สองจุด
+C:   "ต่อ string ใน handler"        # อยู่ที่: chat.py, faq.py, escalate.py — สามจุด!
+R:   "corpus=policy/+catalog/"     # อยู่ที่: bucket จัดเก็บ — ไม่มี version id; ranker = default
+T:   "refund"                      # อยู่ที่: schema เขียน inline ในโค้ด ไม่มีเลขรุ่น
+K:   "ลูปแชท + retry 2 ครั้ง"        # อยู่ที่: app/loop.py — ส่วนเดียวที่อยู่ใน repo ครบ
+S:   "history 10 turn + ตัวตนลูกค้า" # อยู่ที่: session store
+E:   "order store, เวลา, ภาษา"      # อยู่ที่: ไม่เคยถูกบันทึกลง trace เลย</code></pre>
+
+    <h3>ขั้นที่ 2 — รวมการประกอบ context ให้เหลือฟังก์ชันเดียว</h3>
+
+    <p>เขียน A ให้เป็นฟังก์ชันจริง มีชื่อจริง มีลายเซ็นตรงกับสมการ: รับ q, ผลจาก retrieval, ชุด tool, สถานะ session และ θ_A — คืน context หนึ่งก้อนพร้อมหลักฐานประกอบ กติกามีข้อเดียวแต่ต้องเด็ดขาด: โค้ดส่วนใดอยากได้ context ต้องเรียกฟังก์ชันนี้เท่านั้น ห้ามมี string concat ของ prompt หลงเหลืออยู่ตาม handler แม้แต่บรรทัดเดียว เพราะทางลัดหนึ่งทางที่เหลืออยู่คือ A อีกตัวที่ไม่มีใคร version สำหรับน้องครามแปลว่ายุบสามจุดใน chat.py, faq.py และ escalate.py ให้เหลือหนึ่ง — โครงเต็มของฟังก์ชันอยู่ในหัวข้อ <a href="#th-kramkraft">4</a></p>
+
+    <pre><code># app/context.py — เส้นทางเดียวของระบบที่ผลิต context ได้
+def assemble_context(q, retrieval, tools, state, theta):
+    """C = A(q, R, T, S; θ_A) — คืน (context, บันทึกหลักฐานสำหรับ trace)"""
+    ...</code></pre>
+
+    <h3>ขั้นที่ 3 — pin โมเดลและ decoding policy</h3>
+
+    <p>M_v ต้องเป็น identifier ที่ล็อกรุ่น ไม่ใช่ alias ลอยตัวอย่าง "latest" ที่ vendor เลื่อนได้เอง และ D ต้องถูกบันทึกครบทุกค่า: temperature, top_p, seed, max_tokens จำบทเรียนจากตอนที่แล้ว: deterministic decoding ตัด sampling variance ออกได้ แต่ตัดความไวต่อรุ่นโมเดลไม่ได้<sup><a href="#th-ref-1">[1]</a></sup> — seed จึงไม่ใช่เครื่องรางของความถูกต้อง มันคือเงื่อนไขขั้นต่ำที่ทำให้การ replay และการไล่บั๊กเป็นไปได้ ถ้า vendor ของคุณไม่มีรุ่นที่ล็อกได้จริง ให้บันทึกข้อจำกัดนั้นลงบัญชีความเสี่ยงแทนที่จะแกล้งลืม</p>
+
+    <pre><code>// config/model.json — พจน์ M_v กับ D ในไฟล์เดียว ถูก version ใน repo
+{
+  "core": { "provider": "hosted", "model": "hosted-llm",
+            "version": "2026-08-14", "alias_allowed": false },
+  "decoding": { "temperature": 0, "top_p": 1,
+                "seed": 20260901, "max_tokens": 700 }
+}</code></pre>
+
+    <h3>ขั้นที่ 4 — snapshot corpus และ retrieval config</h3>
+
+    <p>พจน์ R มีสองครึ่งและต้อง pin ทั้งคู่ ครึ่งแรกคือ corpus: ให้ <code>policy/</code> กับ <code>catalog/</code> อยู่ใน git และทุกสถานะที่ระบบใช้ตอบลูกค้าต้องอ้างได้ด้วย id เดียว (เช่น git tag) — แก้นโยบายคืนสินค้าหนึ่งย่อหน้า = corpus รุ่นใหม่ = ระบบรุ่นใหม่ ครึ่งหลังคือ retrieval config: ชื่อ ranker พารามิเตอร์ และจำนวน passage ที่ดึง — ของที่เคยเป็น default ของ vendor ต้องกลายเป็นค่าที่ประกาศไว้ในไฟล์ อ่านได้ diff ได้</p>
+
+    <pre><code># retrieval.yaml — ครึ่งหลังของพจน์ R ที่มักไม่มีเจ้าของ
+corpus_snapshot: "kramkraft-corpus@2026-09-05"   # git tag ของ policy/ + catalog/
+ranker: "bm25"
+ranker_params: { k1: 1.2, b: 0.75 }
+top_k: 6
+source_allow_list: ["policy/", "catalog/"]       # ที่มาของ passage ที่ยอมรับ</code></pre>
+
+    <h3>ขั้นที่ 5 — ประกาศ tool schema เป็น artifact ที่มี version</h3>
+
+    <p>พจน์ T ของน้องครามมี tool เดียว แต่เป็น tool ที่มีผลจริงและย้อนไม่ได้ตั้งแต่ payment processor รับคำสั่ง: refund ประกาศ schema ของมันเป็นไฟล์ JSON Schema แยกจากโค้ด ระบุ type, pattern, ช่วงพารามิเตอร์ และปิดท้ายด้วย additionalProperties: false ไฟล์นี้ทำหน้าที่สองอย่างพร้อมกัน — เป็นคำอธิบายที่โมเดลเห็น และเป็นด่านของ<strong>การบังคับเชิงโครงสร้าง</strong> (hard enforcement) ที่ตอนที่ 8 จะเสียบเข้ากับ execution rail วันนี้งานมีแค่ทำให้มันเป็นไฟล์ มีเลขรุ่น และถูก diff ได้</p>
+
+    <pre><code>// tools/refund.schema.json — v1.0.0 (วงเงินเป็นตัวเลขของบทเรียน)
+{
+  "$id": "tools/refund.schema.json", "version": "1.0.0",
+  "type": "object", "required": ["order_id", "amount", "reason"],
+  "properties": {
+    "order_id": { "type": "string", "pattern": "^KK-[0-9]{6}$" },
+    "amount":   { "type": "number", "minimum": 1, "maximum": 2000 },
+    "reason":   { "type": "string", "maxLength": 200 }
+  },
+  "additionalProperties": false
+}</code></pre>
+
+    <h3>ขั้นที่ 6 — ย้าย prompt เข้า repo และให้ PR ของ prompt เป็น PR ของโปรแกรม</h3>
+
+    <p>ย้ายทุก prompt และ template ออกจาก dashboard และออกจาก string ในโค้ด มาเป็นไฟล์ใน <code>prompts/</code> แล้วผูกเจ้าของรีวิวด้วย CODEOWNERS เหมือนโมดูลอื่นทุกประการ นิยามของ "เสร็จ" ในขั้นนี้ชัดเจน: การแก้คำเดียวใน system prompt ต้องเดินเส้นทางเดียวกับการแก้ฟังก์ชันหนึ่งบรรทัด — มี diff มีผู้รีวิวที่เข้าใจทั้งเสียงของแบรนด์และผลต่อพฤติกรรม มีจุด rollback และหลังจากนี้ ประวัติของทุกถ้อยคำที่ระบบเคยใช้พูดกับลูกค้าจะอยู่ใน git log ไม่ใช่ในความทรงจำของใครคนหนึ่ง</p>
+
+    <pre><code>prompts/
+  system.th.md          # เสียงของน้องคราม ขอบเขตงาน ข้อห้าม
+  system.en.md
+  templates/answer.j2   # โครงคำตอบที่ A ใช้ประกอบ context
+
+# CODEOWNERS — prompt คือโปรแกรม จึงมีเจ้าของรีวิวเหมือนโปรแกรม
+prompts/  @kramkraft/assistant-team</code></pre>
+
+    <h3>ขั้นที่ 7 — ประกอบ release manifest ที่ pin ทุกพจน์ด้วย hash</h3>
+
+    <p>ขั้นสุดท้ายรวบผลของขั้น 1–6 เข้าเป็นไฟล์เดียว: อะไรที่เป็นไฟล์ใน repo → เก็บ hash, อะไรที่เป็น corpus → เก็บ snapshot id, อะไรที่เป็นบริการภายนอก → เก็บ identifier กับรุ่นที่ล็อกแล้ว เกณฑ์ตัดสินของขั้นนี้คือคำถามเดียวที่ทีม ops ควรตอบได้ในสิบวินาที: "production ตอนนี้รันอะไรอยู่" — คำตอบต้องเป็นไฟล์เดียวที่อ่านแล้วรู้ครบทุกพจน์ ไม่ใช่การไล่เปิดห้าระบบ</p>
+
+    <pre><code>$ shasum -a 256 prompts/templates/answer.j2     # → a41f...9c2e
+$ shasum -a 256 tools/refund.schema.json        # → 03e8...77b1
+$ git rev-parse --short corpus-2026-09-05       # → 7d3b1a2
+# ค่าทั้งหมดไหลลง release-manifest.json — ฉบับเต็มอยู่หัวข้อ 4</code></pre>
+
+    <h2 id="th-kramkraft">4. Artifact ของน้องคราม — release-manifest v1 และ assemble_context()</h2>
+
+    <p>นี่คือ artifact สองชิ้นที่ตอนนี้ทิ้งไว้ให้ระบบของน้องคราม และเป็นฐานที่ตอนถัด ๆ ไปของซีรีส์จะเขียนต่อ ช่องของ manifest ตรงกับรายการใน conformance profile ของเปเปอร์ (§6.1): core กับ decoding policy, hash ของ context template, corpus snapshot กับ provenance policy, hash ของ tool registry, control profile กับ thresholds และ hash ของ evaluation suite<sup><a href="#th-ref-1">[1]</a></sup> สองช่องสุดท้ายเป็น placeholder อย่างจงใจ — สัญญากับ threshold เป็นงานของตอนที่ 7 ส่วน<strong>ชุดทดสอบทองคำ</strong> (golden set) กับ hash ของชุดประเมินเป็นงานของตอนที่ 9 — การมีช่องว่างที่<em>ประกาศไว้</em>ดีกว่าการไม่มีช่อง เพราะช่องว่างที่ประกาศแล้วทวงตัวเองได้</p>
+
+    <h3>release-manifest v1 — ฉบับเต็ม</h3>
+
+    <pre><code>// release-manifest.json — kramkraft-release-2026-09-08-r1
+{
+  "manifest_id": "kramkraft-release-2026-09-08-r1",
+  "task_set": "customer-support-th: คำถามออเดอร์ สินค้า และการคืนเงิน",
+  "core": {
+    "model": "hosted-llm",
+    "version": "2026-08-14",
+    "alias_allowed": false,
+    "decoding": { "temperature": 0, "top_p": 1,
+                  "seed": 20260901, "max_tokens": 700 }
+  },
+  "context_template": {
+    "path": "prompts/templates/answer.j2",
+    "sha256": "a41f...9c2e",
+    "assembler": "app/context.py::assemble_context",
+    "theta_A": { "max_passages": 6, "history_turns": 10 }
+  },
+  "corpus_snapshot": {
+    "id": "kramkraft-corpus@2026-09-05",
+    "provenance_policy": "รับเฉพาะ passage จาก policy/ และ catalog/ เท่านั้น"
+  },
+  "tool_registry": {
+    "sha256": "03e8...77b1",
+    "tools": [ { "name": "refund",
+                 "schema": "tools/refund.schema.json",
+                 "version": "1.0.0" } ]
+  },
+  "control_profile":  { "status": "PLACEHOLDER — ตอนที่ 7: สัญญา + thresholds" },
+  "evaluation_suite": { "status": "PLACEHOLDER — ตอนที่ 9: golden set + hash" }
+}</code></pre>
+
+    <p>ภาษาข้อกำหนดของ manifest ผมยืมจาก RFC 2119 ตรง ๆ ตามแนวของ conformance profile ในเปเปอร์: ทุก release <em>MUST</em> อ้าง manifest ที่กรอกครบทุกช่องที่ไม่ใช่ placeholder, การเปลี่ยนไฟล์ใดที่ถูก hash ไว้ <em>MUST</em> ออก manifest รุ่นใหม่, และระบบ <em>SHOULD</em> ปฏิเสธการ start เมื่อ hash ที่คำนวณจริงไม่ตรงกับ manifest<sup><a href="#th-ref-3">[3]</a></sup> คำกริยาเหล่านี้ไม่ใช่สำนวนตกแต่ง — MUST คือเงื่อนไขที่ถ้าละเมิดแล้ว conformance ล้มทันที ส่วน SHOULD คือข้อที่เบี่ยงได้เฉพาะเมื่อบันทึกเหตุผลไว้เป็นลายลักษณ์</p>
+
+    <h3>โครง assemble_context() — เส้นทางเดียว พร้อมหลักฐานในตัว</h3>
+
+    <pre><code># app/context.py — C = A(q, R, T, S; θ_A) ของน้องคราม
+import hashlib
+
+def assemble_context(q, retrieval, tools, state, theta):
+    """เส้นทางเดียวของระบบที่ผลิต context — คืนทั้ง context และหลักฐาน"""
+    passages = retrieval.search(q, top_k=theta["max_passages"])
+    for p in passages:                      # provenance เป็นการ์ดของตอนที่ 8
+        assert p.source in retrieval.source_allow_list
+    ctx = render(theta["template"],
+                 system=load_prompt("prompts/system.th.md"),
+                 question=q,
+                 passages=passages,
+                 tools=tools.public_schemas(),
+                 history=state.last_turns(theta["history_turns"]))
+    record = {                              # ร่องรอยการตัดสินใจของพจน์ C
+        "manifest_id": theta["manifest_id"],
+        "context_sha256": hashlib.sha256(ctx.encode()).hexdigest(),
+        "corpus_snapshot": retrieval.snapshot_id,
+        "passage_sources": [p.source for p in passages],
+    }
+    trace.append("context_assembled", record)
+    return ctx, record</code></pre>
+
+    <p>โครงนี้ทำสามอย่างที่ข้อความใน prompt ทำเองไม่ได้ หนึ่ง มันบังคับเส้นทางเดียว — จุดต่อ string ที่เคยกระจายในสาม handler ตายไปแล้ว สอง มันเก็บหลักฐานทุกครั้งที่ทำงาน: hash ของ context ที่ประกอบเสร็จ, รุ่นของ corpus, และที่มาของทุก passage ไหลลงร่องรอยการตัดสินใจโดยไม่ต้องมีใครจำ สาม มันทำให้การ replay เป็นไปได้จริง: request เดิมกับ manifest เดิมต้องให้ context เดิม byte-for-byte — ซึ่งจะกลายเป็นแถวสำคัญของ validation check ข้างล่างทันที</p>
+
+    <blockquote>💡 มุมมองของผม: ผมถือ manifest เป็น<em>หน่วยของการ deploy</em> ไม่ใช่เอกสารแนบท้าย ประโยคทดสอบมีสองประโยคและใช้ได้ทุกสัปดาห์ ไม่ใช่เฉพาะวัน launch: ถ้า diff ระหว่างสอง release ไม่ทำให้ค่าใดใน manifest ขยับเลย แปลว่าคุณไม่ได้เปลี่ยนระบบ และถ้าพฤติกรรมของระบบเปลี่ยนโดยที่ manifest ไม่ขยับ แปลว่ายังมีพจน์ของ (1) ที่หลุดบัญชีอยู่ — ประโยคหลังคือสัญญาณเตือนที่มีค่าที่สุดที่ manifest ให้ฟรี</blockquote>
+
+    <h2 id="th-validation-check">5. Validation check — ตรวจระบบของคุณเองด้วย artifact</h2>
+
+    <p>กติกาเดียวกับทุกตอนของซีรีส์: คำตอบ "ผ่าน" ต้องชี้ artifact ได้ ไม่ใช่ชี้ความมั่นใจ ไล่ตารางนี้กับระบบของคุณเอง — แถวไหนที่ artifact ยังไม่มีตัวตน แถวนั้นคือ backlog ของสัปดาห์นี้ ไม่ใช่ของ quarter หน้า</p>
+
+    <div class="table-wrapper">
+        <table>
+            <thead>
+                <tr>
+                    <th>#</th>
+                    <th>คำถาม</th>
+                    <th>artifact ที่พิสูจน์คำตอบ</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>1</td>
+                    <td>บอกได้ไหมว่าแปดพจน์ของ (1) ในระบบคุณมีค่าอะไร และแต่ละค่าอยู่ที่ไหน</td>
+                    <td>terms.yaml ที่คอมมิตแล้ว ครบแปดแถว — ช่อง "ไม่รู้" มีได้ แต่ทุกช่องต้องมีเจ้าของและกำหนดปิด</td>
+                </tr>
+                <tr>
+                    <td>2</td>
+                    <td>request เดิม replay กับ manifest เดิม ให้ context เดิม byte-for-byte หรือไม่</td>
+                    <td>ค่า context_sha256 สองค่าจากการรันสองครั้งใน trace — ต้องเท่ากันทุกหลัก แสดงคู่กันได้</td>
+                </tr>
+                <tr>
+                    <td>3</td>
+                    <td>ทั้ง codebase มีกี่จุดที่ประกอบ context ได้</td>
+                    <td>ผลตรวจใน CI ที่ยืนยันว่าการ render/ต่อ prompt อยู่ใน assemble_context() แห่งเดียว — ไม่ใช่คำยืนยันปากเปล่า</td>
+                </tr>
+                <tr>
+                    <td>4</td>
+                    <td>โมเดลถูกล็อกรุ่นจริง หรือแค่เชื่อว่าล็อก</td>
+                    <td>บรรทัด core.version ใน manifest ที่เป็นรุ่นระบุชัด (ไม่ใช่ alias) + log ที่ระบบปฏิเสธ start เมื่อรุ่นจริงไม่ตรง</td>
+                </tr>
+                <tr>
+                    <td>5</td>
+                    <td>คำตอบที่ส่งให้ลูกค้าเมื่อวานนี้ ใช้ corpus รุ่นไหนตอบ</td>
+                    <td>แถว trace ของ ticket นั้น ที่อ้าง corpus_snapshot id ซึ่งโยงกลับถึง manifest ที่ active ในเวลานั้น</td>
+                </tr>
+                <tr>
+                    <td>6</td>
+                    <td>การแก้ prompt ครั้งล่าสุด ผ่านตาใครมาบ้าง</td>
+                    <td>PR ที่ merge แล้วของไฟล์ใน prompts/ พร้อมชื่อผู้รีวิว — ไม่ใช่ประวัติการแก้ใน console ของ vendor</td>
+                </tr>
+                <tr>
+                    <td>7</td>
+                    <td>การเปลี่ยน tool schema ครั้งล่าสุด ออก release ใหม่หรือไม่</td>
+                    <td>คู่คอมมิตที่ hash ของ tool_registry ใน manifest ขยับพร้อม schema — หรือ log ของ CI gate ที่ fail เมื่อ hash ค้าง</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <p>สังเกตว่าไม่มีแถวไหนถามว่า "คำตอบของระบบดีไหม" เลยสักแถว — ทั้งเจ็ดแถวถามแค่ว่าระบบ<em>ระบุตัวได้</em>หรือไม่ นั่นไม่ใช่ความบังเอิญ มันคือขอบเขตที่ตอนนี้รับผิดชอบ และเป็นขอบเขตที่ต้องเสร็จก่อนคำถามเรื่องคุณภาพจะมีความหมาย</p>
+
+    <h2 id="th-road-ahead">6. ก้าวต่อไป</h2>
+
+    <p>ถ้าจะพกอะไรกลับไปจากตอนนี้เพียงหนึ่งอย่าง ผมขอเลือกการเปลี่ยนคำถามในทีม: จาก "ใครแก้ prompt" เป็น "release ไหนแก้พจน์ไหนของ (1)" คำถามแรกมองระบบเป็นโมเดลบวกของตกแต่ง คำถามหลังมองระบบเป็นโปรแกรมแปดพจน์ที่ทุกพจน์มีเจ้าของ มีรุ่น และมีประวัติ — ซึ่งเป็นสิ่งที่มันเป็นจริง ๆ มาตลอด เพียงแต่บัญชียังไม่เคยถูกเขียน</p>
+
+    <p>งานที่เริ่มได้ในสัปดาห์นี้มีสามชิ้นและเรียงจากถูกไปแพง หนึ่ง เขียน terms.yaml ของระบบตัวเองให้จบภายในหนึ่งชั่วโมง — ค่าของมันอยู่ที่ช่อง "ไม่รู้" ที่มันบังคับให้เราเขียนออกมา สอง ยุบเส้นทางประกอบ context ให้เหลือหนึ่งฟังก์ชัน — งานนี้เจ็บที่สุดแต่ปลดล็อกแถว replay ของ validation check สาม เจรจาย้าย system prompt ตัวจริงจาก dashboard เข้า repo ให้ได้หนึ่งไฟล์ — แถวที่ 6 ของตารางจะเปลี่ยนสถานะทันที และทีมจะได้เห็นด้วยตาว่า PR ของ prompt หน้าตาเป็นอย่างไร</p>
+
+    <p>สิ่งที่ตอนนี้<em>ไม่ได้</em>ตอบ — และจงใจไม่ตอบ — คือคำถามที่อยู่ถัดไปพอดี: ต่อให้ pin ครบทุกพจน์ hash ตรงทุกช่อง replay ได้ byte-for-byte แกนที่อยู่กลางสมการก็ยังผิดเป็น ผิดอย่างคล่องแคล่ว และผิดด้วยความมั่นใจเต็มเปี่ยม manifest ทำให้ระบบ<em>ระบุตัวได้</em> แต่ไม่ได้ทำให้มัน<em>ถูก</em> การออกแบบบนสมมติฐานว่าแกนคืออัจฉริยะที่พลาดเป็น — แต่งข้อเท็จจริงได้ เก่งไม่สม่ำเสมอ จำอะไรไม่ได้ หูเบา และมั่นใจไม่ตรงกับความจริง — คือทั้งตอนของตอนถัดไป</p>
+
+    <div class="alert info">
+        <strong>🧭 ตอนถัดไป:</strong> <a href="/blog/ai-core-fallible-savant">#5 Design for the Fallible Savant — ออกแบบเผื่ออัจฉริยะที่พลาดเป็น</a> — สี่สมมติฐานการออกแบบกับหนึ่งคุณสมบัติของแกน ที่เปลี่ยนคำชม "โมเดลเก่งมาก" ให้กลายเป็นข้อกำหนดของ envelope ที่ล้อมมัน ตอนนี้เรา pin ทุกพจน์ให้นิ่ง ตอนหน้าเราออกแบบเผื่อวันที่แกนซึ่งนิ่งสนิทแล้ว ก็ยังพลาด</div>
+
+    <div class="key-takeaways">
+        <h3>🎯 สิ่งสำคัญที่ต้องจำ</h3>
+        <ul>
+            <li><strong>สมการ (1)</strong> = Y ~ P(· | M_v, D, C, R, T, K, S, E) — พฤติกรรมแจกแจงตามแปดพจน์ร่วมกัน: โมเดล+รุ่น, decoding, context, retrieval, tools, orchestration, session state, environment</li>
+            <li><strong>Context (C)</strong> = ผลลัพธ์ของโค้ดประกอบ A(q, R, T, S; θ_A) — ไม่ใช่ string ที่พิมพ์มือ และ θ_A ก็เป็นโปรแกรมพอ ๆ กับ template</li>
+            <li><strong>หลักฐานไม่พกข้ามรุ่น</strong> = ตรึง C แล้วเปลี่ยน M_v หรือ D การแจกแจงก็เปลี่ยน — prompt ที่ทดสอบบนรุ่นหนึ่งยังไม่มีหลักฐานบนอีกรุ่นจนกว่าจะรันชุดทดสอบใหม่</li>
+            <li><strong>กฎสองข้อที่สังเกตได้</strong> = control surface (พฤติกรรมที่ปล่อยแล้วถูกกำหนดโดย model output ตาม decision trace) + load-bearing (removal ablation ล้มเกินสัดส่วนที่ประกาศล่วงหน้า)</li>
+            <li><strong>ทุกพจน์เข้า repo</strong> = prompts · โค้ดประกอบ · retrieval config · tool schemas · ชุดประเมิน · model manifest — version รีวิว ปล่อยพร้อมกัน โดยโค้ดยังถือ control flow และ mediation</li>
+            <li><strong>Release manifest</strong> = บันทึกกำกับรุ่นปล่อยที่ pin ทุกพจน์ด้วย hash — หน่วยของการ deploy และคำตอบสิบวินาทีของคำถาม "production รันอะไรอยู่"</li>
+        </ul>
+    </div>
+
+    <section class="references" aria-labelledby="th-references">
+        <h2 id="th-references">อ้างอิง</h2>
+        <p class="references__note">ตรวจสอบทุกแหล่งเมื่อ 8 กันยายน 2026 (เวลาประเทศไทย) · ป้ายหลักฐานสี่แบบ: <strong>Law</strong> ตัวบทกฎหมายหรือประกาศทางการ · <strong>Standard</strong> มาตรฐานหรือกรอบทางการที่เผยแพร่แล้ว · <strong>Study</strong> งานวิจัยหรือสัญญาณภาคสนาม · <strong>Synthesis</strong> การสังเคราะห์ของผู้เขียนหรือแหล่งที่ไม่ใช่งานวิจัย</p>
+        <ol class="references__list">
+            <li id="th-ref-1"><span class="ref-tag ref-tag--synthesis">Synthesis</span> Anirach Mingkhwan. <cite>Engineering AI-Core Systems: A Reference Architecture and Assurance Contract for Software 3.0</cite> — CreativeLAB, FITM, KMUTNB, 2026. เอกสารที่ผู้เขียนจัดหาให้ ยังไม่ตีพิมพ์ ไม่มี URL สาธารณะ จึงไม่มีลิงก์และไม่มีวันเข้าถึง. <span class="ref-supports">รองรับ: สมการ (1) กับนิยามของพจน์ทั้งแปดและรูป C = A(q, R, T, S; θ_A) ข้อความว่า context ตีความแยกจากโมเดลไม่ได้และหลักฐานของ context ไม่พกข้ามรุ่นโมเดล กฎ control-surface และกฎ load-bearing ข้อสรุปว่าการเปลี่ยนพจน์ใดของ (1) คือการเปลี่ยนโปรแกรม รายการ artifact ที่ต้องเข้า codebase พร้อมเงื่อนไขว่าโค้ดยังถือ control flow กับ mediation และรายการช่องของ release manifest ตาม conformance profile §6.1 ที่หัวข้อ 4 ใช้ทั้งหมด</span></li>
+            <li id="th-ref-2"><span class="ref-tag ref-tag--synthesis">Synthesis</span> Karpathy, A. <cite>Software Is Changing (Again)</cite> — การบรรยายที่ AI Startup School, 2025. ไม่มี URL อ้างอิงสาธารณะจึงไม่ใส่ลิงก์และไม่มีวันเข้าถึง. <span class="ref-supports">รองรับ: กรอบความคิด Software 3.0 และการที่คานงัดของวิศวกรย้ายมาอยู่ที่บริบทตอนรัน — อ้างเป็นบริบททางความคิดของคำว่า context engineering เท่านั้น ไม่ใช่แหล่งของสมการ กฎ หรือข้อบังคับใดในตอนนี้</span></li>
+            <li id="th-ref-3"><span class="ref-tag ref-tag--standard">Standard</span> Bradner, S. <cite>Key words for use in RFCs to Indicate Requirement Levels</cite> — RFC 2119 / BCP 14, 1997. <a href="https://doi.org/10.17487/RFC2119">doi.org</a> — เข้าถึง 2026-09-08. <span class="ref-supports">รองรับ: ความหมายของระดับคำข้อกำหนด MUST / SHOULD / MAY ที่หัวข้อ 4 ใช้เขียนข้อกำหนดของ release manifest ตามแนว conformance profile ของเปเปอร์</span></li>
+            <li id="th-ref-4"><span class="ref-tag ref-tag--standard">Standard</span> NIST. <cite>Artificial Intelligence Risk Management Framework (AI RMF 1.0)</cite> — NIST AI 100-1, 2023. <a href="https://www.nist.gov/itl/ai-risk-management-framework">nist.gov</a> — เข้าถึง 2026-09-08. <span class="ref-supports">รองรับ: ความคาดหวังเชิงธรรมาภิบาลว่าองค์ประกอบของระบบ AI และที่มาของมันควรถูกทำบัญชี จัดทำเอกสาร และตรวจย้อนได้ตลอดวงจรชีวิต — อ้างในระดับกรอบโดยรวม ไม่ได้อ้างข้อกำหนดรายข้อของเอกสาร</span></li>
+        </ol>
+    </section>
+    </div>
+
+    <div class="l-en" lang="en">
+
+    <p>🤔 <strong>If your vendor silently upgrades the model to a new version tonight — while your prompt, your corpus and your code do not change by a single character — is the system you maintain still "the same system" tomorrow morning?</strong></p>
+
+    <p>The previous post, <a href="/blog/ai-core-os-model">The AI-OS Mental Model</a>, closed on five seams where the classical guarantees break — weights return a sample rather than a fixed value, the context window is RAM with no memory protection, retrieval has no stable read contract, tool calls are "requested" in natural language, and agents carry no built-in privilege separation. The question I left hanging was this: if the things we pour into that RAM — the system prompt, the passages retrieval brings back, the tool descriptions, the conversation history — determine system behaviour to that degree, what exactly is their engineering status: documentation? Config that ops can tune at will? Or program? The paper answers plainly and answers one way: it is program.<sup><a href="#en-ref-1">[1]</a></sup></p>
+
+    <p>The whole post's answer fits in one equation and one sentence. The equation is the paper's equation (1): Y ~ P(· | M_v, D, C, R, T, K, S, E) — the behaviour a user sees is distributed conditional on eight terms jointly, not on the model alone and not on the prompt alone. The sentence is: <em>a change to any term of (1) is a change to the program.</em> The work of <strong>context engineering</strong> is therefore not the art of choosing words in a prompt but the engineering discipline of making every term identifiable, versioned, reviewed, and released together in a single <strong>release manifest</strong>. In this post we walk seven steps to KramKraft's first manifest, plus the skeleton of a context-assembly function that forces the whole system down to exactly one path that can produce context.</p>
+
+    <h2 id="en-equation-one">1. One Equation That Says Where Behaviour Comes From</h2>
+
+    <p>This section's conclusion fits in one sentence: the output of an AI-core system is not distributed according to "the model" but according to the joint condition of eight terms, and context is only one of them — special because it is reassembled on every request by our own code. The paper writes it as equation (1):<sup><a href="#en-ref-1">[1]</a></sup></p>
+
+    <pre><code>Y ~ P( · | M_v, D, C, R, T, K, S, E )        ...(1)
+
+C = A(q, R, T, S; θ_A)</code></pre>
+
+    <figure class="figure">
+      <a href="../images/ai-core-fig-04-context-eq.png">
+        <img class="figure__img" src="../images/ai-core-fig-04-context-eq.png" alt="Anatomy of the equation Y ~ P(. | Mv, D, C, R, T, K, S, E) — the eight behaviour-determining terms feeding context assembly and pinned together in one release manifest." width="1400" height="700" loading="lazy" decoding="async">
+      </a>
+      <figcaption class="figure__caption">Changing any term of equation (1) is a change to the program — so every term lives in one manifest and ships together.</figcaption>
+    </figure>
+
+    <p>The phrase context engineering is not new — Karpathy described the engineer's leverage moving to runtime context in his 2025 talk<sup><a href="#en-ref-2">[2]</a></sup> — but what the paper adds is the stiffness the phrase needs to carry engineering weight: enumerate the terms completely, define each one precisely, and attach the version-control obligation to every term equally. For a developer maintaining a real system, these eight terms are not floating symbols — every one of them points at something tangible in the KramKraft system:</p>
+
+    <div class="table-wrapper">
+        <table>
+            <thead>
+                <tr>
+                    <th>Term</th>
+                    <th>What it is in the paper</th>
+                    <th>The real thing in the KramKraft system</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td><strong>M_v</strong></td>
+                    <td>The model with its version — frozen weights at a stated version</td>
+                    <td>Not "the vendor's model" in the abstract, but a version-locked identifier in <code>config/model.json</code> — the night the vendor silently upgrades is the night this term changes while your repo diff stays empty</td>
+                </tr>
+                <tr>
+                    <td><strong>D</strong></td>
+                    <td>Decoding policy — how a sample is drawn from the model</td>
+                    <td>The temperature, top_p, seed and max_tokens used on every call — lockable so that replay is possible, but locking them still does not lock the meaning the model gives the context</td>
+                </tr>
+                <tr>
+                    <td><strong>C</strong></td>
+                    <td>Context assembled at runtime by assembly code A under config θ_A</td>
+                    <td>Every character the model sees on that request: system prompt + retrieved passages + tool descriptions + history — produced by <code>assemble_context()</code>, not typed by hand</td>
+                </tr>
+                <tr>
+                    <td><strong>R</strong></td>
+                    <td>Retrieval — the corpus version plus the ranker and its parameters</td>
+                    <td>The version of <code>policy/</code> + <code>catalog/</code> plus the ranker and its top_k — change the ranker without touching the prompt at all, and the passage set changes, and the answer changes</td>
+                </tr>
+                <tr>
+                    <td><strong>T</strong></td>
+                    <td>Tool semantics — the meaning of the tools the system can call</td>
+                    <td>The schema of <code>refund(order_id, amount, reason)</code> and its real behaviour against the order store — rename a parameter or widen a range and you have changed both model behaviour and the effect surface</td>
+                </tr>
+                <tr>
+                    <td><strong>K</strong></td>
+                    <td>Orchestration code — the code that sequences the work</td>
+                    <td>Nong Kram's chat loop: when to retrieve, how many model rounds, how to retry, when to hand off to a human — this layer is the Software 1.0 that still holds the control flow</td>
+                </tr>
+                <tr>
+                    <td><strong>S</strong></td>
+                    <td>Session state — the state of one conversation</td>
+                    <td>The session's history, the customer's identity, the results of earlier tool calls — the same customer asking the same sentence in a new session is already a different input</td>
+                </tr>
+                <tr>
+                    <td><strong>E</strong></td>
+                    <td>Environment — the runtime surroundings</td>
+                    <td>The world the system stands in while answering: the time, the actual state of the order store, the behaviour of downstream services — a term you can record but cannot freeze, which is exactly why it must be recorded</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <h3>C is not a string anyone types — C is the output of a function</h3>
+
+    <p>The second line of the equation matters more to daily work than the first. C = A(q, R, T, S; θ_A) says that the context the model sees on each request is the <em>output of assembly code</em> A, which takes the user's question q, the retrieval results, the tool descriptions and the session state, under the parameters θ_A — the template in use, the maximum number of passages, the number of history turns attached, the order the blocks are laid in. If today your system concatenates prompt strings at five places in five handlers, you do not "not have an A yet" — you have five invisible A's with no name, no version, and no reviewer.</p>
+
+    <p>The corner people miss most often is treating θ_A as a technical detail, when it is program to exactly the degree the template is: change max_passages from 6 to 12 without touching a word of the prompt, and what the model sees changes, the distribution of Y changes, and the behaviour your customer meets changes — all of it while not one line of "the prompt" has moved.</p>
+
+    <h3>Context evidence is bound to the model that gives it meaning</h3>
+
+    <p>The deepest point of equation (1) hides in its own shape: C stands <em>beside</em> M_v and D inside the same conditioning bar. The paper's conclusion is that context cannot be interpreted independently of the model that gives it semantics — hold C fixed to the last character and change M_v or D, and the distribution of Y changes immediately.<sup><a href="#en-ref-1">[1]</a></sup> The sentence "we tested this prompt" is therefore a joint claim about the whole tuple (C, M_v, D, R, T, ...), never a claim about C on its own — and context evidence is <em>not portable across model versions</em>: a prompt that passed your test suite on M_v1 has no evidence at all on M_v2 until that suite is run again.</p>
+
+    <p>This is the answer to the question that opened the post: the night the vendor silently upgrades the model, the term M_v changes — your system became a different program before you woke up. Every piece of evidence you had collected is now evidence about the old program, and no diff tool in your repo sees the change at all, unless you pinned the version and recorded it yourself.</p>
+
+    <blockquote>💡 My view: I have stopped using the phrase "a good prompt" without context. A prompt shared on the internet has the status of a <em>hypothesis</em> — it once worked well somewhere, on some model version, under some decoding policy, over some corpus. Until you have run it through your own test suite, on your own (M_v, D, R, T), it carries not one piece of evidence in your system. The rule I use with my team is short: you can borrow a prompt, but you cannot borrow its evidence.</blockquote>
+
+    <h2 id="en-everything-versioned">2. Every Term Is the Program — So Every Term Is Versioned</h2>
+
+    <p>This section's conclusion: prompts, context-assembly code, retrieval configs, tool schemas, evaluation suites and model manifests all belong to the codebase — versioned together, reviewed together, released together — because changing any one of them is deploying a new version of the program. The reason is not tidiness. It follows from two <em>observable</em> rules the paper uses to separate "the things that determine behaviour" from "the props".<sup><a href="#en-ref-1">[1]</a></sup></p>
+
+    <h3>The two rules that make "control" an observable matter</h3>
+
+    <ul>
+        <li><strong>The control-surface rule</strong> — at least one released behaviour is materially determined by model output, <em>as recorded in the</em> <strong>decision trace</strong> — not as the team feels or a slide claims. An answer released to a customer counts, and an authorised tool call counts too</li>
+        <li><strong>The load-bearing rule</strong> — under <strong>removal ablation</strong>, replacing the model with the declared fallback drops task success on a fixed test set below a share that was <em>predeclared</em> — the model is not decoration; it carries real weight</li>
+    </ul>
+
+    <p>Both rules come from the AI-core definition in the first post of the series, but their logical consequence lands exactly here: if model output really is a control surface, and the model really is indispensable, then everything that shapes that output — every term of (1) the team can edit — is also controlling the system's released behaviour. The paper compresses the obligation about as far as it can be compressed:</p>
+
+    <blockquote>Prompts, context-assembly code, retrieval configs, tool schemas, evaluation suites and model manifests — all of it belongs to the codebase: versioned together, reviewed together, released together. <strong>A change to any term of (1) is a change to the program.</strong><sup><a href="#en-ref-1">[1]</a></sup></blockquote>
+
+    <h3>What goes into the repo — and what the code still holds</h3>
+
+    <ul>
+        <li><strong>Every prompt and template file</strong> — the system prompt, the few-shot examples, the answer template — ordinary files that can be diffed, not text boxes in a vendor console</li>
+        <li><strong>The context-assembly code</strong> — the function A together with the whole of θ_A: the chosen template, the passage count, the history-turn count — a config change to A changes behaviour exactly as a template change does</li>
+        <li><strong>The retrieval config</strong> — the corpus version id, the ranker's name and parameters, and the allow-list of accepted sources — the half of the term R that usually has no owner at all</li>
+        <li><strong>The tool schemas</strong> — a JSON Schema for every tool with its parameter ranges — documentation for the model and a checkpoint for the system, in the same file</li>
+        <li><strong>The evaluation suites</strong> — the golden set, the adversarial set, the deciding thresholds — because "it passed testing" is a claim bound to the version of the test suite as well</li>
+        <li><strong>The model manifest</strong> — the version-locked identifier of M_v and the decoding policy D — the two terms that live outside the repo by nature and therefore have to be pulled in by recording them</li>
+    </ul>
+
+    <p>The paper's next sentence heads off the most common misreading precisely: these artifacts come to sit <em>alongside</em> the code, under exactly the same discipline, but they do not <em>become</em> the source code — the code still holds the control flow, the interfaces, and the mediation everything depends on.<sup><a href="#en-ref-1">[1]</a></sup> Do not read this post as an invitation to move logic into the prompt; the direction is inward — pull the things that floated outside the discipline in under the discipline of code. The same expectation appears in the NIST AI RMF in governance language: the components that determine an AI system's behaviour should be inventoried, documented and traceable across the lifecycle.<sup><a href="#en-ref-4">[4]</a></sup></p>
+
+    <p>One image is all I want you to carry out of this section: Friday afternoon, someone on the team opens the vendor's dashboard, edits two sentences of the system prompt right there, and hits save — no branch, no PR, no review, no rollback, and no trace in git. In the language of equation (1), that event edited the term C of the production program and deployed it instantly, straight over the head of every gate the organisation ever built.</p>
+
+    <div class="alert info">
+        <strong>A prompt edited in a dashboard is an unreviewed hotfix to production:</strong> the test is a single question — "what does a change to our system prompt travel through before it reaches a customer?" If the answer is not the same path the code walks (branch → review → merge → release), the system has a back door that changes the production program with nobody watching — and on the day behaviour goes strange, you will not be able to trace the cause, because that change never had an existence in the system's history.</div>
+
+    <h2 id="en-seven-steps">3. The Seven Steps</h2>
+
+    <p>This post's seven steps walk from a term-by-term inventory to the first release manifest. Each step ends with an artifact that can actually be committed to the repo, not a meeting resolution. Every number in the example (the 2,000 THB limit, top_k = 6, the seed) is a tutorial number I set for KramKraft — not a value the paper recommends and not universal advice.</p>
+
+    <h3>Step 1 — Inventory the eight terms of your system, with current value and location</h3>
+
+    <p>Open one file and answer two questions per term: <em>what is the current value</em>, and <em>where does it live</em>. Work through all eight. The truth that tends to surface when you actually do it: some terms nobody on the team can answer — the ranker runs on vendor defaults nobody ever read, the real system prompt lives in a dashboard rather than the repo, nobody is sure whether the model identifier is version-locked or an alias. An inventory with "unknown" cells is an honest inventory, and those cells are the entire work list for the steps that follow.</p>
+
+    <pre><code># terms.yaml — the eight-term inventory of equation (1) for KramKraft (pre-cleanup state)
+M_v: "hosted-llm @ ???"                  # lives: vendor console — version lock not yet confirmed
+D:   "temp=0.3 (set by whom? when?)"     # lives: scattered across two API-call sites in the code
+C:   "string concat in handlers"         # lives: chat.py, faq.py, escalate.py — three sites!
+R:   "corpus=policy/+catalog/"           # lives: a storage bucket — no version id; ranker = default
+T:   "refund"                            # lives: schema written inline in code, no version number
+K:   "chat loop + 2 retries"             # lives: app/loop.py — the only part fully in the repo
+S:   "history 10 turns + customer id"    # lives: session store
+E:   "order store, time, language"       # lives: never recorded into any trace at all</code></pre>
+
+    <h3>Step 2 — Collapse context assembly into one real function</h3>
+
+    <p>Write A as a real function with a real name and a signature that matches the equation: it takes q, the retrieval results, the tool set, the session state and θ_A — and returns one context plus its supporting evidence. There is only one rule and it must be absolute: any code that wants a context calls this function, and not one line of prompt string-concat survives anywhere in a handler — because every shortcut left standing is another A that nobody versions. For KramKraft this means collapsing the three sites in chat.py, faq.py and escalate.py into one — the full skeleton is in section <a href="#en-kramkraft">4</a>.</p>
+
+    <pre><code># app/context.py — the only path in the system that can produce context
+def assemble_context(q, retrieval, tools, state, theta):
+    """C = A(q, R, T, S; θ_A) — returns (context, evidence record for the trace)"""
+    ...</code></pre>
+
+    <h3>Step 3 — Pin the model and the decoding policy</h3>
+
+    <p>M_v must be a version-locked identifier, never a floating alias like "latest" that the vendor can slide underneath you, and D must be recorded completely: temperature, top_p, seed, max_tokens. Remember the lesson from the previous post: deterministic decoding removes sampling variance but does not remove version sensitivity<sup><a href="#en-ref-1">[1]</a></sup> — so the seed is not a talisman of correctness; it is the minimum condition that makes replay and debugging possible. If your vendor offers no genuinely lockable version, record that limitation in your risk register instead of pretending to forget it.</p>
+
+    <pre><code>// config/model.json — the terms M_v and D in one file, versioned in the repo
+{
+  "core": { "provider": "hosted", "model": "hosted-llm",
+            "version": "2026-08-14", "alias_allowed": false },
+  "decoding": { "temperature": 0, "top_p": 1,
+                "seed": 20260901, "max_tokens": 700 }
+}</code></pre>
+
+    <h3>Step 4 — Snapshot the corpus and the retrieval config</h3>
+
+    <p>The term R has two halves and both must be pinned. The first half is the corpus: put <code>policy/</code> and <code>catalog/</code> in git, and make every state the system ever answered from addressable by a single id (a git tag, for instance) — edit one paragraph of the return policy and that is a new corpus version, which is a new system version. The second half is the retrieval config: the ranker's name, its parameters, and how many passages are drawn — everything that used to be a vendor default becomes a declared value in a file, readable and diffable.</p>
+
+    <pre><code># retrieval.yaml — the half of the term R that usually has no owner
+corpus_snapshot: "kramkraft-corpus@2026-09-05"   # git tag of policy/ + catalog/
+ranker: "bm25"
+ranker_params: { k1: 1.2, b: 0.75 }
+top_k: 6
+source_allow_list: ["policy/", "catalog/"]       # accepted passage origins</code></pre>
+
+    <h3>Step 5 — Declare tool schemas as versioned artifacts</h3>
+
+    <p>KramKraft's term T holds a single tool, but one whose effect is real and irreversible from the moment the payment processor accepts it: refund. Declare its schema as a JSON Schema file separate from the code — types, patterns, parameter ranges, closed with additionalProperties: false. This one file does two jobs at once: it is the description the model sees, and it is the checkpoint of <strong>hard enforcement</strong> that post #8 will plug into the execution rail. Today's work is only to make it a file, give it a version number, and make it diffable.</p>
+
+    <pre><code>// tools/refund.schema.json — v1.0.0 (the limit is a tutorial number)
+{
+  "$id": "tools/refund.schema.json", "version": "1.0.0",
+  "type": "object", "required": ["order_id", "amount", "reason"],
+  "properties": {
+    "order_id": { "type": "string", "pattern": "^KK-[0-9]{6}$" },
+    "amount":   { "type": "number", "minimum": 1, "maximum": 2000 },
+    "reason":   { "type": "string", "maxLength": 200 }
+  },
+  "additionalProperties": false
+}</code></pre>
+
+    <h3>Step 6 — Move prompts into the repo, and make a prompt PR a program PR</h3>
+
+    <p>Move every prompt and template out of the dashboard and out of in-code strings into files under <code>prompts/</code>, then bind a reviewing owner through CODEOWNERS exactly like any other module. The definition of done for this step is precise: changing one word of the system prompt must travel the same path as changing one line of a function — a diff, a reviewer who understands both the brand's voice and the behavioural consequence, a rollback point. From here on, the history of every phrase the system ever used with a customer lives in the git log, not in one person's memory.</p>
+
+    <pre><code>prompts/
+  system.th.md          # Nong Kram's voice, task scope, prohibitions
+  system.en.md
+  templates/answer.j2   # the answer scaffold A uses when assembling context
+
+# CODEOWNERS — a prompt is program, so it has a reviewing owner like program
+prompts/  @kramkraft/assistant-team</code></pre>
+
+    <h3>Step 7 — Assemble the release manifest that pins every term with hashes</h3>
+
+    <p>The final step gathers the outputs of steps 1–6 into one file: whatever is a file in the repo → store its hash; whatever is a corpus → store its snapshot id; whatever is an external service → store its identifier and locked version. The acceptance test for this step is the one question an ops team should answer in ten seconds: "what is production running right now?" — and the answer must be a single file that names every term, not a tour through five systems.</p>
+
+    <pre><code>$ shasum -a 256 prompts/templates/answer.j2     # → a41f...9c2e
+$ shasum -a 256 tools/refund.schema.json        # → 03e8...77b1
+$ git rev-parse --short corpus-2026-09-05       # → 7d3b1a2
+# all values flow into release-manifest.json — the full file is in section 4</code></pre>
+
+    <h2 id="en-kramkraft">4. The KramKraft Artifact — release-manifest v1 and assemble_context()</h2>
+
+    <p>These are the two artifacts this post leaves behind for the KramKraft system, and the base every later post in the series builds on. The manifest's fields match the list in the paper's conformance profile (§6.1): the core with its decoding policy, the context-template hash, the corpus snapshot with its provenance policy, the tool-registry hash, the control profile with thresholds, and the evaluation-suite hash.<sup><a href="#en-ref-1">[1]</a></sup> The last two fields are placeholders on purpose — the contract and its thresholds are post #7's work, and the <strong>golden set</strong> with the evaluation-suite hash is post #9's — a <em>declared</em> gap is better than no field at all, because a declared gap collects on itself.</p>
+
+    <h3>release-manifest v1 — in full</h3>
+
+    <pre><code>// release-manifest.json — kramkraft-release-2026-09-08-r1
+{
+  "manifest_id": "kramkraft-release-2026-09-08-r1",
+  "task_set": "customer-support-th: order, product and refund questions",
+  "core": {
+    "model": "hosted-llm",
+    "version": "2026-08-14",
+    "alias_allowed": false,
+    "decoding": { "temperature": 0, "top_p": 1,
+                  "seed": 20260901, "max_tokens": 700 }
+  },
+  "context_template": {
+    "path": "prompts/templates/answer.j2",
+    "sha256": "a41f...9c2e",
+    "assembler": "app/context.py::assemble_context",
+    "theta_A": { "max_passages": 6, "history_turns": 10 }
+  },
+  "corpus_snapshot": {
+    "id": "kramkraft-corpus@2026-09-05",
+    "provenance_policy": "accept passages from policy/ and catalog/ only"
+  },
+  "tool_registry": {
+    "sha256": "03e8...77b1",
+    "tools": [ { "name": "refund",
+                 "schema": "tools/refund.schema.json",
+                 "version": "1.0.0" } ]
+  },
+  "control_profile":  { "status": "PLACEHOLDER — post #7: contract + thresholds" },
+  "evaluation_suite": { "status": "PLACEHOLDER — post #9: golden set + hash" }
+}</code></pre>
+
+    <p>The manifest's requirement language I borrow directly from RFC 2119, following the paper's conformance profile: every release <em>MUST</em> reference a manifest whose every non-placeholder field is filled; changing any hashed file <em>MUST</em> produce a new manifest version; and the system <em>SHOULD</em> refuse to start when a freshly computed hash disagrees with the manifest.<sup><a href="#en-ref-3">[3]</a></sup> These verbs are not ornament — a violated MUST fails conformance outright, while a SHOULD may be deviated from only with the reason recorded in writing.</p>
+
+    <h3>The assemble_context() skeleton — one path, with evidence built in</h3>
+
+    <pre><code># app/context.py — KramKraft's C = A(q, R, T, S; θ_A)
+import hashlib
+
+def assemble_context(q, retrieval, tools, state, theta):
+    """The only path in the system that produces context — returns context plus evidence."""
+    passages = retrieval.search(q, top_k=theta["max_passages"])
+    for p in passages:                      # provenance is post #8's guard
+        assert p.source in retrieval.source_allow_list
+    ctx = render(theta["template"],
+                 system=load_prompt("prompts/system.th.md"),
+                 question=q,
+                 passages=passages,
+                 tools=tools.public_schemas(),
+                 history=state.last_turns(theta["history_turns"]))
+    record = {                              # the decision trace for the term C
+        "manifest_id": theta["manifest_id"],
+        "context_sha256": hashlib.sha256(ctx.encode()).hexdigest(),
+        "corpus_snapshot": retrieval.snapshot_id,
+        "passage_sources": [p.source for p in passages],
+    }
+    trace.append("context_assembled", record)
+    return ctx, record</code></pre>
+
+    <p>This skeleton does three things that text inside a prompt cannot do for itself. One, it enforces the single path — the string-concat sites that used to live in three handlers are dead. Two, it collects evidence on every run: the hash of the assembled context, the corpus version, and the origin of every passage flow into the decision trace with nobody having to remember. Three, it makes replay genuinely possible: the same request with the same manifest must yield the same context byte-for-byte — which immediately becomes one of the key rows of the validation check below.</p>
+
+    <blockquote>💡 My view: I treat the manifest as the <em>unit of deployment</em>, not an attachment. The test is two sentences, and they work every week, not only on launch day: if the diff between two releases moves no value in the manifest, you did not change the system; and if the system's behaviour changes while the manifest did not move, some term of (1) is still off the books — and that second sentence is the most valuable alarm the manifest gives you for free.</blockquote>
+
+    <h2 id="en-validation-check">5. Validation Check — Audit Your Own System with Artifacts</h2>
+
+    <p>The same rule as every post in this series: a "pass" must point at an artifact, not at confidence. Walk this table against your own system — any row whose artifact does not yet exist is this week's backlog, not next quarter's.</p>
+
+    <div class="table-wrapper">
+        <table>
+            <thead>
+                <tr>
+                    <th>#</th>
+                    <th>Question</th>
+                    <th>The artifact that proves the answer</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>1</td>
+                    <td>Can you state the value of all eight terms of (1) in your system, and where each one lives?</td>
+                    <td>A committed terms.yaml with all eight rows — "unknown" cells are allowed, but every one has an owner and a closing date</td>
+                </tr>
+                <tr>
+                    <td>2</td>
+                    <td>Does replaying the same request against the same manifest reproduce the same assembled context byte-for-byte?</td>
+                    <td>Two context_sha256 values from two runs in the trace — equal to the last digit, and shown side by side</td>
+                </tr>
+                <tr>
+                    <td>3</td>
+                    <td>How many places in the whole codebase can assemble context?</td>
+                    <td>A CI check result confirming prompt rendering/concatenation exists only inside assemble_context() — not a verbal assurance</td>
+                </tr>
+                <tr>
+                    <td>4</td>
+                    <td>Is the model genuinely version-locked, or merely believed to be?</td>
+                    <td>The core.version line in the manifest naming an explicit version (no alias) + a log line of the system refusing to start on a version mismatch</td>
+                </tr>
+                <tr>
+                    <td>5</td>
+                    <td>Which corpus version answered the ticket you shipped yesterday?</td>
+                    <td>That ticket's trace row citing a corpus_snapshot id that links back to the manifest active at the time</td>
+                </tr>
+                <tr>
+                    <td>6</td>
+                    <td>Whose eyes did the latest prompt change pass through?</td>
+                    <td>A merged PR on a file under prompts/ with a named reviewer — not an edit history inside the vendor console</td>
+                </tr>
+                <tr>
+                    <td>7</td>
+                    <td>Did the latest tool-schema change produce a new release?</td>
+                    <td>A commit pair in which the manifest's tool_registry hash moved together with the schema — or the log of a CI gate failing on a stale hash</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <p>Notice that not a single row asks "are the system's answers good?" All seven rows ask only whether the system is <em>identifiable</em>. That is not an accident — it is the boundary this post is responsible for, and the boundary that has to be finished before the quality question can even mean anything.</p>
+
+    <h2 id="en-road-ahead">6. The Road Ahead</h2>
+
+    <p>If you take exactly one thing from this post, I would pick the change of question inside the team: from "who edited the prompt?" to "which release changed which term of (1)?" The first question sees the system as a model plus decorations. The second sees it as an eight-term program in which every term has an owner, a version and a history — which is what it always was; the ledger simply had never been written.</p>
+
+    <p>Three pieces of work can start this week, ordered from cheap to expensive. One: write your own system's terms.yaml inside an hour — its value lies in the "unknown" cells it forces you to write down. Two: collapse the context-assembly paths into one function — the most painful job of the three, and the one that unlocks the replay row of the validation check. Three: negotiate the real system prompt out of the dashboard and into the repo, one file — row 6 of the table changes status immediately, and the team gets to see with its own eyes what a prompt PR looks like.</p>
+
+    <p>What this post does <em>not</em> answer — deliberately — is the question that comes next: even with every term pinned, every hash matching, every replay byte-for-byte, the core standing in the middle of the equation still errs — fluently, and with complete confidence. The manifest makes the system <em>identifiable</em>; it does not make it <em>right</em>. Designing on the assumption that the core is a savant that fails — able to fabricate facts, uneven in skill, unable to remember, easily led, and confident out of proportion to the truth — is the whole of the next post.</p>
+
+    <div class="alert info">
+        <strong>🧭 Next post:</strong> <a href="/blog/ai-core-fallible-savant">#5 Design for the Fallible Savant</a> — four design assumptions and one property of the core, which turn the compliment "the model is very good" into requirements on the envelope that surrounds it. This post pinned every term still; the next one designs for the day the perfectly pinned core errs anyway.</div>
+
+    <div class="key-takeaways">
+        <h3>🎯 Key Takeaways</h3>
+        <ul>
+            <li><strong>Equation (1)</strong> = Y ~ P(· | M_v, D, C, R, T, K, S, E) — behaviour is distributed over eight terms jointly: model+version, decoding, context, retrieval, tools, orchestration, session state, environment</li>
+            <li><strong>Context (C)</strong> = the output of assembly code A(q, R, T, S; θ_A) — not a hand-typed string, and θ_A is program to exactly the degree the template is</li>
+            <li><strong>Evidence does not travel across versions</strong> = hold C fixed and change M_v or D, and the distribution changes — a prompt tested on one version has no evidence on another until the suite is rerun</li>
+            <li><strong>Two observable rules</strong> = control surface (a released behaviour materially determined by model output, per the decision trace) + load-bearing (removal ablation fails beyond a predeclared share)</li>
+            <li><strong>Every term into the repo</strong> = prompts · assembly code · retrieval config · tool schemas · evaluation suites · model manifest — versioned, reviewed and released together, while the code keeps the control flow and the mediation</li>
+            <li><strong>Release manifest</strong> = the record that pins every term with hashes — the unit of deployment, and the ten-second answer to "what is production running?"</li>
+        </ul>
+    </div>
+
+    <section class="references" aria-labelledby="en-references">
+        <h2 id="en-references">References</h2>
+        <p class="references__note">Every source verified on 8 September 2026 (Asia/Bangkok) · Four evidence labels: <strong>Law</strong> statute or official notification · <strong>Standard</strong> a published standard or official framework · <strong>Study</strong> research or a field signal · <strong>Synthesis</strong> the author's own synthesis or a non-research source.</p>
+        <ol class="references__list">
+            <li id="en-ref-1"><span class="ref-tag ref-tag--synthesis">Synthesis</span> Anirach Mingkhwan. <cite>Engineering AI-Core Systems: A Reference Architecture and Assurance Contract for Software 3.0</cite> — CreativeLAB, FITM, KMUTNB, 2026. An author-supplied document, unpublished, with no public URL, and therefore no link and no access date. <span class="ref-supports">Supports: equation (1) with the definitions of all eight terms and the form C = A(q, R, T, S; θ_A); the statement that context cannot be interpreted independently of the model and that context evidence is not portable across model versions; the control-surface and load-bearing rules; the conclusion that a change to any term of (1) is a change to the program; the list of artifacts that belong in the codebase with the proviso that the code retains control flow and mediation; and the release-manifest fields of conformance profile §6.1 that section 4 uses throughout</span></li>
+            <li id="en-ref-2"><span class="ref-tag ref-tag--synthesis">Synthesis</span> Karpathy, A. <cite>Software Is Changing (Again)</cite> — talk, AI Startup School, 2025. No citable public URL, so no link and no access date. <span class="ref-supports">Supports: the Software 3.0 framing and the engineer's leverage moving to runtime context — cited only as the intellectual context of the phrase context engineering, not as the source of any equation, rule or obligation in this post</span></li>
+            <li id="en-ref-3"><span class="ref-tag ref-tag--standard">Standard</span> Bradner, S. <cite>Key words for use in RFCs to Indicate Requirement Levels</cite> — RFC 2119 / BCP 14, 1997. <a href="https://doi.org/10.17487/RFC2119">doi.org</a> — accessed 2026-09-08. <span class="ref-supports">Supports: the meaning of the requirement levels MUST / SHOULD / MAY that section 4 uses to phrase the release manifest's requirements, following the paper's conformance profile</span></li>
+            <li id="en-ref-4"><span class="ref-tag ref-tag--standard">Standard</span> NIST. <cite>Artificial Intelligence Risk Management Framework (AI RMF 1.0)</cite> — NIST AI 100-1, 2023. <a href="https://www.nist.gov/itl/ai-risk-management-framework">nist.gov</a> — accessed 2026-09-08. <span class="ref-supports">Supports: the governance expectation that an AI system's components and their provenance should be inventoried, documented and traceable across the lifecycle — cited at the level of the framework as a whole, not any individual requirement of the document</span></li>
+        </ol>
+    </section>
+    </div>
+
+    <div class="post-series-footer">
+      <span class="l-th">บทความจากซีรีส์ Engineering AI-Core Systems 2026</span><span class="l-en" lang="en">From the Engineering AI-Core Systems 2026 series</span>
+    </div>
+
+    <nav aria-label="Engineering AI-Core Systems">
+    <div class="series-nav">
+      <h3>🛡️ Engineering AI-Core Systems 2026</h3>
+      <div class="series-links">
+        <a href="/blog/ai-core-what-is">#1 What Is AI-Core</a>
+        <a href="/blog/ai-core-three-eras">#2 Three Eras</a>
+        <a href="/blog/ai-core-os-model">#3 AI-OS Seams</a>
+        <span class="current" aria-current="page">#4 Context Control</span>
+        <a href="/blog/ai-core-fallible-savant">#5 Fallible Savant</a>
+        <a href="/blog/ai-core-control-loop">#6 Control Loop</a>
+        <a href="/blog/ai-core-assurance-contract">#7 Assurance Contract</a>
+        <a href="/blog/ai-core-five-rails">#8 Five Rails</a>
+        <a href="/blog/ai-core-validation">#9 Validation</a>
+        <a href="/blog/ai-core-ship-operate">#10 Ship &amp; Operate</a>
+      </div>
+    </div>
+    </nav>
+
+  </article>
+
+  </main>
+
+  <footer class="blog-footer">
+    <nav class="blog-footer__nav" aria-label="Site">
+      <a href="../index.html">Home</a>
+      <a href="./">Blog</a>
+      <a href="../publications/">Publications</a>
+      <a href="../books/">Books</a>
+      <a href="../projects/">Projects</a>
+      <a href="../news/">News</a>
+      <a href="../index.html#contact">Contact</a>
+    </nav>
+    <a href="./">← Back to Blog</a>
+    <span>© 2026 Anirach Mingkhwan — Associate Professor, KMUTNB</span>
+  </footer>
+
+</body>
+</html>

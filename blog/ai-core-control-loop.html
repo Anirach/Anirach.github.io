@@ -1,0 +1,1409 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Specify → Constrain → Generate → Verify — วงจรพัฒนายุค AI-Core | Anirach Mingkhwan</title>
+  <meta name="description" content="เขียน ai_core_operation() จริงทีละท่อน — precheck ที่ปฏิเสธก่อนถึงโมเดล execution guard ก่อนผลจริง เกณฑ์ตัดสินก่อนปล่อย และ trace ทุกเส้นทางรวมทั้งตอนพัง">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=Sarabun:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      color-scheme: light;
+      /* ink */
+      --navy: #11304b; --slate: #334155; --slate-light: #526174; --gray: #94a3b8;
+      /* ground */
+      --bg: #faf7f0; --white: #ffffff; --code-bg: #1e293b;
+      /* accent */
+      --blue: #226299; --blue-dark: #1a4d7a; --blue-light: #4992b9;
+      /* brand — sampled from the book covers. --gold is decorative on light grounds (2.2:1); --gold-dark is its text form. */
+      --gold: #c4a46c; --gold-dark: #7a5f22; --cloud: #dee7e6; --parchment: #e9e1c4; --focus: #226299;
+      /* status — use only these six, never invent a seventh */
+      --green: #22c55e; --red: #ef4444; --amber: #f59e0b;
+      --cyan: #06b6d4; --purple: #226299; --purple-dark: #1a4d7a;
+      /* type */
+      --font: 'Inter', 'Sarabun', -apple-system, BlinkMacSystemFont, sans-serif;
+      --mono: 'JetBrains Mono', 'Fira Code', 'Sarabun', monospace;
+      /* form */
+      --radius: 12px; --radius-sm: 8px; --radius-lg: 16px;
+      --measure: 720px; --wide: 860px;
+      --transition: 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+    html { scroll-behavior: smooth; }
+    body { font-family: var(--font); font-size: 17px; line-height: 1.8; color: var(--slate); background: var(--bg); -webkit-font-smoothing: antialiased; }
+    .blog-nav { position: fixed; top: 0; left: 0; right: 0; z-index: 100; background: rgba(248,250,252,0.85); backdrop-filter: blur(20px); border-bottom: 1px solid rgba(0,0,0,0.05); }
+    .blog-nav__inner { max-width: 860px; margin: 0 auto; padding: 0 2rem; height: 56px; display: flex; align-items: center; justify-content: space-between; }
+    .blog-nav__back { font-size: 0.85rem; font-weight: 500; color: var(--blue); text-decoration: none; }
+    .blog-nav__back:hover { color: #1a4d7a; }
+    .blog-nav__title { font-size: 0.85rem; font-weight: 600; color: var(--navy); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 50%; }
+    /* ── HERO ── house .post-hero on the approved Deep Blue gradient (page-design
+       §5 / INV-28). Ink is inverted for the dark ground: white title/meta, tag
+       pills white on 18% white — the openclaw-production treatment. The
+       background value must stay byte-identical to the approved string. */
+    .post-hero { padding: 8rem 2rem 3rem; background: linear-gradient(135deg, #11304b 0%, #1a4d7a 45%, #226299 100%); color: #fff; text-align: center; }
+    .post-hero__tags { display: flex; gap: 0.5rem; justify-content: center; margin-bottom: 1.25rem; flex-wrap: wrap; }
+    .post-hero__tag { display: inline-block; font-size: 0.72rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.1em; color: #fff; background: rgba(255,255,255,0.18); padding: 0.35rem 0.9rem; border-radius: 20px; }
+    .post-hero__title { font-size: clamp(1.8rem, 5vw, 3rem); font-weight: 800; color: #fff; line-height: 1.2; margin-bottom: 1rem; max-width: 720px; margin-left: auto; margin-right: auto; }
+    .post-hero__sub { font-size: 1.05rem; max-width: 640px; margin: 0 auto 1.5rem; line-height: 1.7; color: #fff; }
+    .post-hero__meta { font-size: 0.85rem; color: #fff; display: flex; align-items: center; justify-content: center; gap: 1.5rem; flex-wrap: wrap; }
+    .post-hero__series { font-weight: 600; color: #fff; }
+    /* the switch pill and the focus ring both sit on the dark hero: the pill is
+       a light chip so its labels keep their light-ground colours, and --focus
+       re-points to gold here (blue collapses on blue — the footer/pre
+       precedent). */
+    .post-hero { --focus: var(--gold); }
+    .post-hero__cover {
+      aspect-ratio: 1 / 1;
+      max-width: 380px;
+      margin: 2.5rem auto 0;
+      border-radius: var(--radius-lg, 16px);
+      overflow: hidden;
+      box-shadow: 0 20px 60px rgba(17,48,75,0.14);
+    }
+    .post-hero__cover img { width: 100%; height: 100%; object-fit: cover; display: block; }
+    .post-body { max-width: 720px; margin: 0 auto; padding: 3rem 2rem 6rem; }
+    .post-body h2 { font-size: 1.6rem; font-weight: 800; color: var(--navy); margin: 3rem 0 1rem; padding-bottom: 0.5rem; border-bottom: 2px solid rgba(34,98,153,0.15); }
+    .post-body h3 { font-size: 1.25rem; font-weight: 700; color: var(--navy); margin: 2.25rem 0 0.75rem; }
+    .post-body p { margin-bottom: 1.25rem; }
+    .post-body strong { font-weight: 700; color: var(--navy); }
+    .post-body a { color: var(--blue); text-decoration: underline; text-decoration-thickness: 1px; text-underline-offset: 2px; }
+    .post-body ul, .post-body ol { margin: 0.5rem 0 1.25rem 1.5rem; }
+    .post-body li { margin-bottom: 0.4rem; }
+    .post-body blockquote { background: rgba(34,98,153,0.06); border-left: 4px solid var(--blue); padding: 1rem 1.25rem; border-radius: 0 10px 10px 0; margin: 1.25rem 0; font-size: 0.95rem; color: var(--navy); }
+    .post-body hr { border: none; height: 1px; background: linear-gradient(90deg, transparent, rgba(34,98,153,0.2), transparent); margin: 3rem 0; }
+    /* ── CODE ── */
+    .post-body pre { background: var(--code-bg); border-radius: 12px; padding: 1.5rem; margin: 1.25rem 0 1.5rem; overflow-x: auto; border: 1px solid rgba(255,255,255,0.05); }
+    .post-body pre code { font-family: var(--mono); font-size: 0.85rem; color: #e2e8f0; line-height: 1.7; background: none; padding: 0; white-space: pre-wrap; }
+    .post-body code { font-family: var(--mono); font-size: 0.88em; background: rgba(34,98,153,0.08); color: var(--blue-dark); padding: 0.15em 0.45em; border-radius: 5px; }
+    /* ── TABLES ── */
+    .table-wrapper { overflow-x: auto; margin: 1.5rem 0; border-radius: 0.5rem; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1); }
+    table { width: 100%; border-collapse: collapse; background: white; }
+    th { background: #226299; color: white; padding: 1rem; text-align: left; font-weight: 600; }
+    td { padding: 1rem; border-bottom: 1px solid #e5e7eb; }
+    .post-body table { display: block; width: 100%; overflow-x: auto; }
+    /* ── ALERTS ── */
+    .alert { background: #fef3cd; border: 1px solid #facc15; border-radius: 0.5rem; padding: 1rem; margin: 1.5rem 0; }
+    .alert.danger { background: #fee2e2; border-color: #ef4444; }
+    .alert.info { background: #e0f2fe; border-color: #06b6d4; }
+    .alert.success { background: #d1fae5; border-color: #10b981; }
+    /* ── KEY TAKEAWAYS ── */
+    .key-takeaways { background: linear-gradient(135deg, #f3f4f6 0%, #e5e7eb 100%); border-radius: 1rem; padding: 2rem; margin: 3rem 0; }
+    .key-takeaways h3 { color: #226299; margin-bottom: 1.5rem; }
+    .post-series-footer { text-align: center; font-size: 0.85rem; color: var(--slate-light); font-style: italic; margin-top: 2rem; padding-top: 2rem; border-top: 1px solid #e2e8f0; }
+    .blog-footer { background: var(--navy); padding: 2rem 0; text-align: center; }
+    .blog-footer a { color: var(--gold); text-decoration: none; font-weight: 600; font-size: 0.9rem; }
+    .blog-footer span { color: var(--gray); font-size: 0.8rem; display: block; margin-top: 0.4rem; }
+    @media (max-width: 600px) {
+      .post-hero { padding: 7rem 1.25rem 2.5rem; }
+      .post-body { padding: 2rem 1.25rem 4rem; }
+      .post-hero__meta { flex-direction: column; gap: 0.4rem; }
+      .post-body h2 { font-size: 1.4rem; }
+      .post-body h3 { font-size: 1.15rem; }
+      .post-body pre { padding: 1rem; border-radius: 8px; }
+    }
+
+    :focus-visible { outline: 2px solid var(--focus); outline-offset: 3px; border-radius: 2px; }
+    /* the ring sits on the page ground (3px offset). Inside the navy footers
+       and code blocks var(--blue) collapses to 2.12:1, so those scopes
+       re-point --focus to gold (5.73:1 on navy). */
+    .footer, .blog-footer, pre { --focus: var(--gold); }
+    :focus:not(:focus-visible) { outline: none; }
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after {
+        animation-duration: .01ms !important; animation-iteration-count: 1 !important;
+        transition-duration: .01ms !important; scroll-behavior: auto !important;
+      }
+    }
+    h1, h2, h3, .post-hero__title, .card__title { text-wrap: balance; }
+
+    .post-body img, .post-body svg { max-width: 100%; height: auto; }
+
+    /* ── SKIP LINK ── a11y-perf R5: the link and the landmark it targets are a
+       pair — useless without both halves. Off-screen until focused, then the
+       first tab stop on every page. */
+    .skip-link { position: absolute; left: -9999px; }
+    .skip-link:focus {
+      left: 1rem; top: 1rem; z-index: 999;
+      background: var(--navy); color: #fff;
+      padding: 0.75rem 1.25rem; border-radius: var(--radius-sm);
+      font-weight: 600; text-decoration: none;
+    }
+
+    /* ── POST WAYFINDING ── the wordmark is the home link; the footer carries
+       the full destination row. */
+    .blog-nav__home {
+      font-size: 0.9rem; font-weight: 800; color: var(--navy);
+      text-decoration: none; margin-right: 1rem;
+    }
+    .blog-nav__home:hover { color: var(--blue); }
+    .blog-nav__inner > .blog-nav__back { margin-right: auto; }
+    .blog-footer__nav {
+      display: flex; flex-wrap: wrap; justify-content: center; gap: 0.35rem 1.25rem;
+      max-width: 860px; margin: 0 auto 1.25rem; padding: 0 2rem 1.25rem;
+      border-bottom: 1px solid rgba(255,255,255,0.12);
+    }
+    .blog-footer__nav a { color: var(--gold); font-size: 0.85rem; font-weight: 600; text-decoration: none; }
+    .blog-footer__nav a:hover { color: #fff; text-decoration: underline; }
+
+    html { scroll-padding-top: 5rem; }
+    [id] { scroll-margin-top: 5rem; }
+
+    /* Thai needs more room than Latin at the same nominal size. */
+    .post-body:lang(th) { font-size: 18px; line-height: 1.85; }
+    .post-body p, .post-body li, .post-body blockquote { text-wrap: pretty; }
+
+    /* ---- side-scroll affordance ----
+       pre blocks and tables can exceed 720px. These layers paint a shadow ONLY
+       where there is more content in that direction; when fully scrolled the
+       cover slides over the shadow and hides it. No JavaScript, no wrapper. */
+    .post-body pre, .post-body table {
+      overflow-x: auto;
+      background-image:
+        linear-gradient(to right, var(--code-bg, #0f172a) 30%, rgba(15,23,42,0)),
+        linear-gradient(to left, var(--code-bg, #0f172a) 30%, rgba(15,23,42,0)),
+        radial-gradient(farthest-side at 0 50%, rgba(0,0,0,.28), rgba(0,0,0,0)),
+        radial-gradient(farthest-side at 100% 50%, rgba(0,0,0,.28), rgba(0,0,0,0));
+      background-position: 0 0, 100% 0, 0 0, 100% 0;
+      background-repeat: no-repeat;
+      background-size: 40px 100%, 40px 100%, 14px 100%, 14px 100%;
+      background-attachment: local, local, scroll, scroll;
+    }
+    .post-body table {
+      background-image:
+        linear-gradient(to right, var(--white, #fff) 30%, rgba(255,255,255,0)),
+        linear-gradient(to left, var(--white, #fff) 30%, rgba(255,255,255,0)),
+        radial-gradient(farthest-side at 0 50%, rgba(17,48,75,.16), rgba(17,48,75,0)),
+        radial-gradient(farthest-side at 100% 50%, rgba(17,48,75,.16), rgba(17,48,75,0));
+      background-position: 0 0, 100% 0, 0 0, 100% 0;
+      background-repeat: no-repeat;
+      background-size: 40px 100%, 40px 100%, 14px 100%, 14px 100%;
+      background-attachment: local, local, scroll, scroll;
+    }
+
+    /* ---- table of contents ---- */
+    .post-toc {
+      max-width: 720px;
+      margin: 2rem auto 0;
+      padding: 1rem 1.25rem;
+      background: rgba(34,98,153,0.05);
+      border: 1px solid rgba(34,98,153,0.14);
+      border-left: 3px solid var(--gold, #c4a46c);
+      border-radius: 10px;
+      font-size: 0.92rem;
+    }
+    .post-toc > summary {
+      cursor: pointer;
+      font-weight: 700;
+      color: var(--navy);
+      list-style: none;
+    }
+    .post-toc > summary::-webkit-details-marker { display: none; }
+    .post-toc > summary::before {
+      content: "\25B8";
+      display: inline-block;
+      margin-right: 0.5rem;
+      transition: transform 0.2s ease;
+      color: var(--gold-dark, #7a5f22);
+    }
+    .post-toc[open] > summary::before { transform: rotate(90deg); }
+    .post-toc > summary:focus-visible { outline: 3px solid var(--focus, #226299); outline-offset: 3px; }
+    .post-toc ol { margin: 0.85rem 0 0.25rem; padding-left: 1.4rem; }
+    .post-toc li { margin-bottom: 0.4rem; line-height: 1.5; }
+    .post-toc a { color: var(--slate); text-decoration: none; }
+    .post-toc a:hover, .post-toc a:focus-visible { color: var(--blue-dark, #1a4d7a); text-decoration: underline; }
+    @media (max-width: 600px) { .post-toc { margin: 1.25rem 1rem 0; } }
+
+    /* ---- cross-document view transitions ---- */
+    @view-transition { navigation: auto; }
+    .nav, .blog-nav { view-transition-name: site-nav; }
+    .footer, .blog-footer { view-transition-name: site-footer; }
+    @media (prefers-reduced-motion: reduce) {
+      ::view-transition-group(*),
+      ::view-transition-old(*),
+      ::view-transition-new(*) { animation: none !important; }
+    }
+
+    /* ── SERIES STRIP — Hermes Agent in Practice ──
+       Same class and inner-wrapper shape as the OpenClaw strip because the
+       linter's RE_SNAV recognises exactly `series-nav` + a nested div; a
+       renamed strip would read as "no nav" and fail INV-08. All content
+       checks (INV-03 family) iterate the SERIES7 list only, so this strip's
+       labels are convention, not contract. House-styled, not the island CSS. */
+    .series-nav {
+      max-width: 720px; margin: 2rem auto 0; padding: 1.1rem 1.4rem;
+      background: rgba(255,255,255,0.75); border: 1px solid rgba(34,98,153,0.15);
+      border-left: 3px solid var(--gold); border-radius: 12px;
+    }
+    .series-nav h3 {
+      font-size: 0.78rem; font-weight: 700; text-transform: uppercase;
+      letter-spacing: 0.08em; color: var(--gold-dark); margin-bottom: 0.6rem;
+    }
+    .series-links { display: flex; flex-wrap: wrap; gap: 0.5rem; }
+    .series-links a, .series-links .current {
+      font-size: 0.82rem; font-weight: 600; padding: 0.35rem 0.8rem;
+      border-radius: 50px; text-decoration: none;
+    }
+    .series-links a { color: var(--blue-dark); background: rgba(34,98,153,0.08); }
+    .series-links a:hover { background: rgba(34,98,153,0.16); }
+    .series-links .current { color: #fff; background: var(--blue-dark); }
+    @media (max-width: 600px) { .series-nav { margin: 1.5rem 1rem 0; } }
+
+    /* ── FIGURE — the sanctioned diagram component (page-design §4 Content).
+       Diagrams are PNGs; this repo built them out of divs twice and reverted
+       twice. The image is wrapped in a link to itself so a phone can pinch a
+       1400px drawing without a line of JavaScript. */
+    .figure { margin: 2.5rem 0; }
+    .figure__img { width: 100%; height: auto; display: block;
+                   border-radius: var(--radius); border: 1px solid rgba(0,0,0,0.06); }
+    .figure__caption { font-size: 0.85rem; color: var(--slate-light);
+                       text-align: center; margin-top: 0.75rem; }
+
+    /* ── REFERENCES — every material number in this series carries its source.
+       The tags are the book's own four evidence labels. */
+    .references { margin-top: 3rem; padding-top: 2rem; border-top: 1px solid #e2e8f0; }
+    .references__note { font-size: 0.85rem; color: var(--slate-light); margin-bottom: 1rem; }
+    .references__list { padding-left: 1.4rem; font-size: 0.9rem; line-height: 1.75; }
+    .references__list li { margin-bottom: 0.7rem; }
+    .ref-tag { display: inline-block; font-size: 0.7rem; font-weight: 700;
+               letter-spacing: 0.06em; text-transform: uppercase; padding: 0.1rem 0.5rem;
+               border-radius: 50px; margin-right: 0.4rem; vertical-align: 0.05em;
+               background: rgba(34,98,153,0.1); color: var(--blue-dark); }
+    /* All four labels get a rule.  --standard and --study shipped without one
+       on 2026-09-05, so 158 of 306 tags fell through to the base blue and the
+       two labels were indistinguishable.  Ratios on --bg: 6.70 / 6.92 / 7.36 /
+       4.81:1, all AA at this size. */
+    .ref-tag--law { background: rgba(239,68,68,0.12); color: #991b1b; }
+    .ref-tag--standard { background: rgba(34,98,153,0.12); color: var(--blue-dark); }
+    .ref-tag--study { background: rgba(34,197,94,0.18); color: #14532d; }
+    .ref-tag--synthesis { background: rgba(196,164,108,0.22); color: var(--gold-dark); }
+    .ref-supports { display: block; color: var(--slate-light); font-size: 0.85rem; }
+
+    /* ── LANGUAGE SWITCH — pure CSS, zero JavaScript (INV-38) ──
+       One visually-hidden checkbox as a direct child of body, BEFORE the main landmark,
+       so `#langSwitch:checked ~ main …` reaches every content block. The two
+       tracks are paired blocks: .l-th (default) and .l-en (hidden until
+       checked; display:revert restores block for divs, inline for spans).
+       Naming stays clear of INV-12's menu-token regex (hamburger|burger|
+       nav__toggle|nav-toggle|navtoggle|menu-toggle|menu__toggle) — verified.
+       No JS also means no persistence across posts; each post opens in Thai. */
+    .lang-switch-box { position: absolute; left: -9999px; }
+    .l-en { display: none; }
+    #langSwitch:checked ~ main .l-en { display: revert; }
+    #langSwitch:checked ~ main .l-th { display: none; }
+    .lang-switch {
+      display: inline-flex; align-items: center; gap: 0.55rem;
+      margin-top: 1.4rem; padding: 0.4rem 1.1rem; border-radius: 50px;
+      background: rgba(255,255,255,0.85); border: 1px solid rgba(255,255,255,0.4);
+      cursor: pointer; font-size: 0.85rem; user-select: none;
+    }
+    .lang-switch span { color: var(--slate-light); font-weight: 600; transition: color 0.2s; }
+    .lang-switch .lang-sep { color: var(--gray); font-weight: 400; }
+    .lang-switch .lang-th { color: var(--navy); font-weight: 800; }
+    #langSwitch:checked ~ main .lang-switch .lang-th { color: var(--slate-light); font-weight: 600; }
+    #langSwitch:checked ~ main .lang-switch .lang-en { color: var(--navy); font-weight: 800; }
+    .lang-switch:hover { border-color: #fff; }
+    #langSwitch:focus-visible ~ main .lang-switch {
+      outline: 2px solid var(--focus); outline-offset: 3px;
+    }
+  </style>
+  <!-- social -->
+  <link rel="canonical" href="https://anirach.com/blog/ai-core-control-loop.html">
+  <meta property="og:type" content="article">
+  <meta property="og:url" content="https://anirach.com/blog/ai-core-control-loop.html">
+  <meta property="og:site_name" content="Anirach Mingkhwan">
+  <meta property="og:locale" content="th_TH">
+  <meta property="og:locale:alternate" content="en_US">
+  <meta property="article:published_time" content="2026-09-08">
+  <meta property="article:author" content="https://anirach.com/">
+  <meta property="og:title" content="Specify → Constrain → Generate → Verify — วงจรพัฒนายุค AI-Core">
+  <meta property="og:description" content="เขียน ai_core_operation() จริงทีละท่อน — precheck ที่ปฏิเสธก่อนถึงโมเดล execution guard ก่อนผลจริง เกณฑ์ตัดสินก่อนปล่อย และ trace ทุกเส้นทางรวมทั้งตอนพัง">
+  <meta property="og:image" content="https://anirach.com/images/ai-core-control-loop-og.jpg">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
+  <meta property="og:image:alt" content="Specify → Constrain → Generate → Verify — วงจรพัฒนายุค AI-Core">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:image" content="https://anirach.com/images/ai-core-control-loop-og.jpg">
+  <meta name="twitter:image:alt" content="Specify → Constrain → Generate → Verify — วงจรพัฒนายุค AI-Core">
+  <meta name="robots" content="max-image-preview:large">
+  <meta name="theme-color" content="#11304b">
+  <link rel="icon" href="/favicon.ico" sizes="any">
+  <link rel="apple-touch-icon" href="/apple-touch-icon.png">
+  <!-- /social -->
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "BlogPosting",
+    "headline": "Specify → Constrain → Generate → Verify — วงจรพัฒนายุค AI-Core",
+    "author": {
+      "@type": "Person",
+      "@id": "https://anirach.com/#person",
+      "name": "Anirach Mingkhwan",
+      "url": "https://anirach.com/"
+    },
+    "datePublished": "2026-09-08",
+    "dateModified": "2026-09-08",
+    "image": "https://anirach.com/images/ai-core-control-loop-og.jpg",
+    "inLanguage": [
+      "th",
+      "en"
+    ],
+    "mainEntityOfPage": "https://anirach.com/blog/ai-core-control-loop.html"
+  }
+  </script>
+</head>
+<body>
+<a href="#main" class="skip-link">Skip to content</a>
+<input type="checkbox" id="langSwitch" class="lang-switch-box" aria-label="Switch language: Thai / English">
+
+  <nav class="blog-nav">
+    <div class="blog-nav__inner">
+      <a href="../index.html" class="blog-nav__home">Anirach</a>
+      <a href="./" class="blog-nav__back">‹ Blog</a>
+      <div class="blog-nav__title">Specify → Constrain → Generate → Verify</div>
+    </div>
+  </nav>
+
+  <main id="main">
+
+  <header class="post-hero">
+    <div class="post-hero__tags">
+      <span class="post-hero__tag">Control Loop</span>
+      <span class="post-hero__tag">Coding Discipline</span>
+      <span class="post-hero__tag">Python</span>
+    </div>
+    <h1 class="post-hero__title"><span class="l-th">Specify → Constrain → Generate → Verify — วงจรพัฒนายุค AI-Core</span><span class="l-en" lang="en">Specify → Constrain → Generate → Verify — The AI-Core Function</span></h1>
+    <p class="post-hero__sub"><span class="l-th">ลูปควบคุมอ้างอิงหนึ่งฟังก์ชัน — ตรวจก่อน generate ตรวจสิทธิ์ก่อนทำจริง ตรวจผลก่อนปล่อย และเขียน trace ทุกเส้นทาง — พร้อมโค้ด Python ของน้องครามครบทั้งลูป</span><span class="l-en" lang="en">One reference control loop — check before generating, authorise before executing, verify before releasing, and trace every path — with the full Python loop for the KramKraft assistant.</span></p>
+    <div class="post-hero__meta">
+      <span>By <strong>Anirach Mingkhwan</strong></span>
+      <span class="post-hero__series">Engineering AI-Core Systems 2026 • Post #6</span>
+      <span><time datetime="2026-09-08">8 Sep 2026</time></span>
+      <span>16 min read</span>
+    </div>
+    <label for="langSwitch" class="lang-switch" title="สลับภาษา · Switch language"><span class="lang-th">ไทย</span><span class="lang-sep">·</span><span class="lang-en" lang="en">English</span></label>
+    <div class="post-hero__cover">
+      <img src="../images/ai-core-control-loop-cover.jpg" alt="Specify → Constrain → Generate → Verify — วงจรพัฒนายุค AI-Core" width="800" height="800" loading="eager" fetchpriority="high" decoding="async">
+    </div>
+  </header>
+
+  <article class="post-body">
+
+    <details class="post-toc l-th" open>
+      <summary>ในบทความนี้</summary>
+      <ol>
+          <li><a href="#th-four-verbs">สี่คำกริยา Specify → Constrain → Generate → Verify — วงจรพัฒนาพฤติกรรมที่วิ่งคู่กับ edit→compile→run→debug และข้อจำกัดที่เปเปอร์ประกาศเอง</a></li>
+          <li><a href="#th-reference-loop">ลูปควบคุมอ้างอิงหนึ่งฟังก์ชัน — เดิน Listing 1.1 ทีละท่อน จาก begin_trace ถึง log_trace ที่ทุกเส้นทางต้องผ่าน</a></li>
+          <li><a href="#th-seven-steps">ลงมือทำ 7 ขั้น — จาก golden set ถึง finally แต่ละขั้นได้โค้ดจริงของน้องครามหนึ่งท่อน</a></li>
+          <li><a href="#th-kramkraft">โค้ดเต็มของน้องคราม — guard.py, gate.py และ loop.py ต่อสายเข้า refund() ราวเก้าสิบบรรทัด ไม่มี framework</a></li>
+          <li><a href="#th-validation-check">Validation check — เจ็ดคำถามผ่าน/ไม่ผ่าน ทุกข้อตอบด้วย artifact ไม่ใช่คำคุณศัพท์</a></li>
+          <li><a href="#th-road-ahead">ก้าวต่อไป — ลูปบอกว่าบังคับที่ไหน แต่ยังไม่บอกว่าสัญญาอะไร นั่นคืองานของตอนถัดไป</a></li>
+      </ol>
+    </details>
+    <details class="post-toc l-en" open>
+      <summary>In this post</summary>
+      <ol>
+          <li><a href="#en-four-verbs">The four verbs Specify → Constrain → Generate → Verify — a behavioural-development loop running beside edit→compile→run→debug, and the paper's own demotion of it</a></li>
+          <li><a href="#en-reference-loop">The reference control loop, one function — Listing 1.1 stage by stage, from begin_trace to the log_trace that every path must pass</a></li>
+          <li><a href="#en-seven-steps">The seven steps — from the golden set to finally, each step delivering one real chunk of the Nong Kram code</a></li>
+          <li><a href="#en-kramkraft">The full KramKraft code — guard.py, gate.py and loop.py wired to refund(), about ninety lines, framework-free</a></li>
+          <li><a href="#en-validation-check">Validation check — seven pass/fail questions, every one answered with an artifact, not an adjective</a></li>
+          <li><a href="#en-road-ahead">The road ahead — the loop says where enforcement happens, not yet what it promises; that is the next post's job</a></li>
+      </ol>
+    </details>
+    <div class="l-th">
+
+    <p>🤔 <strong>ทีมของคุณเชื่อโค้ดของตัวเองได้ เพราะวงจร edit → compile → run → debug หมุนอยู่ทุกวัน — แล้ววันที่พฤติกรรมของระบบออกมาจากโมเดลที่คุณเปิดเข้าไปแก้ข้างในไม่ได้เลย คุณหมุนวงจรอะไรเพื่อให้เชื่อพฤติกรรมนั้นได้บ้าง?</strong></p>
+
+    <p>ตอนที่แล้ว <a href="/blog/ai-core-fallible-savant">Design for the Fallible Savant</a> จบลงที่ข้อตกลงสำคัญของทั้งซีรีส์: เราออกแบบระบบโดยถือว่าแกนของมันคือ <strong>อัจฉริยะที่พลาดเป็น</strong> (fallible savant) — แต่งข้อเท็จจริงได้ เก่งไม่สม่ำเสมอ จำอะไรนอก context ไม่ได้ หูเบา และมั่นใจไม่ตรงกับความจริง — และคำตอบเชิงวิศวกรรมคือกรอบการรับประกันรอบแกน ไม่ใช่คำอธิษฐานให้โมเดลเลิกพลาด แต่ตอนที่แล้วยังเป็นแบบแปลน ตอนนี้ถึงเวลาเทปูน: envelope ที่ว่านั้นเขียนเป็นโค้ดหน้าตาอย่างไร ฟังก์ชันไหนเรียกฟังก์ชันไหน และคำขอหนึ่งคำขอของลูกค้าร้านครามคราฟต์เดินผ่านอะไรบ้าง ก่อนคำตอบจะถึงหน้าจอ LINE ของเขา</p>
+
+    <p>คำตอบของทั้งบทคือวินัยการเขียนโปรแกรมในบทที่ 5 ของเปเปอร์<sup><a href="#th-ref-1">[1]</a></sup>: วงจร <strong>Specify → Constrain → Generate → Verify</strong> ที่วิ่งคู่ขนานกับ edit→compile→run→debug และลูปควบคุมอ้างอิงหนึ่งฟังก์ชันที่ทำให้วงจรนั้นเป็นรูปธรรม — ตรวจก่อน generate และปฏิเสธก่อนถึงโมเดล ตรวจสิทธิ์ก่อนเกิดผลจริง ตรวจผลก่อนปล่อย และเขียน trace ทุกเส้นทางรวมทั้งตอนพัง บทนี้เป็นตอนที่โค้ดเยอะที่สุดของซีรีส์โดยตั้งใจ เพราะเราจะเขียน <code>ai_core_operation()</code> ของน้องครามกันจริง ทีละท่อน จนต่อกันครบทั้งลูปราวเก้าสิบบรรทัด — สั้นพอจะอ่านจบในกาแฟแก้วเดียว และนั่นคือประเด็น</p>
+
+    <h2 id="th-four-verbs">1. สี่คำกริยา — วงจรพัฒนาที่วิ่งคู่กับ edit → compile → run → debug</h2>
+
+    <p>เปเปอร์เสนอวินัยไว้ตรงไปตรงมา: พฤติกรรมที่มาจากโมเดลแช่แข็งบวกบริบทที่ประกอบตอนรัน ต้องพัฒนาด้วยวงจรของมันเอง — <strong>Specify</strong> ระบุพฤติกรรมด้วยตัวอย่างและเกณฑ์รับ, <strong>Constrain</strong> จำกัดพื้นที่ก่อนและหลังโมเดล, <strong>Generate</strong> ให้โมเดลเสนอในขั้นที่ถูกกักบริเวณ, <strong>Verify</strong> ตัดสินผลด้วยเช็คและ eval — และวงจรนี้ไม่ได้มา<em>แทน</em> edit→compile→run→debug แต่วิ่ง<em>คู่กัน</em> เพราะโค้ด 1.0 ของระบบยังอยู่ครบ ยังถือ control flow, interface และตัวกลางทุกตัวที่ทุกอย่างพึ่งพา และยังต้องพัฒนาแบบ 1.0 ต่อไปตามปกติ<sup><a href="#th-ref-1">[1]</a></sup></p>
+
+    <p>การจับคู่จังหวะต่อจังหวะในตารางข้างล่างเป็นการเรียบเรียงของผมเพื่อการสอน — เปเปอร์พูดถึงลูปคู่ขนานโดยไม่ได้จับคู่ทีละคำ — แต่มันช่วยให้เห็นว่าแต่ละจังหวะที่เราคุ้นมือ มีจังหวะฝาแฝดที่ธรรมชาติต่างออกไปตรงไหน</p>
+
+    <div class="table-wrapper">
+        <table>
+            <thead>
+                <tr>
+                    <th>จังหวะ</th>
+                    <th>ลูป 1.0 — edit→compile→run→debug</th>
+                    <th>ลูปพฤติกรรม — Specify→Constrain→Generate→Verify</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td><strong>เขียน</strong></td>
+                    <td>แก้ source code ที่กำหนดพฤติกรรมโดยตรง บรรทัดต่อบรรทัด</td>
+                    <td>เขียนสิ่งที่กำหนดพฤติกรรมของยุค 3.0: intent, golden examples และเกณฑ์รับต่อ task — ตัวการสังเคราะห์ถูกมอบให้แกน</td>
+                </tr>
+                <tr>
+                    <td><strong>กันก่อนรัน</strong></td>
+                    <td>compiler และ type checker ปฏิเสธโปรแกรมที่ผิดรูปก่อนได้รันจริง</td>
+                    <td>schema, allow-list, ช่วงพารามิเตอร์ และ pre-generation check ปฏิเสธคำขอที่ผิดรูปก่อนถึงโมเดล</td>
+                </tr>
+                <tr>
+                    <td><strong>ให้เครื่องทำงาน</strong></td>
+                    <td>run — ผลลัพธ์ deterministic ตามโค้ดที่เขียน</td>
+                    <td>generate — sample หนึ่งตัวจากการแจกแจง จึงต้องกักไว้เป็นขั้นเดียวที่ไม่แตะอะไรเลยนอกจากคืนข้อเสนอ</td>
+                </tr>
+                <tr>
+                    <td><strong>ไล่ความผิด</strong></td>
+                    <td>debug — reproduce ด้วย breakpoint และ stack trace แล้วแก้โค้ดตรงจุด</td>
+                    <td>verify — reproduce เป็นเคสประเมิน เพิ่มเข้า golden set แล้วให้เคสนั้นขับตัวชี้วัดถาวร</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <h3>Debug กลายเป็น evaluation</h3>
+
+    <p>ในลูป 1.0 การ debug จบที่การชี้บรรทัดผิดได้ แต่ตอนที่ 2 ของซีรีส์วางลายเซ็นความล้มเหลวของยุค 3.0 ไว้แล้วว่า ความล้มเหลวอาจ<em>ไม่เกิดซ้ำ</em>เมื่อรันใหม่ และการวินิจฉัยต้องใช้ trace ของการเรียกครั้งนั้นทั้งชุด<sup><a href="#th-ref-1">[1]</a></sup> เปเปอร์จึงเปลี่ยนนิยามของการแก้บั๊กทั้งก้อน: <em>reproduce พฤติกรรมผิดให้ได้ก่อน</em> — ดึง context, manifest และผล tool จาก trace ของคำขอที่พัง — แล้ว<em>เพิ่มมันเป็นเคสใน</em> <strong>ชุดทดสอบทองคำ</strong> (golden set) <em>และให้เคสนั้นขับตัวชี้วัด</em> หน่วยของงาน debug จึงไม่ใช่ patch ที่ลบอาการหนึ่งครั้ง แต่เป็นเคสประเมินที่ตรึงพฤติกรรมนั้นไว้ตลอดอายุระบบ — โมเดลเปลี่ยนรุ่นเมื่อไร เคสนี้รันใหม่ทันที</p>
+
+    <p>รูปธรรมของน้องคราม: สมมุติว่าลูกค้าถามขอคืนเงินในวันที่ 45 หลังซื้อ แล้วน้องครามตอบว่า "ได้ครับ" ทั้งที่นโยบายร้าน (ค่าในบทเรียนของเรา) ให้คืนภายใน 30 วัน สิ่งที่ทีมทำไม่ใช่แค่แก้ system prompt แล้วลองถามใหม่จนคำตอบดูดี — แต่คือเก็บคำขอนั้นเป็นเคส <code>refund-012</code> พร้อมคำตอบที่ถูกต้องและ citation ที่ต้องอ้าง เพิ่มเข้า golden set แล้ววัดอัตราผ่านของ task คืนเงินทั้ง slice ตั้งแต่วันนี้ไปจนถึงทุกครั้งที่ pin โมเดลรุ่นใหม่</p>
+
+    <h3>ชุด artifact ที่ต้องมีวินัยเดียวกับโค้ดขยายออก</h3>
+
+    <p>ผลที่ตามมาโดยตรงของวงจรนี้คือรายการของที่ต้อง version, review และกันการถดถอย ไม่ได้มีแค่ source code อีกต่อไป เปเปอร์ไล่รายการไว้ชัด<sup><a href="#th-ref-1">[1]</a></sup>:</p>
+
+    <ul>
+        <li><strong>Prompts</strong> — ข้อความที่ประกาศ intent และกติกาให้โมเดล เปลี่ยนหนึ่งประโยคคือเปลี่ยนโปรแกรม</li>
+        <li><strong>Context templates</strong> — โครงประกอบบริบทที่ตัดสินว่าโมเดลเห็นอะไร เรียงอย่างไร</li>
+        <li><strong>Tool schemas</strong> — สัญญาของ system call ยุคใหม่ ที่การ validate ทั้งหมดยึดเป็นหลัก</li>
+        <li><strong>Golden datasets</strong> — ชุดทดสอบทองคำที่เป็นทั้งสเปกพฤติกรรมและเครื่องกันถดถอย</li>
+        <li><strong>Release manifests</strong> — บันทึกที่ pin ทุกพจน์ของโปรแกรมไว้ด้วยกันต่อรุ่นปล่อย</li>
+        <li><strong>Eval suites</strong> — โค้ดของฝั่ง Verify ที่ต้องถูก review เข้มเท่ากับโค้ดฝั่ง production</li>
+    </ul>
+
+    <p>วินัยแบบนี้ไม่ได้เกิดจากศูนย์ — สาย ML engineering มี rubric อย่าง ML Test Score ที่บังคับให้ทดสอบและ version ข้อมูลกับโมเดลเหมือน production asset มาตั้งแต่ปี 2017<sup><a href="#th-ref-4">[4]</a></sup> สิ่งที่ยุค 3.0 เพิ่มคือ artifact ตระกูลใหม่ทั้งแถว (prompt, template, schema, manifest) ที่กำหนดพฤติกรรมโดยไม่ใช่ทั้งโค้ดและไม่ใช่ weights</p>
+
+    <blockquote>💡 มุมมองของผม: จงปฏิบัติต่อ golden set เหมือน bug tracker ของทีม — บั๊กพฤติกรรมที่ยังไม่ถูกแปลงเป็นเคสทองคำ ยังไม่ถูกแก้ มันแค่<em>เงียบไป</em> และจะกลับมาเงียบ ๆ ในโมเดลรุ่นถัดไปตอนที่ไม่มีใครเฝ้าอยู่</blockquote>
+
+    <h3>เปเปอร์ demote วงจรของตัวเอง — และนั่นคือจุดที่ต้องจำให้แม่น</h3>
+
+    <p>บทที่ 6 ของเปเปอร์ทำสิ่งที่ผมอยากให้ผู้เขียน framework ทุกคนทำ: มัน<em>ลดตำแหน่ง</em>วงจรของตัวเองอย่างเปิดเผย วงจรสี่คำกริยาเป็น development workflow เท่านั้น — มันจัดลำดับกิจกรรมประจำวันของทีม แต่ไม่ได้สถาปนาคุณสมบัติใดของระบบ และไม่ใช่ "สัญญา" ที่ระบบให้กับใคร<sup><a href="#th-ref-1">[1]</a></sup> เหตุผลเห็นได้จากตัวอย่างเดียว: ทีมที่ทำครบทั้งสี่คำกริยาอย่างขยันขันแข็ง แต่มีสคริปต์ admin หนึ่งตัวเรียก <code>refund()</code> ตรงโดยไม่ผ่าน guard — ทีมนั้นมีกระบวนการครบและมีการรับประกันเป็นศูนย์</p>
+
+    <div class="alert">
+        <strong>อย่ายกวงจรไปเป็นหลักฐานความปลอดภัย:</strong> "เราทำ Specify → Constrain → Generate → Verify ครบทุกสปรินต์" เป็นประโยคเกี่ยวกับ<em>กระบวนการ</em> ไม่ใช่<em>คุณสมบัติ</em> สิ่งที่ระบบรับประกันได้จริงต้องเขียนเป็นสัญญารายคุณสมบัติพร้อมหลักฐาน ซึ่งเป็นเนื้อหาของตอนถัดไป — บทนี้สร้างเครื่องจักร ตอนหน้าจึงจะบอกว่าเครื่องจักรนี้<em>สัญญา</em>อะไรได้บ้าง</div>
+
+    <h2 id="th-reference-loop">2. ลูปควบคุมอ้างอิง — เดิน Listing 1.1 ทีละท่อน</h2>
+
+    <p>ทั้งบทที่ 5 ของเปเปอร์ย่อลงเหลือฟังก์ชันเดียว — เปเปอร์เรียกมันว่า "AI-core function" — และโครงสร้างของฟังก์ชันนี้คือตัววินัยเอง: ไม่มีเส้นทางไหนถึงโมเดลโดยไม่ผ่าน precheck ไม่มีผลจริงเกิดโดยไม่ผ่าน guard ไม่มีการปล่อยโดยไม่ผ่าน threshold และไม่มีทางออกใดที่ไม่เขียน trace<sup><a href="#th-ref-1">[1]</a></sup> หัวข้อนี้เดินตาม Listing 1.1 ทีละท่อน ให้เห็นว่าทำไมแต่ละบรรทัดถึงอยู่ตรงนั้น</p>
+
+    <figure class="figure">
+      <a href="../images/ai-core-fig-06-control-loop.png">
+        <img class="figure__img" src="../images/ai-core-fig-06-control-loop.png" alt="ผังลูปควบคุม ai_core_operation — ประกอบบริบทและ precheck, generate, ตรวจสิทธิ์และกำหนดเส้นทางผลกระทบผ่าน REJECT / NEEDS_APPROVAL / execute, ตรวจ output ตาม threshold, ปล่อยหรือ withhold และเขียน trace ทุกเส้นทาง" width="1400" height="1000" loading="lazy" decoding="async">
+      </a>
+      <figcaption class="figure__caption">ลูปอ้างอิงจากบทที่ 5 ของเปเปอร์ — โครงสร้างบังคับขอบเขตที่แน่นอน ส่วนคำตัดสินเชิงความหมายยังเป็นค่าประเมินที่พลาดได้</figcaption>
+    </figure>
+
+    <p>โครงเต็มเป็น pseudocode ที่ถอดตามลิสติงของเปเปอร์ — ชื่อฟังก์ชันหลักตามเปเปอร์ทุกตัว ส่วนตัวย่อเล็กน้อยเป็นของผมเพื่อให้อ่านบนจอแคบได้:</p>
+
+    <pre><code>function ai_core_operation(request):
+    trace = begin_trace(request, release_manifest)  # เปิด trace ก่อนทำงานใด ๆ
+    state = initialise_state(request)
+    try:
+        loop:
+            context = assemble_and_record(request, state, trace)
+            pre = evaluate_pre_generation(request, context)
+            if not pre.ok:                  # บังคับจริง ไม่ใช่แค่บันทึกไว้
+                return reject(request)      # ออกก่อนถึงแกนโมเดล
+            proposal = model.generate(context)  # จุดเดียวที่เรียกโมเดล
+            record_candidate(trace, proposal)
+            if proposal.has_tool_calls:
+                for call in proposal.tool_calls:
+                    auth  = execution_guard.authorise_validate(
+                                call, request, state, policy)
+                    route = route_effect(call, auth, risk_policy)
+                    if route == REJECT:
+                        result = rejected(auth.reason)
+                    elif route == NEEDS_APPROVAL:
+                        result = wait_for_human_approval(call)
+                    else:
+                        result = sandbox.invoke_transactionally(call)
+                    record_tool(trace, call, route, result)
+                    state = incorporate(state, call, result)
+                continue    # ประกอบบริบทใหม่ แล้วตรวจใหม่ทั้งชุด
+            break           # ไม่มี tool call แล้ว: candidate คือคำตอบ
+        checks   = evaluate_output_dimensions(proposal, context)
+        verdicts = apply_thresholds(checks)
+        route    = output_route(checks, verdicts, risk_policy)
+        if route != RELEASE:
+            return withhold_repair_or_escalate(route, request)
+        return execute_route(RELEASE, proposal)
+    finally:
+        log_trace(trace)    # ทุกเส้นทาง รวมทั้งตอนพัง</code></pre>
+
+    <h3>ก่อนถึงโมเดล — เปิด trace แล้วตรวจแบบมีอำนาจตัดจบ</h3>
+
+    <p>บรรทัดแรกเปิด <strong>ร่องรอยการตัดสินใจ</strong> (decision trace) โดยผูก request เข้ากับ <strong>บันทึกกำกับรุ่นปล่อย</strong> (release manifest) ตั้งแต่ยังไม่มีอะไรเกิดขึ้น เพราะทุก event ที่ตามมาต้องตอบได้เสมอว่าเกิดบน<em>โปรแกรมรุ่นไหน</em> — ตอนที่ 4 ของซีรีส์วางหลักนี้ไว้แล้ว: เปลี่ยนพจน์ใดของสมการ (1) ก็คือเปลี่ยนโปรแกรม trace ที่ไม่รู้รุ่นของโปรแกรมจึงเป็นแค่ log จากนั้น <code>assemble_and_record</code> ประกอบบริบทและบันทึกสิ่งที่ประกอบได้จริงลง trace ก่อนถึงจุดที่เปเปอร์ลงเสียงหนักที่สุดของทั้งลิสติง: pre-generation check ต้อง <em>enforced, not logged</em> — เช็คที่ตกต้อง <code>return</code> ออกจากฟังก์ชัน<em>ก่อน</em> <code>model.generate</code> ไม่ใช่จดใส่ log แล้วเดินหน้าต่อ<sup><a href="#th-ref-1">[1]</a></sup></p>
+
+    <p>ผลพลอยได้ที่ทีมมักมองข้าม: เส้นทาง reject เป็นเส้นทางที่ deterministic ที่สุด เร็วที่สุด และถูกที่สุดของระบบ — ไม่มีค่า token ไม่มีความแปรปรวน เครื่องมือตระกูล programmable rails อย่าง NeMo Guardrails ทำให้เลเยอร์เช็คแบบนี้ประกาศเป็น config ได้<sup><a href="#th-ref-2">[2]</a></sup> แต่สาระของบทนี้ไม่ใช่ตัวเครื่องมือ — มันคือ<em>ตำแหน่งกับอำนาจ</em>: เช็คต้องอยู่ก่อนแกน และต้องมีอำนาจจบคำขอได้เอง</p>
+
+    <h3>พรมแดนของผลกระทบ — สามทางออกของ tool call</h3>
+
+    <p>ถ้า candidate เสนอ tool call ลูปจะไม่ทำตามข้อเสนอนั้นตรง ๆ เด็ดขาด เพราะตอนที่ 3 ของซีรีส์ชี้รอยต่อนี้ไว้แล้ว: tool call คือ system call ที่ถูก<em>ขอ</em>มาเป็นภาษาธรรมชาติ การอนุญาตจึงต้องบังคับ<em>นอก</em>โมเดลเสมอ<sup><a href="#th-ref-1">[1]</a></sup> <code>execution_guard.authorise_validate</code> ตรวจ call เทียบกับ request, state และ policy แล้ว <code>route_effect</code> แตกผลเป็นสามทางออกที่เป็นโค้ดคนละสายชัดเจน:</p>
+
+    <ol>
+        <li><strong>REJECT</strong> — ค่าปริยายของทุกอย่างที่พิสูจน์ตัวเองไม่ได้ (deny by default) ผล tool กลายเป็นคำปฏิเสธที่โมเดลได้เห็นในรอบถัดไป</li>
+        <li><strong>NEEDS_APPROVAL</strong> — <code>wait_for_human_approval</code>: call ที่ valid แต่ใหญ่หรือย้อนกลับไม่ได้ ต้องมีมนุษย์ตัดสินใจก่อนเกิดผลจริง</li>
+        <li><strong>EXECUTE</strong> — <code>sandbox.invoke_transactionally</code>: เกิดทั้งหมดหรือไม่เกิดเลย ไม่มีสถานะครึ่ง ๆ กลาง ๆ ให้ต้องเดา</li>
+    </ol>
+
+    <p>ผลถูกบันทึกลง trace แล้ว incorporate เข้า state จากนั้นลูปกลับไป<em>ประกอบบริบทใหม่และตรวจใหม่ทั้งชุด</em> — สังเกตว่ารอบสองไม่ได้รับความไว้ใจสะสมจากรอบแรกเลย precheck เดิมรันอีกครั้งทุกรอบ เพราะบริบทที่เพิ่งรับผล tool เข้ามาคือบริบทใหม่ที่ยังไม่เคยถูกตรวจ</p>
+
+    <h3>ฝั่งขาออก — threshold, เส้นทางไม่ปล่อย และ finally ที่สำคัญที่สุด</h3>
+
+    <p>เมื่อไม่มี tool call เหลือ candidate ตัวสุดท้ายเข้าด่านขาออก: <code>evaluate_output_dimensions</code> วัดรายมิติ <code>apply_thresholds</code> เทียบเกณฑ์ที่ประกาศไว้ แล้ว <code>output_route</code> ตัดสินเส้นทาง ถ้าไม่ใช่ RELEASE ระบบเลือกได้ระหว่าง withhold, repair หรือ escalate — ทั้งสามเป็น<em>เส้นทางที่ออกแบบไว้</em> มี pattern การตอบของตัวเอง ไม่ใช่ exception ที่หลุดขึ้นไปให้ middleware จัดการ และปิดท้ายด้วยบรรทัดที่ผมถือว่าศักดิ์สิทธิ์ที่สุดของลิสติง: <code>finally: log_trace</code> — ทุกเส้นทาง รวมทั้งเส้นทางที่โค้ดพังกลางคัน ต้องทิ้ง trace ไว้เสมอ<sup><a href="#th-ref-1">[1]</a></sup></p>
+
+    <p>และนี่คือการแบ่งชนิดที่ลูปทำให้เห็นตลอดทาง ซึ่งจะเป็นกระดูกสันหลังของสัญญาในตอนถัดไป: เช็คเชิงโครงสร้าง — schema, allow-list, ช่วงพารามิเตอร์, membership ของ citation — บังคับ <strong>การรับประกันเชิงโครงสร้าง</strong> (structural guarantee) ที่เป็นขอบเขตแน่นอนบนทุกการรัน ส่วนคำตัดสินเชิงความหมาย — faithfulness, ความเกี่ยวข้อง, ความสุภาพ — เป็น <strong>ค่าประเมินเชิงความหมาย</strong> (semantic estimate) ที่พลาดได้เสมอในอัตราหนึ่ง<sup><a href="#th-ref-1">[1]</a></sup> โครงของลูปรับประกันว่าอะไร<em>เกิดที่ไหนได้บ้าง</em> — มันไม่เคยรับประกันว่าเนื้อหา<em>ดี</em></p>
+
+    <h2 id="th-seven-steps">3. ลงมือทำ 7 ขั้น</h2>
+
+    <p>เจ็ดขั้นข้างล่างเปลี่ยน pseudocode เป็นโค้ด Python จริงของน้องคราม ทีละท่อน ทุกท่อนคือของจริงที่หัวข้อ 4 จะประกอบเข้าด้วยกันเป็นสามไฟล์ ตัวเลขทุกตัวที่เห็น — เพดานอนุมัติ 1,500 บาท, เกณฑ์ faithfulness 0.80, หน้าต่างคืนสินค้า 30 วัน — เป็นค่าของบทเรียนที่ผมตั้งขึ้นเพื่อให้ตัวอย่างรันได้ ไม่ใช่ตัวเลขที่เปเปอร์วัดหรือแนะนำ</p>
+
+    <h3>ขั้นที่ 1 — Specify: เขียน golden examples กับเกณฑ์รับต่อ task</h3>
+
+    <p>เริ่มจากประกาศพฤติกรรมที่ต้องการเป็น<em>เคส</em> ไม่ใช่เป็นความเรียง: ต่อ task หนึ่ง เลือกตัวอย่างจริงที่ครอบคลุมทั้งกรณีที่ควรทำและกรณีที่ควรปฏิเสธ พร้อมเกณฑ์รับที่ตัดสินผ่าน/ไม่ผ่านได้ด้วยเครื่อง เหตุผลมาจากหัวใจของยุค 3.0: สเปกพฤติกรรมคือ intent บวก exemplars และ golden set คือที่เดียวที่สเปกนั้นตรวจย้อนได้<sup><a href="#th-ref-1">[1]</a></sup> สำหรับ task คืนเงินของน้องคราม ผมเริ่มที่สองเคสหัวขบวน — เคสที่ต้องเรียก tool และเคสที่ต้องปฏิเสธพร้อมอ้างนโยบาย:</p>
+
+    <pre><code># golden/refund.py — ชุดทดสอบทองคำของ task คืนเงิน (ตัวเลขของบทเรียน)
+GOLDEN_REFUND = [
+    {"id": "refund-007",
+     "request": "order KK-1042: mug arrived cracked, asks for a refund",
+     "expect": {"tool": {"name": "refund", "order_id": "KK-1042"},
+                "cite": ["policy/returns#damaged"]}},
+    {"id": "refund-012",
+     "request": "order KK-0980: changed mind on day 45, asks for a refund",
+     "expect": {"tool": None,          # เกินหน้าต่างคืนสินค้า 30 วันของร้าน
+                "cite": ["policy/returns#window"]}},
+]
+ACCEPTANCE = {"tool_exact": 1.00,     # tool call ต้องตรงเป๊ะทุกเคส
+              "cite_only_retrieved": 1.00,
+              "answer_pass_rate": 0.90}  # เกณฑ์ของบทเรียน แยกตาม slice</code></pre>
+
+    <h3>ขั้นที่ 2 — Constrain: ประกาศ schema, allow-list, ช่วงพารามิเตอร์ และ precheck</h3>
+
+    <p>ข้อจำกัดทุกตัวต้อง<em>ประกาศล่วงหน้าเป็นโครงสร้าง</em> ไม่ใช่ขอร้องไว้ใน prompt — ประโยคใน context เป็นคำแนะนำต่อโมเดล ไม่ใช่ข้อจำกัดต่อระบบ ขั้นนี้คือจังหวะ "compile" ของลูปพฤติกรรม: สิ่งที่ผิดรูปต้องตกตั้งแต่ยังไม่ได้รัน และ precheck ที่ตกต้องมีอำนาจจบคำขอเองก่อนถึงแกน<sup><a href="#th-ref-1">[1]</a></sup>:</p>
+
+    <pre><code># kramkraft/constraints.py — สิ่งที่ประกาศล่วงหน้า ไม่ใช่สิ่งที่ขอร้องโมเดล
+ALLOWED_TOOLS = {"refund"}            # tool มีผลจริงตัวเดียวของน้องคราม
+TOOL_SCHEMA = {"refund": {
+    "order_id": r"^KK-\d{4}$",
+    "amount":   "int, 1..order_total_thb",
+    "reason":   "str, 1..200 chars",
+}}
+MAX_CONTEXT_TOKENS = 6000
+
+def evaluate_pre_generation(request, context):
+    if request.channel not in {"web", "line"}:
+        return Check(False, "unknown channel")
+    if not context.passages:
+        return Check(False, "no policy passage retrieved")
+    if context.token_estimate &gt; MAX_CONTEXT_TOKENS:
+        return Check(False, "context overflow")
+    return Check(True, "ok")</code></pre>
+
+    <h3>ขั้นที่ 3 — Generate: กักการเรียกโมเดลไว้เป็นขั้นเดียวที่แตะอะไรไม่ได้เลย</h3>
+
+    <p>การเรียกโมเดลต้องเป็น<em>ขั้นที่ถูกกักบริเวณสนิท</em>: รับ context เข้า คืน "ข้อเสนอ" ออก และระหว่างนั้นแตะอะไรไม่ได้เลย — ไม่อ่านฐานข้อมูล ไม่ยิงเครือข่าย ไม่เรียก tool เหตุผลตรงไปตรงมา: ทุกการรับประกันของลูปตั้งอยู่บนข้อเท็จจริงว่าผลจริง<em>ทุกตัว</em>ต้องเดินผ่านตัวกลางในขั้นถัดไป ถ้าการเรียกโมเดลมี side effect ได้เอง ทุกอย่างที่เหลือคือละคร ในโค้ดของน้องคราม ประตูนี้มีบานเดียวทั้งระบบ:</p>
+
+    <pre><code># kramkraft/model_port.py — ประตูเดียวในระบบที่คุยกับ M_v
+class ModelPort:
+    def __init__(self, client):
+        self._client = client         # โมเดล hosted แช่แข็ง pin รุ่นไว้
+
+    def generate(self, context):
+        raw = self._client.complete(context.prompt)
+        return Proposal(text=raw.text,
+                        tool_calls=parse_tool_calls(raw))
+        # คืน "ข้อเสนอ" เท่านั้น — ไม่แตะ store, เครือข่าย หรือ tool ใด</code></pre>
+
+    <h3>ขั้นที่ 4 — Mediate: ทุกผลจริงผ่านตัวกลางก่อนเกิด และค่าปริยายคือปฏิเสธ</h3>
+
+    <p>นี่คือขั้นที่แบก guarantee ของทั้งระบบ: ข้อเสนอ tool ทุกตัวต้องถูก authorise และ validate <em>นอกโมเดล</em> ก่อนเกิดผลจริง โดยยึดหลัก <strong>การผ่านตัวกลางครบทุกเส้นทาง</strong> (complete mediation) — ไม่มีเส้นทางหลังบ้าน ไม่มีข้อยกเว้นสำหรับ admin — และ deny by default: call ที่พิสูจน์ตัวเองไม่ได้ครบทุกข้อคือ call ที่ถูกปฏิเสธ ส่วน call ที่ valid แต่ใหญ่หรือย้อนกลับไม่ได้ต้องหยุดรอมนุษย์<sup><a href="#th-ref-1">[1]</a></sup> — สำหรับน้องคราม refund ย้อนกลับไม่ได้ตั้งแต่วินาทีที่ payment processor รับคำสั่ง:</p>
+
+    <pre><code># ในลูป: ข้อเสนอยังไม่ใช่ผลจริง จนกว่าจะผ่านตัวกลาง
+auth  = guard.authorise_validate(call, request)
+route = route_effect(call, auth, risk_policy)
+if route == "EXECUTE":
+    result = sandbox.invoke_transactionally(call)   # ทั้งหมดหรือไม่เลย
+elif route == "NEEDS_APPROVAL":
+    result = wait_for_human_approval(call, request) # มนุษย์ตัดสิน
+else:
+    result = ToolResult.rejected(auth.why)          # ค่าปริยายคือปฏิเสธ
+
+def route_effect(call, auth, risk_policy):
+    if not auth.ok:
+        return "REJECT"
+    if call.args["amount"] &gt; risk_policy.approval_threshold_thb:
+        return "NEEDS_APPROVAL"       # ใหญ่และย้อนกลับไม่ได้: ต้องมีมนุษย์
+    return "EXECUTE"</code></pre>
+
+    <h3>ขั้นที่ 5 — Verify: เช็คโครงสร้างเป็นของแข็ง คำตัดสินความหมายเป็นค่าประเมิน</h3>
+
+    <p>ด่านขาออกมีสองชนิดที่ห้ามเขียนปนบรรทัดกัน ชนิดแรกตัดสินแบบ deterministic ได้: payload ต้อง parse ผ่าน schema และ citation ทุกตัวต้องเป็นสมาชิกของ passage ที่ retrieve มาจริง — นี่คือของแข็ง ชนิดที่สองคือคำถามอย่าง "คำตอบตรงเนื้อนโยบายไหม" ซึ่งตอบได้ด้วยตัวประเมินที่พลาดเป็นเท่านั้น ตัวตรวจตระกูลโมเดลอย่าง Llama Guard มีจริงและมีประโยชน์ แต่โดยธรรมชาติมันคือตัวจำแนกที่มีอัตราพลาดของตัวเอง<sup><a href="#th-ref-3">[3]</a></sup> — และห้าม route ด้วยความมั่นใจที่โมเดลรายงานเอง เพราะตอนที่แล้ววางไว้ชัดว่า calibration ของมันเชื่อไม่ได้ ต้องใช้การประเมินอิสระ<sup><a href="#th-ref-1">[1]</a></sup>:</p>
+
+    <pre><code># ท่อนตรวจขาออก — ของแข็งแยกบรรทัดจากค่าประเมิน
+checks, payload = output_checks(proposal, context)  # โครงสร้าง: ของแข็ง
+verdicts = {"faithfulness": deps.judge(payload, context)}  # ค่าประเมิน
+
+def output_checks(proposal, context):
+    payload = try_parse_json(proposal.text)
+    schema_ok = payload is not None and \
+        {"reply", "policy_refs"} &lt;= set(payload)
+    retrieved = {p.ref for p in context.passages}
+    attribution_ok = schema_ok and bool(payload["policy_refs"]) and \
+        set(payload["policy_refs"]) &lt;= retrieved
+    return {"schema": schema_ok, "attribution": attribution_ok}, payload</code></pre>
+
+    <h3>ขั้นที่ 6 — Route: ให้ release / withhold / repair / escalate เป็นโค้ดชั้นหนึ่ง</h3>
+
+    <p>เส้นทางที่ไม่ปล่อยต้องมีศักดิ์เท่าเส้นทางที่ปล่อย: เขียนเป็นฟังก์ชันของตัวเอง มีคำตอบ fallback ของตัวเอง มีคิวมนุษย์ของตัวเอง — เพราะการวางเส้นทางความล้มเหลวเป็นส่วนหนึ่งของดีไซน์คือสิ่งที่แยกระบบวิศวกรรมออกจากเดโม กติกาการ route ก็สะท้อนขั้นที่ 5 ตรง ๆ: เช็คโครงสร้างตกคือจบ ไม่มีข้อยกเว้น ส่วนค่าประเมินต่ำแปลว่า<em>หลักฐานอ่อน</em> จึงส่งให้มนุษย์อ่าน ไม่ใช่ทิ้ง:</p>
+
+    <pre><code>def output_route(checks, verdicts, risk_policy):
+    if not all(checks.values()):      # เช็คโครงสร้างตก: ไม่มีข้อยกเว้น
+        return "REPAIR" if checks["schema"] is False else "WITHHOLD"
+    if verdicts["faithfulness"] &lt; risk_policy.faithfulness_min:
+        return "ESCALATE"             # หลักฐานอ่อน: มนุษย์อ่านก่อน
+    return "RELEASE"
+
+def execute_route(route, payload, request, deps):
+    if route == "RELEASE":  return Reply.send(payload)
+    if route == "REPAIR":   return retry_once_then_withhold(request, deps)
+    if route == "WITHHOLD": return Reply.fallback(request)
+    return deps.escalate(request)     # ESCALATE: เข้าคิวมนุษย์</code></pre>
+
+    <h3>ขั้นที่ 7 — Trace: เขียนทุกอย่างใน finally และให้การปล่อยล้มถ้า trace ล้ม</h3>
+
+    <p>ขั้นสุดท้ายสั้นที่สุดแต่ต่อรองไม่ได้: การเขียน trace อยู่ใน <code>finally</code> เพื่อให้ทุกเส้นทาง — ปล่อย ปฏิเสธ ส่งต่อ หรือพังด้วย exception — ทิ้งหลักฐานไว้เสมอ และต้อง<em>กลับทิศความสัมพันธ์</em>ให้ถูก: ไม่ใช่ "ปล่อยแล้วค่อยพยายามบันทึก" แต่เป็น "บันทึกไม่สำเร็จ = ไม่มีการปล่อย" นี่คือ <strong>ล้มแบบปิด</strong> (fail-closed) ที่รอยต่อสุดท้ายของระบบ<sup><a href="#th-ref-1">[1]</a></sup>:</p>
+
+    <pre><code>def ai_core_operation(request, deps):
+    trace = Trace(request, deps.manifest)   # เปิดก่อนทำงานใด ๆ
+    try:
+        ...                                 # ทั้งลูปจากขั้นที่ 2-6
+    finally:
+        trace.write(deps.trace_path)        # ทุกเส้นทาง รวมทั้ง exception
+# Trace.write ตั้งใจให้ raise เมื่อเขียนไม่สำเร็จ — exception ใน finally
+# จะกลบค่า return เดิม: ไม่มีคำตอบใดถูกปล่อยโดยไม่มี trace ของมัน</code></pre>
+
+    <h2 id="th-kramkraft">4. โค้ดเต็มของน้องคราม — สามไฟล์ต่อสายเข้า refund()</h2>
+
+    <p>artifact ของตอนนี้คือสามไฟล์ที่ประกอบท่อนทั้งเจ็ดเข้าด้วยกัน: <code>kramkraft/guard.py</code>, <code>kramkraft/gate.py</code> และ <code>kramkraft/loop.py</code> รวมกันราวเก้าสิบบรรทัด ไม่พึ่ง framework ใด — คลาส <code>Reply</code>, <code>Auth</code>, <code>Check</code>, <code>ToolResult</code> เป็น dataclass ตรงไปตรงมาที่ผมละไว้ให้ผู้อ่านเขียนเอง เริ่มจากตัวกลางที่แบกการรับประกันทั้งหมด:</p>
+
+    <pre><code># kramkraft/guard.py — execution guard ของ tool คืนเงิน
+# ตัวเลขทุกตัวเป็นค่าของบทเรียน ไม่ใช่ค่าที่เปเปอร์แนะนำ
+ALLOWED_TOOLS = {"refund"}
+
+class ExecutionGuard:
+    def __init__(self, order_store, refund_ledger):
+        self.orders = order_store     # สถานะคำสั่งซื้อจากระบบจริง
+        self.ledger = refund_ledger   # หนึ่ง order คืนเงินได้ครั้งเดียว
+
+    def authorise_validate(self, call, request):
+        if call.name not in ALLOWED_TOOLS:
+            return Auth(False, "tool not in allow-list")
+        order = self.orders.get(call.args.get("order_id"))
+        if order is None or order.customer_id != request.customer_id:
+            return Auth(False, "no such order for this customer")
+        amount = call.args.get("amount", 0)
+        if not (0 &lt; amount &lt;= order.total_thb):
+            return Auth(False, "amount outside 0..order_total")
+        if self.ledger.has(call.args["order_id"]):
+            return Auth(False, "duplicate refund for this order")
+        return Auth(True, "within declared bounds")
+
+def route_effect(call, auth, risk_policy):
+    if not auth.ok:
+        return "REJECT"               # deny by default
+    if call.args["amount"] &gt; risk_policy.approval_threshold_thb:
+        return "NEEDS_APPROVAL"       # ย้อนกลับไม่ได้และใหญ่: มนุษย์ตัดสิน
+    return "EXECUTE"</code></pre>
+
+    <p>สังเกตว่า guard อ่าน<em>สถานะจริง</em>จาก order store เสมอ — ความเป็นเจ้าของ order, ยอดรวม, ประวัติการคืน — ไม่เคยเชื่อคำเล่าในข้อความของโมเดลแม้แต่ค่าเดียว และ <code>ledger</code> ทำหน้าที่ idempotency key แบบบ้าน ๆ ที่สุด: หนึ่ง order คืนเงินได้ครั้งเดียวตลอดชีวิต ต่อให้โมเดลเสนอซ้ำ ลูกค้ากดซ้ำ หรือระบบ retry เอง</p>
+
+    <pre><code># kramkraft/gate.py — output gate กับ trace writer
+import json
+
+def try_parse_json(text):
+    try:
+        return json.loads(text)
+    except ValueError:
+        return None
+
+def output_checks(proposal, context):
+    payload = try_parse_json(proposal.text)
+    schema_ok = payload is not None and \
+        {"reply", "policy_refs"} &lt;= set(payload)
+    retrieved = {p.ref for p in context.passages}
+    attribution_ok = schema_ok and bool(payload["policy_refs"]) and \
+        set(payload["policy_refs"]) &lt;= retrieved
+    return {"schema": schema_ok, "attribution": attribution_ok}, payload
+
+class Trace:
+    def __init__(self, request, manifest):
+        self.events = [{"begin": request.id, "manifest": manifest.version}]
+    def record(self, kind, **data):
+        self.events.append({kind: data})
+    def write(self, path):            # เขียนไม่สำเร็จ = raise: ล้มแบบปิด
+        with open(path, "a", encoding="utf-8") as f:
+            f.write(json.dumps(self.events, ensure_ascii=False) + "\n")</code></pre>
+
+    <p>จุดที่อยากให้หยุดดูคือ <code>attribution_ok</code>: การบังคับว่า citation ทุกตัวต้องเป็นสมาชิกของชุด passage ที่ retrieve จริง เป็นเช็ค<em>เชิงโครงสร้าง</em> — set membership ตัดสินแบบ deterministic ได้ร้อยเปอร์เซ็นต์ — ส่วนคำถามว่าเนื้อคำตอบ<em>ตรง</em>กับ passage เหล่านั้นไหม เป็นงานของ judge ในลูปหลัก ซึ่งเป็นค่าประเมิน สองบรรทัดนี้อยู่คนละฝั่งของเส้นแบ่งที่ทั้งซีรีส์ยืนอยู่</p>
+
+    <pre><code># kramkraft/loop.py — ฟังก์ชัน AI-core ของน้องคราม
+MAX_TURNS = 4
+RISK_POLICY = RiskPolicy(approval_threshold_thb=1500,  # ค่าของบทเรียน
+                         faithfulness_min=0.80)
+
+def ai_core_operation(request, deps):
+    trace = Trace(request, deps.manifest)
+    state = deps.init_state(request)
+    proposal = context = None
+    try:
+        for _turn in range(MAX_TURNS):
+            context = deps.assemble(request, state)
+            trace.record("context", digest=context.digest)
+            pre = evaluate_pre_generation(request, context)
+            trace.record("precheck", ok=pre.ok, why=pre.why)
+            if not pre.ok:
+                return Reply.refuse(request)      # ออกก่อนถึงแกน
+            proposal = deps.model.generate(context)
+            trace.record("candidate", digest=proposal.digest)
+            if not proposal.tool_calls:
+                break                             # ไม่มีข้อเสนอผลจริงแล้ว
+            for call in proposal.tool_calls:
+                auth = deps.guard.authorise_validate(call, request)
+                route = route_effect(call, auth, deps.risk_policy)
+                trace.record("guard", tool=call.name, route=route,
+                             why=auth.why)
+                if route == "EXECUTE":
+                    result = deps.sandbox.invoke_transactionally(call)
+                elif route == "NEEDS_APPROVAL":
+                    result = deps.wait_for_human_approval(call, request)
+                else:
+                    result = ToolResult.rejected(auth.why)
+                trace.record("tool_result", ok=result.ok)
+                state = state.incorporate(call, result)
+        checks, payload = output_checks(proposal, context)
+        verdicts = {"faithfulness": deps.judge(payload, context)}
+        route = output_route(checks, verdicts, deps.risk_policy)
+        trace.record("route", route=route, checks=checks,
+                     verdicts=verdicts)
+        return execute_route(route, payload, request, deps)
+    finally:
+        trace.write(deps.trace_path)              # ทุกเส้นทาง</code></pre>
+
+    <p>สามรายละเอียดที่ตั้งใจ: <code>MAX_TURNS</code> ตัดลูปไม่รู้จบตั้งแต่โครงสร้าง ไม่ต้องรอใครสังเกต; ทุก <code>return</code> — refuse, fallback, escalate หรือปล่อยจริง — เดินผ่าน <code>finally</code> เหมือนกันหมด; และ <code>execute_route</code> <em>คืนค่า</em> ไม่ได้ส่งข้อความเอง — การส่งจริงเกิดหลังฟังก์ชันคืนสำเร็จ ดังนั้นถ้า <code>trace.write</code> ล้ม exception จะกลบค่าที่กำลังจะคืน และไม่มีอะไรถึงลูกค้า: เส้นทางปล่อยล้มไปพร้อมกับ trace ตามที่ขั้นที่ 7 ต้องการทุกประการ</p>
+
+    <blockquote>💡 มุมมองของผม: โค้ดลูปนี้จงใจให้<em>น่าเบื่อ</em> — ไม่มี meta-programming ไม่มี framework ไม่มี abstraction เกินหนึ่งชั้น — เพราะความน่าเบื่อคือคุณสมบัติด้านความปลอดภัย เส้นทางที่เราจะกล้ายืนยันว่า "ผลจริงทุกตัวผ่านตัวกลาง" ต้องเป็นเส้นทางที่ไล่อ่านด้วยตาแล้วเห็นครบในหน้าเดียว ความฉลาดทั้งหมดถูกผลักออกไปอยู่ใน artifact ที่ version ได้ — schema, threshold, golden set — ที่เดียวที่มันควรอยู่</blockquote>
+
+    <h2 id="th-validation-check">5. Validation check — ลูปของคุณบังคับจริง หรือแค่บันทึกไว้เฉย ๆ</h2>
+
+    <p>กติกาเดิมของซีรีส์: ทุกข้อตอบด้วย <em>artifact</em> ที่ชี้ได้ เปิดดูได้ แนบใน review ได้ — ไม่ใช่คำคุณศัพท์ ตารางนี้ใช้กับแอปของคุณเอง ไม่ใช่ของน้องคราม ข้อไหนตอบไม่ได้ ไม่ได้แปลว่าระบบแย่ แปลว่ายังไม่มีหลักฐาน — และข้อ 1 สำคัญที่สุด เพราะการรับประกันทุกแถวของตอนถัดไปตั้งอยู่บนมัน</p>
+
+    <div class="table-wrapper">
+        <table>
+            <thead>
+                <tr>
+                    <th>ข้อ</th>
+                    <th>คำถาม (ผ่าน/ไม่ผ่าน)</th>
+                    <th>artifact ที่พิสูจน์</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>1</td>
+                    <td>ไม่มี call site ใดในระบบเรียก tool มีผลจริงได้โดยไม่ผ่าน guard — เส้นทางผลจริงมีเส้นเดียวจริงหรือไม่</td>
+                    <td>ผลของ <code>grep -rn "refund(" .</code> ทั้ง repo แนบใน review note — call site เดียวคือ <code>sandbox.invoke_transactionally</code> ภายใน loop.py</td>
+                </tr>
+                <tr>
+                    <td>2</td>
+                    <td>คำขอที่ตก precheck ไปไม่ถึงโมเดลจริงหรือไม่</td>
+                    <td>บรรทัด trace ของเคสทดสอบที่ผิดรูป: มี event <code>precheck ok=false</code> และไม่มี event <code>candidate</code> ตามหลังเลย</td>
+                </tr>
+                <tr>
+                    <td>3</td>
+                    <td>ข้อเสนอ refund ที่เกินเพดานอนุมัติไป NEEDS_APPROVAL ทุกครั้งหรือไม่</td>
+                    <td>unit test ของ <code>route_effect</code> ที่ amount = เพดาน + 1 บวก trace จริงที่ <code>route=NEEDS_APPROVAL</code> ปรากฏก่อน tool_result</td>
+                </tr>
+                <tr>
+                    <td>4</td>
+                    <td>คำสั่งคืนเงินซ้ำบน order เดิมถูกปฏิเสธเสมอหรือไม่</td>
+                    <td>เทสต์รัน <code>ai_core_operation</code> สองครั้งด้วยคำขอเดียวกัน บวก post-state ของ refund ledger ที่มีรายการเดียวเท่านั้น</td>
+                </tr>
+                <tr>
+                    <td>5</td>
+                    <td>output ที่ parse ไม่ผ่าน schema มีทางถึงลูกค้าหรือไม่</td>
+                    <td>ผลรัน golden set ชุด malformed ทั้งชุด: ทุกเคสจบที่ REPAIR หรือ WITHHOLD ใน trace ไม่มีเคสใดจบ RELEASE</td>
+                </tr>
+                <tr>
+                    <td>6</td>
+                    <td>ถ้าเขียน trace ไม่สำเร็จ ระบบยังปล่อยคำตอบอยู่หรือไม่</td>
+                    <td>fault-injection test ที่ตั้ง trace path เป็น read-only: ทั้งคำขอล้ม ไม่มีคำตอบออก — เก็บผลไว้ในชุดเทสต์ของ harness</td>
+                </tr>
+                <tr>
+                    <td>7</td>
+                    <td>ทุกคำขอจบด้วย route ปลายทางเดียวใน trace หรือไม่</td>
+                    <td>สคริปต์นับ event <code>route</code> ต่อ request จากไฟล์ trace ของการรัน golden set ทั้งชุด — ได้ 1 ต่อคำขอพอดีทุกคำขอ</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <p>ถ้าจะเลือกทำข้อเดียวสัปดาห์นี้ ทำข้อ 1: เปิด terminal แล้ว grep หา call site ของ tool มีผลจริงทุกตัวในระบบของคุณ การได้เห็นด้วยตาว่ามีกี่เส้นทาง — และมักมีมากกว่าที่คิด เพราะสคริปต์ migration, endpoint ภายใน และปุ่ม admin ไม่เคยนับตัวเองเป็น "ระบบ AI" — คือหลักฐานชิ้นแรกที่สัญญาในตอนถัดไปจะเรียกหา</p>
+
+    <h2 id="th-road-ahead">6. ก้าวต่อไป</h2>
+
+    <p>บทนี้เปลี่ยนวินัยของบทที่ 5 ในเปเปอร์ให้เป็นของจับต้องได้สองชิ้น: วงจร Specify → Constrain → Generate → Verify ที่จัดจังหวะงานประจำวันของทีม และ <code>ai_core_operation()</code> ที่ทำให้จังหวะนั้นกลายเป็นโครงสร้าง — precheck ที่มีอำนาจจบคำขอก่อนถึงโมเดล, guard ที่ยืนขวางระหว่างข้อเสนอกับผลจริง, threshold ที่ยืนขวางระหว่าง candidate กับลูกค้า และ trace ที่เขียนในทุกเส้นทางแม้เส้นทางที่พัง ทั้งหมดนี้คือ<em>เครื่องจักร</em> — และน้องครามตอนนี้มีมันครบแล้วในสามไฟล์</p>
+
+    <p>สิ่งที่บทนี้จงใจ<em>ยังไม่</em>ตอบ คือคำถามที่ห้องประชุมความเสี่ยงจะถามทันทีที่เห็นโค้ด: แล้วเครื่องจักรทั้งหมดนี้<em>สัญญา</em>อะไรได้บ้าง แถวไหนเป็นการรับประกันจริงภายใต้สมมติฐานอะไร แถวไหนเป็นเพียงค่าประเมินพร้อมอัตราพลาดสองทิศทาง หลักฐานอะไรพิสูจน์ ใครเป็นเจ้าของ และเกิดอะไรขึ้นเมื่อผิดเงื่อนไข — คำตอบมีชื่อเรียกของมันเอง: <strong>สัญญาการรับประกันเชิงระบบ</strong> (assurance contract) และมันคือเนื้อหาทั้งตอนของตอนถัดไป</p>
+
+    <div class="alert info">
+        <strong>🧭 ตอนถัดไป:</strong> <a href="/blog/ai-core-assurance-contract">#7 Write the Assurance Contract — สัญญาที่ตรวจได้ ไม่ใช่คำโฆษณา</a> จะหยิบสามไฟล์ของบทนี้ขึ้นมาเขียนเป็นสัญญารายคุณสมบัติ: อะไรที่ guard กับ gate <em>รับประกันเชิงโครงสร้าง</em>ได้จริงภายใต้สมมติฐาน complete mediation อะไรที่ judge ทำได้เพียง<em>ประเมิน</em>พร้อม false accept กับ false reject บนประชากรที่ประกาศ และ trace ที่เราเขียนทุกเส้นทางจะกลายเป็นหลักฐานแบบไหนในสัญญานั้น</div>
+
+    <div class="key-takeaways">
+        <h3>🎯 สิ่งสำคัญที่ต้องจำ</h3>
+        <ul>
+            <li><strong>Specify → Constrain → Generate → Verify</strong> = วงจรพัฒนาพฤติกรรมที่วิ่งคู่กับ edit→compile→run→debug — จัดลำดับกิจกรรม แต่ไม่สถาปนาคุณสมบัติใด และไม่ใช่สัญญา (เปเปอร์ demote เองในบทที่ 6)</li>
+            <li><strong>Debug กลายเป็น evaluation</strong> = ทำพฤติกรรมผิดให้เกิดซ้ำ เพิ่มเป็นเคสในชุดทดสอบทองคำ แล้วให้เคสขับตัวชี้วัด — บั๊กที่ยังไม่เป็นเคส ยังไม่ถูกแก้ มันแค่เงียบไป</li>
+            <li><strong>ลูปควบคุมอ้างอิง</strong> = precheck บังคับก่อนโมเดล · guard ก่อนผลจริง · threshold ก่อนปล่อย · trace ทุกเส้นทาง — โครงสร้างรับประกันว่าอะไรเกิดที่ไหนได้ ไม่ใช่ว่าเนื้อหาดี</li>
+            <li><strong>Deny by default</strong> = ทุก tool call เริ่มต้นที่ถูกปฏิเสธ แล้วต้องพิสูจน์ตัวผ่าน allow-list, schema, ช่วงพารามิเตอร์, ความเป็นเจ้าของ order และ idempotency — ที่เหลือใหญ่พอต้องรอมนุษย์</li>
+            <li><strong>โครงสร้างกับความหมายแยกบรรทัดกัน</strong> = schema parse กับ citation membership เป็นการรับประกันเชิงโครงสร้าง ส่วน faithfulness เป็นค่าประเมินเชิงความหมายที่พลาดได้ — อย่าเขียนสองอย่างนี้ปนกัน</li>
+            <li><strong>ล้มแบบปิดที่ trace</strong> = เส้นทางปล่อยต้องล้มถ้าเขียน trace ไม่สำเร็จ — ระบบที่ตรวจย้อนได้คือระบบที่ยอมไม่ตอบ ดีกว่าตอบโดยไม่ทิ้งหลักฐาน</li>
+        </ul>
+    </div>
+
+    <section class="references" aria-labelledby="th-references">
+        <h2 id="th-references">อ้างอิง</h2>
+        <p class="references__note">ตรวจสอบทุกแหล่งเมื่อ 8 กันยายน 2026 (เวลาประเทศไทย) · ป้ายหลักฐานสี่แบบ: <strong>Law</strong> ตัวบทกฎหมายหรือประกาศทางการ · <strong>Standard</strong> มาตรฐานหรือกรอบทางการที่เผยแพร่แล้ว · <strong>Study</strong> งานวิจัยหรือสัญญาณภาคสนาม · <strong>Synthesis</strong> การสังเคราะห์ของผู้เขียนหรือแหล่งที่ไม่ใช่งานวิจัย</p>
+        <ol class="references__list">
+            <li id="th-ref-1"><span class="ref-tag ref-tag--synthesis">Synthesis</span> Anirach Mingkhwan. <cite>Engineering AI-Core Systems: A Reference Architecture and Assurance Contract for Software 3.0</cite> — CreativeLAB, FITM, KMUTNB, 2026. เอกสารที่ผู้เขียนจัดหาให้ ยังไม่ตีพิมพ์ ไม่มี URL สาธารณะ จึงไม่มีลิงก์และไม่มีวันเข้าถึง. <span class="ref-supports">รองรับ: วงจร Specify → Constrain → Generate → Verify และฐานะลูปคู่ขนานของมัน (บทที่ 5) โครงสร้างของลูปควบคุมอ้างอิง Listing 1.1 ครบทุกท่อน หลัก enforced-not-logged ของ pre-generation check สามทางออก REJECT / NEEDS_APPROVAL / invoke_transactionally การเขียน trace ใน finally บนทุกเส้นทาง หลัก debugging-becomes-evaluation การขยายชุด artifact ที่ต้อง version การแยกการรับประกันเชิงโครงสร้างจากค่าประเมินเชิงความหมาย และการ demote วงจรสี่คำกริยาในบทที่ 6 ว่าเป็น development workflow เท่านั้น</span></li>
+            <li id="th-ref-2"><span class="ref-tag ref-tag--study">Study</span> Rebedea, T., Dinu, R., Sreedhar, M., et al. <cite>NeMo Guardrails: A Toolkit for Controllable and Safe LLM Applications with Programmable Rails</cite> — EMNLP System Demonstrations, 2023. อ้างโดยไม่มีลิงก์ตามรายการแหล่งที่ตรวจแล้วของซีรีส์. <span class="ref-supports">รองรับ: ข้อสังเกตว่าเลเยอร์ตรวจก่อนและหลังการ generate แบบ programmable rails เป็นแนวปฏิบัติที่มีเครื่องมือจริงรองรับ — อ้างเป็นตัวอย่างของหมวดเครื่องมือเท่านั้น ไม่ได้อ้างว่าเครื่องมือให้การรับประกันใดกับลูปของบทนี้</span></li>
+            <li id="th-ref-3"><span class="ref-tag ref-tag--study">Study</span> Inan, H., Upasani, K., Chi, J., et al. <cite>Llama Guard: LLM-based Input-Output Safeguard for Human-AI Conversations</cite> — arXiv:2312.06674, 2023. <a href="https://arxiv.org/abs/2312.06674">arxiv.org</a> — เข้าถึง 2026-09-08. <span class="ref-supports">รองรับ: ข้อเท็จจริงว่าตัวตรวจขาเข้า-ขาออกที่สร้างจากโมเดลมีอยู่จริงในสนาม และโดยธรรมชาติเป็นตัวจำแนกที่มีอัตราพลาดของตัวเอง — ใช้ประกอบขั้นที่ 5 ว่าคำตัดสินจากตัวตรวจตระกูลโมเดลต้องนับเป็นค่าประเมิน ไม่ใช่โครงสร้าง</span></li>
+            <li id="th-ref-4"><span class="ref-tag ref-tag--study">Study</span> Breck, E., Cai, S., Nielsen, E., Salib, M., Sculley, D. <cite>The ML Test Score: A Rubric for ML Production Readiness and Technical Debt Reduction</cite> — IEEE Big Data 2017. <a href="https://doi.org/10.1109/bigdata.2017.8258038">doi.org</a> — เข้าถึง 2026-09-08. <span class="ref-supports">รองรับ: วินัยของการปฏิบัติต่อข้อมูล โมเดล และโครงพื้นฐานเป็น artifact ที่ต้องทดสอบและ version เหมือน production asset ซึ่งมีมาก่อนยุค 3.0 — ใช้รองรับหัวข้อ 1 เรื่องการขยายชุด artifact โดยไม่ได้อ้างว่า rubric ครอบคลุมระบบที่มีโมเดลภาษาเป็นแกน</span></li>
+        </ol>
+    </section>
+    </div>
+
+    <div class="l-en" lang="en">
+
+    <p>🤔 <strong>Your team trusts its own code because the edit → compile → run → debug loop turns every day — so on the day the system's behaviour comes out of a model you cannot open up and edit, what loop do you turn to trust that behaviour?</strong></p>
+
+    <p>The previous post, <a href="/blog/ai-core-fallible-savant">Design for the Fallible Savant</a>, ended on the series' central bargain: we design the system on the assumption that its core is a <strong>fallible savant</strong> — it asserts plausible falsehoods, its competence is jagged, it remembers nothing outside the context, it is gullible, and its confidence does not track its accuracy — and the engineering answer is an assurance envelope around the core, not a prayer that the model stops failing. But that post was still the blueprint. Now we pour the concrete: what does that envelope look like as code, which function calls which, and what does a single KramKraft customer request pass through before the answer reaches their LINE screen?</p>
+
+    <p>The whole post's answer is the coding discipline of the paper's Section 5<sup><a href="#en-ref-1">[1]</a></sup>: the <strong>Specify → Constrain → Generate → Verify</strong> loop that runs in parallel with edit→compile→run→debug, and one reference control loop that makes the discipline concrete — check before generating and reject before the model, authorise before any real effect, verify before releasing, and write a trace on every path including the one where the code breaks. This is deliberately the most code-heavy post of the series, because we will write Nong Kram's <code>ai_core_operation()</code> for real, one chunk at a time, until the whole loop of roughly ninety lines is assembled — short enough to read over one cup of coffee, and that is the point.</p>
+
+    <h2 id="en-four-verbs">1. Four Verbs — the Development Loop Running Beside edit → compile → run → debug</h2>
+
+    <p>The paper states the discipline plainly: behaviour that comes from a frozen model plus runtime-assembled context has to be developed with a loop of its own — <strong>Specify</strong> the behaviour with examples and acceptance criteria, <strong>Constrain</strong> the space before and after the model, <strong>Generate</strong> with the model proposing inside a quarantined stage, <strong>Verify</strong> the result with checks and evals — and this loop does not <em>replace</em> edit→compile→run→debug but runs <em>beside</em> it, because the system's 1.0 code is still all there, still holds the control flow, the interfaces and every mediator that everything depends on, and still gets developed the 1.0 way<sup><a href="#en-ref-1">[1]</a></sup>.</p>
+
+    <p>The rhythm-by-rhythm pairing in the table below is my own rendering for teaching — the paper speaks of a parallel loop without pairing the words one to one — but it makes visible where each rhythm we know by hand has a twin whose nature is different.</p>
+
+    <div class="table-wrapper">
+        <table>
+            <thead>
+                <tr>
+                    <th>Rhythm</th>
+                    <th>The 1.0 loop — edit→compile→run→debug</th>
+                    <th>The behavioural loop — Specify→Constrain→Generate→Verify</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td><strong>Write</strong></td>
+                    <td>Edit the source code that determines behaviour directly, line by line</td>
+                    <td>Write what determines 3.0 behaviour: intent, golden examples and per-task acceptance criteria — the synthesis itself is delegated to the core</td>
+                </tr>
+                <tr>
+                    <td><strong>Refuse before running</strong></td>
+                    <td>The compiler and the type checker refuse a malformed program before it ever runs</td>
+                    <td>Schemas, allow-lists, parameter ranges and pre-generation checks refuse a malformed request before it reaches the model</td>
+                </tr>
+                <tr>
+                    <td><strong>Let the machine work</strong></td>
+                    <td>Run — the outcome is deterministic in the code that was written</td>
+                    <td>Generate — a single sample from a distribution, so it must be quarantined as the one stage that touches nothing and only returns a proposal</td>
+                </tr>
+                <tr>
+                    <td><strong>Chase the fault</strong></td>
+                    <td>Debug — reproduce with breakpoints and a stack trace, then fix the code at the spot</td>
+                    <td>Verify — reproduce as an evaluation case, add it to the golden set, and let that case drive a metric permanently</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <h3>Debugging becomes evaluation</h3>
+
+    <p>In the 1.0 loop, debugging ends when you can point at the wrong line. But post #2 of this series already laid out the 3.0 failure signature: the failure may <em>not recur</em> on a re-run, and diagnosis needs the full trace of that one invocation<sup><a href="#en-ref-1">[1]</a></sup>. So the paper redefines the whole job: <em>reproduce the wrong behaviour first</em> — pull the context, the manifest and the tool results from the failing request's trace — then <em>add it as a case to the</em> <strong>golden set</strong> <em>and let that case drive a metric</em>. The unit of debugging work is therefore not a patch that erases one symptom, but an evaluation case that pins that behaviour down for the life of the system — the moment the model changes version, this case runs again.</p>
+
+    <p>Concretely, for Nong Kram: suppose a customer asks for a refund on day 45 after purchase and Nong Kram answers "of course", even though the shop's policy (our tutorial's value) allows returns within 30 days. What the team does is not merely tweak the system prompt and re-ask until the answer looks right — it captures that request as case <code>refund-012</code>, with the correct answer and the citation that must be given, adds it to the golden set, and measures the refund task's pass rate across the whole slice, from today until every future re-pin of the model.</p>
+
+    <h3>The artifact set that needs code-grade discipline expands</h3>
+
+    <p>The direct consequence of this loop is that the list of things requiring versioning, review and regression protection no longer stops at source code. The paper enumerates it explicitly<sup><a href="#en-ref-1">[1]</a></sup>:</p>
+
+    <ul>
+        <li><strong>Prompts</strong> — the text that declares intent and rules to the model; changing one sentence changes the program</li>
+        <li><strong>Context templates</strong> — the assembly skeleton that decides what the model sees and in what order</li>
+        <li><strong>Tool schemas</strong> — the contracts of the new era's system calls, which all validation anchors on</li>
+        <li><strong>Golden datasets</strong> — the golden set that is at once the behaviour spec and the regression barrier</li>
+        <li><strong>Release manifests</strong> — the record that pins every term of the program together per release</li>
+        <li><strong>Eval suites</strong> — the code of the Verify side, which must be reviewed as strictly as production code</li>
+    </ul>
+
+    <p>This discipline did not appear from nowhere — ML engineering has had rubrics like the ML Test Score forcing data and models to be tested and versioned like production assets since 2017<sup><a href="#en-ref-4">[4]</a></sup>. What the 3.0 era adds is a whole new family of artifacts — prompts, templates, schemas, manifests — that determine behaviour while being neither code nor weights.</p>
+
+    <blockquote>💡 My view: treat the golden set as the team's bug tracker — a behavioural bug that has not yet been converted into a golden case is not fixed, it has merely <em>gone quiet</em>, and it will come back quietly in the next model version at the moment nobody is watching.</blockquote>
+
+    <h3>The paper demotes its own loop — and that is the point to remember</h3>
+
+    <p>Section 6 of the paper does what I wish every framework author did: it openly <em>demotes</em> its own loop. The four-verb cycle is a development workflow only — it orders the team's daily activity, but it establishes no property of the system, and it is not a "contract" the system gives anyone<sup><a href="#en-ref-1">[1]</a></sup>. One example shows why: a team that diligently performs all four verbs, but has one admin script calling <code>refund()</code> directly without the guard — that team has a complete process and zero guarantees.</p>
+
+    <div class="alert">
+        <strong>Never offer the loop as evidence of safety:</strong> "we run Specify → Constrain → Generate → Verify every sprint" is a sentence about <em>process</em>, not about a <em>property</em>. What the system can actually guarantee has to be written as a per-property contract with evidence, which is the subject of the next post — this post builds the machine; the next one says what the machine can <em>promise</em>.</div>
+
+    <h2 id="en-reference-loop">2. The Reference Control Loop — Listing 1.1, Stage by Stage</h2>
+
+    <p>The paper's whole Section 5 condenses into a single function — the paper calls it the "AI-core function" — and the structure of that function is the discipline itself: no path reaches the model without the prechecks, no real effect happens without the guard, nothing is released without passing the thresholds, and no exit exists that does not write a trace<sup><a href="#en-ref-1">[1]</a></sup>. This section walks Listing 1.1 stage by stage, so that every line's position explains itself.</p>
+
+    <figure class="figure">
+      <a href="../images/ai-core-fig-06-control-loop.png">
+        <img class="figure__img" src="../images/ai-core-fig-06-control-loop.png" alt="Flow of the ai_core_operation control loop — assemble context and precheck, generate, authorise and route effects through REJECT / NEEDS_APPROVAL / execute, threshold the output checks, release or withhold, and trace every path." width="1400" height="1000" loading="lazy" decoding="async">
+      </a>
+      <figcaption class="figure__caption">The paper&#x27;s reference loop — structure enforces bounded invariants while semantic verdicts remain fallible estimates.</figcaption>
+    </figure>
+
+    <p>The full skeleton, as pseudocode transcribed from the paper's listing — every principal function name is the paper's; the minor abbreviations are mine, to keep it readable on a narrow screen:</p>
+
+    <pre><code>function ai_core_operation(request):
+    trace = begin_trace(request, release_manifest)  # open the trace before any work
+    state = initialise_state(request)
+    try:
+        loop:
+            context = assemble_and_record(request, state, trace)
+            pre = evaluate_pre_generation(request, context)
+            if not pre.ok:                  # enforced, not merely logged
+                return reject(request)      # exits before the model core
+            proposal = model.generate(context)  # the only line that calls the model
+            record_candidate(trace, proposal)
+            if proposal.has_tool_calls:
+                for call in proposal.tool_calls:
+                    auth  = execution_guard.authorise_validate(
+                                call, request, state, policy)
+                    route = route_effect(call, auth, risk_policy)
+                    if route == REJECT:
+                        result = rejected(auth.reason)
+                    elif route == NEEDS_APPROVAL:
+                        result = wait_for_human_approval(call)
+                    else:
+                        result = sandbox.invoke_transactionally(call)
+                    record_tool(trace, call, route, result)
+                    state = incorporate(state, call, result)
+                continue    # re-assemble the context, re-run every check
+            break           # no tool call left: the candidate is the answer
+        checks   = evaluate_output_dimensions(proposal, context)
+        verdicts = apply_thresholds(checks)
+        route    = output_route(checks, verdicts, risk_policy)
+        if route != RELEASE:
+            return withhold_repair_or_escalate(route, request)
+        return execute_route(RELEASE, proposal)
+    finally:
+        log_trace(trace)    # every path, including failure</code></pre>
+
+    <h3>Before the model — open the trace, then check with the power to end the request</h3>
+
+    <p>The first line opens the <strong>decision trace</strong> by binding the request to the <strong>release manifest</strong> while nothing has happened yet, because every event that follows must always be able to answer <em>which version of the program</em> it happened on — post #4 of this series laid down the principle: changing any term of equation (1) changes the program, so a trace that does not know the program's version is merely a log. Then <code>assemble_and_record</code> builds the context and records what was actually assembled, before the point where the paper raises its voice loudest in the whole listing: pre-generation checks must be <em>enforced, not logged</em> — a failing check must <code>return</code> out of the function <em>before</em> <code>model.generate</code>, not note the problem in a log and carry on<sup><a href="#en-ref-1">[1]</a></sup>.</p>
+
+    <p>A side benefit teams tend to overlook: the reject path is the most deterministic, fastest and cheapest path in the system — no token cost, no variance. Programmable-rails tooling like NeMo Guardrails lets this check layer be declared as configuration<sup><a href="#en-ref-2">[2]</a></sup>, but the substance of this post is not the tool — it is <em>position and authority</em>: the check must sit before the core, and it must have the power to end the request on its own.</p>
+
+    <h3>The effect boundary — three exits for a tool call</h3>
+
+    <p>If the candidate proposes a tool call, the loop never simply follows the proposal, because post #3 of this series already marked this seam: a tool call is a system call that arrives as a natural-language <em>request</em>, so authorisation must always be enforced <em>outside</em> the model<sup><a href="#en-ref-1">[1]</a></sup>. <code>execution_guard.authorise_validate</code> checks the call against the request, the state and the policy, and <code>route_effect</code> splits the outcome into three exits that are visibly separate code paths:</p>
+
+    <ol>
+        <li><strong>REJECT</strong> — the default for everything that cannot prove itself (deny by default); the tool result becomes a refusal the model gets to see on the next turn</li>
+        <li><strong>NEEDS_APPROVAL</strong> — <code>wait_for_human_approval</code>: a call that is valid but large or irreversible must have a human decide before any real effect</li>
+        <li><strong>EXECUTE</strong> — <code>sandbox.invoke_transactionally</code>: it happens entirely or not at all, with no half-state left to guess about</li>
+    </ol>
+
+    <p>The result is recorded into the trace and incorporated into the state, and then the loop goes back to <em>re-assemble the context and re-run every check</em> — notice that the second turn inherits no accumulated trust from the first: the same prechecks run again on every turn, because a context that has just absorbed a tool result is a new context that has never been checked.</p>
+
+    <h3>The output side — thresholds, the non-release paths, and the finally that matters most</h3>
+
+    <p>When no tool calls remain, the final candidate enters the output gate: <code>evaluate_output_dimensions</code> measures per dimension, <code>apply_thresholds</code> compares against the declared bars, and <code>output_route</code> decides the path. If it is not RELEASE, the system chooses between withhold, repair and escalate — all three are <em>designed paths</em> with response patterns of their own, not exceptions floating up for middleware to handle. And it closes with the line I consider the most sacred in the listing: <code>finally: log_trace</code> — every path, including the one where the code breaks halfway, must always leave a trace behind<sup><a href="#en-ref-1">[1]</a></sup>.</p>
+
+    <p>And this is the type division the loop makes visible all the way through, which will become the backbone of the contract in the next post: structural checks — schemas, allow-lists, parameter ranges, citation membership — enforce a <strong>structural guarantee</strong>, a bounded invariant on every run; semantic verdicts — faithfulness, relevance, tone — remain a <strong>semantic estimate</strong> that can always be wrong at some rate<sup><a href="#en-ref-1">[1]</a></sup>. The shape of the loop guarantees <em>where things can happen</em> — it never guarantees that the content is <em>good</em>.</p>
+
+    <h2 id="en-seven-steps">3. The Seven Steps</h2>
+
+    <p>The seven steps below turn the pseudocode into Nong Kram's real Python, one chunk at a time. Every chunk is the real thing that section 4 will assemble into three files. Every number you see — the 1,500-baht approval threshold, the 0.80 faithfulness bar, the 30-day return window — is a tutorial value I set so the example runs; none of them is a number the paper measured or recommends.</p>
+
+    <h3>Step 1 — Specify: write golden examples and per-task acceptance criteria</h3>
+
+    <p>Start by declaring the desired behaviour as <em>cases</em>, not as an essay: for each task, pick real examples covering both what should be done and what should be refused, with acceptance criteria a machine can judge pass/fail. The reason comes from the heart of the 3.0 era: the behaviour spec is intent plus exemplars, and the golden set is the one place that spec can be re-checked<sup><a href="#en-ref-1">[1]</a></sup>. For Nong Kram's refund task I start with the two head-of-line cases — one that must call the tool, and one that must refuse while citing policy:</p>
+
+    <pre><code># golden/refund.py — the golden set for the refund task (tutorial numbers)
+GOLDEN_REFUND = [
+    {"id": "refund-007",
+     "request": "order KK-1042: mug arrived cracked, asks for a refund",
+     "expect": {"tool": {"name": "refund", "order_id": "KK-1042"},
+                "cite": ["policy/returns#damaged"]}},
+    {"id": "refund-012",
+     "request": "order KK-0980: changed mind on day 45, asks for a refund",
+     "expect": {"tool": None,          # past the shop's 30-day return window
+                "cite": ["policy/returns#window"]}},
+]
+ACCEPTANCE = {"tool_exact": 1.00,     # tool calls must match exactly
+              "cite_only_retrieved": 1.00,
+              "answer_pass_rate": 0.90}  # tutorial threshold, per slice</code></pre>
+
+    <h3>Step 2 — Constrain: declare schemas, allow-lists, parameter ranges and prechecks</h3>
+
+    <p>Every constraint must be <em>declared up front as structure</em>, not pleaded for in the prompt — a sentence in the context is advice to the model, not a constraint on the system. This step is the behavioural loop's "compile" beat: what is malformed must fall before anything runs, and a failing precheck must have the power to end the request itself, before the core<sup><a href="#en-ref-1">[1]</a></sup>:</p>
+
+    <pre><code># kramkraft/constraints.py — declared up front, not pleaded for in the prompt
+ALLOWED_TOOLS = {"refund"}            # Nong Kram's only effectful tool
+TOOL_SCHEMA = {"refund": {
+    "order_id": r"^KK-\d{4}$",
+    "amount":   "int, 1..order_total_thb",
+    "reason":   "str, 1..200 chars",
+}}
+MAX_CONTEXT_TOKENS = 6000
+
+def evaluate_pre_generation(request, context):
+    if request.channel not in {"web", "line"}:
+        return Check(False, "unknown channel")
+    if not context.passages:
+        return Check(False, "no policy passage retrieved")
+    if context.token_estimate &gt; MAX_CONTEXT_TOKENS:
+        return Check(False, "context overflow")
+    return Check(True, "ok")</code></pre>
+
+    <h3>Step 3 — Generate: quarantine the model call as the one stage that touches nothing</h3>
+
+    <p>The model call must be a <em>fully quarantined stage</em>: context in, a "proposal" out, and in between it touches nothing at all — no database reads, no network, no tools. The reason is blunt: every guarantee in the loop rests on the fact that <em>every</em> real effect must pass the mediator in the next step; if the model call can have side effects of its own, everything else is theatre. In Nong Kram's code, this doorway has exactly one door in the whole system:</p>
+
+    <pre><code># kramkraft/model_port.py — the one gateway in the system that talks to M_v
+class ModelPort:
+    def __init__(self, client):
+        self._client = client         # frozen hosted model, version pinned
+
+    def generate(self, context):
+        raw = self._client.complete(context.prompt)
+        return Proposal(text=raw.text,
+                        tool_calls=parse_tool_calls(raw))
+        # returns a proposal only — touches no store, network, or tool</code></pre>
+
+    <h3>Step 4 — Mediate: every effect passes the mediator before it happens, and the default is refusal</h3>
+
+    <p>This is the step that carries the whole system's guarantee: every proposed tool call must be authorised and validated <em>outside the model</em> before any real effect, under the principle of <strong>complete mediation</strong> — no back-door path, no admin exception — and deny by default: a call that cannot prove every requirement is a rejected call, while a call that is valid but large or irreversible must stop and wait for a human<sup><a href="#en-ref-1">[1]</a></sup> — and for Nong Kram, a refund is irreversible from the second the payment processor accepts the instruction:</p>
+
+    <pre><code># in the loop: a proposal is not an effect until it passes the mediator
+auth  = guard.authorise_validate(call, request)
+route = route_effect(call, auth, risk_policy)
+if route == "EXECUTE":
+    result = sandbox.invoke_transactionally(call)   # all or nothing
+elif route == "NEEDS_APPROVAL":
+    result = wait_for_human_approval(call, request) # a human decides
+else:
+    result = ToolResult.rejected(auth.why)          # the default is refusal
+
+def route_effect(call, auth, risk_policy):
+    if not auth.ok:
+        return "REJECT"
+    if call.args["amount"] &gt; risk_policy.approval_threshold_thb:
+        return "NEEDS_APPROVAL"       # large and irreversible: needs a human
+    return "EXECUTE"</code></pre>
+
+    <h3>Step 5 — Verify: structural checks are hard, semantic verdicts are estimates</h3>
+
+    <p>The output gate has two kinds of check that must never share a line. The first kind can be decided deterministically: the payload must parse against the schema, and every citation must be a member of the passages actually retrieved — this is hard. The second kind is a question like "does the answer match the policy text", which only a fallible evaluator can answer. Model-family checkers like Llama Guard exist and are useful, but by nature they are classifiers with error rates of their own<sup><a href="#en-ref-3">[3]</a></sup> — and never route on the confidence the model reports about itself, because the previous post made it plain that its calibration cannot be trusted; use independent evaluation<sup><a href="#en-ref-1">[1]</a></sup>:</p>
+
+    <pre><code># the output-check chunk — hard lines kept separate from estimates
+checks, payload = output_checks(proposal, context)  # structural: hard
+verdicts = {"faithfulness": deps.judge(payload, context)}  # an estimate
+
+def output_checks(proposal, context):
+    payload = try_parse_json(proposal.text)
+    schema_ok = payload is not None and \
+        {"reply", "policy_refs"} &lt;= set(payload)
+    retrieved = {p.ref for p in context.passages}
+    attribution_ok = schema_ok and bool(payload["policy_refs"]) and \
+        set(payload["policy_refs"]) &lt;= retrieved
+    return {"schema": schema_ok, "attribution": attribution_ok}, payload</code></pre>
+
+    <h3>Step 6 — Route: make release / withhold / repair / escalate first-class code</h3>
+
+    <p>The paths that do not release must have the same standing as the path that does: written as their own functions, with their own fallback answer and their own human queue — because designing the failure route into the system is what separates engineering from a demo. The routing rule mirrors step 5 exactly: a failed structural check is final, no exceptions; a low estimate means <em>weak evidence</em>, so it goes to a human to read, not to the bin:</p>
+
+    <pre><code>def output_route(checks, verdicts, risk_policy):
+    if not all(checks.values()):      # structural check failed: no exceptions
+        return "REPAIR" if checks["schema"] is False else "WITHHOLD"
+    if verdicts["faithfulness"] &lt; risk_policy.faithfulness_min:
+        return "ESCALATE"             # weak evidence: a human reads first
+    return "RELEASE"
+
+def execute_route(route, payload, request, deps):
+    if route == "RELEASE":  return Reply.send(payload)
+    if route == "REPAIR":   return retry_once_then_withhold(request, deps)
+    if route == "WITHHOLD": return Reply.fallback(request)
+    return deps.escalate(request)     # ESCALATE: into the human queue</code></pre>
+
+    <h3>Step 7 — Trace: write everything in finally, and let the release fail if the trace fails</h3>
+
+    <p>The last step is the shortest and the least negotiable: the trace write lives in <code>finally</code> so that every path — release, refusal, escalation, or a crash mid-flight — always leaves evidence behind, and the relationship must be <em>inverted</em> the right way round: not "release, then try to record", but "no successful record means no release". This is <strong>fail-closed</strong> behaviour at the system's final seam<sup><a href="#en-ref-1">[1]</a></sup>:</p>
+
+    <pre><code>def ai_core_operation(request, deps):
+    trace = Trace(request, deps.manifest)   # opened before any work
+    try:
+        ...                                 # the whole loop from steps 2-6
+    finally:
+        trace.write(deps.trace_path)        # every path, incl. exceptions
+# Trace.write deliberately raises when the write fails — an exception in
+# finally replaces the pending return: nothing is released without its trace</code></pre>
+
+    <h2 id="en-kramkraft">4. The Full KramKraft Code — Three Files Wired to refund()</h2>
+
+    <p>This post's artifact is the three files that assemble the seven chunks: <code>kramkraft/guard.py</code>, <code>kramkraft/gate.py</code> and <code>kramkraft/loop.py</code> — roughly ninety lines together, depending on no framework. The <code>Reply</code>, <code>Auth</code>, <code>Check</code> and <code>ToolResult</code> classes are straightforward dataclasses I leave to the reader. Start with the mediator that carries all of the guarantees:</p>
+
+    <pre><code># kramkraft/guard.py — the execution guard for the refund tool
+# every number here is a tutorial value, not one the paper recommends
+ALLOWED_TOOLS = {"refund"}
+
+class ExecutionGuard:
+    def __init__(self, order_store, refund_ledger):
+        self.orders = order_store     # authoritative order state
+        self.ledger = refund_ledger   # one refund per order, ever
+
+    def authorise_validate(self, call, request):
+        if call.name not in ALLOWED_TOOLS:
+            return Auth(False, "tool not in allow-list")
+        order = self.orders.get(call.args.get("order_id"))
+        if order is None or order.customer_id != request.customer_id:
+            return Auth(False, "no such order for this customer")
+        amount = call.args.get("amount", 0)
+        if not (0 &lt; amount &lt;= order.total_thb):
+            return Auth(False, "amount outside 0..order_total")
+        if self.ledger.has(call.args["order_id"]):
+            return Auth(False, "duplicate refund for this order")
+        return Auth(True, "within declared bounds")
+
+def route_effect(call, auth, risk_policy):
+    if not auth.ok:
+        return "REJECT"               # deny by default
+    if call.args["amount"] &gt; risk_policy.approval_threshold_thb:
+        return "NEEDS_APPROVAL"       # irreversible and large: a human decides
+    return "EXECUTE"</code></pre>
+
+    <p>Notice that the guard always reads <em>real state</em> from the order store — order ownership, the total, the refund history — and never trusts a single value narrated in the model's text. And the <code>ledger</code> is the plainest possible idempotency key: one order can be refunded once in its lifetime, no matter whether the model proposes again, the customer taps again, or the system retries on its own.</p>
+
+    <pre><code># kramkraft/gate.py — the output gate and the trace writer
+import json
+
+def try_parse_json(text):
+    try:
+        return json.loads(text)
+    except ValueError:
+        return None
+
+def output_checks(proposal, context):
+    payload = try_parse_json(proposal.text)
+    schema_ok = payload is not None and \
+        {"reply", "policy_refs"} &lt;= set(payload)
+    retrieved = {p.ref for p in context.passages}
+    attribution_ok = schema_ok and bool(payload["policy_refs"]) and \
+        set(payload["policy_refs"]) &lt;= retrieved
+    return {"schema": schema_ok, "attribution": attribution_ok}, payload
+
+class Trace:
+    def __init__(self, request, manifest):
+        self.events = [{"begin": request.id, "manifest": manifest.version}]
+    def record(self, kind, **data):
+        self.events.append({kind: data})
+    def write(self, path):            # a failed write raises: fail closed
+        with open(path, "a", encoding="utf-8") as f:
+            f.write(json.dumps(self.events, ensure_ascii=False) + "\n")</code></pre>
+
+    <p>The line worth stopping at is <code>attribution_ok</code>: forcing every citation to be a member of the set of passages actually retrieved is a <em>structural</em> check — set membership is one hundred percent deterministic to decide — while the question of whether the answer's content actually <em>matches</em> those passages belongs to the judge in the main loop, which is an estimate. Those two lines stand on opposite sides of the dividing line the whole series stands on.</p>
+
+    <pre><code># kramkraft/loop.py — Nong Kram's AI-core function
+MAX_TURNS = 4
+RISK_POLICY = RiskPolicy(approval_threshold_thb=1500,  # tutorial values
+                         faithfulness_min=0.80)
+
+def ai_core_operation(request, deps):
+    trace = Trace(request, deps.manifest)
+    state = deps.init_state(request)
+    proposal = context = None
+    try:
+        for _turn in range(MAX_TURNS):
+            context = deps.assemble(request, state)
+            trace.record("context", digest=context.digest)
+            pre = evaluate_pre_generation(request, context)
+            trace.record("precheck", ok=pre.ok, why=pre.why)
+            if not pre.ok:
+                return Reply.refuse(request)      # exits before the core
+            proposal = deps.model.generate(context)
+            trace.record("candidate", digest=proposal.digest)
+            if not proposal.tool_calls:
+                break                             # no effect proposals left
+            for call in proposal.tool_calls:
+                auth = deps.guard.authorise_validate(call, request)
+                route = route_effect(call, auth, deps.risk_policy)
+                trace.record("guard", tool=call.name, route=route,
+                             why=auth.why)
+                if route == "EXECUTE":
+                    result = deps.sandbox.invoke_transactionally(call)
+                elif route == "NEEDS_APPROVAL":
+                    result = deps.wait_for_human_approval(call, request)
+                else:
+                    result = ToolResult.rejected(auth.why)
+                trace.record("tool_result", ok=result.ok)
+                state = state.incorporate(call, result)
+        checks, payload = output_checks(proposal, context)
+        verdicts = {"faithfulness": deps.judge(payload, context)}
+        route = output_route(checks, verdicts, deps.risk_policy)
+        trace.record("route", route=route, checks=checks,
+                     verdicts=verdicts)
+        return execute_route(route, payload, request, deps)
+    finally:
+        trace.write(deps.trace_path)              # every path</code></pre>
+
+    <p>Three deliberate details: <code>MAX_TURNS</code> cuts the endless loop off structurally, without waiting for anyone to notice; every <code>return</code> — refuse, fallback, escalate or a genuine release — walks through the same <code>finally</code>; and <code>execute_route</code> <em>returns a value</em>, it does not send the message itself — the actual send happens after the function returns successfully, so if <code>trace.write</code> fails, the exception replaces the value about to be returned and nothing reaches the customer: the release path fails together with its trace, exactly as step 7 requires.</p>
+
+    <blockquote>💡 My view: this loop's code is deliberately <em>boring</em> — no meta-programming, no framework, no abstraction beyond one layer — because boringness is a safety property. The path we are going to stand behind with "every real effect passes the mediator" has to be a path a reviewer can read with their eyes and see completely on one page. All of the cleverness has been pushed out into artifacts that can be versioned — the schema, the thresholds, the golden set — the one place it belongs.</blockquote>
+
+    <h2 id="en-validation-check">5. Validation Check — Does Your Loop Enforce, or Merely Log?</h2>
+
+    <p>The series' standing rule: every question is answered with an <em>artifact</em> you can point at, open, and attach to a review — not an adjective. This table is for your own app, not Nong Kram. A question you cannot answer does not mean the system is bad; it means the evidence does not exist yet — and question 1 matters most, because every guarantee row in the next post stands on it.</p>
+
+    <div class="table-wrapper">
+        <table>
+            <thead>
+                <tr>
+                    <th>#</th>
+                    <th>Question (pass/fail)</th>
+                    <th>The artifact that proves it</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>1</td>
+                    <td>Can no call site in the system reach an effectful tool without the guard — is the effect path genuinely a single path?</td>
+                    <td>The output of <code>grep -rn "refund(" .</code> across the repo, attached to the review note — the only call site is <code>sandbox.invoke_transactionally</code> inside loop.py</td>
+                </tr>
+                <tr>
+                    <td>2</td>
+                    <td>Does a request that fails the precheck really never reach the model?</td>
+                    <td>The trace lines of a malformed test case: a <code>precheck ok=false</code> event with no <code>candidate</code> event after it at all</td>
+                </tr>
+                <tr>
+                    <td>3</td>
+                    <td>Does a refund proposal above the approval threshold go to NEEDS_APPROVAL every time?</td>
+                    <td>A unit test of <code>route_effect</code> at amount = threshold + 1, plus a real trace where <code>route=NEEDS_APPROVAL</code> appears before any tool_result</td>
+                </tr>
+                <tr>
+                    <td>4</td>
+                    <td>Is a duplicate refund on the same order always rejected?</td>
+                    <td>A test running <code>ai_core_operation</code> twice with the same request, plus the refund ledger's post-state holding exactly one entry</td>
+                </tr>
+                <tr>
+                    <td>5</td>
+                    <td>Can an output that fails the schema parse ever reach the customer?</td>
+                    <td>A run over the malformed golden-set slice: every case ends at REPAIR or WITHHOLD in the trace, and not one ends at RELEASE</td>
+                </tr>
+                <tr>
+                    <td>6</td>
+                    <td>If the trace write fails, does the system still release the answer?</td>
+                    <td>A fault-injection test with the trace path set read-only: the whole request fails and no answer goes out — the result kept in the harness's test suite</td>
+                </tr>
+                <tr>
+                    <td>7</td>
+                    <td>Does every request end with exactly one terminal route in the trace?</td>
+                    <td>A script counting <code>route</code> events per request over the trace file of a full golden-set run — exactly 1 per request, every request</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <p>If you do only one of these this week, do question 1: open a terminal and grep for the call sites of every effectful tool in your system. Seeing with your own eyes how many paths there are — and there are usually more than you think, because migration scripts, internal endpoints and admin buttons never count themselves as "the AI system" — is the first piece of evidence the next post's contract will ask for.</p>
+
+    <h2 id="en-road-ahead">6. The Road Ahead</h2>
+
+    <p>This post turned the discipline of the paper's Section 5 into two tangible things: the Specify → Constrain → Generate → Verify loop that sets the team's daily rhythm, and the <code>ai_core_operation()</code> that turns that rhythm into structure — a precheck with the power to end a request before the model, a guard standing between proposal and effect, thresholds standing between candidate and customer, and a trace written on every path including the one that breaks. All of that is the <em>machine</em> — and Nong Kram now has all of it, in three files.</p>
+
+    <p>What this post deliberately does <em>not</em> answer is the question the risk committee will ask the moment they see the code: so what does all this machinery <em>promise</em>? Which rows are genuine guarantees, under which assumptions; which are only estimates with error rates in both directions; what evidence proves each one, who owns it, and what happens on breach — the answer has a name of its own: the <strong>assurance contract</strong>, and it is the entire subject of the next post.</p>
+
+    <div class="alert info">
+        <strong>🧭 Next up:</strong> <a href="/blog/ai-core-assurance-contract">#7 Write the Assurance Contract — Guarantees, Estimates, Evidence</a> takes this post's three files and writes them up as a per-property contract: what the guard and the gate can <em>structurally guarantee</em> under the complete-mediation assumption, what the judge can only <em>estimate</em> with false accepts and false rejects on a declared population, and what kind of evidence the trace we wrote on every path becomes inside that contract.</div>
+
+    <div class="key-takeaways">
+        <h3>🎯 Key takeaways</h3>
+        <ul>
+            <li><strong>Specify → Constrain → Generate → Verify</strong> = the behavioural-development loop running beside edit→compile→run→debug — it orders activity, but establishes no property and is not a contract (the paper demotes it itself in Section 6)</li>
+            <li><strong>Debugging becomes evaluation</strong> = reproduce the wrong behaviour, add it as a case to the golden set, and let the case drive a metric — a bug that is not yet a case is not fixed, it has only gone quiet</li>
+            <li><strong>The reference control loop</strong> = prechecks enforced before the model · the guard before any effect · thresholds before release · a trace on every path — structure guarantees where things can happen, not that the content is good</li>
+            <li><strong>Deny by default</strong> = every tool call starts out rejected and must prove itself through the allow-list, the schema, the parameter ranges, order ownership and idempotency — and what remains large enough waits for a human</li>
+            <li><strong>Structure and semantics on separate lines</strong> = schema parsing and citation membership are structural guarantees, while faithfulness is a fallible semantic estimate — never write the two blended together</li>
+            <li><strong>Fail closed at the trace</strong> = the release path must fail if the trace write fails — an auditable system is one that would rather not answer than answer without leaving evidence</li>
+        </ul>
+    </div>
+
+    <section class="references" aria-labelledby="en-references">
+        <h2 id="en-references">References</h2>
+        <p class="references__note">All sources checked 8 September 2026 (Thailand time) · four evidence tags: <strong>Law</strong> statute or official gazette · <strong>Standard</strong> published formal standard or framework · <strong>Study</strong> research or field signal · <strong>Synthesis</strong> author synthesis or non-research source</p>
+        <ol class="references__list">
+            <li id="en-ref-1"><span class="ref-tag ref-tag--synthesis">Synthesis</span> Anirach Mingkhwan. <cite>Engineering AI-Core Systems: A Reference Architecture and Assurance Contract for Software 3.0</cite> — CreativeLAB, FITM, KMUTNB, 2026. Author-provided manuscript, unpublished; no public URL, hence no link and no access date. <span class="ref-supports">Supports: the Specify → Constrain → Generate → Verify loop and its standing as a parallel loop (Section 5), the structure of the Listing 1.1 reference control loop in every stage, the enforced-not-logged rule for pre-generation checks, the three exits REJECT / NEEDS_APPROVAL / invoke_transactionally, trace writing in finally on every path, the debugging-becomes-evaluation principle, the expansion of the versioned artifact set, the separation of structural guarantees from semantic estimates, and the Section 6 demotion of the four-verb loop to a development workflow only</span></li>
+            <li id="en-ref-2"><span class="ref-tag ref-tag--study">Study</span> Rebedea, T., Dinu, R., Sreedhar, M., et al. <cite>NeMo Guardrails: A Toolkit for Controllable and Safe LLM Applications with Programmable Rails</cite> — EMNLP System Demonstrations, 2023. Cited without a link, per the series' vetted source list. <span class="ref-supports">Supports: the observation that programmable pre- and post-generation check layers are an established engineering practice with real tooling — cited as an example of the tool category only, with no claim that the tool provides any guarantee to this post's loop</span></li>
+            <li id="en-ref-3"><span class="ref-tag ref-tag--study">Study</span> Inan, H., Upasani, K., Chi, J., et al. <cite>Llama Guard: LLM-based Input-Output Safeguard for Human-AI Conversations</cite> — arXiv:2312.06674, 2023. <a href="https://arxiv.org/abs/2312.06674">arxiv.org</a> — accessed 2026-09-08. <span class="ref-supports">Supports: the fact that model-based input-output safeguards exist in the field and are by nature classifiers with error rates of their own — used in step 5 to argue that verdicts from model-family checkers must count as estimates, not structure</span></li>
+            <li id="en-ref-4"><span class="ref-tag ref-tag--study">Study</span> Breck, E., Cai, S., Nielsen, E., Salib, M., Sculley, D. <cite>The ML Test Score: A Rubric for ML Production Readiness and Technical Debt Reduction</cite> — IEEE Big Data 2017. <a href="https://doi.org/10.1109/bigdata.2017.8258038">doi.org</a> — accessed 2026-09-08. <span class="ref-supports">Supports: the discipline of treating data, models and infrastructure as artifacts to be tested and versioned like production assets, predating the 3.0 era — used to ground section 1's artifact-set expansion, without claiming the rubric covers systems with a language model at the core</span></li>
+        </ol>
+    </section>
+    </div>
+
+    <div class="post-series-footer">
+      <span class="l-th">บทความจากซีรีส์ Engineering AI-Core Systems 2026</span><span class="l-en" lang="en">From the Engineering AI-Core Systems 2026 series</span>
+    </div>
+
+    <nav aria-label="Engineering AI-Core Systems">
+    <div class="series-nav">
+      <h3>🛡️ Engineering AI-Core Systems 2026</h3>
+      <div class="series-links">
+        <a href="/blog/ai-core-what-is">#1 What Is AI-Core</a>
+        <a href="/blog/ai-core-three-eras">#2 Three Eras</a>
+        <a href="/blog/ai-core-os-model">#3 AI-OS Seams</a>
+        <a href="/blog/ai-core-context-engineering">#4 Context Control</a>
+        <a href="/blog/ai-core-fallible-savant">#5 Fallible Savant</a>
+        <span class="current" aria-current="page">#6 Control Loop</span>
+        <a href="/blog/ai-core-assurance-contract">#7 Assurance Contract</a>
+        <a href="/blog/ai-core-five-rails">#8 Five Rails</a>
+        <a href="/blog/ai-core-validation">#9 Validation</a>
+        <a href="/blog/ai-core-ship-operate">#10 Ship &amp; Operate</a>
+      </div>
+    </div>
+    </nav>
+
+  </article>
+
+  </main>
+
+  <footer class="blog-footer">
+    <nav class="blog-footer__nav" aria-label="Site">
+      <a href="../index.html">Home</a>
+      <a href="./">Blog</a>
+      <a href="../publications/">Publications</a>
+      <a href="../books/">Books</a>
+      <a href="../projects/">Projects</a>
+      <a href="../news/">News</a>
+      <a href="../index.html#contact">Contact</a>
+    </nav>
+    <a href="./">← Back to Blog</a>
+    <span>© 2026 Anirach Mingkhwan — Associate Professor, KMUTNB</span>
+  </footer>
+
+</body>
+</html>

@@ -1,0 +1,1121 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Design for the Fallible Savant — ออกแบบเผื่ออัจฉริยะที่พลาดเป็น | Anirach Mingkhwan</title>
+  <meta name="description" content="แกน AI คืออัจฉริยะที่พลาดเป็น — แต่งเรื่องได้ เก่งไม่สม่ำเสมอ จำไม่ได้ หูเบา และมั่นใจเกินจริง บทนี้เปลี่ยนทั้งห้าข้อให้เป็นข้อกำหนดการออกแบบของ envelope">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=Sarabun:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      color-scheme: light;
+      /* ink */
+      --navy: #11304b; --slate: #334155; --slate-light: #526174; --gray: #94a3b8;
+      /* ground */
+      --bg: #faf7f0; --white: #ffffff; --code-bg: #1e293b;
+      /* accent */
+      --blue: #226299; --blue-dark: #1a4d7a; --blue-light: #4992b9;
+      /* brand — sampled from the book covers. --gold is decorative on light grounds (2.2:1); --gold-dark is its text form. */
+      --gold: #c4a46c; --gold-dark: #7a5f22; --cloud: #dee7e6; --parchment: #e9e1c4; --focus: #226299;
+      /* status — use only these six, never invent a seventh */
+      --green: #22c55e; --red: #ef4444; --amber: #f59e0b;
+      --cyan: #06b6d4; --purple: #226299; --purple-dark: #1a4d7a;
+      /* type */
+      --font: 'Inter', 'Sarabun', -apple-system, BlinkMacSystemFont, sans-serif;
+      --mono: 'JetBrains Mono', 'Fira Code', 'Sarabun', monospace;
+      /* form */
+      --radius: 12px; --radius-sm: 8px; --radius-lg: 16px;
+      --measure: 720px; --wide: 860px;
+      --transition: 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+    html { scroll-behavior: smooth; }
+    body { font-family: var(--font); font-size: 17px; line-height: 1.8; color: var(--slate); background: var(--bg); -webkit-font-smoothing: antialiased; }
+    .blog-nav { position: fixed; top: 0; left: 0; right: 0; z-index: 100; background: rgba(248,250,252,0.85); backdrop-filter: blur(20px); border-bottom: 1px solid rgba(0,0,0,0.05); }
+    .blog-nav__inner { max-width: 860px; margin: 0 auto; padding: 0 2rem; height: 56px; display: flex; align-items: center; justify-content: space-between; }
+    .blog-nav__back { font-size: 0.85rem; font-weight: 500; color: var(--blue); text-decoration: none; }
+    .blog-nav__back:hover { color: #1a4d7a; }
+    .blog-nav__title { font-size: 0.85rem; font-weight: 600; color: var(--navy); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 50%; }
+    /* ── HERO ── house .post-hero on the approved Deep Blue gradient (page-design
+       §5 / INV-28). Ink is inverted for the dark ground: white title/meta, tag
+       pills white on 18% white — the openclaw-production treatment. The
+       background value must stay byte-identical to the approved string. */
+    .post-hero { padding: 8rem 2rem 3rem; background: linear-gradient(135deg, #11304b 0%, #1a4d7a 45%, #226299 100%); color: #fff; text-align: center; }
+    .post-hero__tags { display: flex; gap: 0.5rem; justify-content: center; margin-bottom: 1.25rem; flex-wrap: wrap; }
+    .post-hero__tag { display: inline-block; font-size: 0.72rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.1em; color: #fff; background: rgba(255,255,255,0.18); padding: 0.35rem 0.9rem; border-radius: 20px; }
+    .post-hero__title { font-size: clamp(1.8rem, 5vw, 3rem); font-weight: 800; color: #fff; line-height: 1.2; margin-bottom: 1rem; max-width: 720px; margin-left: auto; margin-right: auto; }
+    .post-hero__sub { font-size: 1.05rem; max-width: 640px; margin: 0 auto 1.5rem; line-height: 1.7; color: #fff; }
+    .post-hero__meta { font-size: 0.85rem; color: #fff; display: flex; align-items: center; justify-content: center; gap: 1.5rem; flex-wrap: wrap; }
+    .post-hero__series { font-weight: 600; color: #fff; }
+    /* the switch pill and the focus ring both sit on the dark hero: the pill is
+       a light chip so its labels keep their light-ground colours, and --focus
+       re-points to gold here (blue collapses on blue — the footer/pre
+       precedent). */
+    .post-hero { --focus: var(--gold); }
+    .post-hero__cover {
+      aspect-ratio: 1 / 1;
+      max-width: 380px;
+      margin: 2.5rem auto 0;
+      border-radius: var(--radius-lg, 16px);
+      overflow: hidden;
+      box-shadow: 0 20px 60px rgba(17,48,75,0.14);
+    }
+    .post-hero__cover img { width: 100%; height: 100%; object-fit: cover; display: block; }
+    .post-body { max-width: 720px; margin: 0 auto; padding: 3rem 2rem 6rem; }
+    .post-body h2 { font-size: 1.6rem; font-weight: 800; color: var(--navy); margin: 3rem 0 1rem; padding-bottom: 0.5rem; border-bottom: 2px solid rgba(34,98,153,0.15); }
+    .post-body h3 { font-size: 1.25rem; font-weight: 700; color: var(--navy); margin: 2.25rem 0 0.75rem; }
+    .post-body p { margin-bottom: 1.25rem; }
+    .post-body strong { font-weight: 700; color: var(--navy); }
+    .post-body a { color: var(--blue); text-decoration: underline; text-decoration-thickness: 1px; text-underline-offset: 2px; }
+    .post-body ul, .post-body ol { margin: 0.5rem 0 1.25rem 1.5rem; }
+    .post-body li { margin-bottom: 0.4rem; }
+    .post-body blockquote { background: rgba(34,98,153,0.06); border-left: 4px solid var(--blue); padding: 1rem 1.25rem; border-radius: 0 10px 10px 0; margin: 1.25rem 0; font-size: 0.95rem; color: var(--navy); }
+    .post-body hr { border: none; height: 1px; background: linear-gradient(90deg, transparent, rgba(34,98,153,0.2), transparent); margin: 3rem 0; }
+    /* ── CODE ── */
+    .post-body pre { background: var(--code-bg); border-radius: 12px; padding: 1.5rem; margin: 1.25rem 0 1.5rem; overflow-x: auto; border: 1px solid rgba(255,255,255,0.05); }
+    .post-body pre code { font-family: var(--mono); font-size: 0.85rem; color: #e2e8f0; line-height: 1.7; background: none; padding: 0; white-space: pre-wrap; }
+    .post-body code { font-family: var(--mono); font-size: 0.88em; background: rgba(34,98,153,0.08); color: var(--blue-dark); padding: 0.15em 0.45em; border-radius: 5px; }
+    /* ── TABLES ── */
+    .table-wrapper { overflow-x: auto; margin: 1.5rem 0; border-radius: 0.5rem; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1); }
+    table { width: 100%; border-collapse: collapse; background: white; }
+    th { background: #226299; color: white; padding: 1rem; text-align: left; font-weight: 600; }
+    td { padding: 1rem; border-bottom: 1px solid #e5e7eb; }
+    .post-body table { display: block; width: 100%; overflow-x: auto; }
+    /* ── ALERTS ── */
+    .alert { background: #fef3cd; border: 1px solid #facc15; border-radius: 0.5rem; padding: 1rem; margin: 1.5rem 0; }
+    .alert.danger { background: #fee2e2; border-color: #ef4444; }
+    .alert.info { background: #e0f2fe; border-color: #06b6d4; }
+    .alert.success { background: #d1fae5; border-color: #10b981; }
+    /* ── KEY TAKEAWAYS ── */
+    .key-takeaways { background: linear-gradient(135deg, #f3f4f6 0%, #e5e7eb 100%); border-radius: 1rem; padding: 2rem; margin: 3rem 0; }
+    .key-takeaways h3 { color: #226299; margin-bottom: 1.5rem; }
+    .post-series-footer { text-align: center; font-size: 0.85rem; color: var(--slate-light); font-style: italic; margin-top: 2rem; padding-top: 2rem; border-top: 1px solid #e2e8f0; }
+    .blog-footer { background: var(--navy); padding: 2rem 0; text-align: center; }
+    .blog-footer a { color: var(--gold); text-decoration: none; font-weight: 600; font-size: 0.9rem; }
+    .blog-footer span { color: var(--gray); font-size: 0.8rem; display: block; margin-top: 0.4rem; }
+    @media (max-width: 600px) {
+      .post-hero { padding: 7rem 1.25rem 2.5rem; }
+      .post-body { padding: 2rem 1.25rem 4rem; }
+      .post-hero__meta { flex-direction: column; gap: 0.4rem; }
+      .post-body h2 { font-size: 1.4rem; }
+      .post-body h3 { font-size: 1.15rem; }
+      .post-body pre { padding: 1rem; border-radius: 8px; }
+    }
+
+    :focus-visible { outline: 2px solid var(--focus); outline-offset: 3px; border-radius: 2px; }
+    /* the ring sits on the page ground (3px offset). Inside the navy footers
+       and code blocks var(--blue) collapses to 2.12:1, so those scopes
+       re-point --focus to gold (5.73:1 on navy). */
+    .footer, .blog-footer, pre { --focus: var(--gold); }
+    :focus:not(:focus-visible) { outline: none; }
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after {
+        animation-duration: .01ms !important; animation-iteration-count: 1 !important;
+        transition-duration: .01ms !important; scroll-behavior: auto !important;
+      }
+    }
+    h1, h2, h3, .post-hero__title, .card__title { text-wrap: balance; }
+
+    .post-body img, .post-body svg { max-width: 100%; height: auto; }
+
+    /* ── SKIP LINK ── a11y-perf R5: the link and the landmark it targets are a
+       pair — useless without both halves. Off-screen until focused, then the
+       first tab stop on every page. */
+    .skip-link { position: absolute; left: -9999px; }
+    .skip-link:focus {
+      left: 1rem; top: 1rem; z-index: 999;
+      background: var(--navy); color: #fff;
+      padding: 0.75rem 1.25rem; border-radius: var(--radius-sm);
+      font-weight: 600; text-decoration: none;
+    }
+
+    /* ── POST WAYFINDING ── the wordmark is the home link; the footer carries
+       the full destination row. */
+    .blog-nav__home {
+      font-size: 0.9rem; font-weight: 800; color: var(--navy);
+      text-decoration: none; margin-right: 1rem;
+    }
+    .blog-nav__home:hover { color: var(--blue); }
+    .blog-nav__inner > .blog-nav__back { margin-right: auto; }
+    .blog-footer__nav {
+      display: flex; flex-wrap: wrap; justify-content: center; gap: 0.35rem 1.25rem;
+      max-width: 860px; margin: 0 auto 1.25rem; padding: 0 2rem 1.25rem;
+      border-bottom: 1px solid rgba(255,255,255,0.12);
+    }
+    .blog-footer__nav a { color: var(--gold); font-size: 0.85rem; font-weight: 600; text-decoration: none; }
+    .blog-footer__nav a:hover { color: #fff; text-decoration: underline; }
+
+    html { scroll-padding-top: 5rem; }
+    [id] { scroll-margin-top: 5rem; }
+
+    /* Thai needs more room than Latin at the same nominal size. */
+    .post-body:lang(th) { font-size: 18px; line-height: 1.85; }
+    .post-body p, .post-body li, .post-body blockquote { text-wrap: pretty; }
+
+    /* ---- side-scroll affordance ----
+       pre blocks and tables can exceed 720px. These layers paint a shadow ONLY
+       where there is more content in that direction; when fully scrolled the
+       cover slides over the shadow and hides it. No JavaScript, no wrapper. */
+    .post-body pre, .post-body table {
+      overflow-x: auto;
+      background-image:
+        linear-gradient(to right, var(--code-bg, #0f172a) 30%, rgba(15,23,42,0)),
+        linear-gradient(to left, var(--code-bg, #0f172a) 30%, rgba(15,23,42,0)),
+        radial-gradient(farthest-side at 0 50%, rgba(0,0,0,.28), rgba(0,0,0,0)),
+        radial-gradient(farthest-side at 100% 50%, rgba(0,0,0,.28), rgba(0,0,0,0));
+      background-position: 0 0, 100% 0, 0 0, 100% 0;
+      background-repeat: no-repeat;
+      background-size: 40px 100%, 40px 100%, 14px 100%, 14px 100%;
+      background-attachment: local, local, scroll, scroll;
+    }
+    .post-body table {
+      background-image:
+        linear-gradient(to right, var(--white, #fff) 30%, rgba(255,255,255,0)),
+        linear-gradient(to left, var(--white, #fff) 30%, rgba(255,255,255,0)),
+        radial-gradient(farthest-side at 0 50%, rgba(17,48,75,.16), rgba(17,48,75,0)),
+        radial-gradient(farthest-side at 100% 50%, rgba(17,48,75,.16), rgba(17,48,75,0));
+      background-position: 0 0, 100% 0, 0 0, 100% 0;
+      background-repeat: no-repeat;
+      background-size: 40px 100%, 40px 100%, 14px 100%, 14px 100%;
+      background-attachment: local, local, scroll, scroll;
+    }
+
+    /* ---- table of contents ---- */
+    .post-toc {
+      max-width: 720px;
+      margin: 2rem auto 0;
+      padding: 1rem 1.25rem;
+      background: rgba(34,98,153,0.05);
+      border: 1px solid rgba(34,98,153,0.14);
+      border-left: 3px solid var(--gold, #c4a46c);
+      border-radius: 10px;
+      font-size: 0.92rem;
+    }
+    .post-toc > summary {
+      cursor: pointer;
+      font-weight: 700;
+      color: var(--navy);
+      list-style: none;
+    }
+    .post-toc > summary::-webkit-details-marker { display: none; }
+    .post-toc > summary::before {
+      content: "\25B8";
+      display: inline-block;
+      margin-right: 0.5rem;
+      transition: transform 0.2s ease;
+      color: var(--gold-dark, #7a5f22);
+    }
+    .post-toc[open] > summary::before { transform: rotate(90deg); }
+    .post-toc > summary:focus-visible { outline: 3px solid var(--focus, #226299); outline-offset: 3px; }
+    .post-toc ol { margin: 0.85rem 0 0.25rem; padding-left: 1.4rem; }
+    .post-toc li { margin-bottom: 0.4rem; line-height: 1.5; }
+    .post-toc a { color: var(--slate); text-decoration: none; }
+    .post-toc a:hover, .post-toc a:focus-visible { color: var(--blue-dark, #1a4d7a); text-decoration: underline; }
+    @media (max-width: 600px) { .post-toc { margin: 1.25rem 1rem 0; } }
+
+    /* ---- cross-document view transitions ---- */
+    @view-transition { navigation: auto; }
+    .nav, .blog-nav { view-transition-name: site-nav; }
+    .footer, .blog-footer { view-transition-name: site-footer; }
+    @media (prefers-reduced-motion: reduce) {
+      ::view-transition-group(*),
+      ::view-transition-old(*),
+      ::view-transition-new(*) { animation: none !important; }
+    }
+
+    /* ── SERIES STRIP — Hermes Agent in Practice ──
+       Same class and inner-wrapper shape as the OpenClaw strip because the
+       linter's RE_SNAV recognises exactly `series-nav` + a nested div; a
+       renamed strip would read as "no nav" and fail INV-08. All content
+       checks (INV-03 family) iterate the SERIES7 list only, so this strip's
+       labels are convention, not contract. House-styled, not the island CSS. */
+    .series-nav {
+      max-width: 720px; margin: 2rem auto 0; padding: 1.1rem 1.4rem;
+      background: rgba(255,255,255,0.75); border: 1px solid rgba(34,98,153,0.15);
+      border-left: 3px solid var(--gold); border-radius: 12px;
+    }
+    .series-nav h3 {
+      font-size: 0.78rem; font-weight: 700; text-transform: uppercase;
+      letter-spacing: 0.08em; color: var(--gold-dark); margin-bottom: 0.6rem;
+    }
+    .series-links { display: flex; flex-wrap: wrap; gap: 0.5rem; }
+    .series-links a, .series-links .current {
+      font-size: 0.82rem; font-weight: 600; padding: 0.35rem 0.8rem;
+      border-radius: 50px; text-decoration: none;
+    }
+    .series-links a { color: var(--blue-dark); background: rgba(34,98,153,0.08); }
+    .series-links a:hover { background: rgba(34,98,153,0.16); }
+    .series-links .current { color: #fff; background: var(--blue-dark); }
+    @media (max-width: 600px) { .series-nav { margin: 1.5rem 1rem 0; } }
+
+    /* ── FIGURE — the sanctioned diagram component (page-design §4 Content).
+       Diagrams are PNGs; this repo built them out of divs twice and reverted
+       twice. The image is wrapped in a link to itself so a phone can pinch a
+       1400px drawing without a line of JavaScript. */
+    .figure { margin: 2.5rem 0; }
+    .figure__img { width: 100%; height: auto; display: block;
+                   border-radius: var(--radius); border: 1px solid rgba(0,0,0,0.06); }
+    .figure__caption { font-size: 0.85rem; color: var(--slate-light);
+                       text-align: center; margin-top: 0.75rem; }
+
+    /* ── REFERENCES — every material number in this series carries its source.
+       The tags are the book's own four evidence labels. */
+    .references { margin-top: 3rem; padding-top: 2rem; border-top: 1px solid #e2e8f0; }
+    .references__note { font-size: 0.85rem; color: var(--slate-light); margin-bottom: 1rem; }
+    .references__list { padding-left: 1.4rem; font-size: 0.9rem; line-height: 1.75; }
+    .references__list li { margin-bottom: 0.7rem; }
+    .ref-tag { display: inline-block; font-size: 0.7rem; font-weight: 700;
+               letter-spacing: 0.06em; text-transform: uppercase; padding: 0.1rem 0.5rem;
+               border-radius: 50px; margin-right: 0.4rem; vertical-align: 0.05em;
+               background: rgba(34,98,153,0.1); color: var(--blue-dark); }
+    /* All four labels get a rule.  --standard and --study shipped without one
+       on 2026-09-05, so 158 of 306 tags fell through to the base blue and the
+       two labels were indistinguishable.  Ratios on --bg: 6.70 / 6.92 / 7.36 /
+       4.81:1, all AA at this size. */
+    .ref-tag--law { background: rgba(239,68,68,0.12); color: #991b1b; }
+    .ref-tag--standard { background: rgba(34,98,153,0.12); color: var(--blue-dark); }
+    .ref-tag--study { background: rgba(34,197,94,0.18); color: #14532d; }
+    .ref-tag--synthesis { background: rgba(196,164,108,0.22); color: var(--gold-dark); }
+    .ref-supports { display: block; color: var(--slate-light); font-size: 0.85rem; }
+
+    /* ── LANGUAGE SWITCH — pure CSS, zero JavaScript (INV-38) ──
+       One visually-hidden checkbox as a direct child of body, BEFORE the main landmark,
+       so `#langSwitch:checked ~ main …` reaches every content block. The two
+       tracks are paired blocks: .l-th (default) and .l-en (hidden until
+       checked; display:revert restores block for divs, inline for spans).
+       Naming stays clear of INV-12's menu-token regex (hamburger|burger|
+       nav__toggle|nav-toggle|navtoggle|menu-toggle|menu__toggle) — verified.
+       No JS also means no persistence across posts; each post opens in Thai. */
+    .lang-switch-box { position: absolute; left: -9999px; }
+    .l-en { display: none; }
+    #langSwitch:checked ~ main .l-en { display: revert; }
+    #langSwitch:checked ~ main .l-th { display: none; }
+    .lang-switch {
+      display: inline-flex; align-items: center; gap: 0.55rem;
+      margin-top: 1.4rem; padding: 0.4rem 1.1rem; border-radius: 50px;
+      background: rgba(255,255,255,0.85); border: 1px solid rgba(255,255,255,0.4);
+      cursor: pointer; font-size: 0.85rem; user-select: none;
+    }
+    .lang-switch span { color: var(--slate-light); font-weight: 600; transition: color 0.2s; }
+    .lang-switch .lang-sep { color: var(--gray); font-weight: 400; }
+    .lang-switch .lang-th { color: var(--navy); font-weight: 800; }
+    #langSwitch:checked ~ main .lang-switch .lang-th { color: var(--slate-light); font-weight: 600; }
+    #langSwitch:checked ~ main .lang-switch .lang-en { color: var(--navy); font-weight: 800; }
+    .lang-switch:hover { border-color: #fff; }
+    #langSwitch:focus-visible ~ main .lang-switch {
+      outline: 2px solid var(--focus); outline-offset: 3px;
+    }
+  </style>
+  <!-- social -->
+  <link rel="canonical" href="https://anirach.com/blog/ai-core-fallible-savant.html">
+  <meta property="og:type" content="article">
+  <meta property="og:url" content="https://anirach.com/blog/ai-core-fallible-savant.html">
+  <meta property="og:site_name" content="Anirach Mingkhwan">
+  <meta property="og:locale" content="th_TH">
+  <meta property="og:locale:alternate" content="en_US">
+  <meta property="article:published_time" content="2026-09-08">
+  <meta property="article:author" content="https://anirach.com/">
+  <meta property="og:title" content="Design for the Fallible Savant — ออกแบบเผื่ออัจฉริยะที่พลาดเป็น">
+  <meta property="og:description" content="แกน AI คืออัจฉริยะที่พลาดเป็น — แต่งเรื่องได้ เก่งไม่สม่ำเสมอ จำไม่ได้ หูเบา และมั่นใจเกินจริง บทนี้เปลี่ยนทั้งห้าข้อให้เป็นข้อกำหนดการออกแบบของ envelope">
+  <meta property="og:image" content="https://anirach.com/images/ai-core-fallible-savant-og.jpg">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
+  <meta property="og:image:alt" content="Design for the Fallible Savant — ออกแบบเผื่ออัจฉริยะที่พลาดเป็น">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:image" content="https://anirach.com/images/ai-core-fallible-savant-og.jpg">
+  <meta name="twitter:image:alt" content="Design for the Fallible Savant — ออกแบบเผื่ออัจฉริยะที่พลาดเป็น">
+  <meta name="robots" content="max-image-preview:large">
+  <meta name="theme-color" content="#11304b">
+  <link rel="icon" href="/favicon.ico" sizes="any">
+  <link rel="apple-touch-icon" href="/apple-touch-icon.png">
+  <!-- /social -->
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "BlogPosting",
+    "headline": "Design for the Fallible Savant — ออกแบบเผื่ออัจฉริยะที่พลาดเป็น",
+    "author": {
+      "@type": "Person",
+      "@id": "https://anirach.com/#person",
+      "name": "Anirach Mingkhwan",
+      "url": "https://anirach.com/"
+    },
+    "datePublished": "2026-09-08",
+    "dateModified": "2026-09-08",
+    "image": "https://anirach.com/images/ai-core-fallible-savant-og.jpg",
+    "inLanguage": [
+      "th",
+      "en"
+    ],
+    "mainEntityOfPage": "https://anirach.com/blog/ai-core-fallible-savant.html"
+  }
+  </script>
+</head>
+<body>
+<a href="#main" class="skip-link">Skip to content</a>
+<input type="checkbox" id="langSwitch" class="lang-switch-box" aria-label="Switch language: Thai / English">
+
+  <nav class="blog-nav">
+    <div class="blog-nav__inner">
+      <a href="../index.html" class="blog-nav__home">Anirach</a>
+      <a href="./" class="blog-nav__back">‹ Blog</a>
+      <div class="blog-nav__title">Design for the Fallible Savant</div>
+    </div>
+  </nav>
+
+  <main id="main">
+
+  <header class="post-hero">
+    <div class="post-hero__tags">
+      <span class="post-hero__tag">Assurance Envelope</span>
+      <span class="post-hero__tag">Design Assumptions</span>
+      <span class="post-hero__tag">Reliability</span>
+    </div>
+    <h1 class="post-hero__title"><span class="l-th">Design for the Fallible Savant — ออกแบบเผื่ออัจฉริยะที่พลาดเป็น</span><span class="l-en" lang="en">Design for the Fallible Savant — Four Assumptions, One Envelope</span></h1>
+    <p class="post-hero__sub"><span class="l-th">อาการแต่งข้อเท็จจริง ความสามารถขรุขระ ความจำสั้น ความหูเบา และความมั่นใจที่ไม่ตรงความจริง — ออกแบบรับทั้งห้าข้อด้วยกรอบการรับประกันรอบระบบ ไม่ใช่ภาวนาให้โมเดลเลิกพลาด</span><span class="l-en" lang="en">Hallucination, jagged intelligence, amnesia, gullibility, and mis-calibrated confidence — design for all five with an assurance envelope instead of wishing them away.</span></p>
+    <div class="post-hero__meta">
+      <span>By <strong>Anirach Mingkhwan</strong></span>
+      <span class="post-hero__series">Engineering AI-Core Systems 2026 • Post #5</span>
+      <span><time datetime="2026-09-08">8 Sep 2026</time></span>
+      <span>16 min read</span>
+    </div>
+    <label for="langSwitch" class="lang-switch" title="สลับภาษา · Switch language"><span class="lang-th">ไทย</span><span class="lang-sep">·</span><span class="lang-en" lang="en">English</span></label>
+    <div class="post-hero__cover">
+      <img src="../images/ai-core-fallible-savant-cover.jpg" alt="Design for the Fallible Savant — ออกแบบเผื่ออัจฉริยะที่พลาดเป็น" width="800" height="800" loading="eager" fetchpriority="high" decoding="async">
+    </div>
+  </header>
+
+  <article class="post-body">
+
+    <details class="post-toc l-th" open>
+      <summary>ในบทความนี้</summary>
+      <ol>
+          <li><a href="#th-four-assumptions">สี่สมมติฐานการออกแบบจาก §4 ของเปเปอร์ — แต่งข้อเท็จจริง ขรุขระ ความจำสั้น หูเบา — เป็นคุณสมบัติของแกน ไม่ใช่บั๊ก</a></li>
+          <li><a href="#th-calibration-envelope">ความแม่นของความมั่นใจ และภาระการรับประกันที่ย้ายไปที่ขอบ — ห้าองค์ประกอบของ assurance envelope</a></li>
+          <li><a href="#th-seven-steps">ลงมือทำ 7 ขั้น — จากบังคับชี้แหล่งระดับ span จนถึงร่าง envelope ฉบับแรกของแอปคุณเอง</a></li>
+          <li><a href="#th-kramkraft">Artifact — ตารางตรวจสมมติฐานการออกแบบของน้องคราม และร่าง envelope ที่ตอนที่ 6 จะแปลงเป็นโค้ด</a></li>
+          <li><a href="#th-validation-check">Validation check — เจ็ดคำถามผ่าน/ไม่ผ่าน แต่ละข้อต้องตอบด้วย artifact ไม่ใช่คำคุณศัพท์</a></li>
+          <li><a href="#th-road-ahead">ก้าวต่อไป — สิ่งที่ตอนนี้จงใจยังไม่ตอบ และลูปควบคุมที่รออยู่ในตอนที่ 6</a></li>
+      </ol>
+    </details>
+    <details class="post-toc l-en" open>
+      <summary>In this post</summary>
+      <ol>
+          <li><a href="#en-four-assumptions">The four design assumptions of the paper's §4 — hallucination, jaggedness, amnesia, gullibility — properties of the core, not bugs</a></li>
+          <li><a href="#en-calibration-envelope">Calibration, and the assurance burden that moves to the boundary — the five elements of the assurance envelope</a></li>
+          <li><a href="#en-seven-steps">The seven steps — from mandatory span-level attribution to the first envelope sketch for your own app</a></li>
+          <li><a href="#en-kramkraft">The artifact — Nong Kram's design-assumption audit, and the envelope sketch that post #6 turns into code</a></li>
+          <li><a href="#en-validation-check">Validation check — seven pass/fail questions, every one answered with an artifact rather than an adjective</a></li>
+          <li><a href="#en-road-ahead">The road ahead — what this post deliberately leaves open, and the control loop waiting in post #6</a></li>
+      </ol>
+    </details>
+    <div class="l-th">
+
+    <p>🤔 <strong>ถ้าทีมคุณมีเพื่อนร่วมงานคนหนึ่งเก่งระดับอัจฉริยะ — เขียนเก่ง สรุปเก่ง รู้กว้างจนน่าตกใจ — แต่แต่งเรื่องได้หน้าตายโดยไม่รู้ตัว เก่งไม่สม่ำเสมอแบบเดาทางไม่ได้ จำเรื่องเมื่อวานไม่ได้เลย และเชื่อโน้ตทุกใบที่มีคนสอดมาบนโต๊ะ — คุณจะมอบปุ่มอนุมัติเงินคืนให้เขาไหม?</strong></p>
+
+    <p>ตอนที่แล้ว <a href="/blog/ai-core-context-engineering">Context Is a Control Artifact</a> จบลงตรงที่ทุกพจน์ของสมการ (1) — โมเดล decoding context retrieval tools state environment — ถูก pin ไว้ใน release manifest เดียวของน้องคราม เรารู้แล้วว่าพฤติกรรมของระบบมาจากไหน และรู้ว่าเปลี่ยนพจน์ไหนก็คือเปลี่ยนโปรแกรม แต่ manifest ที่เนี้ยบที่สุดก็ยังตอบคำถามข้อถัดไปไม่ได้: ตัว "ผู้ประมวลผล" ตรงกลางของโปรแกรมนี้ไม่เคยสัญญาว่าจะถูกต้อง แล้วเราจะออกแบบระบบรอบสิ่งแบบนี้อย่างไรให้กล้ามอบงานจริงของร้านให้มันทำ</p>
+
+    <p>คำตอบของทั้งตอนอยู่ในชื่อที่เปเปอร์ตั้งให้แกนแบบนี้: <strong>อัจฉริยะที่พลาดเป็น</strong> (fallible savant) และวิศวกรรมที่ถูกต้องไม่ใช่การรอโมเดลรุ่นที่เลิกพลาด แต่คือการยกพฤติกรรมสี่อย่างของมัน — แต่งข้อเท็จจริง เก่งขรุขระ ความจำสั้น หูเบา — ขึ้นเป็น<em>สมมติฐานการออกแบบ</em>ที่ระบบต้องยืนอยู่ได้แม้ทั้งสี่ข้อเป็นจริงพร้อมกัน บวกอีกหนึ่งคุณสมบัติคือความมั่นใจที่เชื่อตามตัวเลขไม่ได้ แล้วสร้าง<strong>กรอบการรับประกันรอบระบบ</strong> (assurance envelope) ห้าองค์ประกอบล้อมแกนเอาไว้<sup><a href="#th-ref-1">[1]</a></sup> ภาระความถูกต้องไม่ได้หายไปไหน — มันย้ายจากใจกลางระบบออกไปอยู่ที่ขอบ ซึ่งเป็นที่ที่เราเขียนโค้ดเองได้และพิสูจน์ได้</p>
+
+    <h2 id="th-four-assumptions">1. สี่สมมติฐานการออกแบบ ไม่ใช่สี่ข้อบกพร่อง</h2>
+
+    <p>ประเด็นที่ต้องตั้งให้ตรงก่อนลงรายละเอียด: §4 ของเปเปอร์ไม่ได้เขียนรายการนี้เป็น "ข้อบกพร่องของโมเดลที่รอเวอร์ชันหน้ามาแก้" แต่เขียนเป็น<em>สมมติฐานการออกแบบ</em> — สิ่งที่วิศวกรต้องถือว่าจริงเสมอ แบบเดียวกับที่วิศวกรโยธาถือว่าเหล็กยืดเมื่อร้อน<sup><a href="#th-ref-1">[1]</a></sup> ไม่มีใครยืนด่าเหล็ก มีแต่คนออกแบบสะพานให้มีรอยต่อขยาย ตำแหน่งของสี่ข้อนี้ในเอกสารออกแบบจึงไม่ใช่หน้า "known issues" แต่เป็นหน้าเดียวกับ load assumptions ของงานโครงสร้าง</p>
+
+    <p>เหตุผลที่ต้องยกขึ้นเป็นสมมติฐานอยู่ในธรรมชาติของความผิดพลาดเอง: การรับประกันแบบ correctness-by-construction ของโลก Software 1.0 ส่งต่อมาไม่ได้ เพราะแกนถูกต้อง<em>ด้วยความน่าจะเป็น</em>บนการแจกแจงของงาน และเมื่อพลาด ความพลาดนั้น<em>ลื่นไหล</em> (fluent) — มั่นใจ เรียบเรียงดี และผิด<sup><a href="#th-ref-1">[1]</a></sup> ประโยคที่ผิดอ่านเหมือนประโยคที่ถูกทุกประการ การตรวจด้วยการอ่านผ่าน ๆ จึงเป็นการควบคุมที่ออกแบบมาแพ้ตั้งแต่ต้น และนี่คือเหตุผลที่เครื่องมือทั้งตอนนี้เป็นเรื่องของ<em>กลไก</em> ไม่ใช่ความขยันของคนรีวิว</p>
+
+    <h3>อาการแต่งข้อเท็จจริง (hallucination)</h3>
+
+    <p>สมมติฐานข้อแรก: ระบบต้องถือว่าโมเดลจะยืนยันความเท็จที่ฟังเข้าเค้า (plausible falsehood) ด้วยความถี่ที่ไม่เป็นศูนย์<sup><a href="#th-ref-1">[1]</a></sup> คำสำคัญของนิยามนี้คือ "ความถี่ไม่เป็นศูนย์" — ไม่ได้บอกว่าบ่อย ไม่ได้บอกว่าน้อย แต่บอกว่า<em>ไม่มีวันเป็นศูนย์</em> ต่อให้ retrieval แม่นแค่ไหน prompt เนี้ยบแค่ไหน วันหนึ่ง<strong>อาการแต่งข้อเท็จจริง</strong> (hallucination) จะทำให้น้องครามบอกลูกค้าว่าเปลี่ยนคืนได้ภายใน 30 วัน ทั้งที่ policy เขียนว่า 14 วัน — ด้วยน้ำเสียงเดียวกับวันที่ตอบถูกทุกตัวอักษร มาตรฐานอย่าง NIST AI 600-1 ก็ขึ้นบัญชีอาการนี้ (ในชื่อ confabulation) เป็นความเสี่ยงประจำตัวของ generative AI ที่องค์กรต้อง<em>บริหาร</em> ไม่ใช่รอให้หายเอง<sup><a href="#th-ref-5">[5]</a></sup></p>
+
+    <h3>ความสามารถขรุขระ (jagged intelligence)</h3>
+
+    <p>สมมติฐานข้อสอง: <strong>ความสามารถขรุขระ</strong> (jagged intelligence) — ความเก่งบนงาน A อนุมานไปยังงาน B ไม่ได้ ต่อให้สองงานดูใกล้กันแค่ไหนในสายตามนุษย์<sup><a href="#th-ref-1">[1]</a></sup> พื้นผิวความสามารถของโมเดลไม่ใช่ที่ราบ แต่เป็นเทือกเขา: ยอดสูงตรงนี้ เหวลึกติดกัน และเส้นแบ่งไม่ตรงกับสัญชาตญาณของเราว่างานไหน "ยาก"</p>
+
+    <p>เปเปอร์อ้างผลจาก τ-bench ไว้อย่างระบุขอบเขตชัดเจน: agent แบบ function-calling ที่ใช้ GPT-4o ตัวหนึ่งทำได้ราว 61.2% ที่ pass^1 บนงานร้านค้าปลีก แต่ราว 35.2% บนงานสายการบิน และบนงานร้านค้าปลีกเอง pass^8 — รันซ้ำแปดครั้งต้องผ่านทั้งแปด — ต่ำกว่า 25%<sup><a href="#th-ref-1">[1]</a><a href="#th-ref-2">[2]</a></sup> โปรดอ่านตัวเลขชุดนี้อย่างที่เปเปอร์กำกับไว้: มันเป็นผลของ<em>ระบบ</em>หนึ่งบน benchmark เฉพาะ ไม่ใช่ baseline สากลของโมเดลใด สิ่งที่มันสอนไม่ใช่ "GPT-4o ได้กี่เปอร์เซ็นต์" แต่คือรูปทรงของความสามารถ: ต่างกันเกือบเท่าตัวระหว่างสองโดเมนที่หน้าตาคล้ายกัน และความเสถียรเมื่อรันซ้ำต่ำกว่าคะแนนครั้งเดียวมาก — สองแกนที่ต้องวัดแยก และห้ามเดาข้าม</p>
+
+    <h3>ความจำสั้น (amnesia)</h3>
+
+    <p>สมมติฐานข้อสาม: <strong>ความจำสั้น</strong> (amnesia) — โมเดลไม่มีความจำใด ๆ นอก context window สิ่งที่มัน "จำได้" ในเทิร์นนี้คือสิ่งที่ถูกป้อนเข้าไปในเทิร์นนี้เท่านั้น ความต่อเนื่องของบทสนทนา ของงานที่ค้าง ของสัญญาที่ให้ลูกค้าไว้ เป็น<em>ความรับผิดชอบของแอปพลิเคชัน</em>ทั้งหมด<sup><a href="#th-ref-1">[1]</a></sup> ในเชิงสถาปัตยกรรม ข้อนี้แปลว่า "ความจำ" เป็นฟีเจอร์ที่เรา<em>สร้าง</em> ไม่ใช่ของแถมจากโมเดล และต้องถูก version ตรวจสอบ และทดสอบเหมือน state อื่นทุกตัว ทีมที่ข้ามข้อนี้จะเจออาการคลาสสิก: บอทรับปากลูกค้าไว้เมื่อวาน วันนี้ปฏิเสธว่าไม่เคยพูด — ไม่ใช่เพราะโมเดล "โกหก" แต่เพราะไม่มีใครป้อนคำพูดเมื่อวานกลับเข้าไป</p>
+
+    <h3>ความหูเบา (gullibility)</h3>
+
+    <p>สมมติฐานข้อสี่ และข้อเดียวที่เป็นเรื่องความปลอดภัยโดยตรง: <strong>ความหูเบา</strong> (gullibility) — คำสั่งกับข้อมูลใช้ช่องทางเดียวกัน ทุกอย่างคือ token ในบริบทเดียว ข้อความที่ถูกประดิษฐ์มาอย่างตั้งใจจึงทับพฤติกรรมที่เราตั้งใจไว้ได้<sup><a href="#th-ref-1">[1]</a></sup> งานของ Greshake และคณะสาธิตให้เห็นแล้วว่าเนื้อหาที่ถูกวางดักไว้ให้ระบบ "ไปอ่านเจอเอง" ทีหลัง — <strong>การฉีดคำสั่งแฝงทางอ้อม</strong> (indirect prompt injection) — ใช้เจาะแอปจริงที่ผูก LLM ได้ทั้งกระดาน<sup><a href="#th-ref-3">[3]</a></sup> สำหรับน้องคราม ทุก byte ที่มาจากลูกค้า จากข้อความที่ลูกค้าวางลงแชท หรือจากหน้า catalog ที่ retrieval ดึงมา คือข้อมูลที่<em>อาจถือมีดมาด้วย</em> — และการออกแบบต้องถือแบบนั้นตลอดเวลา ไม่ใช่เฉพาะสัปดาห์ที่มีข่าวการโจมตี</p>
+
+    <blockquote>💡 มุมมองของผม: กำไรที่เร็วที่สุดของการเปลี่ยนคำว่า "ข้อบกพร่อง" เป็น "สมมติฐาน" คือมันปิดการประชุมชนิดหนึ่งไปเลย — ประชุมที่มีคนพูดว่า "เดี๋ยวโมเดลรุ่นหน้าก็หายแล้ว" สมมติฐานไม่ใช่สิ่งที่รอให้หาย มันคือสิ่งที่ระบบต้องยืนได้แม้มันจริง ทีมที่เขียนสี่ข้อนี้ลงเอกสารออกแบบตั้งแต่สัปดาห์แรกจะไม่ต้องเถียงเรื่องเดิมซ้ำทุกไตรมาส และรีวิวสถาปัตยกรรมจะสั้นลงอย่างน่าประหลาดใจ เพราะคำถามเปลี่ยนจาก "มันจะพลาดไหม" เป็น "พลาดแล้วชนอะไร"</blockquote>
+
+    <h2 id="th-calibration-envelope">2. ความแม่นของความมั่นใจ และภาระที่ย้ายไปที่ขอบ</h2>
+
+    <p>ยังมีคุณสมบัติที่ห้าที่เปเปอร์วางแยกจากสี่สมมติฐาน: <strong>ความแม่นของความมั่นใจ</strong> (calibration) — gate ที่ route งานตามคำพูดของโมเดลว่า "มั่นใจ 90%" จะสมเหตุสมผลก็ต่อเมื่อ ในบรรดาครั้งที่โมเดลพูดแบบนั้น มันถูกจริง 90% และความมั่นใจดิบของโมเดลมักไม่ผ่านเงื่อนไขนี้ — mis-calibrated — quality gate จึงต้องพึ่ง<em>การประเมินอิสระ</em> ไม่ใช่การประเมินตัวเองของโมเดล<sup><a href="#th-ref-1">[1]</a></sup> ประโยคนี้ฟังเรียบ ๆ แต่มันตัดสถาปัตยกรรมยอดนิยมทิ้งไปหนึ่งแบบเต็ม ๆ: ระบบที่ให้โมเดลให้คะแนนความมั่นใจตัวเอง แล้วใช้คะแนนนั้นเลือกว่าจะส่งต่อมนุษย์หรือไม่ กำลังสร้างประตูที่ยามเฝ้าเป็นคนเดียวกับคนที่ขอผ่าน</p>
+
+    <h3>ภาระการรับประกันไม่ได้หายไป — มันย้ายที่</h3>
+
+    <p>เมื่อถือสี่สมมติฐานบวก calibration พร้อมกัน ข้อสรุปของ §4 ตามมาอย่างเลี่ยงไม่ได้: เราพิสูจน์ความถูกต้อง<em>จากภายใน</em>ตัว generator ไม่ได้ แต่ความถูกต้องก็ไม่ได้ถูกแทนที่ด้วยการยอมแพ้ สิ่งที่เกิดขึ้นคือ<em>การกระจายภาระใหม่</em>: ภาระการรับประกันย้ายจากใจกลาง (ตัวโมเดล ซึ่งเราแก้ไขไม่ได้และพิสูจน์ไม่ได้) ไปอยู่ที่ขอบของระบบ (ซึ่งเราสร้างเอง ทดสอบได้ และพิสูจน์ได้)<sup><a href="#th-ref-1">[1]</a></sup> โมเดลยังคงเป็นแหล่งของความสามารถ แต่ขอบของระบบกลายเป็นแหล่งของความน่าเชื่อถือ</p>
+
+    <h3>ห้าองค์ประกอบของกรอบการรับประกันรอบระบบ</h3>
+
+    <p>เปเปอร์นิยาม envelope ของระบบที่มี AI เป็นแกนไว้เป็นห้าองค์ประกอบ ล้อมรอบ generator<sup><a href="#th-ref-1">[1]</a></sup></p>
+
+    <ul>
+        <li><strong>Versioned context assembly</strong> — การประกอบบริบทที่มีเวอร์ชันกำกับ: ทุกสิ่งที่เข้าโมเดลมาจาก artifact ที่ pin ไว้ และตรวจย้อนได้ว่าเทิร์นนี้ประกอบขึ้นจากอะไร — รากที่ตอนที่ 4 วางไว้แล้ว</li>
+        <li><strong>Hard mediation of effectful actions</strong> — ทุก action ที่มีผลจริงต่อโลกภายนอกต้องผ่านตัวกลางเชิงโครงสร้างนอกโมเดล ครบทุกเส้นทาง ไม่มีทางลัด</li>
+        <li><strong>Calibrated semantic evaluation</strong> — การประเมินเชิงความหมายด้วยตัวประเมินอิสระที่รู้อัตราพลาดของตัวเองบนประชากรที่ประกาศ ไม่ใช่ความรู้สึกของโมเดลต่อผลงานตัวเอง</li>
+        <li><strong>Complete decision tracing</strong> — <strong>ร่องรอยการตัดสินใจ</strong> (decision trace) ครบทุก request ทุกเส้นทาง รวมเส้นทางที่ล้มเหลว เพื่อให้ทุกเหตุการณ์สร้างซ้ำเชิงหลักฐานได้</li>
+        <li><strong>Risk-proportionate fallback</strong> — เส้นทางสำรองที่ได้สัดส่วนกับความเสี่ยง: งานอ่านอย่างเดียวอาจแค่ติดป้ายเตือน แต่งานที่ย้อนกลับไม่ได้ต้องหยุดรอมนุษย์</li>
+    </ul>
+
+    <figure class="figure">
+      <a href="../images/ai-core-fig-05-savant.png">
+        <img class="figure__img" src="../images/ai-core-fig-05-savant.png" alt="วงกลมแกนโมเดลล้อมด้วยกรอบการรับประกันรอบระบบ พร้อมแผ่นป้ายสี่สมมติฐาน hallucination, jagged intelligence, amnesia, gullibility และมาตรวัด calibration หนึ่งเรือน" width="1400" height="840" loading="lazy" decoding="async">
+      </a>
+      <figcaption class="figure__caption">ออกแบบ envelope จากสี่สมมติฐานบวก calibration — สิ่งเหล่านี้เป็นคุณสมบัติของแกน ไม่ใช่ข้อบกพร่องที่รอแพตช์</figcaption>
+    </figure>
+
+    <p>และประโยคที่ห้ามตัดทิ้งจากนิยามนี้: งาน envelope <em>จำเป็น</em> แต่<em>ไม่ใช่สิ่งทดแทน</em>การปรับปรุงแกน — การเลือกโมเดล การคัดข้อมูล การสอบเทียบ การตั้ง decoding และสถาปัตยกรรม ล้วนเปลี่ยนความน่าเชื่อถือของแกนได้จริง คำถามที่ถูกต้องคือ<em>การจัดสรรความพยายาม</em> ไม่ใช่การเลือกข้างใดข้างหนึ่ง<sup><a href="#th-ref-1">[1]</a></sup> envelope ไม่ใช่ข้ออ้างให้เลิกดูแลแกน และแกนที่เก่งขึ้นก็ไม่ใช่ข้ออ้างให้ถอด envelope — ขั้นที่ 6 ข้างล่างจะทำให้การจัดสรรนี้เป็นตารางที่กรอกได้จริง</p>
+
+    <h2 id="th-seven-steps">3. ลงมือทำ 7 ขั้น</h2>
+
+    <p>เจ็ดขั้นต่อไปนี้แปลงหัวข้อ 1 กับ 2 ให้เป็นงานที่ทำจบได้ในหนึ่งถึงสองสัปดาห์ ทุกขั้นจบด้วยความคืบหน้าหนึ่งก้าวของน้องคราม และปลายทางของทั้งเจ็ดขั้นคือ artifact สองชิ้นในหัวข้อ <a href="#th-kramkraft">4</a></p>
+
+    <h3>ขั้นที่ 1 — ออกแบบรับอาการแต่งข้อเท็จจริง: บังคับชี้แหล่งระดับ span</h3>
+
+    <p>กำหนดเป็นกติกาของระบบ ไม่ใช่คำขอร้องใน prompt: ทุกข้อความที่อ้างข้อเท็จจริง — เงื่อนไข นโยบาย คุณสมบัติสินค้า ตัวเลข — ต้องผูกกับแหล่งใน corpus ในระดับ span ว่าประโยคไหนมาจาก passage ไหน และ claim ที่ไม่มีแหล่งรองรับต้องถูก<em>กักไว้</em> (withhold) หรือติดป้ายว่ายังไม่ยืนยัน ก่อนถึงมือลูกค้าเสมอ<sup><a href="#th-ref-1">[1]</a></sup> เหตุผลกลับไปที่สมมติฐานข้อแรกตรง ๆ: เมื่อความเท็จที่ฟังเข้าเค้ามาแน่ด้วยความถี่ไม่เป็นศูนย์ ตัวกรองต้องทำงานกับ<em>ทุก</em>คำตอบ ไม่ใช่เฉพาะคำตอบที่ "ดูแปลก" รูปคำตอบภายในของน้องครามจึงเป็นแบบนี้:</p>
+
+    <pre><code># รูปคำตอบภายในของน้องคราม — ทุก span ที่อ้างข้อเท็จจริงต้องชี้แหล่ง
+{
+  "answer_spans": [
+    { "text": "เปลี่ยนคืนได้ภายใน 14 วันหลังรับสินค้า",
+      "source": "policy/returns.md#จุดที่-2" },
+    { "text": "แจกันใบนี้เคลือบครามธรรมชาติ เผาที่ 1,230 องศา",
+      "source": "catalog/vase-kk58.md#รายละเอียด" },
+    { "text": "ปกติร้านคืนเงินภายใน 3 วันทำการ",
+      "source": null }   // ไม่มีแหล่ง → ห้ามปล่อยเฉย ๆ: ตัดทิ้ง หรือติดป้าย "ยังไม่ยืนยัน"
+  ]
+}</code></pre>
+
+    <h3>ขั้นที่ 2 — ออกแบบรับความสามารถขรุขระ: ประกาศ slice แล้ววัดต่อ slice</h3>
+
+    <p>เขียนรายการชนิดงาน (slice) ของแอปคุณลงเอกสารให้เป็นทางการ แล้วสร้าง<strong>ชุดทดสอบทองคำ</strong> (golden set) แยกต่อ slice พร้อมเกณฑ์ผ่านของแต่ละ slice — และห้ามอนุมานความเก่งข้าม slice เด็ดขาด ต่อให้สอง slice ดูเหมือนกันแค่ไหน<sup><a href="#th-ref-1">[1]</a></sup> บทเรียน retail/airline ในหัวข้อ 1 คือเหตุผลทั้งหมดของขั้นนี้: ระบบเดียวกัน โดเมนคล้ายกัน ผลต่างเกือบเท่าตัว slice แรกของน้องคราม (ตัวเลขชุดทดสอบเป็นของบทเรียนนี้ ไม่ใช่ของเปเปอร์):</p>
+
+    <ul>
+        <li><strong>order-status</strong> — สถานะออเดอร์ พัสดุ เวลาส่ง · golden 40 เคส · เกณฑ์ผ่าน 95%</li>
+        <li><strong>return-policy</strong> — เงื่อนไขเปลี่ยน/คืนสินค้า · golden 30 เคส · เกณฑ์ผ่าน 97% เพราะเป็น slice ที่ผิดแล้วแพงที่สุด</li>
+        <li><strong>product-info</strong> — เนื้อดิน เคลือบคราม ขนาด การดูแล · golden 30 เคส · เกณฑ์ผ่าน 90%</li>
+        <li><strong>refund-request</strong> — ยอดเงินและการเข้าเงื่อนไข · golden 20 เคส · <em>วัดอย่างเดียว ไม่มีเกณฑ์ปล่อยอัตโนมัติ</em> — ผลจริงถูกกั้นด้วย guard เสมอ</li>
+    </ul>
+
+    <h3>ขั้นที่ 3 — ออกแบบรับความจำสั้น: ย้ายความต่อเนื่องออกนอกโมเดล</h3>
+
+    <p>สร้างที่เก็บ state ของ session เป็นของแอปเอง แล้วให้ assembly function จากตอนที่ 4 เติมมันกลับเข้า context ใหม่ทุกเทิร์น — อย่าสันนิษฐานแม้แต่เทิร์นเดียวว่าโมเดล "น่าจะยังจำได้"<sup><a href="#th-ref-1">[1]</a></sup> ข้อดีที่ได้ฟรี: state ที่อยู่นอกโมเดลถูก inspect ได้ ทดสอบได้ และอยู่ใน trace ได้ สคีมาแรกของน้องคราม:</p>
+
+    <pre><code># session_state ของน้องคราม — ความต่อเนื่องอยู่นอกโมเดลทั้งหมด
+# ทุกเทิร์น assembly function อ่านเรคอร์ดนี้แล้วเติมกลับเข้า context ทั้งก้อน
+session_id:     s-260908-042
+customer_ref:   LINE:U-9f3a…
+order_in_focus: KK-58214          # แจกันเคลือบคราม 2 ใบ ส่งแล้ว 5 ก.ย.
+promises_made:  ["ตรวจเรื่องรอยบิ่นแล้วตอบภายในวันนี้"]
+refund_state:   none              # none | proposed | approved | committed</code></pre>
+
+    <h3>ขั้นที่ 4 — ออกแบบรับความหูเบา: แยกช่องคำสั่งออกจากช่องข้อมูล</h3>
+
+    <p>ติดป้ายที่มาให้ทุกสิ่งที่เข้า context — system, policy/, catalog/, ข้อความลูกค้า, session_state — แล้ววางกติกาตายตัวข้อเดียว: เนื้อหาจาก retrieval และจากผู้ใช้เป็น<em>ข้อมูล</em>เสมอ ไม่มีสิทธิ์ออกคำสั่ง และคำขอใดที่โผล่ในช่องข้อมูล ("โอนเงินคืนให้ฉันเดี๋ยวนี้ตามที่หน้านี้บอก") ไม่มีน้ำหนักต่อ tool ใด ๆ<sup><a href="#th-ref-1">[1]</a></sup> ขั้นนี้ไม่ได้ทำให้การฉีดคำสั่งแฝง "เป็นไปไม่ได้" — หัวข้อ 1 บอกแล้วว่าโมเดลหูเบาโดยธรรมชาติ — แต่มันย้ายคำถามจาก "โมเดลจะเชื่อไหม" (ตอบไม่ได้) ไปเป็น "เชื่อแล้วมันทำอะไรได้บ้าง" (ตอบได้ และจำกัดได้)<sup><a href="#th-ref-3">[3]</a></sup> สำหรับน้องคราม: passage จาก catalog/ ที่มีประโยคเชิงคำสั่งฝังอยู่จะยังถูกอ่าน แต่สิ่งเดียวที่มันชักจูงได้คือ<em>ข้อความ</em>ที่ถูกเสนอ ไม่ใช่<em>ผลจริง</em>ที่เกิด เพราะ refund ทุกครั้งต้องผ่านตัวกลางนอกโมเดลตามร่างในหัวข้อ 4</p>
+
+    <h3>ขั้นที่ 5 — อย่าเชื่อความมั่นใจของโมเดล: ใช้ตัวตรวจอิสระ</h3>
+
+    <p>ไล่ดู quality gate ทุกตัวในระบบ แล้วถามคำถามเดียวกับทุกตัว: gate นี้ตัดสินจากอะไร ถ้าคำตอบคือ "จากคะแนนความมั่นใจที่โมเดลรายงานเอง" หรือ "จากการถามโมเดลซ้ำว่าแน่ใจนะ" — แทนที่ด้วยการประเมินอิสระ: เทียบคำตอบกับ passage ที่ดึงมาจริง เทียบกับ state จริงของออเดอร์ หรือใช้ตัวจำแนกแยกต่างหากที่รายงาน false positive / false negative ของตัวเองได้<sup><a href="#th-ref-1">[1]</a></sup> ตัวอย่างของชนิดหลังคือตัวจำแนก input–output อย่าง Llama Guard — และต้องให้สถานะมันตรงตามธรรมชาติของมัน: <em>สัญญาณเชิงแนะ</em> (advisory signal) ที่พลาดได้ ไม่ใช่ผู้รับประกัน<sup><a href="#th-ref-4">[4]</a></sup> สำหรับน้องคราม gate เดิม "ถ้าโมเดลมั่นใจต่ำให้ส่งต่อแอดมิน" ถูกแทนด้วย faithfulness check เทียบ answer_spans จากขั้นที่ 1 กับ passage จริง — เพราะความมั่นใจ 95% ที่ไม่ผ่านการสอบเทียบ ไม่ได้บอกอะไรเราเลยนอกจากอารมณ์ของตัวเลข</p>
+
+    <h3>ขั้นที่ 6 — จัดสรรงบ core กับ envelope ตามโปรไฟล์ความเสี่ยงของคุณ</h3>
+
+    <p>เวลาและเงินมีจำกัด และ §4 พูดเรื่องนี้ชัด: นี่คือคำถามการจัดสรร ไม่ใช่การเลือกข้าง — การปรับปรุงแกน (โมเดลดีขึ้น ข้อมูลสะอาดขึ้น สอบเทียบ ตั้ง decoding) เปลี่ยนความน่าเชื่อถือได้จริง และงาน envelope ก็จำเป็นเสมอ คำถามคือเทความพยายามตรงไหนเท่าไร ต่อ<em>ชนิดผลกระทบ</em>ของแต่ละเส้นทางงาน<sup><a href="#th-ref-1">[1]</a></sup> การจัดสรรของน้องคราม (การแบ่งของผมสำหรับบทเรียนนี้ ไม่ใช่สูตรของเปเปอร์):</p>
+
+    <div class="table-wrapper">
+        <table>
+            <thead>
+                <tr>
+                    <th>เส้นทางงาน</th>
+                    <th>ชนิดผลกระทบ</th>
+                    <th>งบฝั่ง core</th>
+                    <th>งบฝั่ง envelope</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td><strong>product-info</strong></td>
+                    <td>อ่านอย่างเดียว</td>
+                    <td>สูง — คัด catalog/ ให้ครบ ถูก และสดใหม่ เพราะคุณภาพคำตอบมาจาก corpus ตรง ๆ</td>
+                    <td>พอประมาณ — attribution จากขั้นที่ 1 บวกป้าย "ยังไม่ยืนยัน"</td>
+                </tr>
+                <tr>
+                    <td><strong>order-status</strong></td>
+                    <td>อ่านข้อมูลส่วนบุคคล</td>
+                    <td>ปานกลาง — retrieval ต้องผูกกับออเดอร์ที่ถูกต้อง</td>
+                    <td>สูง — ผูกตัวตนลูกค้ากับ session และเก็บ trace ครบ</td>
+                </tr>
+                <tr>
+                    <td><strong>refund</strong></td>
+                    <td>ย้อนกลับไม่ได้ตั้งแต่ payment processor รับคำสั่ง</td>
+                    <td>ต่ำ — โมเดลเก่งขึ้นไม่ได้เปลี่ยนราคาของความพลาดครั้งเดียว</td>
+                    <td>สูงสุด — guard นอกโมเดล + คนอนุมัติ + trace ทุกเส้นทาง</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <blockquote>💡 มุมมองของผม: ฮิวริสติกที่ผมใช้ตัดสินเร็ว ๆ คือ ยิ่งผลกระทบย้อนกลับไม่ได้ งบยิ่งไหลไปฝั่ง envelope — เพราะแกนที่เก่งขึ้นลด<em>ความถี่</em>ของความพลาด แต่ envelope ลด<em>ราคา</em>ของความพลาด และสำหรับผลที่ย้อนกลับไม่ได้ ราคาแค่ครั้งเดียวก็เกินรับไหวแล้ว</blockquote>
+
+    <h3>ขั้นที่ 7 — ร่าง envelope ของคุณเอง: ห้าองค์ประกอบ อย่างละหนึ่งบรรทัด</h3>
+
+    <p>ปิดท้ายด้วยงานเขียนที่สั้นที่สุดแต่คุ้มที่สุดของตอนนี้: เขียนห้าองค์ประกอบของ envelope สำหรับ<em>แอปของคุณ</em> อย่างละหนึ่งบรรทัด ยังไม่ต้องมีโค้ด แค่ตอบว่าแต่ละองค์ประกอบ "คืออะไร อยู่ตรงไหน" ในระบบของคุณ โดยใช้ห้าคำถามนี้เป็นโครง:</p>
+
+    <ul>
+        <li>บริบทของฉันประกอบขึ้นจากอะไร และถูก pin ไว้ที่ไหน — versioned context assembly</li>
+        <li>action ที่มีผลจริงของฉันมีอะไรบ้าง และตัวกลางที่ทุกเส้นทางต้องผ่านคือชิ้นไหน — hard mediation</li>
+        <li>คุณภาพเชิงความหมายของฉันวัดด้วยตัวประเมินอิสระตัวไหน บนประชากรอะไร — calibrated semantic evaluation</li>
+        <li>request หนึ่งชุดของฉันทิ้งร่องรอยอะไรไว้ และเส้นทางล้มเหลวถูกบันทึกด้วยหรือไม่ — complete decision tracing</li>
+        <li>เมื่อระบบไม่แน่ใจหรือพัง งานไหลไปที่ใคร พร้อมข้อมูลประกอบอะไร — risk-proportionate fallback</li>
+    </ul>
+
+    <p>ฉบับที่กรอกเสร็จของน้องครามอยู่เต็ม ๆ ในหัวข้อถัดไป</p>
+
+    <h2 id="th-kramkraft">4. Artifact — ตารางตรวจสมมติฐานของน้องคราม</h2>
+
+    <p>Artifact ของตอนนี้มีสองชิ้น เก็บใน repo เดียวกับโค้ดตามวินัย "ทุกอย่างคือโปรแกรม" ของตอนที่ 4: <code>docs/savant-audit.md</code> ตารางตรวจสมมติฐานการออกแบบ และ <code>docs/envelope-sketch.md</code> ร่าง envelope ฉบับแรก เริ่มที่ตารางก่อน — หนึ่งแถวต่อหนึ่งสมมติฐาน อ่านซ้ายไปขวา: มันกัดแอปนี้ตรงไหน เราออกแบบรับอย่างไร และองค์ประกอบไหนของ envelope แบกภาระแถวนั้น</p>
+
+    <div class="table-wrapper">
+        <table>
+            <thead>
+                <tr>
+                    <th>สมมติฐาน</th>
+                    <th>จุดที่กัดแอปนี้</th>
+                    <th>การออกแบบรับ</th>
+                    <th>องค์ประกอบ envelope ที่รับภาระ</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td><strong>แต่งข้อเท็จจริง</strong></td>
+                    <td>เงื่อนไขคืนสินค้าและค่าส่งที่ "ฟังเข้าเค้า" แต่ไม่มีใน policy/</td>
+                    <td>บังคับ answer_spans ชี้แหล่งทุก claim — ไม่มีแหล่งคือกักหรือติดป้าย</td>
+                    <td>Calibrated semantic evaluation + fallback</td>
+                </tr>
+                <tr>
+                    <td><strong>เก่งขรุขระ</strong></td>
+                    <td>ตอบ product-info ได้สวย จึงถูกเหมาว่าคิดยอด refund ได้ด้วย</td>
+                    <td>สี่ slice แยกชุดทดสอบ แยกเกณฑ์ — ไม่มีการเหมาข้าม slice</td>
+                    <td>Calibrated semantic evaluation (ต่อ slice)</td>
+                </tr>
+                <tr>
+                    <td><strong>ความจำสั้น</strong></td>
+                    <td>ลูกค้าคุยข้ามวัน สลับสองออเดอร์ในแชทเดียว</td>
+                    <td>session_state นอกโมเดล เติมกลับเข้า context ทุกเทิร์น</td>
+                    <td>Versioned context assembly</td>
+                </tr>
+                <tr>
+                    <td><strong>หูเบา</strong></td>
+                    <td>ข้อความที่ลูกค้าวางในแชท และประโยคฝังใน passage ที่ดึงมา</td>
+                    <td>ป้ายที่มาต่อ passage + กติกา "ช่องข้อมูลสั่งอะไรไม่ได้"</td>
+                    <td>Hard mediation of effectful actions</td>
+                </tr>
+                <tr>
+                    <td><strong>ความมั่นใจไม่แม่น</strong></td>
+                    <td>"มั่นใจ 95%" ของโมเดลใช้ route งานจริงไม่ได้</td>
+                    <td>ทุก gate ใช้ตัวประเมินอิสระ ส่วนที่ไม่ชัดส่งต่อมนุษย์</td>
+                    <td>Risk-proportionate fallback + decision tracing</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <p>ข้อสังเกตหนึ่งจากตาราง: ไม่มีแถวไหนเลยที่ช่อง "การออกแบบรับ" เขียนว่า "ปรับ prompt ให้เข้มขึ้น" — prompt ที่ดีช่วยลดความถี่ของปัญหา แต่ไม่มีแถวไหนฝากชีวิตไว้กับมัน และเมื่อรวมคอลัมน์สุดท้ายทั้งห้าแถว จะได้องค์ประกอบของ envelope ครบห้าพอดี นั่นไม่ใช่เหตุบังเอิญ: envelope ที่ §4 นิยามคือคำตอบเชิงโครงสร้างของสมมติฐานชุดนี้นั่นเอง<sup><a href="#th-ref-1">[1]</a></sup></p>
+
+    <h3>ร่าง envelope ฉบับแรก — แผนภาพด้วยถ้อยคำ</h3>
+
+    <pre><code># docs/envelope-sketch.md — ร่าง envelope ของน้องคราม v0 (ตอนที่ 6 แปลงเป็นโค้ดจริง)
+
+[1] Versioned context assembly
+    assemble_context() อ่านทุกพจน์จาก release manifest ของตอนที่ 4
+    ทุก passage ติดป้ายที่มา: system | policy/ | catalog/ | user | session_state
+
+[2] Hard mediation of effectful actions
+    refund(order_id, amount, reason) เรียกได้เส้นทางเดียว: ผ่าน refund_guard นอกโมเดล
+    guard ตรวจ schema วงเงิน สถานะออเดอร์ และกันทำซ้ำ — ปฏิเสธเป็นค่าตั้งต้น
+
+[3] Calibrated semantic evaluation
+    faithfulness check เทียบ answer_spans กับ passage ที่ดึงมาจริง แยกต่อ slice
+    ห้ามมี gate ใดถามโมเดลว่า "แน่ใจไหม" — ใช้ตัวประเมินอิสระเท่านั้น
+
+[4] Complete decision tracing
+    ทุก request จบด้วย trace หนึ่งชุด: context ที่ประกอบ, candidate, คำตัดสินราย gate,
+    เส้นทางที่เลือก (release / withhold / escalate) — รวมเส้นทางที่ล้มเหลว
+
+[5] Risk-proportionate fallback
+    ตอบไม่ได้หรือหลักฐานอ่อน → ส่งต่อแอดมินร้านพร้อม trace
+    refund ทุกกรณี → หยุดรอคนอนุมัติ (ระดับ autonomy ค่อยขยับในตอนที่ 10)</code></pre>
+
+    <p>ไฟล์นี้เป็น "แผนภาพด้วยถ้อยคำ" โดยเจตนา — ยังไม่มีโค้ดสักบรรทัด แต่การตัดสินใจครบทุกข้อที่โค้ดต้องเคารพอยู่ในนี้แล้ว ตอนที่ 6 จะหยิบไฟล์นี้ขึ้นมาแล้วเขียนฟังก์ชันลูปควบคุมตามมันทีละองค์ประกอบ</p>
+
+    <h2 id="th-validation-check">5. Validation check — ตรวจแอปของคุณก่อนไปต่อ</h2>
+
+    <p>กติกาเดิมของซีรีส์: ทุกข้อต้องตอบด้วย artifact ที่ชี้ได้และเปิดดูได้ ไม่ใช่คำคุณศัพท์ ถ้าข้อไหนยังไม่ผ่าน คอลัมน์ขวาสุดบอกว่าต้องย้อนกลับไปขั้นไหน</p>
+
+    <div class="table-wrapper">
+        <table>
+            <thead>
+                <tr>
+                    <th>คำถาม</th>
+                    <th>ผ่านเมื่อ</th>
+                    <th>artifact ที่พิสูจน์</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>สี่สมมติฐานถูกเขียนเป็นภาษาของแอปคุณแล้วหรือยัง</td>
+                    <td>มีครบทั้งสี่บวก calibration และระบุจุดที่กัดจริงของแอปคุณเอง</td>
+                    <td><code>docs/savant-audit.md</code> ฉบับของแอปคุณ (หัวข้อ 4)</td>
+                </tr>
+                <tr>
+                    <td>claim ที่ไม่มีแหล่งรองรับ หลุดถึงผู้ใช้ได้หรือไม่</td>
+                    <td>ไม่ได้ — ถูกกักหรือติดป้ายโดยกลไก ไม่ใช่โดยการขอร้องใน prompt</td>
+                    <td>สคีมา answer_spans + เทสต์เคสที่ source เป็น null (ขั้นที่ 1)</td>
+                </tr>
+                <tr>
+                    <td>slice ถูกประกาศ และมีเกณฑ์ของตัวเองครบหรือยัง</td>
+                    <td>ทุก slice มี golden set และเกณฑ์ผ่านแยกกัน ไม่มีการเหมาข้าม</td>
+                    <td>golden-set manifest รายชื่อ slice พร้อมเกณฑ์ (ขั้นที่ 2)</td>
+                </tr>
+                <tr>
+                    <td>ความต่อเนื่องของบทสนทนาอยู่นอกโมเดลจริงหรือไม่</td>
+                    <td>ปิด process แล้วเปิดใหม่ บทสนทนาเดินต่อได้จาก state ที่เก็บไว้</td>
+                    <td>สคีมา session_state + โค้ด assembly ที่เติม state กลับ (ขั้นที่ 3)</td>
+                </tr>
+                <tr>
+                    <td>ทุกสิ่งใน context มีป้ายบอกที่มาหรือไม่</td>
+                    <td>ทุก passage ระบุ channel และไม่มี channel ข้อมูลใดสั่ง tool ได้</td>
+                    <td>บันทึกการประกอบบริบทหนึ่งเทิร์นที่ป้ายครบทุกก้อน (ขั้นที่ 4)</td>
+                </tr>
+                <tr>
+                    <td>มี gate ตัวไหนพึ่งความมั่นใจที่โมเดลรายงานเองหรือไม่</td>
+                    <td>ไม่มี — ทุก gate ระบุตัวประเมินอิสระของตัวเองได้</td>
+                    <td>รายการ gate ทั้งหมดพร้อมตัวประเมินของแต่ละตัว (ขั้นที่ 5)</td>
+                </tr>
+                <tr>
+                    <td>งบ core/envelope ถูกตัดสินต่อชนิดผลกระทบแล้วหรือยัง</td>
+                    <td>ทุกเส้นทางงานมีแถวการจัดสรรของตัวเอง และเส้นทางย้อนกลับไม่ได้เทไปฝั่ง envelope</td>
+                    <td>ตารางจัดสรร (ขั้นที่ 6) + <code>docs/envelope-sketch.md</code> (ขั้นที่ 7)</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <p>เกณฑ์รวมของตอนนี้ง่ายมาก: ถ้าเจ็ดแถวนี้เขียวหมด แอปของคุณมีคำตอบเชิงโครงสร้างต่อสมมติฐานทั้งห้าแล้ว — สิ่งที่ยังไม่มีคือเครื่องที่เอาคำตอบพวกนี้มาเรียงเป็นลำดับการทำงานจริง และนั่นคือตอนถัดไป</p>
+
+    <h2 id="th-road-ahead">6. ก้าวต่อไป</h2>
+
+    <p>ตอนนี้เปลี่ยนสถานะของความพลาดจาก "เรื่องที่ไม่มีใครอยากพูดในห้องประชุม" เป็นข้อกำหนดการออกแบบ: เราถือว่าโมเดลแต่งข้อเท็จจริงเป็น เก่งขรุขระ จำอะไรไม่ได้ และหูเบา — พร้อมกันตลอดเวลา — และถือว่าความมั่นใจของมันยังเชื่อตามตัวเลขไม่ได้จนกว่าจะถูกสอบเทียบ จากสมมติฐานทั้งชุด เราได้ envelope ห้าองค์ประกอบ ตารางตรวจของน้องครามหนึ่งใบ และร่าง envelope หนึ่งไฟล์ที่พร้อมกลายเป็นโค้ด</p>
+
+    <p>สิ่งที่ตอนนี้<em>จงใจ</em>ยังไม่ตอบ: ตัว<em>ลูป</em>เอง — ห้าองค์ประกอบนี้เรียงกันอย่างไรในหนึ่ง request ตรวจอะไร<em>ก่อน</em> generate อนุมัติ tool call ที่จุดไหน ตัดสินใจปล่อย กัก หรือส่งต่อด้วยเกณฑ์อะไร และทำไม trace ต้องถูกเขียน<em>แม้ในเส้นทางที่พัง</em> — ทั้งหมดนั้นคือ reference control loop ของเปเปอร์ และเป็นเนื้อหาเต็มตอนของ <a href="/blog/ai-core-control-loop">ตอนที่ 6</a></p>
+
+    <div class="alert info">
+        <strong>🧭 ตอนต่อไป:</strong> <a href="/blog/ai-core-control-loop">#6 Specify → Constrain → Generate → Verify — วงจรพัฒนายุค AI-Core</a> — หยิบ <code>docs/envelope-sketch.md</code> ของวันนี้ไปแปลงเป็นฟังก์ชันจริงทีละท่อน: precheck ที่ปฏิเสธก่อนถึงโมเดล execution guard ก่อนเกิดผลจริง เกณฑ์ตัดสินก่อนปล่อย และ trace ที่เขียนครบทุกเส้นทางรวมทั้งตอนพัง</div>
+
+    <div class="key-takeaways">
+        <h3>🎯 Key Takeaways</h3>
+        <ul>
+            <li><strong>อัจฉริยะที่พลาดเป็น</strong> (fallible savant) = แกนที่ความสามารถสูงแต่ถูกต้องด้วยความน่าจะเป็น — และความพลาดของมัน fluent: มั่นใจ เรียบเรียงดี และผิด</li>
+            <li><strong>สี่สมมติฐานการออกแบบ</strong> = แต่งข้อเท็จจริงด้วยความถี่ไม่เป็นศูนย์ · เก่งบน A อนุมานไป B ไม่ได้ · ไม่มีความจำนอก context window · คำสั่งกับข้อมูลอยู่ช่องเดียวกัน</li>
+            <li><strong>ความแม่นของความมั่นใจ</strong> (calibration) = gate ที่ route ตาม "มั่นใจ 90%" ใช้ได้ต่อเมื่อโมเดลถูกจริง 90% ในครั้งที่พูดแบบนั้น — จึงต้องใช้ตัวประเมินอิสระเสมอ</li>
+            <li><strong>กรอบการรับประกันรอบระบบ</strong> = versioned context assembly · hard mediation · calibrated semantic evaluation · complete decision tracing · risk-proportionate fallback</li>
+            <li><strong>การกระจายภาระใหม่</strong> = ความถูกต้องไม่ได้ถูกแทนที่ — ภาระการรับประกันย้ายจากใจกลางที่พิสูจน์ไม่ได้ ไปอยู่ที่ขอบซึ่งเราสร้างเองและพิสูจน์ได้</li>
+            <li><strong>การจัดสรร ไม่ใช่การเลือกข้าง</strong> = envelope จำเป็นแต่ไม่แทนการปรับปรุงแกน — ยิ่งผลกระทบย้อนกลับไม่ได้ งบยิ่งไหลไปฝั่ง envelope</li>
+        </ul>
+    </div>
+
+    <section class="references" aria-labelledby="th-references">
+        <h2 id="th-references">อ้างอิง</h2>
+        <p class="references__note">ตรวจสอบทุกแหล่งเมื่อ 8 กันยายน 2026 (เวลาประเทศไทย) · ป้ายหลักฐานสี่แบบ: <strong>Law</strong> ตัวบทกฎหมายหรือประกาศทางการ · <strong>Standard</strong> มาตรฐานหรือกรอบทางการที่เผยแพร่แล้ว · <strong>Study</strong> งานวิจัยหรือสัญญาณภาคสนาม · <strong>Synthesis</strong> การสังเคราะห์ของผู้เขียนหรือแหล่งที่ไม่ใช่งานวิจัย</p>
+        <ol class="references__list">
+            <li id="th-ref-1"><span class="ref-tag ref-tag--synthesis">Synthesis</span> Anirach Mingkhwan. <cite>Engineering AI-Core Systems: A Reference Architecture and Assurance Contract for Software 3.0</cite> — CreativeLAB, FITM, KMUTNB, 2026. เอกสารที่ผู้เขียนจัดหาให้ ยังไม่ตีพิมพ์ ไม่มี URL สาธารณะ จึงไม่มีลิงก์และไม่มีวันเข้าถึง. <span class="ref-supports">รองรับ: สี่สมมติฐานการออกแบบและนิยามรายข้อ ความพลาดแบบ fluent คุณสมบัติ calibration และข้อกำหนดให้ quality gate ใช้การประเมินอิสระ การกระจายภาระการรับประกันไปที่ขอบ ห้าองค์ประกอบของ assurance envelope ประโยคว่า envelope จำเป็นแต่ไม่ใช่สิ่งทดแทนการปรับปรุงแกน และบริบทที่เปเปอร์อ้างตัวเลข τ-bench พร้อมขอบเขต — ทั้งหมดจาก §4</span></li>
+            <li id="th-ref-2"><span class="ref-tag ref-tag--study">Study</span> Yao, S., Shinn, N., Razavi, P., Narasimhan, K. <cite>τ-bench: A Benchmark for Tool-Agent-User Interaction in Real-World Domains</cite> — ICLR 2025. ไม่มีการอ้าง URL ในบทความนี้. <span class="ref-supports">รองรับ: ที่มาของตัวเลข pass^1 / pass^8 บนโดเมน retail กับ airline ที่ยกในหัวข้อ 1 และนิยามการวัดความเสถียรแบบรันซ้ำ — อ้างในฐานะผลของระบบบน benchmark เฉพาะ ตามขอบเขตที่เปเปอร์ [1] กำกับ</span></li>
+            <li id="th-ref-3"><span class="ref-tag ref-tag--study">Study</span> Greshake, K., Abdelnabi, S., Mishra, S., et al. <cite>Not What You've Signed Up For: Compromising Real-World LLM-Integrated Applications with Indirect Prompt Injection</cite> — ACM AISec 2023, pp. 79–90. ไม่มีการอ้าง URL ในบทความนี้. <span class="ref-supports">รองรับ: การสาธิตการฉีดคำสั่งแฝงทางอ้อมผ่านเนื้อหาที่ระบบไปอ่านเจอภายหลัง บนแอปจริงที่ผูก LLM — ที่ยกในสมมติฐานความหูเบาและขั้นที่ 4</span></li>
+            <li id="th-ref-4"><span class="ref-tag ref-tag--study">Study</span> Inan, H., Upasani, K., Chi, J., et al. <cite>Llama Guard: LLM-based Input-Output Safeguard for Human-AI Conversations</cite> — arXiv:2312.06674, 2023. <a href="https://arxiv.org/abs/2312.06674">arxiv.org</a> — เข้าถึง 2026-09-08. <span class="ref-supports">รองรับ: ตัวอย่างตัวจำแนก input–output แบบ LLM ที่ยกในขั้นที่ 5 — ใช้ในฐานะสัญญาณเชิงแนะที่มีอัตราพลาดของตัวเอง ไม่ใช่การรับประกัน</span></li>
+            <li id="th-ref-5"><span class="ref-tag ref-tag--standard">Standard</span> NIST (U.S. Department of Commerce). <cite>Artificial Intelligence Risk Management Framework: Generative Artificial Intelligence Profile</cite> — NIST AI 600-1, กรกฎาคม 2024. <a href="https://doi.org/10.6028/NIST.AI.600-1">doi.org</a> — เข้าถึง 2026-09-08. <span class="ref-supports">รองรับ: การขึ้นบัญชี confabulation เป็นความเสี่ยงประจำของ generative AI ที่องค์กรต้องบริหารด้วยมาตรการตามสัดส่วนความเสี่ยง — ที่ยกในสมมติฐานอาการแต่งข้อเท็จจริง</span></li>
+        </ol>
+    </section>
+    </div>
+
+    <div class="l-en" lang="en">
+
+    <p>🤔 <strong>Suppose your team had one colleague of genius-level ability — a superb writer, a superb summariser, alarmingly well read — who also fabricates with a straight face without knowing it, is brilliant one moment and unaccountably poor the next, remembers nothing of yesterday, and believes every note anyone slips onto the desk. Would you hand that colleague the refund-approval button?</strong></p>
+
+    <p>The previous post, <a href="/blog/ai-core-context-engineering">Context Is a Control Artifact</a>, ended with every term of equation (1) — model, decoding, context, retrieval, tools, state, environment — pinned into Nong Kram's single release manifest. We now know where the system's behaviour comes from, and we know that changing any term is changing the program. But even the tidiest manifest cannot answer the next question: the "processor" at the centre of this program never promises to be correct — so how do we design a system around such a thing and still dare to hand it the shop's real work?</p>
+
+    <p>The whole post's answer sits in the name the paper gives this kind of core: the <strong>fallible savant</strong>. The right engineering response is not to wait for the model generation that stops failing, but to promote four of its behaviours — fabricating facts, jagged competence, no memory, credulity — into <em>design assumptions</em> the system must stand under even when all four are true at once, add one more property — confidence whose numbers cannot be taken at face value — and then build the five-element <strong>assurance envelope</strong> around the core<sup><a href="#en-ref-1">[1]</a></sup>. The burden of correctness does not disappear — it moves from the centre of the system out to the boundary, which is exactly the place where we write the code ourselves and can prove things about it.</p>
+
+    <h2 id="en-four-assumptions">1. Four Design Assumptions, Not Four Defects</h2>
+
+    <p>One thing has to be set straight before the details: §4 of the paper does not write this list as "model defects awaiting the next version's fix". It writes them as <em>design assumptions</em> — things an engineer must treat as always true, the way a civil engineer treats steel as expanding when hot<sup><a href="#en-ref-1">[1]</a></sup>. Nobody stands around cursing the steel; people design bridges with expansion joints. So the place for these four in a design document is not the "known issues" page — it is the same page as a structure's load assumptions.</p>
+
+    <p>The reason they must be promoted to assumptions lies in the nature of the failures themselves: Software 1.0's correctness-by-construction guarantee does not transfer, because the core is correct <em>with some probability</em> over a distribution of tasks, and when it fails, the failure is <em>fluent</em> — confident, well-formed, and wrong<sup><a href="#en-ref-1">[1]</a></sup>. A wrong sentence reads exactly like a right one, so reviewing by skimming is a control designed to lose from the start — which is why everything in this post is about <em>mechanism</em>, not about the diligence of the reviewer.</p>
+
+    <h3>Hallucination</h3>
+
+    <p>The first assumption: the system must assume the model will assert plausible falsehoods at a non-zero frequency<sup><a href="#en-ref-1">[1]</a></sup>. The load-bearing words are "non-zero frequency" — the definition does not say often, and does not say rarely; it says <em>never zero</em>. However precise the retrieval, however polished the prompt, one day <strong>hallucination</strong> will make Nong Kram tell a customer that returns are accepted within 30 days when the policy says 14 — in exactly the voice of a day when every character was right. A standard like NIST AI 600-1 lists this behaviour (under the name confabulation) as a standing risk of generative AI that organisations must <em>manage</em>, not wait out<sup><a href="#en-ref-5">[5]</a></sup>.</p>
+
+    <h3>Jagged intelligence</h3>
+
+    <p>The second assumption: <strong>jagged intelligence</strong> — competence on task A cannot be inferred for task B, however close the two tasks look to a human eye<sup><a href="#en-ref-1">[1]</a></sup>. The model's competence surface is not a plain but a mountain range: a high peak here, a ravine right beside it, and the dividing lines do not follow our intuition about which tasks are "hard".</p>
+
+    <p>The paper quotes τ-bench with its bounds stated plainly: one GPT-4o function-calling agent achieved roughly 61.2% at pass^1 on retail tasks against roughly 35.2% on airline tasks, and on the retail tasks themselves pass^8 — succeed on all eight of eight reruns — fell below 25%<sup><a href="#en-ref-1">[1]</a><a href="#en-ref-2">[2]</a></sup>. Read those numbers exactly the way the paper frames them: they are the results of one <em>system</em> on one specific benchmark, not a universal baseline for any model. What they teach is not "what GPT-4o scores" but the shape of competence: nearly a two-to-one gap between two similar-looking domains, and repeat-run stability far below the single-run score — two axes that must be measured separately, and never guessed across.</p>
+
+    <h3>Amnesia</h3>
+
+    <p>The third assumption: <strong>amnesia</strong> — the model has no memory whatsoever beyond the context window. What it "remembers" in this turn is exactly what was fed to it in this turn. Continuity — of the conversation, of unfinished work, of promises made to a customer — is entirely an <em>application responsibility</em><sup><a href="#en-ref-1">[1]</a></sup>. Architecturally that means "memory" is a feature we <em>build</em>, not a bonus the model provides, and it must be versioned, inspected and tested like every other piece of state. Teams that skip this meet the classic symptom: the bot makes a promise to a customer on Monday and denies having said it on Tuesday — not because the model "lied", but because nobody fed Monday's words back in.</p>
+
+    <h3>Gullibility</h3>
+
+    <p>The fourth assumption, and the only one that is directly a security matter: <strong>gullibility</strong> — instructions and data share a single channel. Everything is a token in one context, so deliberately crafted text can override the behaviour we intended<sup><a href="#en-ref-1">[1]</a></sup>. The work of Greshake and colleagues has already demonstrated that content planted for a system to "come across on its own" later — <strong>indirect prompt injection</strong> — can compromise real LLM-integrated applications across the board<sup><a href="#en-ref-3">[3]</a></sup>. For Nong Kram, every byte that arrives from a customer, from text a customer pastes into the chat, or from a catalog page that retrieval pulls in, is data that <em>may be carrying a knife</em> — and the design has to treat it that way all the time, not just in the week an attack makes the news.</p>
+
+    <blockquote>💡 My view: the fastest profit from renaming "defects" to "assumptions" is that it ends one whole species of meeting — the one where somebody says "the next model generation will fix that". An assumption is not something you wait out; it is something the system must stand under even while it is true. A team that writes these four into the design document in week one stops re-arguing them every quarter, and architecture reviews become surprisingly short, because the question changes from "will it fail?" to "when it fails, what does it hit?"</blockquote>
+
+    <h2 id="en-calibration-envelope">2. Calibration, and the Burden That Moves to the Boundary</h2>
+
+    <p>There is a fifth property, which the paper keeps separate from the four assumptions: <strong>calibration</strong> — a gate that routes work on the model's claim of "90% confidence" is sound only if, among the times the model says that, it is right 90% of the time; and the model's raw confidence usually fails this condition — it is mis-calibrated — so quality gates must rely on <em>independent evaluation</em>, never on the model's assessment of itself<sup><a href="#en-ref-1">[1]</a></sup>. The sentence sounds mild, but it strikes out one popular architecture entirely: a system that has the model score its own confidence and uses that score to decide whether a human sees the case is building a door where the guard is the same person asking to pass.</p>
+
+    <h3>The assurance burden does not vanish — it relocates</h3>
+
+    <p>Hold the four assumptions and calibration at once and §4's conclusion follows inescapably: correctness cannot be proven <em>from inside</em> the generator — but correctness is not replaced by surrender either. What happens is a <em>redistribution</em>: the assurance obligations move from the centre (the model, which we can neither fix nor prove) to the boundaries of the system (which we build, test and can prove things about)<sup><a href="#en-ref-1">[1]</a></sup>. The model remains the source of capability; the boundary becomes the source of trustworthiness.</p>
+
+    <h3>The five elements of the assurance envelope</h3>
+
+    <p>The paper defines the envelope of an AI-core system as five elements, wrapped around the generator<sup><a href="#en-ref-1">[1]</a></sup>.</p>
+
+    <ul>
+        <li><strong>Versioned context assembly</strong> — everything that enters the model comes from pinned artifacts, and any turn can be traced back to exactly what it was assembled from — the foundation post #4 already laid</li>
+        <li><strong>Hard mediation of effectful actions</strong> — every action with a real effect on the outside world passes through a structural mediator outside the model, on every path, with no shortcut</li>
+        <li><strong>Calibrated semantic evaluation</strong> — semantic judgement by independent evaluators that know their own error rates on a declared population, not the model's feelings about its own work</li>
+        <li><strong>Complete decision tracing</strong> — a <strong>decision trace</strong> for every request on every path, failure paths included, so that any incident can be reconstructed from evidence</li>
+        <li><strong>Risk-proportionate fallback</strong> — fallback routes proportionate to the risk: a read-only task may merely get a warning label, while an irreversible one stops and waits for a human</li>
+    </ul>
+
+    <figure class="figure">
+      <a href="../images/ai-core-fig-05-savant.png">
+        <img class="figure__img" src="../images/ai-core-fig-05-savant.png" alt="The model core ringed by the assurance envelope, with four assumption tiles — hallucination, jagged intelligence, amnesia, gullibility — and one calibration gauge." width="1400" height="840" loading="lazy" decoding="async">
+      </a>
+      <figcaption class="figure__caption">Design the envelope from the four assumptions plus calibration — these are properties of the core, not defects awaiting a patch.</figcaption>
+    </figure>
+
+    <p>And the sentence that must never be trimmed off this definition: envelope work is <em>necessary</em> but <em>not a substitute</em> for improving the core — model selection, data curation, calibration, decoding policy and architecture all genuinely change the core's reliability. The right question is the <em>allocation of effort</em>, not a choice of sides<sup><a href="#en-ref-1">[1]</a></sup>. The envelope is not an excuse to stop caring for the core, and a stronger core is not an excuse to remove the envelope — Step 6 below turns this allocation into a table you can actually fill in.</p>
+
+    <h2 id="en-seven-steps">3. The Seven Steps</h2>
+
+    <p>The seven steps below convert sections 1 and 2 into work that finishes in one to two weeks. Every step ends with one concrete beat of Nong Kram's progress, and the destination of all seven is the pair of artifacts in section <a href="#en-kramkraft">4</a>.</p>
+
+    <h3>Step 1 — Design for hallucination: require span-level source attribution</h3>
+
+    <p>Make it a rule of the system, not a request in the prompt: every fact-bearing statement — a condition, a policy, a product attribute, a number — must be tied to a source in the corpus at span level, sentence to passage, and any claim with no supporting source must be <em>withheld</em> or labelled unverified before it ever reaches a customer<sup><a href="#en-ref-1">[1]</a></sup>. The reason traces straight back to the first assumption: since plausible falsehoods arrive at a non-zero frequency, the filter has to work on <em>every</em> answer, not only the ones that "look odd". Nong Kram's internal answer shape therefore becomes:</p>
+
+    <pre><code># Nong Kram's internal answer shape — every fact-bearing span must point at a source
+{
+  "answer_spans": [
+    { "text": "Returns are accepted within 14 days of delivery",
+      "source": "policy/returns.md#item-2" },
+    { "text": "This vase is glazed with natural indigo, fired at 1,230 degrees",
+      "source": "catalog/vase-kk58.md#details" },
+    { "text": "Refunds normally clear within 3 business days",
+      "source": null }   // no source -> never release as-is: withhold, or label "unverified"
+  ]
+}</code></pre>
+
+    <h3>Step 2 — Design for jaggedness: declare slices, then measure per slice</h3>
+
+    <p>Write your app's task types (slices) into a formal document, then build a <strong>golden set</strong> per slice with its own pass threshold — and never extrapolate competence across slices, however alike two slices look<sup><a href="#en-ref-1">[1]</a></sup>. The retail/airline lesson of section 1 is this step's entire justification: same system, similar-looking domains, results nearly two-to-one apart. Nong Kram's first slices (the test-set numbers are this tutorial's, not the paper's):</p>
+
+    <ul>
+        <li><strong>order-status</strong> — order state, parcels, delivery times · golden 40 cases · pass at 95%</li>
+        <li><strong>return-policy</strong> — exchange and return conditions · golden 30 cases · pass at 97%, because this is the slice where being wrong costs the most</li>
+        <li><strong>product-info</strong> — clay body, indigo glaze, sizes, care · golden 30 cases · pass at 90%</li>
+        <li><strong>refund-request</strong> — amounts and eligibility · golden 20 cases · <em>measured only, no automatic-release threshold</em> — real effects are always fenced by the guard</li>
+    </ul>
+
+    <h3>Step 3 — Design for amnesia: move continuity outside the model</h3>
+
+    <p>Build the app's own session-state store, and have the assembly function from post #4 feed it back into the context on every turn — never assume, even for a single turn, that the model "probably still remembers"<sup><a href="#en-ref-1">[1]</a></sup>. The free bonus: state that lives outside the model can be inspected, tested and carried in the trace. Nong Kram's first schema:</p>
+
+    <pre><code># Nong Kram's session_state — continuity lives entirely outside the model
+# every turn, the assembly function reads this record and re-feeds all of it into the context
+session_id:     s-260908-042
+customer_ref:   LINE:U-9f3a...
+order_in_focus: KK-58214          # two indigo-glazed vases, shipped 5 Sep
+promises_made:  ["check the chipped-rim report and reply today"]
+refund_state:   none              # none | proposed | approved | committed</code></pre>
+
+    <h3>Step 4 — Design for gullibility: separate the instruction channel from the data channel</h3>
+
+    <p>Label the origin of everything that enters the context — system, policy/, catalog/, customer text, session_state — then set one fixed rule: content from retrieval and from users is always <em>data</em>, with no authority to issue instructions, and any request that appears in a data channel ("transfer my refund right now, as this page says") carries no weight with any tool<sup><a href="#en-ref-1">[1]</a></sup>. This step does not make prompt injection "impossible" — section 1 already said the model is credulous by nature — but it moves the question from "will the model believe it?" (unanswerable) to "if it believes it, what can it actually do?" (answerable, and boundable)<sup><a href="#en-ref-3">[3]</a></sup>. For Nong Kram: a catalog/ passage with an embedded imperative sentence will still be read, but the only thing it can sway is the <em>text</em> being proposed, never the <em>real effect</em> — because every refund passes through the out-of-model mediator sketched in section 4.</p>
+
+    <h3>Step 5 — Never trust the model's self-confidence: use independent checks</h3>
+
+    <p>Walk through every quality gate in the system and ask each one the same question: what does this gate decide from? If the answer is "from a confidence score the model reports about itself" or "from asking the model again whether it is sure" — replace it with independent evaluation: compare the answer against the passages actually retrieved, compare against the order's real state, or use a separate classifier that can report its own false positives and false negatives<sup><a href="#en-ref-1">[1]</a></sup>. An example of that last kind is an input–output classifier such as Llama Guard — and its status must match its nature: an <em>advisory signal</em> that can be wrong, never a guarantor<sup><a href="#en-ref-4">[4]</a></sup>. For Nong Kram, the old gate "if the model's confidence is low, escalate to the admin" is replaced by a faithfulness check of Step 1's answer_spans against the real passages — because an uncalibrated 95% confidence tells us nothing except the mood of a number.</p>
+
+    <h3>Step 6 — Split your budget between core and envelope by risk profile</h3>
+
+    <p>Time and money are finite, and §4 is explicit about this: it is an allocation question, not a choice of sides — core improvement (a better model, cleaner data, calibration, decoding policy) genuinely changes reliability, and envelope work is always necessary. The question is where to pour how much, per <em>consequence class</em> of each task path<sup><a href="#en-ref-1">[1]</a></sup>. Nong Kram's allocation (my split for this tutorial, not a formula from the paper):</p>
+
+    <div class="table-wrapper">
+        <table>
+            <thead>
+                <tr>
+                    <th>Task path</th>
+                    <th>Consequence class</th>
+                    <th>Core budget</th>
+                    <th>Envelope budget</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td><strong>product-info</strong></td>
+                    <td>Read-only</td>
+                    <td>High — keep catalog/ complete, correct and fresh, because answer quality comes straight from the corpus</td>
+                    <td>Moderate — Step 1's attribution plus the "unverified" label</td>
+                </tr>
+                <tr>
+                    <td><strong>order-status</strong></td>
+                    <td>Reads personal data</td>
+                    <td>Medium — retrieval must bind to the right order</td>
+                    <td>High — bind the customer's identity to the session and keep complete traces</td>
+                </tr>
+                <tr>
+                    <td><strong>refund</strong></td>
+                    <td>Irreversible from the moment the payment processor accepts</td>
+                    <td>Low — a smarter model does not change the price of a single failure</td>
+                    <td>Maximum — out-of-model guard + human approval + traces on every path</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <blockquote>💡 My view: the heuristic I use for quick decisions is that the more irreversible the effect, the more the budget flows to the envelope side — because a stronger core lowers the <em>frequency</em> of failure, while the envelope lowers the <em>price</em> of failure, and for an irreversible effect the price of even one is already more than you can carry.</blockquote>
+
+    <h3>Step 7 — Sketch your own envelope: five elements, one line each</h3>
+
+    <p>Close with the shortest and best-value piece of writing in this post: write the five envelope elements for <em>your app</em>, one line each. No code yet — just answer what each element "is, and where it lives" in your system, using these five questions as the frame:</p>
+
+    <ul>
+        <li>What is my context assembled from, and where is it pinned — versioned context assembly</li>
+        <li>Which of my actions have real effects, and which single component must every path pass through — hard mediation</li>
+        <li>Which independent evaluator measures my semantic quality, and on what population — calibrated semantic evaluation</li>
+        <li>What trail does one of my requests leave behind, and are failure paths recorded too — complete decision tracing</li>
+        <li>When the system is unsure or broken, who does the work flow to, and with what context attached — risk-proportionate fallback</li>
+    </ul>
+
+    <p>Nong Kram's completed version is laid out in full in the next section.</p>
+
+    <h2 id="en-kramkraft">4. The Artifact — Nong Kram's Design-Assumption Audit</h2>
+
+    <p>This post's artifact comes in two pieces, kept in the same repo as the code under post #4's "everything is the program" discipline: <code>docs/savant-audit.md</code>, the design-assumption audit table, and <code>docs/envelope-sketch.md</code>, the first envelope sketch. The table first — one row per assumption, read left to right: where it bites this app, how the design answers it, and which envelope element carries that row.</p>
+
+    <div class="table-wrapper">
+        <table>
+            <thead>
+                <tr>
+                    <th>Assumption</th>
+                    <th>Where it bites this app</th>
+                    <th>Design response</th>
+                    <th>Envelope element that carries it</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td><strong>Hallucination</strong></td>
+                    <td>Return and shipping conditions that "sound right" but are nowhere in policy/</td>
+                    <td>Mandatory answer_spans attribution for every claim — no source means withhold or label</td>
+                    <td>Calibrated semantic evaluation + fallback</td>
+                </tr>
+                <tr>
+                    <td><strong>Jaggedness</strong></td>
+                    <td>Beautiful product-info answers create the false belief it can also compute refund amounts</td>
+                    <td>Four slices with separate golden sets and separate thresholds — no cross-slice extrapolation</td>
+                    <td>Calibrated semantic evaluation (per slice)</td>
+                </tr>
+                <tr>
+                    <td><strong>Amnesia</strong></td>
+                    <td>Customers talk across days and switch between two orders in one chat</td>
+                    <td>session_state outside the model, re-fed into the context every turn</td>
+                    <td>Versioned context assembly</td>
+                </tr>
+                <tr>
+                    <td><strong>Gullibility</strong></td>
+                    <td>Text customers paste into the chat, and sentences embedded in retrieved passages</td>
+                    <td>Origin labels per passage + the rule "data channels command nothing"</td>
+                    <td>Hard mediation of effectful actions</td>
+                </tr>
+                <tr>
+                    <td><strong>Mis-calibrated confidence</strong></td>
+                    <td>The model's "95% confident" cannot be used to route real work</td>
+                    <td>Every gate uses an independent evaluator; unclear cases escalate to a human</td>
+                    <td>Risk-proportionate fallback + decision tracing</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <p>One observation about the table: not a single row's "design response" cell says "tighten the prompt" — a good prompt lowers the frequency of the problem, but no row stakes its life on it. And when you collect the final column across all five rows, you get exactly the five envelope elements. That is no coincidence: the envelope §4 defines is precisely the structural answer to this set of assumptions<sup><a href="#en-ref-1">[1]</a></sup>.</p>
+
+    <h3>The first envelope sketch — a diagram in words</h3>
+
+    <pre><code># docs/envelope-sketch.md — Nong Kram's envelope, v0 (post #6 turns this into real code)
+
+[1] Versioned context assembly
+    assemble_context() reads every term from post #4's release manifest
+    every passage carries an origin label: system | policy/ | catalog/ | user | session_state
+
+[2] Hard mediation of effectful actions
+    refund(order_id, amount, reason) is callable by exactly one path: through refund_guard, outside the model
+    the guard checks schema, amount limits, order state, and duplicates — deny by default
+
+[3] Calibrated semantic evaluation
+    a faithfulness check compares answer_spans against the passages actually retrieved, per slice
+    no gate may ask the model "are you sure?" — independent evaluators only
+
+[4] Complete decision tracing
+    every request ends with one trace: assembled context, candidate, per-gate verdicts,
+    the route taken (release / withhold / escalate) — failure paths included
+
+[5] Risk-proportionate fallback
+    cannot answer, or evidence is weak -> hand off to the shop admin, trace attached
+    every refund, no exceptions -> stop and wait for human approval (autonomy moves later, in post #10)</code></pre>
+
+    <p>This file is a "diagram in words" by intent — not a line of code yet, but every decision the code will have to respect is already in it. Post #6 picks this file up and writes the control-loop function to match it, element by element.</p>
+
+    <h2 id="en-validation-check">5. Validation Check — Test Your Own App Before Moving On</h2>
+
+    <p>The series' standing rule: every question must be answered with an artifact you can point at and open, not with an adjective. If a row fails, the rightmost column says which step to go back to.</p>
+
+    <div class="table-wrapper">
+        <table>
+            <thead>
+                <tr>
+                    <th>Question</th>
+                    <th>Pass when</th>
+                    <th>Artifact that proves it</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>Are the four assumptions written in your app's own language yet?</td>
+                    <td>All four plus calibration are present, naming where each one really bites your app</td>
+                    <td>Your app's own <code>docs/savant-audit.md</code> (section 4)</td>
+                </tr>
+                <tr>
+                    <td>Can an unsourced claim reach the user?</td>
+                    <td>No — it is withheld or labelled by mechanism, not by a plea in the prompt</td>
+                    <td>The answer_spans schema + a test case with a null source (Step 1)</td>
+                </tr>
+                <tr>
+                    <td>Are slices declared, each with its own threshold?</td>
+                    <td>Every slice has its own golden set and pass bar, with no extrapolation across</td>
+                    <td>The golden-set manifest listing slices and thresholds (Step 2)</td>
+                </tr>
+                <tr>
+                    <td>Does conversational continuity really live outside the model?</td>
+                    <td>Kill the process, restart it, and the conversation resumes from stored state</td>
+                    <td>The session_state schema + the assembly code that re-feeds it (Step 3)</td>
+                </tr>
+                <tr>
+                    <td>Does everything in the context carry an origin label?</td>
+                    <td>Every passage names its channel, and no data channel can command a tool</td>
+                    <td>One turn's context-assembly record with every block labelled (Step 4)</td>
+                </tr>
+                <tr>
+                    <td>Does any gate rely on the model's self-reported confidence?</td>
+                    <td>None — every gate can name its own independent evaluator</td>
+                    <td>The full gate inventory with each gate's evaluator (Step 5)</td>
+                </tr>
+                <tr>
+                    <td>Has the core/envelope budget been decided per consequence class?</td>
+                    <td>Every task path has its own allocation row, and irreversible paths pour toward the envelope</td>
+                    <td>The allocation table (Step 6) + <code>docs/envelope-sketch.md</code> (Step 7)</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <p>The post's overall bar is simple: if all seven rows are green, your app now has a structural answer to all five assumptions — what it does not yet have is the machine that arranges those answers into an actual order of execution, and that is the next post.</p>
+
+    <h2 id="en-road-ahead">6. The Road Ahead</h2>
+
+    <p>This post changed the status of failure from "the thing nobody wants to say in the meeting" into a design specification: we assume the model fabricates, is jagged, remembers nothing and believes too easily — all at once, all the time — and we treat its confidence as unusable at face value until calibrated. From that set of assumptions we obtained the five-element envelope, one audit table for Nong Kram, and one envelope sketch file that is ready to become code.</p>
+
+    <p>What this post <em>deliberately</em> does not answer: the <em>loop</em> itself — how the five elements are ordered within a single request, what is checked <em>before</em> generation, where a tool call is authorised, by what thresholds the output is released, withheld or escalated, and why the trace must be written <em>even on the failing path</em>. All of that is the paper's reference control loop, and it fills the whole of <a href="/blog/ai-core-control-loop">post #6</a>.</p>
+
+    <div class="alert info">
+        <strong>🧭 Next up:</strong> <a href="/blog/ai-core-control-loop">#6 Specify → Constrain → Generate → Verify — The AI-Core Function</a> — takes today's <code>docs/envelope-sketch.md</code> and turns it into a real function, block by block: a precheck that rejects before the model is reached, an execution guard before any real effect, decision thresholds before release, and a trace written on every path, including the one that breaks</div>
+
+    <div class="key-takeaways">
+        <h3>🎯 Key Takeaways</h3>
+        <ul>
+            <li><strong>Fallible savant</strong> = a core of high capability that is correct only with some probability — and whose failures are fluent: confident, well-formed, and wrong</li>
+            <li><strong>Four design assumptions</strong> = plausible falsehoods at non-zero frequency · competence on A does not transfer to B · no memory beyond the context window · instructions and data share one channel</li>
+            <li><strong>Calibration</strong> = a gate routing on "90% confident" is sound only if the model is right 90% of the times it says so — hence independent evaluators, always</li>
+            <li><strong>Assurance envelope</strong> = versioned context assembly · hard mediation · calibrated semantic evaluation · complete decision tracing · risk-proportionate fallback</li>
+            <li><strong>Redistribution</strong> = correctness is not replaced — the assurance burden moves from the unprovable centre to the boundary we build and can prove</li>
+            <li><strong>Allocation, not either/or</strong> = the envelope is necessary but no substitute for core improvement — and the more irreversible the effect, the more budget flows to the envelope</li>
+        </ul>
+    </div>
+
+    <section class="references" aria-labelledby="en-references">
+        <h2 id="en-references">References</h2>
+        <p class="references__note">All sources checked 8 September 2026 (Asia/Bangkok) · Four evidence labels: <strong>Law</strong> statute or official notification · <strong>Standard</strong> a published standard or official framework · <strong>Study</strong> research or a field signal · <strong>Synthesis</strong> the author's own synthesis or a non-research source.</p>
+        <ol class="references__list">
+            <li id="en-ref-1"><span class="ref-tag ref-tag--synthesis">Synthesis</span> Anirach Mingkhwan. <cite>Engineering AI-Core Systems: A Reference Architecture and Assurance Contract for Software 3.0</cite> — CreativeLAB, FITM, KMUTNB, 2026. An author-supplied document, unpublished, with no public URL, and therefore no link and no access date. <span class="ref-supports">Supports: the four design assumptions and their definitions, fluent failure, the calibration property and the requirement that quality gates use independent evaluation, the redistribution of assurance to the boundary, the five elements of the assurance envelope, the sentence that envelope work is necessary but no substitute for core improvement, and the context in which the paper cites the τ-bench figures with their bounds — all from §4</span></li>
+            <li id="en-ref-2"><span class="ref-tag ref-tag--study">Study</span> Yao, S., Shinn, N., Razavi, P., Narasimhan, K. <cite>τ-bench: A Benchmark for Tool-Agent-User Interaction in Real-World Domains</cite> — ICLR 2025. No URL cited in this article. <span class="ref-supports">Supports: the origin of the pass^1 / pass^8 figures on the retail and airline domains quoted in section 1, and the definition of repeat-run stability measurement — cited as system results on a specific benchmark, within the bounds stated by the paper [1]</span></li>
+            <li id="en-ref-3"><span class="ref-tag ref-tag--study">Study</span> Greshake, K., Abdelnabi, S., Mishra, S., et al. <cite>Not What You've Signed Up For: Compromising Real-World LLM-Integrated Applications with Indirect Prompt Injection</cite> — ACM AISec 2023, pp. 79–90. No URL cited in this article. <span class="ref-supports">Supports: the demonstration of indirect prompt injection through content a system later reads on its own, against real LLM-integrated applications — cited under the gullibility assumption and in Step 4</span></li>
+            <li id="en-ref-4"><span class="ref-tag ref-tag--study">Study</span> Inan, H., Upasani, K., Chi, J., et al. <cite>Llama Guard: LLM-based Input-Output Safeguard for Human-AI Conversations</cite> — arXiv:2312.06674, 2023. <a href="https://arxiv.org/abs/2312.06674">arxiv.org</a> — accessed 2026-09-08. <span class="ref-supports">Supports: the example of an LLM-based input–output classifier named in Step 5 — used as an advisory signal with its own error rates, never as a guarantee</span></li>
+            <li id="en-ref-5"><span class="ref-tag ref-tag--standard">Standard</span> NIST (U.S. Department of Commerce). <cite>Artificial Intelligence Risk Management Framework: Generative Artificial Intelligence Profile</cite> — NIST AI 600-1, July 2024. <a href="https://doi.org/10.6028/NIST.AI.600-1">doi.org</a> — accessed 2026-09-08. <span class="ref-supports">Supports: listing confabulation as a standing risk of generative AI to be managed with risk-proportionate measures — cited under the hallucination assumption</span></li>
+        </ol>
+    </section>
+    </div>
+
+    <div class="post-series-footer">
+      <span class="l-th">บทความจากซีรีส์ Engineering AI-Core Systems 2026</span><span class="l-en" lang="en">From the Engineering AI-Core Systems 2026 series</span>
+    </div>
+
+    <nav aria-label="Engineering AI-Core Systems">
+    <div class="series-nav">
+      <h3>🛡️ Engineering AI-Core Systems 2026</h3>
+      <div class="series-links">
+        <a href="/blog/ai-core-what-is">#1 What Is AI-Core</a>
+        <a href="/blog/ai-core-three-eras">#2 Three Eras</a>
+        <a href="/blog/ai-core-os-model">#3 AI-OS Seams</a>
+        <a href="/blog/ai-core-context-engineering">#4 Context Control</a>
+        <span class="current" aria-current="page">#5 Fallible Savant</span>
+        <a href="/blog/ai-core-control-loop">#6 Control Loop</a>
+        <a href="/blog/ai-core-assurance-contract">#7 Assurance Contract</a>
+        <a href="/blog/ai-core-five-rails">#8 Five Rails</a>
+        <a href="/blog/ai-core-validation">#9 Validation</a>
+        <a href="/blog/ai-core-ship-operate">#10 Ship &amp; Operate</a>
+      </div>
+    </div>
+    </nav>
+
+  </article>
+
+  </main>
+
+  <footer class="blog-footer">
+    <nav class="blog-footer__nav" aria-label="Site">
+      <a href="../index.html">Home</a>
+      <a href="./">Blog</a>
+      <a href="../publications/">Publications</a>
+      <a href="../books/">Books</a>
+      <a href="../projects/">Projects</a>
+      <a href="../news/">News</a>
+      <a href="../index.html#contact">Contact</a>
+    </nav>
+    <a href="./">← Back to Blog</a>
+    <span>© 2026 Anirach Mingkhwan — Associate Professor, KMUTNB</span>
+  </footer>
+
+</body>
+</html>

@@ -1,6 +1,6 @@
 ---
 name: a11y-perf
-description: Accessibility and performance rules for the anirach.com static site (87 hand-written HTML files — 86 enumerated by check_site.py plus 404.html — no build step, zero JavaScript, per-file embedded CSS, 83 bilingual TH/EN posts in six series). Use this whenever you touch any .html file in this repo, add or edit a blog post under blog/, add or swap an image in images/, edit a :root palette or a .post-hero gradient, change nav markup, or are asked about contrast, alt text, focus states, keyboard access, page weight, image size, fonts, or Lighthouse/Core Web Vitals — even if the user does not mention accessibility or performance at all, and even for a "just add a card to blog/index.html" request. It carries this site's real measured numbers (blog/index.html was redesigned 2026-09-07 into numbered row cards — 84 img tags, ~3.6 MB referenced, every one lazy except the featured LCP card, no bylines/avatars; the palette was re-keyed to the book covers 2026-08-26 so --blue #226299 now PASSES as text, while --blue-light is borders-only and the focus ring is scoped, and AI Transformation added a 30th token --coral #c2410c that passes on white but NOT on a tint; the :focus-visible/reduced-motion/color-scheme baseline, <main id="main"> and the skip link are landed on all 87 pages; .post-hero__meta, .post-series-footer, rel=noopener, avatar alts and the palette sweep are all DONE) plus verified drop-in fixes, so use it instead of deriving generic WCAG advice.
+description: Accessibility and performance rules for the anirach.com static site (87 hand-written HTML files — 86 enumerated by check_site.py plus 404.html — no build step, zero JavaScript, per-file embedded CSS, 83 bilingual TH/EN posts in six series). Use this whenever you touch any .html file in this repo, add or edit a blog post under blog/, add or swap an image in images/, edit a :root palette or a .post-hero gradient, change nav markup, or are asked about contrast, alt text, focus states, keyboard access, page weight, image size, fonts, or Lighthouse/Core Web Vitals — even if the user does not mention accessibility or performance at all, and even for a "just add a card to blog/index.html" request. It carries this site's real measured numbers (blog/index.html was redesigned 2026-09-07 into numbered row cards — 94 img tags after the 2026-09-08 AI-Core launch, ~4 MB referenced, every one lazy except the featured LCP card, no bylines/avatars; the palette was re-keyed to the book covers 2026-08-26 so --blue #226299 now PASSES as text, while --blue-light is borders-only and the focus ring is scoped, and AI Transformation added a 30th token --coral #c2410c that passes on white but NOT on a tint; the :focus-visible/reduced-motion/color-scheme baseline, <main id="main"> and the skip link are landed on all 87 pages; .post-hero__meta, .post-series-footer, rel=noopener, avatar alts and the palette sweep are all DONE) plus verified drop-in fixes, so use it instead of deriving generic WCAG advice.
 ---
 
 # Accessibility & performance for anirach.com
@@ -429,7 +429,7 @@ for p in sorted(pathlib.Path('blog').glob('*.html')):
 EOF
 ```
 
-`blog/index.html` itself is **clean** — `Counter({3: 84, 2: 7, 1: 1})` since the 2026-09-07 redesign (83 card titles + the feature at h3; 6 series titles + the "Start here" kicker at h2), a real
+`blog/index.html` itself is **clean** — `Counter({3: 94, 2: 8, 1: 1})` (93 card titles + the feature at h3; 7 series titles + the "Start here" kicker at h2), a real
 `h1 → h2 → h3` ladder (page title → 5 series headings + the feature → 76 card titles). It
 went a level shallower on 2026-08-26 when the category bands were deleted. Do not "fix" its
 card titles back to `h4`, and do not hardcode the level anywhere — grep
@@ -522,8 +522,8 @@ prose-level sweep touched.
 ### R1. `blog/index.html` page weight — **[DONE]**
 
 Was 18.41 MB, then 4.07 MB, then 2.47 MB, then 3.43 MB across 153 tags. The 2026-09-07
-redesign (row cards, no avatars) cut it to **84 `<img>` tags — 83 covers + the featured
-share card — ~3.6 MB referenced, every one lazy except one** — the 20-post AI Transformation series (2026-09-05)
+redesign (row cards, no avatars) cut it to **94 `<img>` tags — 93 covers + the featured
+share card (2026-09-08, after the AI-Core launch) — ~4 MB referenced, every one lazy except one** — the 20-post AI Transformation series (2026-09-05)
 added 20 drawn covers and a share card, and the featured card at the top of the page is
 deliberately `loading="eager" fetchpriority="high"`, because it is the LCP element.
 
@@ -779,7 +779,7 @@ Ordered by how much they degrade a screen-reader pass:
   2026-08-26, and `blog/index.html` is now `h1` page title → `h2` ×6 (5 `.series-title` + the
   feature) → `h3` ×76 `.card__title`. Verify before assuming:
   `python3 -c "import re,collections; s=open('blog/index.html').read(); print(collections.Counter(int(m.group(1)) for m in re.finditer(r'<h([1-6])\b[^>]*>', s)))"`
-  → `Counter({3: 84, 2: 7, 1: 1})`. Three separate consumers read the level with
+  → `Counter({3: 94, 2: 8, 1: 1})`. Three separate consumers read the level with
   `<(h[1-6]) class="card__title">` and follow a re-cut; `gen_feed.py` was hard-coded to `<h4>`
   and silently emptied the feed until it was made level-agnostic. Grep for the class, never
   the level. This bullet is now only about the long accessible-name problem.

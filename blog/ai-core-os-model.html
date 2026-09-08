@@ -1,0 +1,1162 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>The AI-OS Mental Model — ห้ารอยต่อที่การรับประกันเดิมพัง | Anirach Mingkhwan</title>
+  <meta name="description" content="weights=CPU, context=RAM, RAG=ไฟล์ซิสเต็ม, tool call=system call — อุปมาที่ดีจนอันตราย เพราะรอยต่อทั้งห้าที่มันพังคือจุดที่ต้องวางการควบคุมทั้งหมด">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=Sarabun:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      color-scheme: light;
+      /* ink */
+      --navy: #11304b; --slate: #334155; --slate-light: #526174; --gray: #94a3b8;
+      /* ground */
+      --bg: #faf7f0; --white: #ffffff; --code-bg: #1e293b;
+      /* accent */
+      --blue: #226299; --blue-dark: #1a4d7a; --blue-light: #4992b9;
+      /* brand — sampled from the book covers. --gold is decorative on light grounds (2.2:1); --gold-dark is its text form. */
+      --gold: #c4a46c; --gold-dark: #7a5f22; --cloud: #dee7e6; --parchment: #e9e1c4; --focus: #226299;
+      /* status — use only these six, never invent a seventh */
+      --green: #22c55e; --red: #ef4444; --amber: #f59e0b;
+      --cyan: #06b6d4; --purple: #226299; --purple-dark: #1a4d7a;
+      /* type */
+      --font: 'Inter', 'Sarabun', -apple-system, BlinkMacSystemFont, sans-serif;
+      --mono: 'JetBrains Mono', 'Fira Code', 'Sarabun', monospace;
+      /* form */
+      --radius: 12px; --radius-sm: 8px; --radius-lg: 16px;
+      --measure: 720px; --wide: 860px;
+      --transition: 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+    html { scroll-behavior: smooth; }
+    body { font-family: var(--font); font-size: 17px; line-height: 1.8; color: var(--slate); background: var(--bg); -webkit-font-smoothing: antialiased; }
+    .blog-nav { position: fixed; top: 0; left: 0; right: 0; z-index: 100; background: rgba(248,250,252,0.85); backdrop-filter: blur(20px); border-bottom: 1px solid rgba(0,0,0,0.05); }
+    .blog-nav__inner { max-width: 860px; margin: 0 auto; padding: 0 2rem; height: 56px; display: flex; align-items: center; justify-content: space-between; }
+    .blog-nav__back { font-size: 0.85rem; font-weight: 500; color: var(--blue); text-decoration: none; }
+    .blog-nav__back:hover { color: #1a4d7a; }
+    .blog-nav__title { font-size: 0.85rem; font-weight: 600; color: var(--navy); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 50%; }
+    /* ── HERO ── house .post-hero on the approved Deep Blue gradient (page-design
+       §5 / INV-28). Ink is inverted for the dark ground: white title/meta, tag
+       pills white on 18% white — the openclaw-production treatment. The
+       background value must stay byte-identical to the approved string. */
+    .post-hero { padding: 8rem 2rem 3rem; background: linear-gradient(135deg, #11304b 0%, #1a4d7a 45%, #226299 100%); color: #fff; text-align: center; }
+    .post-hero__tags { display: flex; gap: 0.5rem; justify-content: center; margin-bottom: 1.25rem; flex-wrap: wrap; }
+    .post-hero__tag { display: inline-block; font-size: 0.72rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.1em; color: #fff; background: rgba(255,255,255,0.18); padding: 0.35rem 0.9rem; border-radius: 20px; }
+    .post-hero__title { font-size: clamp(1.8rem, 5vw, 3rem); font-weight: 800; color: #fff; line-height: 1.2; margin-bottom: 1rem; max-width: 720px; margin-left: auto; margin-right: auto; }
+    .post-hero__sub { font-size: 1.05rem; max-width: 640px; margin: 0 auto 1.5rem; line-height: 1.7; color: #fff; }
+    .post-hero__meta { font-size: 0.85rem; color: #fff; display: flex; align-items: center; justify-content: center; gap: 1.5rem; flex-wrap: wrap; }
+    .post-hero__series { font-weight: 600; color: #fff; }
+    /* the switch pill and the focus ring both sit on the dark hero: the pill is
+       a light chip so its labels keep their light-ground colours, and --focus
+       re-points to gold here (blue collapses on blue — the footer/pre
+       precedent). */
+    .post-hero { --focus: var(--gold); }
+    .post-hero__cover {
+      aspect-ratio: 1 / 1;
+      max-width: 380px;
+      margin: 2.5rem auto 0;
+      border-radius: var(--radius-lg, 16px);
+      overflow: hidden;
+      box-shadow: 0 20px 60px rgba(17,48,75,0.14);
+    }
+    .post-hero__cover img { width: 100%; height: 100%; object-fit: cover; display: block; }
+    .post-body { max-width: 720px; margin: 0 auto; padding: 3rem 2rem 6rem; }
+    .post-body h2 { font-size: 1.6rem; font-weight: 800; color: var(--navy); margin: 3rem 0 1rem; padding-bottom: 0.5rem; border-bottom: 2px solid rgba(34,98,153,0.15); }
+    .post-body h3 { font-size: 1.25rem; font-weight: 700; color: var(--navy); margin: 2.25rem 0 0.75rem; }
+    .post-body p { margin-bottom: 1.25rem; }
+    .post-body strong { font-weight: 700; color: var(--navy); }
+    .post-body a { color: var(--blue); text-decoration: underline; text-decoration-thickness: 1px; text-underline-offset: 2px; }
+    .post-body ul, .post-body ol { margin: 0.5rem 0 1.25rem 1.5rem; }
+    .post-body li { margin-bottom: 0.4rem; }
+    .post-body blockquote { background: rgba(34,98,153,0.06); border-left: 4px solid var(--blue); padding: 1rem 1.25rem; border-radius: 0 10px 10px 0; margin: 1.25rem 0; font-size: 0.95rem; color: var(--navy); }
+    .post-body hr { border: none; height: 1px; background: linear-gradient(90deg, transparent, rgba(34,98,153,0.2), transparent); margin: 3rem 0; }
+    /* ── CODE ── */
+    .post-body pre { background: var(--code-bg); border-radius: 12px; padding: 1.5rem; margin: 1.25rem 0 1.5rem; overflow-x: auto; border: 1px solid rgba(255,255,255,0.05); }
+    .post-body pre code { font-family: var(--mono); font-size: 0.85rem; color: #e2e8f0; line-height: 1.7; background: none; padding: 0; white-space: pre-wrap; }
+    .post-body code { font-family: var(--mono); font-size: 0.88em; background: rgba(34,98,153,0.08); color: var(--blue-dark); padding: 0.15em 0.45em; border-radius: 5px; }
+    /* ── TABLES ── */
+    .table-wrapper { overflow-x: auto; margin: 1.5rem 0; border-radius: 0.5rem; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1); }
+    table { width: 100%; border-collapse: collapse; background: white; }
+    th { background: #226299; color: white; padding: 1rem; text-align: left; font-weight: 600; }
+    td { padding: 1rem; border-bottom: 1px solid #e5e7eb; }
+    .post-body table { display: block; width: 100%; overflow-x: auto; }
+    /* ── ALERTS ── */
+    .alert { background: #fef3cd; border: 1px solid #facc15; border-radius: 0.5rem; padding: 1rem; margin: 1.5rem 0; }
+    .alert.danger { background: #fee2e2; border-color: #ef4444; }
+    .alert.info { background: #e0f2fe; border-color: #06b6d4; }
+    .alert.success { background: #d1fae5; border-color: #10b981; }
+    /* ── KEY TAKEAWAYS ── */
+    .key-takeaways { background: linear-gradient(135deg, #f3f4f6 0%, #e5e7eb 100%); border-radius: 1rem; padding: 2rem; margin: 3rem 0; }
+    .key-takeaways h3 { color: #226299; margin-bottom: 1.5rem; }
+    .post-series-footer { text-align: center; font-size: 0.85rem; color: var(--slate-light); font-style: italic; margin-top: 2rem; padding-top: 2rem; border-top: 1px solid #e2e8f0; }
+    .blog-footer { background: var(--navy); padding: 2rem 0; text-align: center; }
+    .blog-footer a { color: var(--gold); text-decoration: none; font-weight: 600; font-size: 0.9rem; }
+    .blog-footer span { color: var(--gray); font-size: 0.8rem; display: block; margin-top: 0.4rem; }
+    @media (max-width: 600px) {
+      .post-hero { padding: 7rem 1.25rem 2.5rem; }
+      .post-body { padding: 2rem 1.25rem 4rem; }
+      .post-hero__meta { flex-direction: column; gap: 0.4rem; }
+      .post-body h2 { font-size: 1.4rem; }
+      .post-body h3 { font-size: 1.15rem; }
+      .post-body pre { padding: 1rem; border-radius: 8px; }
+    }
+
+    :focus-visible { outline: 2px solid var(--focus); outline-offset: 3px; border-radius: 2px; }
+    /* the ring sits on the page ground (3px offset). Inside the navy footers
+       and code blocks var(--blue) collapses to 2.12:1, so those scopes
+       re-point --focus to gold (5.73:1 on navy). */
+    .footer, .blog-footer, pre { --focus: var(--gold); }
+    :focus:not(:focus-visible) { outline: none; }
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after {
+        animation-duration: .01ms !important; animation-iteration-count: 1 !important;
+        transition-duration: .01ms !important; scroll-behavior: auto !important;
+      }
+    }
+    h1, h2, h3, .post-hero__title, .card__title { text-wrap: balance; }
+
+    .post-body img, .post-body svg { max-width: 100%; height: auto; }
+
+    /* ── SKIP LINK ── a11y-perf R5: the link and the landmark it targets are a
+       pair — useless without both halves. Off-screen until focused, then the
+       first tab stop on every page. */
+    .skip-link { position: absolute; left: -9999px; }
+    .skip-link:focus {
+      left: 1rem; top: 1rem; z-index: 999;
+      background: var(--navy); color: #fff;
+      padding: 0.75rem 1.25rem; border-radius: var(--radius-sm);
+      font-weight: 600; text-decoration: none;
+    }
+
+    /* ── POST WAYFINDING ── the wordmark is the home link; the footer carries
+       the full destination row. */
+    .blog-nav__home {
+      font-size: 0.9rem; font-weight: 800; color: var(--navy);
+      text-decoration: none; margin-right: 1rem;
+    }
+    .blog-nav__home:hover { color: var(--blue); }
+    .blog-nav__inner > .blog-nav__back { margin-right: auto; }
+    .blog-footer__nav {
+      display: flex; flex-wrap: wrap; justify-content: center; gap: 0.35rem 1.25rem;
+      max-width: 860px; margin: 0 auto 1.25rem; padding: 0 2rem 1.25rem;
+      border-bottom: 1px solid rgba(255,255,255,0.12);
+    }
+    .blog-footer__nav a { color: var(--gold); font-size: 0.85rem; font-weight: 600; text-decoration: none; }
+    .blog-footer__nav a:hover { color: #fff; text-decoration: underline; }
+
+    html { scroll-padding-top: 5rem; }
+    [id] { scroll-margin-top: 5rem; }
+
+    /* Thai needs more room than Latin at the same nominal size. */
+    .post-body:lang(th) { font-size: 18px; line-height: 1.85; }
+    .post-body p, .post-body li, .post-body blockquote { text-wrap: pretty; }
+
+    /* ---- side-scroll affordance ----
+       pre blocks and tables can exceed 720px. These layers paint a shadow ONLY
+       where there is more content in that direction; when fully scrolled the
+       cover slides over the shadow and hides it. No JavaScript, no wrapper. */
+    .post-body pre, .post-body table {
+      overflow-x: auto;
+      background-image:
+        linear-gradient(to right, var(--code-bg, #0f172a) 30%, rgba(15,23,42,0)),
+        linear-gradient(to left, var(--code-bg, #0f172a) 30%, rgba(15,23,42,0)),
+        radial-gradient(farthest-side at 0 50%, rgba(0,0,0,.28), rgba(0,0,0,0)),
+        radial-gradient(farthest-side at 100% 50%, rgba(0,0,0,.28), rgba(0,0,0,0));
+      background-position: 0 0, 100% 0, 0 0, 100% 0;
+      background-repeat: no-repeat;
+      background-size: 40px 100%, 40px 100%, 14px 100%, 14px 100%;
+      background-attachment: local, local, scroll, scroll;
+    }
+    .post-body table {
+      background-image:
+        linear-gradient(to right, var(--white, #fff) 30%, rgba(255,255,255,0)),
+        linear-gradient(to left, var(--white, #fff) 30%, rgba(255,255,255,0)),
+        radial-gradient(farthest-side at 0 50%, rgba(17,48,75,.16), rgba(17,48,75,0)),
+        radial-gradient(farthest-side at 100% 50%, rgba(17,48,75,.16), rgba(17,48,75,0));
+      background-position: 0 0, 100% 0, 0 0, 100% 0;
+      background-repeat: no-repeat;
+      background-size: 40px 100%, 40px 100%, 14px 100%, 14px 100%;
+      background-attachment: local, local, scroll, scroll;
+    }
+
+    /* ---- table of contents ---- */
+    .post-toc {
+      max-width: 720px;
+      margin: 2rem auto 0;
+      padding: 1rem 1.25rem;
+      background: rgba(34,98,153,0.05);
+      border: 1px solid rgba(34,98,153,0.14);
+      border-left: 3px solid var(--gold, #c4a46c);
+      border-radius: 10px;
+      font-size: 0.92rem;
+    }
+    .post-toc > summary {
+      cursor: pointer;
+      font-weight: 700;
+      color: var(--navy);
+      list-style: none;
+    }
+    .post-toc > summary::-webkit-details-marker { display: none; }
+    .post-toc > summary::before {
+      content: "\25B8";
+      display: inline-block;
+      margin-right: 0.5rem;
+      transition: transform 0.2s ease;
+      color: var(--gold-dark, #7a5f22);
+    }
+    .post-toc[open] > summary::before { transform: rotate(90deg); }
+    .post-toc > summary:focus-visible { outline: 3px solid var(--focus, #226299); outline-offset: 3px; }
+    .post-toc ol { margin: 0.85rem 0 0.25rem; padding-left: 1.4rem; }
+    .post-toc li { margin-bottom: 0.4rem; line-height: 1.5; }
+    .post-toc a { color: var(--slate); text-decoration: none; }
+    .post-toc a:hover, .post-toc a:focus-visible { color: var(--blue-dark, #1a4d7a); text-decoration: underline; }
+    @media (max-width: 600px) { .post-toc { margin: 1.25rem 1rem 0; } }
+
+    /* ---- cross-document view transitions ---- */
+    @view-transition { navigation: auto; }
+    .nav, .blog-nav { view-transition-name: site-nav; }
+    .footer, .blog-footer { view-transition-name: site-footer; }
+    @media (prefers-reduced-motion: reduce) {
+      ::view-transition-group(*),
+      ::view-transition-old(*),
+      ::view-transition-new(*) { animation: none !important; }
+    }
+
+    /* ── SERIES STRIP — Hermes Agent in Practice ──
+       Same class and inner-wrapper shape as the OpenClaw strip because the
+       linter's RE_SNAV recognises exactly `series-nav` + a nested div; a
+       renamed strip would read as "no nav" and fail INV-08. All content
+       checks (INV-03 family) iterate the SERIES7 list only, so this strip's
+       labels are convention, not contract. House-styled, not the island CSS. */
+    .series-nav {
+      max-width: 720px; margin: 2rem auto 0; padding: 1.1rem 1.4rem;
+      background: rgba(255,255,255,0.75); border: 1px solid rgba(34,98,153,0.15);
+      border-left: 3px solid var(--gold); border-radius: 12px;
+    }
+    .series-nav h3 {
+      font-size: 0.78rem; font-weight: 700; text-transform: uppercase;
+      letter-spacing: 0.08em; color: var(--gold-dark); margin-bottom: 0.6rem;
+    }
+    .series-links { display: flex; flex-wrap: wrap; gap: 0.5rem; }
+    .series-links a, .series-links .current {
+      font-size: 0.82rem; font-weight: 600; padding: 0.35rem 0.8rem;
+      border-radius: 50px; text-decoration: none;
+    }
+    .series-links a { color: var(--blue-dark); background: rgba(34,98,153,0.08); }
+    .series-links a:hover { background: rgba(34,98,153,0.16); }
+    .series-links .current { color: #fff; background: var(--blue-dark); }
+    @media (max-width: 600px) { .series-nav { margin: 1.5rem 1rem 0; } }
+
+    /* ── FIGURE — the sanctioned diagram component (page-design §4 Content).
+       Diagrams are PNGs; this repo built them out of divs twice and reverted
+       twice. The image is wrapped in a link to itself so a phone can pinch a
+       1400px drawing without a line of JavaScript. */
+    .figure { margin: 2.5rem 0; }
+    .figure__img { width: 100%; height: auto; display: block;
+                   border-radius: var(--radius); border: 1px solid rgba(0,0,0,0.06); }
+    .figure__caption { font-size: 0.85rem; color: var(--slate-light);
+                       text-align: center; margin-top: 0.75rem; }
+
+    /* ── REFERENCES — every material number in this series carries its source.
+       The tags are the book's own four evidence labels. */
+    .references { margin-top: 3rem; padding-top: 2rem; border-top: 1px solid #e2e8f0; }
+    .references__note { font-size: 0.85rem; color: var(--slate-light); margin-bottom: 1rem; }
+    .references__list { padding-left: 1.4rem; font-size: 0.9rem; line-height: 1.75; }
+    .references__list li { margin-bottom: 0.7rem; }
+    .ref-tag { display: inline-block; font-size: 0.7rem; font-weight: 700;
+               letter-spacing: 0.06em; text-transform: uppercase; padding: 0.1rem 0.5rem;
+               border-radius: 50px; margin-right: 0.4rem; vertical-align: 0.05em;
+               background: rgba(34,98,153,0.1); color: var(--blue-dark); }
+    /* All four labels get a rule.  --standard and --study shipped without one
+       on 2026-09-05, so 158 of 306 tags fell through to the base blue and the
+       two labels were indistinguishable.  Ratios on --bg: 6.70 / 6.92 / 7.36 /
+       4.81:1, all AA at this size. */
+    .ref-tag--law { background: rgba(239,68,68,0.12); color: #991b1b; }
+    .ref-tag--standard { background: rgba(34,98,153,0.12); color: var(--blue-dark); }
+    .ref-tag--study { background: rgba(34,197,94,0.18); color: #14532d; }
+    .ref-tag--synthesis { background: rgba(196,164,108,0.22); color: var(--gold-dark); }
+    .ref-supports { display: block; color: var(--slate-light); font-size: 0.85rem; }
+
+    /* ── LANGUAGE SWITCH — pure CSS, zero JavaScript (INV-38) ──
+       One visually-hidden checkbox as a direct child of body, BEFORE the main landmark,
+       so `#langSwitch:checked ~ main …` reaches every content block. The two
+       tracks are paired blocks: .l-th (default) and .l-en (hidden until
+       checked; display:revert restores block for divs, inline for spans).
+       Naming stays clear of INV-12's menu-token regex (hamburger|burger|
+       nav__toggle|nav-toggle|navtoggle|menu-toggle|menu__toggle) — verified.
+       No JS also means no persistence across posts; each post opens in Thai. */
+    .lang-switch-box { position: absolute; left: -9999px; }
+    .l-en { display: none; }
+    #langSwitch:checked ~ main .l-en { display: revert; }
+    #langSwitch:checked ~ main .l-th { display: none; }
+    .lang-switch {
+      display: inline-flex; align-items: center; gap: 0.55rem;
+      margin-top: 1.4rem; padding: 0.4rem 1.1rem; border-radius: 50px;
+      background: rgba(255,255,255,0.85); border: 1px solid rgba(255,255,255,0.4);
+      cursor: pointer; font-size: 0.85rem; user-select: none;
+    }
+    .lang-switch span { color: var(--slate-light); font-weight: 600; transition: color 0.2s; }
+    .lang-switch .lang-sep { color: var(--gray); font-weight: 400; }
+    .lang-switch .lang-th { color: var(--navy); font-weight: 800; }
+    #langSwitch:checked ~ main .lang-switch .lang-th { color: var(--slate-light); font-weight: 600; }
+    #langSwitch:checked ~ main .lang-switch .lang-en { color: var(--navy); font-weight: 800; }
+    .lang-switch:hover { border-color: #fff; }
+    #langSwitch:focus-visible ~ main .lang-switch {
+      outline: 2px solid var(--focus); outline-offset: 3px;
+    }
+  </style>
+  <!-- social -->
+  <link rel="canonical" href="https://anirach.com/blog/ai-core-os-model.html">
+  <meta property="og:type" content="article">
+  <meta property="og:url" content="https://anirach.com/blog/ai-core-os-model.html">
+  <meta property="og:site_name" content="Anirach Mingkhwan">
+  <meta property="og:locale" content="th_TH">
+  <meta property="og:locale:alternate" content="en_US">
+  <meta property="article:published_time" content="2026-09-08">
+  <meta property="article:author" content="https://anirach.com/">
+  <meta property="og:title" content="The AI-OS Mental Model — ห้ารอยต่อที่การรับประกันเดิมพัง">
+  <meta property="og:description" content="weights=CPU, context=RAM, RAG=ไฟล์ซิสเต็ม, tool call=system call — อุปมาที่ดีจนอันตราย เพราะรอยต่อทั้งห้าที่มันพังคือจุดที่ต้องวางการควบคุมทั้งหมด">
+  <meta property="og:image" content="https://anirach.com/images/ai-core-os-model-og.jpg">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
+  <meta property="og:image:alt" content="The AI-OS Mental Model — ห้ารอยต่อที่การรับประกันเดิมพัง">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:image" content="https://anirach.com/images/ai-core-os-model-og.jpg">
+  <meta name="twitter:image:alt" content="The AI-OS Mental Model — ห้ารอยต่อที่การรับประกันเดิมพัง">
+  <meta name="robots" content="max-image-preview:large">
+  <meta name="theme-color" content="#11304b">
+  <link rel="icon" href="/favicon.ico" sizes="any">
+  <link rel="apple-touch-icon" href="/apple-touch-icon.png">
+  <!-- /social -->
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "BlogPosting",
+    "headline": "The AI-OS Mental Model — ห้ารอยต่อที่การรับประกันเดิมพัง",
+    "author": {
+      "@type": "Person",
+      "@id": "https://anirach.com/#person",
+      "name": "Anirach Mingkhwan",
+      "url": "https://anirach.com/"
+    },
+    "datePublished": "2026-09-08",
+    "dateModified": "2026-09-08",
+    "image": "https://anirach.com/images/ai-core-os-model-og.jpg",
+    "inLanguage": [
+      "th",
+      "en"
+    ],
+    "mainEntityOfPage": "https://anirach.com/blog/ai-core-os-model.html"
+  }
+  </script>
+</head>
+<body>
+<a href="#main" class="skip-link">Skip to content</a>
+<input type="checkbox" id="langSwitch" class="lang-switch-box" aria-label="Switch language: Thai / English">
+
+  <nav class="blog-nav">
+    <div class="blog-nav__inner">
+      <a href="../index.html" class="blog-nav__home">Anirach</a>
+      <a href="./" class="blog-nav__back">‹ Blog</a>
+      <div class="blog-nav__title">The AI-OS Mental Model</div>
+    </div>
+  </nav>
+
+  <main id="main">
+
+  <header class="post-hero">
+    <div class="post-hero__tags">
+      <span class="post-hero__tag">AI-OS</span>
+      <span class="post-hero__tag">Mental Model</span>
+      <span class="post-hero__tag">Prompt Injection</span>
+    </div>
+    <h1 class="post-hero__title"><span class="l-th">The AI-OS Mental Model — ห้ารอยต่อที่การรับประกันเดิมพัง</span><span class="l-en" lang="en">The AI-OS Mental Model — Five Seams Where Old Guarantees Break</span></h1>
+    <p class="post-hero__sub"><span class="l-th">มองแกน AI เป็นระบบปฏิบัติการ — weights คือ CPU, context คือ RAM, RAG คือไฟล์ซิสเต็ม, tool call คือ system call — แล้วชี้รอยต่อที่การรับประกันแบบเดิมใช้ไม่ได้ ซึ่งเป็นที่อยู่ของงานวิศวกรรมจริง</span><span class="l-en" lang="en">Model the AI core as an operating system — weights as CPU, context as RAM, RAG as the file system, tool calls as system calls — then mark the seams where each classical guarantee fails: exactly where the engineering lives.</span></p>
+    <div class="post-hero__meta">
+      <span>By <strong>Anirach Mingkhwan</strong></span>
+      <span class="post-hero__series">Engineering AI-Core Systems 2026 • Post #3</span>
+      <span><time datetime="2026-09-08">8 Sep 2026</time></span>
+      <span>19 min read</span>
+    </div>
+    <label for="langSwitch" class="lang-switch" title="สลับภาษา · Switch language"><span class="lang-th">ไทย</span><span class="lang-sep">·</span><span class="lang-en" lang="en">English</span></label>
+    <div class="post-hero__cover">
+      <img src="../images/ai-core-os-model-cover.jpg" alt="The AI-OS Mental Model — ห้ารอยต่อที่การรับประกันเดิมพัง" width="800" height="800" loading="eager" fetchpriority="high" decoding="async">
+    </div>
+  </header>
+
+  <article class="post-body">
+
+    <details class="post-toc l-th" open>
+      <summary>ในบทความนี้</summary>
+      <ol>
+          <li><a href="#th-os-analogy">มองแกน AI เป็นระบบปฏิบัติการ — หกคู่เทียบจาก weights = CPU ถึงแชท = เชลล์ และทรัพย์สินจริงที่ไม่ใช่ตัวแชตบอต</a></li>
+          <li><a href="#th-broken-seams">รอยต่อที่การรับประกันเดิมพัง — ไล่ทีละรอย จาก CPU ที่คืนตัวอย่างสุ่ม ถึง kernel ที่อ่าน source ไม่ได้</a></li>
+          <li><a href="#th-seven-steps">ลงมือทำ 7 ขั้น — จากตาราง mapping ของระบบคุณเอง สู่ทะเบียนรอยต่อฉบับแรกที่ commit ได้จริง</a></li>
+          <li><a href="#th-kramkraft">ทะเบียนรอยต่อของน้องคราม — หกแถวเต็ม พร้อมคอลัมน์ที่ซื่อสัตย์ที่สุดในเอกสารทั้งฉบับ: ใครบังคับวันนี้</a></li>
+          <li><a href="#th-validation-check">Validation check — เจ็ดคำถามที่ต้องตอบด้วย artifact ไม่ใช่คำคุณศัพท์</a></li>
+          <li><a href="#th-road-ahead">ก้าวต่อไป — จากแผนที่รอยต่อ สู่การตรึงทุกพจน์ที่กำหนดพฤติกรรมเข้า manifest เดียวในตอนถัดไป</a></li>
+      </ol>
+    </details>
+    <details class="post-toc l-en" open>
+      <summary>In this post</summary>
+      <ol>
+          <li><a href="#en-os-analogy">The AI core as an operating system — six mappings from weights = CPU to chat = shell, and why the real asset is not the chatbot</a></li>
+          <li><a href="#en-broken-seams">The seams where the old guarantees break — row by row, from a CPU that returns a sample to a kernel whose source cannot be read</a></li>
+          <li><a href="#en-seven-steps">The seven steps — from a mapping table of your own system to a first seam register you can actually commit</a></li>
+          <li><a href="#en-kramkraft">Nong Kram's seam register — six full rows, with the most honest column in the whole document: who enforces this today</a></li>
+          <li><a href="#en-validation-check">Validation check — seven questions that must be answered with artifacts, not adjectives</a></li>
+          <li><a href="#en-road-ahead">The road ahead — from a map of the seams to pinning every behaviour-determining term into one manifest in the next post</a></li>
+      </ol>
+    </details>
+    <div class="l-th">
+
+    <p>🤔 <strong>ทีมของคุณเรียกระบบ AI ที่ดูแลอยู่ว่า "แชตบอตตัวหนึ่ง" — แล้วถ้าสิ่งที่คุณดูแลอยู่จริง ๆ คือคอมพิวเตอร์ทั้งเครื่อง ที่ไม่มี memory protection ไม่มีการตรวจสิทธิ์ system call และอ่าน source ของ kernel ไม่ได้เลยล่ะ?</strong></p>
+
+    <p>ตอนที่แล้ว <a href="/blog/ai-core-three-eras">Software 1.0 · 2.0 · 3.0</a> เราเห็นว่าสามยุคไม่แทนที่กันแต่ซ้อนเป็นชั้นในระบบเดียว และคานงัดของวิศวกรย้ายจาก control flow สู่ dataset กับ loss มาหยุดที่ context ที่ประกอบตอนรัน เราปิดตอนด้วยบัญชี artifact ของน้องครามที่ระบุว่าพฤติกรรมแต่ละส่วนอยู่ชั้นไหน คำถามที่ค้าง: เมื่อชั้น 3.0 กำหนดพฤติกรรมมากที่สุด เราควรมองภาพรวมด้วยกรอบอะไร — เพราะ mental model ที่เลือกจะกำหนดว่าเราถามคำถามชุดไหนกับระบบ และมองข้ามความเสี่ยงชุดไหนโดยไม่รู้ตัว</p>
+
+    <p>คำตอบของเปเปอร์<sup><a href="#th-ref-1">[1]</a></sup> และของตอนนี้อยู่ในประโยคเดียว: มองแกน AI เป็น<em>ระบบปฏิบัติการ</em> ไม่ใช่แอปพลิเคชัน — weights คือ CPU, context window คือ RAM, retrieval คือไฟล์ซิสเต็ม, tool call คือ system call, agent คือ process และแชทภาษาธรรมชาติคือเชลล์ แต่คุณค่าจริงของอุปมาอยู่ที่รอยแตกของมัน: ทุกแถวพกการรับประกันที่ระบบปฏิบัติการเคยให้ และฝั่งแกน AI ทำหายหมดทุกข้อ — ตำแหน่งที่หายคือแผนที่งานของทั้งซีรีส์ ตอนนี้จบด้วย artifact ชิ้นแรกที่วาดแผนที่นั้น: ทะเบียนรอยต่อของน้องคราม ที่ตอนที่ 8 จะหยิบไปแปลงเป็นรางควบคุมทีละแถว</p>
+
+    <h2 id="th-os-analogy">1. มองแกน AI เป็นระบบปฏิบัติการ ไม่ใช่แอปพลิเคชัน</h2>
+
+    <p>ข้อสรุปของหัวข้อนี้มาก่อน: Table 4 ของเปเปอร์วางคู่เทียบไว้หกคู่ — weights ≈ CPU, context window ≈ RAM, retrieval/RAG ≈ ไฟล์ซิสเต็ม, tool call ≈ system call, agent ≈ process และแชทภาษาธรรมชาติ ≈ เชลล์<sup><a href="#th-ref-1">[1]</a></sup> ประโยชน์ทันทีของตารางคือการย้ายสายตา: จาก "ฟีเจอร์แชตตัวหนึ่ง" ไปเห็นเครื่องทั้งเครื่อง — มีหน่วยความจำ มีไฟล์ มีช่องเรียกใช้อำนาจภายนอก และมีงานหลายงานวิ่งพร้อมกัน</p>
+
+    <p>ผมยืนยันจากประสบการณ์รีวิวระบบจริง: ทีมที่มองระบบเป็น "แอป" จะทดสอบแบบแอป — พิมพ์ถาม อ่านคำตอบ พอใจแล้วปล่อย ส่วนทีมที่มองเป็น "เครื่อง" จะถามแบบผู้ดูแลเครื่อง: หน่วยความจำถูกปกป้องไหม ใครมีสิทธิ์เรียก system call เปิด log ย้อนหลังได้แค่ไหน คำถามคนละชุดนำไปสู่การควบคุมคนละชุด — และ Table 4 คือเครื่องมือเปลี่ยนชุดคำถามที่ถูกที่สุดที่ผมรู้จัก</p>
+
+    <figure class="figure">
+      <a href="../images/ai-core-fig-03-os-seams.png">
+        <img class="figure__img" src="../images/ai-core-fig-03-os-seams.png" alt="ตารางเทียบระบบปฏิบัติการกับแกน AI — weights กับ CPU, context window กับ RAM, retrieval กับไฟล์ซิสเต็ม, tool call กับ system call, agent กับ process, แชทกับเชลล์ — พร้อมเครื่องหมายรอยแตกตรงจุดที่การรับประกันเดิมพัง" width="1400" height="840" loading="lazy" decoding="async">
+      </a>
+      <figcaption class="figure__caption">อุปมา AI-OS มีประโยชน์ที่สุดตรงรอยแตกของมันเอง — ห้ารอยต่อที่ตอนที่ 8 จะวางรางควบคุม</figcaption>
+    </figure>
+
+    <div class="table-wrapper">
+        <table>
+            <thead>
+                <tr>
+                    <th>ฝั่งระบบปฏิบัติการ</th>
+                    <th>ฝั่งแกน AI</th>
+                    <th>สิ่งที่คู่เทียบนี้จับได้</th>
+                    <th>ในน้องคราม</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td><strong>CPU</strong></td>
+                    <td>weights ของโมเดล</td>
+                    <td>เครื่องคำนวณกลางที่ทุกคำขอต้องวิ่งผ่าน — ตายตัวต่อรุ่น ไม่เรียนรู้อะไรเพิ่มระหว่างใช้งาน</td>
+                    <td>โมเดล hosted รุ่นที่ pin ไว้ (เรียกนามธรรมว่า M_v) ที่ประมวลทุกข้อความของลูกค้า</td>
+                </tr>
+                <tr>
+                    <td><strong>RAM</strong></td>
+                    <td>context window</td>
+                    <td>หน่วยความจำทำงานที่ถูกประกอบขึ้นใหม่ต่อคำขอ — คำสั่ง ประวัติ และข้อมูลที่ดึงมา อยู่รวมกันในนั้น</td>
+                    <td>บทบาทของน้องคราม + ประวัติแชท + ท่อนนโยบายที่ถูกดึงมา ประกอบใหม่ทุกเทิร์น</td>
+                </tr>
+                <tr>
+                    <td><strong>ไฟล์ซิสเต็ม</strong></td>
+                    <td>retrieval / RAG</td>
+                    <td>ความรู้ถาวรที่ถูก "อ่าน" เข้ามาตอนรัน แทนที่จะถูกฝังไว้ในตัวโปรแกรม</td>
+                    <td>คลัง policy/ (นโยบายคืนสินค้า เงื่อนไขจัดส่ง) และ catalog/ (หน้าสินค้า)</td>
+                </tr>
+                <tr>
+                    <td><strong>system call</strong></td>
+                    <td>tool call</td>
+                    <td>ช่องทางเดียวที่การคำนวณข้างในแตะโลกภายนอกได้จริง</td>
+                    <td>refund(order_id, amount, reason) ที่มีผลจริง และการอ่านข้อมูลออเดอร์แบบ read-only</td>
+                </tr>
+                <tr>
+                    <td><strong>process</strong></td>
+                    <td>agent</td>
+                    <td>งานหลายงานที่วิ่งพร้อมกันบนแกนคำนวณเดียวกัน</td>
+                    <td>เซสชันสนทนาของลูกค้าหลายรายที่วิ่งขนานกันบนแกนเดียว</td>
+                </tr>
+                <tr>
+                    <td><strong>เชลล์</strong></td>
+                    <td>แชทภาษาธรรมชาติ</td>
+                    <td>อินเทอร์เฟซที่มนุษย์ใช้สั่งเครื่องทั้งเครื่อง</td>
+                    <td>หน้าต่างแชตบนเว็บของร้านและบน LINE</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <h3>ทรัพย์สินจริงคือข้อมูลกับโปรโตคอล ไม่ใช่ตัวแชต</h3>
+
+    <p>มุมที่หลายองค์กรมองสลับ และเปเปอร์ชี้ตรง ๆ: ตัวเชลล์ — หน้าต่างแชตที่ทุกคนเห็น — คือส่วนที่แทนที่ง่ายที่สุดของเครื่อง ทรัพย์สินจริงอยู่ที่<em>ข้อมูลและโปรโตคอล</em> — คลังความรู้ที่ curate แล้ว สคีมา tool ที่รัดกุม กติกาประกอบบริบท — สิ่งที่สะสมมูลค่าและถ่ายโอนข้ามรุ่นโมเดลได้<sup><a href="#th-ref-1">[1]</a></sup> ของครามคราฟต์: คลัง policy/ กับ catalog/ ที่จัดระเบียบดี และสคีมา refund ที่เงื่อนไขครบ อายุยืนกว่าการเลือกโมเดลรุ่นไหนหลายเท่า</p>
+
+    <p>และประโยคที่คมที่สุดของหัวข้อนี้ในเปเปอร์ว่าด้วยสิ่งที่เกิดขึ้นเมื่อองค์กรไม่มองแบบนี้: แชตบอตที่ติดกาวไว้ข้างระบบเดิมคือ <em>"one application, mistaken for a computer"</em> — แอปพลิเคชันตัวเดียว ที่ถูกเข้าใจผิดว่าเป็นคอมพิวเตอร์ทั้งเครื่อง<sup><a href="#th-ref-1">[1]</a></sup> องค์กรที่ "ซื้อแชตบอต" มักได้แอปหนึ่งตัวโดยไม่มีเครื่องอยู่ข้างใต้ — ไม่มีไฟล์ซิสเต็มที่ดูแล ไม่มีชั้นตรวจ system call ไม่มี log ระดับเครื่อง วันที่อยากให้มัน "ทำได้มากขึ้น" ก็ต่อ tool เข้าไปตรง ๆ กลายเป็นเครื่องที่ประกอบขึ้นโดยบังเอิญ ไม่มีใครเคยออกแบบชั้นป้องกันเลย</p>
+
+    <blockquote>💡 มุมมองของผม: ใช้อุปมานี้เป็น "เครื่องตั้งคำถาม" อย่าใช้เป็นพิมพ์เขียวสถาปัตยกรรม — ไม่ต้องสร้าง scheduler หรือ virtual memory ให้โมเดล คุณค่าของมันคือทำให้คำถามระดับ OS โผล่ในห้องรีวิว: memory protection อยู่ไหน ใคร authorize system call แล้ว log ระดับ kernel อยู่กับใคร — สามคำถามนี้เปิดงานทั้งหมดที่เหลือของซีรีส์</blockquote>
+
+    <h2 id="th-broken-seams">2. รอยต่อที่การรับประกันเดิมพัง</h2>
+
+    <p>อุปมาทุกอันมีจุดพัง และของ Table 4 จุดพังคือสาระทั้งหมด: ฝั่งระบบปฏิบัติการของทุกแถวพก <strong>การรับประกันเชิงโครงสร้าง</strong> (structural guarantee) ที่วิศวกรรมซอฟต์แวร์พึ่งพามาตลอด ส่วนฝั่งแกน AI ไม่เหลือสักข้อ<sup><a href="#th-ref-1">[1]</a></sup> หัวข้อนี้ไล่ทั้งหกรอยทีละแถว เพราะตำแหน่งของรอยคือแผนที่งานของซีรีส์: จุดที่งานวิศวกรรมยาก และจุดที่การควบคุมทั้งหมดจะไปวาง</p>
+
+    <h3>CPU ที่ไม่คืนคำตอบ แต่คืน "ตัวอย่างสุ่ม"</h3>
+
+    <p>CPU จริงให้การรับประกันที่เราลืมไปแล้วว่าเป็นการรับประกัน: คำสั่งเดียวกัน ข้อมูลเดียวกัน ผลเดียวกัน ทุกครั้ง ตลอดไป โมเดลไม่ให้ข้อนี้ — สิ่งที่มันคืนมาคือ<em>ตัวอย่างหนึ่งตัว</em>ที่สุ่มจากการแจกแจงความน่าจะเป็น<sup><a href="#th-ref-1">[1]</a></sup> รันคำถามเดิมซ้ำแล้วได้คนละคำตอบ ไม่ใช่อาการของบั๊ก แต่เป็นพฤติกรรมปกติของเครื่อง</p>
+
+    <p>ข้อควรระวังที่ถูกอ้างผิดบ่อย: deterministic decoding — temperature ศูนย์ pin seed — ตัดได้เฉพาะ<em>ความแปรปรวนจากการสุ่ม</em> แต่ตัด<em>ความไวต่อรุ่นโมเดล</em>ไม่ได้<sup><a href="#th-ref-1">[1]</a></sup> มันทำให้กติกาการเลือกคำทำซ้ำได้ แต่วันที่ผู้ให้บริการอัปเดตรุ่น การแจกแจงข้างใต้เปลี่ยนทั้งผืน — เทียบเท่าสลับ CPU ทั้งตัวโดย opcode เดิมให้ผลใหม่ นี่คือเหตุที่ M_v ต้องถูก pin และตอนถัดไปจะบังคับ pin ทุกพจน์ที่เหลือ</p>
+
+    <h3>RAM ที่ไม่มี memory protection</h3>
+
+    <p>ระบบปฏิบัติการจริงมี MMU แยก address space แยก kernel จาก user space — โปรแกรมหนึ่งเขียนทับหน่วยความจำของอีกโปรแกรมไม่ได้โดยดีไซน์ context window ไม่มีอะไรแบบนั้นเลย: system prompt ข้อความลูกค้า ท่อนที่ retrieve มา และผลจาก tool นั่งเรียงเป็น token ในช่องเดียว ไม่มีบิตไหนบอกโมเดลว่า token นี้คือ "คำสั่งของเจ้าของบ้าน" ส่วน token นั้นคือ "ข้อมูลจากคนแปลกหน้า" — คำสั่งกับข้อมูลแชร์ช่องเดียวกัน<sup><a href="#th-ref-1">[1]</a></sup></p>
+
+    <p>ช่องเดียวนี้คือฐานเชิงโครงสร้างของ <strong>การฉีดคำสั่งแฝง</strong> (prompt injection)<sup><a href="#th-ref-1">[1]</a></sup> และรูปแบบที่อันตรายกว่าคือ <strong>การฉีดคำสั่งแฝงทางอ้อม</strong> (indirect prompt injection): ผู้โจมตีไม่ต้องพิมพ์ใส่แชตเองด้วยซ้ำ แค่วางข้อความไว้ในที่ที่ระบบจะไปอ่านเข้ามาเองภายหลัง — Greshake และคณะสาธิตกับแอปพลิเคชันจริงที่ผูก LLM ไว้ตั้งแต่ปี 2023<sup><a href="#th-ref-2">[2]</a></sup> และ OWASP จัด prompt injection ไว้เป็นรายการแรกของ Top 10 for LLM Applications ฉบับปี 2025<sup><a href="#th-ref-3">[3]</a></sup> สำหรับน้องคราม ถนนเข้าช่องนี้มีจริงวันนี้อย่างน้อยสองสาย: รีวิวสินค้าในหน้า catalog ที่ถูก retrieve และข้อความจากสลิปที่ลูกค้าอัปโหลด</p>
+
+    <h3>ไฟล์ซิสเต็มที่ไม่มีสัญญาการอ่าน</h3>
+
+    <p>สัญญาของไฟล์ซิสเต็มเรียบง่ายจนไม่มีใครนึกถึงมัน: read เดิมคืน bytes เดิม จนกว่าจะมีใคร write ฝั่ง retrieval ไม่มีสัญญาข้อนี้ — "อ่านไฟล์เดียวกันสองครั้ง" อาจได้คนละชุด เพราะ corpus ถูก re-index ไปแล้ว ranker เปลี่ยนรุ่น หรือมีเอกสารใหม่เพิ่มเข้ามาหนึ่งหน้าแล้วลำดับผลการค้นเปลี่ยนทั้งกระดาน — ทั้งเวอร์ชันของ corpus และการจัดอันดับล้วนเปลี่ยนชุดข้อความที่ถูกดึงได้<sup><a href="#th-ref-1">[1]</a></sup></p>
+
+    <p>ผลเชิงวิศวกรรมตรงตัว: ลูกค้าสองคนถามคำถามเดียวกันห่างกันหนึ่งวัน อาจได้คำตอบที่ "อ่าน" นโยบายคนละเวอร์ชัน โดยไม่มีบันทึกเลยว่าใครอ่านอะไร ทางแก้ไม่ใช่ห้ามแตะ corpus แต่คือปฏิบัติกับ retrieval เป็นไฟล์ซิสเต็มที่มีเวอร์ชัน — snapshot มีเลขรุ่น ชุดที่ถูกอ่านต่อคำตอบถูกบันทึก ขั้นที่ 5 ทำเรื่องนี้ให้จบในวันเดียว</p>
+
+    <h3>system call ที่ถูก "ขอ" เป็นภาษาธรรมชาติ</h3>
+
+    <p>ในระบบปฏิบัติการจริง system call คือพรมแดนแข็ง: kernel ตรวจสิทธิ์ก่อนลงมือ ทุกครั้ง ไม่มีข้อยกเว้น ในโลกแกน AI พรมแดนนี้ถูก<em>ขอ</em>เป็นภาษาธรรมชาติ — โมเดล generate ข้อความที่ harness ตีความว่าเป็นการเรียก tool<sup><a href="#th-ref-1">[1]</a></sup> สิ่งที่ generate ออกมาได้จึงมีสถานะเป็นข้อเสนอ ไม่ใช่การกระทำ และโมเดลที่ถูกโน้มน้าวได้ผ่าน context เป็นจุดตรวจสิทธิ์ไม่ได้โดยหลักการ: การอนุญาตต้องถูกบังคับ<em>นอกโมเดล</em>เสมอ<sup><a href="#th-ref-1">[1]</a></sup></p>
+
+    <p>เรื่องนี้ไม่ใช่สถานการณ์สมมติ — agent hijacking ที่ผู้โจมตีฉีดเนื้อหามาชักนำ agent จริงจังถึงขั้น NIST CAISI เผยแพร่บทวิเคราะห์ทางเทคนิคเรื่องการทำ evaluation แบบนี้ให้แข็งแรงขึ้น<sup><a href="#th-ref-4">[4]</a></sup> สำหรับครามคราฟต์ ความหมายตรงและแพง: refund ย้อนกลับไม่ได้ตั้งแต่ payment processor รับคำสั่ง จึงต้องมีผู้ตรวจสิทธิ์นอกโมเดลยืนคั่นเสมอ — วันนี้มีไหม ขั้นที่ 4 จะบังคับให้ตอบตรง ๆ</p>
+
+    <h3>process ที่ไม่มี privilege separation</h3>
+
+    <p>โปรเซสในระบบปฏิบัติการถูกแยกจากกันโดยดีไซน์ — address space แยก สิทธิ์ผู้ใช้แยก capability แยก ส่วน agent หลายตัว (หรือหลายเซสชันของ agent เดียว) ที่วิ่งบนแกนเดียวกัน ไม่มีการแยกสิทธิ์ติดตัวมาแต่กำเนิดระหว่างงานที่วิ่งพร้อมกัน<sup><a href="#th-ref-1">[1]</a></sup> สิ่งเดียวที่คั่นงานหนึ่งจากอีกงานคือโค้ด harness ที่เราเขียนเอง — เป็นวินัยของเรา ไม่ใช่คุณสมบัติของแกน</p>
+
+    <p>น้องครามวันนี้เป็น agent เดียว แต่ให้บริการลูกค้าหลายรายพร้อมกัน คำถามที่ทะเบียนรอยต่อต้องบันทึกให้เห็น: อะไรกันไม่ให้ข้อมูลออเดอร์ของลูกค้ารายหนึ่งไหลปนเข้า context ของอีกราย และอะไรกันไม่ให้เซสชันของรายหนึ่งขอ refund ให้ออเดอร์ของอีกราย — คำตอบวันนี้พิงกับโค้ดจัดการเซสชันล้วน ๆ ซึ่งไม่เคยถูกทดสอบในมุมนี้เลย</p>
+
+    <h3>kernel ที่อ่าน source ไม่ได้</h3>
+
+    <p>การรับประกันข้อสุดท้ายของระบบปฏิบัติการคือข้อที่ลึกที่สุด: เมื่อพฤติกรรมแปลก เราเปิด source ของ kernel อ่านได้เสมอ ตรงนี้อุปมาพังแบบไม่มีชิ้นดี — weights อ่านแบบที่อ่านโค้ดไม่ได้ พฤติกรรมของแกนเป็นสิ่งที่<em>งอกออกมา</em> (emergent) ไม่ใช่สิ่งที่ถูก specify ไว้<sup><a href="#th-ref-1">[1]</a></sup> ถามว่า "บรรทัดไหนทำให้ตอบแบบนี้" ไม่มีคำตอบ เพราะไม่มีบรรทัด</p>
+
+    <p>ทางออกไม่ใช่ยอมแพ้ แต่คือย้ายที่ลงทุน: เมื่ออ่าน source ไม่ได้ observability ต้องเข้ามาทำหน้าที่เสริมที่การอ่าน source เคยทำ<sup><a href="#th-ref-1">[1]</a></sup> — บันทึกอินพุตและเอาต์พุตของเครื่องให้ครบพออธิบายย้อนหลังได้ สิ่งนี้จะโตเป็น <strong>ร่องรอยการตัดสินใจ</strong> (decision trace) ฉบับเต็มในตอนที่ 7 แต่เริ่มคิดได้ตั้งแต่วันนี้ด้วยคำถามข้อเดียว: ถ้าเมื่อวานน้องครามตอบแปลก วันนี้เรามีข้อมูลพอจะรู้ไหมว่าทำไม</p>
+
+    <p>หกแถว พังทั้งหก และไม่ได้พังแบบสุ่ม — เมื่อกางรอยทั้งหมดลงบนเส้นทางจริงของหนึ่งคำขอ (รับข้อความ → ประกอบบริบท → ดึงความรู้ → เรียก tool → ปล่อยคำตอบ) มันเรียงตัวเป็นรอยต่อห้าจุดบนเส้นทางนั้น: input, dialog, retrieval, execution และ output — ตำแหน่งเดียวกับที่ตอนที่ 8 จะวางรางควบคุมทั้งห้า<sup><a href="#th-ref-1">[1]</a></sup></p>
+
+    <div class="alert info">
+        <strong>ระวังการใช้อุปมาเกินขอบเขต:</strong> Table 4 ไม่ได้สั่งให้สร้าง OS จริงรอบโมเดล มันเป็นเครื่องมือหา "จุดที่เราเผลอสมมติการรับประกันที่ไม่มีอยู่จริง" เท่านั้น — เมื่อข้อสรุปจากอุปมาขัดกับกลไกจริง ให้เชื่อกลไกจริงเสมอ
+    </div>
+
+    <h2 id="th-seven-steps">3. ลงมือทำ 7 ขั้น</h2>
+
+    <p>เจ็ดขั้นนี้ใช้เวลาราวครึ่งวันสำหรับระบบขนาดน้องคราม และผลิต artifact เดียว — ทะเบียนรอยต่อ — ที่จะกางฉบับเต็มในหัวข้อ 4 ทำตามลำดับ เพราะแต่ละขั้นป้อนขั้นถัดไป</p>
+
+    <h3>ขั้นที่ 1 — วางหกองค์ประกอบของระบบคุณลงบนตารางเทียบ</h3>
+
+    <p>เขียนหกแถวตามตารางในหัวข้อ 1 แล้วเติมคอลัมน์ "ของจริง" ของระบบคุณ: ชื่อโมเดลพร้อมรุ่น โค้ดที่ประกอบ context อยู่ไฟล์ไหน แหล่ง retrieval มีอะไรบ้าง รายชื่อ tool ทุกตัว งานอะไรวิ่งพร้อมกันบ้าง และผู้ใช้คุยผ่านช่องทางไหน กติกาข้อเดียว: ห้ามเขียนนามธรรม ทุกช่องต้องชี้ไฟล์ บริการ หรือ repo ที่มีจริงได้ หยิบบัญชี artifact จากตอนที่แล้วมากางข้าง ๆ จะเร็วขึ้นมาก</p>
+
+    <p>ขั้นนี้ยังไม่วิเคราะห์อะไรเลย — มันแค่บังคับให้เห็นว่าเครื่องมีชิ้นส่วนอะไร ซึ่งฟังดูง่ายจนน่าข้าม แต่ระบบจำนวนมากไม่เคยมีรายการนี้อยู่ที่ไหนเลย ของน้องคราม หกแถวออกมาแล้วเป็นคอลัมน์ขวาสุดของตารางในหัวข้อ 1 — งานของขั้นนี้คือทำแบบเดียวกันกับระบบของคุณ</p>
+
+    <h3>ขั้นที่ 2 — เขียนการรับประกันเดิมที่คุณเผลอสมมติ ของทุกแถว</h3>
+
+    <p>ต่อท้ายแต่ละแถวด้วยประโยคขึ้นต้นว่า "เราแอบสมมติว่า…" แล้วเขียนให้ซื่อสัตย์: เราแอบสมมติว่าอินพุตเดิมให้คำตอบเดิม ว่า system prompt ไม่มีทางถูกทับ ว่าพรุ่งนี้ retrieval จะคืนชุดเดิม ว่าโมเดลเรียกได้เฉพาะสิ่งที่เราอนุญาต ว่าเซสชันแยกกันเองโดยธรรมชาติ และว่าเมื่อจำเป็นเราจะ "เปิดดูข้างใน" ได้ การรับประกันที่อันตรายที่สุดคือข้อที่ไม่เคยถูกพูดออกมา — เพราะไม่มีใครตรวจสิ่งที่ไม่มีใครเคยพูด</p>
+
+    <p>ตัวอย่างจริงจากทีมครามคราฟต์ (เหตุการณ์สมมติของบทเรียน): ตอนผมถามว่าอะไรกันไม่ให้น้องครามคืนเงินเกินนโยบาย คำตอบแรกคือ "ก็เขียนไว้ใน system prompt แล้ว" — ประโยคนี้คือการเผลอสมมติที่หัวข้อ 2 เพิ่งรื้อ: เข้าใจว่าข้อความในบริบทเป็น<em>ข้อบังคับ</em> ทั้งที่มันเป็นเพียง<em>คำแนะนำ</em>ต่อเครื่องที่ถูกโน้มน้าวได้ทางช่องเดียวกัน เขียนข้อสมมตินี้ลงกระดาษ แล้วขั้นที่ 4 จะจัดการมัน</p>
+
+    <h3>ขั้นที่ 3 — ไล่หาช่องทางร่วมคำสั่ง/ข้อมูลของคุณให้ครบ</h3>
+
+    <p>จากรอยต่อ RAM: ทุกที่ที่ข้อความจากบุคคลที่สามไหลเข้า context ได้ คือถนนเข้าหน่วยความจำที่ไม่มีการปกป้อง<sup><a href="#th-ref-1">[1]</a></sup><sup><a href="#th-ref-2">[2]</a></sup> เดินไล่ให้ครบแล้วเขียนเป็นรายการ ของน้องครามได้ห้าสาย:</p>
+
+    <ul>
+        <li><strong>ข้อความแชตของลูกค้า</strong> (เว็บ + LINE) — untrusted โดยนิยาม นี่คือประตูหน้า</li>
+        <li><strong>ท่อนที่ retrieve จาก catalog/</strong> — หน้าสินค้ามีรีวิวที่ลูกค้าเขียนฝังอยู่ ข้อความของคนแปลกหน้าจึงเดินเข้ามาทางประตู "ความรู้ของร้าน"</li>
+        <li><strong>ข้อความจากสลิปโอนเงินที่ลูกค้าอัปโหลด</strong> — ผ่าน OCR เข้ามาเป็นข้อความใน context โดยตรง</li>
+        <li><strong>ผลลัพธ์ tool: ช่อง note และที่อยู่ในข้อมูลออเดอร์</strong> — ลูกค้าเป็นคนพิมพ์ค่าพวกนี้ตอนสั่งซื้อ ต่อให้มันเดินทางมาผ่านฐานข้อมูลของเราเอง มันก็ยังเป็นข้อความของบุคคลที่สาม</li>
+        <li><strong>ประวัติแชตย้อนหลัง</strong> — ทุกอย่างข้างบนที่เคยเข้ามาแล้ว ถูกม้วนกลับเข้า context อีกครั้งในเทิร์นถัดไป</li>
+    </ul>
+
+    <p>ข้อที่ทีมมักตกใจคือข้อที่สี่ — ข้อมูลจาก tool "ของเราเอง" ก็พาข้อความของคนแปลกหน้าเข้ามาได้ ความ trusted ของ<em>ท่อ</em>ไม่ได้ทำให้<em>เนื้อหา</em>ในท่อ trusted ตาม รายการห้าสายนี้จะกลายเป็นคอลัมน์ "อะไรเข้ามาตรงนั้น" ของแถว RAM ในทะเบียน</p>
+
+    <h3>ขั้นที่ 4 — ประทับตราทุก tool call ว่า "ถูกขอ ไม่ใช่ถูกบังคับ" แล้วตอบว่าใครบังคับวันนี้</h3>
+
+    <p>ทำบัญชี tool ทุกตัวของระบบ แล้วเติมคอลัมน์เดียวที่สำคัญ: <em>ใครบังคับวันนี้</em> — ตอบตามความเป็นจริง ไม่ใช่ตามที่ตั้งใจจะทำ และบ่อยครั้งคำตอบที่ถูกต้องคือ "ไม่มี" ของน้องครามออกมาอย่างนี้:</p>
+
+    <pre><code># บัญชี tool call ของน้องคราม — สำรวจตามจริง ณ วันนี้
+get_order(order_id)               # อ่านอย่างเดียว
+                                  # ใครบังคับ: ไม่มี — รับ order_id ใดก็ได้
+                                  # ไม่ผูกกับตัวตนของลูกค้าที่กำลังแชต
+refund(order_id, amount, reason)  # มีผลจริง — ย้อนไม่ได้เมื่อ payment processor รับคำสั่ง
+                                  # ใครบังคับ: ข้อความใน system prompt เท่านั้น
+                                  # = ไม่มีกลไกใดอยู่นอกโมเดล</code></pre>
+
+    <p>คำว่า "ไม่มี" สองแห่งในบัญชีนี้คือประโยคที่มีค่าที่สุดของขั้นนี้ — มันยอมรับว่าพรมแดน system call ของเราไม่มี kernel เฝ้า<sup><a href="#th-ref-1">[1]</a></sup> และมันคือแถววิกฤตของทะเบียนที่กำลังจะเกิด งาน agent hijacking ที่อ้างในหัวข้อ 2 คือภาพของระบบจริงที่ปล่อยคอลัมน์นี้ว่าง<sup><a href="#th-ref-4">[4]</a></sup></p>
+
+    <h3>ขั้นที่ 5 — ปฏิบัติกับ retrieval เป็นไฟล์ซิสเต็มที่มีเวอร์ชัน</h3>
+
+    <p>ตอบสองคำถามลงกระดาษ: หนึ่ง — snapshot ของ corpus ตอนนี้คือรุ่นอะไร ถ้าไม่มีเลขรุ่นให้ชี้ แปลว่ายังไม่มีคำตอบ สอง — คำถามเดียวกันถามสองครั้งอ่าน "ไฟล์" คนละชุดได้ไหม ไล่ดูว่า corpus กับ ranker เปลี่ยนเมื่อไรและใครเปลี่ยน จากนั้นเริ่มบันทึกสองอย่างต่อคำตอบ: เลขรุ่น snapshot และรายการ passage ที่ถูกอ่าน</p>
+
+    <p>ของครามคราฟต์ ภาพจริง (รายละเอียดสมมติของบทเรียน) คือทีมแก้นโยบายใน Google Docs แล้ว export มา re-index ทุกคืน — ไม่มีเลขรุ่น ไม่มีบันทึกว่าคำตอบไหนอ่านรุ่นไหน สองบรรทัดใน config ของตัว index กับหนึ่งคอลัมน์ใน log ปิดช่องนี้ได้ในวันเดียว — ตั้งแต่นั้น "นโยบายบอกว่า…" ของน้องครามจะมีหลักฐานกำกับเสมอว่า<em>รุ่นไหน</em>บอก</p>
+
+    <h3>ขั้นที่ 6 — วางแผน observability สำหรับ kernel ที่ทึบ</h3>
+
+    <p>เล่นเกมย้อนเหตุการณ์กับของจริง: หยิบคำตอบแปลกที่สุดที่ระบบเคยตอบมาหนึ่งรายการ แล้วถามทีมว่า "อะไรบ้างที่ต้องถูกบันทึกไว้<em>ตั้งแต่ตอนนั้น</em> เราถึงจะอธิบายมันได้<em>ตอนนี้</em>" รายการจากเกมนี้คือสเปกร่างแรกของ trace — ออกแบบจากความเจ็บจริง ไม่ใช่จากตำรา ของน้องครามได้อย่างนี้:</p>
+
+    <pre><code># สเปกร่างแรกของ trace — ต้องมีอะไร ถึงจะอธิบาย "คำตอบแปลกของเมื่อวาน" ได้
+model_id, model_version       # เครื่องคำนวณตัวไหนกันแน่ที่เป็นคนตอบ
+decoding                      # temperature, top_p, seed ที่ใช้จริง
+context_assembled             # ข้อความที่ประกอบแล้วทั้งชิ้น ไม่ใช่แค่ template
+corpus_snapshot, passage_ids  # อ่าน "ไฟล์" รุ่นไหน ท่อนไหนบ้าง
+tool_calls, tool_results      # ขออะไรไป ได้อะไรกลับมา
+timestamp, session_id         # เมื่อไร ในบทสนทนาไหน</code></pre>
+
+    <p>แรงจูงใจของทีมครามคราฟต์มาจากเหตุการณ์ "แจกันร้าว" (กรณีสมมติของบทเรียน): ลูกค้ารายหนึ่งยืนยันว่าน้องครามเคยบอกว่าคืนสินค้าได้ภายใน 45 วัน ทั้งที่นโยบายเขียนไว้ 14 วัน ทีมเปิด log แล้วพบแค่ข้อความแชต — ไม่รู้ว่าเทิร์นนั้นประกอบ context อย่างไร ดึงนโยบายท่อนไหนรุ่นไหน จึงตัดสินไม่ได้แม้แต่ว่าลูกค้าจำผิดหรือระบบตอบผิดจริง นั่นคือความหมายเชิงปฏิบัติของ kernel ที่ทึบและไม่มี observability มาเสริม<sup><a href="#th-ref-1">[1]</a></sup></p>
+
+    <h3>ขั้นที่ 7 — ประกอบทั้งหมดเป็นทะเบียนรอยต่อ</h3>
+
+    <p>รวมผลของขั้นที่ 1–6 เป็นตารางเดียว — <strong>ทะเบียนรอยต่อ</strong> (seam register) — ห้าคอลัมน์: รอยต่อ, การรับประกันเดิมที่พัง, อะไรเข้ามาตรงนั้น, ใครบังคับวันนี้ และความรุนแรง เกณฑ์ความรุนแรงใช้สองคำถาม: ผลแย่สุดย้อนกลับได้ไหม และใครเข้าถึงช่องของรอยนี้ได้ — รอยที่ทั้งย้อนไม่ได้และคนนอกเอื้อมถึง ขึ้นหัวตาราง</p>
+
+    <p>เหตุผลที่ artifact ของตอนนี้เป็นตาราง ไม่ใช่บทสรุปผู้บริหาร: หลักของเปเปอร์ที่ซีรีส์นี้ใช้ทุกตอนคือคำถามด้านความเชื่อถือได้ต้องตอบด้วย artifact ไม่ใช่คำคุณศัพท์<sup><a href="#th-ref-1">[1]</a></sup> ทะเบียนฉบับเต็มของน้องครามอยู่หัวข้อถัดไป — commit มันเป็นไฟล์ docs/seam-register.md ใน repo ของร้าน ให้มันถูกรีวิว ถูก diff และถูกอัปเดตแบบเดียวกับโค้ด</p>
+
+    <h2 id="th-kramkraft">4. ทะเบียนรอยต่อของน้องคราม — artifact ของตอนนี้</h2>
+
+    <p>นี่คือผลจริงของเจ็ดขั้นเมื่อไล่กับน้องคราม — หกแถว ห้าคอลัมน์ อ่านหนึ่งนาทีแล้วเห็นทั้งเครื่อง คอลัมน์ "ใครบังคับวันนี้" ตอบตามสภาพจริงของระบบก่อนซีรีส์นี้จะเข้าไปแก้ ไม่ใช่ตามที่ทีมอยากให้เป็น</p>
+
+    <div class="table-wrapper">
+        <table>
+            <thead>
+                <tr>
+                    <th>รอยต่อ</th>
+                    <th>การรับประกันเดิมที่พัง</th>
+                    <th>อะไรเข้ามาตรงนั้น</th>
+                    <th>ใครบังคับวันนี้</th>
+                    <th>ความรุนแรง</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td><strong>weights ≈ CPU</strong></td>
+                    <td>ผลลัพธ์กำหนดแน่นอน — อินพุตเดิมได้ผลเดิมทุกครั้ง</td>
+                    <td>รุ่นโมเดลใหม่จากผู้ให้บริการ และการแก้ decoding config</td>
+                    <td>pin รุ่น M_v ไว้ใน config — แต่ยังไม่มีชุดทดสอบสำหรับรุ่นใหม่ก่อนสลับ</td>
+                    <td>กลาง</td>
+                </tr>
+                <tr>
+                    <td><strong>context ≈ RAM</strong></td>
+                    <td>memory protection — คำสั่งกับข้อมูลแยกช่องกัน</td>
+                    <td>ข้อความแชตของลูกค้า · รีวิวสินค้าใน catalog/ · ข้อความจากสลิปที่อัปโหลด · ช่อง note จากข้อมูลออเดอร์</td>
+                    <td>ไม่มี — ทุกสายต่อตรงเข้า context ช่องเดียว</td>
+                    <td>สูง</td>
+                </tr>
+                <tr>
+                    <td><strong>retrieval ≈ ไฟล์ซิสเต็ม</strong></td>
+                    <td>สัญญาการอ่านที่เสถียร — อ่านซ้ำได้ผลเดิม</td>
+                    <td>การ re-index รายคืนของ policy/ และ catalog/ โดยไม่มีเลขรุ่น</td>
+                    <td>ไม่มี — ไม่บันทึกทั้ง snapshot และ passage ที่ถูกอ่าน</td>
+                    <td>สูง</td>
+                </tr>
+                <tr>
+                    <td><strong>tool call ≈ system call</strong></td>
+                    <td>การตรวจสิทธิ์ก่อนเกิดผล ทุกครั้ง โดยตัวกลางที่เลี่ยงไม่ได้</td>
+                    <td>ข้อเสนอ refund ที่โมเดลประกอบจากเนื้อหาสนทนา · การอ่านออเดอร์ที่รับ order_id ใดก็ได้</td>
+                    <td>ข้อความใน system prompt เท่านั้น = ไม่มีเชิงโครงสร้าง</td>
+                    <td>วิกฤต</td>
+                </tr>
+                <tr>
+                    <td><strong>agent ≈ process</strong></td>
+                    <td>การแยกสิทธิ์และหน่วยความจำระหว่างงานที่วิ่งพร้อมกัน</td>
+                    <td>เซสชันของลูกค้าหลายรายวิ่งขนานบนแกนเดียวกัน</td>
+                    <td>โค้ดจัดการเซสชันของ backend — ไม่เคยถูกทดสอบเรื่องข้อมูลปนข้ามเซสชัน</td>
+                    <td>กลาง</td>
+                </tr>
+                <tr>
+                    <td><strong>แชท ≈ เชลล์</strong></td>
+                    <td>kernel ที่เปิด source อ่านได้เมื่อพฤติกรรมแปลก</td>
+                    <td>ทุกถ้อยคำของลูกค้าคือคำสั่งต่อเครื่องทั้งเครื่อง — พฤติกรรมเป็นสิ่งที่งอกออกมา</td>
+                    <td>เก็บแค่ข้อความแชต — ไม่มี context ที่ประกอบแล้ว ไม่มี passage ไม่มี decoding ใน log</td>
+                    <td>สูง</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <p>วิธีอ่าน: เริ่มจากคอลัมน์ขวาสุด แถววิกฤตมีแถวเดียว — execution — เพราะเป็นแถวเดียวที่ความเสียหายเป็นเงินจริงและย้อนกลับไม่ได้ ถัดมาคือสามแถวระดับสูงที่พันกันเป็นกลุ่มเดียว: ข้อความไม่น่าเชื่อถือไหลเข้าช่องเดียวกับคำสั่ง (RAM) จากแหล่งที่ไม่มีเลขรุ่น (retrieval) และเมื่อเกิดเรื่องก็อธิบายย้อนหลังไม่ได้ (เชลล์) ลำดับความรุนแรงนี้คือลำดับความสำคัญของ<em>งาน</em> ไม่ใช่ลำดับของบทเรียนในซีรีส์</p>
+
+    <blockquote>💡 มุมมองของผม: คอลัมน์ที่เปลี่ยนการประชุมได้จริงคือ "ใครบังคับวันนี้" การพิมพ์คำว่า <em>ไม่มี</em> ลงในเอกสารที่ทุกคนเห็น ต่างจากการรู้กันเงียบ ๆ อย่างสิ้นเชิง — เมื่อคำว่า ไม่มี อยู่บนกระดาษ มันกลายเป็นรายการงานที่มีเจ้าของได้ เมื่ออยู่แค่ในใจ มันเป็นเพียงความกังวลของใครบางคนที่จะหายไปพร้อมกับเขา</blockquote>
+
+    <p>ส่งมอบ: commit ตารางนี้เป็น docs/seam-register.md ใน repo ของครามคราฟต์ ตอนถัดไป (#4) จะตรึงพจน์ที่ทะเบียนบอกว่ายังลอย — รุ่นโมเดล snapshot ของ corpus และ config ประกอบบริบท — เข้า release manifest เดียว และตอนที่ 8 จะแปลงทะเบียนใบนี้ทีละแถวเป็นรางควบคุมทั้งห้า</p>
+
+    <h2 id="th-validation-check">5. Validation check — ตรวจแผนที่ของคุณด้วย artifact</h2>
+
+    <p>กติกาของซีรีส์ซึ่งยืมมาจากเช็กลิสต์ท้ายเปเปอร์ตรง ๆ: คำถามตรวจรับทุกข้อต้องตอบด้วย artifact ไม่ใช่คำคุณศัพท์<sup><a href="#th-ref-1">[1]</a></sup> ใช้ตารางนี้กับระบบของคุณเอง — ผ่านเมื่อชี้ไฟล์ได้ ไม่ผ่านเมื่อคำตอบเป็นความรู้สึก</p>
+
+    <div class="table-wrapper">
+        <table>
+            <thead>
+                <tr>
+                    <th>คำถาม</th>
+                    <th>ผ่านเมื่อ</th>
+                    <th>artifact ที่พิสูจน์</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>หกองค์ประกอบถูก map ครบและชี้ "ของจริง" ได้ทุกแถว</td>
+                    <td>ทุกแถวระบุชื่อรุ่น ไฟล์ หรือบริการจริง — ไม่มีคำนามธรรมหลงเหลือ</td>
+                    <td>ตาราง mapping จากขั้นที่ 1 — หกแถวแรกของ docs/seam-register.md</td>
+                </tr>
+                <tr>
+                    <td>การรับประกันที่เผลอสมมติ ถูกเขียนเป็นลายลักษณ์อักษร</td>
+                    <td>มีประโยค "เราแอบสมมติว่า…" ครบทั้งหกแถว และอย่างน้อยหนึ่งข้อทำให้ทีมอึดอัด</td>
+                    <td>คอลัมน์ "การรับประกันเดิมที่พัง" ใน docs/seam-register.md</td>
+                </tr>
+                <tr>
+                    <td>ช่องทางที่ข้อความบุคคลที่สามเข้า context ถูกไล่ครบ</td>
+                    <td>รายการครอบคลุมอย่างน้อย: แชต, retrieval, ไฟล์อัปโหลด, ผลลัพธ์ tool, ประวัติย้อนหลัง</td>
+                    <td>channel inventory จากขั้นที่ 3 — คอลัมน์ "อะไรเข้ามาตรงนั้น" ของแถว RAM</td>
+                </tr>
+                <tr>
+                    <td>ทุก tool call มีคำตอบในช่อง "ใครบังคับวันนี้"</td>
+                    <td>ทุกตัวตอบเป็นชื่อกลไก หรือคำว่า "ไม่มี" ตรง ๆ — ห้ามเว้นว่าง ห้ามตอบว่า "กำลังจะทำ"</td>
+                    <td>บัญชี tool call จากขั้นที่ 4</td>
+                </tr>
+                <tr>
+                    <td>ตอบได้ว่าคำตอบหนึ่งรายการของเมื่อวานอ่าน corpus รุ่นไหน</td>
+                    <td>มี snapshot id กับ passage ids ต่อคำตอบ — หรือมีแถว "ไม่มี" ในทะเบียนพร้อมวันที่จะปิด</td>
+                    <td>log ของหนึ่งคำขอจริง หรือแถว retrieval ใน docs/seam-register.md</td>
+                </tr>
+                <tr>
+                    <td>เกมย้อนเหตุการณ์ถูกเล่นกับเคสจริงอย่างน้อยหนึ่งเคส</td>
+                    <td>รายการ field ที่ "ถ้ามีก็อธิบายได้" ถูกเขียนออกมาจากเคสนั้น ไม่ใช่ลอกจากตำรา</td>
+                    <td>trace checklist จากขั้นที่ 6</td>
+                </tr>
+                <tr>
+                    <td>ทะเบียนรอยต่อฉบับเต็มถูก commit และถูกรีวิว</td>
+                    <td>ครบหกแถวห้าคอลัมน์ และมีผู้รีวิวอย่างน้อยหนึ่งคนที่ไม่ใช่คนเขียน</td>
+                    <td>docs/seam-register.md ใน repo พร้อมประวัติ commit และรีวิว</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <p>ถ้าแถวไหนไม่ผ่าน กลับไปทำขั้นที่มันชี้ถึง — และจากประสบการณ์ ข้อที่ไม่ผ่านบ่อยที่สุดกับสำคัญที่สุดคือข้อเดียวกัน: บัญชี tool call อย่าเพิ่งไปตอนถัดไปทั้งที่คอลัมน์ "ใครบังคับวันนี้" ยังว่าง — เขียนคำว่า <em>ไม่มี</em> ได้ ไม่ผิด แต่เว้นว่างไม่ได้</p>
+
+    <h2 id="th-road-ahead">6. ก้าวต่อไป</h2>
+
+    <p>ตอนนี้ให้ของสองชิ้น: กรอบมอง — ระบบของคุณคือเครื่องทั้งเครื่อง ไม่ใช่แอปตัวหนึ่ง — และแผนที่: หกรอยต่อที่การรับประกันเดิมหายไป พร้อมทะเบียนที่ตอบอย่างซื่อสัตย์ว่าวันนี้ใครบังคับแต่ละรอย ซึ่งคำตอบส่วนใหญ่คือยังไม่มีใคร ความก้าวหน้าที่แท้ของตอนนี้วัดง่ายมาก: ก่อนอ่าน ทีมของคุณตอบคำถาม "ใคร authorize system call ของระบบเรา" ไม่ได้ หลังทำเจ็ดขั้น ตอบได้ — ต่อให้คำตอบจะเจ็บก็ตาม</p>
+
+    <p>สิ่งที่ตอนนี้จงใจ<em>ไม่</em>ทำคือการตรึง: ทะเบียนบอกว่ารุ่นโมเดลลอย corpus ลอย config ลอย แต่ยังไม่ได้บอกวิธีหยุดไม่ให้ลอย นั่นคืองานของ <strong>วิศวกรรมบริบท</strong> (context engineering) และของสมการหนึ่งบรรทัดที่พฤติกรรมทั้งระบบไหลออกมาจากมัน ตอนถัดไป <a href="/blog/ai-core-context-engineering">Context Is a Control Artifact</a> จะกางสมการนั้นทีละพจน์ แล้วบังคับกฎที่แรงที่สุดข้อหนึ่งของเปเปอร์: เปลี่ยนพจน์ใดก็ตาม คือเปลี่ยนโปรแกรม — ทุกพจน์จึงต้องถูก pin ไว้ใน release manifest เดียวและปล่อยพร้อมกัน</p>
+
+    <div class="alert info">
+        <strong>🧭 ตำแหน่งในซีรีส์:</strong> #1 จำแนกว่าระบบไหนเป็น AI-core จริง · #2 กางสามชั้นที่กำหนดพฤติกรรม · #3 (ตอนนี้) แปลงชั้นบนสุดเป็นเครื่องทั้งเครื่องและทำแผนที่รอยต่อของมัน · #4 ตรึงทุกพจน์เข้า manifest · #8 กลับมาที่ทะเบียนใบนี้เพื่อวางรางควบคุมทั้งห้า · #9 พิสูจน์ทั้งหมดด้วย harness — เก็บ docs/seam-register.md ไว้ให้ดี มันจะถูกเปิดขึ้นมาอีกอย่างน้อยสองตอน
+    </div>
+
+    <div class="key-takeaways">
+        <h3>🎯 สิ่งสำคัญที่ต้องจำ</h3>
+        <ul>
+            <li><strong>AI-OS mental model</strong> = มองแกน AI เป็นระบบปฏิบัติการ: weights คือ CPU, context window คือ RAM, retrieval คือไฟล์ซิสเต็ม, tool call คือ system call, agent คือ process, แชทคือเชลล์</li>
+            <li><strong>จุดพังคือสาระ</strong> = ฝั่งระบบปฏิบัติการของทุกแถวมีการรับประกันเชิงโครงสร้าง ฝั่งแกน AI ไม่มีสักแถว — งานวิศวกรรมทั้งซีรีส์อยู่ที่รอยต่อเหล่านี้</li>
+            <li><strong>การฉีดคำสั่งแฝง</strong> = ผลโดยตรงของ RAM ที่ไม่มี memory protection: คำสั่งกับข้อมูลแชร์ช่องเดียวกัน และช่องนั้นมีถนนเข้าหลายสายกว่าที่คิด</li>
+            <li><strong>ถูกขอ ไม่ใช่ถูกบังคับ</strong> = tool call เป็นข้อเสนอในภาษาธรรมชาติ การตรวจสิทธิ์จึงต้องอยู่นอกโมเดลเสมอ — โมเดลที่ถูกโน้มน้าวได้ เป็นผู้เฝ้าประตูตัวเองไม่ได้</li>
+            <li><strong>deterministic decoding</strong> = ตัดความแปรปรวนจากการสุ่มได้ แต่ตัดความไวต่อรุ่นโมเดลไม่ได้ — อัปเดตรุ่นคือสลับ CPU ทั้งตัว</li>
+            <li><strong>ทะเบียนรอยต่อ</strong> = artifact ของตอนนี้: หกแถว ห้าคอลัมน์ คอลัมน์ที่สำคัญที่สุดคือ "ใครบังคับวันนี้" และคำตอบว่า ไม่มี ก็เป็นคำตอบที่ใช้ได้</li>
+        </ul>
+    </div>
+
+    <section class="references" aria-labelledby="th-references">
+        <h2 id="th-references">อ้างอิง</h2>
+        <p class="references__note">ตรวจสอบทุกแหล่งเมื่อ 8 กันยายน 2026 (เวลาประเทศไทย) · ป้ายหลักฐานสี่แบบ: <strong>Law</strong> ตัวบทกฎหมายหรือประกาศทางการ · <strong>Standard</strong> มาตรฐานหรือกรอบทางการที่เผยแพร่แล้ว · <strong>Study</strong> งานวิจัยหรือสัญญาณภาคสนาม · <strong>Synthesis</strong> การสังเคราะห์ของผู้เขียนหรือแหล่งที่ไม่ใช่งานวิจัย</p>
+        <ol class="references__list">
+            <li id="th-ref-1"><span class="ref-tag ref-tag--synthesis">Synthesis</span> Anirach Mingkhwan. <cite>Engineering AI-Core Systems: A Reference Architecture and Assurance Contract for Software 3.0</cite> — CreativeLAB, FITM, KMUTNB, 2026. เอกสารที่ผู้เขียนจัดหาให้ ยังไม่ตีพิมพ์ ไม่มี URL สาธารณะ จึงไม่มีลิงก์และไม่มีวันเข้าถึง. <span class="ref-supports">รองรับ: ตารางเทียบ AI-OS ทั้งหกคู่ (Table 4) ประโยค "one application, mistaken for a computer" ข้อสังเกตว่าทรัพย์สินคือข้อมูลกับโปรโตคอล จุดพังของการรับประกันทั้งหก — ตัวอย่างสุ่มของ CPU และขีดจำกัดของ deterministic decoding, ช่องทางเดียวของ context ในฐานะฐานของการฉีดคำสั่งแฝง, สัญญาการอ่านที่ไม่มีของ retrieval, การขอ system call เป็นภาษาธรรมชาติที่ต้องบังคับสิทธิ์นอกโมเดล, การไม่มี privilege separation ของ agent, และ kernel ที่ทึบซึ่ง observability ต้องเข้ามาเสริม — รวมถึงหลักที่ว่ารอยต่อเหล่านี้คือตำแหน่งวางการควบคุมของตอนที่ 8</span></li>
+            <li id="th-ref-2"><span class="ref-tag ref-tag--study">Study</span> Greshake, K., Abdelnabi, S., Mishra, S., et al. <cite>Not What You've Signed Up For: Compromising Real-World LLM-Integrated Applications with Indirect Prompt Injection</cite> — ACM AISec 2023, หน้า 79–90. อ้างเชิงบรรณานุกรม ไม่แนบ URL. <span class="ref-supports">รองรับ: การสาธิตการฉีดคำสั่งแฝงทางอ้อมกับแอปพลิเคชันจริงที่ผูก LLM — เนื้อหาที่ถูกวางไว้ให้ระบบอ่านเข้ามาภายหลังสามารถชี้นำพฤติกรรมได้ — ซึ่งบทความใช้รองรับคำอธิบายรอยต่อ RAM และรายการช่องทางเข้า context ของขั้นที่ 3</span></li>
+            <li id="th-ref-3"><span class="ref-tag ref-tag--standard">Standard</span> OWASP Foundation. <cite>OWASP Top 10 for LLM Applications</cite> — ฉบับปี 2025. อ้างเชิงบรรณานุกรม ไม่แนบ URL. <span class="ref-supports">รองรับ: การจัดให้ prompt injection เป็นรายการแรกของสิบความเสี่ยงสำหรับแอปพลิเคชัน LLM ฉบับปี 2025 — ใช้รองรับน้ำหนักความรุนแรงของแถว context ≈ RAM ในทะเบียนรอยต่อ</span></li>
+            <li id="th-ref-4"><span class="ref-tag ref-tag--study">Study</span> NIST CAISI. <cite>Strengthening AI Agent Hijacking Evaluations</cite> — technical blog, 2025. <a href="https://www.nist.gov/news-events/news/2025/01/technical-blog-strengthening-ai-agent-hijacking-evaluations">nist.gov</a> — เข้าถึง 2026-09-08. <span class="ref-supports">รองรับ: สถานะของ agent hijacking — การชักนำ agent ให้ใช้ tool ตามเป้าของผู้โจมตี — ในฐานะหัวข้อประเมินที่สถาบันมาตรฐานแห่งชาติสหรัฐลงมือทำเอง ใช้รองรับการอ่านรอยต่อ system call และ process ว่าเป็นพื้นที่โจมตีจริง ไม่ใช่สถานการณ์สมมติ</span></li>
+        </ol>
+    </section>
+    </div>
+
+    <div class="l-en" lang="en">
+
+    <p>🤔 <strong>Your team calls the AI system it operates "a chatbot" — but what if the thing you are actually operating is an entire computer, with no memory protection, no system-call authorisation, and a kernel whose source nobody can read?</strong></p>
+
+    <p>In the previous post, <a href="/blog/ai-core-three-eras">Software 1.0 · 2.0 · 3.0</a>, we saw that the three eras of software do not replace one another but stack as layers inside one deployed system, and that the engineer's leverage has moved from control flow, to dataset and loss, and now to the context assembled at runtime. We closed with Nong Kram's artifact inventory, naming which layer determines each piece of behaviour. The question left open: once the 3.0 layer becomes the layer that determines the most behaviour, what frame should we use to see it whole — because the mental model you choose decides which set of questions you ask of the system, and which set of risks you walk past without noticing.</p>
+
+    <p>The paper's answer<sup><a href="#en-ref-1">[1]</a></sup>, and this post's, fits in one sentence: model the AI core as an <em>operating system</em>, not an application — weights are the CPU, the context window is RAM, retrieval is the file system, tool calls are system calls, agents are processes, and natural-language chat is the shell. But the real value of the analogy is not its elegance — it is its cracks. Every row of the table carries a guarantee that operating systems have given us for fifty years, and the AI side loses every single one. Knowing exactly where they are lost is the engineering map for the rest of this series. This post ends with the first artifact drawn on that map: Nong Kram's seam register, which post #8 will pick up and convert, row by row, into control rails.</p>
+
+    <h2 id="en-os-analogy">1. The AI Core Is an Operating System, Not an Application</h2>
+
+    <p>The conclusion first: Table 4 of the paper lays out six mappings — weights ≈ CPU, context window ≈ RAM, retrieval/RAG ≈ file system, tool calls ≈ system calls, agents ≈ processes, and natural-language chat ≈ the shell<sup><a href="#en-ref-1">[1]</a></sup>. The immediate benefit of the table is not that the analogy is clever, but that it moves your eyes: from looking at "a chat feature" to seeing an entire machine — a machine with working memory, files to read, an interface that reaches external authority, and several tasks running at once on a single computational core.</p>
+
+    <p>Why does a mental model deserve a whole post? I will vouch for this from real system reviews: a team that sees its system as an "app" tests it like an app — type a question, read the answer, feel satisfied, ship. A team that sees a "machine" asks the questions a machine's operator asks: is memory protected, who is allowed to make system calls, how far back and how precisely can we read the logs. Different question sets lead to different control sets — and Table 4 is the cheapest question-set changer I know of.</p>
+
+    <figure class="figure">
+      <a href="../images/ai-core-fig-03-os-seams.png">
+        <img class="figure__img" src="../images/ai-core-fig-03-os-seams.png" alt="The operating-system analogy mapped onto the AI core — weights and CPU, context window and RAM, retrieval and the file system, tool calls and system calls, agents and processes, chat and the shell — with crack marks where each classical guarantee fails." width="1400" height="840" loading="lazy" decoding="async">
+      </a>
+      <figcaption class="figure__caption">The AI-OS analogy is most useful at its own cracks — the five seams where post #8 places the control rails.</figcaption>
+    </figure>
+
+    <div class="table-wrapper">
+        <table>
+            <thead>
+                <tr>
+                    <th>Operating-system side</th>
+                    <th>AI-core side</th>
+                    <th>What the mapping captures</th>
+                    <th>In Nong Kram</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td><strong>CPU</strong></td>
+                    <td>model weights</td>
+                    <td>The central computation engine every request runs through — frozen per version, learning nothing while in service</td>
+                    <td>The pinned hosted model (called M_v abstractly) that processes every customer message</td>
+                </tr>
+                <tr>
+                    <td><strong>RAM</strong></td>
+                    <td>context window</td>
+                    <td>Working memory assembled afresh per request — instructions, history and retrieved material all live in it together</td>
+                    <td>Nong Kram's role text + chat history + retrieved policy passages, reassembled every turn</td>
+                </tr>
+                <tr>
+                    <td><strong>file system</strong></td>
+                    <td>retrieval / RAG</td>
+                    <td>Persistent knowledge "read in" at runtime rather than baked into the program</td>
+                    <td>The policy/ corpus (returns policy, shipping terms) and catalog/ (product pages)</td>
+                </tr>
+                <tr>
+                    <td><strong>system call</strong></td>
+                    <td>tool call</td>
+                    <td>The only channel through which the computation inside touches the outside world</td>
+                    <td>The effectful refund(order_id, amount, reason) plus read-only order lookups</td>
+                </tr>
+                <tr>
+                    <td><strong>process</strong></td>
+                    <td>agent</td>
+                    <td>Multiple tasks running concurrently on the same computational core</td>
+                    <td>The chat sessions of several customers running in parallel on one core</td>
+                </tr>
+                <tr>
+                    <td><strong>shell</strong></td>
+                    <td>natural-language chat</td>
+                    <td>The interface through which a human commands the whole machine</td>
+                    <td>The chat window on the shop's website and on LINE</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <h3>The real asset is the data and the protocols, not the chat</h3>
+
+    <p>Here is the corner many organisations get backwards, and the paper states it plainly: the shell — the chat window everyone sees — is the most replaceable part of the whole machine. The real asset is the <em>data and the protocols</em> — the curated knowledge corpus, the tightly defined tool schemas, the context-assembly rules — the things that accumulate value and carry over across model versions<sup><a href="#en-ref-1">[1]</a></sup>. For KramKraft this translates directly: a well-organised policy/ and catalog/ corpus and a refund schema with its conditions written out will outlive the decision of which vendor's model to use, several times over.</p>
+
+    <p>And the sharpest sentence of this section of the paper describes what happens when an organisation does not see it this way: a chatbot glued onto an existing product is <em>"one application, mistaken for a computer"</em><sup><a href="#en-ref-1">[1]</a></sup>. Organisations that "buy a chatbot" usually get one application with no machine underneath — no maintained file system, no system-call checking layer, no machine-level logs. Then, the day they want it to "do more", they wire tools straight into it, and the result is an entire computer assembled by accident, whose protection layers nobody ever designed — not even one of them.</p>
+
+    <blockquote>💡 My view: use this analogy as a question generator, never as an architecture blueprint — nobody should build a scheduler or virtual memory for a model because this table says so. The value of Table 4 is that it makes operating-system-grade questions surface in the review room: where is our memory protection, who authorises our system calls, and who holds the kernel-level logs — those three questions are enough to open every piece of work in the rest of the series.</blockquote>
+
+    <h2 id="en-broken-seams">2. The Seams Where the Old Guarantees Break</h2>
+
+    <p>Every analogy has the places where it breaks, and for Table 4 those places are the entire point: the operating-system side of every row carries a <strong>structural guarantee</strong> that software engineering has leaned on throughout its history, and the AI-core side keeps none of them<sup><a href="#en-ref-1">[1]</a></sup>. This section walks all six seams row by row, because the position of these cracks is the series' map of work: these seams are where the engineering is hard, and where all the controls will be placed.</p>
+
+    <h3>A CPU that returns a sample, not an answer</h3>
+
+    <p>A real CPU gives a guarantee we have forgotten is a guarantee at all: same instruction, same data, same result, every time, forever. The model does not give this — what it returns is a <em>single sample</em> drawn from a probability distribution<sup><a href="#en-ref-1">[1]</a></sup>. Run the same question again and get a different answer: not the symptom of a bug, but the machine's normal behaviour.</p>
+
+    <p>The caveat the paper attaches here is precise and very frequently misquoted: deterministic decoding — temperature zero, a pinned seed — removes only the <em>sampling variance</em>; it does not remove <em>version sensitivity</em><sup><a href="#en-ref-1">[1]</a></sup>. It makes the word-selection rule reproducible, but the day the provider updates the model version, the entire underlying distribution shifts — the equivalent of swapping out the whole CPU while the old opcodes silently produce new results. This is why Nong Kram's M_v must be pinned to a specific version, and why the next post will force every remaining term to be pinned as well.</p>
+
+    <h3>RAM with no memory protection</h3>
+
+    <p>A real operating system has an MMU separating each process's address space, kernel memory split from user space, and code pages split from data pages — by design, one program cannot reach over and overwrite another's memory. The context window has none of this: the owner's system prompt, the customer's messages, retrieved document passages and tool outputs all sit in one channel as identical tokens, with no bit telling the model that this token is "an instruction from the house" while that token is "data from a stranger" — instructions and data share a single channel<sup><a href="#en-ref-1">[1]</a></sup>.</p>
+
+    <p>That single channel is the structural basis of <strong>prompt injection</strong><sup><a href="#en-ref-1">[1]</a></sup>, and the more dangerous form is <strong>indirect prompt injection</strong>: the attacker does not even have to type into the chat — they only plant text somewhere the system will later read in by itself. Greshake and colleagues demonstrated this against real LLM-integrated applications back in 2023<sup><a href="#en-ref-2">[2]</a></sup>, and OWASP places prompt injection first on its Top 10 for LLM Applications, 2025 edition<sup><a href="#en-ref-3">[3]</a></sup>. For Nong Kram, at least two roads into this channel exist today: customer-written product reviews embedded in the retrieved catalog pages, and the text of payment slips customers upload.</p>
+
+    <h3>A file system with no stable read contract</h3>
+
+    <p>The file system's contract is so simple nobody thinks of it: the same read returns the same bytes until someone writes. Retrieval has no such contract — "reading the same file twice" can return different sets, because the corpus has been re-indexed, the ranker has changed versions, or one new document was added and the ranking shifted across the board — both the corpus version and the ranking change the retrieved set<sup><a href="#en-ref-1">[1]</a></sup>.</p>
+
+    <p>The engineering consequence is direct: two customers asking the identical question a day apart may get answers that "read" different versions of the policy, with no record anywhere of who read what. The fix is not to freeze the corpus forever but to treat retrieval as a versioned file system — snapshots carry version ids, and the set of passages read per answer gets recorded. Step 5 in the next section turns this into a task that finishes in a single day.</p>
+
+    <h3>System calls that are requested in natural language</h3>
+
+    <p>In a real operating system, the system call is a hard boundary: the kernel checks authority before acting, every time, no exceptions. In the AI core this boundary is <em>requested</em> in natural language — the model generates text that the harness interprets as a tool call<sup><a href="#en-ref-1">[1]</a></sup>. Whatever the model generates therefore has the status of a proposal, not an action, and since the model itself can be persuaded through the entire context channel, it is disqualified in principle from being the authorisation point: authorisation must be enforced <em>outside the model</em>, always<sup><a href="#en-ref-1">[1]</a></sup>.</p>
+
+    <p>This is not a textbook hypothetical — the evaluation of agent hijacking, where an attacker uses injected content to steer an agent toward the attacker's own goals, is serious enough that NIST CAISI published a technical analysis on making exactly this kind of evaluation stronger<sup><a href="#en-ref-4">[4]</a></sup>. For KramKraft the meaning is direct and expensive: a refund is irreversible from the second the payment processor accepts the instruction, so an authorisation check standing outside the model must always be in the way — does one exist today? Step 4 will force that question to be answered plainly.</p>
+
+    <h3>Processes with no innate privilege separation</h3>
+
+    <p>Processes in an operating system are separated by design — separate address spaces, separate user identities, separate capabilities. Multiple agents (or multiple sessions of one agent) running on the same core have no privilege separation between concurrent tasks built in at all<sup><a href="#en-ref-1">[1]</a></sup>. The only thing standing between one task and another is the harness code we wrote ourselves — our discipline, not a property of the core.</p>
+
+    <p>Nong Kram today is a single agent, but it serves many customers at once. The questions the seam register must put on record: what prevents one customer's order data from bleeding into another customer's context, and what prevents one customer's session from requesting a refund against another customer's order — the team's answer today rests entirely on the correctness of the session-handling code, which has never once been tested from this angle.</p>
+
+    <h3>A kernel whose source cannot be read</h3>
+
+    <p>The operating system's last guarantee is the deepest one: when behaviour turns strange, we can always open the kernel's source and read it. Here the analogy breaks beyond repair — weights cannot be read the way code is read, and the core's behaviour is <em>emergent</em> rather than specified<sup><a href="#en-ref-1">[1]</a></sup>. Ask "which line made it answer this way" and there is no answer, because there is no line.</p>
+
+    <p>The way out is not surrender but a relocation of investment: when the source cannot be read, observability must step in to complement what source-reading used to do<sup><a href="#en-ref-1">[1]</a></sup> — record the machine's inputs and outputs completely enough to explain any run after the fact. This grows into the full <strong>decision trace</strong> in post #7, but it starts today with a single question: if Nong Kram gave a strange answer yesterday, do we hold enough data today to know why?</p>
+
+    <p>Six rows, all six broken — and not broken at random. Spread the cracks over the real path of one request (receive the message → assemble the context → retrieve knowledge → call tools → release the answer) and they line up as five seams along that path: input, dialog, retrieval, execution and output — exactly where post #8 will place the five control rails<sup><a href="#en-ref-1">[1]</a></sup>.</p>
+
+    <div class="alert info">
+        <strong>Beware of over-extending the analogy:</strong> Table 4 does not instruct you to build a real operating system around the model — no scheduler, no paging. It is only an instrument for finding "the places where we unconsciously assumed a guarantee that does not exist", and whenever a conclusion drawn from the analogy conflicts with the system's real mechanism, always believe the real mechanism.
+    </div>
+
+    <h2 id="en-seven-steps">3. The Seven Steps</h2>
+
+    <p>The next seven steps take about half a day for a system of Nong Kram's size, and they produce a single artifact — the seam register — which I lay out in full in section 4. Do them in order, because each step feeds raw material into the next.</p>
+
+    <h3>Step 1 — Lay your system's six components onto the mapping table</h3>
+
+    <p>Write the six rows of the table in section 1 and fill in your system's "real things" column: the model name with its version, which file the context-assembly code lives in, what the retrieval sources are, the complete list of tools, what runs concurrently, and through which channel users talk to the system. The single rule of this step: no abstractions — every cell must point at a file, a service, or a repo that actually exists. Spread out the artifact inventory from the previous post next to you and this goes much faster, because most of the items were already hunted down there.</p>
+
+    <p>This step performs no analysis at all — it only forces you to see what parts the whole machine has, which sounds trivial enough to skip, yet a great many systems have never had this list written down anywhere. For Nong Kram the six rows already exist as the rightmost column of the table in section 1 — this step's job is to produce the same for your system.</p>
+
+    <h3>Step 2 — Write down the classical guarantee you are unconsciously assuming, row by row</h3>
+
+    <p>Append to each row a sentence starting "we are quietly assuming that…" and write it honestly: that the same input yields the same answer, that the system prompt can never be overridden, that retrieval will return the same set tomorrow, that the model can only call what we permit, that sessions separate themselves naturally, and that when necessary we will be able to "look inside". The most dangerous guarantee is the one that has never been said out loud — because nobody tests what nobody has ever said.</p>
+
+    <p>A real example from the KramKraft team (a tutorial-invented incident): when I asked what prevents Nong Kram from refunding beyond the policy, the first answer was "it's already written in the system prompt" — that sentence is exactly the unconscious assumption section 2 just dismantled: taking text in the context to be a <em>constraint</em> on the system, when it is only <em>advice</em> to a machine that can be persuaded through that very same channel. Write this assumption down on paper; step 4 will deal with it.</p>
+
+    <h3>Step 3 — Hunt down your shared instruction/data channel, exhaustively</h3>
+
+    <p>From the RAM seam: every place where third-party text can flow into the context is a road into memory that has no protection<sup><a href="#en-ref-1">[1]</a></sup><sup><a href="#en-ref-2">[2]</a></sup>. Walk all of them and write them as a list. Nong Kram's came out at five:</p>
+
+    <ul>
+        <li><strong>Customer chat messages</strong> (web + LINE) — untrusted by definition; this is the front door</li>
+        <li><strong>Passages retrieved from catalog/</strong> — product pages carry customer-written reviews embedded in them, so a stranger's text walks in through the "shop knowledge" door</li>
+        <li><strong>Text from uploaded payment slips</strong> — arriving through OCR straight into the context as text</li>
+        <li><strong>Tool output: the note and address fields in order data</strong> — customers typed those values at checkout; even though they travel through our own database, they are still third-party text</li>
+        <li><strong>Prior chat history</strong> — everything above that ever entered once gets rolled back into the context again on the next turn</li>
+    </ul>
+
+    <p>The item that usually startles the team is the fourth one — data from "our own" tool can carry a stranger's text in too. A trusted <em>pipe</em> does not make the <em>content</em> in the pipe trusted. This five-road list becomes the "what enters there" column of the RAM row in the register.</p>
+
+    <h3>Step 4 — Stamp every tool call "requested, not enforced" — then name who enforces it today</h3>
+
+    <p>Make a ledger of every tool in the system, then fill in the one column that matters: <em>who enforces this today</em> — answered by what is true, not by what is intended, and quite often the correct answer is "nothing". Nong Kram's ledger comes out like this:</p>
+
+    <pre><code># Nong Kram's tool-call ledger — surveyed honestly, as of today
+get_order(order_id)               # read-only
+                                  # enforced by: nothing — accepts any order_id,
+                                  # not bound to the customer in this chat
+refund(order_id, amount, reason)  # effectful — irreversible once the payment
+                                  # processor accepts the instruction
+                                  # enforced by: system-prompt text only
+                                  # = no mechanism outside the model</code></pre>
+
+    <p>The two occurrences of "nothing" in this ledger are the most valuable sentences this step produces — they are the admission that our system-call boundary has no kernel guarding it<sup><a href="#en-ref-1">[1]</a></sup>, and they are the critical row of the register about to be born. NIST CAISI's agent-hijacking evaluation work cited in section 2 is the picture of what happens when this column is left blank in a real system<sup><a href="#en-ref-4">[4]</a></sup>.</p>
+
+    <h3>Step 5 — Treat retrieval as a versioned file system</h3>
+
+    <p>Answer two questions on paper: one — what is the current corpus snapshot? If there is no version id to point at, there is no answer yet. Two — can the same question asked twice read different "files"? Trace when the corpus and the ranker change and who changes them. Then start recording two things per answer: the snapshot's version id and the list of passages that were read.</p>
+
+    <p>At KramKraft the real picture (a tutorial-invented detail) is that the team edits the policy in Google Docs and exports it for a nightly re-index — no version number, no record of which answer read which version. Two lines in the indexer's config plus one column in the log close this gap within a single day, and from that day on, every "the policy says…" from Nong Kram carries evidence of <em>which version</em> of the policy said it.</p>
+
+    <h3>Step 6 — Plan observability for the opaque kernel</h3>
+
+    <p>Play the incident-replay game with something real: take the strangest answer the system has ever given, and ask the team "what would have had to be recorded <em>back then</em> for us to explain it <em>now</em>?" The list that comes out of this game is the first draft of the trace spec — designed from real pain, not from a textbook. Nong Kram's came out like this:</p>
+
+    <pre><code># First draft of the trace spec — what must exist to explain "yesterday's strange answer"
+model_id, model_version       # which computation engine actually answered
+decoding                      # the temperature, top_p and seed actually used
+context_assembled             # the fully assembled text, not just the template
+corpus_snapshot, passage_ids  # which version of which "files" were read
+tool_calls, tool_results      # what was requested, what came back
+timestamp, session_id         # when, and in which conversation</code></pre>
+
+    <p>The KramKraft team's motivation came from the "cracked vase" incident (a tutorial-invented case): a customer insisted Nong Kram had once said returns were accepted within 45 days, while the policy says 14. The team opened the logs and found only chat text — no idea how that turn's context was assembled, which policy passage of which version was retrieved — so they could not even determine whether the customer misremembered or the system really answered wrongly. That is the practical meaning of an opaque kernel with no observability to complement it<sup><a href="#en-ref-1">[1]</a></sup>.</p>
+
+    <h3>Step 7 — Assemble everything into the seam register</h3>
+
+    <p>Combine the outputs of steps 1–6 into one table — the <strong>seam register</strong> — with five columns: the seam, the broken classical guarantee, what enters there, who enforces it today, and severity. Score severity with two simple questions: is this seam's worst-case damage reversible, and who can reach this seam's channel — a seam that is both irreversible and reachable by outsiders goes to the top of the table.</p>
+
+    <p>The reason this post's artifact is a table and not an executive summary: the paper's rule, which this series applies in every post, is that reliability questions are answered with an artifact, not an adjective<sup><a href="#en-ref-1">[1]</a></sup>. Nong Kram's full register is in the next section — commit it as docs/seam-register.md in the shop's repo, so it gets reviewed, diffed and updated exactly like code.</p>
+
+    <h2 id="en-kramkraft">4. Nong Kram's Seam Register — This Post's Artifact</h2>
+
+    <p>This is the real output of the seven steps run against Nong Kram — six rows, five columns, one minute to read and the whole machine is visible. The "who enforces this today" column answers for the system as it stands before this series steps in to fix it, not as the team wishes it were.</p>
+
+    <div class="table-wrapper">
+        <table>
+            <thead>
+                <tr>
+                    <th>Seam</th>
+                    <th>Broken classical guarantee</th>
+                    <th>What enters there</th>
+                    <th>Who enforces today</th>
+                    <th>Severity</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td><strong>weights ≈ CPU</strong></td>
+                    <td>Deterministic results — same input, same output, every time</td>
+                    <td>New model versions from the provider, and edits to the decoding config</td>
+                    <td>M_v pinned in config — but no test suite yet for a new version before switching</td>
+                    <td>medium</td>
+                </tr>
+                <tr>
+                    <td><strong>context ≈ RAM</strong></td>
+                    <td>Memory protection — instructions and data in separate channels</td>
+                    <td>Customer chat messages · product reviews in catalog/ · text from uploaded slips · the note field from order data</td>
+                    <td>Nothing — every road feeds straight into one context channel</td>
+                    <td>high</td>
+                </tr>
+                <tr>
+                    <td><strong>retrieval ≈ file system</strong></td>
+                    <td>A stable read contract — repeated reads return the same result</td>
+                    <td>Nightly re-indexing of policy/ and catalog/ with no version number</td>
+                    <td>Nothing — neither the snapshot nor the passages read are recorded</td>
+                    <td>high</td>
+                </tr>
+                <tr>
+                    <td><strong>tool call ≈ system call</strong></td>
+                    <td>Authorisation before effect, every time, by an unavoidable mediator</td>
+                    <td>Refund proposals the model composes from conversation content · order lookups accepting any order_id</td>
+                    <td>System-prompt text only = nothing structural</td>
+                    <td>critical</td>
+                </tr>
+                <tr>
+                    <td><strong>agent ≈ process</strong></td>
+                    <td>Privilege and memory separation between concurrent tasks</td>
+                    <td>Several customers' sessions running in parallel on one core</td>
+                    <td>The backend's session-handling code — never tested for cross-session bleed</td>
+                    <td>medium</td>
+                </tr>
+                <tr>
+                    <td><strong>chat ≈ shell</strong></td>
+                    <td>A kernel whose source can be opened when behaviour turns strange</td>
+                    <td>Every customer phrasing is a command to the whole machine — behaviour is emergent</td>
+                    <td>Only chat text is kept — no assembled context, no passages, no decoding in the logs</td>
+                    <td>high</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <p>How to read it: start from the rightmost column. There is exactly one critical row — execution — because it is the only row where the damage is real money and irreversible. Next come three high rows that tie together into one cluster: untrusted text flows into the same channel as instructions (RAM), from sources with no version number (retrieval), and when something happens nothing can be explained after the fact (shell). This severity order is the priority order of the <em>work</em> — not the order of the lessons in this series.</p>
+
+    <blockquote>💡 My view: the column that actually changes the meeting is "who enforces today". Printing the word <em>nothing</em> into a document everyone can see is completely different from knowing it quietly — once the word nothing is on paper, it can become a work item with an owner; while it stays in someone's head, it is merely one person's worry, and it leaves when they do.</blockquote>
+
+    <p>Handover: commit this table as docs/seam-register.md in KramKraft's repo. The next post (#4) pins the terms the register says are still floating — the model version, the corpus snapshot, the context-assembly config — into one release manifest, and post #8 converts this very register row by row into the five control rails.</p>
+
+    <h2 id="en-validation-check">5. Validation Check — Audit Your Map With Artifacts</h2>
+
+    <p>The series' rule, borrowed straight from the checklist at the end of the paper: every acceptance question must be answered with an artifact, not an adjective<sup><a href="#en-ref-1">[1]</a></sup>. Run this table against your own system — a row passes when you can point at a file, and fails when the answer is a feeling.</p>
+
+    <div class="table-wrapper">
+        <table>
+            <thead>
+                <tr>
+                    <th>Question</th>
+                    <th>Passes when</th>
+                    <th>Artifact that proves it</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>All six components are mapped, each pointing at "the real thing"</td>
+                    <td>Every row names an actual version, file or service — no abstractions left</td>
+                    <td>The mapping table from step 1 — the first six rows of docs/seam-register.md</td>
+                </tr>
+                <tr>
+                    <td>The unconsciously assumed guarantees are written down</td>
+                    <td>A "we are quietly assuming that…" sentence exists for all six rows, and at least one makes the team uncomfortable</td>
+                    <td>The "broken classical guarantee" column in docs/seam-register.md</td>
+                </tr>
+                <tr>
+                    <td>Every road for third-party text into the context is enumerated</td>
+                    <td>The list covers at least: chat, retrieval, uploaded files, tool output, prior history</td>
+                    <td>The channel inventory from step 3 — the "what enters there" cell of the RAM row</td>
+                </tr>
+                <tr>
+                    <td>Every tool call has an answer in the "who enforces today" column</td>
+                    <td>Each tool answers with a named mechanism or a plain "nothing" — no blanks, no "we're about to"</td>
+                    <td>The tool-call ledger from step 4</td>
+                </tr>
+                <tr>
+                    <td>You can say which corpus version one of yesterday's answers read</td>
+                    <td>A snapshot id and passage ids exist per answer — or an honest "nothing" row in the register with a closing date</td>
+                    <td>The log of one real request, or the retrieval row of docs/seam-register.md</td>
+                </tr>
+                <tr>
+                    <td>The incident-replay game was played against at least one real case</td>
+                    <td>The "if we had this, we could explain it" field list was written from that case, not copied from a textbook</td>
+                    <td>The trace checklist from step 6</td>
+                </tr>
+                <tr>
+                    <td>The full seam register is committed and reviewed</td>
+                    <td>Six rows and five columns complete, with at least one reviewer who is not the author</td>
+                    <td>docs/seam-register.md in the repo, with its commit and review history</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <p>If a row fails, go back to the step it points at — and in my experience the row that fails most often and the row that matters most are the same one: the tool-call ledger. Do not move on to the next post while the "who enforces today" column is still blank — writing the word <em>nothing</em> is allowed and honest, but a blank is not.</p>
+
+    <h2 id="en-road-ahead">6. The Road Ahead</h2>
+
+    <p>This post hands over two things: a frame — your system is a whole machine, not one app — and a map: the six seams where the old guarantees are gone, plus a register that answers honestly who enforces each seam today, where most of the answers are: nobody yet. The real progress of this post is easy to measure: before reading, your team could not answer "who authorises our system calls"; after the seven steps, it can — even if the answer hurts.</p>
+
+    <p>What this post deliberately does <em>not</em> do is the pinning: the register says the model version floats, the corpus floats, the config floats, but it does not yet say how to stop them floating. That is the work of <strong>context engineering</strong>, and of the one-line equation from which the whole system's behaviour flows. The next post, <a href="/blog/ai-core-context-engineering">Context Is a Control Artifact</a>, unfolds that equation term by term and enforces one of the paper's strongest rules: changing any term is changing the program — so every term must be pinned in one release manifest and shipped together.</p>
+
+    <div class="alert info">
+        <strong>🧭 Position in the series:</strong> #1 classified which systems are genuinely AI-core · #2 unfolded the three layers that determine behaviour · #3 (this post) turned the top layer into a whole machine and mapped its seams · #4 pins every term into a manifest · #8 returns to this very register to place the five control rails · #9 proves it all with a harness — keep docs/seam-register.md safe; it will be opened again in at least two more posts.
+    </div>
+
+    <div class="key-takeaways">
+        <h3>🎯 Key Takeaways</h3>
+        <ul>
+            <li><strong>AI-OS mental model</strong> = see the AI core as an operating system: weights are the CPU, the context window is RAM, retrieval is the file system, tool calls are system calls, agents are processes, chat is the shell</li>
+            <li><strong>The cracks are the content</strong> = the OS side of every row holds a structural guarantee and the AI side holds none — the whole series' engineering lives at these seams</li>
+            <li><strong>Prompt injection</strong> = the direct consequence of RAM with no memory protection: instructions and data share one channel, and that channel has more roads in than you think</li>
+            <li><strong>Requested, not enforced</strong> = a tool call is a proposal in natural language, so authorisation must always live outside the model — a machine that can be persuaded cannot guard its own gate</li>
+            <li><strong>Deterministic decoding</strong> = removes the sampling variance but not the version sensitivity — a version update is a whole-CPU swap</li>
+            <li><strong>Seam register</strong> = this post's artifact: six rows, five columns, and the column that matters most is "who enforces today" — where "nothing" is an acceptable answer</li>
+        </ul>
+    </div>
+
+    <section class="references" aria-labelledby="en-references">
+        <h2 id="en-references">References</h2>
+        <p class="references__note">All sources checked 8 September 2026 (Asia/Bangkok) · Four evidence labels: <strong>Law</strong> statute or official notification · <strong>Standard</strong> a published standard or official framework · <strong>Study</strong> research or a field signal · <strong>Synthesis</strong> the author's own synthesis or a non-research source.</p>
+        <ol class="references__list">
+            <li id="en-ref-1"><span class="ref-tag ref-tag--synthesis">Synthesis</span> Anirach Mingkhwan. <cite>Engineering AI-Core Systems: A Reference Architecture and Assurance Contract for Software 3.0</cite> — CreativeLAB, FITM, KMUTNB, 2026. An author-supplied manuscript, unpublished, with no public URL, and therefore no link and no access date. <span class="ref-supports">Supports: the six AI-OS mappings (Table 4), the sentence "one application, mistaken for a computer", the observation that the asset is the data and the protocols, and all six guarantee failures — the CPU's sampled output and the limits of deterministic decoding, the single context channel as the structural basis of prompt injection, retrieval's missing read contract, system calls requested in natural language with authorisation enforced outside the model, agents' missing privilege separation, and the opaque kernel that observability must complement — together with the principle that these seams are where post #8 places the controls</span></li>
+            <li id="en-ref-2"><span class="ref-tag ref-tag--study">Study</span> Greshake, K., Abdelnabi, S., Mishra, S., et al. <cite>Not What You've Signed Up For: Compromising Real-World LLM-Integrated Applications with Indirect Prompt Injection</cite> — ACM AISec 2023, pp. 79–90. Cited bibliographically, no URL attached. <span class="ref-supports">Supports: the demonstration of indirect prompt injection against real LLM-integrated applications — content planted for the system to read in later can steer behaviour — which this post uses to support the RAM seam discussion and the step-3 inventory of roads into the context</span></li>
+            <li id="en-ref-3"><span class="ref-tag ref-tag--standard">Standard</span> OWASP Foundation. <cite>OWASP Top 10 for LLM Applications</cite> — 2025 edition. Cited bibliographically, no URL attached. <span class="ref-supports">Supports: prompt injection's position as the first entry of the ten risks for LLM applications in the 2025 edition — used to support the severity weight of the context ≈ RAM row in the seam register</span></li>
+            <li id="en-ref-4"><span class="ref-tag ref-tag--study">Study</span> NIST CAISI. <cite>Strengthening AI Agent Hijacking Evaluations</cite> — technical blog, 2025. <a href="https://www.nist.gov/news-events/news/2025/01/technical-blog-strengthening-ai-agent-hijacking-evaluations">nist.gov</a> — accessed 2026-09-08. <span class="ref-supports">Supports: the status of agent hijacking — steering an agent's tool use toward an attacker's goals — as an evaluation area a national standards institute works on directly, used to support reading the system-call and process seams as a real attack surface rather than a hypothetical</span></li>
+        </ol>
+    </section>
+    </div>
+
+    <div class="post-series-footer">
+      <span class="l-th">บทความจากซีรีส์ Engineering AI-Core Systems 2026</span><span class="l-en" lang="en">From the Engineering AI-Core Systems 2026 series</span>
+    </div>
+
+    <nav aria-label="Engineering AI-Core Systems">
+    <div class="series-nav">
+      <h3>🛡️ Engineering AI-Core Systems 2026</h3>
+      <div class="series-links">
+        <a href="/blog/ai-core-what-is">#1 What Is AI-Core</a>
+        <a href="/blog/ai-core-three-eras">#2 Three Eras</a>
+        <span class="current" aria-current="page">#3 AI-OS Seams</span>
+        <a href="/blog/ai-core-context-engineering">#4 Context Control</a>
+        <a href="/blog/ai-core-fallible-savant">#5 Fallible Savant</a>
+        <a href="/blog/ai-core-control-loop">#6 Control Loop</a>
+        <a href="/blog/ai-core-assurance-contract">#7 Assurance Contract</a>
+        <a href="/blog/ai-core-five-rails">#8 Five Rails</a>
+        <a href="/blog/ai-core-validation">#9 Validation</a>
+        <a href="/blog/ai-core-ship-operate">#10 Ship &amp; Operate</a>
+      </div>
+    </div>
+    </nav>
+
+  </article>
+
+  </main>
+
+  <footer class="blog-footer">
+    <nav class="blog-footer__nav" aria-label="Site">
+      <a href="../index.html">Home</a>
+      <a href="./">Blog</a>
+      <a href="../publications/">Publications</a>
+      <a href="../books/">Books</a>
+      <a href="../projects/">Projects</a>
+      <a href="../news/">News</a>
+      <a href="../index.html#contact">Contact</a>
+    </nav>
+    <a href="./">← Back to Blog</a>
+    <span>© 2026 Anirach Mingkhwan — Associate Professor, KMUTNB</span>
+  </footer>
+
+</body>
+</html>

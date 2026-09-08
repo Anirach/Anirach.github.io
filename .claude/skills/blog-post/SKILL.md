@@ -89,14 +89,15 @@ copy at `assets/post-template.html`; it rotted three sweeps behind and was delet
 | Series | Section in `blog/index.html` | Cards | Nav pattern | Template |
 |---|---|---|---|---|
 | **AI Transformation for Organizations** | `#series-ai-transformation` | 20 | `.series-nav` **grouped** strip — `.series-links--grouped` holding four labelled `.series-links__group` blocks of five | **generated** — do not hand-write one; see below |
+| **Engineering AI-Core Systems** | `#series-ai-core` | 10 | `.series-nav` flat 10-chip strip | **generated** — `python3 scripts/build_series.py --series ai-core`; manifest `scripts/series/ai-core.json` |
 | **Hermes Agent in Practice** | `#series-hermes` | 10 | `.series-nav` 10-chip strip, absolute `/blog/<slug>` links | copy `blog/hermes-101.html` |
 | **OpenClaw for Organizations** | `#series-openclaw` | 13 (7 numbered + 6 standalone) | the 7 numbered posts carry the `.series-nav` 7-chip strip; the other 6 carry **no nav at all** | copy `blog/openclaw-skills.html`; read `references/openclaw-series.md` first |
 | **DevOps & Vibe Coding** | `#series-devops` | 24 | `.post-nav` prev/next pair, relative `foo.html` links | `TEMPLATE` — **the default** |
 | **Life Thought & Philosophy** | `#series-life` | 9 | `.series-nav` 9-chip strip, absolute `/blog/<slug>` links | copy `blog/morning-waking.html` |
 
-Card sections sum to the total: 20 + 10 + 13 + 24 + 9 = **76**. The nav partition (what
-`verify-wiring.py` prints) is **46 series-nav + 24 post-nav + 6 no-nav = 76** — the 46
-being 20 AI Transformation + 10 Hermes + 9 Life + 7 numbered OpenClaw. All 24
+Card sections sum to the total: 10 + 7 + 20 + 10 + 13 + 24 + 9 = **93**. The nav partition (what
+`verify-wiring.py` prints) is **63 series-nav + 24 post-nav + 6 no-nav = 93** — the 63 being
+10 AI-Core + 7 Hermes Desktop + 20 AI Transformation + 10 Hermes + 9 Life + 7 numbered OpenClaw. All 24
 `#series-devops` cards carry a `.post-nav` (the chain head `git-branching.html` included,
 since 2026-08-26); the 6 no-nav posts are all `#series-openclaw` cards.
 

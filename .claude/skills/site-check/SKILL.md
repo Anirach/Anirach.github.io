@@ -132,7 +132,7 @@ Then re-run with `--fix` to resync counts.
 
 **Failure means** somebody hand-incremented. That is exactly how 33 drifted from 37.
 
-There are five `.series-count` spans today, one per series: 20 + 10 + 13 + 24 + 9 = 76.
+There are seven `.series-count` spans today, one per series: 10 + 7 + 20 + 10 + 13 + 24 + 9 = 93.
 
 **Repair:** run `--fix` — it recomputes all seven sites and prints the current line numbers.
 Never bump a counter by hand when adding a post; recompute:
@@ -312,8 +312,9 @@ repoint the post.
 
 ### INV-08 — nav-pattern exclusivity
 
-The partition is exact: **46** `.series-nav` + **24** `.post-nav` + **6** no-nav = **76**. The 46
-breaks down as 20 AI Transformation + 10 Hermes + 9 Life + 7 numbered OpenClaw. (It was 7/24/6 = 37
+The partition is exact: **63** `.series-nav` + **24** `.post-nav` + **6** no-nav = **93**. The 63
+breaks down as 10 AI-Core + 7 Hermes Desktop + 20 AI Transformation + 10 Hermes + 9 Life +
+7 numbered OpenClaw. (It was 7/24/6 = 37
 until the 2026-09-01 Life and Hermes launches and the 2026-09-05 AI Transformation launch;
 `git-branching` joined the `.post-nav` set and `claude-code-architecture` /
 `openclaw-memory-architecture` left it on 2026-08-26.) No file may carry two patterns.

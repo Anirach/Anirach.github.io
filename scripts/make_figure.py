@@ -1518,9 +1518,335 @@ FIGS_HD = {
     "07-safety-remote-recovery": ("STD", hd07),
 }
 
+# --- Engineering AI-Core Systems (ac_*) ------------------------------------
+# Ten figures, one per post.  The family rule: the same primitives as the AI
+# Transformation set with GREEN as the series accent (green tiles carry the
+# series' own concepts -- the AI-core cell, Software 3.0, hard-enforcement
+# rails, the guaranteed rows); CORAL keeps the roles the palette gives it --
+# the assurance envelope, the AI-core label, failure/red-line text.  GREEN is
+# never a text ink (2.0:1 on white): green things speak through tint + outline.
+
+
+def _seam(d, x, ym):
+    """ac03's broken-seam mark: the connector breaks and two coral slashes
+    cross the gap -- the classic axis-break glyph, in the failure colour."""
+    line(d, [(x - 16, ym + 16), (x - 4, ym - 16)], CORAL, W_CONN)
+    line(d, [(x + 4, ym + 16), (x + 16, ym - 16)], CORAL, W_CONN)
+
+
+def ac01(d):
+    """STD -- What counts as AI-core: a 2x2 on MODEL INDISPENSABILITY x
+    DECISION AUTHORITY with an obligation chip under each cell name; the
+    autonomous-x-indispensable cell is tinted green (the series accent) and
+    framed by the coral envelope, the palette's AI-core role. The axis
+    direction lines (Optional -> Indispensable, Advisory -> Autonomous) ride
+    as Medium 20-22 sublabels beside the axis names."""
+    F = (220, 70, 1340, 690)
+    rr(d, (786, 76, 1334, 374), R_ENV, fill=TINTS["green"])
+    axes(d, F, mx=780, my=380)
+    envelope(d, (794, 84, 1326, 366))
+    rtext(d, (120, 380), "DECISION AUTHORITY", "อำนาจตัดสินใจ")
+    rtext(d, (172, 380), "Advisory → Autonomous", px=20, col=SLATE, weight="Medium",
+          kind="L2")
+    mixed(d, (780, 738), "MODEL INDISPENSABILITY", "ความขาดไม่ได้ของโมเดล")
+    text(d, (780, 778), "Optional → Indispensable", 22, "Medium", SLATE, kind="L2")
+    cells = [(500, 225, "BOUNDED AGENT", "เอเจนต์ในขอบเขต", NAVY, 32,
+              "gold", "Hard effect mediation", 330),
+             (1060, 225, "AI-CORE", "AI เป็นแกนกลาง", CORAL, 36,
+              "green", "Full envelope", 250),
+             (500, 535, "AI AS A FEATURE", "คุณลักษณะ AI", NAVY, 32,
+              "gray", "Proportionate controls", 350),
+             (1060, 535, "INDISPENSABLE ADVISOR", "ผู้ช่วยที่จำเป็น", NAVY, 32,
+              "blue", "Text-release boundary", 340)]
+    for cx, cy, l1, th, col, px, key, ob, w in cells:
+        stack(d, cx, cy - 55, [row(l1, px, "Bold", col, "L1"), TH(th, 24)], maxw=520)
+        chip(d, (cx - w / 2, cy + 25), key, ob, w=w, h=64, px=24)
+
+
+def ac02(d):
+    """WIDE -- Three eras, one deployed system: three bands stepping down the
+    card with overlapping x-ranges (the eras are layers, not replacements),
+    each carrying its artifact and failure signature, over the engineer's-
+    leverage arrow. Software 3.0 is the green band -- the series' subject."""
+    bands = [((60, 60, 700, 220), "blue", "SOFTWARE 1.0", "โค้ดชัดแจ้ง",
+              "Artifact: code", "Fails as: bug"),
+             ((380, 240, 1020, 400), "gold", "SOFTWARE 2.0", "ชุดข้อมูลและ weights",
+              "Artifact: dataset + weights", "Fails as: poor generalisation"),
+             ((700, 420, 1340, 580), "green", "SOFTWARE 3.0", "บริบทประกอบตอนรัน",
+              "Artifact: runtime context",
+              "Fails as: hallucination · drift · injection")]
+    for box, key, l1, th, art, fail in bands:
+        tile(d, box, key, rows=[L1(l1, 34), TH(th, 24), L2(art, 22),
+                                row(fail, 22, "Bold", CORAL, "L2")], gap=5)
+    mixed(d, (700, 616), "ENGINEER'S LEVERAGE", "คานงัดของวิศวกร", px=26, thpx=22,
+          kind="L1")
+    for x, s in ((250, "control flow"), (700, "dataset"), (1150, "runtime context")):
+        text(d, (x, 648), s, 22, "Medium", SLATE, kind="L2")
+    arrow(d, (140, 672), (1260, 672), NAVY, W_EMPH)
+
+
+def ac03(d):
+    """STD -- The AI-OS analogy at its cracks: six rows, the AI-core side in
+    green tiles against white OS tiles, each connector broken by the coral
+    seam mark with the failure named beside it in coral."""
+    text(d, (220, 100), "AI CORE", 26, "Bold", NAVY, kind="HDR")
+    text(d, (720, 100), "OPERATING SYSTEM", 26, "Bold", NAVY, kind="HDR")
+    text(d, (1140, 100), "WHERE IT BREAKS", 26, "Bold", CORAL, kind="HDR")
+    rows_ = [("WEIGHTS", "น้ำหนักโมเดล", "CPU", "returns a sample"),
+             ("CONTEXT", "บริบท", "RAM", "no memory protection"),
+             ("RETRIEVAL", "การค้นคืน", "FILE SYSTEM", "no read contract"),
+             ("TOOL CALLS", "เครื่องมือ", "SYSTEM CALLS", "requested, not enforced"),
+             ("AGENTS", "เอเจนต์", "PROCESSES", "no privilege separation"),
+             ("CHAT", "แชท", "SHELL", "opaque kernel")]
+    for i, (l1, th, os_, fail) in enumerate(rows_):
+        y = 150 + 106 * i
+        ym = y + 42
+        line(d, [(388, ym), (454, ym)], BLUE_LIGHT, W_CONN)
+        line(d, [(486, ym), (552, ym)], BLUE_LIGHT, W_CONN)
+        _seam(d, 470, ym)
+        tile(d, (60, y, 380, y + 84), "green", l1, th, l1px=28, thpx=22, gap=3)
+        tile(d, (560, y, 880, y + 84), "white", os_, l1px=28)
+        text(d, (910, ym), fail, 22, "Bold", CORAL, anchor="lm", kind="ROW")
+
+
+def ac04(d):
+    """WIDE -- Equation (1) as a picture: the eight term chips under the
+    equation line, all feeding the ASSEMBLY core bar, the whole set wrapped by
+    the coral ONE RELEASE MANIFEST envelope. Term meanings are Medium 20
+    (floor 16) under each chip -- 'orchestration' cannot fit a 146-px chip at
+    the L2 floor and it is a caption, not a label."""
+    text(d, (700, 100), "Y  ~  P( · | Mv, D, C, R, T, K, S, E )", 36, "Bold", NAVY,
+         kind="L1")
+    envelope(d, (60, 150, 1340, 640))
+    terms = [("Mv", "model + version"), ("D", "decoding"), ("C", "context"),
+             ("R", "retrieval"), ("T", "tools"), ("K", "orchestration"),
+             ("S", "state"), ("E", "environment")]
+    keys = ["blue", "gold", "green", "coral"] * 2
+    for i, ((t, meaning), key) in enumerate(zip(terms, keys)):
+        x = 81 + 156 * i
+        cx = x + 73
+        tile(d, (x, 200, x + 146, 310), key, t, l1px=34)
+        text(d, (cx, 340), meaning, 20, "Medium", SLATE, kind="L2", maxw=150, floor=16)
+        arrow(d, (cx, 360), (470 + i * 65.7, 419), BLUE_LIGHT, W_HAIR)
+    bar(d, (430, 425, 970, 545), ["ASSEMBLY", "ประกอบบริบทตอนรัน"], px=34)
+    mixed(d, (700, 598), "ONE RELEASE MANIFEST", "ทุกพจน์อยู่ใน manifest เดียว",
+          px=28, thpx=24, col=CORAL, kind="L1")
+
+
+def ac05(d):
+    """STD -- The fallible savant: the core disc ringed by the coral assurance
+    envelope, the four assumption tiles on spokes, and the smaller fifth
+    member -- the calibration gauge chip, drawn with PIL's arc the way hd07's
+    approval dial is -- between the bottom tiles."""
+    C = (700, 410)
+    tiles = [((150, 120, 470, 240), "coral", "HALLUCINATION", "แต่งข้อเท็จจริง"),
+             ((930, 120, 1250, 240), "gold", "JAGGED INTELLIGENCE", "เก่งไม่สม่ำเสมอ"),
+             ((150, 580, 470, 700), "blue", "AMNESIA", "ความจำสั้น"),
+             ((930, 580, 1250, 700), "green", "GULLIBILITY", "หูเบา")]
+    for box, _key, _l1, _th in tiles:
+        line(d, [((box[0] + box[2]) / 2, (box[1] + box[3]) / 2), C], BLUE_LIGHT, W_CONN)
+    envelope(d, (60, 52, 1340, 798))
+    mixed(d, (700, 88), "ASSURANCE ENVELOPE", "กรอบการประกันความเชื่อมั่น",
+          px=28, thpx=24, col=CORAL, kind="L1")
+    for box, key, l1, th in tiles:
+        tile(d, box, key, l1, th, l1px=32)
+    disc(d, C, 160, ["THE FALLIBLE", "SAVANT", "อัจฉริยะที่พลาดเป็น"], px=36, thpx=26)
+    rr(d, (580, 640, 820, 780), R_TILE, fill=WHITE, outline=NAVY_40, w=W_HAIR)
+    gx, gy, gr = 700, 700, 30
+    d.d.arc(_sc((gx - gr, gy - gr, gx + gr, gy + gr)), 180, 360, fill=NAVY,
+            width=int(round(W_FRAME * K)))
+    ux, uy = math.cos(math.radians(-55)), math.sin(math.radians(-55))
+    line(d, [(gx, gy), (gx + (gr - 6) * ux, gy + (gr - 6) * uy)], CORAL, W_CONN)
+    ellipse(d, gx, gy, 5, 5, fill=CORAL)
+    text(d, (700, 742), "CALIBRATION", 22, "Bold", NAVY, kind="CHIP")
+    text(d, (700, 766), "ความมั่นใจไม่ตรงจริง", 18, "thai", NAVY_85, kind="CHIP")
+
+
+def ac06(d):
+    """TALL -- ai_core_operation top to bottom: precheck, the GENERATE core
+    bar, the tool-proposal gate routing through REJECT / NEEDS APPROVAL /
+    EXECUTE (sandboxed), output checks against thresholds, and the three
+    verdicts -- with the navy TRACE rail running the full height and a dashed
+    leader from every stage, because every path writes a trace. The dashed
+    'none' bypass on the left is the no-tool-proposal path straight to the
+    output checks."""
+    CX = 560
+    tile(d, (310, 60, 810, 140), "blue", "ASSEMBLE & PRECHECK", "ประกอบและตรวจก่อน",
+         l1px=28, thpx=22, gap=4)
+    arrow(d, (CX, 146), (CX, 172), BLUE, W_CONN)
+    bar(d, (310, 178, 810, 268), ["GENERATE", "แกนความน่าจะเป็น"], px=34)
+    arrow(d, (CX, 274), (CX, 302), BLUE, W_CONN)
+    tile(d, (400, 308, 720, 378), "white", "TOOL PROPOSAL?", l1px=26,
+         outline=GOLD_DARK)
+    arrow(d, (CX, 384), (CX, 412), BLUE, W_CONN)
+    tile(d, (310, 418, 810, 498), "gold", "AUTHORISE & ROUTE",
+         "ตรวจสิทธิ์และกำหนดเส้นทาง", l1px=28, thpx=22, gap=4)
+    routes = [(120, 240, "coral", "REJECT", "ปฏิเสธ", None),
+              (390, 330, "gold", "NEEDS APPROVAL", "รออนุมัติ", None),
+              (750, 260, "green", "EXECUTE", None, "sandboxed")]
+    for x, w, key, l1, th, l2 in routes:
+        arrow(d, (CX, 504), (x + w / 2, 526), BLUE_LIGHT, W_CONN)
+        chip(d, (x, 530), key, l1, th, l2=l2, w=w, h=80)
+    arrow(d, (880, 616), (640, 646), BLUE, W_CONN)
+    tile(d, (310, 650, 810, 730), "blue", "OUTPUT CHECKS", "ตรวจผลลัพธ์",
+         l1px=28, thpx=22, gap=4)
+    arrow(d, (CX, 736), (CX, 764), BLUE, W_CONN)
+    tile(d, (400, 768, 720, 838), "white", "THRESHOLDS", "เทียบเกณฑ์", l1px=26,
+         thpx=20, outline=BLUE, gap=2)
+    verdicts = [(150, 250, "green", "RELEASE", "ปล่อย"),
+                (450, 260, "gold", "WITHHOLD", "ระงับ"),
+                (760, 260, "coral", "ESCALATE", "ส่งต่อมนุษย์")]
+    for x, w, key, l1, th in verdicts:
+        arrow(d, (CX, 844), (x + w / 2, 866), BLUE_LIGHT, W_CONN)
+        chip(d, (x, 870), key, l1, th, w=w, h=80)
+    dashed(d, (394, 343), (90, 343), SLATE, 3)
+    dashed(d, (90, 343), (90, 690), SLATE, 3)
+    dashed(d, (90, 690), (302, 690), SLATE, 3, head=True)
+    text(d, (104, 318), "none", 20, "Medium", SLATE, anchor="lm", kind="L2")
+    rr(d, (1120, 60, 1230, 950), R_TILE, fill=NAVY)
+    rtext(d, (1175, 505), "TRACE — EVERY PATH", "ทุกเส้นทาง", px=30, thpx=24,
+          col=WHITE, kind="L1")
+    for y, x0 in ((100, 830), (223, 830), (343, 740), (458, 830), (570, 1020),
+                  (690, 830), (803, 740), (910, 1030)):
+        dashed(d, (x0, y), (1112, y), GRAY, 3)
+
+
+def ac07(d):
+    """STD -- The assurance contract: left, the eight-element row anatomy as
+    green-dot chips inside a hairline frame; right, the GUARANTEED / ESTIMATED
+    split tiles and the rising A -> B -> C conformance ladder, its top rung
+    green. 'guarantee/estimate' shrinks 26 -> 23 in a 280-px chip -- the one
+    two-concept element in the list."""
+    rr(d, (60, 60, 700, 600), 20, fill=None, outline=GRAY, w=W_HAIR)
+    text(d, (380, 105), "ONE ROW PER PROPERTY", 28, "Bold", NAVY, kind="L1")
+    text(d, (380, 143), "แปดองค์ประกอบต่อหนึ่งแถว", 22, "thai", NAVY_85, kind="TH")
+    els = ["assumptions", "obligation", "guarantee/estimate", "evidence",
+           "owner", "threshold", "change", "breach"]
+    for i, s in enumerate(els):
+        chip(d, (90 if i % 2 == 0 else 400, 190 + 100 * (i // 2)), "green", s,
+             w=280, h=76)
+    tile(d, (740, 90, 1340, 260), "green",
+         rows=[L1("GUARANTEED", 34), TH("รับประกันเชิงโครงสร้าง", 24),
+               L2("structural · enforced by construction", 22)], gap=6)
+    tile(d, (740, 300, 1340, 470), "gold",
+         rows=[L1("ESTIMATED", 34), TH("ค่าประเมิน", 24),
+               L2("population · threshold · error rate", 22)], gap=6)
+    text(d, (1000, 545), "CONFORMANCE LEVELS", 24, "Bold", NAVY, kind="L1")
+    for box, key, s in (((760, 660, 880, 730), "white", "A"),
+                        ((940, 625, 1060, 695), "white", "B"),
+                        ((1120, 590, 1240, 660), "green", "C")):
+        tile(d, box, key, s, l1px=30)
+    arrow(d, (886, 675), (934, 655), BLUE, W_CONN)
+    arrow(d, (1066, 640), (1114, 620), BLUE, W_CONN)
+
+
+def ac08(d):
+    """WIDE -- The paper's Fig 1: the four-stage pipeline inside the coral
+    envelope, the five rail chips coloured by their strongest control class
+    (green where a hard invariant exists, gold for soft+governance, blue for
+    soft only), and the all-rails trace/governance core bar beneath."""
+    envelope(d, (60, 60, 1340, 250))
+    tile(d, (84, 85, 374, 225), "blue",
+         rows=[L1("INPUT", 30), L2("assemble & screen", 22),
+               TH("ประกอบและกรอง", 22)], gap=5)
+    bar(d, (399, 85, 689, 225),
+        [row("PROBABILISTIC", 28, "Bold", WHITE, "BAR"),
+         row("CORE", 28, "Bold", WHITE, "BAR"),
+         ("generate · สร้างคำตอบ", 22, "Medium", WHITE, "BAR")], pad=16, gap=4)
+    tile(d, (714, 85, 1004, 225), "gold",
+         rows=[L1("VERIFICATION", 28), L2("& routing", 22),
+               TH("ตรวจและกำหนดทาง", 22)], gap=5)
+    tile(d, (1029, 85, 1319, 225), "green",
+         rows=[L1("HUMAN", 30), L2("in the loop", 22),
+               TH("มนุษย์รับส่วนที่เหลือ", 22)], gap=5)
+    for x in (376, 691, 1006):
+        arrow(d, (x, 155), (x + 21, 155), BLUE, W_EMPH)
+    mixed(d, (80, 280), "ASSURANCE ENVELOPE", "กรอบการประกัน", px=26, thpx=22,
+          col=CORAL, anchor="lm", kind="L1")
+    text(d, (1320, 280), "H hard enforcement · S soft detection · GOV governance",
+         20, "Medium", SLATE, anchor="rm", kind="L2")
+    rails = [("1 INPUT", "S", "blue"), ("2 DIALOG", "S · GOV", "gold"),
+             ("3 RETRIEVAL", "H · S", "green"), ("4 EXECUTION", "H", "green"),
+             ("5 OUTPUT", "H · S", "green")]
+    for i, (l1, cls, key) in enumerate(rails):
+        x = 60 + 260 * i
+        chip(d, (x, 315), key, l1, l2=cls, w=240, h=88)
+        arrow(d, (x + 120, 409), (x + 120, 545), BLUE_LIGHT, W_CONN)
+    bar(d, (60, 555, 1340, 655),
+        ["TRACE + GOVERNANCE — EVERY RAIL", "ร่องรอยและธรรมาภิบาลครอบทุกราง"], px=32)
+
+
+def ac09(d):
+    """STD -- The proof matrix: the four validation questions as quadrant
+    tiles (LOCO in the series green) over the post-state-oracles core bar."""
+    quads = [((60, 80, 680, 350), "blue", "PAIRED FULL vs BARE",
+              "เทียบมีการ์ด/ไม่มีการ์ด", "same tasks · guards on and off"),
+             ((720, 80, 1340, 350), "green", "LEAVE-ONE-CONTROL-OUT",
+              "ถอดการ์ดทีละตัว", "attribute each control's contribution"),
+             ((60, 390, 680, 660), "coral", "ADAPTIVE ATTACKS",
+              "โจมตีแบบรู้ไส้ระบบ", "written after reading the rules"),
+             ((720, 390, 1340, 660), "gold", "STATEFUL FAULTS",
+              "ความล้มเหลวเชิงสถานะ", "repeat the refund · must fail closed")]
+    for box, key, l1, th, l2 in quads:
+        tile(d, box, key, rows=[L1(l1, 34), TH(th, 26), L2(l2, 24)], gap=8)
+    bar(d, (60, 700, 1340, 800),
+        ["POST-STATE ORACLES — NEVER MODEL NARRATION",
+         "ตัดสินจากสภาพจริงหลังงาน ไม่ใช่คำเล่าของโมเดล"], px=32)
+
+
+def ac10(d):
+    """STD -- The autonomy heuristic: four authority levels x three
+    consequence classes, cells tinted by scrutiny ordinal (authority ordinal +
+    irreversibility ordinal: 0-1 baseline green, 2-3 enhanced gold, 4-5
+    highest-scrutiny coral), the autonomous-x-irreversible cell ringed in
+    --red -- the palette's one warning ring -- and captioned NOT ADVISED in
+    coral, the text-safe red."""
+    rows_ = [("AUTONOMOUS", "อัตโนมัติ"), ("ACT WITH APPROVAL", "กระทำเมื่ออนุมัติ"),
+             ("DRAFT", "ร่าง"), ("SUGGEST", "เสนอแนะ")]
+    cols_ = [("READ-ONLY", "อ่านอย่างเดียว"), ("REVERSIBLE WRITE", "เขียนแบบย้อนได้"),
+             ("IRREVERSIBLE", "ย้อนไม่ได้")]
+    for ri in range(4):
+        for ci in range(3):
+            s = (3 - ri) + ci
+            key = "green" if s <= 1 else ("gold" if s <= 3 else "coral")
+            box = (340 + 335 * ci, 80 + 140 * ri, 665 + 335 * ci, 215 + 140 * ri)
+            rr(d, box, 10, fill=TINTS[key])
+    rr(d, (1010, 80, 1335, 215), 10, fill=None, outline=RED, w=W_EMPH)
+    stack(d, 1172, 147, [row("NOT ADVISED", 28, "Bold", CORAL, "L1"),
+                         ("ไม่แนะนำ", 22, "thai", NAVY_85, "TH")], gap=2)
+    for ri, (en, th) in enumerate(rows_):
+        stack(d, 180, 147 + 140 * ri, [row(en, 24, "Bold", NAVY, "AXIS"),
+                                       (th, 20, "thai", NAVY_85, "AXIS")],
+              maxw=290, gap=2)
+    for ci, (en, th) in enumerate(cols_):
+        stack(d, 502 + 335 * ci, 692, [row(en, 24, "Bold", NAVY, "AXIS"),
+                                       (th, 20, "thai", NAVY_85, "AXIS")],
+              maxw=320, gap=2)
+    arrow(d, (322, 630), (322, 90), NAVY, W_HAIR)
+    arrow(d, (345, 652), (1330, 652), NAVY, W_HAIR)
+    chip(d, (170, 748), "green", "BASELINE", "พื้นฐาน", w=260, h=70, px=24)
+    chip(d, (500, 748), "gold", "ENHANCED", "เข้มขึ้น", w=260, h=70, px=24)
+    chip(d, (830, 748), "coral", "HIGHEST SCRUTINY", "เข้มสุด", w=400, h=70, px=24)
+
+
+FIGS_AC = {
+    "01-quadrant": ("STD", ac01),
+    "02-three-eras": ("WIDE", ac02),
+    "03-os-seams": ("STD", ac03),
+    "04-context-eq": ("WIDE", ac04),
+    "05-savant": ("STD", ac05),
+    "06-control-loop": ("TALL", ac06),
+    "07-contract": ("STD", ac07),
+    "08-five-rails": ("WIDE", ac08),
+    "09-validation": ("STD", ac09),
+    "10-autonomy": ("STD", ac10),
+}
+
 SERIES = {
     "ai-transformation": dict(prefix="ai-transformation-fig-", figs=FIGS_AT, expected=19,
                               sheet="figures"),
+    "ai-core": dict(prefix="ai-core-fig-", figs=FIGS_AC, expected=10,
+                    sheet="figures-ai-core"),
     "hermes-desktop": dict(prefix="hermes-desktop-fig-", figs=FIGS_HD, expected=8,
                            sheet="figures-hermes-desktop"),
 }

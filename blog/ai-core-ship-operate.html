@@ -1,0 +1,1253 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Ship It — คันเร่งอิสระ งานปฏิบัติการ และเช็กลิสต์ก่อนปล่อย | Anirach Mingkhwan</title>
+  <meta name="description" content="ก่อนปล่อยจริง — จับคู่ระดับอิสระกับความย้อนกลับได้ของผลกระทบ ตั้งงบความเสี่ยงต่อ action class เตรียม rollback และตอบเช็กลิสต์ 10 ข้อด้วยหลักฐานจริง">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=Sarabun:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      color-scheme: light;
+      /* ink */
+      --navy: #11304b; --slate: #334155; --slate-light: #526174; --gray: #94a3b8;
+      /* ground */
+      --bg: #faf7f0; --white: #ffffff; --code-bg: #1e293b;
+      /* accent */
+      --blue: #226299; --blue-dark: #1a4d7a; --blue-light: #4992b9;
+      /* brand — sampled from the book covers. --gold is decorative on light grounds (2.2:1); --gold-dark is its text form. */
+      --gold: #c4a46c; --gold-dark: #7a5f22; --cloud: #dee7e6; --parchment: #e9e1c4; --focus: #226299;
+      /* status — use only these six, never invent a seventh */
+      --green: #22c55e; --red: #ef4444; --amber: #f59e0b;
+      --cyan: #06b6d4; --purple: #226299; --purple-dark: #1a4d7a;
+      /* type */
+      --font: 'Inter', 'Sarabun', -apple-system, BlinkMacSystemFont, sans-serif;
+      --mono: 'JetBrains Mono', 'Fira Code', 'Sarabun', monospace;
+      /* form */
+      --radius: 12px; --radius-sm: 8px; --radius-lg: 16px;
+      --measure: 720px; --wide: 860px;
+      --transition: 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+    html { scroll-behavior: smooth; }
+    body { font-family: var(--font); font-size: 17px; line-height: 1.8; color: var(--slate); background: var(--bg); -webkit-font-smoothing: antialiased; }
+    .blog-nav { position: fixed; top: 0; left: 0; right: 0; z-index: 100; background: rgba(248,250,252,0.85); backdrop-filter: blur(20px); border-bottom: 1px solid rgba(0,0,0,0.05); }
+    .blog-nav__inner { max-width: 860px; margin: 0 auto; padding: 0 2rem; height: 56px; display: flex; align-items: center; justify-content: space-between; }
+    .blog-nav__back { font-size: 0.85rem; font-weight: 500; color: var(--blue); text-decoration: none; }
+    .blog-nav__back:hover { color: #1a4d7a; }
+    .blog-nav__title { font-size: 0.85rem; font-weight: 600; color: var(--navy); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 50%; }
+    /* ── HERO ── house .post-hero on the approved Deep Blue gradient (page-design
+       §5 / INV-28). Ink is inverted for the dark ground: white title/meta, tag
+       pills white on 18% white — the openclaw-production treatment. The
+       background value must stay byte-identical to the approved string. */
+    .post-hero { padding: 8rem 2rem 3rem; background: linear-gradient(135deg, #11304b 0%, #1a4d7a 45%, #226299 100%); color: #fff; text-align: center; }
+    .post-hero__tags { display: flex; gap: 0.5rem; justify-content: center; margin-bottom: 1.25rem; flex-wrap: wrap; }
+    .post-hero__tag { display: inline-block; font-size: 0.72rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.1em; color: #fff; background: rgba(255,255,255,0.18); padding: 0.35rem 0.9rem; border-radius: 20px; }
+    .post-hero__title { font-size: clamp(1.8rem, 5vw, 3rem); font-weight: 800; color: #fff; line-height: 1.2; margin-bottom: 1rem; max-width: 720px; margin-left: auto; margin-right: auto; }
+    .post-hero__sub { font-size: 1.05rem; max-width: 640px; margin: 0 auto 1.5rem; line-height: 1.7; color: #fff; }
+    .post-hero__meta { font-size: 0.85rem; color: #fff; display: flex; align-items: center; justify-content: center; gap: 1.5rem; flex-wrap: wrap; }
+    .post-hero__series { font-weight: 600; color: #fff; }
+    /* the switch pill and the focus ring both sit on the dark hero: the pill is
+       a light chip so its labels keep their light-ground colours, and --focus
+       re-points to gold here (blue collapses on blue — the footer/pre
+       precedent). */
+    .post-hero { --focus: var(--gold); }
+    .post-hero__cover {
+      aspect-ratio: 1 / 1;
+      max-width: 380px;
+      margin: 2.5rem auto 0;
+      border-radius: var(--radius-lg, 16px);
+      overflow: hidden;
+      box-shadow: 0 20px 60px rgba(17,48,75,0.14);
+    }
+    .post-hero__cover img { width: 100%; height: 100%; object-fit: cover; display: block; }
+    .post-body { max-width: 720px; margin: 0 auto; padding: 3rem 2rem 6rem; }
+    .post-body h2 { font-size: 1.6rem; font-weight: 800; color: var(--navy); margin: 3rem 0 1rem; padding-bottom: 0.5rem; border-bottom: 2px solid rgba(34,98,153,0.15); }
+    .post-body h3 { font-size: 1.25rem; font-weight: 700; color: var(--navy); margin: 2.25rem 0 0.75rem; }
+    .post-body p { margin-bottom: 1.25rem; }
+    .post-body strong { font-weight: 700; color: var(--navy); }
+    .post-body a { color: var(--blue); text-decoration: underline; text-decoration-thickness: 1px; text-underline-offset: 2px; }
+    .post-body ul, .post-body ol { margin: 0.5rem 0 1.25rem 1.5rem; }
+    .post-body li { margin-bottom: 0.4rem; }
+    .post-body blockquote { background: rgba(34,98,153,0.06); border-left: 4px solid var(--blue); padding: 1rem 1.25rem; border-radius: 0 10px 10px 0; margin: 1.25rem 0; font-size: 0.95rem; color: var(--navy); }
+    .post-body hr { border: none; height: 1px; background: linear-gradient(90deg, transparent, rgba(34,98,153,0.2), transparent); margin: 3rem 0; }
+    /* ── CODE ── */
+    .post-body pre { background: var(--code-bg); border-radius: 12px; padding: 1.5rem; margin: 1.25rem 0 1.5rem; overflow-x: auto; border: 1px solid rgba(255,255,255,0.05); }
+    .post-body pre code { font-family: var(--mono); font-size: 0.85rem; color: #e2e8f0; line-height: 1.7; background: none; padding: 0; white-space: pre-wrap; }
+    .post-body code { font-family: var(--mono); font-size: 0.88em; background: rgba(34,98,153,0.08); color: var(--blue-dark); padding: 0.15em 0.45em; border-radius: 5px; }
+    /* ── TABLES ── */
+    .table-wrapper { overflow-x: auto; margin: 1.5rem 0; border-radius: 0.5rem; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1); }
+    table { width: 100%; border-collapse: collapse; background: white; }
+    th { background: #226299; color: white; padding: 1rem; text-align: left; font-weight: 600; }
+    td { padding: 1rem; border-bottom: 1px solid #e5e7eb; }
+    .post-body table { display: block; width: 100%; overflow-x: auto; }
+    /* ── ALERTS ── */
+    .alert { background: #fef3cd; border: 1px solid #facc15; border-radius: 0.5rem; padding: 1rem; margin: 1.5rem 0; }
+    .alert.danger { background: #fee2e2; border-color: #ef4444; }
+    .alert.info { background: #e0f2fe; border-color: #06b6d4; }
+    .alert.success { background: #d1fae5; border-color: #10b981; }
+    /* ── KEY TAKEAWAYS ── */
+    .key-takeaways { background: linear-gradient(135deg, #f3f4f6 0%, #e5e7eb 100%); border-radius: 1rem; padding: 2rem; margin: 3rem 0; }
+    .key-takeaways h3 { color: #226299; margin-bottom: 1.5rem; }
+    .post-series-footer { text-align: center; font-size: 0.85rem; color: var(--slate-light); font-style: italic; margin-top: 2rem; padding-top: 2rem; border-top: 1px solid #e2e8f0; }
+    .blog-footer { background: var(--navy); padding: 2rem 0; text-align: center; }
+    .blog-footer a { color: var(--gold); text-decoration: none; font-weight: 600; font-size: 0.9rem; }
+    .blog-footer span { color: var(--gray); font-size: 0.8rem; display: block; margin-top: 0.4rem; }
+    @media (max-width: 600px) {
+      .post-hero { padding: 7rem 1.25rem 2.5rem; }
+      .post-body { padding: 2rem 1.25rem 4rem; }
+      .post-hero__meta { flex-direction: column; gap: 0.4rem; }
+      .post-body h2 { font-size: 1.4rem; }
+      .post-body h3 { font-size: 1.15rem; }
+      .post-body pre { padding: 1rem; border-radius: 8px; }
+    }
+
+    :focus-visible { outline: 2px solid var(--focus); outline-offset: 3px; border-radius: 2px; }
+    /* the ring sits on the page ground (3px offset). Inside the navy footers
+       and code blocks var(--blue) collapses to 2.12:1, so those scopes
+       re-point --focus to gold (5.73:1 on navy). */
+    .footer, .blog-footer, pre { --focus: var(--gold); }
+    :focus:not(:focus-visible) { outline: none; }
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after {
+        animation-duration: .01ms !important; animation-iteration-count: 1 !important;
+        transition-duration: .01ms !important; scroll-behavior: auto !important;
+      }
+    }
+    h1, h2, h3, .post-hero__title, .card__title { text-wrap: balance; }
+
+    .post-body img, .post-body svg { max-width: 100%; height: auto; }
+
+    /* ── SKIP LINK ── a11y-perf R5: the link and the landmark it targets are a
+       pair — useless without both halves. Off-screen until focused, then the
+       first tab stop on every page. */
+    .skip-link { position: absolute; left: -9999px; }
+    .skip-link:focus {
+      left: 1rem; top: 1rem; z-index: 999;
+      background: var(--navy); color: #fff;
+      padding: 0.75rem 1.25rem; border-radius: var(--radius-sm);
+      font-weight: 600; text-decoration: none;
+    }
+
+    /* ── POST WAYFINDING ── the wordmark is the home link; the footer carries
+       the full destination row. */
+    .blog-nav__home {
+      font-size: 0.9rem; font-weight: 800; color: var(--navy);
+      text-decoration: none; margin-right: 1rem;
+    }
+    .blog-nav__home:hover { color: var(--blue); }
+    .blog-nav__inner > .blog-nav__back { margin-right: auto; }
+    .blog-footer__nav {
+      display: flex; flex-wrap: wrap; justify-content: center; gap: 0.35rem 1.25rem;
+      max-width: 860px; margin: 0 auto 1.25rem; padding: 0 2rem 1.25rem;
+      border-bottom: 1px solid rgba(255,255,255,0.12);
+    }
+    .blog-footer__nav a { color: var(--gold); font-size: 0.85rem; font-weight: 600; text-decoration: none; }
+    .blog-footer__nav a:hover { color: #fff; text-decoration: underline; }
+
+    html { scroll-padding-top: 5rem; }
+    [id] { scroll-margin-top: 5rem; }
+
+    /* Thai needs more room than Latin at the same nominal size. */
+    .post-body:lang(th) { font-size: 18px; line-height: 1.85; }
+    .post-body p, .post-body li, .post-body blockquote { text-wrap: pretty; }
+
+    /* ---- side-scroll affordance ----
+       pre blocks and tables can exceed 720px. These layers paint a shadow ONLY
+       where there is more content in that direction; when fully scrolled the
+       cover slides over the shadow and hides it. No JavaScript, no wrapper. */
+    .post-body pre, .post-body table {
+      overflow-x: auto;
+      background-image:
+        linear-gradient(to right, var(--code-bg, #0f172a) 30%, rgba(15,23,42,0)),
+        linear-gradient(to left, var(--code-bg, #0f172a) 30%, rgba(15,23,42,0)),
+        radial-gradient(farthest-side at 0 50%, rgba(0,0,0,.28), rgba(0,0,0,0)),
+        radial-gradient(farthest-side at 100% 50%, rgba(0,0,0,.28), rgba(0,0,0,0));
+      background-position: 0 0, 100% 0, 0 0, 100% 0;
+      background-repeat: no-repeat;
+      background-size: 40px 100%, 40px 100%, 14px 100%, 14px 100%;
+      background-attachment: local, local, scroll, scroll;
+    }
+    .post-body table {
+      background-image:
+        linear-gradient(to right, var(--white, #fff) 30%, rgba(255,255,255,0)),
+        linear-gradient(to left, var(--white, #fff) 30%, rgba(255,255,255,0)),
+        radial-gradient(farthest-side at 0 50%, rgba(17,48,75,.16), rgba(17,48,75,0)),
+        radial-gradient(farthest-side at 100% 50%, rgba(17,48,75,.16), rgba(17,48,75,0));
+      background-position: 0 0, 100% 0, 0 0, 100% 0;
+      background-repeat: no-repeat;
+      background-size: 40px 100%, 40px 100%, 14px 100%, 14px 100%;
+      background-attachment: local, local, scroll, scroll;
+    }
+
+    /* ---- table of contents ---- */
+    .post-toc {
+      max-width: 720px;
+      margin: 2rem auto 0;
+      padding: 1rem 1.25rem;
+      background: rgba(34,98,153,0.05);
+      border: 1px solid rgba(34,98,153,0.14);
+      border-left: 3px solid var(--gold, #c4a46c);
+      border-radius: 10px;
+      font-size: 0.92rem;
+    }
+    .post-toc > summary {
+      cursor: pointer;
+      font-weight: 700;
+      color: var(--navy);
+      list-style: none;
+    }
+    .post-toc > summary::-webkit-details-marker { display: none; }
+    .post-toc > summary::before {
+      content: "\25B8";
+      display: inline-block;
+      margin-right: 0.5rem;
+      transition: transform 0.2s ease;
+      color: var(--gold-dark, #7a5f22);
+    }
+    .post-toc[open] > summary::before { transform: rotate(90deg); }
+    .post-toc > summary:focus-visible { outline: 3px solid var(--focus, #226299); outline-offset: 3px; }
+    .post-toc ol { margin: 0.85rem 0 0.25rem; padding-left: 1.4rem; }
+    .post-toc li { margin-bottom: 0.4rem; line-height: 1.5; }
+    .post-toc a { color: var(--slate); text-decoration: none; }
+    .post-toc a:hover, .post-toc a:focus-visible { color: var(--blue-dark, #1a4d7a); text-decoration: underline; }
+    @media (max-width: 600px) { .post-toc { margin: 1.25rem 1rem 0; } }
+
+    /* ---- cross-document view transitions ---- */
+    @view-transition { navigation: auto; }
+    .nav, .blog-nav { view-transition-name: site-nav; }
+    .footer, .blog-footer { view-transition-name: site-footer; }
+    @media (prefers-reduced-motion: reduce) {
+      ::view-transition-group(*),
+      ::view-transition-old(*),
+      ::view-transition-new(*) { animation: none !important; }
+    }
+
+    /* ── SERIES STRIP — Hermes Agent in Practice ──
+       Same class and inner-wrapper shape as the OpenClaw strip because the
+       linter's RE_SNAV recognises exactly `series-nav` + a nested div; a
+       renamed strip would read as "no nav" and fail INV-08. All content
+       checks (INV-03 family) iterate the SERIES7 list only, so this strip's
+       labels are convention, not contract. House-styled, not the island CSS. */
+    .series-nav {
+      max-width: 720px; margin: 2rem auto 0; padding: 1.1rem 1.4rem;
+      background: rgba(255,255,255,0.75); border: 1px solid rgba(34,98,153,0.15);
+      border-left: 3px solid var(--gold); border-radius: 12px;
+    }
+    .series-nav h3 {
+      font-size: 0.78rem; font-weight: 700; text-transform: uppercase;
+      letter-spacing: 0.08em; color: var(--gold-dark); margin-bottom: 0.6rem;
+    }
+    .series-links { display: flex; flex-wrap: wrap; gap: 0.5rem; }
+    .series-links a, .series-links .current {
+      font-size: 0.82rem; font-weight: 600; padding: 0.35rem 0.8rem;
+      border-radius: 50px; text-decoration: none;
+    }
+    .series-links a { color: var(--blue-dark); background: rgba(34,98,153,0.08); }
+    .series-links a:hover { background: rgba(34,98,153,0.16); }
+    .series-links .current { color: #fff; background: var(--blue-dark); }
+    @media (max-width: 600px) { .series-nav { margin: 1.5rem 1rem 0; } }
+
+    /* ── FIGURE — the sanctioned diagram component (page-design §4 Content).
+       Diagrams are PNGs; this repo built them out of divs twice and reverted
+       twice. The image is wrapped in a link to itself so a phone can pinch a
+       1400px drawing without a line of JavaScript. */
+    .figure { margin: 2.5rem 0; }
+    .figure__img { width: 100%; height: auto; display: block;
+                   border-radius: var(--radius); border: 1px solid rgba(0,0,0,0.06); }
+    .figure__caption { font-size: 0.85rem; color: var(--slate-light);
+                       text-align: center; margin-top: 0.75rem; }
+
+    /* ── REFERENCES — every material number in this series carries its source.
+       The tags are the book's own four evidence labels. */
+    .references { margin-top: 3rem; padding-top: 2rem; border-top: 1px solid #e2e8f0; }
+    .references__note { font-size: 0.85rem; color: var(--slate-light); margin-bottom: 1rem; }
+    .references__list { padding-left: 1.4rem; font-size: 0.9rem; line-height: 1.75; }
+    .references__list li { margin-bottom: 0.7rem; }
+    .ref-tag { display: inline-block; font-size: 0.7rem; font-weight: 700;
+               letter-spacing: 0.06em; text-transform: uppercase; padding: 0.1rem 0.5rem;
+               border-radius: 50px; margin-right: 0.4rem; vertical-align: 0.05em;
+               background: rgba(34,98,153,0.1); color: var(--blue-dark); }
+    /* All four labels get a rule.  --standard and --study shipped without one
+       on 2026-09-05, so 158 of 306 tags fell through to the base blue and the
+       two labels were indistinguishable.  Ratios on --bg: 6.70 / 6.92 / 7.36 /
+       4.81:1, all AA at this size. */
+    .ref-tag--law { background: rgba(239,68,68,0.12); color: #991b1b; }
+    .ref-tag--standard { background: rgba(34,98,153,0.12); color: var(--blue-dark); }
+    .ref-tag--study { background: rgba(34,197,94,0.18); color: #14532d; }
+    .ref-tag--synthesis { background: rgba(196,164,108,0.22); color: var(--gold-dark); }
+    .ref-supports { display: block; color: var(--slate-light); font-size: 0.85rem; }
+
+    /* ── LANGUAGE SWITCH — pure CSS, zero JavaScript (INV-38) ──
+       One visually-hidden checkbox as a direct child of body, BEFORE the main landmark,
+       so `#langSwitch:checked ~ main …` reaches every content block. The two
+       tracks are paired blocks: .l-th (default) and .l-en (hidden until
+       checked; display:revert restores block for divs, inline for spans).
+       Naming stays clear of INV-12's menu-token regex (hamburger|burger|
+       nav__toggle|nav-toggle|navtoggle|menu-toggle|menu__toggle) — verified.
+       No JS also means no persistence across posts; each post opens in Thai. */
+    .lang-switch-box { position: absolute; left: -9999px; }
+    .l-en { display: none; }
+    #langSwitch:checked ~ main .l-en { display: revert; }
+    #langSwitch:checked ~ main .l-th { display: none; }
+    .lang-switch {
+      display: inline-flex; align-items: center; gap: 0.55rem;
+      margin-top: 1.4rem; padding: 0.4rem 1.1rem; border-radius: 50px;
+      background: rgba(255,255,255,0.85); border: 1px solid rgba(255,255,255,0.4);
+      cursor: pointer; font-size: 0.85rem; user-select: none;
+    }
+    .lang-switch span { color: var(--slate-light); font-weight: 600; transition: color 0.2s; }
+    .lang-switch .lang-sep { color: var(--gray); font-weight: 400; }
+    .lang-switch .lang-th { color: var(--navy); font-weight: 800; }
+    #langSwitch:checked ~ main .lang-switch .lang-th { color: var(--slate-light); font-weight: 600; }
+    #langSwitch:checked ~ main .lang-switch .lang-en { color: var(--navy); font-weight: 800; }
+    .lang-switch:hover { border-color: #fff; }
+    #langSwitch:focus-visible ~ main .lang-switch {
+      outline: 2px solid var(--focus); outline-offset: 3px;
+    }
+  </style>
+  <!-- social -->
+  <link rel="canonical" href="https://anirach.com/blog/ai-core-ship-operate.html">
+  <meta property="og:type" content="article">
+  <meta property="og:url" content="https://anirach.com/blog/ai-core-ship-operate.html">
+  <meta property="og:site_name" content="Anirach Mingkhwan">
+  <meta property="og:locale" content="th_TH">
+  <meta property="og:locale:alternate" content="en_US">
+  <meta property="article:published_time" content="2026-09-08">
+  <meta property="article:author" content="https://anirach.com/">
+  <meta property="og:title" content="Ship It — คันเร่งอิสระ งานปฏิบัติการ และเช็กลิสต์ก่อนปล่อย">
+  <meta property="og:description" content="ก่อนปล่อยจริง — จับคู่ระดับอิสระกับความย้อนกลับได้ของผลกระทบ ตั้งงบความเสี่ยงต่อ action class เตรียม rollback และตอบเช็กลิสต์ 10 ข้อด้วยหลักฐานจริง">
+  <meta property="og:image" content="https://anirach.com/images/ai-core-ship-operate-og.jpg">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
+  <meta property="og:image:alt" content="Ship It — คันเร่งอิสระ งานปฏิบัติการ และเช็กลิสต์ก่อนปล่อย">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:image" content="https://anirach.com/images/ai-core-ship-operate-og.jpg">
+  <meta name="twitter:image:alt" content="Ship It — คันเร่งอิสระ งานปฏิบัติการ และเช็กลิสต์ก่อนปล่อย">
+  <meta name="robots" content="max-image-preview:large">
+  <meta name="theme-color" content="#11304b">
+  <link rel="icon" href="/favicon.ico" sizes="any">
+  <link rel="apple-touch-icon" href="/apple-touch-icon.png">
+  <!-- /social -->
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "BlogPosting",
+    "headline": "Ship It — คันเร่งอิสระ งานปฏิบัติการ และเช็กลิสต์ก่อนปล่อย",
+    "author": {
+      "@type": "Person",
+      "@id": "https://anirach.com/#person",
+      "name": "Anirach Mingkhwan",
+      "url": "https://anirach.com/"
+    },
+    "datePublished": "2026-09-08",
+    "dateModified": "2026-09-08",
+    "image": "https://anirach.com/images/ai-core-ship-operate-og.jpg",
+    "inLanguage": [
+      "th",
+      "en"
+    ],
+    "mainEntityOfPage": "https://anirach.com/blog/ai-core-ship-operate.html"
+  }
+  </script>
+</head>
+<body>
+<a href="#main" class="skip-link">Skip to content</a>
+<input type="checkbox" id="langSwitch" class="lang-switch-box" aria-label="Switch language: Thai / English">
+
+  <nav class="blog-nav">
+    <div class="blog-nav__inner">
+      <a href="../index.html" class="blog-nav__home">Anirach</a>
+      <a href="./" class="blog-nav__back">‹ Blog</a>
+      <div class="blog-nav__title">Ship It: Autonomy, Operations, Checklist</div>
+    </div>
+  </nav>
+
+  <main id="main">
+
+  <header class="post-hero">
+    <div class="post-hero__tags">
+      <span class="post-hero__tag">Autonomy</span>
+      <span class="post-hero__tag">Operations</span>
+      <span class="post-hero__tag">Checklist</span>
+    </div>
+    <h1 class="post-hero__title"><span class="l-th">Ship It — คันเร่งอิสระ งานปฏิบัติการ และเช็กลิสต์ก่อนปล่อย</span><span class="l-en" lang="en">Ship It — The Autonomy Slider, Operations, and the Checklist</span></h1>
+    <p class="post-hero__sub"><span class="l-th">ตั้งระดับอิสระต่อชนิดผลกระทบ ผูกงบความเสี่ยงคงเหลือ เตรียมแผนรับเหตุ แล้วไล่เช็กลิสต์นักปฏิบัติ 10 ข้อ — ทุกข้อตอบด้วย artifact ไม่ใช่คำคุณศัพท์</span><span class="l-en" lang="en">Set autonomy per action class, budget residual risk, prepare incident response, then run the 10-item practitioner checklist — every item answered with an artifact, not an adjective.</span></p>
+    <div class="post-hero__meta">
+      <span>By <strong>Anirach Mingkhwan</strong></span>
+      <span class="post-hero__series">Engineering AI-Core Systems 2026 • Post #10</span>
+      <span><time datetime="2026-09-08">8 Sep 2026</time></span>
+      <span>18 min read</span>
+    </div>
+    <label for="langSwitch" class="lang-switch" title="สลับภาษา · Switch language"><span class="lang-th">ไทย</span><span class="lang-sep">·</span><span class="lang-en" lang="en">English</span></label>
+    <div class="post-hero__cover">
+      <img src="../images/ai-core-ship-operate-cover.jpg" alt="Ship It — คันเร่งอิสระ งานปฏิบัติการ และเช็กลิสต์ก่อนปล่อย" width="800" height="800" loading="eager" fetchpriority="high" decoding="async">
+    </div>
+  </header>
+
+  <article class="post-body">
+
+    <details class="post-toc l-th" open>
+      <summary>ในบทความนี้</summary>
+      <ol>
+          <li><a href="#th-autonomy-slider">คันเร่งอิสระสี่ระดับ ชนิดผลกระทบสามชั้น และช่องเดียวในตารางที่เปเปอร์เขียนว่า "ไม่แนะนำ"</a></li>
+          <li><a href="#th-operations-antipatterns">ความจริงหน้างานห้าข้อ สแต็กสี่ชั้น และแปดความล้มเหลวที่ทีมจริงเจอซ้ำ</a></li>
+          <li><a href="#th-seven-steps">ลงมือทำ 7 ขั้น — จากระดับอิสระต่อ action class ถึงเช็กลิสต์นักปฏิบัติ 10 ข้อ</a></li>
+          <li><a href="#th-kramkraft">Go-live review ของน้องคราม — ตารางอิสระ งบความเสี่ยงคงเหลือ และเช็กลิสต์ที่กรอกครบทุกแถว</a></li>
+          <li><a href="#th-validation-check">ด่านก่อนปล่อยจริง — เจ็ดคำถามที่ตอบได้ด้วย artifact เท่านั้น</a></li>
+          <li><a href="#th-road-ahead">ปิดซีรีส์ — สิ่งที่เปเปอร์จงใจไม่เคลม และก้าวต่อไปในระดับองค์กร</a></li>
+      </ol>
+    </details>
+    <details class="post-toc l-en" open>
+      <summary>In this post</summary>
+      <ol>
+          <li><a href="#en-autonomy-slider">The four-level autonomy slider, the three consequence classes, and the one cell the paper marks "not advised"</a></li>
+          <li><a href="#en-operations-antipatterns">Five deployment realities, the four-layer stack, and the eight failures real teams keep meeting</a></li>
+          <li><a href="#en-seven-steps">The seven steps — from autonomy per action class to the ten-item practitioner checklist</a></li>
+          <li><a href="#en-kramkraft">Nong Kram's go-live review — the autonomy table, the residual-risk budget, and a checklist with every row filled</a></li>
+          <li><a href="#en-validation-check">The pre-launch gate — seven questions that only an artifact can answer</a></li>
+          <li><a href="#en-road-ahead">Closing the series — what the paper deliberately does not claim, and the road onward at the organizational level</a></li>
+      </ol>
+    </details>
+    <div class="l-th">
+
+    <p>🤔 <strong>ระบบของคุณผ่านการทดสอบทุกชุดจากตอนที่แล้ว — แล้วใครกดปุ่มปล่อย กดด้วยหลักฐานอะไร และถ้าพรุ่งนี้เช้ามันคืนเงินผิดรายการ ใครถูกปลุก?</strong></p>
+
+    <p>ตอนที่แล้ว <a href="/blog/ai-core-validation">Prove It</a> จบลงที่ harness ที่ตอบสี่คำถามของบทพิสูจน์ — ระบบเดินตามสเปก การโจมตีแบบรู้ไส้ทะลุชั้น soft ได้แต่ทะลุ execution rail ไม่ได้ และความล้มเหลวเชิงสถานะปิดสนิท แต่หลักฐานไม่ใช่การตัดสินใจ ตอนสุดท้ายคือคำถามที่เหลือ: ระบบควรได้อิสระแค่ไหน ใครดูแลมันหลังวันปล่อย และเราจะรู้ได้อย่างไรว่า "พร้อม" เป็นข้อค้นพบ ไม่ใช่ความรู้สึก</p>
+
+    <p>คำตอบมีสามชั้น หนึ่ง ตั้งระดับอิสระด้วย <strong>คันเร่งอิสระ</strong> (autonomy slider) ต่อ<em>ชนิดของผลกระทบ</em> ไม่ใช่ต่อทั้งแอป — และปล่อยให้ช่อง Autonomous × irreversible ว่างตลอดไป สอง วางงานปฏิบัติการบนความจริงหน้างานห้าข้อที่เปเปอร์เขียนราคาติดไว้ล่วงหน้า สาม ไล่เช็กลิสต์นักปฏิบัติ 10 ข้อ ซึ่งทุกข้อต้องตอบด้วย artifact ไม่ใช่คำคุณศัพท์ — และเพราะเราเดินมาครบเก้าตอน ทุกแถวมี artifact รออยู่แล้ว นี่คือความหมายจริงของ zero-to-hero: วันปล่อยไม่ต้องสร้างอะไรใหม่ แค่ชี้ไปที่ของที่สร้างเสร็จแล้ว</p>
+
+    <h2 id="th-autonomy-slider">1. คันเร่งอิสระ — ความเร็วจากโมเดล การควบคุมจากลูป</h2>
+
+    <p>ข้อสรุปพูดได้ในสองประโยค: ระดับอิสระไม่ใช่ค่าตั้งครั้งเดียวของทั้งระบบ แต่ตั้งแยกต่อชนิดของการกระทำ โดยยึดหลักเดียว — ความพยายามตรวจต้องโตตามอำนาจตัดสินใจและความย้อนกลับไม่ได้ของผลกระทบ และช่องที่อำนาจสูงสุดเจอผลที่ย้อนกลับไม่ได้ เปเปอร์ทำเครื่องหมายว่า<em>ไม่แนะนำ</em> ไม่ว่าจะตรวจหนักแค่ไหน<sup><a href="#th-ref-1">[1]</a></sup></p>
+
+    <p>บทที่ 9 ของเปเปอร์วางทุกอย่างเป็นลูปเดียว: AI generate การ์ดกรอง มนุษย์ตรวจส่วนที่เหลือ แล้ว <strong>ชุดทดสอบทองคำ</strong> (golden set) โตขึ้นทุกรอบ — วงจร generation–verification ที่แบ่งงานระหว่างโมเดลกับ envelope ไว้ชัดในประโยคที่ควรติดผนังห้องทีม:</p>
+
+    <blockquote>Speed from the model; evidence and control from the loop.<sup><a href="#th-ref-1">[1]</a></sup> — ความเร็วมาจากโมเดล หลักฐานและการควบคุมมาจากลูป สองข้อนี้ทดแทนกันไม่ได้</blockquote>
+
+    <h3>สี่ระดับของคันเร่ง</h3>
+
+    <p>เปเปอร์เรียงระดับอิสระสี่ขั้น จากพึ่งมนุษย์มากที่สุดไปน้อยที่สุด<sup><a href="#th-ref-1">[1]</a></sup></p>
+
+    <ul>
+        <li><strong>Suggest</strong> — ระบบเสนอทางเลือก มนุษย์ลงมือเองทั้งหมด ผลกระทบทุกอย่างเกิดจากมือมนุษย์</li>
+        <li><strong>Draft</strong> — ระบบร่างงานเต็มชิ้น มนุษย์ตรวจ แก้ และกดส่ง งานเร็วขึ้นแต่การปล่อยยังเป็นของคน</li>
+        <li><strong>Act with approval</strong> — ระบบเตรียมการกระทำจริงจนพร้อม แล้วหยุดรออนุมัติรายรายการ มนุษย์เห็นการกระทำ<em>ก่อน</em>ผลเกิด</li>
+        <li><strong>Autonomous</strong> — ระบบทำเองจบโดยไม่มีมนุษย์ในเส้นทาง ซึ่งเปเปอร์กำกับตรงตัวว่า low-stakes เท่านั้น</li>
+    </ul>
+
+    <figure class="figure">
+      <a href="../images/ai-core-fig-10-autonomy.png">
+        <img class="figure__img" src="../images/ai-core-fig-10-autonomy.png" alt="ตารางฮิวริสติก — อำนาจตัดสินใจสี่ระดับ คูณชนิดผลกระทบสามชั้น อ่านอย่างเดียว เขียนแบบย้อนได้ และย้อนไม่ได้ — ช่อง Autonomous คูณย้อนไม่ได้ ทำเครื่องหมายว่าไม่แนะนำ" width="1400" height="840" loading="lazy" decoding="async">
+      </a>
+      <figcaption class="figure__caption">ฮิวริสติกเชิงภาพ ไม่ใช่สเกลที่สอบเทียบแล้ว — ความพยายามตรวจต้องโตตามอำนาจตัดสินใจและความย้อนกลับไม่ได้ของผลกระทบ</figcaption>
+    </figure>
+
+    <p>รูปข้างบนถอดจาก Fig. 2 ของเปเปอร์ และต้องกำกับแบบเดียวกับที่เปเปอร์กำกับตัวเอง: นี่คือ<em>ฮิวริสติกเชิงภาพ</em> — แถบเป็นลำดับ (ordinal) ไม่ใช่สเกลที่สอบเทียบ และรูปจงใจไม่บอกจำนวนการ์ดต่อช่อง สาระมีสองข้อ ข้อแรก ความพยายามตรวจโตทางเดียว (monotonic) ตามสองแกนพร้อมกัน — อำนาจตัดสินใจ และความย้อนกลับไม่ได้ของผลที่<em>ระบบก่อผ่านตัวกลางของมันเอง</em> ข้อสอง ช่อง Autonomous × irreversible ถูกทำเครื่องหมาย not advised — ไม่มีปริมาณการตรวจใดทดแทนการตัดสินใจของมนุษย์ต่อผลภายนอกที่ย้อนกลับไม่ได้<sup><a href="#th-ref-1">[1]</a></sup> รูปนี้เป็นเข็มทิศ ไม่ใช่เครื่องคิดเลข</p>
+
+    <p>การ deployment จริงต้องแทนเข็มทิศด้วยแบบจำลอง: ประเมิน expected harm = likelihood × consequence ปรับด้วย detectability — พลาดแล้วรู้ตัวเร็วแค่ไหน — และ recoverability — พลาดแล้วแก้กลับได้แค่ไหน<sup><a href="#th-ref-1">[1]</a></sup> วิธีคิดเดียวกับแกนของ NIST AI RMF: ความเสี่ยงคือโอกาสคูณขนาดของผล และการยอมรับความเสี่ยงต้องถูกประกาศ ไม่ใช่เป็นค่าปริยาย<sup><a href="#th-ref-2">[2]</a></sup></p>
+
+    <h3>สามชั้นของผลกระทบ — และเหตุผลที่ตั้งค่าต่อ action class</h3>
+
+    <div class="table-wrapper">
+        <table>
+            <thead>
+                <tr>
+                    <th>ชนิดผลกระทบ</th>
+                    <th>นิยาม</th>
+                    <th>ตัวอย่างในครามคราฟต์</th>
+                    <th>นัยต่อการตรวจ</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td><strong>Read-only</strong></td>
+                    <td>อ่านอย่างเดียว ไม่เปลี่ยนสถานะภายนอก</td>
+                    <td>ตอบนโยบายจาก corpus เช็คสถานะออเดอร์</td>
+                    <td>ปล่อยเร็วได้ สุ่มตรวจเชิงความหมายตามงบ</td>
+                </tr>
+                <tr>
+                    <td><strong>Reversible write</strong></td>
+                    <td>เขียนที่ย้อนกลับได้ด้วยกลไกที่ซ้อมแล้ว</td>
+                    <td>ใส่โน้ตในตั๋ว ร่างข้อความรอตัวแทนส่ง</td>
+                    <td>ตรวจเข้มขึ้น และเส้นทางย้อนกลับต้องถูกซ้อมจริง</td>
+                </tr>
+                <tr>
+                    <td><strong>Irreversible external effect</strong></td>
+                    <td>ผลภายนอกที่เรียกคืนไม่ได้</td>
+                    <td><code>refund</code> — ย้อนไม่ได้ตั้งแต่ processor รับรายการ</td>
+                    <td>มนุษย์อนุมัติ หรือขอบเขตแคบที่ผ่านช่วงพิสูจน์แล้วเท่านั้น</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <p>ทำไมงบ อัตราสุ่มตรวจ และชุดรีวิวต้องตั้ง<em>ต่อ action class</em> — เพราะความผิดพลาดของ detector เป็นสมบัติของ distribution ไม่ใช่ตัวเลขสากลของตัว detector ตัวจำแนกเดียวกันพลาดไม่เท่ากันบนคำถามนโยบายกับคำขอคืนเงิน และต่อให้อัตราพลาดบังเอิญเท่ากัน ก็ไม่ได้แปลว่ายอมรับได้เท่ากัน — คำตอบนโยบายผิดหนึ่งในร้อยกับคืนเงินผิดหนึ่งในร้อยเป็นคนละความเสี่ยง<sup><a href="#th-ref-1">[1]</a></sup> แต่ละ class จึงถือ threshold, sampling และผู้รีวิวของตัวเอง — ขั้นที่ 3 จะเขียนสิ่งนี้เป็นไฟล์จริง</p>
+
+    <h2 id="th-operations-antipatterns">2. ความจริงหน้างาน — และแปดความล้มเหลวที่พบซ้ำ</h2>
+
+    <p>ข้อสรุปก่อน: envelope ไม่ฟรี มันคิดราคาเป็น latency สิ่งที่ประหยัดได้คือชั้นประเมินเชิงความหมาย สิ่งที่ห้ามประหยัดคือชั้นโครงสร้าง golden set ต้องรันใหม่ทุกครั้งที่โมเดลขยับ คำว่า auditable แปลว่า "ตามรอยได้" ไม่ใช่ "ปลอดภัย" และการป้องกัน injection เหลืออัตราโจมตีสำเร็จที่ไม่เป็นศูนย์เสมอ — ราคาป้ายที่บทที่ 10 ของเปเปอร์ติดไว้ล่วงหน้า<sup><a href="#th-ref-1">[1]</a></sup></p>
+
+    <h3>ห้าความจริงที่ต้องยอมรับก่อนวันปล่อย</h3>
+
+    <ul>
+        <li><strong>Envelope คิดราคาเป็น latency</strong> — หนึ่งคำขอผ่านห้ารางบวกการเรียก judge อีกหนึ่งครั้ง ระบบที่มี envelope ครบช้ากว่าระบบเปลือยเสมอ จงวัดและประกาศราคานี้ อย่าแอบตัดการ์ดเพื่อไล่ตัวเลข</li>
+        <li><strong>ชั้น soft ประหยัดได้ ชั้น hard ห้าม</strong> — การประเมินเชิงความหมายสุ่มหรือแบ่งชั้นได้ แต่การ validate โครงสร้างและ<strong>การบังคับเชิงโครงสร้าง</strong> (hard enforcement) ของผลกระทบอยู่บน<em>ทุก</em> call ที่เกี่ยวข้อง ไม่มีข้อยกเว้นเพื่อความเร็ว</li>
+        <li><strong>Golden set รันใหม่ทุกการเปลี่ยนโมเดล</strong> — โมเดล hosted เปลี่ยนพฤติกรรมใต้เท้าแบบเงียบ ๆ (non-stationarity) ชุดที่เขียวเมื่อเดือนก่อนไม่ได้พูดอะไรถึงรุ่นที่รันวันนี้</li>
+        <li><strong>Auditable = ตามรอยได้ ไม่ใช่ปลอดภัย</strong> — <strong>ร่องรอยการตัดสินใจ</strong> (decision trace) ที่ครบทำให้ประกอบเหตุการณ์กลับได้ แต่ไม่ได้ทำให้เหตุการณ์ถูกต้อง ระบบที่ตรวจย้อนหลังได้สมบูรณ์ยังปล่อยคำตอบผิดได้ทุกวัน</li>
+        <li><strong>การป้องกัน injection เหลือ residual เสมอ</strong> — <strong>การฉีดคำสั่งแฝง</strong> (prompt injection) กดให้ต่ำได้แต่กำจัดไม่ได้ ตัวเลขจริงของทุกชั้นป้องกันคืออัตราโจมตีสำเร็จคงเหลือที่ไม่เป็นศูนย์<sup><a href="#th-ref-5">[5]</a></sup></li>
+    </ul>
+
+    <h3>สแต็กสี่ชั้นที่ระบบต้องมีครบ</h3>
+
+    <p>เปเปอร์วางระบบที่ปล่อยจริงเป็นสี่ชั้นซ้อน: data foundation ล่างสุด ถัดขึ้นมาคือแกน AI-OS (โมเดล context หน่วยความจำ RAG) แล้ว agentic applications ปิดบนด้วย human-in-the-loop — guardrails พาดขวางทุกชั้น และ gates กำกับทุกการเปลี่ยนแปลง<sup><a href="#th-ref-1">[1]</a></sup> โครงนี้คือเชื้อสายเดียวกับสถาปัตยกรรม Simplex ของ Sha — ให้ส่วนเรียบง่ายที่ตรวจสอบได้จำกัดความเสียหายของส่วนซับซ้อนที่ตรวจสอบไม่ได้<sup><a href="#th-ref-4">[4]</a></sup> เพียงแต่ส่วนซับซ้อนของเราคือโมเดลภาษา และเปเปอร์คิดราคาการข้ามชั้นไว้แบบไม่เหลือที่ให้เถียง:</p>
+
+    <blockquote>Skip the data foundation and the core starves; skip the guardrails and it is unsafe; skip the gates and you are flying blind.<sup><a href="#th-ref-1">[1]</a></sup> — ข้ามฐานข้อมูล แกนก็อดอยาก ข้ามการ์ด ระบบก็ไม่ปลอดภัย ข้ามด่านตรวจ เราก็บินโดยมองไม่เห็นอะไรเลย</blockquote>
+
+    <h3>แปดความล้มเหลว — หน้าตาเวลาเกิดจริงในทีมจริง</h3>
+
+    <p><strong>Bolted-on chatbot</strong> — เปเปอร์เรียกว่า "one application, mistaken for a computer" ทีมแปะหน้าต่างแชทบนระบบเดิมโดยไม่มี data foundation เดโมดูดีเพราะคำถามในเดโมไม่แตะข้อมูลจริง แล้วสัปดาห์แรกหลังปล่อย คำถามครึ่งหนึ่งต้องการสถานะออเดอร์ที่แชทมองไม่เห็น — ได้ระบบที่ตอบเก่งในเรื่องที่ไม่มีใครถาม</p>
+
+    <p><strong>Vibes-based shipping</strong> — ปล่อยเพราะ "ลองแล้วรู้สึกดี" บนพรอมป์ต์ห้าข้อที่คนเดโมเลือกเอง ไม่มีชุดตายตัว ไม่มี baseline วันที่ผู้บริหารถามว่ารุ่นนี้ดีกว่ารุ่นก่อนไหม คำตอบซื่อสัตย์คือไม่มีใครรู้ — และทำงานแบบนี้จะไม่มีวันรู้ด้วย</p>
+
+    <p><strong>Trusting fluency</strong> — คำตอบที่เขียนดีผ่านรีวิวง่ายกว่าคำตอบที่ถูก ทีมจึงกลายเป็นผู้ตรวจสำนวนแทนผู้ตรวจข้อเท็จจริงโดยไม่รู้ตัว แต่สมมติฐานข้อแรกจากตอนที่ 5 คือความพลาดของแกน<em>ไหลลื่น</em> — มั่นใจ เรียบร้อย และผิด ภาษาที่น่าเชื่อถือไม่ใช่หลักฐานของอะไรนอกจากความสามารถทางภาษา</p>
+
+    <p><strong>Ungrounded generation</strong> — คำตอบไม่ผูกกับ passage ที่ค้นมาจริง วันหนึ่งระบบไร้การ์ดจะอธิบายนโยบายคืนสินค้าที่ไม่มีในเอกสารฉบับไหนของร้าน และอธิบายมั่นใจพอให้ลูกค้าจำไปอ้างต่อ — attribution ระดับ span ที่รางที่ 5 มีไว้กันเรื่องนี้ตรง ๆ</p>
+
+    <p><strong>Unbounded autonomy</strong> — เส้นทาง confused deputy: สิทธิ์ไหลไปกับเนื้อหาเพราะคำสั่งกับข้อมูลอยู่ช่องเดียวกัน ระบบถือสิทธิ์เรียก <code>refund</code> แล้วอ่านข้อความที่ใครก็เขียนได้ — หนึ่ง passage ที่ฝังคำสั่งก็พอให้สิทธิ์นั้นถูกใช้แทนเรา ทีมส่วนใหญ่เพิ่มความสามารถของ tool เร็วกว่าเพิ่มการ mediation และช่องว่างระหว่างสองเส้นคือพื้นที่ของผู้โจมตี<sup><a href="#th-ref-5">[5]</a></sup></p>
+
+    <p><strong>Deleting the validating glue</strong> — โค้ด validate ระหว่างชั้นดู "ซ้ำซ้อน" เสมอเมื่อระบบนิ่งมาสามเดือน ใครสักคน refactor ทิ้งอย่างหวังดี ทุกอย่างยังเขียวจนโมเดลถูก bump รุ่น — ความพังโผล่ไกลจากจุดที่ลบพอให้ไม่มีใครเชื่อมสองเหตุการณ์ กาวตรวจสอบไม่ใช่ไขมันส่วนเกิน มันคือเหตุผลที่ระบบเคยนิ่ง</p>
+
+    <p><strong>No golden set</strong> — ทุก incident กลายเป็นการถกจากความจำ การแก้พิสูจน์ไม่ได้ว่าไม่ทำของเก่าพัง ตอนที่ 9 สร้างชุดนี้ให้แล้ว เวอร์ชันที่เจ็บกว่าคือ<em>มีชุดแต่ปล่อยให้หยุดโต</em> — กติกาที่ถูกคือทุกความพลาดในสนามต้องกลายเป็นเคสใหม่ก่อนปิดตั๋ว</p>
+
+    <p><strong>Single-layer safety</strong> — เดิมพันทั้งหมดกับตัวกรองชั้นเดียว มักเป็นชั้น output เพราะติดตั้งง่ายสุด — อะไรที่ผ่านชั้นนั้นได้ก็ได้ทุกอย่าง ผลถอดการ์ดทีละตัวจากตอนที่แล้วบอกเป็นตัวเลข: ถอดรางเดียว ความเสียหายที่รางนั้นเคยรับก็เข้าถึงระบบทั้งกลุ่ม defence in depth ไม่ใช่ความหรูหรา — มันคือเหตุผลที่ความพลาดของชั้นหนึ่งยังไม่ใช่ของทั้งระบบ</p>
+
+    <h2 id="th-seven-steps">3. ลงมือทำ 7 ขั้น</h2>
+
+    <p>เจ็ดขั้นคือพิธีปล่อยทั้งพิธี — สี่ขั้นแรกตั้งอิสระและการตรวจ สองขั้นถัดมาเตรียมวันที่มันพัง ขั้นสุดท้ายคือเช็กลิสต์ตัดสิน ทุกขั้นจบด้วยของจริงของครามคราฟต์</p>
+
+    <h3>ขั้นที่ 1 — ตั้งระดับอิสระต่อ action class ไม่ใช่ต่อแอป</h3>
+
+    <p>ไล่รายการทุกสิ่งที่ระบบทำได้ จัดกลุ่มเป็น action class ตามชนิดผลกระทบจากตารางหัวข้อ 1 แล้วตั้งคันเร่งให้แต่ละ class แยกกัน เหตุผลที่ห้าม dial เดียวทั้งแอป: แอปเดียวถือหลาย class เสมอ ค่าเดียวจะเข้มเกินกับงานอ่าน — เผาเวลามนุษย์กับสิ่งที่ควรไหลอัตโนมัติ — และหละหลวมเกินกับงานเขียน ซึ่งจ่ายแพงกว่า ของน้องครามได้สี่ class: ตอบคำถามนโยบาย (read-only เหนือ corpus) เช็คสถานะออเดอร์ (read-only เหนือ order store) คืนเงินก้อนเล็กในเงื่อนไขแคบ และคืนเงินนอกเงื่อนไข</p>
+
+    <blockquote>💡 มุมมองของผม: ให้อิสระแบบเดียวกับให้สิทธิ์ production — เลื่อนขึ้นทีละระดับหลังช่วงทดลองที่มีตัวเลขรองรับ และริบคืนทั้งระดับทันทีเมื่อเกิด incident โดยไม่ต้องประชุม เปเปอร์ไม่ได้กำหนดจังหวะนี้ นี่เป็นแนวปฏิบัติของผมเอง แต่มันทำให้คันเร่งเป็นสิ่งที่<em>ได้มาด้วยหลักฐานและเสียไปด้วยเหตุการณ์</em> ไม่ใช่ค่าที่ตั้งแล้วลืม</blockquote>
+
+    <h3>ขั้นที่ 2 — สเกลการตรวจตาม authority × consequence</h3>
+
+    <p>ต่อแต่ละ class ประเมิน expected harm = likelihood × consequence ปรับด้วย detectability และ recoverability แล้วเลือกความหนาแน่นการตรวจให้แปรตามผลลัพธ์ — ไม่ใช่ตามความสะดวกของทีม ใช้ Fig. 2 เป็นเข็มทิศทางเดียว: ตรวจมากขึ้นเมื่ออำนาจสูงขึ้น มากขึ้นอีกเมื่อผลย้อนไม่ได้ และหยุดที่ "ไม่ปล่อย autonomous" เมื่อสองแกนสูงสุดพร้อมกัน ของน้องคราม: คำตอบนโยบายได้การประเมินแบบสุ่ม เส้นทาง <code>refund</code> ได้การตรวจครบทุกชั้นบวกมนุษย์ — เพราะราคาของหนึ่งความพลาดไม่เท่ากัน</p>
+
+    <h3>ขั้นที่ 3 — ตั้งงบความเสี่ยงคงเหลือ sampling และ review ต่อ action class</h3>
+
+    <p>เขียน <strong>ความเสี่ยงคงเหลือ</strong> (residual risk) เป็นไฟล์ ไม่ใช่ความเข้าใจร่วมในหัวทีม — หนึ่งบรรทัดต่อ class ระบุ escape budget อัตราสุ่มตรวจ ชุดที่มนุษย์รีวิว และรอบรีวิว เหตุผลอยู่ท้ายหัวข้อ 1 แล้ว ของน้องคราม บรรทัดสำคัญที่สุดคือ <code>refund_small.sampling: "100% ภายใน 24 ชั่วโมง"</code> — รายการอนุมัติทุกรายการถูกมนุษย์เห็นย้อนหลังเสมอ แม้คันเร่งจะเลื่อนขึ้นในอนาคต ไฟล์เต็มอยู่หัวข้อ 4</p>
+
+    <h3>ขั้นที่ 4 — ผูก golden-set re-run เข้ากับทุกการเปลี่ยนโมเดล corpus และ prompt</h3>
+
+    <p>ทำด่านให้อัตโนมัติ: ทุกครั้งที่พจน์ใดใน <strong>บันทึกกำกับรุ่นปล่อย</strong> (release manifest) จากตอนที่ 4 เปลี่ยน — รุ่นโมเดล snapshot ของ corpus แฮชของ prompt รุ่น evaluator หรือ threshold — CI ต้องรันชุดทองคำทั้งชุดและ block การ promote เมื่อ regress นี่คือคำตอบเชิงกลไกต่อ non-stationarity — ห้ามต้นน้ำเปลี่ยนไม่ได้ แต่ทำให้ทุกการเปลี่ยน<em>ถูกเห็น</em> ของน้องคราม: job เดียวชื่อ <code>golden-gate</code> เฝ้าแฮชของ manifest แล้วรัน harness จากตอนที่ 9 — คนแก้ prompt "นิดเดียว" ผ่านด่านเดียวกับคนเปลี่ยนโมเดลทั้งตัว</p>
+
+    <h3>ขั้นที่ 5 — เตรียม rollback และ incident response</h3>
+
+    <p>กำหนดสามสิ่งเป็นลายลักษณ์อักษร ก่อนต้องใช้จริงตอนตีสาม<sup><a href="#th-ref-3">[3]</a></sup></p>
+
+    <ul>
+        <li><strong>Roll back ไปที่อะไร</strong> — manifest ฉบับอนุมัติล่าสุด<em>ทั้งฉบับ</em> ไม่ใช่ถอยเฉพาะโมเดล เพราะพฤติกรรมเป็นของทุกพจน์ร่วมกัน ถอยบางพจน์คือสร้างชุดผสมที่ไม่เคยผ่านการทดสอบ</li>
+        <li><strong>ใครถูกปลุก</strong> — ชื่อจริง ช่องทางจริง ลำดับติดต่อจริง "ทีมที่เกี่ยวข้อง" ไม่ใช่คำตอบ เพราะตอนตีสามไม่มีใครชื่อนั้น</li>
+        <li><strong>อะไรหยุดระบบ</strong> — kill switch ที่นิยามชัด: ปิด execution rail เป็น deny-all ระบบ degrade เป็นโหมด advisory แบบ <strong>ล้มแบบปิด</strong> (fail-closed) — ความสามารถหายบางส่วน แต่ผลภายนอกหยุดสนิททันที</li>
+    </ul>
+
+    <p>Runbook หน้าเดียวของน้องคราม: เหตุระดับ refund ให้ freeze tool <code>refund</code> ก่อนเป็นอย่างแรก คงคำตอบ read-only ไว้ให้ลูกค้า ปลุกเจ้าของร้านกับวิศวกรตามลำดับ แล้วถอย manifest เมื่อวินิจฉัยเสร็จ — ร้านตอบคำถามได้ทั้งคืน แค่คืนเงินเองไม่ได้จนกว่ามนุษย์จะกลับเข้าลูป</p>
+
+    <h3>ขั้นที่ 6 — audit ตัวเองกับแปดความล้มเหลว</h3>
+
+    <p>เดินรายการทั้งแปดจากหัวข้อ 2 เป็นเอกสาร ไม่ใช่การพยักหน้าในห้องประชุม — ต่อข้อ ตอบสามช่อง: เกิดกับเราไหม หลักฐานคืออะไร และถ้าเกิด ใครเป็นเจ้าของการแก้ภายในเมื่อไร ข้อที่ตอบ "ไม่เกิด" โดยไม่มีหลักฐานถือว่ายังไม่ได้ตอบ ของน้องคราม audit รอบแรกพบครึ่งข้อของข้อ 7: ชุดทองคำมีจริงแต่เคสหมวดจัดส่งบางกว่าหมวดนโยบายคืนสินค้าชัดเจน จึงเกิด action item เติมเคสก่อนวันปล่อย — ผลลัพธ์ที่ดีของ audit คือรายการซ่อมที่เจาะจง ไม่ใช่ตราประทับว่าผ่าน</p>
+
+    <h3>ขั้นที่ 7 — รันเช็กลิสต์นักปฏิบัติ 10 ข้อ</h3>
+
+    <p>ข้อสุดท้ายของเปเปอร์คือเช็กลิสต์ที่กติกาเดียวแรงพอเปลี่ยนพฤติกรรมทั้งองค์กร: ทุกข้อตอบด้วย <em>artifact</em> — เอกสาร ตาราง log ที่ยื่นให้ดูได้ — ไม่ใช่คำคุณศัพท์รับประกัน<sup><a href="#th-ref-1">[1]</a></sup> สิบข้อมีดังนี้</p>
+
+    <ol>
+        <li><strong>Scope</strong> — ชุดงาน มาตรวัดอำนาจ และ ablation ความขาดไม่ได้ พร้อม threshold ที่ประกาศ<em>ก่อน</em>การประเมิน</li>
+        <li><strong>Manifest</strong> — โมเดล decoding context corpus tools policies evaluators thresholds ถูก pin ร่วมกันเป็นรุ่นเดียว</li>
+        <li><strong>Boundaries</strong> — ทุก payload ที่ปล่อยและทุกผลภายนอกออกสู่โลกผ่านเส้นทางเดียวที่มีตัวกลาง</li>
+        <li><strong>Hard controls</strong> — identity, authority, schema, parameter, rate, transaction, idempotency ตรวจนอกโมเดลทั้งหมด</li>
+        <li><strong>Soft controls</strong> — false accept / false reject วัดบน slice ที่ใช้จริง และไม่มีตัวไหนถูกเรียกว่า guarantee</li>
+        <li><strong>State oracles</strong> — การทดสอบตัดสินจาก post-state จริงและ payload ที่ปล่อยจริง ไม่ใช่คำเล่าของโมเดล</li>
+        <li><strong>Adversary</strong> — เคส fixed, hidden และ adaptive-to-implementation แยกกัน พร้อมประกาศ access และ query budget ของผู้โจมตี</li>
+        <li><strong>Operations</strong> — เส้นทาง duplicate, timeout, tool error, partial failure, rollback, trace-write ล้มแบบปิดทุกเส้น</li>
+        <li><strong>Economics</strong> — utility, escape, unsafe effects, escalation, latency, tokens, cost แยกตาม consequence class</li>
+        <li><strong>Reproduction</strong> — บันทึกรายเคส schemas, dependency lock, ตัวรันคำสั่งเดียว licence, citation metadata และ archive ถาวร</li>
+    </ol>
+
+    <p>ฉบับกรอกครบของครามคราฟต์ — พร้อมลิงก์กลับไปยัง artifact ของทั้งเก้าตอน — คือหัวใจของหัวข้อถัดไป</p>
+
+    <h2 id="th-kramkraft">4. Artifact — go-live review ของน้องคราม</h2>
+
+    <p>Artifact ปิดซีรีส์คือเอกสารเดียวชื่อ <code>go-live-review.md</code> สามส่วน: ตารางอิสระต่อ action class งบความเสี่ยงคงเหลือ และเช็กลิสต์ 10 ข้อที่ทุกแถวชี้ของจริง — เอกสารบนโต๊ะประชุมปล่อย และถูกหยิบมาอ่านอีกครั้งหลัง incident แรก</p>
+
+    <h3>ส่วนที่หนึ่ง — ตารางระดับอิสระต่อ action class</h3>
+
+    <div class="table-wrapper">
+        <table>
+            <thead>
+                <tr>
+                    <th>Action class</th>
+                    <th>ชนิดผลกระทบ</th>
+                    <th>ระดับคันเร่ง</th>
+                    <th>เงื่อนไข</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>ตอบคำถามนโยบาย / สินค้า</td>
+                    <td>Read-only เหนือ corpus</td>
+                    <td><strong>Autonomous</strong></td>
+                    <td>ทุกคำตอบผ่านราง output ครบ สุ่มตรวจตามงบ</td>
+                </tr>
+                <tr>
+                    <td>เช็คสถานะออเดอร์</td>
+                    <td>Read-only เหนือ order store</td>
+                    <td><strong>Autonomous</strong></td>
+                    <td>ผูกกับ session ของลูกค้าที่ยืนยันตัวแล้วเท่านั้น</td>
+                </tr>
+                <tr>
+                    <td><code>refund</code> ≤ ฿1,000 และออเดอร์ undelivered</td>
+                    <td>Irreversible เมื่อ processor รับ</td>
+                    <td><strong>Act with approval</strong></td>
+                    <td>เลื่อนเป็น autonomous ได้<em>หลัง</em>ช่วงรีวิวที่มี FA/FR รองรับเท่านั้น ริบคืนเมื่อเกิด incident</td>
+                </tr>
+                <tr>
+                    <td><code>refund</code> &gt; ฿1,000 หรือนอกเงื่อนไข</td>
+                    <td>Irreversible external effect</td>
+                    <td><strong>Act with approval — เสมอ</strong></td>
+                    <td>ไม่มีเส้นทาง autonomous ช่องนั้นว่างโดยนโยบาย ไม่ใช่โดยบังเอิญ</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <h3>ส่วนที่สอง — งบความเสี่ยงคงเหลือ</h3>
+
+    <pre><code># residual-risk-budget.yaml — งบความเสี่ยงคงเหลือของน้องคราม
+# ตัวเลขทั้งหมดเป็นของบทเรียนนี้ ไม่ใช่ตัวเลขของเปเปอร์
+
+answer_policy:            # read-only เหนือ corpus
+  escape_budget: "คำตอบขัดนโยบายไม่เกิน 2 ต่อ 1,000 คำตอบที่สุ่มตรวจ"
+  sampling: "5% ของทราฟฟิก บวกทุกเคสที่ลูกค้าร้องเรียน"
+  review: "รายสัปดาห์ โดยเจ้าของร้านกับวิศวกร"
+
+order_status:             # read-only เหนือ order store
+  escape_budget: "ข้อมูลออเดอร์ข้ามลูกค้า = 0 (บังคับด้วย session binding ไม่ใช่ด้วยงบ)"
+  sampling: "1% ของทราฟฟิก"
+  review: "รายเดือน"
+
+refund_small:             # ไม่เกิน 1,000 บาท และออเดอร์ undelivered เท่านั้น
+  escape_budget: "รายการต้องห้ามหลุด = 0 (บังคับที่ execution rail)"
+  sampling: "100% ของรายการที่อนุมัติ ตรวจย้อนภายใน 24 ชั่วโมง"
+  review: "ทุก escalation บวกสรุปรายสัปดาห์"
+
+refund_large:             # เกิน 1,000 บาท หรือนอกเงื่อนไข
+  autonomy: "act-with-approval เสมอ — ไม่มีเส้นทาง autonomous"
+  review: "มนุษย์อนุมัติเป็นรายรายการ"
+</code></pre>
+
+    <p>สังเกตการแบ่งงานในไฟล์: ศูนย์สองตัวไม่ใช่งบจริง ๆ — มันคือการรับประกันเชิงโครงสร้างที่ execution rail กับ session binding แบกไว้ งบตัวจริงคือบรรทัด answer_policy ที่ยอมรับตรง ๆ ว่าการตรวจเชิงความหมายพลาดได้ และประกาศว่าพลาดได้แค่ไหนก่อนใครสักคนถูกปลุก</p>
+
+    <h3>ส่วนที่สาม — เช็กลิสต์ 10 ข้อที่กรอกครบ</h3>
+
+    <div class="table-wrapper">
+        <table>
+            <thead>
+                <tr>
+                    <th>#</th>
+                    <th>ข้อ</th>
+                    <th>Artifact ที่ตอบ — สร้างไว้แล้วในซีรีส์</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>1</td>
+                    <td>Scope</td>
+                    <td>ใบงานจำแนกจาก <a href="/blog/ai-core-what-is">ตอนที่ 1</a> — สองแกน สี่ช่อง threshold ประกาศก่อนวัด</td>
+                </tr>
+                <tr>
+                    <td>2</td>
+                    <td>Manifest</td>
+                    <td>Release manifest จาก <a href="/blog/ai-core-context-engineering">ตอนที่ 4</a> — แปดพจน์ของสมการ (1) pin ร่วมกัน</td>
+                </tr>
+                <tr>
+                    <td>3</td>
+                    <td>Boundaries</td>
+                    <td>แผนที่ชั้นจาก <a href="/blog/ai-core-three-eras">ตอนที่ 2</a> ทะเบียนรอยต่อจาก <a href="/blog/ai-core-os-model">ตอนที่ 3</a> และภาพร่าง envelope จาก <a href="/blog/ai-core-fallible-savant">ตอนที่ 5</a></td>
+                </tr>
+                <tr>
+                    <td>4</td>
+                    <td>Hard controls</td>
+                    <td>โค้ดลูป <code>ai_core_operation</code> จาก <a href="/blog/ai-core-control-loop">ตอนที่ 6</a> — execution guard ที่ deny by default</td>
+                </tr>
+                <tr>
+                    <td>5</td>
+                    <td>Soft controls</td>
+                    <td>ตารางห้ารางจาก <a href="/blog/ai-core-five-rails">ตอนที่ 8</a> บวกแถว Estimated ของสัญญาจาก <a href="/blog/ai-core-assurance-contract">ตอนที่ 7</a> — FA/FR ต่อ slice</td>
+                </tr>
+                <tr>
+                    <td>6</td>
+                    <td>State oracles</td>
+                    <td>Harness จาก <a href="/blog/ai-core-validation">ตอนที่ 9</a> — oracle อ่าน post-state ของ order store ไม่อ่านคำเล่าของโมเดล</td>
+                </tr>
+                <tr>
+                    <td>7</td>
+                    <td>Adversary</td>
+                    <td>ชุดโจมตีสามชั้นใน harness ตอนที่ 9 — fixed / hidden / adaptive แยกรายงาน พร้อม access ของผู้โจมตี</td>
+                </tr>
+                <tr>
+                    <td>8</td>
+                    <td>Operations</td>
+                    <td>การทดสอบเชิงสถานะจากตอนที่ 9 (duplicate, tool failure) บวก runbook rollback ของตอนนี้</td>
+                </tr>
+                <tr>
+                    <td>9</td>
+                    <td>Economics</td>
+                    <td><code>residual-risk-budget.yaml</code> ของตอนนี้ บวกช่อง latency / tokens / cost ต่อ consequence class ในสัญญาตอนที่ 7</td>
+                </tr>
+                <tr>
+                    <td>10</td>
+                    <td>Reproduction</td>
+                    <td>ตัวรันคำสั่งเดียวของ harness ตอนที่ 9 บวก dependency lock ใน manifest ตอนที่ 4</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <p>นี่คือผลตอบแทนของทั้งซีรีส์: วันยื่น go-live review ไม่มีข้อไหนเริ่มจากศูนย์ ใบงานตอนที่ 1 ตอบข้อแรก manifest ตอนที่ 4 ตอบข้อสอง โค้ดตอนที่ 6 ตอบข้อสี่ harness ตอนที่ 9 ตอบสามข้อรวด ทีมที่เดินตามลำดับนี้ไม่ได้แค่ "มีระบบ" — มันมี<em>หลักฐานของระบบ</em>ครบหนึ่งชุด และนั่นคือสิ่งเดียวที่เช็กลิสต์ยอมรับ</p>
+
+    <h2 id="th-validation-check">5. Validation check — ด่านสุดท้ายก่อนปล่อยจริง</h2>
+
+    <p>ต่างจากเก้าตอนก่อน ตารางนี้ไม่ใช่แบบฝึกหัดท้ายบท — มันคือด่านปล่อยของจริง กติกาเดียวกับเช็กลิสต์: แต่ละแถวผ่านเมื่อยื่น artifact ที่ระบุได้เท่านั้น คำยืนยันด้วยปากไม่มีค่า และแถวใดตอบไม่ได้ วันปล่อยของระบบคุณยังมาไม่ถึง</p>
+
+    <div class="table-wrapper">
+        <table>
+            <thead>
+                <tr>
+                    <th>#</th>
+                    <th>คำถาม</th>
+                    <th>Artifact ที่ต้องยื่น</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>1</td>
+                    <td>ตารางอิสระตั้งต่อ action class และช่อง Autonomous × irreversible <em>ว่าง</em> ใช่หรือไม่</td>
+                    <td>ตารางอิสระ — ยื่นตัวตาราง ไม่ใช่คำอธิบายว่ามี</td>
+                </tr>
+                <tr>
+                    <td>2</td>
+                    <td>ทุก action class มีบรรทัดงบความเสี่ยงคงเหลือ พร้อม sampling rate และผู้รีวิวหรือไม่</td>
+                    <td><code>residual-risk-budget.yaml</code> หรือเทียบเท่า ครบทุก class</td>
+                </tr>
+                <tr>
+                    <td>3</td>
+                    <td>เปลี่ยนพจน์ใดของ manifest ก็ trigger การรันชุดทองคำอัตโนมัติใช่หรือไม่</td>
+                    <td>Config ของ gate บวก log จากการ bump รุ่นโมเดลครั้งจริงล่าสุด</td>
+                </tr>
+                <tr>
+                    <td>4</td>
+                    <td>เคยซ้อม rollback ไป manifest ฉบับอนุมัติล่าสุดจริงแล้วหรือยัง</td>
+                    <td>บันทึกการซ้อม พร้อมเวลาที่ใช้จนกลับสู่รุ่นก่อน</td>
+                </tr>
+                <tr>
+                    <td>5</td>
+                    <td>มีชื่อคนที่ถูกปลุก และนิยาม "หยุดระบบ" ที่กดได้จริงหรือไม่</td>
+                    <td>Runbook หน้า incident บวกตาราง on-call ที่มีชื่อจริง</td>
+                </tr>
+                <tr>
+                    <td>6</td>
+                    <td>Audit แปดความล้มเหลวทำเป็นเอกสารแล้ว ทุก finding มีเจ้าของหรือไม่</td>
+                    <td>บันทึก audit — แปดแถว สามช่อง พร้อมเจ้าของและกำหนดเวลา</td>
+                </tr>
+                <tr>
+                    <td>7</td>
+                    <td>เช็กลิสต์ 10 ข้อตอบครบด้วยลิงก์ artifact โดยไม่มีคำคุณศัพท์รับประกันสักคำใช่หรือไม่</td>
+                    <td><code>go-live-review.md</code> ฉบับเต็ม — เอกสารเดียวที่ประชุมปล่อยใช้ตัดสิน</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <h2 id="th-road-ahead">6. ก้าวต่อไป</h2>
+
+    <p>สิบตอนของซีรีส์เดินจากคำถามว่าระบบของเราเป็น <strong>ระบบที่มี AI เป็นแกน</strong> (AI-core system) จริงหรือไม่ ไปถึงเอกสารที่ใช้ตัดสินวันปล่อย ถ้าต้องบีบทั้งเส้นทางเหลือประโยคเดียว ผมจะใช้บทสรุปของเปเปอร์เอง: วางการบังคับเชิงโครงสร้างที่พรมแดนที่รองรับมันได้ วัดคุณสมบัติเชิงความหมายเป็นค่าประเมินที่พลาดได้ เก็บหลักฐานให้พอประกอบทุกเส้นทางกลับ และสเกลอิสระตามผลกระทบกับความไม่แน่นอนที่เหลือ<sup><a href="#th-ref-1">[1]</a></sup> สี่วลีนี้คือทั้งซีรีส์ในรูปย่อ</p>
+
+    <p>สิ่งที่ต้องพูดชัดตอนปิดคือสิ่งที่เปเปอร์<em>จงใจไม่เคลม</em> — และซีรีส์นี้รับขอบเขตเดียวกัน ตัวเลขทุกตัวของเปเปอร์ (517 executions, 37 tests, 30/30 benign, 0/40 เทียบ 40/40, 8/12 เทียบ 12/12, 0/4 เทียบ 4/4) วัดบน fixtures ที่ผู้เขียนสร้างเองบน deterministic cores — เป็นหลักฐาน conformance ของ wiring และ boundary semantics ไม่ใช่ field safety ไม่ใช่คำตัดสินคุณภาพโมเดล ไม่ใช่ข้อสรุปเชิงประชากร<sup><a href="#th-ref-1">[1]</a></sup> คำเตือนเชิงประจักษ์กลางเปเปอร์ยังคุมทุกอย่างที่เราสร้าง: ชุดทดสอบตายตัวที่เขียวสนิทอยู่ร่วมกับอัตรา escape เชิงความหมายที่สูงได้ ระบบที่ผ่านด่านเจ็ดแถวข้างบนจึงไม่ใช่ระบบ "พิสูจน์แล้วว่าปลอดภัย" — มันคือระบบที่ประกาศขอบเขตครบ มีหลักฐานครบ และมีคนรับผิดชอบครบ ซึ่งเป็นสิ่งดีที่สุดที่วิศวกรรมให้ได้กับแกนที่เป็นความน่าจะเป็น</p>
+
+    <p>งานหลังวันปล่อยคือลูปเดิมที่ไม่จบ: ทุก incident เติมชุดทองคำ ทุกการเลื่อนคันเร่งมีตัวเลขรองรับ ทุกการเปลี่ยนโมเดลผ่านด่านเดิม ส่วนคำถามที่ซีรีส์นี้ไม่ได้ตอบคือคำถามระดับองค์กร — ทีมแบบไหนดูแลระบบแบบนี้ งบและ KPI ตั้งอย่างไร ผู้บริหารต้องถามอะไรในห้องอนุมัติ — ทั้งหมดเป็นเนื้อหาของซีรีส์คู่ขนาน <a href="/blog/ai-transformation-layers">AI Transformation for Organizations</a> ที่มองจากชั้นองค์กรลงมา ซีรีส์นี้สร้างระบบ ซีรีส์นั้นสร้างองค์กรรอบระบบ</p>
+
+    <div class="alert info">
+        <strong>🧭 ปิดซีรีส์:</strong> สิบตอน สิบ artifact — ใบงานจำแนก แผนที่ชั้น ทะเบียนรอยต่อ manifest ภาพร่าง envelope โค้ดลูป สัญญา ตารางราง harness และ go-live review — ต่อกันเป็นสายหลักฐานเส้นเดียวจากศูนย์ถึงวันปล่อย ถ้าจะเดินต่อ เส้นทางระดับองค์กรเริ่มที่ <a href="/blog/ai-transformation-layers">AI Transformation for Organizations #1</a> — ซีรีส์คู่ขนานที่ถามว่าองค์กรแบบไหนคู่ควรกับระบบที่คุณเพิ่งสร้างเสร็จ</div>
+
+    <div class="key-takeaways">
+        <h3>🎯 สิ่งสำคัญที่ต้องจำ</h3>
+        <ul>
+            <li><strong>Autonomy slider</strong> = คันเร่งอิสระสี่ระดับ Suggest → Draft → Act with approval → Autonomous (low-stakes เท่านั้น) — ตั้งต่อ action class ไม่ใช่ต่อแอป</li>
+            <li><strong>Consequence class</strong> = read-only · reversible write · irreversible external effect — งบ sampling และ review ตั้งแยกต่อชั้น เพราะความพลาดของ detector เป็นของ distribution</li>
+            <li><strong>Autonomous × irreversible</strong> = ช่องที่ต้องว่าง — ไม่มีปริมาณการตรวจใดทดแทนการตัดสินใจของมนุษย์ต่อผลภายนอกที่ย้อนกลับไม่ได้</li>
+            <li><strong>ความจริงหน้างาน</strong> = soft สุ่มได้แต่ hard อยู่ทุก call · golden set รันใหม่ทุกการเปลี่ยนโมเดล · auditable = ตามรอยได้ ไม่ใช่ปลอดภัย · injection เหลือ residual เสมอ</li>
+            <li><strong>แปดความล้มเหลว</strong> = รายการ audit ตัวเอง ตั้งแต่ bolted-on chatbot ถึง single-layer safety — ตอบทุกข้อด้วยหลักฐาน ไม่ใช่ความมั่นใจ</li>
+            <li><strong>เช็กลิสต์นักปฏิบัติ</strong> = 10 ข้อที่ทุกข้อตอบด้วย artifact ไม่ใช่คำคุณศัพท์ — และเก้าตอนที่ผ่านมาสร้าง artifact ครบทุกแถวแล้ว</li>
+        </ul>
+    </div>
+
+    <section class="references" aria-labelledby="th-references">
+        <h2 id="th-references">อ้างอิง</h2>
+        <p class="references__note">ตรวจสอบทุกแหล่งเมื่อ 8 กันยายน 2026 (เวลาประเทศไทย) · ป้ายหลักฐานสี่แบบ: <strong>Law</strong> ตัวบทกฎหมายหรือประกาศทางการ · <strong>Standard</strong> มาตรฐานหรือกรอบทางการที่เผยแพร่แล้ว · <strong>Study</strong> งานวิจัยหรือสัญญาณภาคสนาม · <strong>Synthesis</strong> การสังเคราะห์ของผู้เขียนหรือแหล่งที่ไม่ใช่งานวิจัย</p>
+        <ol class="references__list">
+            <li id="th-ref-1"><span class="ref-tag ref-tag--synthesis">Synthesis</span> Anirach Mingkhwan. <cite>Engineering AI-Core Systems: A Reference Architecture and Assurance Contract for Software 3.0</cite> — CreativeLAB, FITM, KMUTNB, 2026. เอกสารที่ผู้เขียนจัดหาให้ ยังไม่ตีพิมพ์ ไม่มี URL สาธารณะ จึงไม่มีลิงก์และไม่มีวันเข้าถึง. <span class="ref-supports">รองรับ: ลูป generation–verification และประโยค "speed from the model; evidence and control from the loop" คันเร่งอิสระสี่ระดับ สถานะฮิวริสติกของ Fig. 2 กับช่อง autonomous × irreversible ที่ไม่แนะนำ สูตร expected harm ชนิดผลกระทบสามชั้นและการตั้งงบต่อ action class ความจริงหน้างานห้าข้อ สแต็กสี่ชั้นกับประโยค "skip the …" แปดความล้มเหลว เช็กลิสต์นักปฏิบัติ 10 ข้อ ตัวเลขของ specimen พร้อมประโยคขอบเขต และบทสรุปสี่วลี</span></li>
+            <li id="th-ref-2"><span class="ref-tag ref-tag--standard">Standard</span> NIST (U.S. Department of Commerce). <cite>Artificial Intelligence Risk Management Framework (AI RMF 1.0)</cite> — NIST AI 100-1, 2023. <a href="https://www.nist.gov/itl/ai-risk-management-framework">nist.gov</a> — เข้าถึง 2026-09-08. <span class="ref-supports">รองรับ: การมองความเสี่ยงเป็นฟังก์ชันของโอกาสกับขนาดของผล การประกาศระดับความเสี่ยงที่ยอมรับได้เป็นการตัดสินใจขององค์กร และการปฏิบัติต่อการปล่อยระบบเป็นด่านตัดสินใจที่บริหารความเสี่ยง — อ้างระดับกรอบโดยรวม ไม่ใช่รายข้อ</span></li>
+            <li id="th-ref-3"><span class="ref-tag ref-tag--standard">Standard</span> NIST (U.S. Department of Commerce). <cite>AI RMF: Generative Artificial Intelligence Profile</cite> — NIST AI 600-1, กรกฎาคม 2024. <a href="https://doi.org/10.6028/NIST.AI.600-1">doi.org</a> — เข้าถึง 2026-09-08. <span class="ref-supports">รองรับ: กิจกรรมการตอบสนองเหตุการณ์และเกณฑ์การหยุดใช้งานระบบ generative AI ที่อยู่เบื้องหลังขั้นเตรียม rollback และ incident response — ใช้เป็นเอกสารประกอบโดยสมัครใจที่องค์กรเลือกปรับเอง</span></li>
+            <li id="th-ref-4"><span class="ref-tag ref-tag--study">Study</span> Sha, L. <cite>Using Simplicity to Control Complexity</cite> — IEEE Software 18(4), 2001, pp. 20–28. <a href="https://doi.org/10.1109/ms.2001.936213">doi.org</a> — เข้าถึง 2026-09-08. <span class="ref-supports">รองรับ: หลักการให้ส่วนประกอบเรียบง่ายที่ตรวจสอบได้จำกัดความเสียหายของส่วนประกอบซับซ้อนที่ตรวจสอบไม่ได้ — เชื้อสาย Simplex ที่ assurance envelope ของเปเปอร์สืบทอดมา</span></li>
+            <li id="th-ref-5"><span class="ref-tag ref-tag--standard">Standard</span> OWASP Foundation. <cite>OWASP Top 10 for LLM Applications</cite> — 2025. ไม่มี URL ที่อ้างในซีรีส์นี้. <span class="ref-supports">รองรับ: สถานะของ prompt injection และ excessive agency ในฐานะชั้นความเสี่ยงที่อุตสาหกรรมยอมรับร่วมกัน และฉันทามติว่าการป้องกัน injection เป็นการบรรเทา ไม่ใช่การกำจัด — สอดคล้องกับอัตราโจมตีคงเหลือไม่เป็นศูนย์ของเปเปอร์</span></li>
+        </ol>
+    </section>
+    </div>
+
+    <div class="l-en" lang="en">
+
+    <p>🤔 <strong>Your system passed every suite from the previous post — so who presses the release button, on what evidence, and if it refunds the wrong order tomorrow morning, who gets woken up?</strong></p>
+
+    <p>The previous post, <a href="/blog/ai-core-validation">Prove It</a>, ended with a harness that answers the four validation questions — the system routes as specified, attacks written after reading the rules get through the soft layer but not the execution rail, and stateful failures fail closed. But evidence is not a decision. This final post is about what remains: how much autonomy the system should be granted, who looks after it after launch day, and how we know that "ready" is a finding rather than a feeling.</p>
+
+    <p>This post's answer has three layers. First, set the autonomy level with the <strong>autonomy slider</strong> per <em>kind of effect</em>, not per app — and leave the autonomous-times-irreversible cell empty forever. Second, build operations on the five deployment realities the paper states plainly, from the latency the envelope charges to the residual attack rate that never reaches zero. Third, walk the paper's ten-item practitioner checklist, where every item must be answered with an artifact rather than an adjective — and because we have walked nine posts together, every row of that checklist already has its artifact waiting. That is what zero-to-hero actually means: on launch day nothing new has to be built, only pointed at.</p>
+
+    <h2 id="en-autonomy-slider">1. The Autonomy Slider — Speed from the Model, Control from the Loop</h2>
+
+    <p>This section's conclusion fits in two sentences: the autonomy level is not a single setting for the whole system but a value set separately per kind of action, governed by one principle — verification effort must grow with decision authority and with the irreversibility of the effect — and the cell where the highest authority meets an irreversible effect is the one the paper marks <em>not advised</em>, no matter how heavy the verification.<sup><a href="#en-ref-1">[1]</a></sup></p>
+
+    <p>The paper's Section 9 frames everything as one loop: the AI generates, the gates filter, a human verifies the residue, and the <strong>golden set</strong> grows on every pass — a generation–verification loop in which the model's capability and the envelope's machinery divide the work cleanly. The paper compresses that division into a sentence I think belongs on the team-room wall:</p>
+
+    <blockquote>Speed from the model; evidence and control from the loop.<sup><a href="#en-ref-1">[1]</a></sup> — Neither half substitutes for the other.</blockquote>
+
+    <h3>The four positions of the slider</h3>
+
+    <p>The paper orders autonomy in four steps, from most human-dependent to least.<sup><a href="#en-ref-1">[1]</a></sup></p>
+
+    <ul>
+        <li><strong>Suggest</strong> — the system proposes options or points at things; the human does everything. Every effect comes from a human hand.</li>
+        <li><strong>Draft</strong> — the system produces complete work; the human reviews, edits, and presses send. The work is accelerated, but release remains a human decision.</li>
+        <li><strong>Act with approval</strong> — the system prepares a real action all the way to ready, then stops for per-item approval. The human sees the action before the effect exists, not after.</li>
+        <li><strong>Autonomous</strong> — the system carries the task to completion with no human in the path — which the paper qualifies in the same breath: for low-stakes work only.</li>
+    </ul>
+
+    <figure class="figure">
+      <a href="../images/ai-core-fig-10-autonomy.png">
+        <img class="figure__img" src="../images/ai-core-fig-10-autonomy.png" alt="The heuristic grid — four authority levels against three consequence classes, read-only, reversible write, and irreversible — with the autonomous-times-irreversible cell marked not advised." width="1400" height="840" loading="lazy" decoding="async">
+      </a>
+      <figcaption class="figure__caption">An illustrative heuristic, not a calibrated scale — verification effort must grow with authority and with irreversibility.</figcaption>
+    </figure>
+
+    <p>The figure above is drawn from the paper's Fig. 2, and I have to annotate it exactly the way the paper annotates itself: this is an <em>illustrative heuristic</em>. The bands are ordinal, not a calibrated scale, and the figure deliberately implies nothing about how many controls each cell requires. It intends to carry exactly two claims. First, verification effort grows monotonically along both axes at once — the system's decision authority, and the irreversibility of the effect the system produces <em>through its own mediated path</em>. Second, the autonomous-times-irreversible cell is marked not advised — no amount of verification substitutes for a human decision on an irreversible external effect.<sup><a href="#en-ref-1">[1]</a></sup> The figure works as a compass; it does not work as a calculator.</p>
+
+    <p>A real deployment must replace the compass with a model: the paper says to estimate expected harm = likelihood × consequence, adjusted by two factors — detectability, how quickly we would notice a miss, and recoverability, how much of a miss can be undone.<sup><a href="#en-ref-1">[1]</a></sup> The same reasoning anchors NIST's AI RMF: risk as likelihood times magnitude, and risk acceptance as a declared decision, never a default.<sup><a href="#en-ref-2">[2]</a></sup></p>
+
+    <h3>Three consequence classes — and why settings are made per action class</h3>
+
+    <div class="table-wrapper">
+        <table>
+            <thead>
+                <tr>
+                    <th>Consequence class</th>
+                    <th>Definition</th>
+                    <th>KramKraft example</th>
+                    <th>What it implies for verification</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td><strong>Read-only</strong></td>
+                    <td>Reads only; changes no state outside the system</td>
+                    <td>Answering return policy from the corpus; checking order status against the order store</td>
+                    <td>Can flow fast, with semantic checks sampled against a declared budget</td>
+                </tr>
+                <tr>
+                    <td><strong>Reversible write</strong></td>
+                    <td>A write that can be undone by a rehearsed mechanism</td>
+                    <td>Adding a note to a customer ticket; drafting a message an agent will send</td>
+                    <td>Tighter verification, and a reversal path that has actually been rehearsed, not merely documented</td>
+                </tr>
+                <tr>
+                    <td><strong>Irreversible external effect</strong></td>
+                    <td>An external effect that cannot be recalled once made</td>
+                    <td><code>refund</code> — irreversible from the moment the payment processor accepts the transaction</td>
+                    <td>Human approval, or only a narrow scope that has survived a proving period — a fully autonomous cell does not exist</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <p>Why must the risk budget, sampling rate and review set be set <em>per action class</em> rather than as one global value? Because a detector's error is a property of the distribution it runs on, not a universal number belonging to the detector. The same classifier misses at different rates on policy questions and on refund requests — and even if the rates happened to be equal, equal rates would not imply equal acceptability: one wrong policy answer in a hundred and one wrong refund in a hundred are different risks in different worlds.<sup><a href="#en-ref-1">[1]</a></sup> Each class's budget line therefore carries its own threshold, its own sampling, and its own reviewer — which is exactly what Step 3 writes down as a real file.</p>
+
+    <h2 id="en-operations-antipatterns">2. Deployment Realities — and the Eight Recurring Failures</h2>
+
+    <p>Conclusion first: the envelope is not free — it charges latency on every request. What can be economized is the semantic-evaluation layer; what must never be economized is the structural layer. Golden sets must be re-run every time the model moves. "Auditable" means traceable, not safe. And injection defences always leave a non-zero residual attack rate. These are the price tags the paper attaches in advance, in Section 10.<sup><a href="#en-ref-1">[1]</a></sup></p>
+
+    <h3>Five realities to accept before launch day</h3>
+
+    <ul>
+        <li><strong>The envelope charges latency</strong> — one request's path crosses five rails plus one judge call. A fully enveloped system will always be slower than a bare one. Measure and declare that price; never quietly strip a guard to chase a number.</li>
+        <li><strong>The soft layer can be economized; the hard layer cannot</strong> — semantic evaluation may be sampled or tiered by risk, but structural validation and the <strong>hard enforcement</strong> of effects stay on <em>every</em> applicable call. There is no exception for speed.</li>
+        <li><strong>Golden sets re-run on every model change</strong> — a hosted model shifts behaviour under our feet silently (non-stationarity). A golden set that was green last month says nothing about the version running today.</li>
+        <li><strong>Auditable means traceable, not safe</strong> — a complete <strong>decision trace</strong> lets us reconstruct every route after the fact, but it does not make any route correct. A perfectly auditable system can release wrong answers every day.</li>
+        <li><strong>Injection defence always leaves a residual</strong> — <strong>prompt injection</strong> is a risk that can be pressed down but not eliminated. The honest number for any defence stack is a non-zero residual attack success rate, which is exactly what both the paper and the industry's standard risk list concede.<sup><a href="#en-ref-5">[5]</a></sup></li>
+    </ul>
+
+    <h3>The four-layer stack a system needs in full</h3>
+
+    <p>The paper draws the deployed whole as four stacked layers: the data foundation at the bottom, then the AI-OS core (models, context, memory, and RAG), then the agentic applications, closed at the top by the human-in-the-loop — with guardrails cross-cutting every layer and gates governing every change.<sup><a href="#en-ref-1">[1]</a></sup> The shape is not new in reliability engineering — it is the same lineage as Sha's Simplex architecture, where a simple, verifiable component bounds the damage a complex, unverifiable component can do.<sup><a href="#en-ref-4">[4]</a></sup> What has changed is that our complex component is a language model, and the paper prices skipping any layer in a sentence that leaves no room to argue:</p>
+
+    <blockquote>Skip the data foundation and the core starves; skip the guardrails and it is unsafe; skip the gates and you are flying blind.<sup><a href="#en-ref-1">[1]</a></sup> — Each clause names a different bankruptcy: an underfed core, an unbounded one, and one whose changes nobody can see.</blockquote>
+
+    <h3>The eight failures — what each looks like when it happens to a real team</h3>
+
+    <p><strong>Bolted-on chatbot</strong> — the paper calls this "one application, mistaken for a computer". A team staples a chat window onto the old system with no data foundation under it. The demo looks great because none of the demo questions touch real data — and in the first week after launch, half the customers' questions need order state the chat cannot see. What the organisation gets is a system that answers brilliantly on the topics nobody asks about.</p>
+
+    <p><strong>Vibes-based shipping</strong> — shipping because "we tried it and it felt good" on five prompts the demo-giver chose. No fixed suite, no baseline. The day an executive asks whether this build is better than the last one, the honest answer is that nobody knows — and, working this way, nobody ever will.</p>
+
+    <p><strong>Trusting fluency</strong> — a well-written answer passes review more easily than a correct one, so the team drifts, without noticing, into reviewing prose instead of facts. But the first core assumption we set down back in post #5 is that the core's errors are <em>fluent</em> — confident, well-formed, and wrong. Convincing language is evidence of nothing except linguistic competence.</p>
+
+    <p><strong>Ungrounded generation</strong> — answers not bound to any passage actually retrieved. One day the unguarded system will explain a return policy that exists in no document the shop ever wrote, and explain it confidently enough for the customer to remember and quote back. Span-level attribution at rail five exists precisely to prevent this.</p>
+
+    <p><strong>Unbounded autonomy</strong> — the confused-deputy route in full: privilege flows with content, because instructions and data share one channel. The system holds the authority to call <code>refund</code>, and it reads text anyone can write — a single planted passage is enough for that authority to be spent on our behalf. Most teams grow their tools' capability faster than their mediation, and the gap between those two lines is the attacker's workspace.<sup><a href="#en-ref-5">[5]</a></sup></p>
+
+    <p><strong>Deleting the validating glue</strong> — validation code between layers always looks "redundant" once the system has been quiet for three months. Someone refactors it away in good faith, and everything stays green until the model gets a version bump — at which point the breakage surfaces far enough from the deletion that nobody connects the two events. The validating glue is not excess fat; it is the reason the system was quiet.</p>
+
+    <p><strong>No golden set</strong> — every incident becomes a debate from memory, and no fix can be proven not to regress the last one. Post #9 built this set for you. The later, more painful version of the failure is <em>having the set and letting it stop growing</em> — the correct rule is that every miss found in the field becomes a new case in the set before its ticket closes.</p>
+
+    <p><strong>Single-layer safety</strong> — betting all safety on one filter, usually at the output because that is easiest to install; then whatever passes that one layer gets everything at once. The leave-one-control-out results from the previous post state this as numbers: remove a single rail and the whole family of challenges that rail used to absorb reaches the system immediately. Defence in depth is not a luxury — it is the only reason one layer's error is not yet the whole system's error.</p>
+
+    <h2 id="en-seven-steps">3. The Seven Steps</h2>
+
+    <p>The seven steps are the whole launch ceremony — the first four set autonomy and verification, the next two prepare for the day it breaks, and the last is the deciding checklist. Every step ends with the real KramKraft beat.</p>
+
+    <h3>Step 1 — Set the autonomy level per action class, not per app</h3>
+
+    <p>Enumerate everything the system can do, group the items into action classes by consequence (using the table in section 1), then set a slider position for each class separately. The reason a single dial per app is forbidden: one app always holds several classes, so one value covering all of them is simultaneously too strict for reads — burning human time on what should flow automatically — and too loose for writes, which is the direction that costs far more. Nong Kram separates into four classes: policy and product answers (read-only over the corpus), order-status checks (read-only over the order store), small refunds under narrow conditions, and refunds outside those conditions.</p>
+
+    <blockquote>💡 My view: grant autonomy the way you grant production access — promote one level at a time after a trial period with numbers behind it, and revoke the whole level immediately on an incident, no meeting required. The paper does not prescribe this cadence; it is my own practice. But it makes the slider something <em>earned with evidence and lost with events</em>, rather than a value set once and forgotten.</blockquote>
+
+    <h3>Step 2 — Scale verification to authority × consequence</h3>
+
+    <p>For each class, estimate expected harm = likelihood × consequence, adjust for detectability and recoverability, then choose verification density to track the result — not technical difficulty, and not the team's convenience. Use Fig. 2 as a one-direction compass: more verification as authority rises, more again as effects become irreversible, and a hard stop at "no autonomous release" where both axes peak together. For Nong Kram: policy answers get sampled semantic evaluation, while the <code>refund</code> path gets the full stack plus a human in the loop — because the price of one miss is not the same.</p>
+
+    <h3>Step 3 — Set a residual-risk budget, sampling rate and review set per action class</h3>
+
+    <p>Write the <strong>residual risk</strong> down as a file, not as a shared understanding in the team's heads — one line per class stating the acceptable escape budget, the sampling rate, the set a human reviews, and the review cadence. The reason was given at the end of section 1. For Nong Kram the most important line is <code>refund_small.sampling: "100% within 24 hours"</code> — every approved refund is seen by a human in retrospect, always, even if the slider position is promoted later. The full file is in section 4.</p>
+
+    <h3>Step 4 — Wire golden-set re-runs into every model, corpus and prompt change</h3>
+
+    <p>Make the gate automatic: whenever any term of the <strong>release manifest</strong> from post #4 changes — model version, corpus snapshot, prompt-template hash, evaluator version, or a threshold — CI must run the entire golden set and block promotion on regression. This is the mechanical answer to non-stationarity — we cannot stop upstream from changing, but we can make every change <em>visible</em>. For Nong Kram: a single job named <code>golden-gate</code> watches the manifest hash and runs the harness from post #9 — whoever edits the prompt "just slightly" walks through the same gate as whoever swaps the whole model.</p>
+
+    <h3>Step 5 — Prepare rollback and incident response</h3>
+
+    <p>Fix three things in writing, in advance, before they are needed at three in the morning.<sup><a href="#en-ref-3">[3]</a></sup></p>
+
+    <ul>
+        <li><strong>Roll back to what</strong> — to the last approved manifest <em>in its entirety</em>, never the model alone, because behaviour belongs to all the terms jointly. Rolling back some terms creates a mixed configuration that has never been tested at all.</li>
+        <li><strong>Who gets woken up</strong> — real names, real channels, a real contact order. "The relevant teams" is not an answer, because at three in the morning nobody is named that.</li>
+        <li><strong>What stops the system</strong> — a precisely defined kill switch: close the execution rail to deny-all, and the whole system degrades to advisory mode, <strong>fail-closed</strong> — some capability disappears, but external effects stop completely and immediately.</li>
+    </ul>
+
+    <p>Nong Kram's one-page runbook reads: for a refund-level incident, freeze the <code>refund</code> tool first, keep the read-only answers alive for customers, wake the shop owner and the engineer in that order, and roll the manifest back once diagnosis is done — the shop keeps answering questions all night; it just cannot refund on its own until a human is back in the loop.</p>
+
+    <h3>Step 6 — Audit yourself against the eight characteristic failures</h3>
+
+    <p>Walk all eight items from section 2 as a document, not as nods in a meeting — for each one, answer three columns: does this happen to us, what evidence supports that answer, and if it does happen, who owns the fix and by when. An item answered "does not happen" with no evidence counts as unanswered. For Nong Kram, the first audit found half of item 7: the golden set exists but is thin on one side — shipping-condition cases are clearly fewer than return-policy cases — producing an action item to add shipping cases before launch. That is what a good audit yields: a specific repair list, not a stamp that says passed.</p>
+
+    <h3>Step 7 — Run the ten-item practitioner checklist</h3>
+
+    <p>The paper's last word is a checklist whose one rule is strong enough to change how a whole organisation behaves: every item must be answered with an <em>artifact</em> — a document, a table, a log file that can be handed over — never with an assurance adjective.<sup><a href="#en-ref-1">[1]</a></sup> The ten items are these.</p>
+
+    <ol>
+        <li><strong>Scope</strong> — the task set, the authority measure, and the indispensability ablation, with thresholds declared <em>before</em> evaluation</li>
+        <li><strong>Manifest</strong> — model, decoding, context, corpus, tools, policies, evaluators and thresholds pinned together as one release</li>
+        <li><strong>Boundaries</strong> — every released payload and every external effect reaches the world through one mediated path</li>
+        <li><strong>Hard controls</strong> — identity, authority, schema, parameter, rate, transaction and idempotency checks all outside the model</li>
+        <li><strong>Soft controls</strong> — detector false accepts and false rejects measured on the slices actually served, and none of them called a guarantee</li>
+        <li><strong>State oracles</strong> — tests judged from authoritative post-state and the released payload, never from the model's narration</li>
+        <li><strong>Adversary</strong> — fixed, hidden and adaptive-to-implementation cases kept separate, with the attacker's access and query budget stated</li>
+        <li><strong>Operations</strong> — the duplicate, timeout, tool-error, partial-failure, rollback and trace-write paths all fail closed</li>
+        <li><strong>Economics</strong> — utility, escapes, unsafe effects, escalation, latency, tokens and cost reported by consequence class</li>
+        <li><strong>Reproduction</strong> — per-case records, schemas, a dependency lock, a one-command runner, licence, citation metadata and an immutable archive</li>
+    </ol>
+
+    <p>KramKraft's completed copy — with links back to the artifacts of all nine preceding posts — is the heart of the next section.</p>
+
+    <h2 id="en-kramkraft">4. The Artifact — Nong Kram's Go-Live Review</h2>
+
+    <p>The series-closing artifact is a single document, <code>go-live-review.md</code>, in three parts: the autonomy table per action class, the residual-risk budget, and the ten-item checklist with every row pointing at something real. It is the document on the release meeting's table — and the one read again after the first incident.</p>
+
+    <h3>Part one — the autonomy table per action class</h3>
+
+    <div class="table-wrapper">
+        <table>
+            <thead>
+                <tr>
+                    <th>Action class</th>
+                    <th>Consequence class</th>
+                    <th>Slider position</th>
+                    <th>Conditions</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>Policy / product answers</td>
+                    <td>Read-only over the corpus</td>
+                    <td><strong>Autonomous</strong></td>
+                    <td>Every answer passes the full output rail; semantic checks sampled per the budget</td>
+                </tr>
+                <tr>
+                    <td>Order-status checks</td>
+                    <td>Read-only over the order store</td>
+                    <td><strong>Autonomous</strong></td>
+                    <td>Bound to the authenticated customer's own session only</td>
+                </tr>
+                <tr>
+                    <td><code>refund</code> up to THB 1,000, order still undelivered</td>
+                    <td>Irreversible once the processor accepts</td>
+                    <td><strong>Act with approval</strong></td>
+                    <td>May be promoted to autonomous only <em>after</em> a review period with measured FA/FR behind it, and demoted on any incident</td>
+                </tr>
+                <tr>
+                    <td><code>refund</code> above THB 1,000, or outside the conditions</td>
+                    <td>Irreversible external effect</td>
+                    <td><strong>Act with approval — always</strong></td>
+                    <td>No autonomous path exists; that cell is empty by policy, not by accident</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <h3>Part two — the residual-risk budget</h3>
+
+    <pre><code># residual-risk-budget.yaml — Nong Kram's residual-risk budget
+# All numbers are this tutorial's, not the paper's
+
+answer_policy:            # read-only over the corpus
+  escape_budget: "at most 2 policy-contradicting answers per 1,000 sampled"
+  sampling: "5% of traffic, plus every case a customer complains about"
+  review: "weekly, by the shop owner and the engineer"
+
+order_status:             # read-only over the order store
+  escape_budget: "cross-customer order data = 0 (enforced by session binding, not by budget)"
+  sampling: "1% of traffic"
+  review: "monthly"
+
+refund_small:             # up to 1,000 baht, undelivered orders only
+  escape_budget: "prohibited transactions released = 0 (enforced at the execution rail)"
+  sampling: "100% of approved transactions, reviewed within 24 hours"
+  review: "every escalation, plus a weekly summary"
+
+refund_large:             # above 1,000 baht, or outside the conditions
+  autonomy: "act-with-approval always — no autonomous path"
+  review: "human approval per transaction"
+</code></pre>
+
+    <p>Notice the division of labour inside the file: the two zeroes are not really budget at all — they are structural guarantees carried by the execution rail and by session binding. The genuine budget is the answer_policy line, which admits plainly that semantic checking can miss, and declares exactly how much it may miss before somebody has to be woken up.</p>
+
+    <h3>Part three — the ten-item checklist, filled in</h3>
+
+    <div class="table-wrapper">
+        <table>
+            <thead>
+                <tr>
+                    <th>#</th>
+                    <th>Item</th>
+                    <th>Answering artifact — already built in this series</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>1</td>
+                    <td>Scope</td>
+                    <td>The classification worksheet from <a href="/blog/ai-core-what-is">post #1</a> — two axes, four quadrants, thresholds declared before measurement</td>
+                </tr>
+                <tr>
+                    <td>2</td>
+                    <td>Manifest</td>
+                    <td>The release manifest from <a href="/blog/ai-core-context-engineering">post #4</a> — all eight terms of equation (1) pinned together</td>
+                </tr>
+                <tr>
+                    <td>3</td>
+                    <td>Boundaries</td>
+                    <td>The layer map from <a href="/blog/ai-core-three-eras">post #2</a>, the seam register from <a href="/blog/ai-core-os-model">post #3</a>, and the envelope sketch from <a href="/blog/ai-core-fallible-savant">post #5</a></td>
+                </tr>
+                <tr>
+                    <td>4</td>
+                    <td>Hard controls</td>
+                    <td>The <code>ai_core_operation</code> loop code from <a href="/blog/ai-core-control-loop">post #6</a> — an execution guard that denies by default</td>
+                </tr>
+                <tr>
+                    <td>5</td>
+                    <td>Soft controls</td>
+                    <td>The five-rail table from <a href="/blog/ai-core-five-rails">post #8</a> plus the Estimated rows of the contract from <a href="/blog/ai-core-assurance-contract">post #7</a> — FA/FR per slice</td>
+                </tr>
+                <tr>
+                    <td>6</td>
+                    <td>State oracles</td>
+                    <td>The harness from <a href="/blog/ai-core-validation">post #9</a> — oracles that read the order store's post-state, never the model's narration</td>
+                </tr>
+                <tr>
+                    <td>7</td>
+                    <td>Adversary</td>
+                    <td>The three-tier attack suite in post #9's harness — fixed / hidden / adaptive reported separately, attacker access stated</td>
+                </tr>
+                <tr>
+                    <td>8</td>
+                    <td>Operations</td>
+                    <td>The stateful tests from post #9 (duplicates, tool failure) plus this post's rollback runbook</td>
+                </tr>
+                <tr>
+                    <td>9</td>
+                    <td>Economics</td>
+                    <td>This post's <code>residual-risk-budget.yaml</code> plus the latency / tokens / cost columns per consequence class in post #7's contract</td>
+                </tr>
+                <tr>
+                    <td>10</td>
+                    <td>Reproduction</td>
+                    <td>Post #9's one-command harness runner plus the dependency lock in post #4's manifest</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <p>This is the payoff of the whole journey: on the day the go-live review is due, not one row starts from zero. The worksheet from post #1 answers the first item, the manifest from post #4 the second, the loop code from post #6 the fourth, and the harness from post #9 answers three items in a row. A team that walked this sequence does not merely "have a system" — it holds one complete <em>body of evidence about the system</em>, and that is the only currency the checklist accepts.</p>
+
+    <h2 id="en-validation-check">5. Validation Check — This One Is the Launch Gate</h2>
+
+    <p>Unlike the nine posts before it, this table is not an end-of-chapter exercise — it is the launch gate itself. The rule is the checklist's own: a row passes only when a named artifact is produced. A verbal assurance is worth nothing here, and any row you cannot answer means your system's launch day has not arrived yet.</p>
+
+    <div class="table-wrapper">
+        <table>
+            <thead>
+                <tr>
+                    <th>#</th>
+                    <th>Question</th>
+                    <th>Artifact to produce</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>1</td>
+                    <td>Is your autonomy table set per action class, with the autonomous × irreversible cell <em>empty</em>?</td>
+                    <td>The autonomy table — show the table itself, not a description of having one</td>
+                </tr>
+                <tr>
+                    <td>2</td>
+                    <td>Does every action class have a residual-risk budget line, with a sampling rate and a named reviewer?</td>
+                    <td><code>residual-risk-budget.yaml</code> or equivalent, covering every class</td>
+                </tr>
+                <tr>
+                    <td>3</td>
+                    <td>Does a change to any manifest term automatically trigger a full golden-set run?</td>
+                    <td>The gate config plus the run log from the most recent real model-version bump</td>
+                </tr>
+                <tr>
+                    <td>4</td>
+                    <td>Has rollback to the last approved manifest actually been rehearsed?</td>
+                    <td>The drill record, with the real time taken until the system was back on the previous release</td>
+                </tr>
+                <tr>
+                    <td>5</td>
+                    <td>Is there a named person who gets woken up, and a definition of "stop the system" that can really be pressed?</td>
+                    <td>The incident page of the runbook plus an on-call rota with real names</td>
+                </tr>
+                <tr>
+                    <td>6</td>
+                    <td>Has the eight-failure audit been done as a document, with an owner for every finding?</td>
+                    <td>The audit record — eight rows, three columns, owners and deadlines attached</td>
+                </tr>
+                <tr>
+                    <td>7</td>
+                    <td>Are all ten checklist items answered with links to artifacts, with not one assurance adjective?</td>
+                    <td>The complete <code>go-live-review.md</code> — the single document the release meeting decides on</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <h2 id="en-road-ahead">6. The Road Ahead</h2>
+
+    <p>The series' ten posts walked from the question of whether your system is genuinely an <strong>AI-core system</strong> to the document a release decision is made on — and if the whole road had to compress into one sentence, I would use the paper's own conclusion: put hard invariants at the boundaries that admit them; measure semantic properties as fallible estimates; retain enough evidence to reconstruct every route; and scale autonomy to consequence and residual uncertainty.<sup><a href="#en-ref-1">[1]</a></sup> Those four clauses are the entire series in miniature.</p>
+
+    <p>What must be said plainly at the close is what the paper <em>deliberately does not claim</em> — and this series inherits every one of those boundaries. Every number in the paper (517 executions, 37 tests, 30/30 benign, 0/40 against 40/40, 8/12 against 12/12, 0/4 against 4/4) was measured on fixtures the author constructed, over deterministic cores — it is evidence of conformance of the wiring and the boundary semantics, not a field-safety claim, not a verdict on model quality, and not a population claim of any kind.<sup><a href="#en-ref-1">[1]</a></sup> The empirical warning the paper plants at its centre governs everything we built: a clean fixed suite can coexist with a high semantic escape rate. A system that passes all seven gate rows above is therefore not a system "proven safe" — it is a system whose limits are fully declared, fully evidenced, and fully owned, which is the best that engineering can give a probabilistic core.</p>
+
+    <p>The work after launch day is the same loop with no end: every incident feeds the golden set, every slider promotion needs numbers behind it, every model change walks the same gate. And the next question — the one this series has not answered — is the organizational one: what kind of team runs a system like this, how its budget and KPIs are set, what an executive must ask in the approval room. All of that is the subject of the companion series, <a href="/blog/ai-transformation-layers">AI Transformation for Organizations</a>, which starts from this very question seen from the organizational layer downward. This series built the system; that one builds the organization around it.</p>
+
+    <div class="alert info">
+        <strong>🧭 Closing the series:</strong> ten posts, ten artifacts — the classification worksheet, the layer map, the seam register, the manifest, the envelope sketch, the loop code, the contract, the rail table, the harness, and the go-live review — chained into a single line of evidence from zero to launch day. To keep walking, the organizational road begins at <a href="/blog/ai-transformation-layers">AI Transformation for Organizations #1</a> — the companion series that asks what kind of organization deserves the system you have just finished building.</div>
+
+    <div class="key-takeaways">
+        <h3>🎯 Key Takeaways</h3>
+        <ul>
+            <li><strong>Autonomy slider</strong> = four positions, Suggest → Draft → Act with approval → Autonomous (low-stakes only) — set per action class, never per app</li>
+            <li><strong>Consequence class</strong> = read-only · reversible write · irreversible external effect — risk budget, sampling and review set per class, because detector error belongs to the distribution</li>
+            <li><strong>Autonomous × irreversible</strong> = the cell that stays empty — no amount of verification substitutes for a human decision on an irreversible external effect</li>
+            <li><strong>Deployment realities</strong> = soft checks may be sampled but hard mediation is on every call · golden sets re-run on every model change · auditable = traceable, not safe · injection always leaves a residual</li>
+            <li><strong>Eight failures</strong> = the self-audit list, from the bolted-on chatbot to single-layer safety — every item answered with evidence, not confidence</li>
+            <li><strong>Practitioner checklist</strong> = ten items, each answered with an artifact rather than an adjective — and the nine preceding posts already built an artifact for every row</li>
+        </ul>
+    </div>
+
+    <section class="references" aria-labelledby="en-references">
+        <h2 id="en-references">References</h2>
+        <p class="references__note">All sources checked 8 September 2026 (Asia/Bangkok) · Four evidence labels: <strong>Law</strong> statute or official notification · <strong>Standard</strong> a published standard or official framework · <strong>Study</strong> research or a field signal · <strong>Synthesis</strong> the author's own synthesis or a non-research source.</p>
+        <ol class="references__list">
+            <li id="en-ref-1"><span class="ref-tag ref-tag--synthesis">Synthesis</span> Anirach Mingkhwan. <cite>Engineering AI-Core Systems: A Reference Architecture and Assurance Contract for Software 3.0</cite> — CreativeLAB, FITM, KMUTNB, 2026. An author-supplied document, unpublished, with no public URL, and therefore no link and no access date. <span class="ref-supports">Supports: the generation–verification loop and the sentence "speed from the model; evidence and control from the loop", the four-position autonomy slider, Fig. 2's status as an illustrative heuristic and its not-advised autonomous × irreversible cell, the expected-harm formula, the three consequence classes and per-action-class budgeting, the five deployment realities, the four-layer stack with the "skip the …" sentence, the eight characteristic failures, the ten-item practitioner checklist, the specimen's numeric results with their boundary sentence, and the paper's four-clause conclusion</span></li>
+            <li id="en-ref-2"><span class="ref-tag ref-tag--standard">Standard</span> NIST (U.S. Department of Commerce). <cite>Artificial Intelligence Risk Management Framework (AI RMF 1.0)</cite> — NIST AI 100-1, 2023. <a href="https://www.nist.gov/itl/ai-risk-management-framework">nist.gov</a> — accessed 2026-09-08. <span class="ref-supports">Supports: treating risk as a function of likelihood and magnitude of impact, declaring risk tolerance as an organisational decision, and treating release as a risk-managed decision gate — cited at the level of the framework as a whole, not clause by clause</span></li>
+            <li id="en-ref-3"><span class="ref-tag ref-tag--standard">Standard</span> NIST (U.S. Department of Commerce). <cite>AI RMF: Generative Artificial Intelligence Profile</cite> — NIST AI 600-1, July 2024. <a href="https://doi.org/10.6028/NIST.AI.600-1">doi.org</a> — accessed 2026-09-08. <span class="ref-supports">Supports: the incident-response and system-deactivation-criteria activities for generative AI that stand behind the rollback and incident-response step — used as a voluntary companion document whose actions organisations select and tailor</span></li>
+            <li id="en-ref-4"><span class="ref-tag ref-tag--study">Study</span> Sha, L. <cite>Using Simplicity to Control Complexity</cite> — IEEE Software 18(4), 2001, pp. 20–28. <a href="https://doi.org/10.1109/ms.2001.936213">doi.org</a> — accessed 2026-09-08. <span class="ref-supports">Supports: the principle of letting a simple, verifiable component bound the damage of a complex, unverifiable one — the Simplex lineage the paper's assurance envelope descends from</span></li>
+            <li id="en-ref-5"><span class="ref-tag ref-tag--standard">Standard</span> OWASP Foundation. <cite>OWASP Top 10 for LLM Applications</cite> — 2025. No URL cited in this series. <span class="ref-supports">Supports: the standing of prompt injection and excessive agency as industry-recognised risk classes, and the consensus that injection defences mitigate rather than eliminate — consistent with the paper's non-zero residual attack rate</span></li>
+        </ol>
+    </section>
+    </div>
+
+    <div class="post-series-footer">
+      <span class="l-th">บทความจากซีรีส์ Engineering AI-Core Systems 2026</span><span class="l-en" lang="en">From the Engineering AI-Core Systems 2026 series</span>
+    </div>
+
+    <nav aria-label="Engineering AI-Core Systems">
+    <div class="series-nav">
+      <h3>🛡️ Engineering AI-Core Systems 2026</h3>
+      <div class="series-links">
+        <a href="/blog/ai-core-what-is">#1 What Is AI-Core</a>
+        <a href="/blog/ai-core-three-eras">#2 Three Eras</a>
+        <a href="/blog/ai-core-os-model">#3 AI-OS Seams</a>
+        <a href="/blog/ai-core-context-engineering">#4 Context Control</a>
+        <a href="/blog/ai-core-fallible-savant">#5 Fallible Savant</a>
+        <a href="/blog/ai-core-control-loop">#6 Control Loop</a>
+        <a href="/blog/ai-core-assurance-contract">#7 Assurance Contract</a>
+        <a href="/blog/ai-core-five-rails">#8 Five Rails</a>
+        <a href="/blog/ai-core-validation">#9 Validation</a>
+        <span class="current" aria-current="page">#10 Ship &amp; Operate</span>
+      </div>
+    </div>
+    </nav>
+
+  </article>
+
+  </main>
+
+  <footer class="blog-footer">
+    <nav class="blog-footer__nav" aria-label="Site">
+      <a href="../index.html">Home</a>
+      <a href="./">Blog</a>
+      <a href="../publications/">Publications</a>
+      <a href="../books/">Books</a>
+      <a href="../projects/">Projects</a>
+      <a href="../news/">News</a>
+      <a href="../index.html#contact">Contact</a>
+    </nav>
+    <a href="./">← Back to Blog</a>
+    <span>© 2026 Anirach Mingkhwan — Associate Professor, KMUTNB</span>
+  </footer>
+
+</body>
+</html>

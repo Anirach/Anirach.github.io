@@ -32,6 +32,10 @@ RE_EMOJI_TAIL = re.compile(r'\s*[\U0001F000-\U0001FAFF\u2300-\u23FF☀-➿⬀-�
 # ---------------------------------------------------------------- copy deck
 SERIES = {
     # id: (chip label WITHOUT the "· N" suffix, EN description, TH description)
+    "series-ai-core": (
+        "AI-Core Systems",
+        "A zero-to-hero engineering course from the author&#x27;s own paper — classify, design, contract, guard and prove a system whose core is a language model.",
+        "คอร์สวิศวกรรมจากศูนย์ถึงมือโปร อิงเปเปอร์ของผู้เขียนเอง — จำแนก ออกแบบ ทำสัญญา วางการ์ด และพิสูจน์ระบบที่มีโมเดลภาษาเป็นแกน ตอนละ 7 ขั้นลงมือจริง"),
     "series-hermes-desktop": (
         "Hermes Desktop",
         "Install and run Nous Research&#x27;s Hermes Desktop on your own machine, screen by screen.",
@@ -61,10 +65,10 @@ ICON_FIX = {"series-devops": "🚀"}   # chip said ⚙️, header says 🚀 — 
 
 HERO_LABEL = 'Anirach Mingkhwan · KMUTNB · <span lang="th">ไทย</span> ⇄ English'
 HERO_TITLE = 'Thoughts &amp; Tutorials'
-HERO_SUB = ('Six series on DevOps, AI agents, organisational AI and living well — '
+HERO_SUB = ('Seven series on DevOps, AI agents, AI-core engineering and living well — '
             'every post in Thai, with English one tap away.')
-META_DESC = ('83 bilingual Thai/English articles by Anirach Mingkhwan in six series — Hermes '
-             'Desktop, AI Transformation, Hermes Agent, OpenClaw, DevOps and Life Thought.')
+META_DESC = ('93 bilingual Thai/English articles by Anirach Mingkhwan in seven series — AI-Core '
+             'Systems, Hermes Desktop, AI Transformation, Hermes Agent, OpenClaw, DevOps and Life Thought.')
 
 # ---------------------------------------------------------------- helpers
 def read(p):
@@ -103,7 +107,7 @@ def rewrap_excerpt(ex):
 def ordinal_map(repo):
     """slug -> (n, group_key) from manifests, chip strips and the DevOps chain."""
     out = {}
-    for name in ("hermes-desktop", "ai-transformation"):
+    for name in ("hermes-desktop", "ai-transformation", "ai-core"):
         man = json.load(open(os.path.join(repo, "scripts", "series", name + ".json")))
         for p in man["posts"]:
             out[p["slug"]] = (p["n"], p.get("group"))
@@ -215,6 +219,7 @@ CSS_HERO = r"""
     .blog-jump a[href="/feed.xml"]:hover { background: var(--gold-dark); border-color: var(--gold-dark); color: #fff; }
     /* After a chip jump the destination is :target — light the chip that got you
        there. Pure enhancement: nothing depends on :has(). */
+    body:has(#series-ai-core:target)          .blog-jump a[href="#series-ai-core"],
     body:has(#series-hermes-desktop:target)   .blog-jump a[href="#series-hermes-desktop"],
     body:has(#series-ai-transformation:target) .blog-jump a[href="#series-ai-transformation"],
     body:has(#series-hermes:target)           .blog-jump a[href="#series-hermes"],
