@@ -56,19 +56,29 @@ SERIES = {
         "DevOps",
         "Modern DevOps from Git fundamentals to Kubernetes, CI/CD and production-ready infrastructure — in 24 steps.",
         "DevOps ยุคใหม่ตั้งแต่ Git พื้นฐานถึง Kubernetes, CI/CD และ infrastructure พร้อมใช้จริง — 24 ตอนตามลำดับ"),
-    "series-life": (
-        "Life Thought",
-        "One whole day in nine essays on living well, grown from the book One Day of Light.",
-        "ความเรียงว่าด้วยการใช้ชีวิต เดินครบทั้งวันตามหนังสือ «แสงของวันหนึ่ง» — เช้า เที่ยง และสนธยา"),
+    # "series-life" left this page on 2026-09-08: the nine Life essays are
+    # catalogued on thoughts/index.html (hand-written; the series is complete).
 }
+NUM_WORD = {4: "four", 5: "five", 6: "six", 7: "seven", 8: "eight", 9: "nine"}
 ICON_FIX = {"series-devops": "🚀"}   # chip said ⚙️, header says 🚀 — one glyph per series
 
 HERO_LABEL = 'Anirach Mingkhwan · KMUTNB · <span lang="th">ไทย</span> ⇄ English'
-HERO_TITLE = 'Thoughts &amp; Tutorials'
-HERO_SUB = ('Seven series on DevOps, AI agents, AI-core engineering and living well — '
-            'every post in Thai, with English one tap away.')
-META_DESC = ('93 bilingual Thai/English articles by Anirach Mingkhwan in seven series — AI-Core '
-             'Systems, Hermes Desktop, AI Transformation, Hermes Agent, OpenClaw, DevOps and Life Thought.')
+HERO_TITLE = 'Tutorials'
+HERO_SUB = ('{nseries} series on DevOps, AI agents, AI transformation and AI-core engineering — '
+            'every post in Thai, with English one tap away. Essays on living well are in '
+            '<a href="../thoughts/">Thoughts</a>.')
+META_DESC = ('{total} bilingual Thai/English tutorials by Anirach Mingkhwan in {nseries} series — AI-Core '
+             'Systems, Hermes Desktop, AI Transformation, Hermes Agent, OpenClaw and DevOps.')
+PAGE_TITLE = 'Tutorials — Anirach Mingkhwan'
+
+
+def read_label(mins):
+    """80 -> '1 h 20 min', 60 -> '1 h', 45 -> '45 min'. check_site.py INV-02g
+    parses exactly this shape back out of the tile."""
+    h, m = divmod(mins, 60)
+    if h and m:
+        return "%d h %d min" % (h, m)
+    return "%d h" % h if h else "%d min" % m
 
 # ---------------------------------------------------------------- helpers
 def read(p):
@@ -188,9 +198,11 @@ CSS_HERO = r"""
       color: var(--navy); line-height: 1.1; margin-bottom: 0.75rem;
     }
     .blog-hero__sub {
-      font-size: 1.02rem; color: var(--slate-light); max-width: 560px;
+      font-size: 1.02rem; color: var(--slate-light); max-width: 600px;
       margin: 0 auto 1rem; line-height: 1.6;
     }
+    .blog-hero__sub a { color: var(--blue-dark); font-weight: 700; }
+    .blog-hero__sub a:hover { text-decoration: underline; }
     .blog-hero__stats { display: flex; justify-content: center; gap: 0.6rem; font-size: 0.85rem;
                         color: var(--slate-light); font-variant-numeric: tabular-nums; }
     .blog-hero__stat strong { color: var(--blue-dark); font-weight: 700; }
@@ -224,8 +236,7 @@ CSS_HERO = r"""
     body:has(#series-ai-transformation:target) .blog-jump a[href="#series-ai-transformation"],
     body:has(#series-hermes:target)           .blog-jump a[href="#series-hermes"],
     body:has(#series-openclaw:target)         .blog-jump a[href="#series-openclaw"],
-    body:has(#series-devops:target)           .blog-jump a[href="#series-devops"],
-    body:has(#series-life:target)             .blog-jump a[href="#series-life"] {
+    body:has(#series-devops:target)           .blog-jump a[href="#series-devops"] {
       background: var(--blue-dark); border-color: var(--blue-dark); color: #fff;
     }
 
@@ -262,6 +273,28 @@ CSS_HERO = r"""
     .feature__excerpt { font-size: 0.9rem; color: var(--slate-light); line-height: 1.7; margin-bottom: 1rem;
                         display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
     .feature__read { font-size: 0.85rem; font-weight: 700; color: var(--blue); }
+
+    /* ── CATALOG ── the six series side by side, each with a description and a
+       summed reading time, so a reader picks a series before scrolling into
+       80-odd rows. Tiles are <a>s with their own class — never class="card" —
+       and check_site.py INV-02g keeps their counts and reading times honest. */
+    .catalog { margin-bottom: 2.5rem; padding-bottom: 2.5rem; border-bottom: 1px solid #e8ecf1; }
+    .catalog__grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 0.9rem; }
+    .series-tile {
+      display: grid; grid-template-columns: 40px minmax(0, 1fr); gap: 0.85rem; align-items: start;
+      background: var(--white); border: 1px solid #e8ecf1; border-radius: var(--radius);
+      padding: 0.95rem 1rem; transition: border-color var(--transition), box-shadow var(--transition);
+    }
+    .series-tile:hover, .series-tile:focus-within { border-color: rgba(34,98,153,0.35); box-shadow: 0 8px 24px rgba(34,98,153,0.08); }
+    .series-tile:hover .series-tile__name { color: var(--blue); }
+    .series-tile__icon { font-size: 1.25rem; width: 40px; height: 40px; display: flex; align-items: center;
+                         justify-content: center; background: rgba(34,98,153,0.08); border-radius: 10px; }
+    .series-tile__body { display: block; min-width: 0; }
+    .series-tile__name { display: block; font-size: 1rem; font-weight: 800; color: var(--navy); line-height: 1.3; }
+    .series-tile__meta { display: block; font-size: 0.74rem; font-weight: 600; color: var(--gold-dark);
+                         margin: 0.2rem 0 0.35rem; font-variant-numeric: tabular-nums; }
+    .series-tile__desc { font-size: 0.82rem; color: var(--slate-light); line-height: 1.55;
+                         display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
 
     /* ── SERIES SECTIONS ── */
     .series-section { margin-bottom: 2.5rem; }
@@ -344,6 +377,7 @@ CSS_RESPONSIVE = r"""
                    mask-image: linear-gradient(to right, #000 calc(100% - 28px), transparent); }
       .blog-jump::-webkit-scrollbar { display: none; }
       .blog-jump a { scroll-snap-align: start; }
+      .catalog__grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
     }
     @media (max-width: 768px) {
       /* In-page jumps use instant scroll here: a smooth 13,000px scroll drags
@@ -382,6 +416,9 @@ CSS_RESPONSIVE = r"""
          row's ordinal; hiding the pill stops it wrapping under every title.
          The span stays in the markup — RE_SERIES_COUNT reads the source. */
       .series-count { display: none; }
+      .catalog__grid { grid-template-columns: 1fr; gap: 0.6rem; }
+      .series-tile { padding: 0.75rem 0.85rem; }
+      .series-tile__desc { display: none; }     /* the section header below carries it */
     }
 """
 
@@ -477,7 +514,7 @@ def build(repo, order):
         "    /* Hidden entirely at desktop — the burger label is display:none there too,\n"
         "       so a focusable-but-invisible checkbox would be a purposeless tab stop\n"
         "       between the logo and the first nav link. Restored, visually-hidden but\n"
-        "       focusable, only inside the max-width:800px block below. */\n"
+        "       focusable, only inside the max-width:950px block below. */\n"
         "    .nav__toggle { display: none; }")
     try:
         takeover = block(style, "    /* ── RESPONSIVE ── */", "    /* ── PHONE: row cards ──")
@@ -500,13 +537,17 @@ def build(repo, order):
     # ---- head
     nav_markup = re.search(r'  <!-- NAV -->\n(.*?)  </nav>\n', raw, re.S).group(1) + "  </nav>\n"
     nav_markup = nav_markup.replace('<nav class="nav">', '<nav class="nav" aria-label="Site">')
-    nav_markup = nav_markup.replace('<a href="../blog/" class="active">Blog</a>', '<a href="../blog/" class="active" aria-current="page">Blog</a>')
+    nav_markup = nav_markup.replace('<a href="../blog/" class="active">Tutorials</a>', '<a href="../blog/" class="active" aria-current="page">Tutorials</a>')
     social = re.search(r'  <!-- social -->.*?<!-- /social -->\n', raw, re.S).group(0)
-    social = re.sub(r'<meta property="og:title" content="[^"]*">', '<meta property="og:title" content="Blog — Anirach Mingkhwan">', social)
-    social = re.sub(r'<meta property="og:description" content="[^"]*">', '<meta property="og:description" content="%s">' % META_DESC, social)
-    social = re.sub(r'<meta property="og:image:alt" content="[^"]*">', '<meta property="og:image:alt" content="Blog — Anirach Mingkhwan">', social)
+    total = sum(len(s["cards"]) for s in idx["sections"])
+    nseries = NUM_WORD.get(len(idx["sections"]), str(len(idx["sections"])))
+    meta_desc = META_DESC.format(total=total, nseries=nseries)
+    hero_sub = HERO_SUB.format(nseries=nseries.capitalize())
+    social = re.sub(r'<meta property="og:title" content="[^"]*">', '<meta property="og:title" content="%s">' % PAGE_TITLE, social)
+    social = re.sub(r'<meta property="og:description" content="[^"]*">', '<meta property="og:description" content="%s">' % meta_desc, social)
+    social = re.sub(r'<meta property="og:image:alt" content="[^"]*">', '<meta property="og:image:alt" content="%s">' % PAGE_TITLE, social)
     jsonld = ('  <script type="application/ld+json">\n'
-              '  {"@context":"https://schema.org","@type":"Blog","name":"Anirach Mingkhwan — Blog",'
+              '  {"@context":"https://schema.org","@type":"Blog","name":"Anirach Mingkhwan — Tutorials",'
               '"url":"https://anirach.com/blog/","inLanguage":["th","en"],'
               '"author":{"@type":"Person","@id":"https://anirach.com/#person","name":"Anirach Mingkhwan"}}\n'
               '  </script>\n')
@@ -543,7 +584,30 @@ def build(repo, order):
         '',
     ])
     chips = "\n".join('      <a href="#%s">%s · %d</a>' % (s["id"], SERIES[s["id"]][0], len(s["cards"])) for s in idx["sections"])
-    total = sum(len(s["cards"]) for s in idx["sections"])
+    tiles = []
+    for s in idx["sections"]:
+        mins = sum(c["mins"] for c in s["cards"])
+        tiles.append("\n".join([
+            '        <a href="#%s" class="series-tile">' % s["id"],
+            '          <span class="series-tile__icon" aria-hidden="true">%s</span>' % s["icon"],
+            '          <span class="series-tile__body">',
+            '            <span class="series-tile__name">%s</span>' % s["title"],
+            '            <span class="series-tile__meta">%d articles · ≈ %s</span>' % (len(s["cards"]), read_label(mins)),
+            '            <span class="series-tile__desc">%s</span>' % SERIES[s["id"]][1],
+            '          </span>',
+            '        </a>',
+        ]))
+    catalog = "\n".join([
+        '    <!-- CATALOG: one tile per series. class="series-tile", never "card";',
+        '         INV-02g checks each tile\'s count and reading time against its section. -->',
+        '    <section class="catalog" aria-labelledby="catalog-title">',
+        '      <h2 class="section-kicker" id="catalog-title">Choose a series · <span lang="th">เลือกซีรีส์</span></h2>',
+        '      <div class="catalog__grid">',
+        "\n".join(tiles),
+        '      </div>',
+        '    </section>',
+        '',
+    ])
     sections = "\n".join(section_html(s, ords, chain, order, groups) for s in idx["sections"])
 
     page = f'''<!DOCTYPE html>
@@ -551,8 +615,8 @@ def build(repo, order):
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Blog — Anirach Mingkhwan</title>
-  <meta name="description" content="{META_DESC}">
+  <title>{PAGE_TITLE}</title>
+  <meta name="description" content="{meta_desc}">
 {fonts}  <style>
     *, *::before, *::after {{ box-sizing: border-box; margin: 0; padding: 0; }}
 {root_block}    html {{ scroll-behavior: smooth; }}
@@ -576,7 +640,7 @@ def build(repo, order):
   <header class="blog-hero">
     <p class="blog-hero__label">{HERO_LABEL}</p>
     <h1 class="blog-hero__title">{HERO_TITLE}</h1>
-    <p class="blog-hero__sub">{HERO_SUB}</p>
+    <p class="blog-hero__sub">{hero_sub}</p>
     <p class="blog-hero__stats">
       <span class="blog-hero__stat"><strong>{len(idx["sections"])}</strong> Series</span>
       <span class="blog-hero__stat"><strong>{total}</strong> Articles</span>
@@ -597,6 +661,7 @@ def build(repo, order):
     <div class="blog-list">
 
 {feature}
+{catalog}
 {sections}    </div>
   </main>
 

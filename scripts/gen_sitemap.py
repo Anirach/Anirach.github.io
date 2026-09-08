@@ -23,7 +23,7 @@ from datetime import date
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 SITE = "https://anirach.com"
-SECTIONS = ["blog", "books", "news", "projects", "publications"]
+SECTIONS = ["blog", "books", "news", "projects", "publications", "thoughts"]
 
 
 def git_date(rel):

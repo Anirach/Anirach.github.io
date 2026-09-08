@@ -43,7 +43,10 @@ SERIES7_HREFS = ["/blog/" + f[:-5] for f in SERIES7]
 BASELINE = set()
 
 # --- Regexes. Every one of these bit somebody during a previous audit. -------
-CARD = re.compile(r'<a\s+href="([^"]+)"\s+class="card">')
+# thoughts/index.html (2026-09-08) cards the nine Life essays as ../blog/<slug>.html;
+# the basename is the post, on either catalog page.
+CARD = re.compile(r'<a\s+href="(?:\.\./blog/)?([^"/]+)"\s+class="card">')
+CATALOGS = ["blog/index.html", "thoughts/index.html"]
 # `[^>]*>` is load-bearing: 3 posts append style="text-align:right;" to the anchor.
 PLINK = re.compile(r'<a\s+href="([^"]+)"\s+class="post-nav__link"[^>]*>\s*'
                    r'<div class="post-nav__dir">([^<]*)</div>\s*'
@@ -76,7 +79,9 @@ def norm(s):
 
 
 posts = sorted(f for f in os.listdir(BLOG) if f.endswith(".html") and f != "index.html")
-idx = read(os.path.join(BLOG, "index.html"))
+idx = "\n".join(read(os.path.join(os.path.dirname(BLOG), rel)) for rel in CATALOGS
+                if os.path.exists(os.path.join(os.path.dirname(BLOG), rel)))
+blog_idx = read(os.path.join(BLOG, "index.html"))
 
 # --- card index --------------------------------------------------------------
 cards, card_img, card_title = [], {}, {}
@@ -110,16 +115,21 @@ for c, n in Counter(cards).items():
     if n > 1:
         fails.append(f"{c} is carded {n} times in blog/index.html")
 
-# --- 2. counters -------------------------------------------------------------
+# --- 2. counters — per catalog page, never on the concatenation ---------------
+# blog/index.html hand-types "N Series" / "N Articles"; thoughts/index.html has no
+# hero stats (its count is the .series-count "9 essays"). Each page is measured
+# against its own cards and sections; check_site.py INV-02a/b/c is the authority.
+blog_cards = CARD.findall(blog_idx)
+blog_sections = re.findall(r'<section class="series-section" id="([^"]+)">', blog_idx)
 hero = {k.lower(): int(v) for v, k in
-        re.findall(r'<span class="blog-hero__stat"><strong>(\d+)</strong>\s*([A-Za-z]+)</span>', idx)}
-if hero.get("articles") != len(cards):
-    fails.append(f"hero Articles {hero.get('articles')} != {len(cards)} cards")
-if hero.get("series") != len(sections):
-    fails.append(f"hero Series {hero.get('series')} != {len(sections)} series-section")
+        re.findall(r'<span class="blog-hero__stat"><strong>(\d+)</strong>\s*([A-Za-z]+)</span>', blog_idx)}
+if hero.get("articles") != len(blog_cards):
+    fails.append(f"hero Articles {hero.get('articles')} != {len(blog_cards)} cards on blog/index.html")
+if hero.get("series") != len(blog_sections):
+    fails.append(f"hero Series {hero.get('series')} != {len(blog_sections)} series-section on blog/index.html")
 for sid, body in sections.items():
-    actual = len(re.findall(r'class="card"', body))
-    m = re.search(r'<span class="series-count">(\d+)\s*articles?</span>', body)
+    actual = len(CARD.findall(body))
+    m = re.search(r'<span class="series-count">(\d+)\s*(?:articles?|essays?)</span>', body)
     declared = int(m.group(1)) if m else None
     if declared != actual:
         fails.append(f"#{sid} declares {declared}, holds {actual}")

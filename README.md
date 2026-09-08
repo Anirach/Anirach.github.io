@@ -4,7 +4,7 @@
 
 🌐 **Live: [anirach.com](https://anirach.com)**
 
-A hand-written static site — six top-level pages, four per-book detail pages, and 76 self-contained blog posts. No build system, no package manager, no dependencies, no JavaScript framework. Push to `main` and GitHub Pages publishes it.
+A hand-written static site — seven top-level pages, four per-book detail pages, and 93 self-contained blog posts catalogued on two pages: Tutorials (`/blog/`, six technical series) and Thoughts (`/thoughts/`, nine essays on living well). No build system, no package manager, no dependencies, no JavaScript framework. Push to `main` and GitHub Pages publishes it.
 
 ---
 
@@ -12,7 +12,7 @@ A hand-written static site — six top-level pages, four per-book detail pages, 
 
 | | |
 |---|---|
-| **Pages** | Home · Blog · Publications · Books · Projects & Apps · News & Updates |
+| **Pages** | Home · Tutorials (`/blog/`) · Thoughts (`/thoughts/`) · Publications · Books · Projects & Apps · News & Updates |
 | **Blog** | **76 posts** in 5 series, every one bilingual Thai/English |
 | **Stack** | Plain HTML5 + CSS3, zero JavaScript. Google Fonts is the only external dependency |
 | **Hosting** | GitHub Pages (classic Jekyll build) on the custom domain `anirach.com`, fronted by Cloudflare |

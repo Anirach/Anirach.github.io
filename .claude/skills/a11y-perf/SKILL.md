@@ -232,7 +232,7 @@ an element's resting state its natural state on a browser with no `animation-tim
 | Mechanism | Files | Markup |
 |---|---|---|
 | `.nav__links:target` + `.nav__hamburger` | `index.html` only | anchor-driven, `style.css:172` |
-| `.nav__toggle` checkbox + `.nav__burger` label | **10 island-chrome pages** — `404.html`, `blog/index.html`, `books/index.html` + the 4 `books/*.html` detail pages, `news/`, `projects/`, `publications/` | hidden `<input type="checkbox" id="navToggle" class="nav__toggle">`, `<label for="navToggle" class="nav__burger">☰</label>`, and `.nav__toggle:checked ~ .nav__links { display: flex; }` inside the **800px** media query (moved up from 768px in `5178252`: the 6-link desktop bar broke in the 769–771px band) |
+| `.nav__toggle` checkbox + `.nav__burger` label | **11 section-chrome pages** — `404.html`, `blog/index.html`, `thoughts/index.html`, `books/index.html` + the 4 `books/*.html` detail pages, `news/`, `projects/`, `publications/` (takeover 950px since 2026-09-08) | hidden `<input type="checkbox" id="navToggle" class="nav__toggle">`, `<label for="navToggle" class="nav__burger">☰</label>`, and `.nav__toggle:checked ~ .nav__links { display: flex; }` inside the **800px** media query (moved up from 768px in `5178252`: the 6-link desktop bar broke in the 769–771px band) |
 
 `.nav__toggle:focus-visible + .nav__burger` gives the label a visible ring, so both are
 keyboard-operable. `check_site.py` INV-12 ("every menu-toggle control is wired: JS toggles
@@ -834,7 +834,7 @@ Ordered by how much they degrade a screen-reader pass:
 2026-08-26 and the `.blog-jump` strip added one back. **All six are correct today** and
 `check_site.py` INV-02a–INV-02f all PASS with no baseline entries: **5 Series, 76 Articles**,
 `#series-ai-transformation` 20, `#series-hermes` 10, `#series-openclaw` 13,
-`#series-devops` 24, `#series-life` 9 — plus INV-02f, which checks that each `.blog-jump`
+`#series-devops` 24 (blog/index.html) and `#series-life` 9 essays (thoughts/index.html, since 2026-09-08) — plus INV-02g for the series tiles' counts and reading times, and INV-02f, which checks that each `.blog-jump`
 chip's trailing `· N` equals its section's card count.
 
 ```bash

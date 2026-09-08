@@ -93,7 +93,7 @@ copy at `assets/post-template.html`; it rotted three sweeps behind and was delet
 | **Hermes Agent in Practice** | `#series-hermes` | 10 | `.series-nav` 10-chip strip, absolute `/blog/<slug>` links | copy `blog/hermes-101.html` |
 | **OpenClaw for Organizations** | `#series-openclaw` | 13 (7 numbered + 6 standalone) | the 7 numbered posts carry the `.series-nav` 7-chip strip; the other 6 carry **no nav at all** | copy `blog/openclaw-skills.html`; read `references/openclaw-series.md` first |
 | **DevOps & Vibe Coding** | `#series-devops` | 24 | `.post-nav` prev/next pair, relative `foo.html` links | `TEMPLATE` — **the default** |
-| **Life Thought & Philosophy** | `#series-life` | 9 | `.series-nav` 9-chip strip, absolute `/blog/<slug>` links | copy `blog/morning-waking.html` |
+| **Life Thought & Philosophy** — carded on **`thoughts/index.html`** (2026-09-08), never on the blog index | `#series-life` | 9 | `.series-nav` 9-chip strip, absolute `/blog/<slug>` links; back links `../thoughts/` | copy `blog/morning-waking.html` |
 
 Card sections sum to the total: 10 + 7 + 20 + 10 + 13 + 24 + 9 = **93**. The nav partition (what
 `verify-wiring.py` prints) is **63 series-nav + 24 post-nav + 6 no-nav = 93** — the 63 being
@@ -198,8 +198,8 @@ Transformation posts do not use it — `build_series.py` lifts its skeleton from
 Then fill every `{{PLACEHOLDER}}`. The skeleton, in order, is:
 
 ```
-<!DOCTYPE html> / <html lang="th">          ← all 83 posts are lang="th"; the 10 English
-<head>                                          pages are the 6 nav-bearing index pages
+<!DOCTYPE html> / <html lang="th">          ← all 93 posts are lang="th"; the 11 English
+<head>                                          pages are the 7 nav-bearing index pages
   <title>{EN title} — {TH subtitle} | Anirach Mingkhwan</title>      and the 4 books/ detail pages
   <meta name="description" content="{Thai, ~1 sentence}">
   <!-- social --> … <!-- /social -->, then the JSON-LD BlogPosting <script>
@@ -226,10 +226,11 @@ their `<main>` moved up on 2026-09-03.
 
 Non-negotiables, each because something on disk got them wrong:
 
-- **`lang="th"`.** All 83 posts are `th` and the page-level `lang` never flips — it cannot,
-  without JavaScript; the EN track is `lang="en"` wrappers behind the CSS switch. The 10
-  English pages are the 6 nav-bearing index pages (`index.html`, `blog/index.html`,
-  `books/`, `news/`, `projects/`, `publications/`) and the 4 `books/` detail pages.
+- **`lang="th"`.** All 93 posts are `th` and the page-level `lang` never flips — it cannot,
+  without JavaScript; the EN track is `lang="en"` wrappers behind the CSS switch. The 11
+  English pages are the 7 nav-bearing index pages (`index.html`, `blog/index.html`,
+  `thoughts/index.html`, `books/`, `news/`, `projects/`, `publications/`) and the 4 `books/`
+  detail pages.
 - **Exactly one `<h1>`**, the `.post-hero__title`. Do not repeat the title in the body —
   `deployment-hosting.html` did, and the duplicate was removed on 2026-08-26; every post
   has exactly one now, and INV-11 carries no baseline entry, so a regression will fail.
@@ -493,7 +494,7 @@ immediately.
 | `.series-count` `#series-hermes` | 10 articles | yes, if the post lands there |
 | `.series-count` `#series-openclaw` | 13 articles | yes, if the post lands there |
 | `.series-count` `#series-devops` | 24 articles | yes, if the post lands there |
-| `.series-count` `#series-life` | 9 articles | yes, if the post lands there |
+| `.series-count` `#series-life` (on `thoughts/index.html`) | 9 essays | yes, if the post lands there |
 | `.blog-jump` chip `· N` | 20 / 10 / 13 / 24 / 9 | **yes** — the chip for the post's own series (INV-02f) |
 | `.blog-hero__stat` "N Categories" | — | the stat was deleted 2026-08-26 with the bands; re-add it only if a `.category` band ever ships, and INV-02e will then verify it |
 | `.category__count` | — | gone with the bands; INV-02d fails on an empty band a future commit adds |

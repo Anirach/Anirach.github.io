@@ -66,7 +66,12 @@ from collections import Counter, defaultdict
 RE_CARD = re.compile(r'<a\s+href="([^"]+)"\s+class="card">')
 RE_SECTION = re.compile(
     r'<section class="series-section" id="([^"]+)">(.*?)</section>', re.S)
-RE_SERIES_COUNT = re.compile(r'(<span class="series-count">)(\d+)(\s*articles?</span>)')
+RE_SERIES_COUNT = re.compile(r'(<span class="series-count">)(\d+)(\s*(?:articles?|essays?)</span>)')
+# A card's identity is the post it links. On blog/index.html that is the bare
+# `openclaw-101.html`; on thoughts/index.html (2026-09-08) the same post is
+# `../blog/morning-waking.html`. Both resolve to blog/<basename>, and the
+# basename is the key every merged view uses.
+RE_CARD_HREF = re.compile(r'^(?:\.\./blog/)?([a-z0-9-]+\.html)$')
 RE_HERO_STAT = re.compile(
     r'(<span class="blog-hero__stat"><strong>)(\d+)(</strong>\s*([A-Za-z]+)</span>)')
 # A .category block's header is a small fixed shape (icon/title/count, no
@@ -516,6 +521,13 @@ def norm_title(s):
     return s.strip().strip("—-").strip()
 
 
+def card_key(href):
+    """blog/<basename> for a card href on ANY catalog page; anything that is not
+    a post link is returned verbatim so INV-01b still reports it."""
+    m = RE_CARD_HREF.match(href)
+    return m.group(1) if m else href
+
+
 # ---------------------------------------------------------------------------
 # Site model — everything is parsed once
 # ---------------------------------------------------------------------------
@@ -566,68 +578,96 @@ class Site(object):
         css = os.path.join(root, "style.css")
         self.style_css = open(css, encoding="utf-8").read() if os.path.exists(css) else ""
 
-        self._parse_index()
+        self._parse_catalogs()
         self._parse_navs()
 
     def post(self, f):
         return self.text["blog/" + f]
 
-    # -- blog/index.html --------------------------------------------------
-    def _parse_index(self):
-        idx = self.idx
-        self.cards = []          # card hrefs, document order
+    # -- the catalog pages ------------------------------------------------
+    # A catalog is a nav-bearing page that cards posts. Until 2026-09-08 there
+    # was one, blog/index.html; the Thoughts/Tutorials split added
+    # thoughts/index.html for the nine Life essays. Catalogs are DISCOVERED by
+    # the one marker every catalog carries, <section class="series-section">,
+    # so a third one is policed the day it appears. Every view below is MERGED
+    # across catalogs (site.cards, card_img, card_title, sections,
+    # section_cards, card_section) and remembers which page a card came from
+    # (site.card_page, site.card_pos) so a report names the right file and
+    # line. The posts never move: a card on thoughts/ links
+    # ../blog/<slug>.html and the slug is its identity (card_key).
+    def _parse_catalogs(self):
+        self.catalogs = [rel for rel in self.nav_pages
+                         if '<section class="series-section"' in self.text.get(rel, "")]
+        if "blog/index.html" not in self.catalogs:
+            self.catalogs.insert(0, "blog/index.html")
+        self.cards = []          # post basenames, document order, blog first
+        self.catalog_cards = {}  # rel -> [basename, ...] on that page
         self.card_img = {}
         self.card_title = {}
-        self.card_pos = {}       # href -> byte offset of the <a>
+        self.card_pos = {}       # basename -> byte offset of the <a> in ITS page
+        self.card_page = {}      # basename -> catalog rel path
+        self.sections = []       # (sid, body, body_offset, rel)
+        self.section_cards = {}
+        self.card_section = {}
+        self.hero_stats_by_page = {}   # rel -> {label.lower(): (value, offset)}
+        for rel in self.catalogs:
+            self._parse_catalog(rel)
+        self.hero_stats = self.hero_stats_by_page.get("blog/index.html", {})
+        self._parse_categories()
+
+    def _parse_catalog(self, rel):
+        idx = self.text[rel]
+        mine = []
         parts = re.split(r'(<a\s+href="[^"]+"\s+class="card">)', idx)
         offset = 0
         cur = None
         for p in parts:
             m = RE_CARD.match(p)
             if m:
-                cur = m.group(1)
+                cur = card_key(m.group(1))
                 self.cards.append(cur)
+                mine.append(cur)
                 self.card_pos.setdefault(cur, offset)
+                self.card_page.setdefault(cur, rel)
             elif cur is not None:
                 im = re.search(r'<img src="([^"]+)"', p)
-                # The heading LEVEL .card__title uses is not stable — it was <h2>
-                # until Task 11's fix round (2026-08-10) demoted it to <h4> to
-                # repair the heading ladder (h1 -> h2 category -> h3 series ->
-                # h4 card). Match any level via a backreference instead of
-                # hardcoding one, so a future ladder change can't silently zero
-                # out site.card_title and turn INV-10 into a check that always
-                # passes because it has nothing left to compare.
+                # The heading LEVEL .card__title uses is not stable — h2, then
+                # h4 (Task 11), then h3 (the 2026-08-26 band deletion), and h4
+                # again on thoughts/ where the ladder is page > series > part >
+                # essay. Match any level via a backreference so a re-cut can't
+                # silently zero out card_title and turn INV-10 into a no-op.
                 t = re.search(r'<(h[1-6]) class="card__title">(.*?)</\1>', p, re.S)
                 self.card_img[cur] = os.path.basename(im.group(1)) if im else None
                 self.card_title[cur] = norm_title(t.group(2)) if t else None
                 cur = None
             offset += len(p)
+        self.catalog_cards[rel] = mine
 
-        # (sid, body, body_offset) — body_offset is m.start(2), NOT m.start():
-        # the opening <section ...> tag is ~52 bytes long and shifting the
-        # window by that much lands a later match on a different line.
-        self.sections = []
+        # (sid, body, body_offset, rel) — body_offset is m.start(2), NOT
+        # m.start(): the opening <section ...> tag is ~52 bytes long and
+        # shifting the window by that much lands a later match on a different
+        # line.
         for m in RE_SECTION.finditer(idx):
-            self.sections.append((m.group(1), m.group(2), m.start(2)))
-        self.section_cards = {}
-        self.card_section = {}
-        for sid, body, _off in self.sections:
-            hrefs = RE_CARD.findall(body)
+            sid, body = m.group(1), m.group(2)
+            self.sections.append((sid, body, m.start(2), rel))
+            hrefs = [card_key(h) for h in RE_CARD.findall(body)]
             self.section_cards[sid] = hrefs
             for h in hrefs:
                 self.card_section[h] = sid
 
-        self.hero_stats = {}     # label.lower() -> (value, offset)
+        stats = {}
         for m in RE_HERO_STAT.finditer(idx):
-            self.hero_stats[m.group(4).lower()] = (int(m.group(2)), m.start())
+            stats[m.group(4).lower()] = (int(m.group(2)), m.start())
+        self.hero_stats_by_page[rel] = stats
 
-        # -- category bands (Task 11, 2026-08-10) -------------------------
-        # Each category's card count is derived positionally: everything
-        # between the end of its own header and the start of the next
-        # category's opening <div> (or end of file for the last one). That
-        # correctly sums cards across a category's *multiple* child
-        # series-sections (Technology has 2) without needing to balance
-        # nested </div> tags.
+    def _parse_categories(self):
+        # -- category bands (Task 11, 2026-08-10; retired 2026-08-26) --------
+        # blog/index.html only. Each category's card count is derived
+        # positionally: everything between the end of its own header and the
+        # start of the next category's opening <div> (or end of file for the
+        # last one). That correctly sums cards across a category's *multiple*
+        # child series-sections without needing to balance nested </div> tags.
+        idx = self.idx
         self.categories = []
         heads = list(RE_CATEGORY_HEAD.finditer(idx))
         for i, m in enumerate(heads):
@@ -703,21 +743,22 @@ class Site(object):
 # ---------------------------------------------------------------------------
 # INV-01 — link closure
 # ---------------------------------------------------------------------------
-@check("INV-01a", "every blog/*.html post is linked from blog/index.html")
+@check("INV-01a", "every blog/*.html post is carded on a catalog page")
 def _(site):
-    return [Violation(p, "blog/%s is not carded in blog/index.html" % p)
+    return [Violation(p, "blog/%s is not carded on any catalog page (%s)"
+                      % (p, ", ".join(site.catalogs)))
             for p in site.posts if p not in site.cards]
 
 
-@check("INV-01b", "every card href in blog/index.html resolves to a real file")
+@check("INV-01b", "every card href on a catalog page resolves to a real post")
 def _(site):
     out = []
     for c in site.cards:
         if not os.path.exists(os.path.join(site.blog, c)):
-            out.append(Violation(c, "blog/index.html:%d card -> %s (no such file)"
-                                 % (lineno(site.idx, site.card_pos[c]), c)))
+            page = site.card_page[c]
+            out.append(Violation(c, "%s:%d card -> %s (no such file)"
+                                 % (page, lineno(site.text[page], site.card_pos[c]), c)))
     return out
-
 
 @check("INV-01c", "no post is carded twice")
 def _(site):
@@ -728,50 +769,59 @@ def _(site):
 # ---------------------------------------------------------------------------
 # INV-02 — article counters (the thing --fix repairs)
 # ---------------------------------------------------------------------------
-@check("INV-02a", 'blog-hero "N Articles" == total card count')
+@check("INV-02a", 'catalog hero "N Articles" (or "N Essays") == that page\'s card count')
 def _(site):
-    stat = site.hero_stats.get("articles")
-    want = len(site.cards)
-    if stat is None:
-        return [Violation("missing", 'blog/index.html has no "N Articles" hero stat')]
-    got, off = stat
-    if got != want:
-        ln = lineno(site.idx, off)
-        return [Violation("articles", "blog/index.html:%d declared %d, actual %d"
-                          % (ln, got, want))]
-    return []
+    """Required on blog/index.html; on any other catalog the stat is verified
+    only if the page carries one (thoughts/ states its count in the checked
+    .series-count span instead)."""
+    out = []
+    for rel in site.catalogs:
+        stats = site.hero_stats_by_page[rel]
+        stat = stats.get("articles") or stats.get("essays")
+        want = len(site.catalog_cards[rel])
+        if stat is None:
+            if rel == "blog/index.html":
+                out.append(Violation("missing", 'blog/index.html has no "N Articles" hero stat'))
+            continue
+        got, off = stat
+        if got != want:
+            out.append(Violation("articles|" + rel, "%s:%d declared %d, actual %d"
+                                 % (rel, lineno(site.text[rel], off), got, want)))
+    return out
 
 
-@check("INV-02b", 'blog-hero "N Series" == number of <section class="series-section">')
+@check("INV-02b", 'catalog hero "N Series" == number of <section class="series-section">')
 def _(site):
-    stat = site.hero_stats.get("series")
-    want = len(site.sections)
-    if stat is None:
-        return [Violation("missing", 'blog/index.html has no "N Series" hero stat')]
-    got, off = stat
-    if got != want:
-        ln = lineno(site.idx, off)
-        return [Violation("series", "blog/index.html:%d declared %d, actual %d"
-                          % (ln, got, want))]
-    return []
+    out = []
+    for rel in site.catalogs:
+        stat = site.hero_stats_by_page[rel].get("series")
+        want = sum(1 for s in site.sections if s[3] == rel)
+        if stat is None:
+            if rel == "blog/index.html":
+                out.append(Violation("missing", 'blog/index.html has no "N Series" hero stat'))
+            continue
+        got, off = stat
+        if got != want:
+            out.append(Violation("series|" + rel, "%s:%d declared %d, actual %d"
+                                 % (rel, lineno(site.text[rel], off), got, want)))
+    return out
 
 
 @check("INV-02c", ".series-count == cards inside its own series-section")
 def _(site):
     out = []
-    for sid, body, body_off in site.sections:
+    for sid, body, body_off, rel in site.sections:
         actual = len(RE_CARD.findall(body))
         m = RE_SERIES_COUNT.search(body)
         if not m:
-            out.append(Violation(sid, "#%s has no .series-count span" % sid))
+            out.append(Violation(sid, "%s #%s has no .series-count span" % (rel, sid)))
             continue
         declared = int(m.group(2))
         if declared != actual:
-            ln = lineno(site.idx, body_off + m.start())
-            out.append(Violation(sid, "blog/index.html:%d #%s declared %d, actual %d"
-                                 % (ln, sid, declared, actual)))
+            ln = lineno(site.text[rel], body_off + m.start())
+            out.append(Violation(sid, "%s:%d #%s declared %d, actual %d"
+                                 % (rel, ln, sid, declared, actual)))
     return out
-
 
 # Retired 2026-08-26. Until then an empty .category band was allowed to exist
 # so long as it carried the label "First posts coming soon". Two such bands
@@ -837,32 +887,77 @@ def _(site):
     """The jump strip is hand-maintained and was forgotten twice (dae4304).
     Nothing read it until now: it is not a card, not a counter and not a nav
     pattern, so every existing check looked straight past a chip that pointed
-    at a section that had been renamed, or a count that had stopped being true."""
+    at a section that had been renamed, or a count that had stopped being true.
+    Required on blog/index.html; checked on any catalog that carries one."""
     out = []
-    m = re.search(r'<nav class="blog-jump"[^>]*>(.*?)</nav>', site.idx, re.S)
-    if not m:
-        return [Violation("blog-jump", "blog/index.html has no .blog-jump strip")]
-    chips = re.findall(r'<a href="#([^"]+)">([^<]*)</a>', m.group(1))
-    have = {sid: len(RE_CARD.findall(body)) for sid, body, _o in site.sections}
-    seen = Counter(sid for sid, _t in chips)
-    for sid, text in chips:
-        if sid not in have:
-            out.append(Violation("jump|" + sid,
-                                 "jump chip #%s anchors no <section class=\"series-section\">"
-                                 % sid))
+    for rel in site.catalogs:
+        m = re.search(r'<nav class="blog-jump"[^>]*>(.*?)</nav>', site.text[rel], re.S)
+        if not m:
+            if rel == "blog/index.html":
+                out.append(Violation("blog-jump", "blog/index.html has no .blog-jump strip"))
             continue
-        n = re.search(r"\u00b7\s*(\d+)\s*$", htmlmod.unescape(text).strip())
-        if not n:
-            out.append(Violation("jump|" + sid,
-                                 "jump chip %r has no trailing count" % text.strip()))
-        elif int(n.group(1)) != have[sid]:
-            out.append(Violation("jump|" + sid,
-                                 "jump chip #%s says %s, section holds %d card(s)"
-                                 % (sid, n.group(1), have[sid])))
-    for sid in sorted(have):
-        if seen[sid] != 1:
-            out.append(Violation("jump|missing|" + sid,
-                                 "#%s has %d jump chip(s), want exactly 1" % (sid, seen[sid])))
+        chips = re.findall(r'<a href="#([^"]+)">([^<]*)</a>', m.group(1))
+        have = {sid: len(RE_CARD.findall(body))
+                for sid, body, _o, r in site.sections if r == rel}
+        seen = Counter(sid for sid, _t in chips)
+        for sid, text in chips:
+            if sid not in have:
+                out.append(Violation("jump|" + sid,
+                                     "%s: jump chip #%s anchors no <section class=\"series-section\">"
+                                     % (rel, sid)))
+                continue
+            n = re.search(r"\u00b7\s*(\d+)\s*$", htmlmod.unescape(text).strip())
+            if not n:
+                out.append(Violation("jump|" + sid,
+                                     "%s: jump chip %r has no trailing count" % (rel, text.strip())))
+            elif int(n.group(1)) != have[sid]:
+                out.append(Violation("jump|" + sid,
+                                     "%s: jump chip #%s says %s, section holds %d card(s)"
+                                     % (rel, sid, n.group(1), have[sid])))
+        for sid in sorted(have):
+            if seen[sid] != 1:
+                out.append(Violation("jump|missing|" + sid,
+                                     "%s: #%s has %d jump chip(s), want exactly 1"
+                                     % (rel, sid, seen[sid])))
+    return out
+
+@check("INV-02g", ".series-tile counts and reading times match the sections they anchor")
+def _(site):
+    """The 'Choose a series' tiles on blog/index.html (2026-09-08) state a card
+    count and a summed reading time per series. Both are emitted by
+    scripts/reindex_blog.py and both would drift silently the first time a post
+    is added by hand without re-running it — the failure the hero stats and
+    .series-count spans had before INV-02 existed. The reading-time shape is
+    reindex_blog.read_label()'s: '1 h 20 min' / '1 h' / '45 min'."""
+    out = []
+    for rel in site.catalogs:
+        text = site.text[rel]
+        by_sid = {sid: body for sid, body, _o, r in site.sections if r == rel}
+        for m in re.finditer(r'<a href="#([^"]+)" class="series-tile">(.*?)</a>', text, re.S):
+            sid, body = m.group(1), m.group(2)
+            if sid not in by_sid:
+                out.append(Violation("tile|" + sid,
+                                     "%s: series tile anchors no #%s section" % (rel, sid)))
+                continue
+            meta = re.search(r'<span class="series-tile__meta">([^<]*)</span>', body)
+            if not meta:
+                out.append(Violation("tile|" + sid,
+                                     "%s: tile #%s has no .series-tile__meta" % (rel, sid)))
+                continue
+            txt = htmlmod.unescape(meta.group(1)).strip()
+            want_n = len(RE_CARD.findall(by_sid[sid]))
+            n = re.match(r"(\d+)\s+articles?\b", txt)
+            if not n or int(n.group(1)) != want_n:
+                out.append(Violation("tile|count|" + sid,
+                                     "%s: tile #%s says %r, section holds %d card(s)"
+                                     % (rel, sid, txt, want_n)))
+            want_min = sum(int(x) for x in re.findall(r"(\d+)\s*min read", by_sid[sid]))
+            t = re.search(r"\u2248\s*(?:(\d+)\s*h)?\s*(?:(\d+)\s*min)?\s*$", txt)
+            got_min = (int(t.group(1) or 0) * 60 + int(t.group(2) or 0)) if t else None
+            if got_min != want_min:
+                out.append(Violation("tile|time|" + sid,
+                                     "%s: tile #%s says %r, the section's cards sum to %d min"
+                                     % (rel, sid, txt, want_min)))
     return out
 
 
@@ -2166,79 +2261,87 @@ def _(site):
 
 
 # ---------------------------------------------------------------------------
-# --fix : article counters in blog/index.html, and NOTHING else
+# --fix : the hand-typed counters on every catalog page, and NOTHING else
 # ---------------------------------------------------------------------------
 def do_fix(site, quiet=False):
-    path = os.path.join(site.blog, "index.html")
-    with open(path, encoding="utf-8", newline="") as fh:
-        raw = fh.read()
+    """Recompute the counters each catalog page hand-types — the .blog-hero__stat
+    values (Articles or Essays, Series) and every .series-count — from the
+    actual class="card" counts, and rewrite only the ones that are wrong.
+    Generic over site.catalogs: blog/index.html and thoughts/index.html today."""
+    total_edits = 0
+    for rel in site.catalogs:
+        path = os.path.join(site.root, rel)
+        with open(path, encoding="utf-8", newline="") as fh:
+            raw = fh.read()
 
-    edits = []       # (start, end, old, new, line, label)
-    unchanged = []   # (line, label, value)
+        edits = []       # (start, end, old, new, line, label)
+        unchanged = []   # (line, label, value)
 
-    total_cards = len(RE_CARD.findall(raw))
-    n_sections = len(RE_SECTION.findall(raw))
+        total_cards = len(RE_CARD.findall(raw))
+        n_sections = len(RE_SECTION.findall(raw))
 
-    # 1 + 2: the two .blog-hero__stat values
-    for m in RE_HERO_STAT.finditer(raw):
-        label = m.group(4).lower()
-        if label == "articles":
-            want = total_cards
-        elif label == "series":
-            want = n_sections
-        else:
-            continue
-        got = int(m.group(2))
-        ln = lineno(raw, m.start())
-        if got == want:
-            unchanged.append((ln, 'blog-hero__stat "%s"' % m.group(4), got))
-        else:
-            edits.append((m.start(2), m.end(2), str(got), str(want), ln,
-                          'blog-hero__stat "%s"' % m.group(4)))
+        # 1 + 2: the .blog-hero__stat values
+        for m in RE_HERO_STAT.finditer(raw):
+            label = m.group(4).lower()
+            if label in ("articles", "essays"):
+                want = total_cards
+            elif label == "series":
+                want = n_sections
+            else:
+                continue
+            got = int(m.group(2))
+            ln = lineno(raw, m.start())
+            if got == want:
+                unchanged.append((ln, 'blog-hero__stat "%s"' % m.group(4), got))
+            else:
+                edits.append((m.start(2), m.end(2), str(got), str(want), ln,
+                              'blog-hero__stat "%s"' % m.group(4)))
 
-    # 3: every .series-count, measured against its own section
-    for sm in RE_SECTION.finditer(raw):
-        sid, body, base = sm.group(1), sm.group(2), sm.start(2)
-        want = len(RE_CARD.findall(body))
-        cm = RE_SERIES_COUNT.search(body)
-        if not cm:
-            continue
-        got = int(cm.group(2))
-        ln = lineno(raw, base + cm.start())
-        if got == want:
-            unchanged.append((ln, "series-count #%s" % sid, got))
-        else:
-            edits.append((base + cm.start(2), base + cm.end(2), str(got), str(want),
-                          ln, "series-count #%s" % sid))
+        # 3: every .series-count, measured against its own section
+        for sm in RE_SECTION.finditer(raw):
+            sid, body, base = sm.group(1), sm.group(2), sm.start(2)
+            want = len(RE_CARD.findall(body))
+            cm = RE_SERIES_COUNT.search(body)
+            if not cm:
+                continue
+            got = int(cm.group(2))
+            ln = lineno(raw, base + cm.start())
+            if got == want:
+                unchanged.append((ln, "series-count #%s" % sid, got))
+            else:
+                edits.append((base + cm.start(2), base + cm.end(2), str(got), str(want),
+                              ln, "series-count #%s" % sid))
 
-    if not quiet:
-        print(C.bold("--fix  blog/index.html  (article counters only)"))
-        print("  computed truth: %d cards, %d series-sections" % (total_cards, n_sections))
-        for ln, label, val in sorted(unchanged):
-            print("  %s line %-4d %-28s %s" % (C.grey("  ok"), ln, label,
-                                               C.grey("%s (already correct)" % val)))
-    if not edits:
         if not quiet:
-            print("  " + C.green("nothing to change — all counters already correct"))
-        return 0
+            print(C.bold("--fix  %s  (article counters only)" % rel))
+            print("  computed truth: %d cards, %d series-sections" % (total_cards, n_sections))
+            for ln, label, val in sorted(unchanged):
+                print("  %s line %-4d %-28s %s" % (C.grey("  ok"), ln, label,
+                                                   C.grey("%s (already correct)" % val)))
+        if not edits:
+            if not quiet:
+                print("  " + C.green("nothing to change — all counters already correct"))
+            continue
 
-    out = raw
-    for start, end, old, new, _ln, _label in sorted(edits, key=lambda e: -e[0]):
-        out = out[:start] + new + out[end:]
+        out = raw
+        for start, end, old, new, _ln, _label in sorted(edits, key=lambda e: -e[0]):
+            out = out[:start] + new + out[end:]
 
-    with open(path, "w", encoding="utf-8", newline="") as fh:
-        fh.write(out)
+        with open(path, "w", encoding="utf-8", newline="") as fh:
+            fh.write(out)
 
-    if not quiet:
-        for _s, _e, old, new, ln, label in sorted(edits, key=lambda e: e[4]):
-            print("  %s line %-4d %-28s %s" % (C.yellow("edit"), ln, label,
-                                               C.red("-" + old) + "  " + C.green("+" + new)))
-        print("  %s %d counter%s rewritten in blog/index.html"
-              % (C.green("wrote"), len(edits), "" if len(edits) == 1 else "s"))
-    return len(edits)
+        if not quiet:
+            for _s, _e, old, new, ln, label in sorted(edits, key=lambda e: e[4]):
+                print("  %s line %-4d %-28s %s" % (C.yellow("edit"), ln, label,
+                                                   C.red("-" + old) + "  " + C.green("+" + new)))
+            print("  %s %d counter%s rewritten in %s"
+                  % (C.green("wrote"), len(edits), "" if len(edits) == 1 else "s", rel))
+        total_edits += len(edits)
+    return total_edits
 
 
 # ---------------------------------------------------------------------------
+
 # Runner
 # ---------------------------------------------------------------------------
 def find_root(explicit):
@@ -2314,9 +2417,10 @@ def main(argv=None):
 
     if not args.quiet:
         print(C.bold("site-check") + "  " + root)
-        print(C.grey("%d HTML files  |  %d posts  |  %d files in images/  |  %d cards in blog/index.html"
+        print(C.grey("%d HTML files  |  %d posts  |  %d files in images/  |  %d cards on %d catalog page%s"
                      % (len(site.pages), len(site.posts),
-                        len(site.images_on_disk), len(site.cards))))
+                        len(site.images_on_disk), len(site.cards),
+                        len(site.catalogs), "" if len(site.catalogs) == 1 else "s")))
         print()
 
     n_pass = n_known = n_warn = n_fail = n_info = 0
@@ -2482,15 +2586,15 @@ def _(site):
                                      "(regenerate: python3 scripts/gen_feed.py)")]
     feed = open(feed_path, encoding="utf-8").read()
     in_feed = set(re.findall(r"<link>https://anirach\.com/blog/([a-z0-9-]+\.html)</link>", feed))
-    carded = set(re.findall(r'<a href="([a-z0-9-]+\.html)" class="card">', site.idx))
+    carded = set(site.cards)          # every catalog page, blog/ and thoughts/
     out = []
     for f in sorted(carded - in_feed):
         out.append(Violation("missing|" + f,
-                             "%s is carded on the blog index but absent from feed.xml "
-                             "— run: python3 scripts/gen_feed.py" % f))
+                             "%s is carded on %s but absent from feed.xml "
+                             "— run: python3 scripts/gen_feed.py" % (f, site.card_page[f])))
     for f in sorted(in_feed - carded):
         out.append(Violation("extra|" + f,
-                             "%s is in feed.xml but has no card on the blog index" % f))
+                             "%s is in feed.xml but has no card on any catalog page" % f))
     return out
 
 
@@ -2746,21 +2850,23 @@ def _(site):
                     "article:published_time (%s)"
                     % (f, lineno(s_, t.start()), t.group(1), iso)))
 
-    # and every card on the index must carry the date of the post it links to
-    idx = site.idx
-    for m in re.finditer(r'<a href="([a-z0-9-]+)\.html" class="card">(.*?)</a>', idx, re.S):
-        slug, block = m.group(1), m.group(2)
-        t = re.search(r'<time datetime="([^"]+)"', block)
-        if not t:
-            out.append(Violation("blog/index.html|%s|missing" % slug,
-                "blog/index.html: the %s card has no <time datetime> — the "
-                "featured card ranks by date and cannot see a bare string" % slug))
-            continue
-        want = feed_dates.get(slug)
-        if want and t.group(1)[:10] != want:
-            out.append(Violation("blog/index.html|%s" % slug,
-                "blog/index.html: the %s card says %s but the post was "
-                "published %s" % (slug, t.group(1), want)))
+    # and every card on every catalog must carry the date of the post it links to
+    for rel in site.catalogs:
+        idx = site.text[rel]
+        for m in re.finditer(r'<a href="(?:\.\./blog/)?([a-z0-9-]+)\.html" class="card">(.*?)</a>',
+                             idx, re.S):
+            slug, block = m.group(1), m.group(2)
+            t = re.search(r'<time datetime="([^"]+)"', block)
+            if not t:
+                out.append(Violation("%s|%s|missing" % (rel, slug),
+                    "%s: the %s card has no <time datetime> — the "
+                    "featured card ranks by date and cannot see a bare string" % (rel, slug)))
+                continue
+            want = feed_dates.get(slug)
+            if want and t.group(1)[:10] != want:
+                out.append(Violation("%s|%s" % (rel, slug),
+                    "%s: the %s card says %s but the post was "
+                    "published %s" % (rel, slug, t.group(1), want)))
     return out
 
 

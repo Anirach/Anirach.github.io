@@ -48,7 +48,7 @@ python3 .claude/skills/site-check/scripts/check_site.py --fix
 
 `--fix` recomputes **seven** counter sites in `blog/index.html` — the two `.blog-hero__stat` values
 (Series, Articles) and all five `.series-count` spans (`#series-ai-transformation`, `#series-hermes`,
-`#series-openclaw`, `#series-devops`, `#series-life`) — from the actual `class="card"` counts, and
+`#series-openclaw`, `#series-devops`; `#series-life` lives on `thoughts/index.html`, which `--fix` walks too — `site.catalogs`, 2026-09-08) — from the actual `class="card"` counts, and
 rewrites only the ones that are wrong (**0 of 7 today**: 76 cards, 5 series-sections,
 20 + 10 + 13 + 24 + 9). The `.series-count` loop is generic — it walks whatever
 `<section class="series-section">` blocks it finds — so a sixth series is picked up for free. It
@@ -409,9 +409,10 @@ the hook, so its domain was guaranteed empty; it now covers every page. Adding `
 
 0 today. `index.html`, `blog/index.html` and every discovered section index — six pages now that
 `publications/` exists — each carry their own
-hand-copied `<nav>`; every one must link to home, `#contact`, and all five section directories
+hand-copied `<nav>`; every one must link to home, `#contact`, and all six section directories
 (the check's title still says "5 destinations" from when home + four directories was the whole
-list — the destination set is discovered, so `publications/` joined it automatically), and
+list — the destination set is discovered, so `publications/` and, on 2026-09-08, `thoughts/`
+joined it automatically), and
 every relative href inside that `<nav>` must resolve on disk.
 
 The page list is **discovered, not hardcoded**: any non-hidden top-level directory that ships an
@@ -478,7 +479,7 @@ reads 0 today; the "repair" column is what to keep it at 0.
 | INV-04d | `.post-nav__dir` ∈ {`← Previous`, `Next →`} | 0 | `claude-code-architecture`'s `Related` / `See also` block was deleted in `f5e53fb` (the post is no-nav now, and lost those two links). |
 | INV-06a | every file in `images/` (and the repo root) is referenced | 0 | The 9 template leftovers were deleted 2026-08-26. Confirm with `grep -r` before deleting any future orphan. |
 | INV-10 | `.post-nav__title` matches the target's card title | 0 | Copy the card title from `blog/index.html` verbatim, Thai subtitle included (`73032cb` rewrote the last five). `verify-wiring.py` agrees one-for-one. |
-| INV-13 | `lang` attrs | 0 | Green: the 10 English pages (6 nav-bearing index pages + 4 `books/` detail pages) are `lang="en"`, all **76** posts `lang="th"`. The page-level `lang` never flips for the EN track — that track is `lang="en"` wrappers inside `<main>`, behind the CSS switch. |
+| INV-13 | `lang` attrs | 0 | Green: the 11 English pages (7 nav-bearing index pages + 4 `books/` detail pages) are `lang="en"`, all **93** posts `lang="th"`. The page-level `lang` never flips for the EN track — that track is `lang="en"` wrappers inside `<main>`, behind the CSS switch. |
 | INV-14 | every post has `<meta name="description">` | 0 | All **86** enumerated pages carry one since the 2026-08-26 metadata sweep; INV-27 enforces it at fail level. |
 | INV-15 | footer copyright year uniform **in posts** | 0 | One string, one encoding (the literal `©`, never `&copy;`) on every page since 2026-08-26. The script reports one violation per non-modal cohort. |
 | INV-16 | footer container class uniform | 0 | **76 of 76** posts open with `<footer class="blog-footer">` (the last three `post-footer` posts converged in `08cfd95`). A second cohort is reported as new. |
@@ -487,7 +488,7 @@ reads 0 today; the "repair" column is what to keep it at 0.
 | INV-20b | ordinal badge uses one consistent markup form | 0 | All seven use one `.post-hero__tag` line since Phase 3 (2026-08-26). |
 | INV-20c | badge is worded "Post #N" | 0 | `openclaw-memory` wrote `บทที่ 3` until `01332eb`. |
 | INV-22 | every post defines its own `:root` | 0 | Green since `6670480` landed the canonical block (24 tokens then, **29** after the 2026-08-26 re-key) in every file with embedded CSS — **86 pages today plus `style.css`, 87 `:root` blocks**; `index.html` is the one page with none, by design, its CSS living entirely in `style.css` (INV-22b, info-level, is green for the same reason). The 20 AI Transformation posts add a 30th token, `--coral`, *after* the canonical block — the same per-post accent pattern `--docker-blue` uses. Baseline entries deleted — a post that loses its `:root` is now reported as new. |
-| INV-24 | the 6 nav-bearing pages agree on the footer `©` year and all carry a meta description | 0 | INV-14/15/16 iterate `site.posts` only, so `blog/index.html` and the landing pages sat outside every footer/meta check — which is how a `© 2025` footer survived on `blog/index.html` while the others read 2026. The year is checked for **consistency** (modal year wins), never against a hardcoded literal, so 1 January is not a linter event. |
+| INV-24 | the 7 nav-bearing pages agree on the footer `©` year and all carry a meta description | 0 | INV-14/15/16 iterate `site.posts` only, so `blog/index.html` and the landing pages sat outside every footer/meta check — which is how a `© 2025` footer survived on `blog/index.html` while the others read 2026. The year is checked for **consistency** (modal year wins), never against a hardcoded literal, so 1 January is not a linter event. |
 
 Full drift inventory with counts and the reason each cohort exists: `references/drift-budget.md`.
 

@@ -504,15 +504,16 @@ def _(ctx):
             out.append(Finding("L2", FAIL, HIGH, "llms.txt",
                                "line %d: %s resolves to no file on disk (%s)"
                                % (i, url, rel)))
-    # Series representation: the four series-title h2s on blog/index.html.
+    # Series representation: every series-title h2 on every catalog page
+    # (blog/index.html and, since 2026-09-08, thoughts/index.html).
     text = htmlmod.unescape(content)
-    for m in re.finditer(r'<h2 class="series-title">(.*?)</h2>',
-                         ctx.text("blog/index.html")):
-        series = clean_text(m.group(1))
-        if series.lower() not in text.lower():
-            out.append(Finding("L2", FAIL, HIGH, "llms.txt",
-                               "series %r (blog/index.html) appears nowhere "
-                               "in llms.txt" % series))
+    for rel in ctx.site.catalogs:
+        for m in re.finditer(r'<h2 class="series-title">(.*?)</h2>', ctx.text(rel)):
+            series = clean_text(m.group(1))
+            if series.lower() not in text.lower():
+                out.append(Finding("L2", FAIL, HIGH, "llms.txt",
+                                   "series %r (%s) appears nowhere in llms.txt"
+                                   % (series, rel)))
     return out
 
 

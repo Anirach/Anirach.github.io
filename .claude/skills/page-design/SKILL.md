@@ -30,8 +30,8 @@ to touch.
                            its CSS is all style.css. It is NOT the "only page with
                            a <script>": there is no executable script anywhere —
                            see "Zero JavaScript" in CLAUDE.md and INV-38.)
-  + 5 LISTING pages       blog/index.html, books/index.html, news/index.html,
-                           projects/index.html, publications/index.html
+  + 6 LISTING pages       blog/index.html, thoughts/index.html (2026-09-08), books/index.html,
+                           news/index.html, projects/index.html, publications/index.html
                                                 — .nav chrome, 16px/1.7, 1200px
   + 404.html              (root; LISTING chrome and type, but NOT a section index —
                            it is noindex, carries no social block, and is excluded
@@ -62,18 +62,19 @@ reads "convert the island files" is finished history, not a plan.
 
 **The LISTING family is new** (Task 8, commits `fd63657` / `3f3d049` / `5447407`; `publications/`
 split out of `books/` on 2026-08-23, `a648a85`) and it is
-internally consistent: all five pages use `.nav` / `.nav__inner` / `.nav__links` / `.nav__logo` /
+internally consistent: all six pages use `.nav` / `.nav__inner` / `.nav__links` / `.nav__logo` /
 `.nav__right`, `16px`/`1.7` body type, a `max-width: 1200px` container, one `clamp()` hero title,
-and the pure-CSS `.nav__toggle` checkbox + `.nav__burger` label mobile menu (takeover at **800px**
-since `5178252`, byte-identical across all 9 section-chrome pages — the 5 listing + 4 detail;
-`404.html` carries the same block, which is why the 800px count is 10).
+and the pure-CSS `.nav__toggle` checkbox + `.nav__burger` label mobile menu (takeover at **950px**
+since 2026-09-08 — 800px from `5178252` until the nav grew to seven links, Tutorials + Thoughts in
+place of Blog, and the bar measured 921px; byte-identical across all 10 section-chrome pages — the
+6 listing + 4 detail; `404.html` carries the same block, which is why the 950px count is 11).
 Copy a sibling listing
 page when you add another; do not give a listing page `.blog-nav` chrome and do not give a post
 `.nav` chrome.
 
 **The DETAIL family is newer still** (`ea3c8e8`, 2026-08-23): a per-subject page inside a section
 directory — today the four books under `books/` (`one-day-of-light.html` joined in `7daf3a4`). A DETAIL page shares the LISTING chrome and type
-wholesale (same `.nav`, same 800px takeover block, `16px`/`1.7`, 1200px container, `clamp()` hero
+wholesale (same `.nav`, same 950px takeover block, `16px`/`1.7`, 1200px container, `clamp()` hero
 title), wraps its content in `<main id="main">`, and is reached from its own section index via a
 whole-card anchor (`<a class="card card--feature" href="<slug>.html"
 aria-labelledby="card-title-<slug>">` — the `aria-labelledby` scopes the card's accessible name to
@@ -334,8 +335,8 @@ The 2 files with no `.post-body h2/h3/h4` rules at all are `openclaw-memory-arch
 
 **The extension work this section used to schedule is DONE.** The 11 island files were converted in
 `662e966`; all 83 posts now carry the house body type, the canonical `clamp()` title, and the
-Inter + Sarabun webfont pair. The 5 LISTING pages and the 4 DETAIL pages are `16px` / `1.7` and
-that is deliberate and uniform across all nine — leave it. The five font stacks this section listed
+Inter + Sarabun webfont pair. The 6 LISTING pages and the 4 DETAIL pages are `16px` / `1.7` and
+that is deliberate and uniform across all ten — leave it. The five font stacks this section listed
 for retirement (`'SF Pro Display'`, `'Segoe UI', Tahoma, …`, bare `-apple-system`,
 `'Inter', 'Noto Sans Thai', system-ui`, and `openclaw-production`'s Inter-without-a-link) are at
 **0 occurrences**; that list is now history, kept only so the anti-pattern behind it stays legible.
@@ -348,31 +349,30 @@ for retirement (`'SF Pro Display'`, `'Segoe UI', Tahoma, …`, bare `-apple-syst
 |---|---|---|
 | reading measure (`.post-body`) | **720px** | 279 literals (the two minified posts use 760px) |
 | wide container (`.blog-nav__inner`) | **860px** | 151 |
-| listing/detail container (5 LISTING + 4 DETAIL + 404) | **1200px** | 27 |
+| listing/detail container (6 LISTING + 4 DETAIL + 404) | **1200px** | 22 |
 | hero cover box | **380px** max-width (75/75) and `border-radius: var(--radius-lg, 16px)` (75/75) — the 420/480/520/560 forks are gone | one value, hold it |
 | listing card image | `.card__image`: width 100%; aspect-ratio 16/10 (96px square in the phone row-card override) | `grep -n 'card__image' blog/index.html` |
 | tablet breakpoint | **768px** | 63 (61 spaced + 2 unspaced) |
 | phone breakpoint | **600px** | 256 |
-| section-chrome nav takeover | **800px** | 10 — the 5 LISTING + 4 DETAIL pages + `404.html`, nav rules only (`5178252`) |
-| landing nav takeover | **1080px** | 1 — `style.css` only (`5178252`) |
+| section-chrome nav takeover | **950px** | 11 — the 6 LISTING + 4 DETAIL pages + `404.html`, nav rules only (`5178252`; 800px until 2026-09-08, when the 7-link nav measured 921px) |
+| landing nav takeover | **1140px** | 1 — `style.css` only (`5178252`; 1080px until 2026-09-08 — nine links at a 1.5rem gap need 1103px) |
 | wide breakpoint | **1024px** | 1 — `style.css`, landing grids only |
 | retire | `480px` (2), `900px` (5) | fold into 600px / 768px |
 
 ```bash
-grep -ho '@media[^{]*' index.html style.css 404.html blog/*.html books/*.html news/index.html projects/index.html publications/index.html \
+grep -ho '@media[^{]*' index.html style.css 404.html blog/*.html books/*.html news/index.html projects/index.html publications/index.html thoughts/index.html \
   | sed 's/[[:space:]]*$//' | sort | uniq -c | sort -rn
 ```
-→ `256 (max-width: 600px)`, `174 (prefers-reduced-motion: reduce)`, `61 (max-width: 768px)`,
-`10 (max-width: 800px)`, `5 (max-width: 900px)`, `2 (max-width:768px)`, `2 480px`,
-`1 (prefers-reduced-motion: no-preference)`, `1 1080px`, `1 1024px`. The `500px` block is gone.
+→ `309 (max-width: 600px)`, `210 (prefers-reduced-motion: reduce)`, `60 (max-width: 768px)`, `11 (max-width: 950px)`, `5 (max-width: 900px)`, `3 (max-width: 1024px)`, `2 (max-width:768px)`, `1 (prefers-reduced-motion: no-preference)`, `1 (max-width: 1140px)`, `1 (max-width: 480px)` (re-measured 2026-09-08). The `500px` block is gone.
 
 Two of the 768px hits are still unspaced (`max-width:768px`) — match the spaced form in new code so
 grep-based sweeps find them. The reduced-motion blocks are the `e8da9da` a11y sweep, now at 174
 occurrences across 87 files because several files declare it more than once; they are not layout
-breakpoints. The 10 `800px` blocks are the section-chrome mobile-nav takeover (9 section pages +
-`404.html`) and the 1 `1080px` block is `style.css`'s — the desktop bar with the 6-link nav last
-fits at 772px on the section-chrome pages, so 768px left a broken 769–771px band (`5178252`); keep
-the takeover block byte-identical across all 9 pages.
+breakpoints. The 11 `950px` blocks are the section-chrome mobile-nav takeover (10 section pages +
+`404.html`) and the 1 `1140px` block is `style.css`'s — the desktop bar with the 7-link nav last
+fits at 921px on the section-chrome pages (772px with six links, when 768px left a broken
+769–771px band, `5178252`; measure in a browser, never estimate, before moving it again); keep
+the takeover block byte-identical across all 11 pages.
 
 **The island measures are gone.** The 1200/1000/900/800px `.container` widths this section used to
 list for conversion (`openclaw-101`, `openclaw-security`, `openclaw-memory`, `beyond-plugins` and
@@ -855,13 +855,16 @@ Then in a real browser on `index.html`: tab once and confirm a visible focus rin
 
    | Counter | Value today |
    |---|---|
-   | `.blog-hero__stat` "N Series" | 5 |
-   | `.blog-hero__stat` "N Articles" | 76 |
+   | `.blog-hero__stat` "N Series" | 6 |
+   | `.blog-hero__stat` "N Articles" | 84 |
+   | `.series-count` `#series-ai-core` | 10 articles |
+   | `.series-count` `#series-hermes-desktop` | 7 articles |
    | `.series-count` `#series-ai-transformation` | 20 articles |
    | `.series-count` `#series-hermes` | 10 articles |
    | `.series-count` `#series-openclaw` | 13 articles |
    | `.series-count` `#series-devops` | 24 articles |
-   | `.series-count` `#series-life` | 9 articles |
+   | six `.series-tile__meta` "N articles · ≈ time" (INV-02g) | generated by `reindex_blog.py` |
+   | `.series-count` `#series-life` — on **`thoughts/index.html`** | 9 essays |
 
    There is no "N Categories" stat any more — it went with the bands (§4). The `.blog-jump` chip
    strip in the hero is an eighth counter site in all but name: each chip's trailing `· N` must
