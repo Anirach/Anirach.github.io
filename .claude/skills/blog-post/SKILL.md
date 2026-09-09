@@ -16,19 +16,21 @@ description: End-to-end recipe for adding, editing, or removing a post in blog/ 
 > `<h2 class="card__title">` against 37 cards that had been `h4` since `635eb94`, silently
 > reporting CLEAN while `check_site.py` independently found 8 stale nav titles.
 >
-> **Last full re-measure: 2026-09-06**, after the 2026-09-03 bilingual sweep (the last 37
+> **Last full re-measure: 2026-09-09** (Wisdom for a Good Life launch: 20 essays on
+> `/thoughts/`, the fifth generated series). Previous full pass 2026-09-06, after the 2026-09-03 bilingual sweep (the last 37
 > posts) and the 2026-09-05 AI Transformation launch (20 posts, built by
 > `scripts/build_series.py`), themselves on top of the 2026-09-01 Life (9) and Hermes (10)
 > launches. Every count in this file and in `references/` was recomputed on that date:
-> **83 posts, 6 series, 94 HTML files on disk (93 enumerated), 61 checks**. Where a count
+> **123 posts, 9 series (6 Tutorials + 3 Thoughts), 135 HTML files on disk (134 enumerated),
+> 62 checks**. Where a count
 > below still reads 37 or 47 it is deliberately describing the corpus at a named past
 > commit — a *present-tense* 37 anywhere in this skill is a bug; report it.
 
-This site has **no build step, no templating, no partials**. Each of the 77 files in
-`blog/` — 76 posts plus `index.html` — embeds its own `<style>`, its own copy of the nav
-markup, and its own footer. (The wider site is 87 HTML files: these 77 plus `index.html`,
-the four section indexes `books/`, `news/`, `projects/`, `publications/`, the four
-`books/*.html` per-book detail pages, and `404.html`.)
+This site has **no build step, no templating, no partials**. Each of the 124 files in
+`blog/` — 123 posts plus `index.html` — embeds its own `<style>`, its own copy of the nav
+markup, and its own footer. (The wider site is 135 HTML files: these 124 plus `index.html`,
+the five section indexes `books/`, `news/`, `projects/`, `publications/`, `thoughts/`, the
+four `books/*.html` per-book detail pages, and `404.html`.)
 Nothing validates the wiring between them. A post is not "a file" — it is a file plus a
 cover plus a share card plus a card plus three counter sites plus its neighbours' nav
 links plus a feed item plus a sitemap entry plus an `llms.txt` line, in **two language
@@ -93,13 +95,14 @@ copy at `assets/post-template.html`; it rotted three sweeps behind and was delet
 | **Hermes Agent in Practice** | `#series-hermes` | 10 | `.series-nav` 10-chip strip, absolute `/blog/<slug>` links | copy `blog/hermes-101.html` |
 | **OpenClaw for Organizations** | `#series-openclaw` | 13 (7 numbered + 6 standalone) | the 7 numbered posts carry the `.series-nav` 7-chip strip; the other 6 carry **no nav at all** | copy `blog/openclaw-skills.html`; read `references/openclaw-series.md` first |
 | **DevOps & Vibe Coding** | `#series-devops` | 24 | `.post-nav` prev/next pair, relative `foo.html` links | `TEMPLATE` — **the default** |
+| **Wisdom for a Good Life** — carded on **`thoughts/index.html`** | `#series-good-life` | 20 | `.series-nav` **grouped** strip — four labelled groups of five (Self · Mind · Work · Others) | **generated** — `python3 scripts/build_series.py --series good-life`; manifest `scripts/series/good-life.json`, skeleton `blog/morning-waking.html` (Sunrise), hero-sub + `.ref-tag--source` rules via `extra_css` |
 | **Working Philosophies** — carded on **`thoughts/index.html`** | `#series-working` | 10 | `.series-nav` flat 10-chip strip | **generated** — `python3 scripts/build_series.py --series working`; manifest `scripts/series/working.json`, skeleton `blog/morning-waking.html` (Sunrise) |
 | **Life Thought & Philosophy** — carded on **`thoughts/index.html`** (2026-09-08), never on the blog index | `#series-life` | 9 | `.series-nav` 9-chip strip, absolute `/blog/<slug>` links; back links `../thoughts/` | copy `blog/morning-waking.html` |
 
-Card sections sum to the total: 10 + 7 + 20 + 10 + 13 + 24 + 10 + 9 = **103**. The nav partition
-(what `verify-wiring.py` prints) is **73 series-nav + 24 post-nav + 6 no-nav = 103** — the 73 being
-10 AI-Core + 7 Hermes Desktop + 20 AI Transformation + 10 Hermes + 10 Working Philosophies + 9 Life
-+ 7 numbered OpenClaw. All 24
+Card sections sum to the total: 10 + 7 + 20 + 10 + 13 + 24 + 20 + 10 + 9 = **123**. The nav partition
+(what `verify-wiring.py` prints) is **93 series-nav + 24 post-nav + 6 no-nav = 123** — the 93 being
+10 AI-Core + 7 Hermes Desktop + 20 AI Transformation + 10 Hermes + 20 Good Life + 10 Working
+Philosophies + 9 Life + 7 numbered OpenClaw. All 24
 `#series-devops` cards carry a `.post-nav` (the chain head `git-branching.html` included,
 since 2026-08-26); the 6 no-nav posts are all `#series-openclaw` cards.
 

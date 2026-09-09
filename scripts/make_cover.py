@@ -3283,6 +3283,577 @@ def wp_carryhome(d, b, c, o):
     circ(d, lx, ly - h * 0.09, h * 0.09, fill=None, outline=c["hif"], w=8)
 
 
+# --------------------------------------------------------------------------
+# Wisdom for a Good Life motifs -- amber on the two dark grounds (2026-09-08).
+# One everyday object per essay, drawn flat, and the amber ink spent ONCE per
+# drawing on the thing the essay is about. No lamps, candles, suns, books or
+# pages: those belong to the Life and Working series that share these grounds.
+# --------------------------------------------------------------------------
+def _gl_table(d, b, c, frac=0.06, w_=5, col=None):
+    """The table or ground line most of these objects stand on."""
+    x0, y0, x1, y1 = b
+    base = y1 - (y1 - y0) * frac
+    d.line([(x0 + (x1 - x0) * 0.03, base), (x1 - (x1 - x0) * 0.03, base)],
+           fill=col or c["ln2"], width=w_)
+    return base
+
+
+def _gl_dashed(d, pts, col, width, dash, gap):
+    """Dashes along a polyline -- the path in gl_boulder."""
+    on, rem = True, dash
+    for (ax, ay), (bx, by) in zip(pts, pts[1:]):
+        L = math.hypot(bx - ax, by - ay)
+        if L == 0:
+            continue
+        ux, uy = (bx - ax) / L, (by - ay) / L
+        t = 0.0
+        while t < L:
+            seg = min(rem, L - t)
+            if on:
+                d.line([(ax + ux * t, ay + uy * t),
+                        (ax + ux * (t + seg), ay + uy * (t + seg))], fill=col, width=width)
+            t += seg
+            rem -= seg
+            if rem <= 0:
+                on = not on
+                rem = dash if on else gap
+
+
+def _gl_mesh(d, box, step, col, width, cut_r=0):
+    """A diamond mesh clipped to `box`: two diagonal families, one line of
+    each through the centre. With cut_r the centre "/" strand is drawn in two
+    pieces leaving a gap of 2*cut_r -- gl_net's one event."""
+    nx0, ny0, nx1, ny1 = box
+    cx, cy = (nx0 + nx1) / 2, (ny0 + ny1) / 2
+    n = int((nx1 - nx0 + ny1 - ny0) / step) + 1
+    for k in range(-n, n + 1):
+        cst = (cx - cy) + k * step                       # "\"  x - y = cst
+        ya, yb = max(ny0, nx0 - cst), min(ny1, nx1 - cst)
+        if yb > ya:
+            d.line([(ya + cst, ya), (yb + cst, yb)], fill=col, width=width)
+        cst = (cx + cy) + k * step                       # "/"  x + y = cst
+        ya, yb = max(ny0, cst - nx1), min(ny1, cst - nx0)
+        if yb > ya:
+            if k == 0 and cut_r:
+                g = cut_r / math.sqrt(2)
+                d.line([(cst - ya, ya), (cx + g, cy - g)], fill=col, width=width)
+                d.line([(cx - g, cy + g), (cst - yb, yb)], fill=col, width=width)
+            else:
+                d.line([(cst - ya, ya), (cst - yb, yb)], fill=col, width=width)
+
+
+def gl_mirror(d, b, c, o):
+    """A round mirror standing on its own foot, a table line under it, one
+    amber point of reflection in the glass and the long faint shadow it
+    throws along the table -- the examined life is a life looked at.  vs
+    dv_quality's magnifier (a handle, a lens, a tick): a mirror stands on a
+    foot; nothing is held."""
+    x0, y0, x1, y1 = b
+    w, h = x1 - x0, y1 - y0
+    base = _gl_table(d, b, c)
+    cx = x0 + w * 0.32
+    r = min(h * 0.34, w * 0.17)
+    cy = base - h * 0.14 - r
+    d.line([(cx - h * 0.16, base), (cx + h * 0.16, base)], fill=c["ln"], width=8)
+    d.line([(cx, base), (cx, cy + r)], fill=c["ln"], width=8)
+    sx0 = cx + r * 0.5
+    d.ellipse([sx0, base - h * 0.03, min(x1 - w * 0.02, sx0 + w * 0.46), base + h * 0.03],
+              fill=c["dimf"])
+    circ(d, cx, cy, r, fill=c["fill"], outline=c["ln"], w=9)
+    circ(d, cx, cy, r * 0.84, fill=None, outline=c["ln2"], w=4)
+    d.arc([cx - r * 0.66, cy - r * 0.66, cx + r * 0.66, cy + r * 0.66], 200, 250,
+          fill=c["ln"], width=6)
+    circ(d, cx + r * 0.24, cy - r * 0.10, h * 0.07, fill=c["hi"])
+
+
+def gl_stamp(d, b, c, o):
+    """A hand stamp lifted off the newest of three prints on a line -- two
+    faded, the fresh one amber -- we are what we repeatedly do.  vs ac_seal
+    (a seal ON a document with ribbons) and gl_mirror's standing glass: the
+    page's only stamp, and the prints are the point."""
+    x0, y0, x1, y1 = b
+    w, h = x1 - x0, y1 - y0
+    base = _gl_table(d, b, c, frac=0.08)
+    sr = h * 0.20
+    for i, fx in enumerate((0.16, 0.42, 0.70)):
+        sx = x0 + w * fx
+        sy = base - sr * 0.40
+        fresh = i == 2
+        d.ellipse([sx - sr * 1.1, sy - sr * 0.40, sx + sr * 1.1, sy + sr * 0.40],
+                  fill=c["hi"] if fresh else None,
+                  outline=None if fresh else c["ln2"], width=5)
+        d.ellipse([sx - sr * 0.5, sy - sr * 0.18, sx + sr * 0.5, sy + sr * 0.18],
+                  fill=None, outline=c["bg"] if fresh else c["ln2"], width=4)
+    sx = x0 + w * 0.70
+    by1 = base - sr * 0.86 - h * 0.10          # stamp base bottom, just lifted
+    bw_ = sr * 1.15
+    d.polygon([(sx - bw_, by1), (sx + bw_, by1), (sx + bw_ * 0.62, by1 - h * 0.14),
+               (sx - bw_ * 0.62, by1 - h * 0.14)], fill=c["core"])
+    hy = by1 - h * 0.14
+    rr(d, (sx - h * 0.035, hy - h * 0.22, sx + h * 0.035, hy), h * 0.03, fill=c["core"])
+    circ(d, sx, hy - h * 0.26, h * 0.075, fill=None, outline=c["ln"], w=8)
+    for k in (-0.55, 0.0, 0.55):
+        d.line([(sx + bw_ * 0.8 * k, by1 + h * 0.035), (sx + bw_ * 0.8 * k, by1 + h * 0.075)],
+               fill=c["hi"], width=4)
+
+def gl_loom(d, b, c, o):
+    """A weaving frame: warp threads hung close and faint, four wefts already
+    woven as pale bars, and the newest weft -- amber, carried by a shuttle --
+    still crossing the warp.  We spin our own fates thread by thread.  vs
+    at_lanes and ac_rails (bare parallel lines): here the lines CROSS, and
+    the page's only shuttle."""
+    x0, y0, x1, y1 = b
+    w, h = x1 - x0, y1 - y0
+    fx0, fx1 = x0 + w * 0.06, x1 - w * 0.06
+    fy0, fy1 = y0 + h * 0.06, y1 - h * 0.06
+    rr(d, (fx0, fy0, fx1, fy0 + h * 0.07), h * 0.02, fill=c["core"])
+    rr(d, (fx0, fy1 - h * 0.07, fx1, fy1), h * 0.02, fill=c["core"])
+    n = 22
+    ix0, ix1 = fx0 + w * 0.03, fx1 - w * 0.03
+    for i in range(n + 1):
+        x = ix0 + (ix1 - ix0) * i / n
+        d.line([(x, fy0 + h * 0.07), (x, fy1 - h * 0.07)], fill=c["ln2"], width=3)
+    wy = fy1 - h * 0.07
+    bh = h * 0.075
+    for k in range(4):
+        y = wy - bh * (k + 1)
+        d.rectangle([ix0, y + bh * 0.2, ix1, y + bh * 0.8], fill=c["fill"])
+    y = wy - bh * 5 + bh * 0.5
+    xe = ix0 + (ix1 - ix0) * 0.64
+    d.line([(ix0, y), (xe, y)], fill=c["hi"], width=7)
+    d.polygon([(xe - h * 0.06, y), (xe + h * 0.02, y - h * 0.045),
+               (xe + h * 0.12, y), (xe + h * 0.02, y + h * 0.045)], fill=c["hi"])
+
+
+def gl_hooks(d, b, c, o):
+    """A key rail: seven hooks in a row, a key hanging from each but one, and
+    the empty hook ringed amber -- wisdom begins with knowing which key you
+    do not have.  The page's only keys: dv_auth draws a padlock, never a
+    key, and hd_drawers has handles, not hooks."""
+    x0, y0, x1, y1 = b
+    w, h = x1 - x0, y1 - y0
+    ry = y0 + h * 0.14
+    rr(d, (x0 + w * 0.02, ry - h * 0.035, x1 - w * 0.02, ry + h * 0.035), h * 0.02,
+       fill=c["core"])
+    n, empty = 7, 4
+    for i in range(n):
+        hx = x0 + w * (0.10 + 0.80 * i / (n - 1))
+        d.line([(hx, ry + h * 0.035), (hx, ry + h * 0.14)], fill=c["ln"], width=6)
+        d.arc([hx - h * 0.05, ry + h * 0.10, hx + h * 0.05, ry + h * 0.20], 0, 180,
+              fill=c["ln"], width=6)
+        if i == empty:
+            circ(d, hx, ry + h * 0.17, h * 0.12, fill=None, outline=c["hi"], w=7)
+            continue
+        ky = ry + h * 0.20
+        br = h * 0.09
+        circ(d, hx, ky + br, br, fill=c["fill"], outline=c["ln"], w=6)
+        sy = ky + br * 2
+        d.line([(hx, sy), (hx, sy + h * 0.36)], fill=c["ln"], width=7)
+        d.line([(hx, sy + h * 0.36), (hx + h * 0.07, sy + h * 0.36)], fill=c["ln"], width=7)
+        d.line([(hx, sy + h * 0.27), (hx + h * 0.05, sy + h * 0.27)], fill=c["ln"], width=7)
+
+
+def gl_door(d, b, c, o):
+    """A door frame, the door swung a hand's width open toward us, amber
+    light filling the gap and spilling in a wedge across the floor -- courage
+    is the door you open anyway.  vs wp_doorwindow (a door AND a window side
+    by side, both shut): one door, ajar, and the page's only light on a
+    floor."""
+    x0, y0, x1, y1 = b
+    w, h = x1 - x0, y1 - y0
+    base = _gl_table(d, b, c)
+    fw = min(w * 0.30, h * 0.62)
+    fx = x0 + w * 0.36
+    fy = y0 + h * 0.06
+    jl, jr = fx - fw / 2, fx + fw / 2
+    d.rectangle([jl, fy, jr, base], fill=c["hif"])
+    lean = fw * 0.62
+    leaf = [(jl, fy), (jl + lean, fy + h * 0.05), (jl + lean, base - h * 0.05), (jl, base)]
+    d.polygon(leaf, fill=c["bg"])
+    d.polygon(leaf, fill=c["fill"], outline=c["ln"], width=7)
+    circ(d, jl + lean - h * 0.06, (fy + base) / 2, h * 0.025, fill=c["core"])
+    rr(d, (jl - h * 0.04, fy - h * 0.04, jr + h * 0.04, base), h * 0.01,
+       fill=None, outline=c["ln"], w=8)
+    d.polygon([(jl + lean, base), (jr, base), (x1 - w * 0.02, base + h * 0.05),
+               (jl + lean + fw * 0.1, base + h * 0.05)], fill=c["hif"])
+
+
+def gl_bowl(d, b, c, o):
+    """One wide bowl and a folded cloth on a table, the water in the bowl a
+    single amber line -- wash the dishes to wash the dishes.  vs gl_cup (a
+    cup with a handle, filled to the brim) and gl_ricebowl (a heap and
+    chopsticks): this bowl is wide, low and plain, and the cloth is the
+    page's."""
+    x0, y0, x1, y1 = b
+    w, h = x1 - x0, y1 - y0
+    base = _gl_table(d, b, c, frac=0.10)
+    bx = x0 + w * 0.34
+    bw_ = min(w * 0.22, h * 0.50)
+    bh_ = h * 0.44
+    rim_y = base - bh_
+    d.chord([bx - bw_, rim_y - bh_ + h * 0.03, bx + bw_, base - h * 0.03], 0, 180,
+            fill=c["fill"], outline=c["ln"], width=7)
+    d.line([(bx - bw_ * 0.3, base), (bx + bw_ * 0.3, base)], fill=c["ln"], width=8)
+    d.ellipse([bx - bw_, rim_y - h * 0.07, bx + bw_, rim_y + h * 0.07],
+              fill=c["dimf"], outline=c["ln"], width=6)
+    d.line([(bx - bw_ * 0.8, rim_y + h * 0.10), (bx + bw_ * 0.8, rim_y + h * 0.10)],
+           fill=c["hi"], width=6)
+    cx0 = x0 + w * 0.62
+    cw = w * 0.28
+    rr(d, (cx0, base - h * 0.22, cx0 + cw, base - h * 0.02), h * 0.04,
+       fill=c["fill"], outline=c["ln"], w=6)
+    d.line([(cx0 + cw * 0.5, base - h * 0.22), (cx0 + cw * 0.5, base - h * 0.02)],
+           fill=c["ln2"], width=4)
+    rr(d, (cx0 + cw * 0.06, base - h * 0.36, cx0 + cw * 0.94, base - h * 0.20), h * 0.04,
+       fill=c["dimf"], outline=c["ln"], w=6)
+
+
+def gl_boulder(d, b, c, o):
+    """A boulder on the road and the road going over it: a dashed amber path
+    arriving from the left, climbing the rock and leaving on the right --
+    the impediment to action advances action.  vs wp_plateau (a flat-topped
+    hill with a figure): a single rock, and the path CLIMBS it."""
+    x0, y0, x1, y1 = b
+    w, h = x1 - x0, y1 - y0
+    base = _gl_table(d, b, c, frac=0.08, w_=6, col=c["ln"])
+    cx = x0 + w * 0.50
+    R = min(h * 0.36, w * 0.13)
+    pts = [(cx - R * 1.35, base), (cx - R * 1.25, base - R * 0.9), (cx - R * 0.6, base - R * 1.55),
+           (cx + R * 0.35, base - R * 1.7), (cx + R * 1.1, base - R * 1.2),
+           (cx + R * 1.4, base - R * 0.4), (cx + R * 1.3, base)]
+    d.polygon(pts, fill=c["fill"], outline=c["ln"], width=7)
+    d.line([(cx - R * 0.5, base - R * 0.9), (cx + R * 0.1, base - R * 0.4)], fill=c["ln2"], width=4)
+    path = [(x0 + w * 0.03, base - h * 0.04), (cx - R * 1.32, base - h * 0.04),
+            (cx - R * 1.12, base - R * 0.98), (cx - R * 0.55, base - R * 1.66),
+            (cx + R * 0.35, base - R * 1.84), (cx + R * 1.18, base - R * 1.28),
+            (cx + R * 1.5, base - R * 0.42), (cx + R * 1.55, base - h * 0.04),
+            (x1 - w * 0.03, base - h * 0.04)]
+    _gl_dashed(d, path, c["hi"], 9, h * 0.06, h * 0.035)
+
+
+def gl_cup(d, b, c, o):
+    """A cup on its saucer filled exactly to the brim -- the amber surface IS
+    the rim -- and beside it the jug, set down, pouring nothing more.
+    Contentment is knowing where the brim is.  vs gl_bowl (wide, low, a
+    cloth beside it): a cup has a handle and a saucer, and the page's only
+    jug."""
+    x0, y0, x1, y1 = b
+    w, h = x1 - x0, y1 - y0
+    base = _gl_table(d, b, c, frac=0.08)
+    cx = x0 + w * 0.40
+    cw = min(w * 0.15, h * 0.32)
+    ch = h * 0.50
+    top = base - h * 0.08 - ch
+    d.ellipse([cx - cw * 2.0, base - h * 0.08, cx + cw * 2.0, base + h * 0.02],
+              fill=c["fill"], outline=c["ln"], width=6)
+    d.polygon([(cx - cw, top), (cx + cw, top), (cx + cw * 0.85, base - h * 0.08),
+               (cx - cw * 0.85, base - h * 0.08)], fill=c["hif"], outline=c["ln"], width=7)
+    d.ellipse([cx - cw, top - h * 0.06, cx + cw, top + h * 0.06],
+              fill=c["hi"], outline=c["ln"], width=6)
+    d.arc([cx + cw * 0.7, top + h * 0.08, cx + cw * 1.75, top + ch * 0.68], 270, 90,
+          fill=c["ln"], width=8)
+    jx = x0 + w * 0.78
+    jw = min(w * 0.11, h * 0.24)
+    jh = h * 0.60
+    rr(d, (jx - jw, base - jh, jx + jw, base), jw * 0.5, fill=c["fill"], outline=c["ln"], w=7)
+    d.polygon([(jx - jw, base - jh + h * 0.02), (jx - jw - h * 0.08, base - jh - h * 0.03),
+               (jx - jw + h * 0.03, base - jh + h * 0.10)], fill=c["core"])
+    d.arc([jx + jw * 0.55, base - jh + h * 0.10, jx + jw * 1.7, base - jh * 0.45], 270, 90,
+          fill=c["ln"], width=8)
+
+
+def gl_fence(d, b, c, o):
+    """A low fence across the middle of the field, the ground inside it lit
+    amber, the ground beyond left dark with two dim things out there --
+    some things are up to us, and a fence says which.  vs ac_rails (rails
+    with gate posts) and at_rails (vertical tiles): posts AND rails, on a
+    ground, and the lit thing is the FIELD."""
+    x0, y0, x1, y1 = b
+    w, h = x1 - x0, y1 - y0
+    base = _gl_table(d, b, c, frac=0.10, w_=6, col=c["ln"])
+    fx = x0 + w * 0.56
+    d.rectangle([x0 + w * 0.03, base - h * 0.16, fx, base], fill=c["hif"])
+    n = 6
+    ph = h * 0.48
+    xs = [x0 + w * (0.06 + 0.50 * i / (n - 1)) for i in range(n)]
+    for ry in (base - ph * 0.78, base - ph * 0.42):
+        d.line([(xs[0], ry), (xs[-1], ry)], fill=c["ln"], width=7)
+    for px in xs:
+        rr(d, (px - h * 0.03, base - ph, px + h * 0.03, base), h * 0.01, fill=c["core"])
+    d.line([(fx + w * 0.06, base - h * 0.30), (x1 - w * 0.02, base - h * 0.30)],
+           fill=c["ln2"], width=4)
+    circ(d, x0 + w * 0.76, base - h * 0.14, h * 0.05, fill=None, outline=c["ln2"], w=4)
+    circ(d, x0 + w * 0.90, base - h * 0.20, h * 0.04, fill=None, outline=c["ln2"], w=4)
+
+
+def gl_footprints(d, b, c, o):
+    """A line of footprints crossing the field, left and right alternating,
+    the first one amber and the rest paling as they go -- how we spend our
+    days is how we spend our lives.  vs wp_stand (two shoes standing still
+    on a tile): these are PRINTS, walking, and only the first is lit."""
+    x0, y0, x1, y1 = b
+    w, h = x1 - x0, y1 - y0
+    n = 7
+    pw, ph = h * 0.10, h * 0.24
+    for i in range(n):
+        px = x0 + w * (0.08 + 0.84 * i / (n - 1))
+        py = (y0 + y1) / 2 + (h * 0.14 if i % 2 else -h * 0.14) + h * 0.05
+        first = i == 0
+        col = c["hi"] if first else (255, 255, 255, 215 - i * 22)
+        d.rounded_rectangle([px - pw / 2, py - ph * 0.15, px + pw / 2, py + ph * 0.5],
+                            radius=pw * 0.5, fill=col if first else None, outline=col, width=5)
+        d.ellipse([px - pw * 0.55, py - ph * 0.55, px + pw * 0.55, py - ph * 0.12],
+                  fill=col if first else None, outline=col, width=5)
+
+
+def gl_horizon(d, b, c, o):
+    """A flat horizon, one small standing mark on it, and its long amber
+    shadow reaching most of the way across the ground -- a why to live for
+    is what lets a small figure cast a long line.  vs gl_sundial (a shadow
+    off a gnomon on a dial): no dial; a figure on open ground."""
+    x0, y0, x1, y1 = b
+    w, h = x1 - x0, y1 - y0
+    hy = y0 + h * 0.62
+    d.line([(x0 + w * 0.02, hy), (x1 - w * 0.02, hy)], fill=c["ln"], width=6)
+    fx = x0 + w * 0.22
+    d.polygon([(fx, hy - h * 0.02), (fx, hy + h * 0.06), (x1 - w * 0.05, hy + h * 0.16),
+               (x1 - w * 0.05, hy + h * 0.10)], fill=c["hif"])
+    d.line([(fx, hy + h * 0.02), (x1 - w * 0.05, hy + h * 0.13)], fill=c["hi"], width=5)
+    rr(d, (fx - h * 0.045, hy - h * 0.34, fx + h * 0.045, hy), h * 0.045, fill=c["core"])
+    circ(d, fx, hy - h * 0.42, h * 0.06, fill=c["core"])
+    d.line([(x0 + w * 0.55, hy - h * 0.12), (x1 - w * 0.02, hy - h * 0.12)], fill=c["ln2"], width=3)
+
+
+def gl_bucket(d, b, c, o):
+    """A carrying pole bowed under two water buckets, the water in each an
+    amber surface and one bucket fuller than the other -- carry water, chop
+    wood.  The page's only bowed line; hd_lifebuoy's ring and gl_cup's jug
+    are neither."""
+    x0, y0, x1, y1 = b
+    w, h = x1 - x0, y1 - y0
+    top = y0 + h * 0.10
+    px0, px1 = x0 + w * 0.08, x1 - w * 0.08
+    d.line(_hd_bez((px0, top), ((px0 + px1) / 2, top + h * 0.20), (px1, top)),
+           fill=c["ln"], width=10)
+    mx = (px0 + px1) / 2
+    rr(d, (mx - h * 0.09, top + h * 0.06, mx + h * 0.09, top + h * 0.13), h * 0.02, fill=c["core"])
+    for bx, frac in ((px0 + w * 0.06, 0.55), (px1 - w * 0.06, 0.80)):
+        ry0 = top + h * 0.02
+        bw_ = min(w * 0.10, h * 0.22)
+        by0 = ry0 + h * 0.22
+        by1 = y1 - h * 0.06
+        d.line([(bx, ry0), (bx - bw_ * 0.9, by0)], fill=c["ln2"], width=4)
+        d.line([(bx, ry0), (bx + bw_ * 0.9, by0)], fill=c["ln2"], width=4)
+        d.polygon([(bx - bw_, by0), (bx + bw_, by0), (bx + bw_ * 0.8, by1), (bx - bw_ * 0.8, by1)],
+                  fill=c["fill"], outline=c["ln"], width=7)
+        wy = by1 - (by1 - by0) * frac
+        hw = bw_ * (0.8 + 0.2 * frac)
+        d.polygon([(bx - hw, wy), (bx + hw, wy), (bx + bw_ * 0.8, by1), (bx - bw_ * 0.8, by1)],
+                  fill=c["hif"])
+        d.line([(bx - hw, wy), (bx + hw, wy)], fill=c["hi"], width=6)
+        d.line([(bx - bw_ * 1.05, by0), (bx + bw_ * 1.05, by0)], fill=c["ln"], width=7)
+
+
+def gl_ladder(d, b, c, o):
+    """A ladder leaning on a wall, one rung snapped in two, and an amber foot
+    planted on the rung above the break -- fail again, fail better.  vs
+    hm_ladder (a ladder as a level scale, every rung whole): the page's only
+    broken rung."""
+    x0, y0, x1, y1 = b
+    w, h = x1 - x0, y1 - y0
+    base = _gl_table(d, b, c, frac=0.05)
+    lean = w * 0.22
+    lx = x0 + w * 0.30
+    gap = min(w * 0.14, h * 0.30)
+    top = y0 + h * 0.04
+    for dx in (0, gap):
+        d.line([(lx + dx, base), (lx + dx + lean, top)], fill=c["ln"], width=9)
+    n, broken = 5, 2
+    for i in range(n):
+        t = (i + 1) / (n + 1)
+        ax = lx + lean * t
+        ay = base - (base - top) * t
+        if i == broken:
+            d.line([(ax, ay), (ax + gap * 0.38, ay + h * 0.09)], fill=c["ln"], width=8)
+            d.line([(ax + gap, ay), (ax + gap * 0.62, ay + h * 0.09)], fill=c["ln"], width=8)
+        else:
+            d.line([(ax, ay), (ax + gap, ay)], fill=c["ln"], width=8)
+        if i == broken + 1:
+            fx = ax + gap * 0.45
+            rr(d, (fx - h * 0.09, ay - h * 0.10, fx + h * 0.11, ay - h * 0.005), h * 0.035,
+               fill=c["hi"])
+            rr(d, (fx - h * 0.04, ay - h * 0.30, fx + h * 0.04, ay - h * 0.08), h * 0.02,
+               fill=c["hi"])
+    wx = lx + gap + lean + w * 0.03
+    d.line([(wx, y0 + h * 0.02), (wx, base)], fill=c["ln2"], width=4)
+
+
+def gl_pebble(d, b, c, o):
+    """One smooth pebble alone on a wide field, three raked arcs behind it
+    and nothing else -- when there is nothing left to take away.  The
+    emptiest drawing on the page by design; vs the lp_* and wp_* objects
+    nothing here stands, burns or points."""
+    x0, y0, x1, y1 = b
+    w, h = x1 - x0, y1 - y0
+    base = _gl_table(d, b, c, frac=0.12, w_=4)
+    cx = x0 + w * 0.40
+    pr = h * 0.20
+    gy = base - pr * 0.25
+    for r_ in (2.0, 3.0, 4.0):
+        rx_, ry_ = pr * r_, pr * r_ * 0.28
+        d.arc([cx - rx_, gy - ry_, cx + rx_, gy + ry_], 190, 350, fill=c["ln2"], width=3)
+    d.ellipse([cx - pr * 1.35, base - pr * 1.25, cx + pr * 1.35, base + pr * 0.05],
+              fill=c["fill"], outline=c["ln"], width=7)
+    d.arc([cx - pr * 0.9, base - pr * 1.0, cx + pr * 0.5, base - pr * 0.2], 200, 300,
+          fill=c["hi"], width=7)
+
+
+def gl_ricebowl(d, b, c, o):
+    """A rice bowl on its foot, the rice heaped white above the rim and a
+    pair of amber chopsticks laid across it -- coarse rice, water, and joy
+    in them.  vs gl_bowl (empty, water-lined, a cloth beside it) and gl_cup:
+    the heap and the chopsticks are the page's."""
+    x0, y0, x1, y1 = b
+    w, h = x1 - x0, y1 - y0
+    base = _gl_table(d, b, c, frac=0.08)
+    bx = x0 + w * 0.40
+    bw_ = min(w * 0.18, h * 0.42)
+    bh_ = h * 0.40
+    rim_y = base - bh_
+    hh = bh_ - h * 0.05
+    rr(d, (bx - bw_ * 0.32, base - h * 0.05, bx + bw_ * 0.32, base), h * 0.01, fill=c["core"])
+    d.chord([bx - bw_, rim_y - hh, bx + bw_, rim_y + hh], 0, 180,
+            fill=c["fill"], outline=c["ln"], width=7)
+    d.chord([bx - bw_ * 0.92, rim_y - h * 0.26, bx + bw_ * 0.92, rim_y + h * 0.10], 180, 360,
+            fill=c["core"])
+    d.ellipse([bx - bw_, rim_y - h * 0.07, bx + bw_, rim_y + h * 0.07],
+              fill=None, outline=c["ln"], width=6)
+    for k in (0, 1):
+        ox = k * h * 0.05
+        d.line([(bx - bw_ * 0.6 + ox, rim_y - h * 0.02), (x0 + w * 0.80 + ox, y0 + h * 0.10)],
+               fill=c["hi"], width=7)
+
+
+def gl_net(d, b, c, o):
+    """A rope net, diamond mesh, one strand cut through the middle and its
+    two frayed ends lit amber -- kindness is what holds when a strand goes.
+    vs at_federated's node graph and dv_net's topology: a regular MESH, and
+    the one event in it is a break."""
+    x0, y0, x1, y1 = b
+    w, h = x1 - x0, y1 - y0
+    box = (x0 + w * 0.04, y0 + h * 0.06, x1 - w * 0.04, y1 - h * 0.06)
+    step = h * 0.34
+    cut = h * 0.13
+    _gl_mesh(d, box, step, c["ln2"], 4, cut_r=cut)
+    rr(d, (box[0], box[1], box[2], box[3]), h * 0.02, fill=None, outline=c["ln"], w=6)
+    cx, cy = (box[0] + box[2]) / 2, (box[1] + box[3]) / 2
+    g = cut / math.sqrt(2)
+    for sx, sy, dx, dy in ((cx + g, cy - g, 1, -1), (cx - g, cy + g, -1, 1)):
+        circ(d, sx, sy, h * 0.03, fill=c["hi"])
+        d.line([(sx, sy), (sx - dx * h * 0.02, sy + dy * h * 0.09)], fill=c["hi"], width=4)
+        d.line([(sx, sy), (sx + dx * h * 0.09, sy - dy * h * 0.02)], fill=c["hi"], width=4)
+
+
+def gl_twochairs(d, b, c, o):
+    """Two chairs in profile facing each other across a small gap, their
+    seats amber -- the friendship that is two people sitting down.  vs
+    hd_roundtable (a table ringed with seats, seen from above): profile, no
+    table, and exactly two."""
+    x0, y0, x1, y1 = b
+    w, h = x1 - x0, y1 - y0
+    base = _gl_table(d, b, c)
+    sw = min(w * 0.16, h * 0.36)
+    seat_y = base - h * 0.36
+
+    def chair(cx, face):
+        for k in (-0.42, 0.42):
+            d.line([(cx + k * sw, seat_y), (cx + k * sw, base)], fill=c["ln"], width=8)
+        bxp = cx - face * sw * 0.46
+        d.line([(bxp, seat_y), (bxp, y0 + h * 0.06)], fill=c["ln"], width=9)
+        d.line([(bxp, y0 + h * 0.06), (bxp + face * h * 0.10, y0 + h * 0.06)], fill=c["ln"], width=9)
+        d.line([(bxp, seat_y - h * 0.20), (bxp + face * h * 0.06, seat_y - h * 0.20)],
+               fill=c["ln2"], width=5)
+        rr(d, (cx - sw / 2, seat_y - h * 0.05, cx + sw / 2, seat_y + h * 0.02), h * 0.02,
+           fill=c["hi"])
+
+    chair(x0 + w * 0.30, +1)
+    chair(x1 - w * 0.30, -1)
+
+
+def gl_twocircles(d, b, c, o):
+    """Two equal circles that touch at exactly one point, that point amber,
+    each keeping its own centre -- two solitudes that border and greet each
+    other.  vs hm_bounded (one ring inside another) and at_federated (rings
+    joined by lines): tangent, equal, and joined by nothing but the touch."""
+    x0, y0, x1, y1 = b
+    w, h = x1 - x0, y1 - y0
+    cy = (y0 + y1) / 2
+    cx = (x0 + x1) / 2
+    r = min(h * 0.44, w * 0.21)
+    for k in (-1, 1):
+        circ(d, cx + k * r, cy, r, fill=c["fill"] if k < 0 else c["dimf"], outline=c["ln"], w=9)
+        circ(d, cx + k * r, cy, h * 0.025, fill=c["ln2"])
+    circ(d, cx, cy, h * 0.06, fill=c["hi"])
+
+
+def gl_glass(d, b, c, o):
+    """A tall glass of water with the sediment settling -- most of it
+    already amber on the bottom, a few grains still suspended, the water
+    above going clear -- and the spoon set down beside it.  The best remedy
+    for anger is delay.  vs gl_cup (filled to a brim) and dv_db's cylinders:
+    a glass is clear, and what is in it is falling."""
+    x0, y0, x1, y1 = b
+    w, h = x1 - x0, y1 - y0
+    base = _gl_table(d, b, c)
+    gx = x0 + w * 0.38
+    gw = min(w * 0.12, h * 0.26)
+    top = y0 + h * 0.04
+    d.polygon([(gx - gw, top), (gx + gw, top), (gx + gw * 0.86, base), (gx - gw * 0.86, base)],
+              fill=c["dimf"], outline=c["ln"], width=7)
+    wy = top + h * 0.10
+    d.line([(gx - gw * 0.97, wy), (gx + gw * 0.97, wy)], fill=c["ln2"], width=4)
+    for i in range(70):                     # deterministic scatter, no random import
+        u = (math.sin(i * 12.9898) * 43758.5453) % 1.0
+        v = (math.sin(i * 78.233) * 24634.6345) % 1.0
+        t = u ** 2.6
+        yy = base - h * 0.02 - t * (base - wy - h * 0.05)
+        xx = gx + (v * 2 - 1) * gw * 0.78
+        circ(d, xx, yy, h * (0.011 + 0.012 * (1 - t)), fill=c["hi"] if t < 0.35 else c["hif"])
+    sx = x0 + w * 0.60
+    d.line([(sx, base - h * 0.035), (x1 - w * 0.06, base - h * 0.035)], fill=c["ln"], width=7)
+    d.ellipse([sx - h * 0.16, base - h * 0.085, sx + h * 0.02, base + h * 0.005],
+              fill=c["fill"], outline=c["ln"], width=6)
+
+
+def gl_sundial(d, b, c, o):
+    """A sundial: the dial plate on its plinth, hour ticks round its edge, a
+    solid gnomon, and the amber shadow it throws across the plate and off it
+    -- think of yourself as dead; now live what is left.  vs ac_gauge (an
+    arc with a needle) and gl_horizon (a figure's shadow): the plate, the
+    ticks and the gnomon are the page's."""
+    x0, y0, x1, y1 = b
+    w, h = x1 - x0, y1 - y0
+    cx = x0 + w * 0.40
+    cy = y0 + h * 0.62
+    rx = min(w * 0.30, h * 0.72)
+    ry = rx * 0.36
+    d.line([(cx - rx * 1.3, cy + ry + h * 0.10), (x1 - w * 0.02, cy + ry + h * 0.10)],
+           fill=c["ln2"], width=5)
+    d.polygon([(cx - rx * 0.30, cy + ry * 0.5), (cx + rx * 0.30, cy + ry * 0.5),
+               (cx + rx * 0.42, cy + ry + h * 0.10), (cx - rx * 0.42, cy + ry + h * 0.10)],
+              fill=c["fill"], outline=c["ln"], width=5)
+    d.ellipse([cx - rx, cy - ry, cx + rx, cy + ry], fill=c["fill"], outline=c["ln"], width=7)
+    for k in range(13):
+        a = math.pi * k / 12
+        px, py = cx - rx * math.cos(a), cy + ry * math.sin(a)
+        qx, qy = cx - rx * 0.86 * math.cos(a), cy + ry * 0.86 * math.sin(a)
+        d.line([(px, py), (qx, qy)], fill=c["ln2"], width=4)
+    d.polygon([(cx, cy), (cx + rx * 0.10, cy - ry * 0.35), (x1 - w * 0.02, cy + ry * 0.55),
+               (x1 - w * 0.02, cy + ry * 0.95)], fill=c["hif"])
+    d.line([(cx, cy), (x1 - w * 0.04, cy + ry * 0.75)], fill=c["hi"], width=5)
+    d.polygon([(cx, cy), (cx, cy - h * 0.42), (cx - rx * 0.55, cy)], fill=c["core"])
+
+
 MOTIFS = {
     "oc_os": oc_os, "oc_team": oc_team, "oc_memory": oc_memory,
     "oc_security": oc_security, "oc_integrations": oc_integrations,
@@ -3326,6 +3897,14 @@ MOTIFS = {
     "ac_seams": ac_seams, "ac_manifest": ac_manifest,
     "ac_gauge": ac_gauge, "ac_loop": ac_loop, "ac_seal": ac_seal,
     "ac_rails": ac_rails, "ac_scale": ac_scale, "ac_dial": ac_dial,
+    "gl_mirror": gl_mirror, "gl_stamp": gl_stamp, "gl_loom": gl_loom,
+    "gl_hooks": gl_hooks, "gl_door": gl_door, "gl_bowl": gl_bowl,
+    "gl_boulder": gl_boulder, "gl_cup": gl_cup, "gl_fence": gl_fence,
+    "gl_footprints": gl_footprints, "gl_horizon": gl_horizon,
+    "gl_bucket": gl_bucket, "gl_ladder": gl_ladder, "gl_pebble": gl_pebble,
+    "gl_ricebowl": gl_ricebowl, "gl_net": gl_net,
+    "gl_twochairs": gl_twochairs, "gl_twocircles": gl_twocircles,
+    "gl_glass": gl_glass, "gl_sundial": gl_sundial,
 }
 
 

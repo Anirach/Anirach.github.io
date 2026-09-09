@@ -2,9 +2,10 @@
 """Draw images/og-thoughts.jpg — the 1200x630 share card for /thoughts/.
 
 The Thoughts catalog (2026-09-08) is the one section page whose share card is
-neither the generic site card nor a post's own: it is the sunrise of *One Day of
-Light* — the Sunrise ground every Life essay's hero uses, a gold sun on the
-horizon, and the section's name. Same visual language as scripts/make_cover.py
+neither the generic site card nor a post's own: the Sunrise ground every
+essay hero on the page uses, a gold sun on the horizon, and the section's
+name. Since 2026-09-09 the page carries three series (39 essays), so the type
+names the section, not one book. Same visual language as scripts/make_cover.py
 (house tokens only, Inter + Sarabun from scripts/fonts), written as its own
 script because it is one card, not a spec table.
 
@@ -92,15 +93,14 @@ def main():
 
     # --- type, left column
     x = 84
-    eyebrow = "THOUGHTS · LIFE & PHILOSOPHY"
+    eyebrow = "THOUGHTS · LIFE & WORK"
     d.text((x, 118), eyebrow, font=font(26, "SemiBold"), fill=GOLD_DARK)
     d.line((x, 162, x + 96, 162), fill=GOLD, width=4)
-    title_f = font(92, "Black")
-    d.text((x, 190), "One Day", font=title_f, fill=NAVY)
-    d.text((x, 290), "of Light", font=title_f, fill=NAVY)
-    d.text((x, 410), "Nine essays on living, working, and what remains",
-           font=font(30, "Regular"), fill=SLATE)
-    d.text((x, 478), "แสงของวันหนึ่ง — ความเรียงเก้าบท ว่าด้วยชีวิต การงาน และสิ่งที่ตกผลึกภายใน",
+    title_f = font(112, "Black")
+    d.text((x, 196), "Thoughts", font=title_f, fill=NAVY)
+    d.text((x, 356), "Thirty-nine essays — wisdom from famous quotes,", font=font(30, "Regular"), fill=SLATE)
+    d.text((x, 398), "one working week, and one whole day of a life", font=font(30, "Regular"), fill=SLATE)
+    d.text((x, 496), "ความเรียงสามชุด ว่าด้วยชีวิต การงาน และการอยู่ให้ดี — อ่านฟรีสองภาษา",
            font=thai(30), fill=SLATE)
     d.text((x, 548), "Anirach Mingkhwan · anirach.com/thoughts", font=font(24, "Medium"), fill=NAVY)
 

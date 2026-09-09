@@ -25,7 +25,7 @@ self-consistent families**, and every design decision starts by classifying the 
 to touch.
 
 ```
-87 HTML files
+135 HTML files
   = index.html            (landing — the only page with no embedded <style>;
                            its CSS is all style.css. It is NOT the "only page with
                            a <script>": there is no executable script anywhere —
@@ -36,14 +36,14 @@ to touch.
   + 404.html              (root; LISTING chrome and type, but NOT a section index —
                            it is noindex, carries no social block, and is excluded
                            from sitemap.xml. check_site.py does not enumerate it,
-                           which is why the enumerated total is 86 against a tree of
-                           87.)
+                           which is why the enumerated total is 134 against a tree of
+                           135.)
   + 4 DETAIL pages        books/three-old-men.html, books/a-pocketful-of-questions.html,
                            books/the-thirteenth-seal.html, books/one-day-of-light.html
                            — same .nav chrome and type
                            as LISTING, one subject per page, carded from books/index.html
                            (check_site.py INV-26 enforces that link)
-  + 76 posts in blog/     = 76 HOUSE. All of them. The ISLAND family is retired
+  + 123 posts in blog/    = 123 HOUSE. All of them. The ISLAND family is retired
                            (662e966, "Phase 3: convert the 11 island posts to house
                            chrome, content preserved"); obsidian-ai-jarvis is no
                            longer a hybrid either.
@@ -51,8 +51,10 @@ to touch.
 
 ```bash
 find . -name '*.html' -not -path './.git/*' -not -path './.claude/*' \
-     -not -path './.bilingual/*' | wc -l                                  # → 87
-ls blog/*.html | wc -l                                                    # → 77 (76 posts + index)
+     -not -path './.bilingual/*' -not -path './.covers/*' \
+     -not -path './.playwright-mcp/*' -not -path './docs/*' \
+     -not -path './UserGiven/*' | wc -l                                   # → 135
+ls blog/*.html | wc -l                                                    # → 124 (123 posts + index)
 for f in blog/*.html; do grep -q 'class="blog-nav"' "$f" || basename "$f"; done # → index.html only
 ```
 
@@ -83,7 +85,7 @@ exists that its index never links, or if the index links a same-dir `.html` that
 Adding a book = one new `books/<slug>.html` copied from a sibling detail page + its card in
 `books/index.html` + the counter labels `check-news-sync.py` recomputes.
 
-| Axis | HOUSE (76 posts) | LISTING (5) + DETAIL (4) + 404 |
+| Axis | HOUSE (123 posts) | LISTING (6) + DETAIL (4) + 404 |
 |---|---|---|
 | `:root` tokens | yes 76/76 | yes 10/10 |
 | `:focus-visible` + reduced-motion + `color-scheme` + `text-wrap` | yes 76/76 | yes 10/10 |
@@ -161,7 +163,7 @@ That is the architecture, not a bug — see anti-pattern 2 before you reach for 
 **This sweep is finished, and it has held through four content waves since.** `6670480` put the
 block below into every file, `36d9814` fixed its one bad target, `1fca25e` re-keyed the values to
 the book covers, and the 37-post bilingual conversion and the 20-post AI Transformation launch
-both shipped clean. Re-measured today: **87 `:root` blocks across 88 files** (`index.html`,
+both shipped clean. Re-measured 2026-09-09: **135 `:root` blocks across 136 files** (`index.html`,
 `style.css`, `404.html`, the 77 `blog/`, the 5 `books/`, and news/projects/publications), every one
 declaring the same **29** tokens with **zero value deviations** — every token reads `×87`.
 `index.html` is the one file with no `:root` of its own, by design: its CSS is `style.css`, which

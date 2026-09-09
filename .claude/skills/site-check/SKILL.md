@@ -1,6 +1,6 @@
 ---
 name: site-check
-description: Runs the cross-file integrity linter for the anirach.com static site (76 self-contained bilingual posts in blog/ across 5 series, no build step, no tests, no CI) and explains how to repair every failure its 61 checks report. This repo has zero tooling — this skill IS the test suite. Use it before any push, and immediately after ANY edit under blog/, images/, index.html, or style.css — every page carries its own copy of the nav, the CSS and the counters, so even a one-line edit silently desynchronises blog/index.html card counts, the .blog-jump chips, the post-nav prev/next chain, one of the four .series-nav strips, or a cover image. Also use it when adding or renaming a blog post, when the user says "check the site", "did I break anything", "is the blog consistent", "verify before deploy", "run the tests", or when reviewing a diff that touches blog/index.html. Run it BEFORE the edit too, to confirm the tree is green (0 new, 0 known since 2026-08-26), so any violation the run after your edit reports is yours.
+description: Runs the cross-file integrity linter for the anirach.com static site (123 self-contained bilingual posts in blog/ across 9 series on 2 catalog pages, no build step, no tests, no CI) and explains how to repair every failure its 62 checks report. This repo has zero tooling — this skill IS the test suite. Use it before any push, and immediately after ANY edit under blog/, images/, index.html, or style.css — every page carries its own copy of the nav, the CSS and the counters, so even a one-line edit silently desynchronises blog/index.html card counts, the .blog-jump chips, the post-nav prev/next chain, one of the four .series-nav strips, or a cover image. Also use it when adding or renaming a blog post, when the user says "check the site", "did I break anything", "is the blog consistent", "verify before deploy", "run the tests", or when reviewing a diff that touches blog/index.html. Run it BEFORE the edit too, to confirm the tree is green (0 new, 0 known since 2026-08-26), so any violation the run after your edit reports is yours.
 ---
 
 # site-check — the site's only test suite
@@ -71,9 +71,9 @@ change the exit code, so read the per-check status lines, not just the exit stat
 ## Expected `[known]` on today's tree — none
 
 A clean checkout **exits 0 with 0 violations**: `checks run 61 / clean 61 / known baseline 0 /
-violations 0 new, 0 known`. Re-verified **2026-09-06**; the banner reads
-`86 HTML files | 76 posts | 195 files in images/ | 76 cards in blog/index.html`, and the check
-inventory is **61 checks, 42 fail / 17 warn / 2 info** (`--list` prints it).
+violations 0 new, 0 known`. Re-verified **2026-09-09**; the banner reads
+`134 HTML files | 123 posts | 308 files in images/ | 123 cards on 2 catalog pages`, and the check
+inventory is **62 checks, 43 fail / 17 warn / 2 info** (`--list` prints it).
 
 The shape it is measured against has moved three times since the baseline was emptied — the counts
 matter because half the checks below quote one:
@@ -84,6 +84,7 @@ matter because half the checks below quote one:
 | 2026-09-01 | 66 pages, 56 posts, 4 series (Life 9 + Hermes 10 launched) | 58 |
 | 2026-09-03 | unchanged in shape; the last 37 posts became bilingual, so all 56 were | 58 |
 | 2026-09-05 | **86 pages** (87 HTML files on disk), **76 posts**, **5 series** (AI Transformation, 20) | **61** (42/17/2) — INV-02f, INV-03c, INV-03d landed with it |
+| 2026-09-09 | **134 pages** (135 HTML files on disk), **123 posts**, **9 series on 2 catalogs** (`/blog/` + `/thoughts/`; Hermes Desktop 7, AI-Core 10, Working 10, Good Life 20 all launched 2026-09-07..09) | **62** (43/17/2) — INV-02g and the catalog generalisation landed with the split |
 
 `BASELINE = {}` holds only retirement comments. There is no table of expected debt to compare
 against any more: **any violation the script prints is new**, and any fail-severity one blocks the
@@ -299,7 +300,7 @@ Do not "fix" a missing diagram by inlining markup; regenerate the PNG.
 **Repair for 07a:** add a `covers.tsv` row and draw the missing cover. Do **not** silently re-point
 one card to a different existing image — that produces a card whose picture contradicts the article.
 
-**Do not enforce `<slug>-cover.*`.** 64 of the 76 posts follow that pattern; **12** deliberately use
+**Do not enforce `<slug>-cover.*`.** 111 of the 123 posts follow that pattern; **12** deliberately use
 short names (`iac-cover.jpg`, `auth-cover.jpg`, `sre-cover.jpg`, `cicd-cover.jpg`,
 `linux-cli-cover.jpg`, `api-lifecycle-cover.jpg`, `security-cover.jpg`, `gitops-cover.jpg`,
 `kubernetes-cover.jpg`, `monitoring-cover.jpg`, `networking-cover.jpg`, `testing-cover.jpg`).
@@ -468,7 +469,7 @@ automatically; INV-26 is the one check that ties them to their index.
 ## Warn-level checks (real drift, never blocks a push)
 
 Surface these; fix them deliberately, not opportunistically. A linter that fails the build on
-cosmetics gets switched off. The real split is 42 fail / 17 warn / 2 info across 61 checks —
+cosmetics gets switched off. The real split is 43 fail / 17 warn / 2 info across 62 checks —
 `--list` prints each check's severity, and the counts were re-verified 2026-09-06. Every row below
 reads 0 today; the "repair" column is what to keep it at 0.
 
@@ -479,7 +480,7 @@ reads 0 today; the "repair" column is what to keep it at 0.
 | INV-04d | `.post-nav__dir` ∈ {`← Previous`, `Next →`} | 0 | `claude-code-architecture`'s `Related` / `See also` block was deleted in `f5e53fb` (the post is no-nav now, and lost those two links). |
 | INV-06a | every file in `images/` (and the repo root) is referenced | 0 | The 9 template leftovers were deleted 2026-08-26. Confirm with `grep -r` before deleting any future orphan. |
 | INV-10 | `.post-nav__title` matches the target's card title | 0 | Copy the card title from `blog/index.html` verbatim, Thai subtitle included (`73032cb` rewrote the last five). `verify-wiring.py` agrees one-for-one. |
-| INV-13 | `lang` attrs | 0 | Green: the 11 English pages (7 nav-bearing index pages + 4 `books/` detail pages) are `lang="en"`, all **103** posts `lang="th"`. The page-level `lang` never flips for the EN track — that track is `lang="en"` wrappers inside `<main>`, behind the CSS switch. |
+| INV-13 | `lang` attrs | 0 | Green: the 11 English pages (7 nav-bearing index pages + 4 `books/` detail pages) are `lang="en"`, all **123** posts `lang="th"`. The page-level `lang` never flips for the EN track — that track is `lang="en"` wrappers inside `<main>`, behind the CSS switch. |
 | INV-14 | every post has `<meta name="description">` | 0 | All **86** enumerated pages carry one since the 2026-08-26 metadata sweep; INV-27 enforces it at fail level. |
 | INV-15 | footer copyright year uniform **in posts** | 0 | One string, one encoding (the literal `©`, never `&copy;`) on every page since 2026-08-26. The script reports one violation per non-modal cohort. |
 | INV-16 | footer container class uniform | 0 | **76 of 76** posts open with `<footer class="blog-footer">` (the last three `post-footer` posts converged in `08cfd95`). A second cohort is reported as new. |
@@ -694,9 +695,9 @@ system was being built:
 
 | Branch | Why it matters |
 |---|---|
-| every post has a row | 76 posts, 76 rows; a post added later keeps whatever cover it was born with, and the family gains a silent outlier |
+| every post has a row | 123 posts, 123 rows; a post added later keeps whatever cover it was born with, and the family gains a silent outlier |
 | cover is exactly 800×800 | the post `<img>` and its card both hard-code those numbers — a different canvas renders squeezed (INV-33's trap, one level up) |
-| share card exists at 1200×630 | `og:image` points at `<slug>-og.jpg`; a missing one is a broken share preview no page visibly shows. 80 of them on disk: 76 posts + the four books |
+| share card exists at 1200×630 | `og:image` points at `<slug>-og.jpg`; a missing one is a broken share preview no page visibly shows. 127 of them on disk: 123 posts + the four books |
 | cover ≤ 90 KB | the whole point was the weight; flat drawn art has no business exceeding it, and one that does is usually a photo that slipped in. Today's 76 average 43 KB, largest 54 KB |
 
 All four were fault-injected before the check was trusted.

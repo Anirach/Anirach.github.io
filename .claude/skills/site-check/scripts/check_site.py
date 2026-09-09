@@ -128,7 +128,10 @@ RE_PLINK = re.compile(                       # trap #1: [^>]*> is load-bearing
     r'<div class="post-nav__title">(.*?)</div>', re.S)
 RE_ATTR = re.compile(r'\b(href|src|srcset|poster)\s*=\s*"([^"]+)"')  # never content=
 RE_CODE_SPAN = re.compile(r'<(pre|code)\b[^>]*>.*?</\1>', re.S)      # trap #4
-RE_IMG_REF = re.compile(r'(?:src|href)="([^"]*images/[^"]+)"')
+# (?!https?://) — an external href whose PATH merely contains "images/"
+# (greatergood.berkeley.edu/images/uploads/… in the good-life references,
+# 2026-09-09) is not a local asset; resolving it as one is trap #4 again.
+RE_IMG_REF = re.compile(r'(?:src|href)="((?!https?://)[^"]*images/[^"]+)"')
 # og:image / twitter:image live in content=, which RE_IMG_REF cannot see and
 # RE_ATTR must never learn to read (trap #4 — the link resolver would then try
 # to resolve absolute share URLs as on-disk links).  Without this, every share
