@@ -636,8 +636,9 @@ class Site(object):
                 im = re.search(r'<img src="([^"]+)"', p)
                 # The heading LEVEL .card__title uses is not stable — h2, then
                 # h4 (Task 11), then h3 (the 2026-08-26 band deletion), and h4
-                # again on thoughts/ where the ladder is page > series > part >
-                # essay. Match any level via a backreference so a re-cut can't
+                # again on thoughts/ until 2026-09-09 (h3 since, when that
+                # catalog adopted the blog architecture). Match any level via a
+                # backreference so a re-cut can't
                 # silently zero out card_title and turn INV-10 into a no-op.
                 t = re.search(r'<(h[1-6]) class="card__title">(.*?)</\1>', p, re.S)
                 self.card_img[cur] = os.path.basename(im.group(1)) if im else None
@@ -949,7 +950,7 @@ def _(site):
                 continue
             txt = htmlmod.unescape(meta.group(1)).strip()
             want_n = len(RE_CARD.findall(by_sid[sid]))
-            n = re.match(r"(\d+)\s+articles?\b", txt)
+            n = re.match(r"(\d+)\s+(?:articles?|essays?)\b", txt)   # thoughts/ tiles say essays
             if not n or int(n.group(1)) != want_n:
                 out.append(Violation("tile|count|" + sid,
                                      "%s: tile #%s says %r, section holds %d card(s)"

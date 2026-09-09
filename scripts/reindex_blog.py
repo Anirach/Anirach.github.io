@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
-"""Regenerate blog/index.html — the 2026-09-07 redesign, and its repair tool.
+"""Regenerate the catalog pages — blog/index.html (the 2026-09-07 redesign) and,
+since 2026-09-09, thoughts/index.html in the same architecture (--catalog thoughts).
 
 Reads the CURRENT blog/index.html (source of truth for cards, hrefs, covers,
 dates, read times, excerpts, titles), the two series manifests, the three
@@ -62,6 +63,55 @@ SERIES = {
 NUM_WORD = {4: "four", 5: "five", 6: "six", 7: "seven", 8: "eight", 9: "nine"}
 ICON_FIX = {"series-devops": "🚀"}   # chip said ⚙️, header says 🚀 — one glyph per series
 
+# ---------------------------------------------------------------- thoughts deck
+# The Thoughts catalog (2026-09-09) is emitted in the SAME architecture: hero
+# with stats, sticky jump bar, Start-here feature, series tiles, numbered row
+# cards. Style is lifted from blog/index.html at RUN TIME, so the two catalogs
+# cannot drift apart. Only the copy deck, the sections and the companion band
+# (the book the Life essays grow from) differ.
+SERIES_T = {
+    "series-good-life": (
+        "Good Life",
+        "Twenty essays on living well, each grown from two or three famous quotes — traced to their real sources, weighed against the research, and turned into one practice for the week.",
+        "ยี่สิบความเรียงว่าด้วยการใช้ชีวิตให้ดี แต่ละตอนงอกจากคำคมดัง 2–3 ประโยค — ไล่หาต้นทางจริง ชั่งกับงานวิจัย และเปลี่ยนเป็นข้อปฏิบัติหนึ่งข้อของสัปดาห์"),
+    "series-working": (
+        "Working Philosophies",
+        "One working week in ten essays for anyone in a hard job — where you stand, how to think through heavy work, how to stay stuck without becoming stuck, a compass set before the storm, and how to leave well.",
+        "หนึ่งสัปดาห์ทำงานในสิบบทความ สำหรับคนที่งานกำลังยาก — รู้ว่ายืนอยู่ตรงไหน คิดอย่างไรเมื่องานหนัก ติดอยู่โดยไม่กลายเป็นคนติด ตั้งเข็มทิศไว้ก่อนพายุ และจากไปอย่างงาม"),
+    "series-life": (
+        "Life &amp; Philosophy",
+        "Read them in order — about an hour end to end. The first eight set something up that the finale quietly turns over.",
+        "อ่านตามลำดับ — ราวหนึ่งชั่วโมงจบทั้งวัน แปดบทแรกวางบางสิ่งไว้ ที่บทสุดท้ายค่อยพลิกให้เห็น"),
+}
+# Group labels rendered as .blog-grid__label rows inside each section — the same
+# device the AI Transformation section uses on the blog catalog.
+GROUPS_T = {
+    "series-working": [
+        {"key": "monday", "label": "Monday · วันจันทร์"},
+        {"key": "tuesday", "label": "Tuesday · วันอังคาร"},
+        {"key": "wednesday", "label": "Wednesday · วันพุธ"},
+        {"key": "thursday", "label": "Thursday · วันพฤหัสบดี"},
+        {"key": "friday", "label": "Friday · วันศุกร์"},
+    ],
+    "series-life": [
+        {"key": "morning", "label": "Morning · เช้า"},
+        {"key": "noon", "label": "Noon · เที่ยง"},
+        {"key": "twilight", "label": "Twilight · สนธยา"},
+    ],
+}
+LIFE_PART = lambda n: "morning" if n <= 3 else ("noon" if n <= 6 else "twilight")
+
+HERO_TITLE_T = 'Thoughts'
+HERO_SUB_T = ('Three series of essays — twenty grown from famous quotes, ten for one '
+              'working week, nine for one whole day of a life. Every essay in Thai, with '
+              'English one tap away. The technical series are in <a href="../blog/">Tutorials</a>.')
+META_DESC_T = ('Thirty-nine bilingual Thai/English essays in three series — twenty grown from famous '
+               'quotes and weighed against the research, ten that walk one working week, and nine that '
+               'walk one whole day of a life, from the book One Day of Light. By Anirach Mingkhwan.')
+PAGE_TITLE_T = 'Thoughts — Anirach Mingkhwan'
+FEATURE_DEFAULT_T = "good-life-examined-life"   # first build only; then parsed back
+
+
 HERO_LABEL = 'Anirach Mingkhwan · KMUTNB · <span lang="th">ไทย</span> ⇄ English'
 HERO_TITLE = 'Tutorials'
 HERO_SUB = ('{nseries} series on DevOps, AI agents, AI transformation and AI-core engineering — '
@@ -117,10 +167,10 @@ def rewrap_excerpt(ex):
 def ordinal_map(repo):
     """slug -> (n, group_key) from manifests, chip strips and the DevOps chain."""
     out = {}
-    for name in ("hermes-desktop", "ai-transformation", "ai-core"):
+    for name in ("hermes-desktop", "ai-transformation", "ai-core", "working", "good-life"):
         man = json.load(open(os.path.join(repo, "scripts", "series", name + ".json")))
         for p in man["posts"]:
-            out[p["slug"]] = (p["n"], p.get("group"))
+            out[p["slug"]] = (p["n"], p.get("group") or p.get("day"))
     for host in ("hermes-101", "morning-waking", "openclaw-101"):
         s = read(os.path.join(repo, "blog", host + ".html"))
         body = re.search(r'<div class="series-links">(.*?)</div>', s, re.S).group(1)
@@ -677,14 +727,274 @@ def build(repo, order):
 '''
     return page
 
+
+# ---------------------------------------------------------------- thoughts build
+CSS_COMPANION = r"""
+    /* ── COMPANION ── the book the essays grow from. Not a card: nothing here
+       may be class="card", or four separate regexes would count it as a post. */
+    .companion {
+      display: grid; grid-template-columns: 220px minmax(0, 1fr); gap: 1.75rem; align-items: center;
+      padding: 1.5rem 1.75rem; margin-bottom: 2.5rem;
+      background: var(--white); border: 1px solid #e8ecf1; border-radius: var(--radius-lg);
+      box-shadow: 0 10px 30px rgba(17,48,75,0.07);             /* the one lifted object on the page */
+    }
+    .companion__book { display: flex; gap: 0.6rem; }
+    .companion__book img {
+      width: calc(50% - 0.3rem); height: auto; border-radius: var(--radius-sm);
+      box-shadow: 0 6px 18px rgba(17,48,75,0.18); transition: transform var(--transition);
+    }
+    .companion__book:hover img { transform: translateY(-2px); }
+    .companion__title { font-size: 1.35rem; font-weight: 800; color: var(--navy); line-height: 1.25; margin: 0.15rem 0 0.4rem; }
+    .companion__title [lang="th"] { font-weight: 600; color: var(--slate); font-size: 0.85em; }
+    .companion__desc { font-size: 0.92rem; color: var(--slate-light); line-height: 1.65; margin-bottom: 0.9rem; }
+    .companion__desc [lang="th"] { display: block; margin-top: 0.3rem; }
+    .companion__links { display: flex; flex-wrap: wrap; gap: 0.5rem 1.4rem; font-size: 0.88rem; font-weight: 700; }
+    .companion__links a { color: var(--blue); }
+    .companion__links a:hover { color: var(--blue-dark); text-decoration: underline; }
+    @media (max-width: 1024px) {
+      .companion { grid-template-columns: 180px minmax(0, 1fr); }
+    }
+    @media (max-width: 768px) {
+      .companion { grid-template-columns: 1fr; gap: 1rem; padding: 1.1rem 1.1rem 1.25rem; margin-bottom: 2rem; }
+      .companion__book { max-width: 220px; }
+    }
+"""
+
+RE_CARD_T = re.compile(r'<a href="(\.\./blog/[a-z0-9-]+\.html)" class="card">(.*?)</a>', re.S)
+
+def parse_thoughts(repo):
+    """Cards, sections, the companion band and the head blocks of the CURRENT
+    thoughts/index.html — the page is its own source of truth for excerpts,
+    dates and read times, exactly as parse_index treats the blog catalog. The
+    card regexes accept both the pre-2026-09-09 shape (h4 titles) and this
+    script's own output (h3)."""
+    s = read(os.path.join(repo, "thoughts", "index.html"))
+    sections = []
+    for sid, body in RE_SECTION.findall(s):
+        icon = re.search(r'<span class="series-icon" aria-hidden="true">([^<]*)</span>', body).group(1)
+        title = re.search(r'<h2 class="series-title">(.*?)</h2>', body).group(1)
+        cards = []
+        for href, cblock in RE_CARD_T.findall(body):
+            cover = re.search(r'<img src="([^"]+)"', cblock).group(1)
+            t = re.search(r'<h([34]) class="card__title">(.*?)</h\1>', cblock, re.S).group(2)
+            ex = re.search(r'<p class="card__excerpt">(.*?)</p>', cblock, re.S).group(1)
+            tm = re.search(r'<time datetime="([^"]+)">([^<]*)</time>\s*·\s*(\d+) min', cblock)
+            en, sep, th = split_title(t)
+            slug = href.rsplit("/", 1)[-1][:-5]
+            cards.append(dict(href=href, slug=slug, cover=cover, en=en, sep=sep, th=th,
+                              excerpt=ex.strip(), date=tm.group(1),
+                              date_text=tm.group(2), mins=int(tm.group(3))))
+        sections.append(dict(id=sid, icon=icon, title=title, cards=cards))
+    companion = re.search(r'    <!-- COMPANION.*?</section>\n', s, re.S).group(0)
+    style = re.search(r'<style>(.*?)</style>', s, re.S).group(1)
+    return dict(sections=sections, companion=companion, style=style, raw=s)
+
+
+def section_html_t(sec, ords):
+    chip_label, desc_en, desc_th = SERIES_T[sec["id"]]
+    rows = sorted([(c,) + (ords.get(c["slug"]) or (None, None)) for c in sec["cards"]],
+                  key=lambda r: r[1] or 999)
+    n = len(sec["cards"])
+    out = [
+        '    <!-- %s -->' % strip_tags(sec["title"]),
+        '    <section class="series-section" id="%s">' % sec["id"],
+        '      <div class="series-header">',
+        '        <div class="series-header__left">',
+        '          <span class="series-icon" aria-hidden="true">%s</span>' % sec["icon"],
+        '          <h2 class="series-title">%s</h2>' % sec["title"],
+        '        </div>',
+        '        <span class="series-count">%d essays</span>' % n,
+        '      </div>',
+        '      <p class="series-description">%s <span lang="th">%s</span></p>' % (desc_en, desc_th),
+        '      <div class="blog-grid">',
+    ]
+    if sec["id"] == "series-good-life":
+        groups = json.load(open(os.path.join(REPO_T[0], "scripts", "series", "good-life.json")))["groups"]
+    else:
+        groups = GROUPS_T.get(sec["id"], [])
+    if groups:
+        for g in groups:
+            en_l, th_l = g["label"].split(" · ", 1)
+            out.append('      <p class="blog-grid__label">%s · <span lang="th">%s</span></p>' % (en_l, th_l))
+            for c, num, gk in rows:
+                key = gk if gk else (LIFE_PART(num) if sec["id"] == "series-life" and num else None)
+                if key == g["key"]:
+                    out.append(card_html(c, num))
+    else:
+        for c, num, _gk in rows:
+            out.append(card_html(c, num))
+    out += ['      </div>', '    </section>', '']
+    return "\n".join(out)
+
+
+REPO_T = ["."]   # section_html_t needs the repo path; set by build_thoughts
+
+def build_thoughts(repo):
+    REPO_T[0] = repo
+    idx = parse_thoughts(repo)
+    blog_raw = read(os.path.join(repo, "blog", "index.html"))
+    blog_style = re.search(r'<style>(.*?)</style>', blog_raw, re.S).group(1)
+    ords = ordinal_map(repo)
+
+    # ---- house blocks, lifted from the LIVE blog catalog so the two pages
+    # share one look with one source of truth. blog/index.html is already this
+    # script's own output, so no transforms are needed here.
+    root_block = block(blog_style, "    :root {", "    html { scroll-behavior")
+    nav_block = block(blog_style, "    /* ── NAV ── */", "    /* ── HERO ──")
+    takeover = block(blog_style, "    /* ── RESPONSIVE ── */", "    /* ── ≤1024px:")
+    tail = blog_style[blog_style.index("    :focus-visible {"):].rstrip() + "\n"
+
+    # ---- head, from the thoughts page itself (canonical, og:*, fonts, nav)
+    raw = idx["raw"]
+    fonts = re.search(r'  <link rel="preconnect".*?rel="stylesheet">\n', raw, re.S).group(0)
+    nav_markup = re.search(r'  <!-- NAV -->\n(.*?)  </nav>\n', raw, re.S).group(1) + "  </nav>\n"
+    social = re.search(r'  <!-- social -->.*?<!-- /social -->\n', raw, re.S).group(0)
+    social = re.sub(r'<meta property="og:title" content="[^"]*">', '<meta property="og:title" content="%s">' % PAGE_TITLE_T, social)
+    social = re.sub(r'<meta property="og:description" content="[^"]*">', '<meta property="og:description" content="%s">' % META_DESC_T, social)
+    jsonld = ('  <script type="application/ld+json">\n'
+              '  {"@context":"https://schema.org","@type":"Blog","name":"Anirach Mingkhwan — Thoughts",'
+              '"url":"https://anirach.com/thoughts/","inLanguage":["th","en"],'
+              '"author":{"@type":"Person","@id":"https://anirach.com/#person","name":"Anirach Mingkhwan"}}\n'
+              '  </script>\n')
+
+    # ---- feature: parse this script's own output, else the newest essay
+    fm = re.search(r'<a href="(\.\./blog/[a-z0-9-]+\.html)" class="feature">', raw)
+    f_slug = fm.group(1).rsplit("/", 1)[-1][:-5] if fm else FEATURE_DEFAULT_T
+    f_sec = next(s_ for s_ in idx["sections"] if any(c["slug"] == f_slug for c in s_["cards"]))
+    f_card = next(c for c in f_sec["cards"] if c["slug"] == f_slug)
+    f_ord = ords.get(f_slug, (None, None))[0]
+    eyebrow = 'New series · <span lang="th">ซีรีส์ใหม่</span> · %s · %s' % (f_card["date_text"], strip_tags(f_sec["title"]))
+    if f_ord:
+        eyebrow += ' · Essay %d of %d' % (f_ord, len(f_sec["cards"]))
+    feature = "\n".join([
+        '    <!-- SPOTLIGHT: the promoted essay. class="feature", NOT "card" — three',
+        '         separate regexes count class="card" and a 40th match would inflate',
+        '         the counters and duplicate a feed item. -->',
+        '    <section class="spotlight" aria-labelledby="spotlight-title">',
+        '      <h2 class="section-kicker" id="spotlight-title">Start here · <span lang="th">เริ่มอ่านที่นี่</span></h2>',
+        '      <a href="../blog/%s.html" class="feature">' % f_slug,
+        '        <div class="feature__media">',
+        '          <img src="../images/%s-og.jpg" alt="" width="1200" height="630"' % f_slug,
+        '               loading="eager" fetchpriority="high" decoding="async">',
+        '        </div>',
+        '        <div class="feature__body">',
+        '          <p class="feature__eyebrow">%s</p>' % eyebrow,
+        '          <h3 class="feature__title"><span class="card__en">%s</span><span class="card__sep">%s</span><span class="card__th" lang="th">%s</span></h3>' % (f_card["en"], f_card["sep"] or ' — ', f_card["th"]),
+        '          <p class="feature__excerpt" lang="th">%s</p>' % strip_tags(f_card["excerpt"]),
+        '          <span class="feature__read">Read <span lang="th">อ่านต่อ</span> &rarr;</span>',
+        '        </div>',
+        '      </a>',
+        '    </section>',
+        '',
+    ])
+    chips = "\n".join('      <a href="#%s">%s · %d</a>' % (s_["id"], SERIES_T[s_["id"]][0], len(s_["cards"])) for s_ in idx["sections"])
+    tiles = []
+    for s_ in idx["sections"]:
+        mins = sum(c["mins"] for c in s_["cards"])
+        tiles.append("\n".join([
+            '        <a href="#%s" class="series-tile">' % s_["id"],
+            '          <span class="series-tile__icon" aria-hidden="true">%s</span>' % s_["icon"],
+            '          <span class="series-tile__body">',
+            '            <span class="series-tile__name">%s</span>' % s_["title"],
+            '            <span class="series-tile__meta">%d essays · ≈ %s</span>' % (len(s_["cards"]), read_label(mins)),
+            '            <span class="series-tile__desc">%s</span>' % SERIES_T[s_["id"]][1],
+            '          </span>',
+            '        </a>',
+        ]))
+    catalog = "\n".join([
+        '    <!-- CATALOG: one tile per series. class="series-tile", never "card";',
+        '         INV-02g checks each tile\'s count and reading time against its section. -->',
+        '    <section class="catalog" aria-labelledby="catalog-title">',
+        '      <h2 class="section-kicker" id="catalog-title">Choose a series · <span lang="th">เลือกซีรีส์</span></h2>',
+        '      <div class="catalog__grid">',
+        "\n".join(tiles),
+        '      </div>',
+        '    </section>',
+        '',
+    ])
+    parts = []
+    for s_ in idx["sections"]:
+        parts.append(section_html_t(s_, ords))
+        if s_["id"] == "series-working":       # the book band sits before the Life section
+            parts.append(idx["companion"])
+    sections = "\n".join(parts)
+    total = sum(len(s_["cards"]) for s_ in idx["sections"])
+
+    page = f'''<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{PAGE_TITLE_T}</title>
+  <meta name="description" content="{META_DESC_T}">
+{fonts}  <style>
+    *, *::before, *::after {{ box-sizing: border-box; margin: 0; padding: 0; }}
+{root_block}    html {{ scroll-behavior: smooth; }}
+    body {{
+      font-family: var(--font); font-size: 16px; line-height: 1.7;
+      color: var(--slate); background: var(--bg); -webkit-font-smoothing: antialiased;
+    }}
+    a {{ text-decoration: none; color: inherit; }}
+    img {{ max-width: 100%; display: block; }}
+
+{nav_block}{CSS_HERO}
+{CSS_COMPANION}
+{takeover}{CSS_RESPONSIVE}
+{tail}  </style>
+{social}{jsonld}</head>
+<body>
+<a href="#main" class="skip-link">Skip to content</a>
+
+  <!-- NAV -->
+{nav_markup}
+  <!-- HERO -->
+  <header class="blog-hero">
+    <p class="blog-hero__label">{HERO_LABEL}</p>
+    <h1 class="blog-hero__title">{HERO_TITLE_T}</h1>
+    <p class="blog-hero__sub">{HERO_SUB_T}</p>
+    <p class="blog-hero__stats">
+      <span class="blog-hero__stat"><strong>{len(idx["sections"])}</strong> Series</span>
+      <span class="blog-hero__stat"><strong>{total}</strong> Essays</span>
+    </p>
+  </header>
+
+  <!-- SERIES BAR — sticky, between the hero and <main>. One chip per section;
+       INV-02f checks each chip's "· N" against its section's card count. -->
+  <nav class="blog-jump" id="series-index" aria-label="Jump to a series">
+{chips}
+      <a href="/feed.xml">RSS</a>
+    </nav>
+
+  <main id="main">
+    <div class="blog-list">
+
+{feature}
+{catalog}
+{sections}    </div>
+  </main>
+
+  <!-- FOOTER -->
+  <footer class="footer">
+    <a href="../index.html">← Back to Home</a>
+    <a href="../blog/">Tutorials</a>
+    <a href="#main">↑ Top</a>
+    <span>© 2026 Anirach Mingkhwan — Associate Professor, KMUTNB</span>
+  </footer>
+
+</body>
+</html>
+'''
+    return page
+
 if __name__ == "__main__":
     ap = argparse.ArgumentParser()
     ap.add_argument("--repo", required=True)
     ap.add_argument("--out", required=True)
     ap.add_argument("--order", choices=["reading", "newest"], default="reading")
+    ap.add_argument("--catalog", choices=["blog", "thoughts"], default="blog")
     a = ap.parse_args()
-    html_out = build(a.repo, a.order)
+    html_out = build_thoughts(a.repo) if a.catalog == "thoughts" else build(a.repo, a.order)
     os.makedirs(os.path.dirname(a.out), exist_ok=True)
     open(a.out, "w", encoding="utf-8").write(html_out)
-    n_cards = len(RE_CARD.findall(html_out))
+    n_cards = len(RE_CARD.findall(html_out)) + len(RE_CARD_T.findall(html_out))
     print("wrote", a.out, len(html_out), "bytes,", n_cards, "cards")
