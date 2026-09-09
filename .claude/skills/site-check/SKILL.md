@@ -394,7 +394,7 @@ zero-JavaScript, so both checks policed a contract with a file that no longer ex
 (no page loads executable JavaScript) replaced them. The record below is what they did while alive.
 
 7 selectors were harvested: `#nav`, `#hamburger`, `#navLinks`, `a`, `[data-reveal]` ×2,
-`a[href^="#"]`. `index.html` carries 13 `data-reveal` attributes (12 until the 2026-09-09 Scholar Atlas card) and is the only file in the repo
+`a[href^="#"]`. `index.html` carries 12 `data-reveal` attributes (re-count with `grep -c data-reveal index.html` — the Things I built cards each carry one) and is the only file in the repo
 that carries any. (`.hero__bg-text` was the 8th until 2026-08-26, when the hero watermark was
 deleted — INV-21 caught the orphaned parallax listener left behind in `script.js`, which is
 precisely the failure it exists to catch.)
