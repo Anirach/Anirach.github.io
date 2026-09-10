@@ -252,25 +252,32 @@ for rel in pages:
     here = os.path.dirname(full)
     skip = [(m.start(), m.end()) for m in CODE_SPAN.finditer(s)]
     for m in ATTR.finditer(s):
-        u = m.group(2).strip()
-        if u.startswith(("http", "mailto:", "tel:", "data:", "javascript:", "#")):
-            continue
-        q = u.split("#")[0].split("?")[0]
-        if not q:
-            continue
-        if q.startswith("/"):
-            c = os.path.join(ROOT, q.lstrip("/"))
-            ok = (os.path.exists(c) or os.path.exists(c + ".html")
-                  or os.path.exists(os.path.join(c, "index.html")))
-        else:
-            c = os.path.normpath(os.path.join(here, q))
-            ok = (os.path.exists(os.path.join(c, "index.html"))
-                  if q.endswith("/") or q in ("./", ".") else os.path.exists(c))
-        if ok or any(a <= m.start() < b for a, b in skip):
-            continue
-        line = s[:m.start()].count("\n") + 1
-        (warns if rel[5:] in SERIES7 else fails).append(
-            f'{rel}:{line} broken {m.group(1)}="{u}"')
+        # srcset holds a comma-separated candidate list with a width descriptor
+        # after each URL, not a single path. The catalog cards have carried one
+        # since 2026-09-10 (the 144px card derivative); without this split, each
+        # list reports as one broken link.
+        raw = m.group(2).strip()
+        cands = ([c.strip().split()[0] for c in raw.split(",") if c.strip()]
+                 if m.group(1) == "srcset" else [raw])
+        for u in cands:
+            if u.startswith(("http", "mailto:", "tel:", "data:", "javascript:", "#")):
+                continue
+            q = u.split("#")[0].split("?")[0]
+            if not q:
+                continue
+            if q.startswith("/"):
+                c = os.path.join(ROOT, q.lstrip("/"))
+                ok = (os.path.exists(c) or os.path.exists(c + ".html")
+                      or os.path.exists(os.path.join(c, "index.html")))
+            else:
+                c = os.path.normpath(os.path.join(here, q))
+                ok = (os.path.exists(os.path.join(c, "index.html"))
+                      if q.endswith("/") or q in ("./", ".") else os.path.exists(c))
+            if ok or any(a <= m.start() < b for a, b in skip):
+                continue
+            line = s[:m.start()].count("\n") + 1
+            (warns if rel[5:] in SERIES7 else fails).append(
+                f'{rel}:{line} broken {m.group(1)}="{u}"')
 
 for p in posts:
     n = len(re.findall(r"<h1[ >]", read(os.path.join(BLOG, p))))

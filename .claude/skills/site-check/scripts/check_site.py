@@ -137,6 +137,12 @@ RE_IMG_REF = re.compile(r'(?:src|href)="((?!https?://)[^"]*images/[^"]+)"')
 # to resolve absolute share URLs as on-disk links).  Without this, every share
 # image added by the INV-27 sweep reports as an unreferenced orphan in INV-06a.
 RE_META_IMG_REF = re.compile(r'content="[^"]*?/images/([^"]+)"')
+# srcset holds a comma-separated candidate list with width descriptors
+# ("../images/x-thumb.jpg 144w, ../images/x-cover.jpg 800w"), so RE_IMG_REF —
+# which reads a whole attribute as one URL — cannot see the candidates.  The
+# catalog cards have offered a 144px derivative through srcset since
+# 2026-09-10; without this, all 123 -thumb.jpg files report as INV-06a orphans.
+RE_SRCSET = re.compile(r'srcset="([^"]+)"')
 RE_URL_REF = re.compile(r"url\(\s*['\"]?([^'\"\)]*images/[^'\"\)]+)")
 RE_POST_COVER_SRC = re.compile(r'src="\.\./images/([^"]+)"')
 RE_POST_COVER_URL = re.compile(r"url\(\s*['\"]?\.\./images/([^'\"\)]+)")
@@ -1255,6 +1261,30 @@ def _escaped_markup(s, pos):
     return elt != -1 and "&gt;" not in s[elt:pos]
 
 
+def attr_urls(name, value):
+    """Every URL an href|src|srcset|poster attribute actually contains.
+
+    All of them hold one URL except srcset, which holds a comma-separated
+    candidate list with a width or density descriptor after each URL:
+
+        srcset="../images/x-thumb.jpg 144w, ../images/x-cover.jpg 800w"
+
+    RE_ATTR has captured srcset since it was written, but every consumer
+    treated the whole value as a single path, so the first srcset on the site
+    (the catalog cards' 144px derivative, 2026-09-10) reported 123 broken
+    links in INV-05.  Split here, once, so no consumer has to remember.
+    """
+    v = value.strip()
+    if name != "srcset":
+        return [v]
+    out = []
+    for cand in v.split(","):
+        cand = cand.strip()
+        if cand:
+            out.append(cand.split()[0])
+    return out
+
+
 def _scan_links(site):
     """Unresolvable href|src|srcset|poster values in REAL markup.
 
@@ -1272,27 +1302,27 @@ def _scan_links(site):
         for m in RE_ATTR.finditer(s):
             if any(a <= m.start() < b for a, b in spans) or _escaped_markup(s, m.start()):
                 continue
-            u = m.group(2).strip()
-            if u.startswith(("http://", "https://", "//", "mailto:", "tel:",
-                             "data:", "javascript:", "#")):
-                continue
-            q = u.split("#")[0].split("?")[0]
-            if not q:
-                continue
-            if q.startswith("/"):
-                cand = os.path.join(site.root, q.lstrip("/"))
-                ok = (os.path.exists(cand) or os.path.exists(cand + ".html")
-                      or (os.path.isdir(cand) and os.path.exists(cand + "/index.html")))
-            else:
-                cand = os.path.normpath(os.path.join(d, q))
-                if q.endswith("/") or q in ("./", "."):
-                    ok = os.path.exists(os.path.join(cand, "index.html"))
+            for u in attr_urls(m.group(1), m.group(2)):
+                if u.startswith(("http://", "https://", "//", "mailto:", "tel:",
+                                 "data:", "javascript:", "#")):
+                    continue
+                q = u.split("#")[0].split("?")[0]
+                if not q:
+                    continue
+                if q.startswith("/"):
+                    cand = os.path.join(site.root, q.lstrip("/"))
+                    ok = (os.path.exists(cand) or os.path.exists(cand + ".html")
+                          or (os.path.isdir(cand) and os.path.exists(cand + "/index.html")))
                 else:
-                    ok = os.path.exists(cand)
-            if ok:
-                continue
-            real.append(Violation("%s|%s" % (rel, u),
-                                  '%s:%d %s="%s"' % (rel, lineno(s, m.start()), m.group(1), u)))
+                    cand = os.path.normpath(os.path.join(d, q))
+                    if q.endswith("/") or q in ("./", "."):
+                        ok = os.path.exists(os.path.join(cand, "index.html"))
+                    else:
+                        ok = os.path.exists(cand)
+                if ok:
+                    continue
+                real.append(Violation("%s|%s" % (rel, u),
+                                      '%s:%d %s="%s"' % (rel, lineno(s, m.start()), m.group(1), u)))
     return real
 
 
@@ -1323,6 +1353,11 @@ def _images_used(site):
         for u in (RE_IMG_REF.findall(s) + RE_URL_REF.findall(s)
                   + RE_META_IMG_REF.findall(s)):
             used.add(os.path.basename(u))
+        for attr in RE_SRCSET.findall(s):
+            for cand in attr.split(","):
+                url = cand.strip().split()[0] if cand.strip() else ""
+                if url and not url.startswith(("http://", "https://")):
+                    used.add(os.path.basename(url))
     return used
 
 

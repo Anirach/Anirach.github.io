@@ -550,7 +550,7 @@ Three numbers matter and they are not the same number — quote the right one:
 
 | Figure | Value | Meaning |
 |---|---|---|
-| referenced total | **~3.6 MB** | every byte the page can eventually pull. Was 18.41 MB, then 4.07, 1.59, 2.47, 3.43. The 800×800 covers now render as 64–72px thumbs — a `-thumb` derivative set is the standing follow-up. |
+| referenced total | **~3.6 MB** | every byte the page can eventually pull. Was 18.41 MB, then 4.07, 1.59, 2.47, 3.43. The 800×800 covers render as 64–72px thumbs; a 144px `-thumb` derivative now serves them via `srcset` — **R1b, done 2026-09-10**. |
 | eager payload | **206 KB** | the HTML (146 KB) plus the single eager image, the featured share card (60 KB). **The other 152 `<img>` tags are `loading="lazy"`**, so nothing else is fetched up front. |
 | realistic first viewport | **≈0.65 MB** | HTML + the feature + the first ~10 cards' covers, which a browser fetches because lazy images near the viewport still load. |
 
@@ -573,6 +573,54 @@ None of that is on the critical path — the HTML gzips well, the hidden track i
 the checkbox flips, and every figure is lazy. But **do not "optimise" a post by deleting one
 language track**; that is the feature, and `check_visibility.py` S1 fails the build when the
 markup and `inLanguage: ["th","en"]` disagree.
+
+### R1b. Catalog cards ship a 144px derivative through `srcset`. **[FIXED 2026-09-10]**
+
+The redesigned row card renders its cover in a **72px** box (64px under 600px) — but the
+`src` was the full **800×800** cover, ~11× oversampled, 43 KB where 4.5 KB does the job,
+times 84 cards on the blog catalog. That was the standing follow-up noted in R1 ("a `-thumb`
+derivative set"), and it is now done.
+
+```
+images/<slug>-thumb.jpg     144×144, JPEG q72, avg 4.5 KB   (123 files, 0.54 MB total)
+```
+
+| page | referenced images before | after |
+|---|---|---|
+| `blog/index.html` | 3.63 MB | **0.42 MB** |
+| `thoughts/index.html` | 2.11 MB | **0.38 MB** |
+
+The markup keeps `src` on the **full cover** and offers the thumb as a candidate, which is
+load-bearing in two directions: `check_site.py` **INV-07b** reads the `src` basename and
+requires it to equal the post's own cover, and a browser without `srcset` still gets a
+correct image.
+
+```html
+<img src="../images/<slug>-cover.jpg"
+     srcset="../images/<slug>-thumb.jpg 144w, ../images/<slug>-cover.jpg 800w"
+     sizes="72px" alt="" width="800" height="800" loading="lazy" decoding="async">
+```
+
+`width`/`height` stay the **source** size (800×800), per rule 2 — both candidates are square,
+so the intrinsic ratio is right and nothing shifts.
+
+**Emitted by `scripts/reindex_blog.py`'s `card_img_tag()`, never by hand.** It derives
+`<slug>-thumb.jpg` from the cover name and falls back to a plain `<img>` when the file is
+absent, so a new post without a thumb still renders. Regenerate a thumb with:
+
+```bash
+sips -s format jpeg -s formatOptions 72 -Z 144 images/<slug>-cover.jpg --out images/<slug>-thumb.jpg
+```
+
+**Three link resolvers had to learn what `srcset` is**, and this is the trap to remember:
+`srcset` holds a comma-separated candidate list with a width descriptor after each URL, not
+one path. `RE_ATTR` / `ATTR` had captured the attribute since they were written, but every
+consumer resolved the whole value as a single file, so the first `srcset` on the site
+reported **123 broken links in INV-05 and 84 in verify-wiring**. Fixed by splitting in one
+place each — `check_site.attr_urls()`, `check_site._images_used()` (the INV-06a orphan
+scan, which reads `src`/`href` only and would otherwise call all 123 thumbs unreferenced),
+and `verify-wiring.py`'s link loop. All three were fault-injected against a deliberately
+broken candidate and reported the individual URL.
 
 ### R2. Mobile navigation — **[MOSTLY DONE]**
 
@@ -858,14 +906,58 @@ It is still the step that is always forgotten on a *new* post, which is why it i
 on `assets/new-post-checklist.md`. **Recompute, never increment** — incrementing by hand
 is how all of them went stale in the first place.
 
-### R8. Font weights — **the premise was backwards, and the real defect is fixed**
+### R8b. **Request a variable font with the RANGE syntax, or you get static instances.** [FIXED 2026-09-10]
 
-This rule used to say: trim the unused weights (Inter 300, JetBrains Mono 500) to save bytes.
-**That saving is zero.** Google Fonts serves Inter and JetBrains Mono as *variable* fonts — one
-file covering the whole axis — so `wght@300;400;…;900` and `wght@400` download exactly the same
-bytes. Re-measured 2026-09-06: **all 87 files load webfonts**, all 87 request Inter 300, and
-`style.css` is the only file that *uses* weight 300 — 6 declarations, all on `index.html`
-headings. Trimming it from the other 86 buys nothing and risks the documented trap below.
+**The previous version of this rule was wrong, and it was expensive.** It said Google Fonts
+serves Inter and JetBrains Mono as variable fonts, so `wght@300;400;…;900` and `wght@400`
+cost the same bytes. That is true of the *font*, not of the *request*. The CSS2 API keys on
+punctuation:
+
+| syntax | what Google serves |
+|---|---|
+| `wght@300;400;500;600;700;800;900` (semicolons — discrete) | **7 static instances**, one file each |
+| `wght@300..900` (two dots — a range) | **1 variable file** covering the whole axis |
+
+Measured 2026-09-10 against the live API, Inter's `latin` subset:
+
+```
+wght@300;400;500;600;700;800;900   ->  7 files, 331.1 KB
+wght@300..900                      ->  1 file,   47.3 KB
+```
+
+The site had shipped the semicolon form on every page since the fonts were introduced. A
+bilingual essay page, which uses Inter weights 400–800, was downloading **five** 47.3 KB
+Inter files where one would do. Fixed on 2026-09-10 across all 136 HTML files plus
+`scripts/build_series.py`:
+
+```
+Inter:wght@300;400;500;600;700;800;900  ->  Inter:wght@300..900
+JetBrains+Mono:wght@400;500;600         ->  JetBrains+Mono:wght@400..600
+Sarabun:wght@400;500;600;700;800        ->  unchanged — see below
+```
+
+Per-page font payload for a Thai essay (thai + latin subsets, the weights actually used):
+
+| | files | KB |
+|---|---|---|
+| before | 15 | 340.5 |
+| after | 10 | 151.3 |
+
+**189 KB saved per page, 56% of the font bytes**, on every one of the 136 pages. A page with
+code blocks saves a further 61 KB, because JetBrains Mono went 3 files → 1.
+
+**Sarabun has no variable version and must keep the semicolon form.**
+`family=Sarabun:wght@400..800` returns **HTTP 400**. Its five weights are five real static
+files (~11 KB latin + ~9.5 KB thai each) and all five are used — see the census below. Do
+not "tidy" Sarabun into range syntax; you will get an error page instead of a stylesheet.
+
+**How to check a new page in one command:**
+
+```bash
+grep -o 'Inter:wght@[^&]*' <file>          # must print Inter:wght@300..900, never a semicolon list
+```
+
+### R8. Sarabun's five weights — **the real defect, fixed 2026-08-26**
 
 **Sarabun is the one that mattered, and it is static.** An unrequested weight is *synthesised* by
 the browser — faux-bold, which smears Thai glyphs far more visibly than Latin ones. The site
@@ -893,14 +985,14 @@ weights — 83 × 400, 96 × 500, 1005 × 600, 630 × 700, 417 × 800.
 **The whole site now uses exactly two font URLs.** Check any new page against one of them:
 
 ```
-67 files  Inter:wght@300;400;500;600;700;800;900&family=Sarabun:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap
-20 files  Inter:wght@300;400;500;600;700;800;900&family=Sarabun:wght@400;500;600;700;800&display=swap
+67 files  Inter:wght@300..900&family=Sarabun:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400..600&display=swap
+20 files  Inter:wght@300..900&family=Sarabun:wght@400;500;600;700;800&display=swap
 ```
 
-**Still true, and still a trap:** never trim 300 from the Inter URL — six headings in `style.css`
-would silently re-render at 400. Keep both `preconnect` lines and `display=swap` (correct on all
-87). JetBrains Mono is on 67 files and its weight 500 is unused, but it is variable, so removing it
-saves nothing either.
+**Still true, and still a trap:** never narrow the Inter range below `300..900` — six headings
+in `style.css` use weight 300 and would silently re-render at 400. Keep both `preconnect` lines
+and `display=swap` (correct on all 136 pages). With the range syntax the axis bounds cost
+nothing, so there is no reason to narrow them.
 
 ---
 

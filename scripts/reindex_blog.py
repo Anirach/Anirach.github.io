@@ -473,6 +473,34 @@ CSS_RESPONSIVE = r"""
 """
 
 # ---------------------------------------------------------------- markup
+_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+
+
+def card_img_tag(cover):
+    """The card image, with a 144px derivative offered through srcset.
+
+    The row card renders the cover in a 72px box (64px under 600px), so an
+    800x800 source is ~11x oversampled — 43 KB where 4.5 KB would do, times 84
+    cards on the blog catalog.  A `<slug>-thumb.jpg` derivative cuts the two
+    catalogs from 3.7 MB and 1.7 MB to 0.39 MB and 0.18 MB.
+
+    `src` deliberately stays the full cover: check_site.py INV-07b reads the
+    src basename and requires it to equal the post's own cover, and a browser
+    without srcset support still gets a correct (if heavy) image.  width and
+    height stay the SOURCE size, per the house convention, so the intrinsic
+    aspect ratio is right and nothing shifts on load.
+    """
+    attrs = 'alt="" width="800" height="800" loading="lazy" decoding="async"'
+    stem, dot, ext = cover.rpartition(".")
+    if stem.endswith("-cover"):
+        thumb = stem[: -len("-cover")] + "-thumb." + ext
+        on_disk = os.path.join(_ROOT, thumb.replace("../", "", 1))
+        if os.path.exists(on_disk):
+            return ('<img src="%s" srcset="%s 144w, %s 800w" sizes="72px" %s>'
+                    % (cover, thumb, cover, attrs))
+    return '<img src="%s" %s>' % (cover, attrs)
+
+
 def card_html(c, num, indent="      "):
     en = c["en"]; th = c["th"]
     if th:
@@ -489,7 +517,7 @@ def card_html(c, num, indent="      "):
         indent + '<a href="%s" class="card">' % c["href"],
         indent + '  %s' % num_span,
         indent + '  <div class="card__image">',
-        indent + '    <img src="%s" alt="" width="800" height="800" loading="lazy" decoding="async">' % c["cover"],
+        indent + '    %s' % card_img_tag(c["cover"]),
         indent + '  </div>',
         indent + '  <div class="card__body">',
         indent + '    <h3 class="card__title">%s</h3>' % title,

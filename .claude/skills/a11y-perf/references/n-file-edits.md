@@ -217,8 +217,8 @@ the browser had been synthesising as faux-bold over Thai glyphs.
 Every page is on one of exactly two URLs. Check a new page against them:
 
 ```
-67 files  Inter:wght@300;400;500;600;700;800;900&family=Sarabun:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap
-20 files  Inter:wght@300;400;500;600;700;800;900&family=Sarabun:wght@400;500;600;700;800&display=swap
+67 files  Inter:wght@300..900&family=Sarabun:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400..600&display=swap
+20 files  Inter:wght@300..900&family=Sarabun:wght@400;500;600;700;800&display=swap
 ```
 
 ```bash

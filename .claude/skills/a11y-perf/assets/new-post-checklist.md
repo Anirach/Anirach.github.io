@@ -195,8 +195,8 @@ python3 scripts/bilingualize.py --verify <slug>   # the only check that catches 
 - [ ] `rel="noopener"` on every `target="_blank"` — **92 of 92** on the site have it.
 - [ ] `aria-hidden="true"` on decorative emoji.
 - [ ] Font `<link>` is one of the two URLs the whole site uses, preceded by both `preconnect`
-      links: `Inter:wght@300;400;500;600;700;800;900&family=Sarabun:wght@400;500;600;700;800`
-      plus `&family=JetBrains+Mono:wght@400;500;600` if the post has code, then `&display=swap`.
+      links: `Inter:wght@300..900&family=Sarabun:wght@400;500;600;700;800`
+      plus `&family=JetBrains+Mono:wght@400..600` if the post has code, then `&display=swap`.
       **Never trim Inter 300** (six `style.css` headings would re-render at 400) and never trim
       a Sarabun weight — Sarabun is a static family, so an unrequested weight is *synthesised*
       as faux-bold, which smears Thai glyphs.
