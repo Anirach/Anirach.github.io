@@ -350,6 +350,13 @@ Conventions that hold across the corpus:
 - A `🐕` on the last bullet is the running house joke. Keep it if the post is in the
   DevOps series.
 
+**Thoughts essays are a different register.** The Life, Working Philosophies and Wisdom for a
+Good Life posts are literary Thai in the owner's voice, not code-switched tutorial prose; the
+brief is `references/thai-essay-voice.md` (2026-09-10, written for the Good Life rewrite —
+ten rules with before/after pairs, the fixed-element contract, the per-essay workflow and a
+reviewer checklist). For a generated series the edit surface is the `.bilingual/` sheet, never
+the emitted post.
+
 ## Answer-readiness (editorial, not lint)
 
 These are editorial choices that make sections quotable by AI answer engines. **No

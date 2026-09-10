@@ -487,7 +487,7 @@ def build(man, post, sk):
       "url": "https://anirach.com/"
     },
     "datePublished": "%(date)s",
-    "dateModified": "%(date)s",
+    "dateModified": "%(modified)s",
     "image": "%(og)s",
     "inLanguage": [
       "th",
@@ -499,6 +499,10 @@ def build(man, post, sk):
 </head>
 """ % {"title_th": esc(title["th"]), "desc": esc(post["description"]),
        "style": styled(sk["style"], man), "canon": canon, "date": date,
+       # dateModified moves on a substantive edit (blog-post skill, Step 3);
+       # the manifest's optional "modified" carries it, and defaults to the
+       # launch date so an untouched series keeps the two equal.
+       "modified": man.get("modified") or date,
        "og": og, "ogw": ogw, "ogh": ogh,
        "title_json": json.dumps(title["th"], ensure_ascii=False)[1:-1]}
 

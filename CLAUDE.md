@@ -139,7 +139,10 @@ card). Card titles are `h3`, exactly as on the blog catalog.
   Source/Study/Synthesis-tagged references block per essay. The **fifth generated series**:
   `scripts/build_series.py --series good-life`, manifest `scripts/series/good-life.json`, Sunrise
   skeleton `blog/morning-waking.html` with the hero-sub and `.ref-tag--source` rules supplied via
-  the manifest's `extra_css`
+  the manifest's `extra_css`. **Thai track rewritten 2026-09-10** in the owner's Life-essay voice (the
+  launch prose read as English-shaped: colon-reveals, `ไม่ใช่ X แต่คือ Y`, `มัน` for ideas) — the
+  brief is `.claude/skills/blog-post/references/thai-essay-voice.md`; a prose edit goes through
+  the `.bilingual/` sheet and `--post`, and the manifest's `modified` key moves `dateModified`
 - `#series-working` — "Working Philosophies" (10 cards, #1–#10; launched 2026-09-08, carded on
   `thoughts/index.html`) — one working week for anyone in a hard job: Monday (where you stand,
   whose weather), Tuesday (one brick, the corridor voice), Wednesday (stuck is a place, a small
