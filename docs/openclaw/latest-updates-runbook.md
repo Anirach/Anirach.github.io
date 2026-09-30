@@ -236,23 +236,39 @@ the checker report a real problem at least once.
 
 ## Dated content that expires
 
-Two things on this site are written around a date that has not happened yet, and both go stale
-silently the day after. Nothing computes them, and no gate can — a checker cannot know what the
+One thing on this site is still written around a date that has not happened yet, and it goes stale
+silently the day after. Nothing computes it, and no gate can — a checker cannot know what the
 copy *should* say once the event is over.
 
-**The Last Lecture — Saturday 19 September 2026.** After that date, revise all four of these
-in one commit:
+**The Last Lecture — Saturday 19 September 2026. DONE on 2026-09-30.** The event has passed and
+the copy was past-tensed sitewide in one commit. What actually needed changing was wider than the
+four rows this table used to list, so the record is kept here for the next dated thing:
 
-| Where | What is date-bound |
+| Where | What changed |
 |---|---|
-| `books/one-day-of-light.html` | the `Event` JSON-LD block in `<head>` — past-tense it or remove it |
-| `books/one-day-of-light.html` | `<meta name="description">` **and** the `og:description` in the `<!-- social -->` block — both are written around the upcoming event |
-| `index.html` | the `.latest` strip line announcing the lecture |
-| `news/index.html` | the corresponding news item |
+| `index.html` | hero eyebrow chip (`จัดขึ้นแล้วเมื่อ…`) and its CTA, the `.book__label`, the book card's Reserve button, the footer column's note and link, and the `.latest` strip line |
+| `news/index.html` | the item's `Upcoming` tag → `Held`, both language bodies past-tensed; the CSS class `.card__tag--upcoming` was renamed `.card__tag--event` so it does not mislead the next editor |
+| `books/one-day-of-light.html` | the `Event` JSON-LD lost its `offers` block, the prose went past-tense with a Thai line saying the book outlives the lecture, and the whole seat-reservation block (QR + copy + button) was removed |
+| `books/index.html` | the card tag `Event · 19 September 2026` → `Lecture given · 19 September 2026` |
+| `images/one-day-of-light-qr.png` | deleted — its only reference was that reservation block, and it encodes a closed form. INV-06a catches this: removing a CTA can orphan its image |
 
-The `og:description` matters more than it looks: Facebook and LINE cache the card on first
-scrape, so a stale description outlives the edit until someone re-scrapes the URL through the
-Facebook Sharing Debugger. Do that as the last step.
+Two things the old version of this table got wrong, worth remembering:
+
+- It said `books/one-day-of-light.html`'s `<meta name="description">` and `og:description` were
+  "written around the upcoming event". By the time the date arrived they described the **book and
+  its two free editions** and needed no change at all. Re-read the copy before editing it.
+- It listed four places. There were **six files**, plus an image, plus a CSS class name. Grep for
+  the dead CTA (`Reserve a seat`, `สำรองที่นั่ง`, the Google Form URL), not just for the date.
+
+The `og:description` point still stands and still matters: Facebook and LINE cache the card on
+first scrape, so a stale description outlives the edit until someone re-scrapes the URL through the
+Facebook Sharing Debugger. Do that as the last step **if** the description actually changed.
+
+**Still open, and the owner's call.** `index.html`'s book feature was planned to revert to
+*Libraries in Transformation* after the lecture
+(`docs/superpowers/specs/2026-08-26-site-critique-redesign-design.md` §4). It has not been
+reverted — *One Day of Light* still leads the homepage, now past-tensed, because the book outlasts
+the event. The Springer volume stays reachable on the `.book__doi` line beneath it either way.
 
 **Adding a new page?** It needs a `<!-- social -->` block in `<head>` and a `<loc>` entry in
 `/sitemap.xml`. `check_site.py` INV-27 fails the build without the first; nothing but this
