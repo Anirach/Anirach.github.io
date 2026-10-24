@@ -1,5 +1,12 @@
 # CLAUDE.md
 
+> **Current publication inventory — 2026-10-24:** 135 bilingual posts across10 series
+> (7 Tutorials /96 articles,3 Thoughts /39 essays),147 HTML files (146 enumerated),
+> 466 images,135 feed items and146 sitemap URLs. AI-Core Functional Workflows adds
+> twelve lessons paired with Anirach/ai-core-functional-tutorial,108 offline tests
+> and twelve exercises. Earlier dated measurements below retain their historical context.
+
+
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
 ## Project Overview

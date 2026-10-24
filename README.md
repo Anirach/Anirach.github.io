@@ -1,10 +1,17 @@
 # anirach.com
 
+> **Current publication inventory — 2026-10-24:** 135 bilingual posts across10 series
+> (7 Tutorials /96 articles,3 Thoughts /39 essays),147 HTML files (146 enumerated),
+> 466 images,135 feed items and146 sitemap URLs. AI-Core Functional Workflows adds
+> twelve lessons paired with Anirach/ai-core-functional-tutorial,108 offline tests
+> and twelve exercises. Earlier dated measurements below retain their historical context.
+
+
 **The personal site of Dr. Anirach Mingkhwan** — Associate Professor at King Mongkut's University of Technology North Bangkok (KMUTNB), PhD (Liverpool John Moores University, UK), researcher in Agentic AI, computer networks, and big data analytics.
 
 🌐 **Live: [anirach.com](https://anirach.com)**
 
-A hand-written static site — seven top-level pages, four per-book detail pages, and 123 self-contained blog posts catalogued on two pages: Tutorials (`/blog/`, six technical series) and Thoughts (`/thoughts/`, thirty-nine essays on living well and working well). No build system, no package manager, no dependencies, no JavaScript framework. Push to `main` and GitHub Pages publishes it.
+A hand-written static site — seven top-level pages, four per-book detail pages, and 135 self-contained blog posts catalogued on two pages: Tutorials (`/blog/`, seven technical series) and Thoughts (`/thoughts/`, thirty-nine essays on living well and working well). No build system, no package manager, no dependencies, no JavaScript framework. Push to `main` and GitHub Pages publishes it.
 
 ---
 
@@ -13,8 +20,8 @@ A hand-written static site — seven top-level pages, four per-book detail pages
 | | |
 |---|---|
 | **Pages** | Home · Tutorials (`/blog/`) · Thoughts (`/thoughts/`) · Publications · Books · Projects & Apps · News & Updates |
-| **Posts** | **123**, in 9 series across two catalogs, every one bilingual Thai/English |
-| **Files** | 135 HTML files on disk (134 enumerated by the linter; `404.html` is deliberately excluded) |
+| **Posts** | **135**, in 10 series across two catalogs, every one bilingual Thai/English |
+| **Files** | 147 HTML files on disk (146 enumerated by the linter; `404.html` is deliberately excluded) |
 | **Stack** | Plain HTML5 + CSS3, zero JavaScript. Google Fonts is the only external dependency |
 | **Hosting** | GitHub Pages (classic Jekyll build) on the custom domain `anirach.com`, fronted by Cloudflare |
 | **Build step** | None |
@@ -25,7 +32,7 @@ A hand-written static site — seven top-level pages, four per-book detail pages
 | Page | What it holds |
 |---|---|
 | [`index.html`](index.html) | Single-scroll editorial portfolio: hero, about, latest-news strip, six research areas, featured book, curated live apps, contact |
-| [`blog/`](blog/) | The **Tutorials** catalog — 84 cards in six technical series, plus all 123 post files |
+| [`blog/`](blog/) | The **Tutorials** catalog — 96 cards in seven technical series, plus all 135 post files |
 | [`thoughts/`](thoughts/) | The **Thoughts** catalog — 39 essay cards in three series, each linking `../blog/<slug>.html` |
 | [`publications/`](publications/) | The academic record: the Springer book *Libraries in Transformation*, 8 book chapters, and a selected-publications table |
 | [`books/`](books/) | Books & writing: four works — *One Day of Light* (the free last-lecture event book, EN/TH editions with free PDF downloads served from `books/`), the published novel *Three Old Men: The Last Conversation*, and two complete bilingual manuscripts — each with its own detail page |
@@ -42,10 +49,11 @@ A hand-written static site — seven top-level pages, four per-book detail pages
 
 Both are static, zero-JavaScript and **generated** by `scripts/reindex_blog.py` — re-run it rather than hand-ordering cards. Each is a hero, a sticky chip strip, a "Start here" feature, a row of series tiles, then one numbered-row-card section per series. There is no filtering, sorting or search UI.
 
-**Tutorials — `/blog/`, hero reads 6 Series · 84 Articles**
+**Tutorials — `/blog/`, hero reads 7 Series · 96 Articles**
 
 | Series | Posts | Navigation |
 |---|---|---|
+| ⧉ AI-Core Functional Workflows | 12 | generated12-chip strip · GitHub code, tests and exercises |
 | 🛡️ Engineering AI-Core Systems | 10 | chip strip · generated |
 | 💻 Hermes Desktop Hands-On | 7 | chip strip · generated |
 | 🧭 AI Transformation for Organizations | 20 | grouped chip strip (Reframe · Redesign · Engineer · Lead) · generated |
@@ -76,7 +84,7 @@ The Thoughts essays are written in a different register from the tutorials — l
 ├── _config.yml         # Jekyll: keeps internal working docs out of the published site
 ├── CNAME               # anirach.com
 ├── sitemap.xml         # 134 URLs, generated · feed.xml — 123 items, generated · llms.txt · robots.txt
-├── blog/               # index.html (the Tutorials catalog, 84 cards) + all 123 self-contained posts
+├── blog/               # index.html (the Tutorials catalog, 96 cards) + all 123 self-contained posts
 ├── thoughts/           # index.html (the Thoughts catalog — 39 essay cards linking ../blog/)
 ├── books/              # index.html + 4 per-book detail pages + 3 free PDFs, all self-contained
 ├── publications/  projects/  news/   # one self-contained index.html each
@@ -180,3 +188,13 @@ News updates have their own runbook at [`docs/openclaw/latest-updates-runbook.md
 ---
 
 *No `LICENSE` file is present. Content and code are © Anirach Mingkhwan; all rights reserved by default.*
+
+## AI-Core Functional Workflows
+
+Twelve bilingual lessons and the matching code are maintained together:
+[Anirach/ai-core-functional-tutorial](https://github.com/Anirach/ai-core-functional-tutorial).
+The offline lab ZIP is `downloads/ai-core-functional-lab.zip`. The series manifest
+is `scripts/series/ai-core-functional.json`; article source links pin the reviewed
+companion commit. Default fixtures require no SDK install, API key or paid calls.
+Run the companion tests/advertised commands and the four website checks when revising.
+No additional reuse license is granted by the companion's public availability.

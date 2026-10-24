@@ -5,6 +5,13 @@ description: End-to-end recipe for adding, editing, or removing a post in blog/ 
 
 # Adding and editing blog posts
 
+> **Current publication inventory — 2026-10-24:** 135 bilingual posts across10 series
+> (7 Tutorials /96 articles,3 Thoughts /39 essays),147 HTML files (146 enumerated),
+> 466 images,135 feed items and146 sitemap URLs. AI-Core Functional Workflows adds
+> twelve lessons paired with Anirach/ai-core-functional-tutorial,108 offline tests
+> and twelve exercises. Earlier dated measurements below retain their historical context.
+
+
 > ## Standing rule — numbers in this skill are load-bearing
 >
 > **Any change that invalidates a number in a skill file must update that number in the

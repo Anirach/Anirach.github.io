@@ -32,6 +32,7 @@ RE_EMOJI_TAIL = re.compile(r'\s*[\U0001F000-\U0001FAFF\u2300-\u23FF☀-➿⬀-�
 
 # ---------------------------------------------------------------- copy deck
 SERIES = {
+    "series-ai-core-functional": ("Functions → AI-Core", "Build explicit input checks, policy, output validation and a separate quality gate, with a runnable offline companion.", "จากฟังก์ชันเดิมสู่ input check, guardrail, output check และ quality gate แบบลงมือทำ"),
     # id: (chip label WITHOUT the "· N" suffix, EN description, TH description)
     "series-ai-core": (
         "AI-Core Systems",
@@ -114,11 +115,10 @@ FEATURE_DEFAULT_T = "good-life-examined-life"   # first build only; then parsed 
 
 HERO_LABEL = 'Anirach Mingkhwan · KMUTNB · <span lang="th">ไทย</span> ⇄ English'
 HERO_TITLE = 'Tutorials'
-HERO_SUB = ('{nseries} series on DevOps, AI agents, AI transformation and AI-core engineering — '
+HERO_SUB = ('{nseries} practical series on guarded functions, AI-Core, agents and DevOps — '
             'every post in Thai, with English one tap away. Essays on living well are in '
             '<a href="../thoughts/">Thoughts</a>.')
-META_DESC = ('{total} bilingual Thai/English tutorials by Anirach Mingkhwan in {nseries} series — AI-Core '
-             'Systems, Hermes Desktop, AI Transformation, Hermes Agent, OpenClaw and DevOps.')
+META_DESC = ('{total} Thai/English tutorials by Anirach Mingkhwan in {nseries} series: guarded functions, AI-Core, agents, AI transformation and DevOps.')
 PAGE_TITLE = 'Tutorials — Anirach Mingkhwan'
 
 
@@ -167,7 +167,7 @@ def rewrap_excerpt(ex):
 def ordinal_map(repo):
     """slug -> (n, group_key) from manifests, chip strips and the DevOps chain."""
     out = {}
-    for name in ("hermes-desktop", "ai-transformation", "ai-core", "working", "good-life"):
+    for name in ("ai-core-functional", "hermes-desktop", "ai-transformation", "ai-core", "working", "good-life"):
         man = json.load(open(os.path.join(repo, "scripts", "series", name + ".json")))
         for p in man["posts"]:
             out[p["slug"]] = (p["n"], p.get("group") or p.get("day"))
@@ -281,6 +281,7 @@ CSS_HERO = r"""
     .blog-jump a[href="/feed.xml"]:hover { background: var(--gold-dark); border-color: var(--gold-dark); color: #fff; }
     /* After a chip jump the destination is :target — light the chip that got you
        there. Pure enhancement: nothing depends on :has(). */
+    body:has(#series-ai-core-functional:target) .blog-jump a[href="#series-ai-core-functional"],
     body:has(#series-ai-core:target)          .blog-jump a[href="#series-ai-core"],
     body:has(#series-hermes-desktop:target)   .blog-jump a[href="#series-hermes-desktop"],
     body:has(#series-ai-transformation:target) .blog-jump a[href="#series-ai-transformation"],
@@ -558,6 +559,8 @@ def section_html(sec, ords, chain, order, groups):
         '      <p class="series-description">%s <span lang="th">%s</span></p>' % (desc_en, desc_th),
         '      <div class="blog-grid">',
     ]
+    if sec["id"] == "series-ai-core-functional":
+        out.insert(-1, '      <p class="series-description"><a href="https://github.com/Anirach/ai-core-functional-tutorial">GitHub companion + detailed README</a> · <a href="../downloads/ai-core-functional-lab.zip">Download code, tests and exercises</a> · <span lang="th">อ่านบทเรียนคู่กับโค้ดและแบบฝึกใน GitHub</span></p>')
     if sec["id"] == "series-ai-transformation":
         for g in groups:
             en_l, th_l = g["label"].split(" · ", 1)

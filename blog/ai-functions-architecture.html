@@ -1,0 +1,578 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Functions — จากฟังก์ชันสู่ระบบ | Anirach Mingkhwan</title>
+  <meta name="description" content="AI-Core Functional #1: แยกฟังก์ชันเดิม ตัวตัดสิน Jev และ pipeline ที่คืน state ชัด โดยเริ่มจากตัวอย่างร่างคำแนะนำ export CSV">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300..900&family=Sarabun:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400..600&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      color-scheme: light;
+      /* ink */
+      --navy: #11304b; --slate: #334155; --slate-light: #526174; --gray: #94a3b8;
+      /* ground */
+      --bg: #faf7f0; --white: #ffffff; --code-bg: #1e293b;
+      /* accent */
+      --blue: #226299; --blue-dark: #1a4d7a; --blue-light: #4992b9;
+      /* brand — sampled from the book covers. --gold is decorative on light grounds (2.2:1); --gold-dark is its text form. */
+      --gold: #c4a46c; --gold-dark: #7a5f22; --cloud: #dee7e6; --parchment: #e9e1c4; --focus: #226299;
+      /* status — use only these six, never invent a seventh */
+      --green: #22c55e; --red: #ef4444; --amber: #f59e0b;
+      --cyan: #06b6d4; --purple: #226299; --purple-dark: #1a4d7a;
+      /* type */
+      --font: 'Inter', 'Sarabun', -apple-system, BlinkMacSystemFont, sans-serif;
+      --mono: 'JetBrains Mono', 'Fira Code', 'Sarabun', monospace;
+      /* form */
+      --radius: 12px; --radius-sm: 8px; --radius-lg: 16px;
+      --measure: 720px; --wide: 860px;
+      --transition: 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+    html { scroll-behavior: smooth; }
+    body { font-family: var(--font); font-size: 17px; line-height: 1.8; color: var(--slate); background: var(--bg); -webkit-font-smoothing: antialiased; }
+    .blog-nav { position: fixed; top: 0; left: 0; right: 0; z-index: 100; background: rgba(248,250,252,0.85); backdrop-filter: blur(20px); border-bottom: 1px solid rgba(0,0,0,0.05); }
+    .blog-nav__inner { max-width: 860px; margin: 0 auto; padding: 0 2rem; height: 56px; display: flex; align-items: center; justify-content: space-between; }
+    .blog-nav__back { font-size: 0.85rem; font-weight: 500; color: var(--blue); text-decoration: none; }
+    .blog-nav__back:hover { color: #1a4d7a; }
+    .blog-nav__title { font-size: 0.85rem; font-weight: 600; color: var(--navy); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 50%; }
+    /* ── HERO ── house .post-hero on the approved Deep Blue gradient (page-design
+       §5 / INV-28). Ink is inverted for the dark ground: white title/meta, tag
+       pills white on 18% white — the openclaw-production treatment. The
+       background value must stay byte-identical to the approved string. */
+    .post-hero { padding: 8rem 2rem 3rem; background: linear-gradient(135deg, #11304b 0%, #1a4d7a 45%, #226299 100%); color: #fff; text-align: center; }
+    .post-hero__tags { display: flex; gap: 0.5rem; justify-content: center; margin-bottom: 1.25rem; flex-wrap: wrap; }
+    .post-hero__tag { display: inline-block; font-size: 0.72rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.1em; color: #fff; background: rgba(255,255,255,0.18); padding: 0.35rem 0.9rem; border-radius: 20px; }
+    .post-hero__title { font-size: clamp(1.8rem, 5vw, 3rem); font-weight: 800; color: #fff; line-height: 1.2; margin-bottom: 1rem; max-width: 720px; margin-left: auto; margin-right: auto; }
+    .post-hero__sub { font-size: 1.05rem; max-width: 640px; margin: 0 auto 1.5rem; line-height: 1.7; color: #fff; }
+    .post-hero__meta { font-size: 0.85rem; color: #fff; display: flex; align-items: center; justify-content: center; gap: 1.5rem; flex-wrap: wrap; }
+    .post-hero__series { font-weight: 600; color: #fff; }
+    /* the switch pill and the focus ring both sit on the dark hero: the pill is
+       a light chip so its labels keep their light-ground colours, and --focus
+       re-points to gold here (blue collapses on blue — the footer/pre
+       precedent). */
+    .post-hero { --focus: var(--gold); }
+    .post-hero__cover {
+      aspect-ratio: 1 / 1;
+      max-width: 380px;
+      margin: 2.5rem auto 0;
+      border-radius: var(--radius-lg, 16px);
+      overflow: hidden;
+      box-shadow: 0 20px 60px rgba(17,48,75,0.14);
+    }
+    .post-hero__cover img { width: 100%; height: 100%; object-fit: cover; display: block; }
+    .post-body { max-width: 720px; margin: 0 auto; padding: 3rem 2rem 6rem; }
+    .post-body h2 { font-size: 1.6rem; font-weight: 800; color: var(--navy); margin: 3rem 0 1rem; padding-bottom: 0.5rem; border-bottom: 2px solid rgba(34,98,153,0.15); }
+    .post-body h3 { font-size: 1.25rem; font-weight: 700; color: var(--navy); margin: 2.25rem 0 0.75rem; }
+    .post-body p { margin-bottom: 1.25rem; }
+    .post-body strong { font-weight: 700; color: var(--navy); }
+    .post-body a { color: var(--blue); text-decoration: underline; text-decoration-thickness: 1px; text-underline-offset: 2px; }
+    .post-body ul, .post-body ol { margin: 0.5rem 0 1.25rem 1.5rem; }
+    .post-body li { margin-bottom: 0.4rem; }
+    .post-body blockquote { background: rgba(34,98,153,0.06); border-left: 4px solid var(--blue); padding: 1rem 1.25rem; border-radius: 0 10px 10px 0; margin: 1.25rem 0; font-size: 0.95rem; color: var(--navy); }
+    .post-body hr { border: none; height: 1px; background: linear-gradient(90deg, transparent, rgba(34,98,153,0.2), transparent); margin: 3rem 0; }
+    /* ── CODE ── */
+    .post-body pre { background: var(--code-bg); border-radius: 12px; padding: 1.5rem; margin: 1.25rem 0 1.5rem; overflow-x: auto; border: 1px solid rgba(255,255,255,0.05); }
+    .post-body pre code { font-family: var(--mono); font-size: 0.85rem; color: #e2e8f0; line-height: 1.7; background: none; padding: 0; white-space: pre-wrap; }
+    .post-body code { font-family: var(--mono); font-size: 0.88em; background: rgba(34,98,153,0.08); color: var(--blue-dark); padding: 0.15em 0.45em; border-radius: 5px; }
+    /* ── TABLES ── */
+    .table-wrapper { overflow-x: auto; margin: 1.5rem 0; border-radius: 0.5rem; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1); }
+    table { width: 100%; border-collapse: collapse; background: white; }
+    th { background: #226299; color: white; padding: 1rem; text-align: left; font-weight: 600; }
+    td { padding: 1rem; border-bottom: 1px solid #e5e7eb; }
+    .post-body table { display: block; width: 100%; overflow-x: auto; }
+    /* ── ALERTS ── */
+    .alert { background: #fef3cd; border: 1px solid #facc15; border-radius: 0.5rem; padding: 1rem; margin: 1.5rem 0; }
+    .alert.danger { background: #fee2e2; border-color: #ef4444; }
+    .alert.info { background: #e0f2fe; border-color: #06b6d4; }
+    .alert.success { background: #d1fae5; border-color: #10b981; }
+    /* ── KEY TAKEAWAYS ── */
+    .key-takeaways { background: linear-gradient(135deg, #f3f4f6 0%, #e5e7eb 100%); border-radius: 1rem; padding: 2rem; margin: 3rem 0; }
+    .key-takeaways h3 { color: #226299; margin-bottom: 1.5rem; }
+    .post-series-footer { text-align: center; font-size: 0.85rem; color: var(--slate-light); font-style: italic; margin-top: 2rem; padding-top: 2rem; border-top: 1px solid #e2e8f0; }
+    .blog-footer { background: var(--navy); padding: 2rem 0; text-align: center; }
+    .blog-footer a { color: var(--gold); text-decoration: none; font-weight: 600; font-size: 0.9rem; }
+    .blog-footer span { color: var(--gray); font-size: 0.8rem; display: block; margin-top: 0.4rem; }
+    @media (max-width: 600px) {
+      .post-hero { padding: 7rem 1.25rem 2.5rem; }
+      .post-body { padding: 2rem 1.25rem 4rem; }
+      .post-hero__meta { flex-direction: column; gap: 0.4rem; }
+      .post-body h2 { font-size: 1.4rem; }
+      .post-body h3 { font-size: 1.15rem; }
+      .post-body pre { padding: 1rem; border-radius: 8px; }
+    }
+
+    :focus-visible { outline: 2px solid var(--focus); outline-offset: 3px; border-radius: 2px; }
+    /* the ring sits on the page ground (3px offset). Inside the navy footers
+       and code blocks var(--blue) collapses to 2.12:1, so those scopes
+       re-point --focus to gold (5.73:1 on navy). */
+    .footer, .blog-footer, pre { --focus: var(--gold); }
+    :focus:not(:focus-visible) { outline: none; }
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after {
+        animation-duration: .01ms !important; animation-iteration-count: 1 !important;
+        transition-duration: .01ms !important; scroll-behavior: auto !important;
+      }
+    }
+    h1, h2, h3, .post-hero__title, .card__title { text-wrap: balance; }
+
+    .post-body img, .post-body svg { max-width: 100%; height: auto; }
+
+    /* ── SKIP LINK ── a11y-perf R5: the link and the landmark it targets are a
+       pair — useless without both halves. Off-screen until focused, then the
+       first tab stop on every page. */
+    .skip-link { position: absolute; left: -9999px; }
+    .skip-link:focus {
+      left: 1rem; top: 1rem; z-index: 999;
+      background: var(--navy); color: #fff;
+      padding: 0.75rem 1.25rem; border-radius: var(--radius-sm);
+      font-weight: 600; text-decoration: none;
+    }
+
+    /* ── POST WAYFINDING ── the wordmark is the home link; the footer carries
+       the full destination row. */
+    .blog-nav__home {
+      font-size: 0.9rem; font-weight: 800; color: var(--navy);
+      text-decoration: none; margin-right: 1rem;
+    }
+    .blog-nav__home:hover { color: var(--blue); }
+    .blog-nav__inner > .blog-nav__back { margin-right: auto; }
+    .blog-footer__nav {
+      display: flex; flex-wrap: wrap; justify-content: center; gap: 0.35rem 1.25rem;
+      max-width: 860px; margin: 0 auto 1.25rem; padding: 0 2rem 1.25rem;
+      border-bottom: 1px solid rgba(255,255,255,0.12);
+    }
+    .blog-footer__nav a { color: var(--gold); font-size: 0.85rem; font-weight: 600; text-decoration: none; }
+    .blog-footer__nav a:hover { color: #fff; text-decoration: underline; }
+
+    html { scroll-padding-top: 5rem; }
+    [id] { scroll-margin-top: 5rem; }
+
+    /* Thai needs more room than Latin at the same nominal size. */
+    .post-body:lang(th) { font-size: 18px; line-height: 1.85; }
+    .post-body p, .post-body li, .post-body blockquote { text-wrap: pretty; }
+
+    /* ---- side-scroll affordance ----
+       pre blocks and tables can exceed 720px. These layers paint a shadow ONLY
+       where there is more content in that direction; when fully scrolled the
+       cover slides over the shadow and hides it. No JavaScript, no wrapper. */
+    .post-body pre, .post-body table {
+      overflow-x: auto;
+      background-image:
+        linear-gradient(to right, var(--code-bg, #0f172a) 30%, rgba(15,23,42,0)),
+        linear-gradient(to left, var(--code-bg, #0f172a) 30%, rgba(15,23,42,0)),
+        radial-gradient(farthest-side at 0 50%, rgba(0,0,0,.28), rgba(0,0,0,0)),
+        radial-gradient(farthest-side at 100% 50%, rgba(0,0,0,.28), rgba(0,0,0,0));
+      background-position: 0 0, 100% 0, 0 0, 100% 0;
+      background-repeat: no-repeat;
+      background-size: 40px 100%, 40px 100%, 14px 100%, 14px 100%;
+      background-attachment: local, local, scroll, scroll;
+    }
+    .post-body table {
+      background-image:
+        linear-gradient(to right, var(--white, #fff) 30%, rgba(255,255,255,0)),
+        linear-gradient(to left, var(--white, #fff) 30%, rgba(255,255,255,0)),
+        radial-gradient(farthest-side at 0 50%, rgba(17,48,75,.16), rgba(17,48,75,0)),
+        radial-gradient(farthest-side at 100% 50%, rgba(17,48,75,.16), rgba(17,48,75,0));
+      background-position: 0 0, 100% 0, 0 0, 100% 0;
+      background-repeat: no-repeat;
+      background-size: 40px 100%, 40px 100%, 14px 100%, 14px 100%;
+      background-attachment: local, local, scroll, scroll;
+    }
+
+    /* ---- table of contents ---- */
+    .post-toc {
+      max-width: 720px;
+      margin: 2rem auto 0;
+      padding: 1rem 1.25rem;
+      background: rgba(34,98,153,0.05);
+      border: 1px solid rgba(34,98,153,0.14);
+      border-left: 3px solid var(--gold, #c4a46c);
+      border-radius: 10px;
+      font-size: 0.92rem;
+    }
+    .post-toc > summary {
+      cursor: pointer;
+      font-weight: 700;
+      color: var(--navy);
+      list-style: none;
+    }
+    .post-toc > summary::-webkit-details-marker { display: none; }
+    .post-toc > summary::before {
+      content: "\25B8";
+      display: inline-block;
+      margin-right: 0.5rem;
+      transition: transform 0.2s ease;
+      color: var(--gold-dark, #7a5f22);
+    }
+    .post-toc[open] > summary::before { transform: rotate(90deg); }
+    .post-toc > summary:focus-visible { outline: 3px solid var(--focus, #226299); outline-offset: 3px; }
+    .post-toc ol { margin: 0.85rem 0 0.25rem; padding-left: 1.4rem; }
+    .post-toc li { margin-bottom: 0.4rem; line-height: 1.5; }
+    .post-toc a { color: var(--slate); text-decoration: none; }
+    .post-toc a:hover, .post-toc a:focus-visible { color: var(--blue-dark, #1a4d7a); text-decoration: underline; }
+    @media (max-width: 600px) { .post-toc { margin: 1.25rem 1rem 0; } }
+
+    /* ---- cross-document view transitions ---- */
+    @view-transition { navigation: auto; }
+    .nav, .blog-nav { view-transition-name: site-nav; }
+    .footer, .blog-footer { view-transition-name: site-footer; }
+    @media (prefers-reduced-motion: reduce) {
+      ::view-transition-group(*),
+      ::view-transition-old(*),
+      ::view-transition-new(*) { animation: none !important; }
+    }
+
+    /* ── SERIES STRIP — Hermes Agent in Practice ──
+       Same class and inner-wrapper shape as the OpenClaw strip because the
+       linter's RE_SNAV recognises exactly `series-nav` + a nested div; a
+       renamed strip would read as "no nav" and fail INV-08. All content
+       checks (INV-03 family) iterate the SERIES7 list only, so this strip's
+       labels are convention, not contract. House-styled, not the island CSS. */
+    .series-nav {
+      max-width: 720px; margin: 2rem auto 0; padding: 1.1rem 1.4rem;
+      background: rgba(255,255,255,0.75); border: 1px solid rgba(34,98,153,0.15);
+      border-left: 3px solid var(--gold); border-radius: 12px;
+    }
+    .series-nav h3 {
+      font-size: 0.78rem; font-weight: 700; text-transform: uppercase;
+      letter-spacing: 0.08em; color: var(--gold-dark); margin-bottom: 0.6rem;
+    }
+    .series-links { display: flex; flex-wrap: wrap; gap: 0.5rem; }
+    .series-links a, .series-links .current {
+      font-size: 0.82rem; font-weight: 600; padding: 0.35rem 0.8rem;
+      border-radius: 50px; text-decoration: none;
+    }
+    .series-links a { color: var(--blue-dark); background: rgba(34,98,153,0.08); }
+    .series-links a:hover { background: rgba(34,98,153,0.16); }
+    .series-links .current { color: #fff; background: var(--blue-dark); }
+    @media (max-width: 600px) { .series-nav { margin: 1.5rem 1rem 0; } }
+
+    /* ── FIGURE — the sanctioned diagram component (page-design §4 Content).
+       Diagrams are PNGs; this repo built them out of divs twice and reverted
+       twice. The image is wrapped in a link to itself so a phone can pinch a
+       1400px drawing without a line of JavaScript. */
+    .figure { margin: 2.5rem 0; }
+    .figure__img { width: 100%; height: auto; display: block;
+                   border-radius: var(--radius); border: 1px solid rgba(0,0,0,0.06); }
+    .figure__caption { font-size: 0.85rem; color: var(--slate-light);
+                       text-align: center; margin-top: 0.75rem; }
+
+    /* ── REFERENCES — every material number in this series carries its source.
+       The tags are the book's own four evidence labels. */
+    .references { margin-top: 3rem; padding-top: 2rem; border-top: 1px solid #e2e8f0; }
+    .references__note { font-size: 0.85rem; color: var(--slate-light); margin-bottom: 1rem; }
+    .references__list { padding-left: 1.4rem; font-size: 0.9rem; line-height: 1.75; }
+    .references__list li { margin-bottom: 0.7rem; }
+    .ref-tag { display: inline-block; font-size: 0.7rem; font-weight: 700;
+               letter-spacing: 0.06em; text-transform: uppercase; padding: 0.1rem 0.5rem;
+               border-radius: 50px; margin-right: 0.4rem; vertical-align: 0.05em;
+               background: rgba(34,98,153,0.1); color: var(--blue-dark); }
+    /* All four labels get a rule.  --standard and --study shipped without one
+       on 2026-09-05, so 158 of 306 tags fell through to the base blue and the
+       two labels were indistinguishable.  Ratios on --bg: 6.70 / 6.92 / 7.36 /
+       4.81:1, all AA at this size. */
+    .ref-tag--law { background: rgba(239,68,68,0.12); color: #991b1b; }
+    .ref-tag--standard { background: rgba(34,98,153,0.12); color: var(--blue-dark); }
+    .ref-tag--study { background: rgba(34,197,94,0.18); color: #14532d; }
+    .ref-tag--synthesis { background: rgba(196,164,108,0.22); color: var(--gold-dark); }
+    .ref-supports { display: block; color: var(--slate-light); font-size: 0.85rem; }
+
+    /* ── LANGUAGE SWITCH — pure CSS, zero JavaScript (INV-38) ──
+       One visually-hidden checkbox as a direct child of body, BEFORE the main landmark,
+       so `#langSwitch:checked ~ main …` reaches every content block. The two
+       tracks are paired blocks: .l-th (default) and .l-en (hidden until
+       checked; display:revert restores block for divs, inline for spans).
+       Naming stays clear of INV-12's menu-token regex (hamburger|burger|
+       nav__toggle|nav-toggle|navtoggle|menu-toggle|menu__toggle) — verified.
+       No JS also means no persistence across posts; each post opens in Thai. */
+    .lang-switch-box { position: absolute; left: -9999px; }
+    .l-en { display: none; }
+    #langSwitch:checked ~ main .l-en { display: revert; }
+    #langSwitch:checked ~ main .l-th { display: none; }
+    .lang-switch {
+      display: inline-flex; align-items: center; gap: 0.55rem;
+      margin-top: 1.4rem; padding: 0.4rem 1.1rem; border-radius: 50px;
+      background: rgba(255,255,255,0.85); border: 1px solid rgba(255,255,255,0.4);
+      cursor: pointer; font-size: 0.85rem; user-select: none;
+    }
+    .lang-switch span { color: var(--slate-light); font-weight: 600; transition: color 0.2s; }
+    .lang-switch .lang-sep { color: var(--gray); font-weight: 400; }
+    .lang-switch .lang-th { color: var(--navy); font-weight: 800; }
+    #langSwitch:checked ~ main .lang-switch .lang-th { color: var(--slate-light); font-weight: 600; }
+    #langSwitch:checked ~ main .lang-switch .lang-en { color: var(--navy); font-weight: 800; }
+    .lang-switch:hover { border-color: #fff; }
+    #langSwitch:focus-visible ~ main .lang-switch {
+      outline: 2px solid var(--focus); outline-offset: 3px;
+    }
+  </style>
+  <!-- social -->
+  <link rel="canonical" href="https://anirach.com/blog/ai-functions-architecture.html">
+  <meta property="og:type" content="article">
+  <meta property="og:url" content="https://anirach.com/blog/ai-functions-architecture.html">
+  <meta property="og:site_name" content="Anirach Mingkhwan">
+  <meta property="og:locale" content="th_TH">
+  <meta property="og:locale:alternate" content="en_US">
+  <meta property="article:published_time" content="2026-10-24">
+  <meta property="article:author" content="https://anirach.com/">
+  <meta property="og:title" content="Functions — จากฟังก์ชันสู่ระบบ">
+  <meta property="og:description" content="AI-Core Functional #1: แยกฟังก์ชันเดิม ตัวตัดสิน Jev และ pipeline ที่คืน state ชัด โดยเริ่มจากตัวอย่างร่างคำแนะนำ export CSV">
+  <meta property="og:image" content="https://anirach.com/images/ai-functions-architecture-og.jpg">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
+  <meta property="og:image:alt" content="Functions — จากฟังก์ชันสู่ระบบ">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:image" content="https://anirach.com/images/ai-functions-architecture-og.jpg">
+  <meta name="twitter:image:alt" content="Functions — จากฟังก์ชันสู่ระบบ">
+  <meta name="robots" content="max-image-preview:large">
+  <meta name="theme-color" content="#11304b">
+  <link rel="icon" href="/favicon.ico" sizes="any">
+  <link rel="apple-touch-icon" href="/apple-touch-icon.png">
+  <!-- /social -->
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "BlogPosting",
+    "headline": "Functions — จากฟังก์ชันสู่ระบบ",
+    "author": {
+      "@type": "Person",
+      "@id": "https://anirach.com/#person",
+      "name": "Anirach Mingkhwan",
+      "url": "https://anirach.com/"
+    },
+    "datePublished": "2026-10-24",
+    "dateModified": "2026-10-24",
+    "image": "https://anirach.com/images/ai-functions-architecture-og.jpg",
+    "inLanguage": [
+      "th",
+      "en"
+    ],
+    "mainEntityOfPage": "https://anirach.com/blog/ai-functions-architecture.html"
+  }
+  </script>
+</head>
+<body>
+<a href="#main" class="skip-link">Skip to content</a>
+<input type="checkbox" id="langSwitch" class="lang-switch-box" aria-label="Switch language: Thai / English">
+
+  <nav class="blog-nav">
+    <div class="blog-nav__inner">
+      <a href="../index.html" class="blog-nav__home">Anirach</a>
+      <a href="./" class="blog-nav__back">‹ Tutorials</a>
+      <div class="blog-nav__title">Functions</div>
+    </div>
+  </nav>
+
+  <main id="main">
+
+  <header class="post-hero">
+    <div class="post-hero__tags">
+      <span class="post-hero__tag">Typed Functions</span>
+      <span class="post-hero__tag">Jev Decisions</span>
+      <span class="post-hero__tag">Offline First</span>
+    </div>
+    <h1 class="post-hero__title"><span class="l-th">Functions — จากฟังก์ชันสู่ระบบ</span><span class="l-en" lang="en">From Functions to Guarded Workflows</span></h1>
+    <p class="post-hero__sub"><span class="l-th">แยกฟังก์ชันเดิม ตัวตัดสิน Jev และ pipeline ที่คืน state ชัด โดยเริ่มจากตัวอย่างร่างคำแนะนำ export CSV</span><span class="l-en" lang="en">Trace a familiar template function into a guarded workflow with explicit states and no external effects.</span></p>
+    <div class="post-hero__meta">
+      <span>By <strong>Anirach Mingkhwan</strong></span>
+      <span class="post-hero__series">AI-Core Functional Workflows 2026 • Post #1</span>
+      <span><time datetime="2026-10-24">24 Oct 2026</time></span>
+      <span>3 min read</span>
+    </div>
+    <label for="langSwitch" class="lang-switch" title="สลับภาษา · Switch language"><span class="lang-th">ไทย</span><span class="lang-sep">·</span><span class="lang-en" lang="en">English</span></label>
+    <div class="post-hero__cover">
+      <img src="../images/ai-functions-architecture-cover.jpg" alt="Functions — จากฟังก์ชันสู่ระบบ" width="800" height="800" loading="eager" fetchpriority="high" decoding="async">
+    </div>
+  </header>
+
+  <article class="post-body">
+
+    <details class="post-toc l-th" open>
+      <summary>ในบทความนี้</summary>
+      <ol>
+          <li><a href="#th-outcome">เป้าหมายและสิ่งที่ต้องพร้อม</a></li>
+          <li><a href="#th-concepts">จากโค้ดเดิมสู่ขอบเขตใหม่</a></li>
+          <li><a href="#th-steps">ลงมือทีละเจ็ดขั้น</a></li>
+          <li><a href="#th-implementation">ไฟล์และคำสั่งที่รันได้</a></li>
+          <li><a href="#th-verify">ผลที่ควรได้และการตรวจ</a></li>
+          <li><a href="#th-failure">ตัวอย่างที่ต้องเข้าใจเมื่อไม่ผ่าน</a></li>
+          <li><a href="#th-exercise">แบบฝึกในสำเนาทดลอง</a></li>
+          <li><a href="#th-troubleshoot">ตรวจเมื่อผลไม่ตรง</a></li>
+          <li><a href="#th-next">จุดตรวจถัดไป</a></li>
+          <li><a href="#th-references">แหล่งอ้างอิงและรุ่น</a></li>
+          <li><a href="#th-summary">สิ่งที่ควรนำไปใช้ต่อ</a></li>
+      </ol>
+    </details>
+    <details class="post-toc l-en" open>
+      <summary>In this post</summary>
+      <ol>
+          <li><a href="#en-outcome">Outcome and prerequisites</a></li>
+          <li><a href="#en-concepts">Old functions and the new boundary</a></li>
+          <li><a href="#en-steps">Seven practical steps</a></li>
+          <li><a href="#en-implementation">Files and runnable commands</a></li>
+          <li><a href="#en-verify">Expected output and verification</a></li>
+          <li><a href="#en-failure">A failure to understand</a></li>
+          <li><a href="#en-exercise">Exercise in a disposable copy</a></li>
+          <li><a href="#en-troubleshoot">Troubleshooting</a></li>
+          <li><a href="#en-next">Next checkpoint</a></li>
+          <li><a href="#en-references">Sources and version notes</a></li>
+          <li><a href="#en-summary">Key takeaways</a></li>
+      </ol>
+    </details>
+    <div class="l-th">
+
+<p>ตอนที่ 1 จากสิบสอง: แยกฟังก์ชันเดิม ตัวตัดสิน Jev และ pipeline ที่คืน state ชัด โดยเริ่มจากตัวอย่างร่างคำแนะนำ export CSV</p><blockquote>คำตัดสินและร่างข้อความเริ่มต้นเป็น mock ที่ผู้เขียนกำหนด ไม่ใช่ผล Jev จริง อ่านบทเรียนคู่กับ source, tests และแบบฝึกที่ลิงก์ไปยังรุ่นตรึงใน GitHub</blockquote>
+
+<h2 id="th-outcome">เป้าหมายและสิ่งที่ต้องพร้อม</h2>
+<p>เตรียม Node22.18 ขึ้นไปกับ terminal clone companion จาก GitHub ตาม README หรือดาวน์โหลด ZIP ฉบับสมบูรณ์ แตกแล้วเข้า ai-core-functional-lab ไม่ต้อง npm install ใช้ API key หรือเรียกโมเดลผ่านเครือข่าย เวลาอ่านไม่รวมการลงมือประมาณ25–45นาที เก็บชุดอ้างอิงหนึ่งชุดและทำแบบฝึกในอีกสำเนา</p><p><a href="../downloads/ai-core-functional-lab.zip" download>ดาวน์โหลด companion ZIP</a> · <a href="https://github.com/Anirach/ai-core-functional-tutorial/blob/869487af4cf0bb30384ba125d0cb0a035cb7dbe2/README.md">README / แผนบทเรียน</a></p><p>ตอนนี้เน้น src/generation.mjs โดย gate state บอกผลต่อชิ้นงานและทางไปต่อ ไม่มี state ใดส่งข้อความหรือแก้บัญชีจริง</p>
+
+<h2 id="th-concepts">จากโค้ดเดิมสู่ขอบเขตใหม่</h2>
+<p>เริ่มจากฟังก์ชันที่คุ้นเคย รับ input แล้วคืน object ร่างคำตอบ traditionalReply เป็น template จากข้อเท็จจริงของผลิตภัณฑ์ที่เราดูแล เมื่อคำตอบมีขอบเขตแคบ วิธีนี้อาจพอแล้ว การเพิ่มโมเดลเป็นทางเลือกในการออกแบบ ไม่ใช่การยกระดับโดยอัตโนมัติ</p>
+<p>DeskLite เป็นผลิตภัณฑ์สมมติ ผู้ใช้ถามวิธี export CSV ระบบร่างคำตอบได้ แต่ส่งไฟล์ แก้บัญชี หรือคืนเงินไม่ได้ accept หมายถึงชิ้นงานผ่านด่าน runtime ของรุ่นนี้ ไม่ได้ให้สิทธิ์กระทำกับระบบภายนอก</p>
+<p>คำว่า functional ในที่นี้หมายถึงขอบเขต input/output ที่ชัดและฟังก์ชันที่ประกอบกันได้ ไม่ใช่ชื่อ framework ของผู้ขาย Codex ช่วยพัฒนาโค้ด ตัวสร้างข้อความเป็นอีกบทบาทหนึ่ง ส่วน Jev ตัดสินแบบมีชนิดข้อมูล แล็บนี้จำลองส่วนโมเดลทั้งสองและไม่ได้สร้าง SDK ชื่อ AI-Core ขึ้นมา</p>
+
+<h2 id="th-steps">ลงมือทีละเจ็ดขั้น</h2>
+<h3>ขั้นที่ 1</h3><p>แตก ZIP ในโฟลเดอร์ที่เขียนไฟล์ได้ แล้วเข้า ai-core-functional-lab รัน doctor ก่อนแก้ไฟล์ ควรเห็นข้อมูลสมมติ 28 เคสและโหมดออฟไลน์ ไม่ต้องติดตั้งแพ็กเกจหรือใช้บัญชี</p>
+<h3>ขั้นที่ 2</h3><p>เปิด data/facts.json อ่านข้อเท็จจริงสองข้อ Export ทำไฟล์ให้ดาวน์โหลดและไม่ส่งอีเมล ข้อมูลนี้เป็นหลักฐานที่แอปส่งให้ ไม่ใช่สิ่งที่คำตอบร่างแต่งขึ้นแล้วถือว่าจริง</p>
+<h3>ขั้นที่ 3</h3><p>ไล่ traditionalReply ใน generation.mjs ซึ่งรับ input กับ facts แล้วคืน action, language, text และ citations ไม่มีการอ่าน key เรียก API หรือแก้ ticket</p>
+<h3>ขั้นที่ 4</h3><p>รัน compare กับ V001 เก็บผลสองแบบ ค่าแบบเดิมเป็นร่าง ส่วน guarded มี state, history และ attempts อย่าเทียบร่างที่ยังไม่ผ่านด่านกับชิ้นงานที่ตรวจแล้วราวกับรับประกันเหมือนกัน</p>
+<h3>ขั้นที่ 5</h3><p>อ่านลำดับด่าน input code, authorization, semantic input, generation, output code, semantic output และ quality แต่ละด่านหยุดงานถัดไปได้ จดลำดับนี้ก่อนอ่าน implementation</p>
+<h3>ขั้นที่ 6</h3><p>รัน V004 ที่ขอ send_reply ด่านสิทธิ์ต้อง reject ก่อนเรียก provider คำตอบคล่องแคล่วไม่ได้สร้างสิทธิ์ให้ ตรวจ calls เป็นศูนย์ด้วย ไม่ดูเพียงคำว่า reject</p>
+<h3>ขั้นที่ 7</h3><p>รัน pipeline tests แล้วอธิบายว่าฟังก์ชันเก่ายังช่วยตรงไหน มันเป็น deterministic fallback หลังขอแก้ร่าง ระบบใหม่เพิ่มการสังเกตและขอบเขตตัดสิน แต่ template เดิมยังมีคุณค่า</p>
+
+<h2 id="th-implementation">ไฟล์และคำสั่งที่รันได้</h2>
+<p>เปิด source จริงและอ่าน dependencies ก่อนแก้ นี่คือโค้ดอ้างอิงที่รันได้ ไม่ใช่ SDK ชื่อ AI-Core ที่สมมติขึ้น ลิงก์ชี้ source รุ่นตรึงของ companion สาธารณะใน GitHub</p><p><a href="https://github.com/Anirach/ai-core-functional-tutorial/blob/869487af4cf0bb30384ba125d0cb0a035cb7dbe2/src/generation.mjs">src/generation.mjs</a> · <a href="https://github.com/Anirach/ai-core-functional-tutorial/blob/869487af4cf0bb30384ba125d0cb0a035cb7dbe2/test/pipeline.test.mjs">tests ของตอนนี้</a> · <a href="https://github.com/Anirach/ai-core-functional-tutorial/blob/869487af4cf0bb30384ba125d0cb0a035cb7dbe2/exercises/01-architecture.md">แบบฝึกตอนนี้</a></p><pre><code>export function traditionalReply(input,facts) {
+  // An ordinary deterministic function is preferable when a template is enough.
+  return {action:&#x27;draft_reply&#x27;,language:input.language,
+    text:facts.facts.map(f=&gt;f[input.language]).join(&#x27; &#x27;),citations:[&#x27;export-csv&#x27;,&#x27;no-send&#x27;]};
+}
+// The mock generator is separate from Jev. No live text generation is configured.
+</code></pre><p>คำสั่งออฟไลน์:</p><pre><code>node src/cli.mjs doctor
+node src/cli.mjs compare --case V001
+node src/cli.mjs run --case V004
+node --test --test-reporter=spec test/pipeline.test.mjs</code></pre>
+
+<h2 id="th-verify">ผลที่ควรได้และการตรวจ</h2>
+<p>doctor แสดง OFFLINE FIXTURES และ paidCalls 0 เคส V001 accept หลัง mock สี่ครั้ง ส่วน V004 reject ด้วย action_not_authorized และไม่เรียก provider นี่คือพฤติกรรม fixture ที่รันซ้ำได้ ไม่ใช่ผลวัดความสามารถหรือการประหยัดของ Jev</p><p>อ่าน reasons, history และทุก attempt ไม่ดูเพียง label สุดท้าย usage ที่ไม่ทราบต้องยังไม่ทราบ test สีเขียวแสดงเส้นทางโค้ดที่กำหนด ไม่ได้พิสูจน์ความปลอดภัยเชิงความหมายทุกกรณี</p>
+
+<h2 id="th-failure">ตัวอย่างที่ต้องเข้าใจเมื่อไม่ผ่าน</h2>
+<p>หากคืนร่างแบบเดิมจาก endpoint ทันที object ที่ดูดีอาจซ่อนการขาดด่านสิทธิ์และความหมาย compare ทำให้เห็นความต่าง โดยไม่ได้อ้างว่าทางที่มีโมเดลปลอดภัยกว่าเสมอ</p>
+
+<h2 id="th-exercise">แบบฝึกในสำเนาทดลอง</h2>
+<p>ในสำเนาทดลอง เพิ่มข้อเท็จจริงข้อที่สามสองภาษาแล้วรัน compare template จะเปลี่ยนทันที แต่คำตัดสินจำลองไม่ได้ฉลาดขึ้น คืนไฟล์ต้นฉบับก่อนตอนถัดไป</p><p>ทำตามไฟล์แบบฝึก เก็บต้นฉบับและคืนชุดอ้างอิงก่อนตอนถัดไป อย่าใช้ผล held-out เลือก threshold</p>
+
+<h2 id="th-troubleshoot">ตรวจเมื่อผลไม่ตรง</h2>
+<p>ถ้าหา cli.mjs ไม่พบ ให้ตรวจโฟลเดอร์ terminal หากเห็นว่าต้องใช้ SDK หรือ key ให้ตรวจคำสั่ง CLI ที่ให้มาเป็นออฟไลน์และปฏิเสธ --live</p>
+
+<h2 id="th-next">จุดตรวจถัดไป</h2>
+<p>ก่อนต่อ ให้บอกคุณสมบัติที่โค้ดตรวจได้แน่นอน คำตัดสินที่ผิดได้ state ที่หยุดงาน และหลักฐานที่ต้องมีก่อนปล่อยรุ่น</p><p><a href="ai-functions-contracts.html">ตอนถัดไป →</a></p>
+
+<h2 id="th-references">แหล่งอ้างอิงและรุ่น</h2>
+<section class="references" aria-labelledby="th-reference-heading"><h3 id="th-reference-heading">เอกสารต้นทางและ companion source</h3><p>ตรวจเอกสาร TypeSafe วันที่24ตุลาคม2026 บทเรียนตรึงคำขอข้อความที่ jev-1.14.0 และใช้ Choice/Noul ไม่ได้อ้างว่ามีเพียงความสามารถเหล่านี้ โค้ด REST ทางเลือกยังไม่ได้ลอง live ส่วน SDK0.7.0 มีเอกสารแต่แล็บนี้ไม่ต้องติดตั้ง</p><ol class="references__list"><li id="th-ref-1"><a href="/blog/ai-core-control-loop.html">Existing AI-Core assurance cycle</a></li><li id="th-ref-2"><a href="https://docs.typesafe.ai/introduction/coding-agents">Jev and coding agents</a></li><li id="th-ref-3"><a href="https://docs.typesafe.ai/models">Models and aliases</a></li><li id="th-ref-4"><a href="https://docs.typesafe.ai/primitives/choice">Choice</a></li><li id="th-ref-5"><a href="https://docs.typesafe.ai/primitives/noul">Noul</a></li><li id="th-ref-6"><a href="https://docs.typesafe.ai/confidence">Confidence statistic</a></li><li id="th-ref-7"><a href="https://docs.typesafe.ai/api/system-one">System One REST API</a></li><li id="th-ref-8"><a href="https://docs.typesafe.ai/sdk/javascript/api/interfaces/RetryPolicy">SDK retry policy</a></li></ol></section>
+
+<h2 id="th-summary">สิ่งที่ควรนำไปใช้ต่อ</h2>
+<div class="key-takeaways"><ul><li>เงื่อนไขแน่นอนและสิทธิ์ยังอยู่ในโค้ด</li><li>ด่านความหมายและคุณภาพผิดพลาดได้</li><li>accept, reject, revise และ review มีทางไปต่อคนละแบบ</li></ul></div>
+    </div>
+
+    <div class="l-en" lang="en">
+
+<p>Part 1 of twelve. Trace a familiar template function into a guarded workflow with explicit states and no external effects.</p><blockquote>Default decisions and draft text are authored mocks, not live Jev results. Use the tutorial with the matching companion code, tests and exercise linked to a fixed GitHub version.</blockquote>
+
+<h2 id="en-outcome">Outcome and prerequisites</h2>
+<p>Use Node22.18+ and a terminal. Clone the GitHub companion using its README, or download the complete ZIP, extract it and enter ai-core-functional-lab. No npm install, API key or network inference is needed. The reading-time label excludes about25–45 minutes of hands-on work. Keep one reference copy and make exercises in another.</p><p><a href="../downloads/ai-core-functional-lab.zip" download>Download companion ZIP</a> · <a href="https://github.com/Anirach/ai-core-functional-tutorial/blob/869487af4cf0bb30384ba125d0cb0a035cb7dbe2/README.md">README / lesson map</a></p><p>This part focuses on src/generation.mjs. Expected gate states describe content and continuation; no state sends a message or changes a real account.</p>
+
+<h2 id="en-concepts">Old functions and the new boundary</h2>
+<p>Start with a familiar function: input goes in, a draft object comes out. traditionalReply is an ordinary template over maintained product facts. It is fast to understand and sufficient when the answer space is small. Adding a model is a design choice, not an automatic upgrade.</p>
+<p>The sample product DeskLite is fictional. A user asks how to export CSV; our system may prepare a reply and may never send a file, modify an account or issue a refund. A result called accept means an artifact passed this release’s runtime checks. It grants no external authority.</p>
+<p>Here functional means explicit typed boundaries and composable functions. It is not the name of a vendor framework. Codex helps develop the code; a separate generative provider would draft text; Jev supplies typed discriminative judgments. This local lab mocks both model-facing roles and implements no AI-Core SDK.</p>
+
+<h2 id="en-steps">Seven practical steps</h2>
+<h3>Step 1</h3><p>Extract the companion ZIP into a writable folder and enter ai-core-functional-lab. Run doctor before changing files. It should identify 28 synthetic cases and offline mode; no package installation or account is necessary.</p>
+<h3>Step 2</h3><p>Open data/facts.json and read both maintained claims. Export downloads a CSV locally and does not email it. These facts are evidence supplied by the application, not claims the draft can write into existence.</p>
+<h3>Step 3</h3><p>Trace traditionalReply in generation.mjs. Its dependencies are the validated input and facts object. It returns action, language, text and citations; it does not read a key, make a request or mutate a ticket.</p>
+<h3>Step 4</h3><p>Run compare for V001 and keep both outputs. The traditional value is a draft; the guarded value includes state, history and attempts. Do not compare a raw draft with a checked artifact as though their guarantees were identical.</p>
+<h3>Step 5</h3><p>Read the pipeline stage order: input code, authorization, semantic input, generation, output code, semantic output and quality. Each stage can stop later work. Write that order down before studying the implementation.</p>
+<h3>Step 6</h3><p>Run V004, which requests send_reply. Authorization must reject it before any provider call. A fluent answer cannot grant permission absent from the application policy. Check calls equals zero, not only the final word reject.</p>
+<h3>Step 7</h3><p>Run the pipeline tests, then explain where the old function still helps: deterministic fallback after a repair request. The new workflow adds observability and judgment boundaries, while the template remains useful.</p>
+
+<h2 id="en-implementation">Files and runnable commands</h2>
+<p>Open the exact source and read its dependencies before editing. This is runnable reference code, not a fictional AI-Core SDK. The source links point to a fixed version of the public GitHub companion.</p><p><a href="https://github.com/Anirach/ai-core-functional-tutorial/blob/869487af4cf0bb30384ba125d0cb0a035cb7dbe2/src/generation.mjs">src/generation.mjs</a> · <a href="https://github.com/Anirach/ai-core-functional-tutorial/blob/869487af4cf0bb30384ba125d0cb0a035cb7dbe2/test/pipeline.test.mjs">Matching tests</a> · <a href="https://github.com/Anirach/ai-core-functional-tutorial/blob/869487af4cf0bb30384ba125d0cb0a035cb7dbe2/exercises/01-architecture.md">This lesson’s exercise</a></p><pre><code>export function traditionalReply(input,facts) {
+  // An ordinary deterministic function is preferable when a template is enough.
+  return {action:&#x27;draft_reply&#x27;,language:input.language,
+    text:facts.facts.map(f=&gt;f[input.language]).join(&#x27; &#x27;),citations:[&#x27;export-csv&#x27;,&#x27;no-send&#x27;]};
+}
+// The mock generator is separate from Jev. No live text generation is configured.
+</code></pre><p>Offline commands:</p><pre><code>node src/cli.mjs doctor
+node src/cli.mjs compare --case V001
+node src/cli.mjs run --case V004
+node --test --test-reporter=spec test/pipeline.test.mjs</code></pre>
+
+<h2 id="en-verify">Expected output and verification</h2>
+<p>doctor reports OFFLINE FIXTURES and paidCalls 0. V001 accepts an artifact after four mock calls. V004 rejects with action_not_authorized and zero calls. These are reproducible fixture behaviors, not measured Jev intelligence or cost savings.</p><p>Inspect reasons, history and every attempt rather than only the final label. Unknown usage must remain unknown. A green test demonstrates the specified code path, not universal semantic safety.</p>
+
+<h2 id="en-failure">A failure to understand</h2>
+<p>If you return the traditional draft directly from a network endpoint, its well-formed object can hide missing policy and semantic checks. The compare command exposes that difference without claiming the model-based route is universally safer.</p>
+
+<h2 id="en-exercise">Exercise in a disposable copy</h2>
+<p>In a disposable copy, add a third product fact in both languages and run compare again. The template changes immediately; canned model judgments do not become more intelligent. Restore the reference before continuing.</p><p>Follow the matching exercise file, retain the original and restore the reference before the next chapter. Do not use held-out results to choose a threshold.</p>
+
+<h2 id="en-troubleshoot">Troubleshooting</h2>
+<p>Cannot find cli.mjs means the terminal is in the wrong folder. If you see a request for an SDK or key, inspect the command: the provided CLI is offline-only and rejects --live.</p>
+
+<h2 id="en-next">Next checkpoint</h2>
+<p>Before continuing, name the property that code checks exactly, the judgment that may be wrong, the state that stops work and the evidence needed before release.</p><p><a href="ai-functions-contracts.html">Next lesson →</a></p>
+
+<h2 id="en-references">Sources and version notes</h2>
+<section class="references" aria-labelledby="en-reference-heading"><h3 id="en-reference-heading">Primary documentation and companion source</h3><p>Official TypeSafe docs checked2026-10-24. This curriculum pins text requests to jev-1.14.0 and uses Choice/Noul; it does not claim those exhaust Jev’s capabilities. Optional REST code is untested live. SDK0.7.0 is documented but unnecessary for this no-install lab.</p><ol class="references__list"><li id="en-ref-1"><a href="/blog/ai-core-control-loop.html">Existing AI-Core assurance cycle</a></li><li id="en-ref-2"><a href="https://docs.typesafe.ai/introduction/coding-agents">Jev and coding agents</a></li><li id="en-ref-3"><a href="https://docs.typesafe.ai/models">Models and aliases</a></li><li id="en-ref-4"><a href="https://docs.typesafe.ai/primitives/choice">Choice</a></li><li id="en-ref-5"><a href="https://docs.typesafe.ai/primitives/noul">Noul</a></li><li id="en-ref-6"><a href="https://docs.typesafe.ai/confidence">Confidence statistic</a></li><li id="en-ref-7"><a href="https://docs.typesafe.ai/api/system-one">System One REST API</a></li><li id="en-ref-8"><a href="https://docs.typesafe.ai/sdk/javascript/api/interfaces/RetryPolicy">SDK retry policy</a></li></ol></section>
+
+<h2 id="en-summary">Key takeaways</h2>
+<div class="key-takeaways"><ul><li>Deterministic constraints and authorization stay in code.</li><li>Semantic guards and quality judgments are fallible.</li><li>Accept, reject, revise and review have distinct continuation rules.</li></ul></div>
+    </div>
+
+    <div class="post-series-footer">
+      <span class="l-th">บทปฏิบัติจากซีรีส์ AI-Core Functional Workflows 2026</span><span class="l-en" lang="en">A lab from AI-Core Functional Workflows 2026</span>
+    </div>
+
+    <nav aria-label="AI-Core Functional Workflows">
+    <div class="series-nav">
+      <h3>AI-Core Functional Workflows 2026</h3>
+      <div class="series-links">
+        <span class="current" aria-current="page">#1 Functions</span>
+        <a href="/blog/ai-functions-contracts">#2 Contracts</a>
+        <a href="/blog/ai-functions-input-code">#3 Input Code</a>
+        <a href="/blog/ai-functions-input-semantic">#4 Input Meaning</a>
+        <a href="/blog/ai-functions-policy">#5 Policy</a>
+        <a href="/blog/ai-functions-decisions">#6 Decisions</a>
+        <a href="/blog/ai-functions-output-code">#7 Output Code</a>
+        <a href="/blog/ai-functions-output-semantic">#8 Grounding</a>
+        <a href="/blog/ai-functions-quality-gate">#9 Quality Gate</a>
+        <a href="/blog/ai-functions-budgets">#10 Budgets</a>
+        <a href="/blog/ai-functions-evaluation">#11 Evaluation</a>
+        <a href="/blog/ai-functions-release">#12 Release</a>
+      </div>
+    </div>
+    </nav>
+
+  </article>
+
+  </main>
+
+  <footer class="blog-footer">
+    <nav class="blog-footer__nav" aria-label="Site">
+      <a href="../index.html">Home</a>
+      <a href="./">Tutorials</a>
+      <a href="../thoughts/">Thoughts</a>
+      <a href="../publications/">Publications</a>
+      <a href="../books/">Books</a>
+      <a href="../projects/">Projects</a>
+      <a href="../news/">News</a>
+      <a href="../index.html#contact">Contact</a>
+    </nav>
+    <a href="./">← Back to Tutorials</a>
+    <span>© 2026 Anirach Mingkhwan — Associate Professor, KMUTNB</span>
+  </footer>
+
+</body>
+</html>

@@ -5,7 +5,14 @@ description: Runs the cross-file integrity linter for the anirach.com static sit
 
 # site-check — the site's only test suite
 
-`/Users/anirach/Documents/Anirach.github.io` has no package manager, no build step, no CI, and no
+> **Current publication inventory — 2026-10-24:** 135 bilingual posts across10 series
+> (7 Tutorials /96 articles,3 Thoughts /39 essays),147 HTML files (146 enumerated),
+> 466 images,135 feed items and146 sitemap URLs. AI-Core Functional Workflows adds
+> twelve lessons paired with Anirach/ai-core-functional-tutorial,108 offline tests
+> and twelve exercises. Earlier dated measurements below retain their historical context.
+
+
+This repository has no package manager, no build step, no CI, and no
 tests. Every file in `blog/` is self-contained: its own `<style>` block, its own copy of the nav
 markup, its own footer. There are no shared partials, so a "global" change means editing N files by
 hand, and nothing tells you when file 23 of 76 got missed. The bundled script is what tells you.
@@ -13,7 +20,7 @@ hand, and nothing tells you when file 23 of 76 got missed. The bundled script is
 ## Run it
 
 ```bash
-cd /Users/anirach/Documents/Anirach.github.io
+cd /path/to/Anirach.github.io
 python3 .claude/skills/site-check/scripts/check_site.py
 ```
 

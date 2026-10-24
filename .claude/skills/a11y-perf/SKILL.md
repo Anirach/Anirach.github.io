@@ -5,6 +5,13 @@ description: Accessibility and performance rules for the anirach.com static site
 
 # Accessibility & performance for anirach.com
 
+> **Current publication inventory — 2026-10-24:** 135 bilingual posts across10 series
+> (7 Tutorials /96 articles,3 Thoughts /39 essays),147 HTML files (146 enumerated),
+> 466 images,135 feed items and146 sitemap URLs. AI-Core Functional Workflows adds
+> twelve lessons paired with Anirach/ai-core-functional-tutorial,108 offline tests
+> and twelve exercises. Earlier dated measurements below retain their historical context.
+
+
 This site has no build step, no partials and no tests. Every page in `blog/` carries
 its own `<style>`, its own `:root` and its own copy of the nav. A "global" fix is an
 N-file edit, and nothing catches a regression except you. That is why these rules are
