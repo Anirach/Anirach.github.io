@@ -225,7 +225,7 @@ Every page is on one of exactly two URLs. Check a new page against them:
 grep -rhoE 'href="https://fonts.googleapis.com/css2[^"]*"' --include="*.html" --exclude-dir=.claude . \
   | sort | uniq -c            # must print exactly the two lines above
 grep -rnE "font-weight: *300" --include="*.html" --include="*.css" --exclude-dir=.claude .
-# → 6 hits, all in style.css (index.html's headings). None in blog/.
+# → 3 hits, all in style.css (index.html's .section__title, .latest__heading, .contact__heading). None in blog/.
 ```
 
 ## `.post-series-footer` and `.post-hero__meta` colours — both done

@@ -312,7 +312,7 @@ is nothing to fix.
 | `.post-body h3` | `1.25rem` / 700 | 74 files declare it, **73 identical**; `obsidian-ai-jarvis` is `1.3rem` |
 | `.post-body h4` | `1.05rem` / 700 | 32 files declare it, **32/32 identical** — the other 42 simply never use `h4` |
 | `.post-body p` | `margin-bottom: 1.25rem` | house |
-| landing section heading | `clamp(2rem, 4vw, 3.5rem)` | `style.css` lines 310, 364, 437 — identical; line 485 is a near-miss at `clamp(2rem, 4vw, 3.2rem)` — snap it to 3.5rem |
+| landing section heading | `clamp(2rem, 4vw, 3.5rem)` | one shared `.section__title` rule in `style.css` since the 2026-10-26 consultant redesign (`grep -n 'clamp(2rem, 4vw, 3.5rem)' style.css` → 1 line); the per-section copies and the 3.2rem near-miss are gone |
 
 Verify with a block-aware parse, not a line-based grep — and **strip `@media` blocks first**, or
 you will read the mobile override as a second house value. A naive count returns 153 `.post-body
@@ -645,7 +645,7 @@ source, correctly, because it has no `<style>` block at all.
 
 ```bash
 grep -L ':focus-visible' style.css 404.html blog/*.html books/*.html news/index.html projects/index.html publications/index.html  # → empty
-grep -c ':focus-visible' style.css                                                                   # → 3
+grep -c ':focus-visible' style.css                                                                   # → 7
 ```
 
 **There is no `script.js` and no JS guard.** The line this section used to cite — `script.js:12`'s
@@ -738,9 +738,9 @@ regardless of which linked/embedded sheet declared them):
 
 ```bash
 grep -c '</style>' index.html      # → 0  (must stay 0 — Task 10, and anti-pattern 2)
-grep -c ':focus-visible' style.css # → 3
+grep -c ':focus-visible' style.css # → 7  (the a11y block's 3 + nav-link and .shelf hover/focus parity, 2026-10-26)
 grep -c 'color-scheme' style.css   # → 1
-grep -c 'text-wrap' style.css      # → 6
+grep -c 'text-wrap' style.css      # → 2  (the balance line + .research__card p pretty)
 ```
 Then in a real browser on `index.html`: tab once and confirm a visible focus ring, and confirm
 `getComputedStyle(document.documentElement).getPropertyValue('--blue')` resolves — both prove the

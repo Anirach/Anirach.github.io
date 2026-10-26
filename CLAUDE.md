@@ -31,8 +31,14 @@ Deploy by pushing to `main` — GitHub Pages auto-deploys. There is no `.nojekyl
 
 ```
 /
-├── index.html          # Portfolio landing page — the ONLY consumer of style.css
-├── style.css           # Landing-page styles — the canonical 29-token :root block (same tokens every other page redefines in its own embedded <style>), plus the scroll-driven reveal and nav animations that replaced script.js
+├── index.html          # Consultant landing page (2026-10-26 redesign) — the ONLY consumer of style.css.
+│                       #   Deep Blue hero → stats card → focus-area marquee → Services (6) → Approach
+│                       #   (Advise · Teach · Build + 4 steps) → Selected work → About + career card →
+│                       #   Research → Free resources → Latest updates (3 rows, check-news-sync.py) +
+│                       #   One Day of Light → Contact panel. Every fact on it is copied from news/,
+│                       #   publications/ or projects/; the 10 section pages + 404 carry a
+│                       #   "Work with me ›" nav button pointing at its #services
+├── style.css           # Landing-page styles — the canonical 29-token :root block (same tokens every other page redefines in its own embedded <style>), plus the scroll-driven reveal and nav animations that replaced script.js. Landing-only values (--ease, --line, --lift, --deep-blue) live on `body`, never in :root, so the token audit stays at 29. Small gold text on Deep Blue uses #f1e7c8, not --gold (≈2.3:1 there)
 │                       # NOTE: there is no script.js. It was deleted 2026-08-26 (bb9c7dc);
 │                       #   the site is zero-JavaScript and INV-38 fails the build on any
 │                       #   <script> that is not application/ld+json. See "Zero JavaScript" below.

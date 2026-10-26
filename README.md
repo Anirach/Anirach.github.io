@@ -31,7 +31,7 @@ A hand-written static site — seven top-level pages, four per-book detail pages
 
 | Page | What it holds |
 |---|---|
-| [`index.html`](index.html) | Single-scroll editorial portfolio: hero, about, latest-news strip, six research areas, featured book, curated live apps, contact |
+| [`index.html`](index.html) | Single-scroll consultant profile: hero, at-a-glance stats, six services, engagement approach, selected work, about and career, research, free resources, latest news with the featured book, contact |
 | [`blog/`](blog/) | The **Tutorials** catalog — 96 cards in seven technical series, plus all 135 post files |
 | [`thoughts/`](thoughts/) | The **Thoughts** catalog — 39 essay cards in three series, each linking `../blog/<slug>.html` |
 | [`publications/`](publications/) | The academic record: the Springer book *Libraries in Transformation*, 8 book chapters, and a selected-publications table |
