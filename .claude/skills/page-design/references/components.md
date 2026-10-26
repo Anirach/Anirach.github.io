@@ -457,7 +457,7 @@ Then the footer. It is now **two** parts, and INV-29 requires the second:
     <a href="../news/">News</a>
     <a href="../index.html#contact">Contact</a>
   </nav>
-  <span>© 2026 Anirach Mingkhwan — Associate Professor, KMUTNB</span>
+  <span>© 2026 Anirach Mingkhwan — Independent AI consultant</span>
 </footer>
 ```
 
@@ -472,7 +472,8 @@ The link colour is `var(--gold)` in 70 of the 71 posts that declare `.blog-foote
 `var(--blue-light)` — the 2026-08-26 re-key made `--blue-light` borders-only, and `--focus` is
 re-pointed to gold inside footers and `<pre>` where the blue ring collapses to 2.12:1. The one
 outlier still writes `var(--purple-light)`; fix it on contact. The copyright reads
-`© 2026 Anirach Mingkhwan — Associate Professor, KMUTNB` in all 77 files in `blog/`, and
+`© 2026 Anirach Mingkhwan — Independent AI consultant` in every page with a footer (re-worded
+sitewide 2026-10-26 from "Associate Professor, KMUTNB" for the consultant repositioning), and
 INV-15/INV-16 check that year and the container class for uniformity.
 
 ---

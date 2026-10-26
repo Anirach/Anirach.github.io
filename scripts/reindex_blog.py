@@ -750,7 +750,7 @@ def build(repo, order):
   <footer class="footer">
     <a href="../index.html">← Back to Home</a>
     <a href="#main">↑ Top</a>
-    <span>© 2026 Anirach Mingkhwan — Associate Professor, KMUTNB</span>
+    <span>© 2026 Anirach Mingkhwan — Independent AI consultant</span>
   </footer>
 
 </body>
@@ -1009,7 +1009,7 @@ def build_thoughts(repo):
     <a href="../index.html">← Back to Home</a>
     <a href="../blog/">Tutorials</a>
     <a href="#main">↑ Top</a>
-    <span>© 2026 Anirach Mingkhwan — Associate Professor, KMUTNB</span>
+    <span>© 2026 Anirach Mingkhwan — Independent AI consultant</span>
   </footer>
 
 </body>
