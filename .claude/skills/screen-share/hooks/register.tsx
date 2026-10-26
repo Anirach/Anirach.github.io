@@ -19,6 +19,19 @@ const BAND_TEXT = ' Screen-share mode: emails, phones, amounts and names hidden 
 // Module variables reset on a reload; the mode itself lives in $.state and $.store.
 let sid = ''
 let home = ''
+
+// The user's home folder. A mod kept in a project's .claude/skills/ sits inside the
+// project, so the folder above its .claude/ is no home: session.start reads HOME first.
+const homeDir = ($: EngineInterface) => home || ($.plugin.root.split('/.claude/')[0] ?? '')
+
+async function readHome($: EngineInterface) {
+  try {
+    return (await $.env.get('HOME')) || homeDir($)
+  } catch {
+    return homeDir($)
+  }
+}
+
 // The bar glyph rows draw with now: light for the first frame after turning
 // on, then the full bar. A fade in of one step, 150 ms.
 let glyph = BAR
@@ -31,7 +44,7 @@ let off = false
 async function readSwitch($: EngineInterface) {
   let now = false
   try {
-    const path = `${$.plugin.root.split('/.claude/')[0] ?? ''}/.claude/mods/switches.json`
+    const path = `${homeDir($)}/.claude/mods/switches.json`
     if (await $.fs.exists(path)) {
       const json = JSON.parse(String(await $.fs.read(path))) as Record<string, unknown>
       now = json[NAME] === false
@@ -121,7 +134,7 @@ export const register: Register = on => {
     })
     try {
       sid = await $.session.id()
-      home = $.plugin.root.split('/.claude/')[0] ?? ''
+      home = await readHome($)
       await readSwitch($).catch(() => undefined)
       $.clock.every(3000, () => {
         void readSwitch($).catch(() => undefined)

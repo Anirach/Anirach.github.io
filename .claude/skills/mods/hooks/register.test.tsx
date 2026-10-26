@@ -182,8 +182,12 @@ const disk: Record<string, string> = {
   '/.claude/dev-mods/sid-123/brand-new/.claude-plugin/plugin.json': JSON.stringify({ name: 'brand-new', description: 'Made in this chat' }),
   '/.claude/dev-mods/sid-123/brand-new/hooks/hooks.json': JSON.stringify({ modules: ['./register.tsx'] }),
   '/.claude/dev-mods/sid-123/brand-new/hooks/register.tsx': "'switches.json'",
+  '/vault/.claude/skills/skill-mod/.claude-plugin/plugin.json': JSON.stringify({ name: 'skill-mod', description: "Kept in the project's skills folder" }),
+  '/vault/.claude/skills/skill-mod/hooks/hooks.json': JSON.stringify({ modules: ['./register.tsx'] }),
+  '/vault/.claude/skills/skill-mod/hooks/register.tsx': "'switches.json'",
 }
 const dirs: Record<string, string[]> = {
+  '/vault/.claude/skills': ['skill-mod', 'page-design'],
   '/.claude/mods': ['zeta-notes', 'plain-tool', 'not-a-mod', 'mods', 'helper-desk'],
   '/.claude/dev-mods/sid-123': ['brand-new'],
   '/.claude/plugins/cache': ['anthropic'],
@@ -225,7 +229,8 @@ for (const surface of ['desktop', 'terminal'] as const) {
       if (!names.length) throw new Error(`ENOENT ${path}`)
       return { value: names.map(name => ({ name, kind: 'file', size: 10, mtimeMs: 0, isLink: false })) } as never
     })
-    mock.env(on, { CLAUDE_CODE_PLUGIN_DIRS: '~/.claude/mods/context-meter:/opt/extra/alpha-env/' })
+    on('session.cwd', async () => ({ value: '/Users/test/vault' }) as never)
+    mock.env(on, { HOME: '/home/test', CLAUDE_CODE_PLUGIN_DIRS: '~/.claude/mods/context-meter:/opt/extra/alpha-env/' })
 
     await $.session.start({ source: 'startup', cwd: '/Users/test/vault', surface, isInteractive: true } as never)
     await $.command.run({ command: 'mods', args: '' } as never)
@@ -239,6 +244,8 @@ for (const surface of ['desktop', 'terminal'] as const) {
     expect(await v.find({ text: 'Alpha Env' }), 'mod from CLAUDE_CODE_PLUGIN_DIRS').toBeDefined()
     expect(await v.find({ text: 'Replay Theater' }), 'mod installed from a marketplace').toBeDefined()
     expect(await v.find({ text: 'Brand New' }), "this chat's own new mod").toBeDefined()
+    expect(await v.find({ text: 'Skill Mod' }), "mod in the project's .claude/skills").toBeDefined()
+    expect(await v.find({ text: 'Page Design' }), 'a plain skill beside it is not a mod').toBeUndefined()
     expect(await v.find({ text: 'This chat only' }), 'labelled This chat only').toBeDefined()
 
     // No switch in its source: a note and no toggle.
@@ -261,11 +268,12 @@ for (const surface of ['desktop', 'terminal'] as const) {
     // Order: the old table, then new ones A to Z, then this chat's own.
     const order = (await v.findAll({ type: 'Box' })).map(b => b.key ?? '').filter(k => k.startsWith('row-')).map(k => k.slice(4))
     expect(order.slice(0, 7), 'old table first').toEqual(['cache-clock', 'handoff', 'screen-share', 'brain-dump', 'reflect', 'helper-desk', 'chat-inventory'])
-    expect(order.slice(7), 'then A to Z, then this chat only').toEqual(['alpha-env', 'plain-tool', 'replay-theater', 'zeta-notes', 'brand-new'])
+    expect(order.slice(7), 'then A to Z, then this chat only').toEqual(['alpha-env', 'plain-tool', 'replay-theater', 'skill-mod', 'zeta-notes', 'brand-new'])
 
     // A found mod switches like a known one.
     await v.press({ key: 'toggle-zeta-notes' })
     const sw = Object.keys(files).find(k => k.endsWith('/.claude/mods/switches.json')) ?? ''
+    expect(sw, 'switches.json sits in the HOME folder').toEqual('/home/test/.claude/mods/switches.json')
     expect(JSON.parse(files[sw] ?? '{}'), 'zeta-notes off').toEqual({ 'zeta-notes': false })
     expect(await v.find({ text: 'Zeta Notes is off in every chat.' }), 'note').toBeDefined()
   })

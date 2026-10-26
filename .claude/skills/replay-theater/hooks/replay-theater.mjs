@@ -23,9 +23,20 @@ const state = { pending: [], replay: [], index: 0, isOpen: false, inBand: false,
 const NAME = "replay-theater";
 const HIDE_KEY = `${NAME}:hidden`;
 const POLL_MS = 3000;
-const sw = { off: false, hidden: false, sid: "" };
+const sw = { off: false, hidden: false, sid: "", home: "" };
 
-const homeOf = ($) => $.plugin.root.split("/.claude/")[0] || "";
+// The user's home folder. A mod kept in a project's .claude/skills/ sits inside the
+// project, so the folder above its .claude/ is no home: session.start reads HOME first.
+const homeOf = ($) => sw.home || $.plugin.root.split("/.claude/")[0] || "";
+
+async function readHome($) {
+  try {
+    return (await $.env.get("HOME")) || homeOf($);
+  } catch {
+    return homeOf($);
+  }
+}
+
 const switchesPath = ($) => `${homeOf($)}/.claude/mods/switches.json`;
 
 async function readSwitches($) {
@@ -254,6 +265,7 @@ export function register(on, options) {
     const r = await next(e);
     try {
       sw.sid = await $.session.id();
+      sw.home = await readHome($);
       await $.command.register({ name: "replay", description: "Replay Theater: step through the last turn's file edits" });
       await poll($).catch(() => undefined);
       $.clock.every(POLL_MS, () => { void poll($).catch(() => undefined); });
