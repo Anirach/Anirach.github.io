@@ -230,6 +230,13 @@ All 123 posts carry it. The mechanism is four CSS lines and no JavaScript:
 #langSwitch:checked ~ main .l-th { display: none; }
 ```
 
+A progressive-enhancement line follows the first one (2026-10-26, UI/UX Pro Max audit):
+`.lang-switch { anchor-name: --lang-switch; }` plus `position-anchor`/`anchor()` on the box, which
+sets it invisibly on top of the pill. Off-canvas, focusing the box scrolled only to the top of the
+page, so on 18 posts at 375×667 (and `openclaw-migration` at 1440) the focused pill and its ring
+stayed below the fold; anchored, 135/135 show it. Browsers without anchor positioning drop those
+declarations and keep `left: -9999px` — leave that line byte-identical.
+
 Four things follow from that selector and each has bitten once:
 
 - **The checkbox is a direct child of `<body>`, before `<main id="main">`** — a general sibling
@@ -413,6 +420,18 @@ repo, may be absent on other machines): `fixing-metadata` + `seo` (the gap they 
 throwaway visual A/Bs. **House rules win every conflict**: the four project skills above stay
 authoritative for tokens, type scale, components, and measured a11y numbers — third-party skills
 advise, never override, and any change they motivate still goes through the owner's review-first flow.
+
+**UI/UX Pro Max in `.claude/skills/ui-ux-pro-max/`** (vendored 2026-10-26 from
+`nextlevelbuilder/ui-ux-pro-max-skill` v2.15.0, MIT) — a searchable UI/UX rule base (119 UX
+guidelines, styles, palettes, font pairs) behind `python3 .claude/skills/ui-ux-pro-max/scripts/search.py`.
+It is third-party, so the rule above applies: it advises, the house skills decide. Its
+`--design-system` output for this site (Brutalism, Caveat/Quicksand) is exactly the kind of advice
+to ignore; its checklist (contrast, target size, no horizontal scroll, emoji-as-icon, focus not
+obscured) is what it is for. Never `--persist` into the repo root — `design-system/` would be
+published. Local edits and the update recipe are in its `VENDORED.md`; the first audit it drove is
+`docs/ui-ux-pro-max/2026-10-26-audit.md`. Since that audit every post also carries
+`.post-body { overflow-wrap: break-word; }` beside the `text-wrap` line, which took the pages that
+scroll sideways at 375px from 17 to 0 (and to 0 at 320px, the WCAG reflow width).
 
 **Claude Code mods in `.claude/skills/`** (added 2026-10-26): nine plugin folders from the Ben AI
 `benai-mods` pack — `brain-dump`, `cache-clock`, `chat-inventory`, `handoff`, `helper-desk`, `mods`,
