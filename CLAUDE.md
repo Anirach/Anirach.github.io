@@ -82,7 +82,7 @@ Deploy by pushing to `main` — GitHub Pages auto-deploys. There is no `.nojekyl
 │                       #   (og-*.jpg, `<slug>-og.jpg` — all 1200×630), diagram and series-figure PNGs,
 │                       #   posters, the event QR
 ├── docs/               # design spec, implementation plan, OpenClaw news runbook + gate
-├── .claude/skills/     # page-design · blog-post · a11y-perf · site-check
+├── .claude/skills/     # page-design · blog-post · a11y-perf · site-check + 9 Claude Code mods (see Project skills)
 ├── _config.yml         # Jekyll excludes: docs/, CLAUDE.md (see Development)
 └── CNAME               # anirach.com
 ```
@@ -413,6 +413,16 @@ repo, may be absent on other machines): `fixing-metadata` + `seo` (the gap they 
 throwaway visual A/Bs. **House rules win every conflict**: the four project skills above stay
 authoritative for tokens, type scale, components, and measured a11y numbers — third-party skills
 advise, never override, and any change they motivate still goes through the owner's review-first flow.
+
+**Claude Code mods in `.claude/skills/`** (added 2026-10-26): nine plugin folders from the Ben AI
+`benai-mods` pack — `brain-dump`, `cache-clock`, `chat-inventory`, `handoff`, `helper-desk`, `mods`,
+`reflect`, `replay-theater`, `screen-share`. They are plugins, not skills: each has a
+`.claude-plugin/plugin.json` plus a `hooks/` module, and Claude Code auto-loads them as
+`<name>@skills-dir` in every session opened on this repo (cloud sessions included), once the
+workspace is trusted. `/mods` switches each on or off. They change Claude Code's interface only
+and are never published (Jekyll drops every path starting with `.`). Several assume a Mac
+(`pbcopy`, `open`) and degrade in the Linux cloud container. Update one by replacing its folder
+from a newer pack; do not edit them by hand.
 
 News and the homepage "Latest updates" strip have a separate gate — `python3 docs/openclaw/check-news-sync.py` — which checks three things nothing else does: the strip lists the 3 newest news items in order, every news item carries a `<!-- source: … -->` provenance comment, and the four hand-typed counters match reality (`"N updates"` on news, `"N chapters"` on publications, `"N novel"` / `"N complete"` on books). The full procedure for adding news is `docs/openclaw/latest-updates-runbook.md`.
 
