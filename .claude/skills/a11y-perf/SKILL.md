@@ -291,11 +291,13 @@ Historical, for context — the old value's failures, which is why the re-key ha
 4.09:1 on the tag chip, 3.87:1 on the series-count chip, 3.90:1 and 2.99:1 on the two
 ends of the old hero gradient.
 At the time `var(--blue)` was used 279 times against `var(--blue-dark)`'s 60, and every
-*text* use among them was a fail. Today's counts — **636 `var(--blue)`, 230
-`var(--blue-dark)`, 321 `var(--gold)`, and just 6 `var(--blue-light)`** — carry no such
-implication, because `--blue` passes as text now. The collapse of `--blue-light` from 38 uses
-to 6 is the re-key working: it is borders-only, and the footer link text that used to carry it
-moved to `--gold`.
+*text* use among them was a fail. Today's counts (re-measured 2026-10-26) — **1024
+`var(--blue)`, 538 `var(--blue-dark)`, 611 `var(--gold)`, and just 7 `var(--blue-light)`** —
+carry no such implication, because `--blue` passes as text now. The collapse of `--blue-light`
+from 38 uses to 7 is the re-key working: it is borders-only, and the footer link text that used
+to carry it moved to `--gold`. Two footers had been missed (`git-branching` on `--blue-light`,
+`obsidian-ai-jarvis` on `--purple-light`, both 3.93:1 on navy); the 2026-10-26 axe sweep caught
+them and they are `--gold` now.
 
 That gradient no longer exists either — the light family is now the sunrise
 `#eef3f3 → #dee7e6 → #e9e1c4`, on which `--navy` measures 10.4–12.1:1. `references/contrast.md`
