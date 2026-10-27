@@ -1,0 +1,11 @@
+import test from 'node:test';import assert from 'node:assert/strict';import {readFile} from 'node:fs/promises';import {fixtureProviders} from '../src/providers.mjs';import {decide} from '../src/pipeline.mjs';
+const load=async p=>JSON.parse(await readFile(new URL('../'+p,import.meta.url),'utf8')),tickets=await load('data/tickets.json'),policy=await load('config/policy.json'),providers=await fixtureProviders();
+const run=(id,mode='hybrid',ps=providers)=>decide(tickets.find(t=>t.id===id),{mode,providers:ps,policy});
+test('clear path makes one call',async()=>{const r=await run('T-001');assert.equal(r.attempts.length,1);assert.equal(r.status,'proposed')});
+test('uncertain route falls back once',async()=>{const r=await run('T-002');assert.equal(r.attempts.length,2);assert.equal(r.source,'baseline')});
+test('human request not bypassed',async()=>assert.equal((await run('T-004')).status,'needs_review'));
+test('Noul uncertainty causes review',async()=>assert.equal((await run('T-024')).status,'needs_review'));
+test('unknown route never an effect',async()=>{const r=await run('T-040','jev');assert.equal(r.action,null);assert.equal(r.status,'needs_review')});
+test('provider failure becomes review',async()=>{const ps={jev:async()=>{throw new Error('timeout')},baseline:async()=>{throw new Error('unavailable')}};assert.equal((await run('T-001','hybrid',ps)).status,'needs_review')});
+test('providers never receive gold labels',async()=>{let keys;const ps={...providers,jev:async t=>{keys=Object.keys(t);return providers.jev(t)}};await run('T-001','hybrid',ps);assert.ok(!keys.includes('goldRoute'));assert.ok(!keys.includes('goldHuman'))});
+test('offline mode needs no installed SDK',async()=>assert.equal((await run('T-001')).attempts[0].mode,'MOCK / FICTIONAL SCENARIO'));

@@ -5,11 +5,21 @@ description: End-to-end recipe for adding, editing, or removing a post in blog/ 
 
 # Adding and editing blog posts
 
-> **Current publication inventory — 2026-10-24:** 135 bilingual posts across10 series
-> (7 Tutorials /96 articles,3 Thoughts /39 essays),147 HTML files (146 enumerated),
-> 466 images,135 feed items and146 sitemap URLs. AI-Core Functional Workflows adds
-> twelve lessons paired with Anirach/ai-core-functional-tutorial,108 offline tests
-> and twelve exercises. Earlier dated measurements below retain their historical context.
+> **Current local review inventory — 2026-10-24:**145 bilingual posts across11 series
+> (8 Tutorials /106 articles,3 Thoughts /39 essays),157 HTML files (156 enumerated),
+> 496 images,145 feed items and156 sitemap URLs. The new12-part **AI-Core Functional
+> Workflows** series has a distinct local companion,108 tests, twelve exercises and
+> an offline ZIP. This twelve-part series and its companion are now published; the earlier ten-part website series remains an unpublished local draft.
+> The prior ten-part AI-Core/Jev draft and its public companion remain separate.
+
+> **Historical local review inventory — 2026-10-23:** 133 bilingual posts across 10 series
+> (7 Tutorials / 94 articles, 3 Thoughts / 39 essays), 145 public HTML files
+> (144 enumerated), 460 image files, 133 feed items and 144 sitemap URLs.
+> The new ten-part **AI-Core + Jev in Practice** series is generated from
+> `scripts/series/ai-core-jev.json` and paired `.bilingual/` sheets. It is separate
+> from the original Engineering AI-Core Systems series. Older dated measurements
+> below describe their stated historical snapshots; use the current inventory above.
+> The lab is offline by default; no paid API call or SDK installation was verified.
 
 
 > ## Standing rule — numbers in this skill are load-bearing
@@ -694,3 +704,14 @@ copyright string, 0 stale nav titles, and no two-`<h1>` post. The old second bug
 `blog/index.html` rendering a hamburger with no JavaScript — was **fixed in Task 9** and
 replaced with the pure-CSS checkbox toggle. Check that file before "fixing" anything you
 did not introduce.
+
+## Coding tutorial delivery default — user preference, 2026-10-23
+
+For future coding tutorials, pair the website lesson with a runnable GitHub
+companion by default. Each chapter must link directly to its matching code files
+and tests. The companion README must cover prerequisites, exact commands,
+expected results, troubleshooting and lesson-to-code mapping; verify commands
+from a clean copy and keep secrets and generated output out of publication.
+Keep website and companion publication within the scope authorized for that task.
+The AI-Core + Jev companion is https://github.com/Anirach/ai-core-jev-tutorial;
+its ten website lessons currently await publication.

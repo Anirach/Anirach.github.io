@@ -135,7 +135,6 @@ ACCENTS = {
 }
 
 
-
 # --------------------------------------------------------------------------
 # type
 # --------------------------------------------------------------------------
@@ -3909,12 +3908,15 @@ MOTIFS = {
 }
 
 
-# --------------------------------------------------------------------------
-# the one renderer
-# --------------------------------------------------------------------------
+# Additional original motifs for AI-Core + Jev in Practice.
+from jev_motifs import MOTIFS as JEV_MOTIFS
+MOTIFS.update(JEV_MOTIFS)
 from functional_motifs import MOTIFS as FUNCTIONAL_MOTIFS
 MOTIFS.update(FUNCTIONAL_MOTIFS)
 
+# --------------------------------------------------------------------------
+# the one renderer
+# --------------------------------------------------------------------------
 PART_RE = re.compile(r"PART (\d+)$")   # chip is OpenClaw-only; see render()
 
 

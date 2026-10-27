@@ -1,27 +1,37 @@
 # anirach.com
 
-> **Current publication inventory — 2026-10-24:** 135 bilingual posts across10 series
-> (7 Tutorials /96 articles,3 Thoughts /39 essays),147 HTML files (146 enumerated),
-> 466 images,135 feed items and146 sitemap URLs. AI-Core Functional Workflows adds
-> twelve lessons paired with Anirach/ai-core-functional-tutorial,108 offline tests
-> and twelve exercises. Earlier dated measurements below retain their historical context.
-
-
 **The personal site of Dr. Anirach Mingkhwan** — Associate Professor at King Mongkut's University of Technology North Bangkok (KMUTNB), PhD (Liverpool John Moores University, UK), researcher in Agentic AI, computer networks, and big data analytics.
 
 🌐 **Live: [anirach.com](https://anirach.com)**
 
-A hand-written static site — seven top-level pages, four per-book detail pages, and 135 self-contained blog posts catalogued on two pages: Tutorials (`/blog/`, seven technical series) and Thoughts (`/thoughts/`, thirty-nine essays on living well and working well). No build system, no package manager, no dependencies, no JavaScript framework. Push to `main` and GitHub Pages publishes it.
+A hand-written static site — seven top-level pages, four per-book detail pages, and 145 self-contained blog posts catalogued on two pages: Tutorials (`/blog/`, eight technical series) and Thoughts (`/thoughts/`, thirty-nine essays on living well and working well). No build system, no package manager, no dependencies, no JavaScript framework. Push to `main` and GitHub Pages publishes it.
 
 ---
+
+
+> **Current local review inventory — 2026-10-24:**145 bilingual posts across11 series
+> (8 Tutorials /106 articles,3 Thoughts /39 essays),157 HTML files (156 enumerated),
+> 496 images,145 feed items and156 sitemap URLs. The new12-part **AI-Core Functional
+> Workflows** series has a distinct local companion,108 tests, twelve exercises and
+> an offline ZIP. This twelve-part series and its companion are now published; the earlier ten-part website series remains an unpublished local draft.
+> The prior ten-part AI-Core/Jev draft and its public companion remain separate.
+
+> **Historical local review inventory — 2026-10-23:** 133 bilingual posts across 10 series
+> (7 Tutorials / 94 articles, 3 Thoughts / 39 essays), 145 public HTML files
+> (144 enumerated), 460 image files, 133 feed items and 144 sitemap URLs.
+> The new ten-part **AI-Core + Jev in Practice** series is generated from
+> `scripts/series/ai-core-jev.json` and paired `.bilingual/` sheets. It is separate
+> from the original Engineering AI-Core Systems series. Older dated measurements
+> below describe their stated historical snapshots; use the current inventory above.
+> The lab is offline by default; no paid API call or SDK installation was verified.
 
 ## At a glance
 
 | | |
 |---|---|
 | **Pages** | Home · Tutorials (`/blog/`) · Thoughts (`/thoughts/`) · Publications · Books · Projects & Apps · News & Updates |
-| **Posts** | **135**, in 10 series across two catalogs, every one bilingual Thai/English |
-| **Files** | 147 HTML files on disk (146 enumerated by the linter; `404.html` is deliberately excluded) |
+| **Posts** | **145**, in 11 series across two catalogs, every one bilingual Thai/English |
+| **Files** | 157 HTML files on disk (156 enumerated by the linter; `404.html` is deliberately excluded) |
 | **Stack** | Plain HTML5 + CSS3, zero JavaScript. Google Fonts is the only external dependency |
 | **Hosting** | GitHub Pages (classic Jekyll build) on the custom domain `anirach.com`, fronted by Cloudflare |
 | **Build step** | None |
@@ -32,7 +42,7 @@ A hand-written static site — seven top-level pages, four per-book detail pages
 | Page | What it holds |
 |---|---|
 | [`index.html`](index.html) | Single-scroll editorial portfolio: hero, about, latest-news strip, six research areas, featured book, curated live apps, contact |
-| [`blog/`](blog/) | The **Tutorials** catalog — 96 cards in seven technical series, plus all 135 post files |
+| [`blog/`](blog/) | The **Tutorials** catalog — 106 cards in eight technical series, plus all 145 post files |
 | [`thoughts/`](thoughts/) | The **Thoughts** catalog — 39 essay cards in three series, each linking `../blog/<slug>.html` |
 | [`publications/`](publications/) | The academic record: the Springer book *Libraries in Transformation*, 8 book chapters, and a selected-publications table |
 | [`books/`](books/) | Books & writing: four works — *One Day of Light* (the free last-lecture event book, EN/TH editions with free PDF downloads served from `books/`), the published novel *Three Old Men: The Last Conversation*, and two complete bilingual manuscripts — each with its own detail page |
@@ -49,11 +59,12 @@ A hand-written static site — seven top-level pages, four per-book detail pages
 
 Both are static, zero-JavaScript and **generated** by `scripts/reindex_blog.py` — re-run it rather than hand-ordering cards. Each is a hero, a sticky chip strip, a "Start here" feature, a row of series tiles, then one numbered-row-card section per series. There is no filtering, sorting or search UI.
 
-**Tutorials — `/blog/`, hero reads 7 Series · 96 Articles**
+**Tutorials — `/blog/`, hero reads 8 Series · 106 Articles**
 
 | Series | Posts | Navigation |
 |---|---|---|
-| ⧉ AI-Core Functional Workflows | 12 | generated12-chip strip · GitHub code, tests and exercises |
+| ⧉ AI-Core Functional Workflows | 12 | flat12-chip strip · local companion and exercises |
+| ◈ AI-Core + Jev in Practice | 10 | flat 10-chip strip · generated; offline-first support-ticket lab |
 | 🛡️ Engineering AI-Core Systems | 10 | chip strip · generated |
 | 💻 Hermes Desktop Hands-On | 7 | chip strip · generated |
 | 🧭 AI Transformation for Organizations | 20 | grouped chip strip (Reframe · Redesign · Engineer · Lead) · generated |
@@ -69,9 +80,9 @@ Both are static, zero-JavaScript and **generated** by `scripts/reindex_blog.py` 
 | 🧭 Working Philosophies | 10 | chip strip, one working week Monday to Friday · generated |
 | 🌅 Life Thought & Philosophy | 9 | chip strip, one day in three parts (Morning · Noon · Twilight) |
 
-**Five of the nine series are generated** from a manifest plus per-post content sheets: `python3 scripts/build_series.py --series <name>`, with manifests in `scripts/series/` (`ai-core`, `ai-transformation`, `good-life`, `hermes-desktop`, `working`). For those, the manifest and the sheets are the edit surface — never the emitted post.
+**Seven of the eleven series are generated** from a manifest plus per-post content sheets: `python3 scripts/build_series.py --series <name>`, with manifests in `scripts/series/` (`ai-core-functional`, `ai-core-jev`, `ai-core`, `ai-transformation`, `good-life`, `hermes-desktop`, `working`). For those, the manifest and the sheets are the edit surface — never the emitted post.
 
-**Every post is bilingual.** All 123 carry a pure-CSS Thai ⇄ English switch: a `ไทย · English` pill in the hero swaps between two complete tracks of the same article. Thai is the default, there is no JavaScript, and the page-level `<html lang="th">` never changes — the English track is `lang="en"` inside it. The seven top-level pages and the four book detail pages are `lang="en"` chrome and wrap their Thai passages in `<span lang="th">`.
+**Every post is bilingual.** All 145 carry a pure-CSS Thai ⇄ English switch: a `ไทย · English` pill in the hero swaps between two complete tracks of the same article. Thai is the default, there is no JavaScript, and the page-level `<html lang="th">` never changes — the English track is `lang="en"` inside it. The seven top-level pages and the four book detail pages are `lang="en"` chrome and wrap their Thai passages in `<span lang="th">`.
 
 The Thoughts essays are written in a different register from the tutorials — literary Thai in the author's own voice, not code-switched technical prose. The brief, with ten rules and worked before/after pairs, is [`.claude/skills/blog-post/references/thai-essay-voice.md`](.claude/skills/blog-post/references/thai-essay-voice.md).
 
@@ -83,8 +94,8 @@ The Thoughts essays are written in a different register from the tutorials — l
 ├── style.css           # Landing-page styles; carries the canonical :root token block
 ├── _config.yml         # Jekyll: keeps internal working docs out of the published site
 ├── CNAME               # anirach.com
-├── sitemap.xml         # 134 URLs, generated · feed.xml — 123 items, generated · llms.txt · robots.txt
-├── blog/               # index.html (the Tutorials catalog, 96 cards) + all 123 self-contained posts
+├── sitemap.xml         # 156 URLs, generated · feed.xml — 145 items, generated · llms.txt · robots.txt
+├── blog/               # index.html (the Tutorials catalog, 106 cards) + all 145 self-contained posts
 ├── thoughts/           # index.html (the Thoughts catalog — 39 essay cards linking ../blog/)
 ├── books/              # index.html + 4 per-book detail pages + 3 free PDFs, all self-contained
 ├── publications/  projects/  news/   # one self-contained index.html each
@@ -104,7 +115,7 @@ The single most important fact before editing:
 index.html ──▶ style.css                 (the ONLY consumer of it)
 
 blog/index.html   ──▶ its own <style> block, no JS
-blog/<post>.html  ──▶ its own <style> block, no JS     × 123
+blog/<post>.html  ──▶ its own <style> block, no JS     × 145
 thoughts/ books/ (index + 4 detail) publications/ projects/ news/ 404.html ──▶ same   × 10
 ```
 
@@ -158,9 +169,19 @@ Two measured costs were paid down on 2026-09-10, and both are easy to reintroduc
 
 Both are documented with their measurements in the **a11y-perf** skill (R8b and R1b).
 
+## The AI-Core + Jev lab (local draft)
+
+The ten new posts use one downloadable Node 22.18+ project in
+`examples/ai-core-jev-lab/`, with the reviewed ZIP in `downloads/`. Offline fixtures
+need no SDK, credentials, network or paid API call. All fixture metrics and most
+cost inputs are explicitly fictional. The optional live adapter pins
+`@typesafe-ai/sdk@0.7.0` / `jev-1.13.0` and is not live-verified. See the project
+README for acceptance commands and limitations. Website pages still execute no
+JavaScript; the Node source is teaching material, not a browser dependency.
+
 ## Adding a new blog post
 
-A post is not one file — it is a file plus a cover plus a share card plus a card plus counters plus its neighbours' nav links plus a feed item, a sitemap entry and an `llms.txt` line, **in two language tracks**, with no build step to catch a miss. The full recipe, including which of the four navigation patterns applies, is in [`.claude/skills/blog-post/SKILL.md`](.claude/skills/blog-post/SKILL.md). Start from `.claude/skills/page-design/assets/post-template.html` — the repo's single canonical template. For one of the five generated series, add a manifest row and run `build_series.py` instead; never hand-edit those posts.
+A post is not one file — it is a file plus a cover plus a share card plus a card plus counters plus its neighbours' nav links plus a feed item, a sitemap entry and an `llms.txt` line, **in two language tracks**, with no build step to catch a miss. The full recipe, including which of the four navigation patterns applies, is in [`.claude/skills/blog-post/SKILL.md`](.claude/skills/blog-post/SKILL.md). Start from `.claude/skills/page-design/assets/post-template.html` — the repo's single canonical template. For one of the seven generated series, add a manifest row and run `build_series.py` instead; never hand-edit those posts.
 
 ## Maintenance
 
@@ -189,12 +210,23 @@ News updates have their own runbook at [`docs/openclaw/latest-updates-runbook.md
 
 *No `LICENSE` file is present. Content and code are © Anirach Mingkhwan; all rights reserved by default.*
 
-## AI-Core Functional Workflows
+## Coding tutorial delivery default — user preference, 2026-10-23
 
-Twelve bilingual lessons and the matching code are maintained together:
-[Anirach/ai-core-functional-tutorial](https://github.com/Anirach/ai-core-functional-tutorial).
-The offline lab ZIP is `downloads/ai-core-functional-lab.zip`. The series manifest
-is `scripts/series/ai-core-functional.json`; article source links pin the reviewed
-companion commit. Default fixtures require no SDK install, API key or paid calls.
-Run the companion tests/advertised commands and the four website checks when revising.
-No additional reuse license is granted by the companion's public availability.
+For future coding tutorials, pair the website lesson with a runnable GitHub
+companion by default. Each chapter must link directly to its matching code files
+and tests. The companion README must cover prerequisites, exact commands,
+expected results, troubleshooting and lesson-to-code mapping; verify commands
+from a clean copy and keep secrets and generated output out of publication.
+Keep website and companion publication within the scope authorized for that task.
+The AI-Core + Jev companion is https://github.com/Anirach/ai-core-jev-tutorial;
+its ten website lessons currently await publication.
+
+## AI-Core Functional Workflows — published tutorial and code
+
+The twelve bilingual lessons are published on Anirach.com with the matching
+[GitHub companion](https://github.com/Anirach/ai-core-functional-tutorial).
+The local source mirror remains `examples/ai-core-functional-lab/` and the exact
+release ZIP is `downloads/ai-core-functional-lab.zip`. Tutorial source links pin
+companion commit869487af4cf0bb30384ba125d0cb0a035cb7dbe2. The CLI stays offline by
+default; no paid live API call was tested. The earlier ten-part series remains
+local and must not be included in a publication without separate approval.
