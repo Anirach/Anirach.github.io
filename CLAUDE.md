@@ -1,12 +1,5 @@
 # CLAUDE.md
 
-> **Current publication inventory — 2026-10-24:** 135 bilingual posts across10 series
-> (7 Tutorials /96 articles,3 Thoughts /39 essays),147 HTML files (146 enumerated),
-> 466 images,135 feed items and146 sitemap URLs. AI-Core Functional Workflows adds
-> twelve lessons paired with Anirach/ai-core-functional-tutorial,108 offline tests
-> and twelve exercises. Earlier dated measurements below retain their historical context.
-
-
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
 ## Project Overview
@@ -22,6 +15,19 @@ python -m http.server 8000    # then open http://localhost:8000
 # or
 npx serve .
 ```
+
+> **Current inventory — re-measured 2026-10-27.** 145 bilingual posts across 11 series
+> (8 Tutorials / 106 articles, 3 Thoughts / 39 essays), 157 HTML files (156 enumerated
+> by `check_site.py`), 496 images, 145 feed items and 156 sitemap URLs. Every one of
+> those was verified against the tree on that date; re-derive rather than trust.
+>
+> The 12-part **AI-Core Functional Workflows** series and its companion are published.
+> The earlier 10-part **AI-Core + Jev in Practice** series (`scripts/series/ai-core-jev.json`
+> plus paired `.bilingual/` sheets) is a separate, still-unpublished local draft, and so
+> is its companion; the lab is offline by default, and no paid API call or SDK install
+> has been verified. Both are distinct from the original Engineering AI-Core Systems
+> series. Dated measurements further down this file describe their own historical
+> snapshots — this block is the current one.
 
 Deploy by pushing to `main` — GitHub Pages auto-deploys. There is no `.nojekyll`, so Jekyll's default processing applies; GitHub Pages also resolves extensionless URLs (`/blog/openclaw-101` → `openclaw-101.html`), which the eight chip-strip series rely on (93 posts across OpenClaw's numbered seven, Hermes, Hermes Desktop, AI Transformation, AI-Core, Life, Working Philosophies and Wisdom for a Good Life).
 
@@ -605,3 +611,14 @@ comm -3 <(grep -o 'href="[a-z0-9-]*\.html"' blog/index.html | sed 's/href="//;s/
 for f in blog/*.html; do [ "$(basename $f)" = index.html ] && continue; \
   echo "$(grep -c 'class="post-nav__link"' $f) $(grep -c 'class="series-nav"' $f) $(basename $f)"; done | sort
 ```
+
+## Coding tutorial delivery default — user preference, 2026-10-23
+
+For future coding tutorials, pair the website lesson with a runnable GitHub
+companion by default. Each chapter must link directly to its matching code files
+and tests. The companion README must cover prerequisites, exact commands,
+expected results, troubleshooting and lesson-to-code mapping; verify commands
+from a clean copy and keep secrets and generated output out of publication.
+Keep website and companion publication within the scope authorized for that task.
+The AI-Core + Jev companion is https://github.com/Anirach/ai-core-jev-tutorial;
+its ten website lessons currently await publication.

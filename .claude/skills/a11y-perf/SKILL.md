@@ -5,11 +5,21 @@ description: Accessibility and performance rules for the anirach.com static site
 
 # Accessibility & performance for anirach.com
 
-> **Current publication inventory — 2026-10-24:** 135 bilingual posts across10 series
-> (7 Tutorials /96 articles,3 Thoughts /39 essays),147 HTML files (146 enumerated),
-> 466 images,135 feed items and146 sitemap URLs. AI-Core Functional Workflows adds
-> twelve lessons paired with Anirach/ai-core-functional-tutorial,108 offline tests
-> and twelve exercises. Earlier dated measurements below retain their historical context.
+> **Current local review inventory — 2026-10-24:**145 bilingual posts across11 series
+> (8 Tutorials /106 articles,3 Thoughts /39 essays),157 HTML files (156 enumerated),
+> 496 images,145 feed items and156 sitemap URLs. The new12-part **AI-Core Functional
+> Workflows** series has a distinct local companion,108 tests, twelve exercises and
+> an offline ZIP. This twelve-part series and its companion are now published; the earlier ten-part website series remains an unpublished local draft.
+> The prior ten-part AI-Core/Jev draft and its public companion remain separate.
+
+> **Historical local review inventory — 2026-10-23:** 133 bilingual posts across 10 series
+> (7 Tutorials / 94 articles, 3 Thoughts / 39 essays), 145 public HTML files
+> (144 enumerated), 460 image files, 133 feed items and 144 sitemap URLs.
+> The new ten-part **AI-Core + Jev in Practice** series is generated from
+> `scripts/series/ai-core-jev.json` and paired `.bilingual/` sheets. It is separate
+> from the original Engineering AI-Core Systems series. Older dated measurements
+> below describe their stated historical snapshots; use the current inventory above.
+> The lab is offline by default; no paid API call or SDK installation was verified.
 
 
 This site has no build step, no partials and no tests. Every page in `blog/` carries

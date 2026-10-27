@@ -1,0 +1,632 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Abstain &amp; Route — ไม่มั่นใจให้หยุดได้ | Anirach Mingkhwan</title>
+  <meta name="description" content="บทปฏิบัติ AI-Core + Jev ตอนที่ 5 เขียนนโยบาย abstention และ fallback ที่ทดสอบได้ แยกความมั่นใจออกจากความถูกต้อง และไม่มองข้ามคำขอใช้มนุษย์">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300..900&family=Sarabun:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400..600&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      color-scheme: light;
+      /* ink */
+      --navy: #11304b; --slate: #334155; --slate-light: #526174; --gray: #94a3b8;
+      /* ground */
+      --bg: #faf7f0; --white: #ffffff; --code-bg: #1e293b;
+      /* accent */
+      --blue: #226299; --blue-dark: #1a4d7a; --blue-light: #4992b9;
+      /* brand — sampled from the book covers. --gold is decorative on light grounds (2.2:1); --gold-dark is its text form. */
+      --gold: #c4a46c; --gold-dark: #7a5f22; --cloud: #dee7e6; --parchment: #e9e1c4; --focus: #226299;
+      /* status — use only these six, never invent a seventh */
+      --green: #22c55e; --red: #ef4444; --amber: #f59e0b;
+      --cyan: #06b6d4; --purple: #226299; --purple-dark: #1a4d7a;
+      /* type */
+      --font: 'Inter', 'Sarabun', -apple-system, BlinkMacSystemFont, sans-serif;
+      --mono: 'JetBrains Mono', 'Fira Code', 'Sarabun', monospace;
+      /* form */
+      --radius: 12px; --radius-sm: 8px; --radius-lg: 16px;
+      --measure: 720px; --wide: 860px;
+      --transition: 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+    html { scroll-behavior: smooth; }
+    body { font-family: var(--font); font-size: 17px; line-height: 1.8; color: var(--slate); background: var(--bg); -webkit-font-smoothing: antialiased; }
+    .blog-nav { position: fixed; top: 0; left: 0; right: 0; z-index: 100; background: rgba(248,250,252,0.85); backdrop-filter: blur(20px); border-bottom: 1px solid rgba(0,0,0,0.05); }
+    .blog-nav__inner { max-width: 860px; margin: 0 auto; padding: 0 2rem; height: 56px; display: flex; align-items: center; justify-content: space-between; }
+    .blog-nav__back { font-size: 0.85rem; font-weight: 500; color: var(--blue); text-decoration: none; }
+    .blog-nav__back:hover { color: #1a4d7a; }
+    .blog-nav__title { font-size: 0.85rem; font-weight: 600; color: var(--navy); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 50%; }
+    /* ── HERO ── house .post-hero on the approved Deep Blue gradient (page-design
+       §5 / INV-28). Ink is inverted for the dark ground: white title/meta, tag
+       pills white on 18% white — the openclaw-production treatment. The
+       background value must stay byte-identical to the approved string. */
+    .post-hero { padding: 8rem 2rem 3rem; background: linear-gradient(135deg, #11304b 0%, #1a4d7a 45%, #226299 100%); color: #fff; text-align: center; }
+    .post-hero__tags { display: flex; gap: 0.5rem; justify-content: center; margin-bottom: 1.25rem; flex-wrap: wrap; }
+    .post-hero__tag { display: inline-block; font-size: 0.72rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.1em; color: #fff; background: rgba(255,255,255,0.18); padding: 0.35rem 0.9rem; border-radius: 20px; }
+    .post-hero__title { font-size: clamp(1.8rem, 5vw, 3rem); font-weight: 800; color: #fff; line-height: 1.2; margin-bottom: 1rem; max-width: 720px; margin-left: auto; margin-right: auto; }
+    .post-hero__sub { font-size: 1.05rem; max-width: 640px; margin: 0 auto 1.5rem; line-height: 1.7; color: #fff; }
+    .post-hero__meta { font-size: 0.85rem; color: #fff; display: flex; align-items: center; justify-content: center; gap: 1.5rem; flex-wrap: wrap; }
+    .post-hero__series { font-weight: 600; color: #fff; }
+    /* the switch pill and the focus ring both sit on the dark hero: the pill is
+       a light chip so its labels keep their light-ground colours, and --focus
+       re-points to gold here (blue collapses on blue — the footer/pre
+       precedent). */
+    .post-hero { --focus: var(--gold); }
+    .post-hero__cover {
+      aspect-ratio: 1 / 1;
+      max-width: 380px;
+      margin: 2.5rem auto 0;
+      border-radius: var(--radius-lg, 16px);
+      overflow: hidden;
+      box-shadow: 0 20px 60px rgba(17,48,75,0.14);
+    }
+    .post-hero__cover img { width: 100%; height: 100%; object-fit: cover; display: block; }
+    .post-body { max-width: 720px; margin: 0 auto; padding: 3rem 2rem 6rem; }
+    .post-body h2 { font-size: 1.6rem; font-weight: 800; color: var(--navy); margin: 3rem 0 1rem; padding-bottom: 0.5rem; border-bottom: 2px solid rgba(34,98,153,0.15); }
+    .post-body h3 { font-size: 1.25rem; font-weight: 700; color: var(--navy); margin: 2.25rem 0 0.75rem; }
+    .post-body p { margin-bottom: 1.25rem; }
+    .post-body strong { font-weight: 700; color: var(--navy); }
+    .post-body a { color: var(--blue); text-decoration: underline; text-decoration-thickness: 1px; text-underline-offset: 2px; }
+    .post-body ul, .post-body ol { margin: 0.5rem 0 1.25rem 1.5rem; }
+    .post-body li { margin-bottom: 0.4rem; }
+    .post-body blockquote { background: rgba(34,98,153,0.06); border-left: 4px solid var(--blue); padding: 1rem 1.25rem; border-radius: 0 10px 10px 0; margin: 1.25rem 0; font-size: 0.95rem; color: var(--navy); }
+    .post-body hr { border: none; height: 1px; background: linear-gradient(90deg, transparent, rgba(34,98,153,0.2), transparent); margin: 3rem 0; }
+    /* ── CODE ── */
+    .post-body pre { background: var(--code-bg); border-radius: 12px; padding: 1.5rem; margin: 1.25rem 0 1.5rem; overflow-x: auto; border: 1px solid rgba(255,255,255,0.05); }
+    .post-body pre code { font-family: var(--mono); font-size: 0.85rem; color: #e2e8f0; line-height: 1.7; background: none; padding: 0; white-space: pre-wrap; }
+    .post-body code { font-family: var(--mono); font-size: 0.88em; background: rgba(34,98,153,0.08); color: var(--blue-dark); padding: 0.15em 0.45em; border-radius: 5px; }
+    /* ── TABLES ── */
+    .table-wrapper { overflow-x: auto; margin: 1.5rem 0; border-radius: 0.5rem; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1); }
+    table { width: 100%; border-collapse: collapse; background: white; }
+    th { background: #226299; color: white; padding: 1rem; text-align: left; font-weight: 600; }
+    td { padding: 1rem; border-bottom: 1px solid #e5e7eb; }
+    .post-body table { display: block; width: 100%; overflow-x: auto; }
+    /* ── ALERTS ── */
+    .alert { background: #fef3cd; border: 1px solid #facc15; border-radius: 0.5rem; padding: 1rem; margin: 1.5rem 0; }
+    .alert.danger { background: #fee2e2; border-color: #ef4444; }
+    .alert.info { background: #e0f2fe; border-color: #06b6d4; }
+    .alert.success { background: #d1fae5; border-color: #10b981; }
+    /* ── KEY TAKEAWAYS ── */
+    .key-takeaways { background: linear-gradient(135deg, #f3f4f6 0%, #e5e7eb 100%); border-radius: 1rem; padding: 2rem; margin: 3rem 0; }
+    .key-takeaways h3 { color: #226299; margin-bottom: 1.5rem; }
+    .post-series-footer { text-align: center; font-size: 0.85rem; color: var(--slate-light); font-style: italic; margin-top: 2rem; padding-top: 2rem; border-top: 1px solid #e2e8f0; }
+    .blog-footer { background: var(--navy); padding: 2rem 0; text-align: center; }
+    .blog-footer a { color: var(--gold); text-decoration: none; font-weight: 600; font-size: 0.9rem; }
+    .blog-footer span { color: var(--gray); font-size: 0.8rem; display: block; margin-top: 0.4rem; }
+    @media (max-width: 600px) {
+      .post-hero { padding: 7rem 1.25rem 2.5rem; }
+      .post-body { padding: 2rem 1.25rem 4rem; }
+      .post-hero__meta { flex-direction: column; gap: 0.4rem; }
+      .post-body h2 { font-size: 1.4rem; }
+      .post-body h3 { font-size: 1.15rem; }
+      .post-body pre { padding: 1rem; border-radius: 8px; }
+    }
+
+    :focus-visible { outline: 2px solid var(--focus); outline-offset: 3px; border-radius: 2px; }
+    /* the ring sits on the page ground (3px offset). Inside the navy footers
+       and code blocks var(--blue) collapses to 2.12:1, so those scopes
+       re-point --focus to gold (5.73:1 on navy). */
+    .footer, .blog-footer, pre { --focus: var(--gold); }
+    :focus:not(:focus-visible) { outline: none; }
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after {
+        animation-duration: .01ms !important; animation-iteration-count: 1 !important;
+        transition-duration: .01ms !important; scroll-behavior: auto !important;
+      }
+    }
+    h1, h2, h3, .post-hero__title, .card__title { text-wrap: balance; }
+
+    .post-body img, .post-body svg { max-width: 100%; height: auto; }
+
+    /* ── SKIP LINK ── a11y-perf R5: the link and the landmark it targets are a
+       pair — useless without both halves. Off-screen until focused, then the
+       first tab stop on every page. */
+    .skip-link { position: absolute; left: -9999px; }
+    .skip-link:focus {
+      left: 1rem; top: 1rem; z-index: 999;
+      background: var(--navy); color: #fff;
+      padding: 0.75rem 1.25rem; border-radius: var(--radius-sm);
+      font-weight: 600; text-decoration: none;
+    }
+
+    /* ── POST WAYFINDING ── the wordmark is the home link; the footer carries
+       the full destination row. */
+    .blog-nav__home {
+      font-size: 0.9rem; font-weight: 800; color: var(--navy);
+      text-decoration: none; margin-right: 1rem;
+    }
+    .blog-nav__home:hover { color: var(--blue); }
+    .blog-nav__inner > .blog-nav__back { margin-right: auto; }
+    .blog-footer__nav {
+      display: flex; flex-wrap: wrap; justify-content: center; gap: 0.35rem 1.25rem;
+      max-width: 860px; margin: 0 auto 1.25rem; padding: 0 2rem 1.25rem;
+      border-bottom: 1px solid rgba(255,255,255,0.12);
+    }
+    .blog-footer__nav a { color: var(--gold); font-size: 0.85rem; font-weight: 600; text-decoration: none; }
+    .blog-footer__nav a:hover { color: #fff; text-decoration: underline; }
+
+    html { scroll-padding-top: 5rem; }
+    [id] { scroll-margin-top: 5rem; }
+
+    /* Thai needs more room than Latin at the same nominal size. */
+    .post-body:lang(th) { font-size: 18px; line-height: 1.85; }
+    .post-body p, .post-body li, .post-body blockquote { text-wrap: pretty; }
+
+    /* ---- side-scroll affordance ----
+       pre blocks and tables can exceed 720px. These layers paint a shadow ONLY
+       where there is more content in that direction; when fully scrolled the
+       cover slides over the shadow and hides it. No JavaScript, no wrapper. */
+    .post-body pre, .post-body table {
+      overflow-x: auto;
+      background-image:
+        linear-gradient(to right, var(--code-bg, #0f172a) 30%, rgba(15,23,42,0)),
+        linear-gradient(to left, var(--code-bg, #0f172a) 30%, rgba(15,23,42,0)),
+        radial-gradient(farthest-side at 0 50%, rgba(0,0,0,.28), rgba(0,0,0,0)),
+        radial-gradient(farthest-side at 100% 50%, rgba(0,0,0,.28), rgba(0,0,0,0));
+      background-position: 0 0, 100% 0, 0 0, 100% 0;
+      background-repeat: no-repeat;
+      background-size: 40px 100%, 40px 100%, 14px 100%, 14px 100%;
+      background-attachment: local, local, scroll, scroll;
+    }
+    .post-body table {
+      background-image:
+        linear-gradient(to right, var(--white, #fff) 30%, rgba(255,255,255,0)),
+        linear-gradient(to left, var(--white, #fff) 30%, rgba(255,255,255,0)),
+        radial-gradient(farthest-side at 0 50%, rgba(17,48,75,.16), rgba(17,48,75,0)),
+        radial-gradient(farthest-side at 100% 50%, rgba(17,48,75,.16), rgba(17,48,75,0));
+      background-position: 0 0, 100% 0, 0 0, 100% 0;
+      background-repeat: no-repeat;
+      background-size: 40px 100%, 40px 100%, 14px 100%, 14px 100%;
+      background-attachment: local, local, scroll, scroll;
+    }
+
+    /* ---- table of contents ---- */
+    .post-toc {
+      max-width: 720px;
+      margin: 2rem auto 0;
+      padding: 1rem 1.25rem;
+      background: rgba(34,98,153,0.05);
+      border: 1px solid rgba(34,98,153,0.14);
+      border-left: 3px solid var(--gold, #c4a46c);
+      border-radius: 10px;
+      font-size: 0.92rem;
+    }
+    .post-toc > summary {
+      cursor: pointer;
+      font-weight: 700;
+      color: var(--navy);
+      list-style: none;
+    }
+    .post-toc > summary::-webkit-details-marker { display: none; }
+    .post-toc > summary::before {
+      content: "\25B8";
+      display: inline-block;
+      margin-right: 0.5rem;
+      transition: transform 0.2s ease;
+      color: var(--gold-dark, #7a5f22);
+    }
+    .post-toc[open] > summary::before { transform: rotate(90deg); }
+    .post-toc > summary:focus-visible { outline: 3px solid var(--focus, #226299); outline-offset: 3px; }
+    .post-toc ol { margin: 0.85rem 0 0.25rem; padding-left: 1.4rem; }
+    .post-toc li { margin-bottom: 0.4rem; line-height: 1.5; }
+    .post-toc a { color: var(--slate); text-decoration: none; }
+    .post-toc a:hover, .post-toc a:focus-visible { color: var(--blue-dark, #1a4d7a); text-decoration: underline; }
+    @media (max-width: 600px) { .post-toc { margin: 1.25rem 1rem 0; } }
+
+    /* ---- cross-document view transitions ---- */
+    @view-transition { navigation: auto; }
+    .nav, .blog-nav { view-transition-name: site-nav; }
+    .footer, .blog-footer { view-transition-name: site-footer; }
+    @media (prefers-reduced-motion: reduce) {
+      ::view-transition-group(*),
+      ::view-transition-old(*),
+      ::view-transition-new(*) { animation: none !important; }
+    }
+
+    /* ── SERIES STRIP — Hermes Agent in Practice ──
+       Same class and inner-wrapper shape as the OpenClaw strip because the
+       linter's RE_SNAV recognises exactly `series-nav` + a nested div; a
+       renamed strip would read as "no nav" and fail INV-08. All content
+       checks (INV-03 family) iterate the SERIES7 list only, so this strip's
+       labels are convention, not contract. House-styled, not the island CSS. */
+    .series-nav {
+      max-width: 720px; margin: 2rem auto 0; padding: 1.1rem 1.4rem;
+      background: rgba(255,255,255,0.75); border: 1px solid rgba(34,98,153,0.15);
+      border-left: 3px solid var(--gold); border-radius: 12px;
+    }
+    .series-nav h3 {
+      font-size: 0.78rem; font-weight: 700; text-transform: uppercase;
+      letter-spacing: 0.08em; color: var(--gold-dark); margin-bottom: 0.6rem;
+    }
+    .series-links { display: flex; flex-wrap: wrap; gap: 0.5rem; }
+    .series-links a, .series-links .current {
+      font-size: 0.82rem; font-weight: 600; padding: 0.35rem 0.8rem;
+      border-radius: 50px; text-decoration: none;
+    }
+    .series-links a { color: var(--blue-dark); background: rgba(34,98,153,0.08); }
+    .series-links a:hover { background: rgba(34,98,153,0.16); }
+    .series-links .current { color: #fff; background: var(--blue-dark); }
+    @media (max-width: 600px) { .series-nav { margin: 1.5rem 1rem 0; } }
+
+    /* ── FIGURE — the sanctioned diagram component (page-design §4 Content).
+       Diagrams are PNGs; this repo built them out of divs twice and reverted
+       twice. The image is wrapped in a link to itself so a phone can pinch a
+       1400px drawing without a line of JavaScript. */
+    .figure { margin: 2.5rem 0; }
+    .figure__img { width: 100%; height: auto; display: block;
+                   border-radius: var(--radius); border: 1px solid rgba(0,0,0,0.06); }
+    .figure__caption { font-size: 0.85rem; color: var(--slate-light);
+                       text-align: center; margin-top: 0.75rem; }
+
+    /* ── REFERENCES — every material number in this series carries its source.
+       The tags are the book's own four evidence labels. */
+    .references { margin-top: 3rem; padding-top: 2rem; border-top: 1px solid #e2e8f0; }
+    .references__note { font-size: 0.85rem; color: var(--slate-light); margin-bottom: 1rem; }
+    .references__list { padding-left: 1.4rem; font-size: 0.9rem; line-height: 1.75; }
+    .references__list li { margin-bottom: 0.7rem; }
+    .ref-tag { display: inline-block; font-size: 0.7rem; font-weight: 700;
+               letter-spacing: 0.06em; text-transform: uppercase; padding: 0.1rem 0.5rem;
+               border-radius: 50px; margin-right: 0.4rem; vertical-align: 0.05em;
+               background: rgba(34,98,153,0.1); color: var(--blue-dark); }
+    /* All four labels get a rule.  --standard and --study shipped without one
+       on 2026-09-05, so 158 of 306 tags fell through to the base blue and the
+       two labels were indistinguishable.  Ratios on --bg: 6.70 / 6.92 / 7.36 /
+       4.81:1, all AA at this size. */
+    .ref-tag--law { background: rgba(239,68,68,0.12); color: #991b1b; }
+    .ref-tag--standard { background: rgba(34,98,153,0.12); color: var(--blue-dark); }
+    .ref-tag--study { background: rgba(34,197,94,0.18); color: #14532d; }
+    .ref-tag--synthesis { background: rgba(196,164,108,0.22); color: var(--gold-dark); }
+    .ref-supports { display: block; color: var(--slate-light); font-size: 0.85rem; }
+
+    /* ── LANGUAGE SWITCH — pure CSS, zero JavaScript (INV-38) ──
+       One visually-hidden checkbox as a direct child of body, BEFORE the main landmark,
+       so `#langSwitch:checked ~ main …` reaches every content block. The two
+       tracks are paired blocks: .l-th (default) and .l-en (hidden until
+       checked; display:revert restores block for divs, inline for spans).
+       Naming stays clear of INV-12's menu-token regex (hamburger|burger|
+       nav__toggle|nav-toggle|navtoggle|menu-toggle|menu__toggle) — verified.
+       No JS also means no persistence across posts; each post opens in Thai. */
+    .lang-switch-box { position: absolute; left: -9999px; }
+    .l-en { display: none; }
+    #langSwitch:checked ~ main .l-en { display: revert; }
+    #langSwitch:checked ~ main .l-th { display: none; }
+    .lang-switch {
+      display: inline-flex; align-items: center; gap: 0.55rem;
+      margin-top: 1.4rem; padding: 0.4rem 1.1rem; border-radius: 50px;
+      background: rgba(255,255,255,0.85); border: 1px solid rgba(255,255,255,0.4);
+      cursor: pointer; font-size: 0.85rem; user-select: none;
+    }
+    .lang-switch span { color: var(--slate-light); font-weight: 600; transition: color 0.2s; }
+    .lang-switch .lang-sep { color: var(--gray); font-weight: 400; }
+    .lang-switch .lang-th { color: var(--navy); font-weight: 800; }
+    #langSwitch:checked ~ main .lang-switch .lang-th { color: var(--slate-light); font-weight: 600; }
+    #langSwitch:checked ~ main .lang-switch .lang-en { color: var(--navy); font-weight: 800; }
+    .lang-switch:hover { border-color: #fff; }
+    #langSwitch:focus-visible ~ main .lang-switch {
+      outline: 2px solid var(--focus); outline-offset: 3px;
+    }
+  </style>
+  <!-- social -->
+  <link rel="canonical" href="https://anirach.com/blog/ai-core-jev-routing.html">
+  <meta property="og:type" content="article">
+  <meta property="og:url" content="https://anirach.com/blog/ai-core-jev-routing.html">
+  <meta property="og:site_name" content="Anirach Mingkhwan">
+  <meta property="og:locale" content="th_TH">
+  <meta property="og:locale:alternate" content="en_US">
+  <meta property="article:published_time" content="2026-10-23">
+  <meta property="article:author" content="https://anirach.com/">
+  <meta property="og:title" content="Abstain &amp; Route — ไม่มั่นใจให้หยุดได้">
+  <meta property="og:description" content="บทปฏิบัติ AI-Core + Jev ตอนที่ 5 เขียนนโยบาย abstention และ fallback ที่ทดสอบได้ แยกความมั่นใจออกจากความถูกต้อง และไม่มองข้ามคำขอใช้มนุษย์">
+  <meta property="og:image" content="https://anirach.com/images/ai-core-jev-routing-og.jpg">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
+  <meta property="og:image:alt" content="Abstain &amp; Route — ไม่มั่นใจให้หยุดได้">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:image" content="https://anirach.com/images/ai-core-jev-routing-og.jpg">
+  <meta name="twitter:image:alt" content="Abstain &amp; Route — ไม่มั่นใจให้หยุดได้">
+  <meta name="robots" content="max-image-preview:large">
+  <meta name="theme-color" content="#11304b">
+  <link rel="icon" href="/favicon.ico" sizes="any">
+  <link rel="apple-touch-icon" href="/apple-touch-icon.png">
+  <!-- /social -->
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "BlogPosting",
+    "headline": "Abstain & Route — ไม่มั่นใจให้หยุดได้",
+    "author": {
+      "@type": "Person",
+      "@id": "https://anirach.com/#person",
+      "name": "Anirach Mingkhwan",
+      "url": "https://anirach.com/"
+    },
+    "datePublished": "2026-10-23",
+    "dateModified": "2026-10-23",
+    "image": "https://anirach.com/images/ai-core-jev-routing-og.jpg",
+    "inLanguage": [
+      "th",
+      "en"
+    ],
+    "mainEntityOfPage": "https://anirach.com/blog/ai-core-jev-routing.html"
+  }
+  </script>
+</head>
+<body>
+<a href="#main" class="skip-link">Skip to content</a>
+<input type="checkbox" id="langSwitch" class="lang-switch-box" aria-label="Switch language: Thai / English">
+
+  <nav class="blog-nav">
+    <div class="blog-nav__inner">
+      <a href="../index.html" class="blog-nav__home">Anirach</a>
+      <a href="./" class="blog-nav__back">‹ Tutorials</a>
+      <div class="blog-nav__title">Abstain &amp; Route</div>
+    </div>
+  </nav>
+
+  <main id="main">
+
+  <header class="post-hero">
+    <div class="post-hero__tags">
+      <span class="post-hero__tag">AI-Core + Jev</span>
+      <span class="post-hero__tag">Hands-on Lab</span>
+      <span class="post-hero__tag">Offline First</span>
+    </div>
+    <h1 class="post-hero__title"><span class="l-th">Abstain &amp; Route — ไม่มั่นใจให้หยุดได้</span><span class="l-en" lang="en">Abstain, Route, and Fall Back — AI-Core + Jev in Practice</span></h1>
+    <p class="post-hero__sub"><span class="l-th">เขียนนโยบาย abstention และ fallback ที่ทดสอบได้ แยกความมั่นใจออกจากความถูกต้อง และไม่มองข้ามคำขอใช้มนุษย์</span><span class="l-en" lang="en">Implement abstention and fallback without treating concentration as correctness or ignoring a human request.</span></p>
+    <div class="post-hero__meta">
+      <span>By <strong>Anirach Mingkhwan</strong></span>
+      <span class="post-hero__series">AI-Core + Jev in Practice 2026 • Post #5</span>
+      <span><time datetime="2026-10-23">23 Oct 2026</time></span>
+      <span>4 min read</span>
+    </div>
+    <label for="langSwitch" class="lang-switch" title="สลับภาษา · Switch language"><span class="lang-th">ไทย</span><span class="lang-sep">·</span><span class="lang-en" lang="en">English</span></label>
+    <div class="post-hero__cover">
+      <img src="../images/ai-core-jev-routing-cover.jpg" alt="Abstain &amp; Route — ไม่มั่นใจให้หยุดได้" width="800" height="800" loading="eager" fetchpriority="high" decoding="async">
+    </div>
+  </header>
+
+  <article class="post-body">
+
+    <details class="post-toc l-th" open>
+      <summary>ในบทความนี้</summary>
+      <ol>
+          <li><a href="#th-start">เป้าหมายและสิ่งที่ต้องพร้อม</a></li>
+          <li><a href="#th-concepts">ทำความเข้าใจขอบเขตนี้</a></li>
+          <li><a href="#th-steps">ลงมือทีละเจ็ดขั้น</a></li>
+          <li><a href="#th-implementation">ไฟล์และคำสั่งที่ใช้</a></li>
+          <li><a href="#th-verify">ตรวจผลที่ควรได้</a></li>
+          <li><a href="#th-troubleshoot">แก้ปัญหาเมื่อผลไม่ตรง</a></li>
+          <li><a href="#th-exercise">เปลี่ยนหนึ่งอย่างแล้วทดสอบ</a></li>
+          <li><a href="#th-next">จุดตรวจถัดไป</a></li>
+          <li><a href="#th-references">แหล่งอ้างอิงและหลักฐาน</a></li>
+          <li><a href="#th-summary">สรุปที่นำไปใช้ต่อ</a></li>
+      </ol>
+    </details>
+    <details class="post-toc l-en" open>
+      <summary>In this post</summary>
+      <ol>
+          <li><a href="#en-start">Outcome and prerequisites</a></li>
+          <li><a href="#en-concepts">How this boundary works</a></li>
+          <li><a href="#en-steps">Seven practical steps</a></li>
+          <li><a href="#en-implementation">Files and commands</a></li>
+          <li><a href="#en-verify">Verify the expected behavior</a></li>
+          <li><a href="#en-troubleshoot">Troubleshooting</a></li>
+          <li><a href="#en-exercise">Change one thing, then test</a></li>
+          <li><a href="#en-next">Next checkpoint</a></li>
+          <li><a href="#en-references">References and evidence</a></li>
+          <li><a href="#en-summary">Key takeaways</a></li>
+      </ol>
+    </details>
+    <div class="l-th">
+
+<p>ตอนที่ 5 จากสิบตอน: เขียนนโยบาย abstention และ fallback ที่ทดสอบได้ แยกความมั่นใจออกจากความถูกต้อง และไม่มองข้ามคำขอใช้มนุษย์</p>
+<blockquote>ฉบับร่างสำหรับตรวจในเครื่อง • โค้ดเริ่มต้นใช้ offline fixtures เท่านั้น ตัวเลขเป็นสถานการณ์สมมติ ไม่ใช่ผลวัด Jev จริง และยังไม่มีการพิสูจน์ว่าระบบเร็วขึ้นหรือประหยัดลง</blockquote>
+
+<h2 id="th-start">เป้าหมายและสิ่งที่ต้องพร้อม</h2>
+<p>แนะนำให้เริ่มจาก companion repo และคู่มือ README บน GitHub ด้านล่าง ส่วน ZIP ของเว็บไซต์เป็นสำเนาออฟไลน์อีกทางหนึ่ง คำสั่ง Node ใช้เหมือนกันเมื่อรันจากรากโครงการ <a href="https://github.com/Anirach/ai-core-jev-tutorial">GitHub repository</a> · <a href="https://github.com/Anirach/ai-core-jev-tutorial/blob/a634bb49157ddfa01f1ff7a61627066a3e70196d/README.md">README / Quickstart</a></p>
+<p>ใช้โครงการ Support Ticket Decision Lab เดิมตลอดสิบตอน เตรียม Node 22.18 ขึ้นไป terminal และโฟลเดอร์ที่เขียนไฟล์ได้ รันคำสั่งจากราก repo ai-core-jev-tutorial หรือจากไดเรกทอรี ai-core-jev-lab หากใช้ ZIP ของเว็บไซต์ ไม่ต้อง npm install สำหรับออฟไลน์ เผื่อเวลาลงมือและทดลองเปลี่ยนโค้ดประมาณ 20–40 นาที โดยเวลาที่แสดงบนหัวบทความเป็นเวลาอ่านเนื้อหา ไม่รวมเวลาลองทำ</p><p><a class="btn" href="../downloads/ai-core-jev-lab.zip" download>ดาวน์โหลดโครงการพร้อมโค้ดและ tests (ZIP)</a> · <a href="../examples/ai-core-jev-lab/README.md">อ่านคู่มือโครงการ</a></p><p>ตอนนี้เน้นไฟล์ src/pipeline.mjs และใช้ผลจาก fixture เพื่อทดสอบการประกอบระบบเท่านั้น ยังไม่ได้ติดตั้ง SDK หรือใช้ key ในการจัดทำบทเรียน เส้นทาง live ที่แยกไว้ในตอนท้ายยังไม่ได้ทดสอบผ่าน API จริง</p>
+
+<h2 id="th-concepts">ทำความเข้าใจขอบเขตนี้</h2>
+<p>นโยบาย abstention คือพฤติกรรมผลิตภัณฑ์ที่รันได้ ในแล็บนี้ Choice confidence ต่ำอาจเรียก fixture ของ generative baseline แต่กรณีอาจขอคุยกับคนจะไป review โดยตรง สองแขนงนี้มีผลต่างกัน fallback เป็นอีกความเห็นหนึ่งที่ผิดได้และเป็นอีกการเรียกที่มีต้นทุนเมื่อใช้งานจริง ไม่ใช่ข้อยกเว้นจาก effect guard</p>
+<p>Choice confidence สรุปความกระจุกตัวของการแจกแจง ไม่ใช่สัดส่วนการตอบถูกที่วัดจาก ticket ของคุณ ค่า 0.9 จึงไม่รับประกันความแม่น 90 เปอร์เซ็นต์เมื่อนำไปใช้ เราวัด calibration โดยเทียบ probability ของตัวเลือกที่เลือกกับเฉลย และยังถือผลนั้นว่าเป็นคุณสมบัติของชุดข้อมูลกับรุ่นโมเดล ไม่ใช่ค่าคงที่สากล</p>
+<p>threshold route ที่ 0.7 และขอบเขต human-no ที่ 0.3 เป็นพารามิเตอร์สอน ยังไม่ได้ยืนยันกับธุรกิจหรือประชากรภาษาใด อย่านำไปใช้จริงเพียงเพราะเห็นในบทเรียน ให้ประกาศคุณภาพและ coverage ที่รับได้ล่วงหน้า sweep เฉพาะ validation แล้วเก็บ test ที่แยกไว้จนกว่าจะตรึง policy</p>
+
+<h2 id="th-steps">ลงมือทีละเจ็ดขั้น</h2>
+<h3>ขั้นที่ 1</h3><p>อ่านไฟล์ policy ในฐานะ release artifact จดรุ่นก่อนเปลี่ยน threshold routeConfidence ใช้กับสถิติของ Choice ส่วน humanNoMax ใช้กับความน่าจะเป็นของ Noul การแยกชื่อฟิลด์ช่วยไม่ให้ helper ชื่อ confidence แบบครอบจักรวาลตีความสองอย่างนี้ปนกัน</p>
+<h3>ขั้นที่ 2</h3><p>รัน T-002 fixture ของ route กำกวมจนต่ำกว่า threshold ทำให้ hybrid เรียก baseline หนึ่งครั้ง ดู attempts ทั้งสองและลำดับของมัน อย่าทิ้งการเรียกครั้งแรกเมื่อครั้งที่สองเป็นผู้ให้ route สุดท้าย</p>
+<h3>ขั้นที่ 3</h3><p>รัน T-004 คำขอคุยกับคนชัดเจนทำให้เข้า review ก่อน fallback จะเขียนคำตัดสินใหม่ เงื่อนไขนี้เป็นภาระของผลิตภัณฑ์ ไม่ใช่เพียงความชอบของ classifier โปรแกรมต้องรักษาไว้แม้ provider อีกตัวเสนอ label อื่นอย่างมั่นใจ</p>
+<h3>ขั้นที่ 4</h3><p>รัน T-006 ซึ่ง Noul อยู่ใกล้ช่วงกลางที่ไม่แน่ใจ เราไม่แปลงมันเป็น no ที่แน่นอนแล้วส่งคิวอัตโนมัติ เส้นทางของตัวอย่างนี้คือ needs_review ให้บันทึกว่าการงดตัดสินลักษณะนี้สร้างภาระเท่าไรต่อกระบวนงาน แทนการซ่อนเป็น model error หรือนับเป็นความสำเร็จฟรี</p>
+<h3>ขั้นที่ 5</h3><p>ดู T-011 เทียบกับเฉลย เราตั้งใจใส่คำทำนายรูปแบบ Jev ที่มั่นใจสูงแต่ผิด fixture นี้สอนข้อจำกัด ไม่ใช่อัตราความผิดพลาดของ Jev ที่วัดจริง เมื่อประเมินจริงควรมีตัวอย่างโต้แย้งเช่นนี้ เพื่อไม่ให้คะแนนสูงถูกใช้แทนความถูกต้อง</p>
+<h3>ขั้นที่ 6</h3><p>รัน sweep ที่ใช้ validation เท่านั้น อ่าน selective accuracy, coverage และ fallback rate คู่กันในแต่ละ threshold ถ้าทุกค่าผิดเงื่อนไขที่ประกาศไว้ คำตอบไม่ใช่เลือกตัวที่แพ้แต่ถูกที่สุด ให้แก้คำถาม ชุดข้อมูล หรือสถาปัตยกรรมแล้วเริ่มรอบ validation ใหม่</p>
+<h3>ขั้นที่ 7</h3><p>ตรึง policy หนึ่งชุดก่อนตอนถัดไป เก็บสำเนาไว้คู่กับรายงานและรุ่นคำถาม ใช้ test split ประเมิน candidate ที่ตรึงแล้ว ไม่ใช่ใช้เลือก threshold หลังเห็นว่าค่าไหนทำตารางออกมาสวยที่สุด</p>
+
+<h2 id="th-implementation">ไฟล์และคำสั่งที่ใช้</h2>
+<p><strong>โค้ดประกอบบน GitHub:</strong> <a href="https://github.com/Anirach/ai-core-jev-tutorial">ai-core-jev-tutorial</a> · <a href="https://github.com/Anirach/ai-core-jev-tutorial/blob/a634bb49157ddfa01f1ff7a61627066a3e70196d/README.md">README</a>. ใช้ repo เป็นทางหลักในการทำแบบฝึก ไฟล์ต่อไปนี้ตรึงกับรุ่นที่ทดสอบแล้ว <a href="https://github.com/Anirach/ai-core-jev-tutorial/blob/a634bb49157ddfa01f1ff7a61627066a3e70196d/src/pipeline.mjs">src/pipeline.mjs</a> · <a href="https://github.com/Anirach/ai-core-jev-tutorial/blob/a634bb49157ddfa01f1ff7a61627066a3e70196d/config/policy.json">config/policy.json</a></p>
+
+<p>เปิดไฟล์นี้เทียบกับ source ใน ZIP ก่อนแก้ ข้อความต่อไปนี้คือโค้ดที่ใช้ในโครงการจริง ไม่ใช่ pseudocode ผลโมเดลเป็น input ให้โค้ดตรวจและวางเส้นทางต่อ ไม่ใช่สิทธิ์ให้ข้ามด่านอนุมัติ</p><p><a href="../examples/ai-core-jev-lab/src/pipeline.mjs">src/pipeline.mjs</a></p><pre><code>import {validateTicket,parseJev,parseBaseline,probability} from &#x27;./contracts.mjs&#x27;;
+export function validatePolicy(policy) {
+  probability(policy.routeConfidence,&#x27;policy routeConfidence&#x27;);probability(policy.humanNoMax,&#x27;policy humanNoMax&#x27;);
+  if(policy.humanNoMax&gt;=0.5||typeof policy.fallbackOnLowConfidence!==&#x27;boolean&#x27;)throw new Error(&#x27;invalid abstention policy&#x27;);return policy;
+}
+export async function decide(input,{mode=&#x27;hybrid&#x27;,providers,policy}) {
+  const ticket=validateTicket(input);validatePolicy(policy);
+  if(![&#x27;baseline&#x27;,&#x27;jev&#x27;,&#x27;hybrid&#x27;].includes(mode))throw new Error(&#x27;invalid mode&#x27;);
+  const attempts=[];let decision=null,source=null,reason=&#x27;not_evaluated&#x27;;
+  async function obtain(kind,parse) {
+    try {const result=await providers[kind](ticket);attempts.push(result.attempt);source=kind;return parse(result.value);}
+    catch(error) {
+      if(attempts.at(-1)?.provider!==kind)attempts.push({provider:kind,mode:&#x27;error&#x27;,usage:null,wallMs:null,scenarioLatencyMs:null,httpAttempts:null,costComplete:false});
+      reason=`${kind}_failed_validation_or_call`;return null;
+    }
+  }
+  if(mode===&#x27;baseline&#x27;)decision=await obtain(&#x27;baseline&#x27;,parseBaseline);
+  else {
+    decision=await obtain(&#x27;jev&#x27;,parseJev);
+    if(decision&amp;&amp;decision.wantsHuman&gt;policy.humanNoMax)reason=&#x27;human_request_or_uncertainty&#x27;;
+    else if(!decision||decision.confidence&lt;policy.routeConfidence) {
+      const humanProbability=decision?.wantsHuman;
+      if(mode===&#x27;hybrid&#x27;&amp;&amp;policy.fallbackOnLowConfidence) {
+        const fallback=await obtain(&#x27;baseline&#x27;,parseBaseline);
+        decision=fallback?{...fallback,wantsHuman:Math.max(fallback.wantsHuman,humanProbability??0)}:null;
+      } else reason=&#x27;low_route_confidence&#x27;;
+    }
+  }
+  const auto=!!decision&amp;&amp;decision.wantsHuman&lt;=policy.humanNoMax&amp;&amp;(source===&#x27;baseline&#x27;||decision.confidence&gt;=policy.routeConfidence);
+  if(auto)reason=source===&#x27;baseline&#x27;?&#x27;validated_baseline_proposal&#x27;:&#x27;validated_jev_proposal&#x27;;
+  else if(decision?.wantsHuman&gt;policy.humanNoMax)reason=&#x27;human_request_or_uncertainty&#x27;;
+  return {ticketId:ticket.id,status:auto?&#x27;proposed&#x27;:&#x27;needs_review&#x27;,reason,source,decision,attempts,action:auto?{kind:&#x27;route_ticket&#x27;,ticketId:ticket.id,queue:decision.route}:null};
+}
+</code></pre><p>คำสั่งออฟไลน์ต่อไปนี้รันได้โดยไม่ใช้ SDK หรือ API key:</p><pre><code>node src/cli.mjs demo --mode hybrid --ticket T-002
+node src/cli.mjs demo --mode hybrid --ticket T-004
+node src/cli.mjs demo --mode hybrid --ticket T-006
+node src/cli.mjs demo --mode jev --ticket T-011
+node src/cli.mjs sweep</code></pre>
+
+<h2 id="th-verify">ตรวจผลที่ควรได้</h2>
+<p>T-002 ใช้สอง attempts ส่วน T-004 และ T-006 ต้อง review และ T-011 อาจมั่นใจแต่ผิดได้ ข้อสังเกตสามแบบนี้สอนได้มากกว่าค่าเฉลี่ยเดียว เพราะแยกความมั่นใจในการส่งคิว ภาระของผลิตภัณฑ์ และความถูกต้องเชิงความหมายออกจากกัน</p><p>ตรวจชื่อ test และเส้นทางปฏิเสธด้วย อย่าดูเพียง exit code หรือ label สุดท้าย ข้อมูลที่ไม่ทราบต้องยังระบุว่าไม่ทราบ และรายงานทุกชิ้นต้องแยกผลจำลองออกจากข้อมูลที่วัดจริง</p>
+
+<h2 id="th-troubleshoot">แก้ปัญหาเมื่อผลไม่ตรง</h2>
+<p>ถ้าเพิ่ม threshold แล้วเหมือนทุกอย่างดีขึ้น ให้ตรวจ attempts ที่หายและงาน review ที่ยังไม่จบ ถ้าเคสขอคุยกับคนกลายเป็นข้อเสนอหลัง fallback แปลว่า fallback ลบข้อจำกัดทิ้ง ถ้าใช้ผล test เลือก threshold ไปแล้ว ให้ถือชุดนั้นเป็น validation และเตรียม held-out ใหม่</p><p>หากเปิดบทเรียนผ่าน Python http.server ให้ใช้ลิงก์ .html ที่ท้ายตอนเมื่อจำเป็น ลิงก์ chip แบบไม่มีนามสกุลในแถบซีรีส์อาศัยการ resolve ของ GitHub Pages และเป็นข้อจำกัด preview ที่มีอยู่เดิม ไม่ใช่ปัญหาในโค้ด Node</p>
+
+<h2 id="th-exercise">เปลี่ยนหนึ่งอย่างแล้วทดสอบ</h2>
+<p>เลือกขั้นต่ำ coverage และ selective accuracy สมมติไว้ก่อนดู sweep แล้วอธิบายว่า candidate ใดไม่ผ่านเพราะอะไร ถ้าไม่มีตัวไหนผ่านให้รายงานตรงนั้น แบบฝึกนี้ฝึกกระบวนการตัดสินใจ ไม่ได้ทำให้ fixture กลุ่มเล็กกลายเป็นหลักฐานสำหรับ threshold ใช้งานจริง</p><p>ทำการแก้ไขในสำเนาทดลอง เก็บไฟล์ต้นฉบับไว้เทียบ แล้วคืนค่าก่อนเริ่มตอนถัดไป หากทดลองกับ provider จริงภายหลัง ให้สร้าง experiment record ใหม่แทนเขียนทับผลเดิม</p>
+
+<h2 id="th-next">จุดตรวจถัดไป</h2>
+<p>ก่อนขยับต่อ ให้บอกได้ว่าไฟล์ใดเป็น contract ไฟล์ใดเป็น policy หลักฐานใดได้จากการรัน และข้อใดยังไม่ได้ทดสอบกับโมเดลจริง การแยกสี่อย่างนี้เป็นงานวิศวกรรมที่สำคัญกว่าการได้เดโมที่ดูไหลลื่น</p><p><a href="ai-core-jev-validation.html">← ตอนก่อนหน้า</a> · <a href="ai-core-jev-evaluation.html">ตอนถัดไป →</a></p>
+
+<h2 id="th-references">แหล่งอ้างอิงและหลักฐาน</h2>
+<section class="references" aria-labelledby="th-reference-heading"><h3 id="th-reference-heading">เอกสารและ source ที่ใช้</h3><p>ตรวจเอกสาร Jev วันที่ 23 ตุลาคม 2026 ข้อเท็จจริง API และราคาอาจเปลี่ยน ให้ตรวจใหม่ก่อนใช้ live ส่วนผลของ fixture เป็นข้อมูลสอนที่ระบุไว้ในโครงการ</p><ol class="references__list"><li id="th-ref-1"><a href="https://docs.typesafe.ai/confidence">Confidence and its limits</a></li><li id="th-ref-2"><a href="https://docs.typesafe.ai/patterns/confidence-routing">Confidence routing pattern</a></li><li id="th-ref-3"><a href="../examples/ai-core-jev-lab/src/pipeline.mjs">Lab pipeline source</a></li></ol></section>
+
+<h2 id="th-summary">สรุปที่นำไปใช้ต่อ</h2>
+<div class="key-takeaways"><ul><li>contract จำกัดโครงสร้าง ส่วน evaluation ตรวจพฤติกรรม</li><li>อ่าน coverage คุณภาพ เวลา และต้นทุนรวมควบคู่กัน</li><li>ข้อเสนอไม่ใช่ผลที่อนุมัติแล้ว และหลักฐาน mock ไม่ใช่หลักฐานโมเดล live</li></ul></div>
+    </div>
+
+    <div class="l-en" lang="en">
+
+<p>Part 5 of ten: Implement abstention and fallback without treating concentration as correctness or ignoring a human request.</p>
+<blockquote>Local review draft • Default code uses offline fixtures. Numbers are fictional scenarios, not measured Jev results. Faster performance and lower cost remain hypotheses.</blockquote>
+
+<h2 id="en-start">Outcome and prerequisites</h2>
+<p>Start with the companion repository and its detailed README. The website ZIP remains an alternative offline snapshot; run the same Node commands from either project root. <a href="https://github.com/Anirach/ai-core-jev-tutorial">GitHub repository</a> · <a href="https://github.com/Anirach/ai-core-jev-tutorial/blob/a634bb49157ddfa01f1ff7a61627066a3e70196d/README.md">README / Quickstart</a></p>
+<p>Use the same Support Ticket Decision Lab throughout the series. Have Node 22.18+, a terminal and a writable directory. Run commands from the cloned ai-core-jev-tutorial root, or the extracted ai-core-jev-lab folder if using the website ZIP. Offline work needs no npm install. Allow roughly 20–40 minutes for experiments; the article reading-time label excludes hands-on work.</p><p><a class="btn" href="../downloads/ai-core-jev-lab.zip" download>Download the complete code and tests (ZIP)</a> · <a href="../examples/ai-core-jev-lab/README.md">Project README</a></p><p>This chapter focuses on src/pipeline.mjs. Fixture outputs test the integration mechanics only. The author did not install the SDK or use an API key while preparing the lab. The separately documented live path has not been tested against the API.</p>
+
+<h2 id="en-concepts">How this boundary works</h2>
+<p>An abstention policy is executable product behavior. In this lab, a low Choice confidence can trigger a generative-baseline fixture, while a possible human request goes directly to review. These are different branches with different consequences. A fallback is another fallible opinion and another billable operation in a real deployment, not an exemption from the effect guard.</p>
+<p>Choice confidence summarizes the concentration of an option distribution; it is not a measured fraction of correct decisions on your tickets. A value of 0.9 is not a warranty of 90 percent deployment accuracy. We measure calibration using the selected option probability against labels, and still treat that result as a property of a dataset and model version, not a universal constant.</p>
+<p>Our 0.7 route threshold and 0.3 human-no boundary are teaching parameters. They have not been validated for a business or language population. Do not deploy them because a tutorial uses them. Predeclare acceptable quality and coverage, sweep only validation data, and keep the held-out test untouched until the policy is frozen.</p>
+
+<h2 id="en-steps">Seven practical steps</h2>
+<h3>Step 1 — Read the policy file as a release artifact</h3><p>Read the policy file as a release artifact. Record its version before changing a threshold. routeConfidence applies to the Choice statistic; humanNoMax applies to a Noul probability. Keeping the two field names distinct prevents a generic confidence helper from applying the wrong meaning to both.</p>
+<h3>Step 2 — Run T-002</h3><p>Run T-002. Its route fixture is ambiguous enough to fall below the route threshold, so hybrid calls the baseline once. Inspect the two attempts and their ordering. Do not discard the first call when the second call supplies the final route.</p>
+<h3>Step 3 — Run T-004</h3><p>Run T-004. An explicit request for a human causes review before a fallback can rewrite the decision. This is a product obligation, not merely a classifier preference. The program must retain this condition even when another provider offers a confident alternative label.</p>
+<h3>Step 4 — Run T-006</h3><p>Run T-006. Its Noul probability is near the uncertain middle. We do not convert that into a firm no and auto-route. The safe path here is needs_review. Write down how much such abstention costs your support workflow instead of hiding it as a model error or counting it as a free success.</p>
+<h3>Step 5 — Inspect T-011 against its label</h3><p>Inspect T-011 against its label. It deliberately contains a high-confidence wrong Jev-shaped prediction. The fixture teaches a limitation, not a measured Jev failure rate. Keep such counterexamples in your real evaluation set so a high score cannot become a substitute for correctness.</p>
+<h3>Step 6 — Run the validation-only sweep</h3><p>Run the validation-only sweep. For each threshold read selective accuracy, coverage and fallback rate together. If every candidate fails your predeclared constraints, the answer is not to choose the cheapest loser; revise the questions, dataset or architecture and start a new validation cycle.</p>
+<h3>Step 7 — Freeze one policy before the next chapter</h3><p>Freeze one policy before the next chapter. Keep a copy with the report and the question version. The test split is for evaluating that frozen candidate once, not for selecting the threshold after seeing which number gives the nicest table.</p>
+
+<h2 id="en-implementation">Files and commands</h2>
+<p><strong>Companion code on GitHub:</strong> <a href="https://github.com/Anirach/ai-core-jev-tutorial">ai-core-jev-tutorial</a> · <a href="https://github.com/Anirach/ai-core-jev-tutorial/blob/a634bb49157ddfa01f1ff7a61627066a3e70196d/README.md">README</a>. Use the companion repository as the default working copy. These file links pin the tested revision. <a href="https://github.com/Anirach/ai-core-jev-tutorial/blob/a634bb49157ddfa01f1ff7a61627066a3e70196d/src/pipeline.mjs">src/pipeline.mjs</a> · <a href="https://github.com/Anirach/ai-core-jev-tutorial/blob/a634bb49157ddfa01f1ff7a61627066a3e70196d/config/policy.json">config/policy.json</a></p>
+
+<p>Compare this file with the source in the ZIP before editing. The listing is the implementation used by the lab, not pseudocode. Model output is input to validation and routing code; it grants no permission to bypass approval.</p><p><a href="../examples/ai-core-jev-lab/src/pipeline.mjs">src/pipeline.mjs</a></p><pre><code>import {validateTicket,parseJev,parseBaseline,probability} from &#x27;./contracts.mjs&#x27;;
+export function validatePolicy(policy) {
+  probability(policy.routeConfidence,&#x27;policy routeConfidence&#x27;);probability(policy.humanNoMax,&#x27;policy humanNoMax&#x27;);
+  if(policy.humanNoMax&gt;=0.5||typeof policy.fallbackOnLowConfidence!==&#x27;boolean&#x27;)throw new Error(&#x27;invalid abstention policy&#x27;);return policy;
+}
+export async function decide(input,{mode=&#x27;hybrid&#x27;,providers,policy}) {
+  const ticket=validateTicket(input);validatePolicy(policy);
+  if(![&#x27;baseline&#x27;,&#x27;jev&#x27;,&#x27;hybrid&#x27;].includes(mode))throw new Error(&#x27;invalid mode&#x27;);
+  const attempts=[];let decision=null,source=null,reason=&#x27;not_evaluated&#x27;;
+  async function obtain(kind,parse) {
+    try {const result=await providers[kind](ticket);attempts.push(result.attempt);source=kind;return parse(result.value);}
+    catch(error) {
+      if(attempts.at(-1)?.provider!==kind)attempts.push({provider:kind,mode:&#x27;error&#x27;,usage:null,wallMs:null,scenarioLatencyMs:null,httpAttempts:null,costComplete:false});
+      reason=`${kind}_failed_validation_or_call`;return null;
+    }
+  }
+  if(mode===&#x27;baseline&#x27;)decision=await obtain(&#x27;baseline&#x27;,parseBaseline);
+  else {
+    decision=await obtain(&#x27;jev&#x27;,parseJev);
+    if(decision&amp;&amp;decision.wantsHuman&gt;policy.humanNoMax)reason=&#x27;human_request_or_uncertainty&#x27;;
+    else if(!decision||decision.confidence&lt;policy.routeConfidence) {
+      const humanProbability=decision?.wantsHuman;
+      if(mode===&#x27;hybrid&#x27;&amp;&amp;policy.fallbackOnLowConfidence) {
+        const fallback=await obtain(&#x27;baseline&#x27;,parseBaseline);
+        decision=fallback?{...fallback,wantsHuman:Math.max(fallback.wantsHuman,humanProbability??0)}:null;
+      } else reason=&#x27;low_route_confidence&#x27;;
+    }
+  }
+  const auto=!!decision&amp;&amp;decision.wantsHuman&lt;=policy.humanNoMax&amp;&amp;(source===&#x27;baseline&#x27;||decision.confidence&gt;=policy.routeConfidence);
+  if(auto)reason=source===&#x27;baseline&#x27;?&#x27;validated_baseline_proposal&#x27;:&#x27;validated_jev_proposal&#x27;;
+  else if(decision?.wantsHuman&gt;policy.humanNoMax)reason=&#x27;human_request_or_uncertainty&#x27;;
+  return {ticketId:ticket.id,status:auto?&#x27;proposed&#x27;:&#x27;needs_review&#x27;,reason,source,decision,attempts,action:auto?{kind:&#x27;route_ticket&#x27;,ticketId:ticket.id,queue:decision.route}:null};
+}
+</code></pre><p>Run these offline commands without an SDK installation or API key:</p><pre><code>node src/cli.mjs demo --mode hybrid --ticket T-002
+node src/cli.mjs demo --mode hybrid --ticket T-004
+node src/cli.mjs demo --mode hybrid --ticket T-006
+node src/cli.mjs demo --mode jev --ticket T-011
+node src/cli.mjs sweep</code></pre>
+
+<h2 id="en-verify">Verify the expected behavior</h2>
+<p>T-002 uses two attempts, T-004 and T-006 need review, and T-011 can be confidently wrong. Those three observations are more instructive than a single average. They distinguish routing confidence, product obligations and semantic correctness.</p><p>Read the named tests and refusal paths, not just the exit code or final label. Unknown values must remain unknown, and every report must distinguish simulation inputs from real measurements.</p>
+
+<h2 id="en-troubleshoot">Troubleshooting</h2>
+<p>If increasing the threshold seems to improve everything, inspect missing attempts and unresolved reviews. If a human-request case reaches a proposal after fallback, the fallback has erased a constraint. If test-set results guided the chosen threshold, treat that test set as validation and obtain a new held-out set.</p><p>When previewing with Python http.server, use the .html continuation links below when needed. Extensionless series chips rely on GitHub Pages resolution; that documented preview limitation is separate from the Node example.</p>
+
+<h2 id="en-exercise">Change one thing, then test</h2>
+<p>Choose a hypothetical coverage floor and a selective-accuracy floor before examining the sweep. Explain which candidates fail and why. If none qualify, report that outcome. This exercise practices a decision process; it does not turn the tiny fixture population into evidence for a production threshold.</p><p>Make changes in a disposable copy, retain the reference files for comparison, and restore them before the next chapter. If you later use a real provider, create a new experiment record rather than overwriting the fixture transcript.</p>
+
+<h2 id="en-next">Next checkpoint</h2>
+<p>Before moving on, identify the contract file, the policy file, what was observed in a run, and what remains untested against a real model. Keeping those four things separate matters more than making the demo look effortless.</p><p><a href="ai-core-jev-validation.html">← Previous chapter</a> · <a href="ai-core-jev-evaluation.html">Next chapter →</a></p>
+
+<h2 id="en-references">References and evidence</h2>
+<section class="references" aria-labelledby="en-reference-heading"><h3 id="en-reference-heading">Documentation and implementation</h3><p>Jev documentation checked on 23 October 2026. API and pricing details can change; recheck before live use. Fixture results are explicitly authored teaching data in the project.</p><ol class="references__list"><li id="en-ref-1"><a href="https://docs.typesafe.ai/confidence">Confidence and its limits</a></li><li id="en-ref-2"><a href="https://docs.typesafe.ai/patterns/confidence-routing">Confidence routing pattern</a></li><li id="en-ref-3"><a href="../examples/ai-core-jev-lab/src/pipeline.mjs">Lab pipeline source</a></li></ol></section>
+
+<h2 id="en-summary">Key takeaways</h2>
+<div class="key-takeaways"><ul><li>Contracts bound structure; evaluation checks behavior.</li><li>Coverage, quality, latency and total cost must be read together.</li><li>A proposal is not an approved effect; mock evidence is not live model evidence.</li></ul></div>
+    </div>
+
+    <div class="post-series-footer">
+      <span class="l-th">บทปฏิบัติจากซีรีส์ AI-Core + Jev in Practice 2026</span><span class="l-en" lang="en">A lab from AI-Core + Jev in Practice 2026</span>
+    </div>
+
+    <nav aria-label="AI-Core + Jev in Practice">
+    <div class="series-nav">
+      <h3>AI-Core + Jev in Practice 2026</h3>
+      <div class="series-links">
+        <a href="/blog/ai-core-jev-lab">#1 Jev Lab</a>
+        <a href="/blog/ai-core-jev-baseline">#2 Baseline</a>
+        <a href="/blog/ai-core-jev-questions">#3 Typed Questions</a>
+        <a href="/blog/ai-core-jev-validation">#4 Validate Responses</a>
+        <span class="current" aria-current="page">#5 Abstain &amp; Route</span>
+        <a href="/blog/ai-core-jev-evaluation">#6 Fair Evaluation</a>
+        <a href="/blog/ai-core-jev-guard">#7 Effect Guard</a>
+        <a href="/blog/ai-core-jev-failures">#8 Failure Tests</a>
+        <a href="/blog/ai-core-jev-cost">#9 Full Task Cost</a>
+        <a href="/blog/ai-core-jev-release">#10 Shadow Release</a>
+      </div>
+    </div>
+    </nav>
+
+  </article>
+
+  </main>
+
+  <footer class="blog-footer">
+    <nav class="blog-footer__nav" aria-label="Site">
+      <a href="../index.html">Home</a>
+      <a href="./">Tutorials</a>
+      <a href="../thoughts/">Thoughts</a>
+      <a href="../publications/">Publications</a>
+      <a href="../books/">Books</a>
+      <a href="../projects/">Projects</a>
+      <a href="../news/">News</a>
+      <a href="../index.html#contact">Contact</a>
+    </nav>
+    <a href="./">← Back to Tutorials</a>
+    <span>© 2026 Anirach Mingkhwan — Associate Professor, KMUTNB</span>
+  </footer>
+
+</body>
+</html>

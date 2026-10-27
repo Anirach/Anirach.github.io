@@ -46,12 +46,16 @@ def first_commit_date(rel: str) -> str:
         cwd=ROOT, capture_output=True, text=True).stdout.strip()
     if out:
         return out.split("\n")[-1]
-    # Not committed yet: date it today, like gen_sitemap.py does for a dirty
-    # file, so a freshly built post agrees with its own article:published_time
-    # (INV-36) before the launch commit instead of after it.
+    # A local draft may remain uncommitted for several days. Preserve its
+    # recorded publication day rather than silently changing yesterday's feed.
     import datetime
-    now = datetime.datetime.now(datetime.timezone(datetime.timedelta(hours=7)))
-    return now.strftime("%a, %d %b %Y 09:00:00 +0700")
+    source = ROOT / rel
+    match = re.search(r'<meta property="article:published_time" content="(\d{4}-\d{2}-\d{2})',
+                      source.read_text(encoding="utf-8")) if source.exists() else None
+    day = datetime.date.fromisoformat(match.group(1)) if match else datetime.date.today()
+    date = datetime.datetime.combine(day, datetime.time(9),
+        tzinfo=datetime.timezone(datetime.timedelta(hours=7)))
+    return date.strftime("%a, %d %b %Y %H:%M:%S +0700")
 
 
 def build() -> str:

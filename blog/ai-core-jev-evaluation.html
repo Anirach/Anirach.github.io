@@ -1,0 +1,630 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Fair Evaluation — แยกชุดวัดก่อนเทียบ | Anirach Mingkhwan</title>
+  <meta name="description" content="บทปฏิบัติ AI-Core + Jev ตอนที่ 6 แยก validation, test และ attack ป้องกันเฉลยรั่ว รายงาน accuracy ควบคู่ coverage และไม่อ้างผล fixture เป็นความแม่นของ Jev">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300..900&family=Sarabun:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400..600&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      color-scheme: light;
+      /* ink */
+      --navy: #11304b; --slate: #334155; --slate-light: #526174; --gray: #94a3b8;
+      /* ground */
+      --bg: #faf7f0; --white: #ffffff; --code-bg: #1e293b;
+      /* accent */
+      --blue: #226299; --blue-dark: #1a4d7a; --blue-light: #4992b9;
+      /* brand — sampled from the book covers. --gold is decorative on light grounds (2.2:1); --gold-dark is its text form. */
+      --gold: #c4a46c; --gold-dark: #7a5f22; --cloud: #dee7e6; --parchment: #e9e1c4; --focus: #226299;
+      /* status — use only these six, never invent a seventh */
+      --green: #22c55e; --red: #ef4444; --amber: #f59e0b;
+      --cyan: #06b6d4; --purple: #226299; --purple-dark: #1a4d7a;
+      /* type */
+      --font: 'Inter', 'Sarabun', -apple-system, BlinkMacSystemFont, sans-serif;
+      --mono: 'JetBrains Mono', 'Fira Code', 'Sarabun', monospace;
+      /* form */
+      --radius: 12px; --radius-sm: 8px; --radius-lg: 16px;
+      --measure: 720px; --wide: 860px;
+      --transition: 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+    html { scroll-behavior: smooth; }
+    body { font-family: var(--font); font-size: 17px; line-height: 1.8; color: var(--slate); background: var(--bg); -webkit-font-smoothing: antialiased; }
+    .blog-nav { position: fixed; top: 0; left: 0; right: 0; z-index: 100; background: rgba(248,250,252,0.85); backdrop-filter: blur(20px); border-bottom: 1px solid rgba(0,0,0,0.05); }
+    .blog-nav__inner { max-width: 860px; margin: 0 auto; padding: 0 2rem; height: 56px; display: flex; align-items: center; justify-content: space-between; }
+    .blog-nav__back { font-size: 0.85rem; font-weight: 500; color: var(--blue); text-decoration: none; }
+    .blog-nav__back:hover { color: #1a4d7a; }
+    .blog-nav__title { font-size: 0.85rem; font-weight: 600; color: var(--navy); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 50%; }
+    /* ── HERO ── house .post-hero on the approved Deep Blue gradient (page-design
+       §5 / INV-28). Ink is inverted for the dark ground: white title/meta, tag
+       pills white on 18% white — the openclaw-production treatment. The
+       background value must stay byte-identical to the approved string. */
+    .post-hero { padding: 8rem 2rem 3rem; background: linear-gradient(135deg, #11304b 0%, #1a4d7a 45%, #226299 100%); color: #fff; text-align: center; }
+    .post-hero__tags { display: flex; gap: 0.5rem; justify-content: center; margin-bottom: 1.25rem; flex-wrap: wrap; }
+    .post-hero__tag { display: inline-block; font-size: 0.72rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.1em; color: #fff; background: rgba(255,255,255,0.18); padding: 0.35rem 0.9rem; border-radius: 20px; }
+    .post-hero__title { font-size: clamp(1.8rem, 5vw, 3rem); font-weight: 800; color: #fff; line-height: 1.2; margin-bottom: 1rem; max-width: 720px; margin-left: auto; margin-right: auto; }
+    .post-hero__sub { font-size: 1.05rem; max-width: 640px; margin: 0 auto 1.5rem; line-height: 1.7; color: #fff; }
+    .post-hero__meta { font-size: 0.85rem; color: #fff; display: flex; align-items: center; justify-content: center; gap: 1.5rem; flex-wrap: wrap; }
+    .post-hero__series { font-weight: 600; color: #fff; }
+    /* the switch pill and the focus ring both sit on the dark hero: the pill is
+       a light chip so its labels keep their light-ground colours, and --focus
+       re-points to gold here (blue collapses on blue — the footer/pre
+       precedent). */
+    .post-hero { --focus: var(--gold); }
+    .post-hero__cover {
+      aspect-ratio: 1 / 1;
+      max-width: 380px;
+      margin: 2.5rem auto 0;
+      border-radius: var(--radius-lg, 16px);
+      overflow: hidden;
+      box-shadow: 0 20px 60px rgba(17,48,75,0.14);
+    }
+    .post-hero__cover img { width: 100%; height: 100%; object-fit: cover; display: block; }
+    .post-body { max-width: 720px; margin: 0 auto; padding: 3rem 2rem 6rem; }
+    .post-body h2 { font-size: 1.6rem; font-weight: 800; color: var(--navy); margin: 3rem 0 1rem; padding-bottom: 0.5rem; border-bottom: 2px solid rgba(34,98,153,0.15); }
+    .post-body h3 { font-size: 1.25rem; font-weight: 700; color: var(--navy); margin: 2.25rem 0 0.75rem; }
+    .post-body p { margin-bottom: 1.25rem; }
+    .post-body strong { font-weight: 700; color: var(--navy); }
+    .post-body a { color: var(--blue); text-decoration: underline; text-decoration-thickness: 1px; text-underline-offset: 2px; }
+    .post-body ul, .post-body ol { margin: 0.5rem 0 1.25rem 1.5rem; }
+    .post-body li { margin-bottom: 0.4rem; }
+    .post-body blockquote { background: rgba(34,98,153,0.06); border-left: 4px solid var(--blue); padding: 1rem 1.25rem; border-radius: 0 10px 10px 0; margin: 1.25rem 0; font-size: 0.95rem; color: var(--navy); }
+    .post-body hr { border: none; height: 1px; background: linear-gradient(90deg, transparent, rgba(34,98,153,0.2), transparent); margin: 3rem 0; }
+    /* ── CODE ── */
+    .post-body pre { background: var(--code-bg); border-radius: 12px; padding: 1.5rem; margin: 1.25rem 0 1.5rem; overflow-x: auto; border: 1px solid rgba(255,255,255,0.05); }
+    .post-body pre code { font-family: var(--mono); font-size: 0.85rem; color: #e2e8f0; line-height: 1.7; background: none; padding: 0; white-space: pre-wrap; }
+    .post-body code { font-family: var(--mono); font-size: 0.88em; background: rgba(34,98,153,0.08); color: var(--blue-dark); padding: 0.15em 0.45em; border-radius: 5px; }
+    /* ── TABLES ── */
+    .table-wrapper { overflow-x: auto; margin: 1.5rem 0; border-radius: 0.5rem; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1); }
+    table { width: 100%; border-collapse: collapse; background: white; }
+    th { background: #226299; color: white; padding: 1rem; text-align: left; font-weight: 600; }
+    td { padding: 1rem; border-bottom: 1px solid #e5e7eb; }
+    .post-body table { display: block; width: 100%; overflow-x: auto; }
+    /* ── ALERTS ── */
+    .alert { background: #fef3cd; border: 1px solid #facc15; border-radius: 0.5rem; padding: 1rem; margin: 1.5rem 0; }
+    .alert.danger { background: #fee2e2; border-color: #ef4444; }
+    .alert.info { background: #e0f2fe; border-color: #06b6d4; }
+    .alert.success { background: #d1fae5; border-color: #10b981; }
+    /* ── KEY TAKEAWAYS ── */
+    .key-takeaways { background: linear-gradient(135deg, #f3f4f6 0%, #e5e7eb 100%); border-radius: 1rem; padding: 2rem; margin: 3rem 0; }
+    .key-takeaways h3 { color: #226299; margin-bottom: 1.5rem; }
+    .post-series-footer { text-align: center; font-size: 0.85rem; color: var(--slate-light); font-style: italic; margin-top: 2rem; padding-top: 2rem; border-top: 1px solid #e2e8f0; }
+    .blog-footer { background: var(--navy); padding: 2rem 0; text-align: center; }
+    .blog-footer a { color: var(--gold); text-decoration: none; font-weight: 600; font-size: 0.9rem; }
+    .blog-footer span { color: var(--gray); font-size: 0.8rem; display: block; margin-top: 0.4rem; }
+    @media (max-width: 600px) {
+      .post-hero { padding: 7rem 1.25rem 2.5rem; }
+      .post-body { padding: 2rem 1.25rem 4rem; }
+      .post-hero__meta { flex-direction: column; gap: 0.4rem; }
+      .post-body h2 { font-size: 1.4rem; }
+      .post-body h3 { font-size: 1.15rem; }
+      .post-body pre { padding: 1rem; border-radius: 8px; }
+    }
+
+    :focus-visible { outline: 2px solid var(--focus); outline-offset: 3px; border-radius: 2px; }
+    /* the ring sits on the page ground (3px offset). Inside the navy footers
+       and code blocks var(--blue) collapses to 2.12:1, so those scopes
+       re-point --focus to gold (5.73:1 on navy). */
+    .footer, .blog-footer, pre { --focus: var(--gold); }
+    :focus:not(:focus-visible) { outline: none; }
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after {
+        animation-duration: .01ms !important; animation-iteration-count: 1 !important;
+        transition-duration: .01ms !important; scroll-behavior: auto !important;
+      }
+    }
+    h1, h2, h3, .post-hero__title, .card__title { text-wrap: balance; }
+
+    .post-body img, .post-body svg { max-width: 100%; height: auto; }
+
+    /* ── SKIP LINK ── a11y-perf R5: the link and the landmark it targets are a
+       pair — useless without both halves. Off-screen until focused, then the
+       first tab stop on every page. */
+    .skip-link { position: absolute; left: -9999px; }
+    .skip-link:focus {
+      left: 1rem; top: 1rem; z-index: 999;
+      background: var(--navy); color: #fff;
+      padding: 0.75rem 1.25rem; border-radius: var(--radius-sm);
+      font-weight: 600; text-decoration: none;
+    }
+
+    /* ── POST WAYFINDING ── the wordmark is the home link; the footer carries
+       the full destination row. */
+    .blog-nav__home {
+      font-size: 0.9rem; font-weight: 800; color: var(--navy);
+      text-decoration: none; margin-right: 1rem;
+    }
+    .blog-nav__home:hover { color: var(--blue); }
+    .blog-nav__inner > .blog-nav__back { margin-right: auto; }
+    .blog-footer__nav {
+      display: flex; flex-wrap: wrap; justify-content: center; gap: 0.35rem 1.25rem;
+      max-width: 860px; margin: 0 auto 1.25rem; padding: 0 2rem 1.25rem;
+      border-bottom: 1px solid rgba(255,255,255,0.12);
+    }
+    .blog-footer__nav a { color: var(--gold); font-size: 0.85rem; font-weight: 600; text-decoration: none; }
+    .blog-footer__nav a:hover { color: #fff; text-decoration: underline; }
+
+    html { scroll-padding-top: 5rem; }
+    [id] { scroll-margin-top: 5rem; }
+
+    /* Thai needs more room than Latin at the same nominal size. */
+    .post-body:lang(th) { font-size: 18px; line-height: 1.85; }
+    .post-body p, .post-body li, .post-body blockquote { text-wrap: pretty; }
+
+    /* ---- side-scroll affordance ----
+       pre blocks and tables can exceed 720px. These layers paint a shadow ONLY
+       where there is more content in that direction; when fully scrolled the
+       cover slides over the shadow and hides it. No JavaScript, no wrapper. */
+    .post-body pre, .post-body table {
+      overflow-x: auto;
+      background-image:
+        linear-gradient(to right, var(--code-bg, #0f172a) 30%, rgba(15,23,42,0)),
+        linear-gradient(to left, var(--code-bg, #0f172a) 30%, rgba(15,23,42,0)),
+        radial-gradient(farthest-side at 0 50%, rgba(0,0,0,.28), rgba(0,0,0,0)),
+        radial-gradient(farthest-side at 100% 50%, rgba(0,0,0,.28), rgba(0,0,0,0));
+      background-position: 0 0, 100% 0, 0 0, 100% 0;
+      background-repeat: no-repeat;
+      background-size: 40px 100%, 40px 100%, 14px 100%, 14px 100%;
+      background-attachment: local, local, scroll, scroll;
+    }
+    .post-body table {
+      background-image:
+        linear-gradient(to right, var(--white, #fff) 30%, rgba(255,255,255,0)),
+        linear-gradient(to left, var(--white, #fff) 30%, rgba(255,255,255,0)),
+        radial-gradient(farthest-side at 0 50%, rgba(17,48,75,.16), rgba(17,48,75,0)),
+        radial-gradient(farthest-side at 100% 50%, rgba(17,48,75,.16), rgba(17,48,75,0));
+      background-position: 0 0, 100% 0, 0 0, 100% 0;
+      background-repeat: no-repeat;
+      background-size: 40px 100%, 40px 100%, 14px 100%, 14px 100%;
+      background-attachment: local, local, scroll, scroll;
+    }
+
+    /* ---- table of contents ---- */
+    .post-toc {
+      max-width: 720px;
+      margin: 2rem auto 0;
+      padding: 1rem 1.25rem;
+      background: rgba(34,98,153,0.05);
+      border: 1px solid rgba(34,98,153,0.14);
+      border-left: 3px solid var(--gold, #c4a46c);
+      border-radius: 10px;
+      font-size: 0.92rem;
+    }
+    .post-toc > summary {
+      cursor: pointer;
+      font-weight: 700;
+      color: var(--navy);
+      list-style: none;
+    }
+    .post-toc > summary::-webkit-details-marker { display: none; }
+    .post-toc > summary::before {
+      content: "\25B8";
+      display: inline-block;
+      margin-right: 0.5rem;
+      transition: transform 0.2s ease;
+      color: var(--gold-dark, #7a5f22);
+    }
+    .post-toc[open] > summary::before { transform: rotate(90deg); }
+    .post-toc > summary:focus-visible { outline: 3px solid var(--focus, #226299); outline-offset: 3px; }
+    .post-toc ol { margin: 0.85rem 0 0.25rem; padding-left: 1.4rem; }
+    .post-toc li { margin-bottom: 0.4rem; line-height: 1.5; }
+    .post-toc a { color: var(--slate); text-decoration: none; }
+    .post-toc a:hover, .post-toc a:focus-visible { color: var(--blue-dark, #1a4d7a); text-decoration: underline; }
+    @media (max-width: 600px) { .post-toc { margin: 1.25rem 1rem 0; } }
+
+    /* ---- cross-document view transitions ---- */
+    @view-transition { navigation: auto; }
+    .nav, .blog-nav { view-transition-name: site-nav; }
+    .footer, .blog-footer { view-transition-name: site-footer; }
+    @media (prefers-reduced-motion: reduce) {
+      ::view-transition-group(*),
+      ::view-transition-old(*),
+      ::view-transition-new(*) { animation: none !important; }
+    }
+
+    /* ── SERIES STRIP — Hermes Agent in Practice ──
+       Same class and inner-wrapper shape as the OpenClaw strip because the
+       linter's RE_SNAV recognises exactly `series-nav` + a nested div; a
+       renamed strip would read as "no nav" and fail INV-08. All content
+       checks (INV-03 family) iterate the SERIES7 list only, so this strip's
+       labels are convention, not contract. House-styled, not the island CSS. */
+    .series-nav {
+      max-width: 720px; margin: 2rem auto 0; padding: 1.1rem 1.4rem;
+      background: rgba(255,255,255,0.75); border: 1px solid rgba(34,98,153,0.15);
+      border-left: 3px solid var(--gold); border-radius: 12px;
+    }
+    .series-nav h3 {
+      font-size: 0.78rem; font-weight: 700; text-transform: uppercase;
+      letter-spacing: 0.08em; color: var(--gold-dark); margin-bottom: 0.6rem;
+    }
+    .series-links { display: flex; flex-wrap: wrap; gap: 0.5rem; }
+    .series-links a, .series-links .current {
+      font-size: 0.82rem; font-weight: 600; padding: 0.35rem 0.8rem;
+      border-radius: 50px; text-decoration: none;
+    }
+    .series-links a { color: var(--blue-dark); background: rgba(34,98,153,0.08); }
+    .series-links a:hover { background: rgba(34,98,153,0.16); }
+    .series-links .current { color: #fff; background: var(--blue-dark); }
+    @media (max-width: 600px) { .series-nav { margin: 1.5rem 1rem 0; } }
+
+    /* ── FIGURE — the sanctioned diagram component (page-design §4 Content).
+       Diagrams are PNGs; this repo built them out of divs twice and reverted
+       twice. The image is wrapped in a link to itself so a phone can pinch a
+       1400px drawing without a line of JavaScript. */
+    .figure { margin: 2.5rem 0; }
+    .figure__img { width: 100%; height: auto; display: block;
+                   border-radius: var(--radius); border: 1px solid rgba(0,0,0,0.06); }
+    .figure__caption { font-size: 0.85rem; color: var(--slate-light);
+                       text-align: center; margin-top: 0.75rem; }
+
+    /* ── REFERENCES — every material number in this series carries its source.
+       The tags are the book's own four evidence labels. */
+    .references { margin-top: 3rem; padding-top: 2rem; border-top: 1px solid #e2e8f0; }
+    .references__note { font-size: 0.85rem; color: var(--slate-light); margin-bottom: 1rem; }
+    .references__list { padding-left: 1.4rem; font-size: 0.9rem; line-height: 1.75; }
+    .references__list li { margin-bottom: 0.7rem; }
+    .ref-tag { display: inline-block; font-size: 0.7rem; font-weight: 700;
+               letter-spacing: 0.06em; text-transform: uppercase; padding: 0.1rem 0.5rem;
+               border-radius: 50px; margin-right: 0.4rem; vertical-align: 0.05em;
+               background: rgba(34,98,153,0.1); color: var(--blue-dark); }
+    /* All four labels get a rule.  --standard and --study shipped without one
+       on 2026-09-05, so 158 of 306 tags fell through to the base blue and the
+       two labels were indistinguishable.  Ratios on --bg: 6.70 / 6.92 / 7.36 /
+       4.81:1, all AA at this size. */
+    .ref-tag--law { background: rgba(239,68,68,0.12); color: #991b1b; }
+    .ref-tag--standard { background: rgba(34,98,153,0.12); color: var(--blue-dark); }
+    .ref-tag--study { background: rgba(34,197,94,0.18); color: #14532d; }
+    .ref-tag--synthesis { background: rgba(196,164,108,0.22); color: var(--gold-dark); }
+    .ref-supports { display: block; color: var(--slate-light); font-size: 0.85rem; }
+
+    /* ── LANGUAGE SWITCH — pure CSS, zero JavaScript (INV-38) ──
+       One visually-hidden checkbox as a direct child of body, BEFORE the main landmark,
+       so `#langSwitch:checked ~ main …` reaches every content block. The two
+       tracks are paired blocks: .l-th (default) and .l-en (hidden until
+       checked; display:revert restores block for divs, inline for spans).
+       Naming stays clear of INV-12's menu-token regex (hamburger|burger|
+       nav__toggle|nav-toggle|navtoggle|menu-toggle|menu__toggle) — verified.
+       No JS also means no persistence across posts; each post opens in Thai. */
+    .lang-switch-box { position: absolute; left: -9999px; }
+    .l-en { display: none; }
+    #langSwitch:checked ~ main .l-en { display: revert; }
+    #langSwitch:checked ~ main .l-th { display: none; }
+    .lang-switch {
+      display: inline-flex; align-items: center; gap: 0.55rem;
+      margin-top: 1.4rem; padding: 0.4rem 1.1rem; border-radius: 50px;
+      background: rgba(255,255,255,0.85); border: 1px solid rgba(255,255,255,0.4);
+      cursor: pointer; font-size: 0.85rem; user-select: none;
+    }
+    .lang-switch span { color: var(--slate-light); font-weight: 600; transition: color 0.2s; }
+    .lang-switch .lang-sep { color: var(--gray); font-weight: 400; }
+    .lang-switch .lang-th { color: var(--navy); font-weight: 800; }
+    #langSwitch:checked ~ main .lang-switch .lang-th { color: var(--slate-light); font-weight: 600; }
+    #langSwitch:checked ~ main .lang-switch .lang-en { color: var(--navy); font-weight: 800; }
+    .lang-switch:hover { border-color: #fff; }
+    #langSwitch:focus-visible ~ main .lang-switch {
+      outline: 2px solid var(--focus); outline-offset: 3px;
+    }
+  </style>
+  <!-- social -->
+  <link rel="canonical" href="https://anirach.com/blog/ai-core-jev-evaluation.html">
+  <meta property="og:type" content="article">
+  <meta property="og:url" content="https://anirach.com/blog/ai-core-jev-evaluation.html">
+  <meta property="og:site_name" content="Anirach Mingkhwan">
+  <meta property="og:locale" content="th_TH">
+  <meta property="og:locale:alternate" content="en_US">
+  <meta property="article:published_time" content="2026-10-23">
+  <meta property="article:author" content="https://anirach.com/">
+  <meta property="og:title" content="Fair Evaluation — แยกชุดวัดก่อนเทียบ">
+  <meta property="og:description" content="บทปฏิบัติ AI-Core + Jev ตอนที่ 6 แยก validation, test และ attack ป้องกันเฉลยรั่ว รายงาน accuracy ควบคู่ coverage และไม่อ้างผล fixture เป็นความแม่นของ Jev">
+  <meta property="og:image" content="https://anirach.com/images/ai-core-jev-evaluation-og.jpg">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
+  <meta property="og:image:alt" content="Fair Evaluation — แยกชุดวัดก่อนเทียบ">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:image" content="https://anirach.com/images/ai-core-jev-evaluation-og.jpg">
+  <meta name="twitter:image:alt" content="Fair Evaluation — แยกชุดวัดก่อนเทียบ">
+  <meta name="robots" content="max-image-preview:large">
+  <meta name="theme-color" content="#11304b">
+  <link rel="icon" href="/favicon.ico" sizes="any">
+  <link rel="apple-touch-icon" href="/apple-touch-icon.png">
+  <!-- /social -->
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "BlogPosting",
+    "headline": "Fair Evaluation — แยกชุดวัดก่อนเทียบ",
+    "author": {
+      "@type": "Person",
+      "@id": "https://anirach.com/#person",
+      "name": "Anirach Mingkhwan",
+      "url": "https://anirach.com/"
+    },
+    "datePublished": "2026-10-23",
+    "dateModified": "2026-10-23",
+    "image": "https://anirach.com/images/ai-core-jev-evaluation-og.jpg",
+    "inLanguage": [
+      "th",
+      "en"
+    ],
+    "mainEntityOfPage": "https://anirach.com/blog/ai-core-jev-evaluation.html"
+  }
+  </script>
+</head>
+<body>
+<a href="#main" class="skip-link">Skip to content</a>
+<input type="checkbox" id="langSwitch" class="lang-switch-box" aria-label="Switch language: Thai / English">
+
+  <nav class="blog-nav">
+    <div class="blog-nav__inner">
+      <a href="../index.html" class="blog-nav__home">Anirach</a>
+      <a href="./" class="blog-nav__back">‹ Tutorials</a>
+      <div class="blog-nav__title">Fair Evaluation</div>
+    </div>
+  </nav>
+
+  <main id="main">
+
+  <header class="post-hero">
+    <div class="post-hero__tags">
+      <span class="post-hero__tag">AI-Core + Jev</span>
+      <span class="post-hero__tag">Hands-on Lab</span>
+      <span class="post-hero__tag">Offline First</span>
+    </div>
+    <h1 class="post-hero__title"><span class="l-th">Fair Evaluation — แยกชุดวัดก่อนเทียบ</span><span class="l-en" lang="en">Compare Without Test-Set Leakage — AI-Core + Jev in Practice</span></h1>
+    <p class="post-hero__sub"><span class="l-th">แยก validation, test และ attack ป้องกันเฉลยรั่ว รายงาน accuracy ควบคู่ coverage และไม่อ้างผล fixture เป็นความแม่นของ Jev</span><span class="l-en" lang="en">Separate validation, test and attack cases; prevent label leakage and report quality together with coverage.</span></p>
+    <div class="post-hero__meta">
+      <span>By <strong>Anirach Mingkhwan</strong></span>
+      <span class="post-hero__series">AI-Core + Jev in Practice 2026 • Post #6</span>
+      <span><time datetime="2026-10-23">23 Oct 2026</time></span>
+      <span>5 min read</span>
+    </div>
+    <label for="langSwitch" class="lang-switch" title="สลับภาษา · Switch language"><span class="lang-th">ไทย</span><span class="lang-sep">·</span><span class="lang-en" lang="en">English</span></label>
+    <div class="post-hero__cover">
+      <img src="../images/ai-core-jev-evaluation-cover.jpg" alt="Fair Evaluation — แยกชุดวัดก่อนเทียบ" width="800" height="800" loading="eager" fetchpriority="high" decoding="async">
+    </div>
+  </header>
+
+  <article class="post-body">
+
+    <details class="post-toc l-th" open>
+      <summary>ในบทความนี้</summary>
+      <ol>
+          <li><a href="#th-start">เป้าหมายและสิ่งที่ต้องพร้อม</a></li>
+          <li><a href="#th-concepts">ทำความเข้าใจขอบเขตนี้</a></li>
+          <li><a href="#th-steps">ลงมือทีละเจ็ดขั้น</a></li>
+          <li><a href="#th-implementation">ไฟล์และคำสั่งที่ใช้</a></li>
+          <li><a href="#th-verify">ตรวจผลที่ควรได้</a></li>
+          <li><a href="#th-troubleshoot">แก้ปัญหาเมื่อผลไม่ตรง</a></li>
+          <li><a href="#th-exercise">เปลี่ยนหนึ่งอย่างแล้วทดสอบ</a></li>
+          <li><a href="#th-next">จุดตรวจถัดไป</a></li>
+          <li><a href="#th-references">แหล่งอ้างอิงและหลักฐาน</a></li>
+          <li><a href="#th-summary">สรุปที่นำไปใช้ต่อ</a></li>
+      </ol>
+    </details>
+    <details class="post-toc l-en" open>
+      <summary>In this post</summary>
+      <ol>
+          <li><a href="#en-start">Outcome and prerequisites</a></li>
+          <li><a href="#en-concepts">How this boundary works</a></li>
+          <li><a href="#en-steps">Seven practical steps</a></li>
+          <li><a href="#en-implementation">Files and commands</a></li>
+          <li><a href="#en-verify">Verify the expected behavior</a></li>
+          <li><a href="#en-troubleshoot">Troubleshooting</a></li>
+          <li><a href="#en-exercise">Change one thing, then test</a></li>
+          <li><a href="#en-next">Next checkpoint</a></li>
+          <li><a href="#en-references">References and evidence</a></li>
+          <li><a href="#en-summary">Key takeaways</a></li>
+      </ol>
+    </details>
+    <div class="l-th">
+
+<p>ตอนที่ 6 จากสิบตอน: แยก validation, test และ attack ป้องกันเฉลยรั่ว รายงาน accuracy ควบคู่ coverage และไม่อ้างผล fixture เป็นความแม่นของ Jev</p>
+<blockquote>ฉบับร่างสำหรับตรวจในเครื่อง • โค้ดเริ่มต้นใช้ offline fixtures เท่านั้น ตัวเลขเป็นสถานการณ์สมมติ ไม่ใช่ผลวัด Jev จริง และยังไม่มีการพิสูจน์ว่าระบบเร็วขึ้นหรือประหยัดลง</blockquote>
+
+<h2 id="th-start">เป้าหมายและสิ่งที่ต้องพร้อม</h2>
+<p>แนะนำให้เริ่มจาก companion repo และคู่มือ README บน GitHub ด้านล่าง ส่วน ZIP ของเว็บไซต์เป็นสำเนาออฟไลน์อีกทางหนึ่ง คำสั่ง Node ใช้เหมือนกันเมื่อรันจากรากโครงการ <a href="https://github.com/Anirach/ai-core-jev-tutorial">GitHub repository</a> · <a href="https://github.com/Anirach/ai-core-jev-tutorial/blob/a634bb49157ddfa01f1ff7a61627066a3e70196d/README.md">README / Quickstart</a></p>
+<p>ใช้โครงการ Support Ticket Decision Lab เดิมตลอดสิบตอน เตรียม Node 22.18 ขึ้นไป terminal และโฟลเดอร์ที่เขียนไฟล์ได้ รันคำสั่งจากราก repo ai-core-jev-tutorial หรือจากไดเรกทอรี ai-core-jev-lab หากใช้ ZIP ของเว็บไซต์ ไม่ต้อง npm install สำหรับออฟไลน์ เผื่อเวลาลงมือและทดลองเปลี่ยนโค้ดประมาณ 20–40 นาที โดยเวลาที่แสดงบนหัวบทความเป็นเวลาอ่านเนื้อหา ไม่รวมเวลาลองทำ</p><p><a class="btn" href="../downloads/ai-core-jev-lab.zip" download>ดาวน์โหลดโครงการพร้อมโค้ดและ tests (ZIP)</a> · <a href="../examples/ai-core-jev-lab/README.md">อ่านคู่มือโครงการ</a></p><p>ตอนนี้เน้นไฟล์ src/metrics.mjs และใช้ผลจาก fixture เพื่อทดสอบการประกอบระบบเท่านั้น ยังไม่ได้ติดตั้ง SDK หรือใช้ key ในการจัดทำบทเรียน เส้นทาง live ที่แยกไว้ในตอนท้ายยังไม่ได้ทดสอบผ่าน API จริง</p>
+
+<h2 id="th-concepts">ทำความเข้าใจขอบเขตนี้</h2>
+<p>การเปรียบเทียบต้องมี input เท่ากัน คำนิยามความสำเร็จเดียวกัน และวิธีนับงานที่ยังไม่จบชัดเจน harness รัน baseline, Jev-only และ hybrid บน split เดียวกัน ใช้เฉลยและนิยาม policy เดียวกัน ไม่ใช่เทียบ classifier บนเคสง่ายกับ generator บนทุกเคส เมื่อแทน fixture ด้วยผล provider จริง ต้องรักษาความเท่ากันนี้ไว้</p>
+<p>ticket สมมติสี่สิบรายการแบ่งเป็น validation สิบสอง test ยี่สิบสี่ และ attack สี่รายการ ชื่อ split ใช้สอนขั้นตอนประเมิน ไม่ได้ทำให้เป็นการศึกษาแบบปิดเฉลยที่ถูกต้องทางสถิติ เพราะคำทำนายที่เตรียมไว้ถูกสร้างคู่กับเคส ความแม่นของ fixture จึงใช้ประมาณการ generalization ของ Jev ความเชื่อถือได้ในภาษาไทย หรือผลบนลูกค้าของคุณไม่ได้</p>
+<p>การประเมินจริงต้องใช้ ticket ที่ได้รับอนุญาตและเป็นตัวแทน กำหนดกติกาติดป้าย แก้ความเห็นไม่ตรงกัน และแยกบทสนทนาที่เกี่ยวกันก่อนแบ่งชุด ปรับคำถามกับ threshold เฉพาะ validation ตรึง candidate แล้วค่อยเปิด held-out ทดสอบครั้งหนึ่ง ถ้าแก้ candidate หลังดูผล test ต้องหาชุดที่ยังไม่แตะใหม่ ไม่ใช่เรียกชุดเดิมว่า held-out ต่อไป</p>
+
+<h2 id="th-steps">ลงมือทีละเจ็ดขั้น</h2>
+<h3>ขั้นที่ 1</h3><p>ตรวจฟิลด์ split ยืนยันสัดส่วน 12/24/4 และดู language กลุ่มภาษาไทยขนาดเล็กแสดงเพียงว่าข้อความ Unicode เดินผ่านโปรแกรมได้ ยังไม่พอรองรับข้อสรุปเรื่องคุณภาพโมเดลภาษาไทย จึงไม่ควรเขียนคำอ้างนั้นในรายงาน</p>
+<h3>ขั้นที่ 2</h3><p>อ่าน validateTicket ก่อนเรียก provider ฟังก์ชันคืนเพียง id, text และ language โดยทิ้ง goldRoute กับ goldHuman ไว้ด้านหลัง pipeline test ตรวจ object ที่ส่งให้ provider จริง การแยกข้อมูลควรเป็น test ที่รันได้ ไม่ใช่เพียง comment ว่าห้ามเฉลยรั่ว</p>
+<h3>ขั้นที่ 3</h3><p>รัน validation และบันทึก JSON ก่อน อ่าน coverage คู่กับ selective accuracy ทุกโหมด rawRouteAccuracy นับ route สุดท้ายที่มีรูปแบบใช้ได้ ส่วน selectiveAccuracy นับงานอัตโนมัติที่ส่งคิวถูกและเคารพคำขอใช้คน สองค่านี้ตอบคนละคำถาม จึงไม่ควรติดป้าย accuracy คลุม ๆ เหมือนกัน</p>
+<h3>ขั้นที่ 4</h3><p>ประกาศ quality gate สำหรับงานจริงล่วงหน้า ระบุ selective accuracy, coverage และอัตรามองข้ามคำขอใช้คนที่ยอมรับได้ก่อนเลือก threshold บทเรียนไม่ได้กำหนดค่าที่พร้อมใช้จริง จุดมุ่งหมายคือปฏิเสธการทดลองที่ไม่ผ่านข้อกำหนดผลิตภัณฑ์ ไม่ใช่ปรับหาตัวเลขเดี่ยวที่ดูดีที่สุด</p>
+<h3>ขั้นที่ 5</h3><p>รัน test split หลังตรึง policy ตัวอย่าง บันทึก out/test.json เพื่อได้ transcript ของ fixture ที่ทำซ้ำได้ ไม่ใช่ benchmark โมเดลที่พร้อมเผยแพร่ เปรียบเทียบจำนวนตัวอย่าง การจัดการ response เสีย และจำนวน review ที่ยังค้างก่อนดู latency หรือราคาสมมติ</p>
+<h3>ขั้นที่ 6</h3><p>อ่าน calibration bins พร้อมจำนวนตัวอย่าง ECE ใช้ probability ของตัวเลือกที่เลือก ไม่ใช่สถิติ Choice confidence ค่า ECE ต่ำบนข้อมูลสมมติเล็ก ๆ ไม่รับประกันเมื่อใช้งานจริง ควรวางจำนวนในแต่ละ bin รุ่นโมเดล รุ่นคำถาม และผลแยกภาษาคู่กับตัวเลขเสมอ</p>
+<h3>ขั้นที่ 7</h3><p>ตรวจการตัดสินใจว่าจะทำต่อไหม ถ้า hybrid ไม่ผ่านเงื่อนไขคุณภาพหรือ coverage ที่เท่ากัน อย่านับค่า inference สมมติที่ต่ำกว่าเป็นชัยชนะ บันทึกข้อที่ไม่ผ่านลงใน experiment record แล้ววาง candidate ใหม่ การรายงานผลลบเป็นผลลัพธ์วิศวกรรมที่มีประโยชน์</p>
+
+<h2 id="th-implementation">ไฟล์และคำสั่งที่ใช้</h2>
+<p><strong>โค้ดประกอบบน GitHub:</strong> <a href="https://github.com/Anirach/ai-core-jev-tutorial">ai-core-jev-tutorial</a> · <a href="https://github.com/Anirach/ai-core-jev-tutorial/blob/a634bb49157ddfa01f1ff7a61627066a3e70196d/README.md">README</a>. ใช้ repo เป็นทางหลักในการทำแบบฝึก ไฟล์ต่อไปนี้ตรึงกับรุ่นที่ทดสอบแล้ว <a href="https://github.com/Anirach/ai-core-jev-tutorial/blob/a634bb49157ddfa01f1ff7a61627066a3e70196d/src/metrics.mjs">src/metrics.mjs</a> · <a href="https://github.com/Anirach/ai-core-jev-tutorial/blob/a634bb49157ddfa01f1ff7a61627066a3e70196d/src/report.mjs">src/report.mjs</a> · <a href="https://github.com/Anirach/ai-core-jev-tutorial/blob/a634bb49157ddfa01f1ff7a61627066a3e70196d/src/cli.mjs">src/cli.mjs</a></p>
+
+<p>เปิดไฟล์นี้เทียบกับ source ใน ZIP ก่อนแก้ ข้อความต่อไปนี้คือโค้ดที่ใช้ในโครงการจริง ไม่ใช่ pseudocode ผลโมเดลเป็น input ให้โค้ดตรวจและวางเส้นทางต่อ ไม่ใช่สิทธิ์ให้ข้ามด่านอนุมัติ</p><p><a href="../examples/ai-core-jev-lab/src/metrics.mjs">src/metrics.mjs</a></p><pre><code>export function percentile(values,p) {if(!values.length)return null;const s=[...values].sort((a,b)=&gt;a-b);return s[Math.max(0,Math.ceil(p*s.length)-1)];}
+export function money(attempt,prices) {
+  if(!attempt.usage||!attempt.costComplete)return null;const p=attempt.provider===&#x27;jev&#x27;?&#x27;jev&#x27;:&#x27;baseline&#x27;;
+  return (attempt.usage.input*prices[p+&#x27;InputPerMillionUSD&#x27;]+attempt.usage.output*prices[p+&#x27;OutputPerMillionUSD&#x27;])/1e6;
+}
+export function summarize(rows,prices) {
+  const n=rows.length,auto=rows.filter(r=&gt;r.result.status===&#x27;proposed&#x27;);
+  const correct=r=&gt;r.result.decision?.route===r.ticket.goldRoute,success=r=&gt;correct(r)&amp;&amp;!r.ticket.goldHuman;
+  const successful=auto.filter(success).length,valid=rows.filter(r=&gt;r.result.decision),human=rows.filter(r=&gt;r.ticket.goldHuman);
+  const costs=rows.flatMap(r=&gt;r.result.attempts).map(a=&gt;money(a,prices));
+  const reviews=n-auto.length,wrongAuto=auto.length-successful;
+  const knownInferenceUSD=costs.reduce((s,c)=&gt;s+(c??0),0);
+  const modeledOverheadUSD=n*prices.infrastructurePerTaskUSD+reviews*prices.assumedReviewSeconds/3600*prices.reviewHourlyUSD+wrongAuto*prices.reworkPerWrongAutoTaskUSD;
+  const complete=costs.every(c=&gt;c!==null);
+  const latencies=rows.map(r=&gt;{const xs=r.result.attempts.map(a=&gt;a.scenarioLatencyMs);return xs.every(Number.isFinite)?xs.reduce((a,b)=&gt;a+b,0):null;});
+  const calibration=rows.filter(r=&gt;r.result.decision?.probabilities),bins=[];
+  for(let k=0;k&lt;5;k++) {
+    const members=calibration.filter(r=&gt;Math.min(4,Math.floor(r.result.decision.probabilities[r.result.decision.route]*5))===k);
+    if(members.length)bins.push({n:members.length,meanTopProbability:members.reduce((s,r)=&gt;s+r.result.decision.probabilities[r.result.decision.route],0)/members.length,accuracy:members.filter(correct).length/members.length});
+  }
+  const ece=calibration.length?bins.reduce((s,b)=&gt;s+b.n/calibration.length*Math.abs(b.meanTopProbability-b.accuracy),0):null;
+  const ratio=(a,b)=&gt;b?a/b:null;
+  return {evidence:&#x27;OFFLINE FIXTURE SIMULATION — NOT MEASURED JEV PERFORMANCE OR SAVINGS&#x27;,n,
+    rawRouteAccuracy:ratio(valid.filter(correct).length,valid.length),coverage:ratio(auto.length,n),selectiveAccuracy:ratio(successful,auto.length),abstentionRate:ratio(reviews,n),
+    humanRequestMissRate:ratio(human.filter(r=&gt;r.result.status===&#x27;proposed&#x27;).length,human.length),fallbackRate:ratio(rows.filter(r=&gt;r.result.attempts.some(a=&gt;a.provider===&#x27;baseline&#x27;)&amp;&amp;r.result.attempts.some(a=&gt;a.provider===&#x27;jev&#x27;)).length,n),
+    successfulAutomatedTasks:successful,unresolvedReviewTasks:reviews,
+    latency:{label:&#x27;fictional per-attempt scenario milliseconds, summed for sequential fallback&#x27;,p50:percentile(latencies.filter(Number.isFinite),0.5),p95:percentile(latencies.filter(Number.isFinite),0.95)},
+    calibration:{metric:&#x27;5-bin ECE of selected-option probability; not Choice confidence&#x27;,n:calibration.length,ece,bins,note:&#x27;Synthetic cases only; no production calibration claim.&#x27;},
+    cost:{currency:&#x27;USD&#x27;,knownInferenceUSD,modeledOverheadUSD,allAttemptsKnown:complete,modeledTotalUSD:complete?knownInferenceUSD+modeledOverheadUSD:null,
+      costPerSuccessfulTaskUSD:complete&amp;&amp;successful?(knownInferenceUSD+modeledOverheadUSD)/successful:null,
+      denominator:&#x27;correct automatic routing tasks that did not ignore a human request; reviews unresolved&#x27;,note:&#x27;All usage/latencies/review/rework inputs are scenario fixtures. Unknown usage or hidden retries makes total unknown.&#x27;}};
+}
+</code></pre><p>คำสั่งออฟไลน์ต่อไปนี้รันได้โดยไม่ใช้ SDK หรือ API key:</p><pre><code>node --test --test-reporter=spec test/pipeline.test.mjs
+node src/cli.mjs evaluate --split validation --save
+node src/cli.mjs evaluate --split test --save</code></pre>
+
+<h2 id="th-verify">ตรวจผลที่ควรได้</h2>
+<p>ทุกโหมดต้องมี n=24 สำหรับ test split งาน review ยังนับว่ายังไม่จบ และฟิลด์ calibration อาจเป็น null ถ้า provider ไม่ให้ probabilities ถ้าตัวหารเล็กลงต้องอธิบายเส้นทางปฏิเสธหรือล้มเหลว ไม่ตัดเคสออกเงียบ ๆ</p><p>ตรวจชื่อ test และเส้นทางปฏิเสธด้วย อย่าดูเพียง exit code หรือ label สุดท้าย ข้อมูลที่ไม่ทราบต้องยังระบุว่าไม่ทราบ และรายงานทุกชิ้นต้องแยกผลจำลองออกจากข้อมูลที่วัดจริง</p>
+<p>รายงานที่บันทึกเก็บ run ID เวลา รุ่น release/model/SDK/questions/dataset และ SHA-256 ของคำถาม policy ราคา ชุดข้อมูล fixture และโค้ด แต่ละโหมดมี ticket ทุกเคส เฉลยที่ evaluator แนบภายหลัง inference คำตัดสิน attempts เหตุผลปฏิเสธ และข้อเสนอ action พร้อมสรุปภาษาไทยกับอังกฤษแยกกัน เปิด cases และ languageSlices ใน out/test.json โดยไม่ตีความกลุ่มย่อยเล็ก ๆ นี้เป็นค่าคุณภาพใช้งานจริง</p>
+<p>โค้ดบันทึกหลักฐานรายเคส: <a href="../examples/ai-core-jev-lab/src/report.mjs">src/report.mjs</a> · <a href="../examples/ai-core-jev-lab/src/cli.mjs">src/cli.mjs</a></p>
+
+<h2 id="th-troubleshoot">แก้ปัญหาเมื่อผลไม่ตรง</h2>
+<p>ถ้าเลือกคำถามใหม่ด้วยคะแนน test ชุด test ก็กลายเป็นข้อมูลพัฒนาแล้ว ถ้าบทสนทนาที่เกือบซ้ำข้าม partition ให้แบ่งตามบทสนทนาหรือกลุ่มลูกค้าก่อนวัดใหม่ ถ้าผู้ติดป้ายเห็นไม่ตรงกัน ให้บันทึกความกำกวม ไม่เลือกเฉลยที่ทำให้ hybrid ดูดีเป็นคำตอบถูก</p><p>หากเปิดบทเรียนผ่าน Python http.server ให้ใช้ลิงก์ .html ที่ท้ายตอนเมื่อจำเป็น ลิงก์ chip แบบไม่มีนามสกุลในแถบซีรีส์อาศัยการ resolve ของ GitHub Pages และเป็นข้อจำกัด preview ที่มีอยู่เดิม ไม่ใช่ปัญหาในโค้ด Node</p>
+
+<h2 id="th-exercise">เปลี่ยนหนึ่งอย่างแล้วทดสอบ</h2>
+<p>เขียนกติกาติดป้ายสำหรับ ticket ที่มีทั้งขอคืนเงินและหน้าบัญชีเสีย กำหนดว่าคิวหลักติดป้ายอย่างไรและลูกค้าขอมนุษย์ชัดหรือไม่ ให้ผู้ตรวจอีกคนทักท้วงกติกาก่อนเก็บผลโมเดลจริง และบันทึกความกำกวมแทนการแก้เฉลยให้ตรงคำทำนายเงียบ ๆ</p><p>ทำการแก้ไขในสำเนาทดลอง เก็บไฟล์ต้นฉบับไว้เทียบ แล้วคืนค่าก่อนเริ่มตอนถัดไป หากทดลองกับ provider จริงภายหลัง ให้สร้าง experiment record ใหม่แทนเขียนทับผลเดิม</p>
+
+<h2 id="th-next">จุดตรวจถัดไป</h2>
+<p>ก่อนขยับต่อ ให้บอกได้ว่าไฟล์ใดเป็น contract ไฟล์ใดเป็น policy หลักฐานใดได้จากการรัน และข้อใดยังไม่ได้ทดสอบกับโมเดลจริง การแยกสี่อย่างนี้เป็นงานวิศวกรรมที่สำคัญกว่าการได้เดโมที่ดูไหลลื่น</p><p><a href="ai-core-jev-routing.html">← ตอนก่อนหน้า</a> · <a href="ai-core-jev-guard.html">ตอนถัดไป →</a></p>
+
+<h2 id="th-references">แหล่งอ้างอิงและหลักฐาน</h2>
+<section class="references" aria-labelledby="th-reference-heading"><h3 id="th-reference-heading">เอกสารและ source ที่ใช้</h3><p>ตรวจเอกสาร Jev วันที่ 23 ตุลาคม 2026 ข้อเท็จจริง API และราคาอาจเปลี่ยน ให้ตรวจใหม่ก่อนใช้ live ส่วนผลของ fixture เป็นข้อมูลสอนที่ระบุไว้ในโครงการ</p><ol class="references__list"><li id="th-ref-1"><a href="/blog/ai-core-validation.html">AI-Core validation principles</a></li><li id="th-ref-2"><a href="../examples/ai-core-jev-lab/data/tickets.json">Lab dataset</a></li><li id="th-ref-3"><a href="../examples/ai-core-jev-lab/src/metrics.mjs">Lab metrics source</a></li></ol></section>
+
+<h2 id="th-summary">สรุปที่นำไปใช้ต่อ</h2>
+<div class="key-takeaways"><ul><li>contract จำกัดโครงสร้าง ส่วน evaluation ตรวจพฤติกรรม</li><li>อ่าน coverage คุณภาพ เวลา และต้นทุนรวมควบคู่กัน</li><li>ข้อเสนอไม่ใช่ผลที่อนุมัติแล้ว และหลักฐาน mock ไม่ใช่หลักฐานโมเดล live</li></ul></div>
+    </div>
+
+    <div class="l-en" lang="en">
+
+<p>Part 6 of ten: Separate validation, test and attack cases; prevent label leakage and report quality together with coverage.</p>
+<blockquote>Local review draft • Default code uses offline fixtures. Numbers are fictional scenarios, not measured Jev results. Faster performance and lower cost remain hypotheses.</blockquote>
+
+<h2 id="en-start">Outcome and prerequisites</h2>
+<p>Start with the companion repository and its detailed README. The website ZIP remains an alternative offline snapshot; run the same Node commands from either project root. <a href="https://github.com/Anirach/ai-core-jev-tutorial">GitHub repository</a> · <a href="https://github.com/Anirach/ai-core-jev-tutorial/blob/a634bb49157ddfa01f1ff7a61627066a3e70196d/README.md">README / Quickstart</a></p>
+<p>Use the same Support Ticket Decision Lab throughout the series. Have Node 22.18+, a terminal and a writable directory. Run commands from the cloned ai-core-jev-tutorial root, or the extracted ai-core-jev-lab folder if using the website ZIP. Offline work needs no npm install. Allow roughly 20–40 minutes for experiments; the article reading-time label excludes hands-on work.</p><p><a class="btn" href="../downloads/ai-core-jev-lab.zip" download>Download the complete code and tests (ZIP)</a> · <a href="../examples/ai-core-jev-lab/README.md">Project README</a></p><p>This chapter focuses on src/metrics.mjs. Fixture outputs test the integration mechanics only. The author did not install the SDK or use an API key while preparing the lab. The separately documented live path has not been tested against the API.</p>
+
+<h2 id="en-concepts">How this boundary works</h2>
+<p>A comparison needs equal inputs, equal success definitions and a documented handling of unresolved work. The harness runs baseline, Jev-only and hybrid over the same split and uses the same labels and policy definition. It does not compare a classifier on easy tickets with a generator on all tickets. Keep that equality when replacing the fixtures with recorded real-provider results.</p>
+<p>Our forty synthetic tickets are partitioned into twelve validation cases, twenty-four test cases and four attack cases. These names teach the evaluation protocol; they do not create a statistically valid blind study. The canned predictions were authored alongside the cases. No reported fixture accuracy estimates Jev generalization, Thai-language reliability or performance on your customer distribution.</p>
+<p>For a real evaluation, gather permitted, representative tickets, define an annotation policy, resolve disagreements and separate related conversations before splitting. Tune questions and thresholds only on validation data. Freeze the candidate, then evaluate the held-out set once. If you change the candidate after reading the test result, obtain another untouched test set rather than continuing to call the same cases held out.</p>
+
+<h2 id="en-steps">Seven practical steps</h2>
+<h3>Step 1 — Inspect the split fields</h3><p>Inspect the split fields. Verify the 12/24/4 partition and note the language field. The small Thai subset demonstrates that Unicode text flows through the program; it is not large enough to support a claim about Thai model quality. Keep that claim out of the report.</p>
+<h3>Step 2 — Read validateTicket before the provider call</h3><p>Read validateTicket before the provider call. It returns only id, text and language, leaving goldRoute and goldHuman behind. The pipeline test checks the actual object delivered to the provider. Data separation should be an executable check rather than a comment saying do not leak labels.</p>
+<h3>Step 3 — Run validation first and save its JSON</h3><p>Run validation first and save its JSON. Read both coverage and selective accuracy for every mode. rawRouteAccuracy covers valid final route decisions, whereas selectiveAccuracy evaluates correct automatic tasks that also respect human requests. The two metrics answer different questions and must not share an ambiguous accuracy label.</p>
+<h3>Step 4 — Predeclare a quality gate for the real workload</h3><p>Predeclare a quality gate for the real workload. Decide what selective accuracy, coverage and human-request miss rate are acceptable before choosing a threshold. This tutorial supplies no production values. The point is to reject an experiment that cannot meet the product requirement, not to optimize whatever scalar looks best.</p>
+<h3>Step 5 — Run the test split only after freezing the demonstration policy</h3><p>Run the test split only after freezing the demonstration policy. Saving out/test.json gives you a reproducible fixture transcript, not a publishable model benchmark. Compare sample counts, malformed-response handling and unresolved-review counts before considering any fictional latency or price field.</p>
+<h3>Step 6 — Read the calibration bins with their sample counts</h3><p>Read the calibration bins with their sample counts. ECE uses the selected-option probability, not the Choice confidence statistic. A small ECE on a tiny synthetic sample is not a deployment guarantee. Keep bin counts, model ID, question version and language slices next to the number.</p>
+<h3>Step 7 — Audit the decision to continue</h3><p>Audit the decision to continue. If the hybrid fails equal-quality or coverage constraints, stop treating its lower simulated inference bill as a win. Write the failed criterion into the experiment record and plan a new candidate. Reporting a negative result is a useful engineering outcome.</p>
+
+<h2 id="en-implementation">Files and commands</h2>
+<p><strong>Companion code on GitHub:</strong> <a href="https://github.com/Anirach/ai-core-jev-tutorial">ai-core-jev-tutorial</a> · <a href="https://github.com/Anirach/ai-core-jev-tutorial/blob/a634bb49157ddfa01f1ff7a61627066a3e70196d/README.md">README</a>. Use the companion repository as the default working copy. These file links pin the tested revision. <a href="https://github.com/Anirach/ai-core-jev-tutorial/blob/a634bb49157ddfa01f1ff7a61627066a3e70196d/src/metrics.mjs">src/metrics.mjs</a> · <a href="https://github.com/Anirach/ai-core-jev-tutorial/blob/a634bb49157ddfa01f1ff7a61627066a3e70196d/src/report.mjs">src/report.mjs</a> · <a href="https://github.com/Anirach/ai-core-jev-tutorial/blob/a634bb49157ddfa01f1ff7a61627066a3e70196d/src/cli.mjs">src/cli.mjs</a></p>
+
+<p>Compare this file with the source in the ZIP before editing. The listing is the implementation used by the lab, not pseudocode. Model output is input to validation and routing code; it grants no permission to bypass approval.</p><p><a href="../examples/ai-core-jev-lab/src/metrics.mjs">src/metrics.mjs</a></p><pre><code>export function percentile(values,p) {if(!values.length)return null;const s=[...values].sort((a,b)=&gt;a-b);return s[Math.max(0,Math.ceil(p*s.length)-1)];}
+export function money(attempt,prices) {
+  if(!attempt.usage||!attempt.costComplete)return null;const p=attempt.provider===&#x27;jev&#x27;?&#x27;jev&#x27;:&#x27;baseline&#x27;;
+  return (attempt.usage.input*prices[p+&#x27;InputPerMillionUSD&#x27;]+attempt.usage.output*prices[p+&#x27;OutputPerMillionUSD&#x27;])/1e6;
+}
+export function summarize(rows,prices) {
+  const n=rows.length,auto=rows.filter(r=&gt;r.result.status===&#x27;proposed&#x27;);
+  const correct=r=&gt;r.result.decision?.route===r.ticket.goldRoute,success=r=&gt;correct(r)&amp;&amp;!r.ticket.goldHuman;
+  const successful=auto.filter(success).length,valid=rows.filter(r=&gt;r.result.decision),human=rows.filter(r=&gt;r.ticket.goldHuman);
+  const costs=rows.flatMap(r=&gt;r.result.attempts).map(a=&gt;money(a,prices));
+  const reviews=n-auto.length,wrongAuto=auto.length-successful;
+  const knownInferenceUSD=costs.reduce((s,c)=&gt;s+(c??0),0);
+  const modeledOverheadUSD=n*prices.infrastructurePerTaskUSD+reviews*prices.assumedReviewSeconds/3600*prices.reviewHourlyUSD+wrongAuto*prices.reworkPerWrongAutoTaskUSD;
+  const complete=costs.every(c=&gt;c!==null);
+  const latencies=rows.map(r=&gt;{const xs=r.result.attempts.map(a=&gt;a.scenarioLatencyMs);return xs.every(Number.isFinite)?xs.reduce((a,b)=&gt;a+b,0):null;});
+  const calibration=rows.filter(r=&gt;r.result.decision?.probabilities),bins=[];
+  for(let k=0;k&lt;5;k++) {
+    const members=calibration.filter(r=&gt;Math.min(4,Math.floor(r.result.decision.probabilities[r.result.decision.route]*5))===k);
+    if(members.length)bins.push({n:members.length,meanTopProbability:members.reduce((s,r)=&gt;s+r.result.decision.probabilities[r.result.decision.route],0)/members.length,accuracy:members.filter(correct).length/members.length});
+  }
+  const ece=calibration.length?bins.reduce((s,b)=&gt;s+b.n/calibration.length*Math.abs(b.meanTopProbability-b.accuracy),0):null;
+  const ratio=(a,b)=&gt;b?a/b:null;
+  return {evidence:&#x27;OFFLINE FIXTURE SIMULATION — NOT MEASURED JEV PERFORMANCE OR SAVINGS&#x27;,n,
+    rawRouteAccuracy:ratio(valid.filter(correct).length,valid.length),coverage:ratio(auto.length,n),selectiveAccuracy:ratio(successful,auto.length),abstentionRate:ratio(reviews,n),
+    humanRequestMissRate:ratio(human.filter(r=&gt;r.result.status===&#x27;proposed&#x27;).length,human.length),fallbackRate:ratio(rows.filter(r=&gt;r.result.attempts.some(a=&gt;a.provider===&#x27;baseline&#x27;)&amp;&amp;r.result.attempts.some(a=&gt;a.provider===&#x27;jev&#x27;)).length,n),
+    successfulAutomatedTasks:successful,unresolvedReviewTasks:reviews,
+    latency:{label:&#x27;fictional per-attempt scenario milliseconds, summed for sequential fallback&#x27;,p50:percentile(latencies.filter(Number.isFinite),0.5),p95:percentile(latencies.filter(Number.isFinite),0.95)},
+    calibration:{metric:&#x27;5-bin ECE of selected-option probability; not Choice confidence&#x27;,n:calibration.length,ece,bins,note:&#x27;Synthetic cases only; no production calibration claim.&#x27;},
+    cost:{currency:&#x27;USD&#x27;,knownInferenceUSD,modeledOverheadUSD,allAttemptsKnown:complete,modeledTotalUSD:complete?knownInferenceUSD+modeledOverheadUSD:null,
+      costPerSuccessfulTaskUSD:complete&amp;&amp;successful?(knownInferenceUSD+modeledOverheadUSD)/successful:null,
+      denominator:&#x27;correct automatic routing tasks that did not ignore a human request; reviews unresolved&#x27;,note:&#x27;All usage/latencies/review/rework inputs are scenario fixtures. Unknown usage or hidden retries makes total unknown.&#x27;}};
+}
+</code></pre><p>Run these offline commands without an SDK installation or API key:</p><pre><code>node --test --test-reporter=spec test/pipeline.test.mjs
+node src/cli.mjs evaluate --split validation --save
+node src/cli.mjs evaluate --split test --save</code></pre>
+
+<h2 id="en-verify">Verify the expected behavior</h2>
+<p>Each mode must evaluate n=24 for the test split. Review tasks remain unresolved, and calibration fields may be null when a provider supplies no probabilities. If a method has a smaller denominator, explain the refusal or failure path rather than silently dropping the cases.</p><p>Read the named tests and refusal paths, not just the exit code or final label. Unknown values must remain unknown, and every report must distinguish simulation inputs from real measurements.</p>
+<p>Saved reports retain a run ID, timestamp, release/model/SDK/question/dataset identifiers and SHA-256 hashes of the question, policy, price, dataset, fixtures and implementation. Each mode includes every ticket, gold labels attached after inference, decisions, attempts, refusal reasons and action proposals, plus separate Thai and English summaries. Inspect cases and languageSlices in out/test.json; never interpret the tiny slices as deployment-quality estimates.</p>
+<p>Audit record implementation: <a href="../examples/ai-core-jev-lab/src/report.mjs">src/report.mjs</a> · <a href="../examples/ai-core-jev-lab/src/cli.mjs">src/cli.mjs</a></p>
+
+<h2 id="en-troubleshoot">Troubleshooting</h2>
+<p>If a new question was selected by test accuracy, the test set has become development data. If near-duplicate conversations cross partitions, split by conversation or customer group before measuring again. If reviewers disagree about a label, record the ambiguity rather than declaring whichever label benefits the hybrid to be correct.</p><p>When previewing with Python http.server, use the .html continuation links below when needed. Extensionless series chips rely on GitHub Pages resolution; that documented preview limitation is separate from the Node example.</p>
+
+<h2 id="en-exercise">Change one thing, then test</h2>
+<p>Write an annotation note for a ticket that mixes a refund request with a broken account page. Decide how the primary queue is labeled and whether the customer explicitly requested a human. Have another reviewer challenge the rule before collecting real model outputs. Record ambiguity instead of silently fixing labels to match predictions.</p><p>Make changes in a disposable copy, retain the reference files for comparison, and restore them before the next chapter. If you later use a real provider, create a new experiment record rather than overwriting the fixture transcript.</p>
+
+<h2 id="en-next">Next checkpoint</h2>
+<p>Before moving on, identify the contract file, the policy file, what was observed in a run, and what remains untested against a real model. Keeping those four things separate matters more than making the demo look effortless.</p><p><a href="ai-core-jev-routing.html">← Previous chapter</a> · <a href="ai-core-jev-guard.html">Next chapter →</a></p>
+
+<h2 id="en-references">References and evidence</h2>
+<section class="references" aria-labelledby="en-reference-heading"><h3 id="en-reference-heading">Documentation and implementation</h3><p>Jev documentation checked on 23 October 2026. API and pricing details can change; recheck before live use. Fixture results are explicitly authored teaching data in the project.</p><ol class="references__list"><li id="en-ref-1"><a href="/blog/ai-core-validation.html">AI-Core validation principles</a></li><li id="en-ref-2"><a href="../examples/ai-core-jev-lab/data/tickets.json">Lab dataset</a></li><li id="en-ref-3"><a href="../examples/ai-core-jev-lab/src/metrics.mjs">Lab metrics source</a></li></ol></section>
+
+<h2 id="en-summary">Key takeaways</h2>
+<div class="key-takeaways"><ul><li>Contracts bound structure; evaluation checks behavior.</li><li>Coverage, quality, latency and total cost must be read together.</li><li>A proposal is not an approved effect; mock evidence is not live model evidence.</li></ul></div>
+    </div>
+
+    <div class="post-series-footer">
+      <span class="l-th">บทปฏิบัติจากซีรีส์ AI-Core + Jev in Practice 2026</span><span class="l-en" lang="en">A lab from AI-Core + Jev in Practice 2026</span>
+    </div>
+
+    <nav aria-label="AI-Core + Jev in Practice">
+    <div class="series-nav">
+      <h3>AI-Core + Jev in Practice 2026</h3>
+      <div class="series-links">
+        <a href="/blog/ai-core-jev-lab">#1 Jev Lab</a>
+        <a href="/blog/ai-core-jev-baseline">#2 Baseline</a>
+        <a href="/blog/ai-core-jev-questions">#3 Typed Questions</a>
+        <a href="/blog/ai-core-jev-validation">#4 Validate Responses</a>
+        <a href="/blog/ai-core-jev-routing">#5 Abstain &amp; Route</a>
+        <span class="current" aria-current="page">#6 Fair Evaluation</span>
+        <a href="/blog/ai-core-jev-guard">#7 Effect Guard</a>
+        <a href="/blog/ai-core-jev-failures">#8 Failure Tests</a>
+        <a href="/blog/ai-core-jev-cost">#9 Full Task Cost</a>
+        <a href="/blog/ai-core-jev-release">#10 Shadow Release</a>
+      </div>
+    </div>
+    </nav>
+
+  </article>
+
+  </main>
+
+  <footer class="blog-footer">
+    <nav class="blog-footer__nav" aria-label="Site">
+      <a href="../index.html">Home</a>
+      <a href="./">Tutorials</a>
+      <a href="../thoughts/">Thoughts</a>
+      <a href="../publications/">Publications</a>
+      <a href="../books/">Books</a>
+      <a href="../projects/">Projects</a>
+      <a href="../news/">News</a>
+      <a href="../index.html#contact">Contact</a>
+    </nav>
+    <a href="./">← Back to Tutorials</a>
+    <span>© 2026 Anirach Mingkhwan — Associate Professor, KMUTNB</span>
+  </footer>
+
+</body>
+</html>
