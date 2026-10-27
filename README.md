@@ -1,113 +1,110 @@
-# anirach.com
+<p align="center">
+  <img src="https://img.shields.io/badge/anirach.com-Live-1D4ED8?style=for-the-badge" alt="anirach.com live">
+  <img src="https://img.shields.io/badge/Zero-JavaScript-111827?style=for-the-badge" alt="Zero JavaScript">
+  <img src="https://img.shields.io/badge/Build_step-None-7C3AED?style=for-the-badge" alt="No build step">
+  <img src="https://img.shields.io/badge/Posts-145_bilingual-059669?style=for-the-badge" alt="145 bilingual posts">
+  <img src="https://img.shields.io/badge/GitHub_Pages-Deploy_on_push-0EA5E9?style=for-the-badge&logo=github&logoColor=white" alt="GitHub Pages">
+</p>
 
-**The personal site of Dr. Anirach Mingkhwan** — Associate Professor at King Mongkut's University of Technology North Bangkok (KMUTNB), PhD (Liverpool John Moores University, UK), researcher in Agentic AI, computer networks, and big data analytics.
+<h1 align="center">🌅 anirach.com</h1>
 
-🌐 **Live: [anirach.com](https://anirach.com)**
+<p align="center">
+  <strong>The personal site of Dr. Anirach Mingkhwan — independent AI consultant, author, and former Dean of FITM, KMUTNB.</strong>
+  <br>
+  <em>A consultant profile, 145 bilingual Thai/English posts in 11 series, four books and an academic record — hand-written, zero-JavaScript, no build step.</em>
+</p>
 
-A hand-written static site — seven top-level pages, four per-book detail pages, and 145 self-contained blog posts catalogued on two pages: Tutorials (`/blog/`, eight technical series) and Thoughts (`/thoughts/`, thirty-nine essays on living well and working well). No build system, no package manager, no dependencies, no JavaScript framework. Push to `main` and GitHub Pages publishes it.
+<p align="center">
+  <a href="#-the-problem">The Problem</a> •
+  <a href="#-quick-start">Quick Start</a> •
+  <a href="#-how-it-works">How It Works</a> •
+  <a href="#-verification">Verification</a> •
+  <a href="#-development">Development</a> •
+  <a href="#%EF%B8%8F-conventions-and-gotchas">Gotchas</a>
+</p>
 
 ---
 
+## 🤔 The Problem
 
-> **Current local review inventory — 2026-10-24:**145 bilingual posts across11 series
-> (8 Tutorials /106 articles,3 Thoughts /39 essays),157 HTML files (156 enumerated),
-> 496 images,145 feed items and156 sitemap URLs. The new12-part **AI-Core Functional
-> Workflows** series has a distinct local companion,108 tests, twelve exercises and
-> an offline ZIP. This twelve-part series and its companion are now published; the earlier ten-part website series remains an unpublished local draft.
-> The prior ten-part AI-Core/Jev draft and its public companion remain separate.
+A static site with no build step buys simplicity and pays for it in one specific way: **nothing is shared, so nothing is enforced.**
 
-> **Historical local review inventory — 2026-10-23:** 133 bilingual posts across 10 series
-> (7 Tutorials / 94 articles, 3 Thoughts / 39 essays), 145 public HTML files
-> (144 enumerated), 460 image files, 133 feed items and 144 sitemap URLs.
-> The new ten-part **AI-Core + Jev in Practice** series is generated from
-> `scripts/series/ai-core-jev.json` and paired `.bilingual/` sheets. It is separate
-> from the original Engineering AI-Core Systems series. Older dated measurements
-> below describe their stated historical snapshots; use the current inventory above.
-> The lab is offline by default; no paid API call or SDK installation was verified.
+- every page embeds its own complete stylesheet — there is no partial, template engine or token file
+- a "global" change is therefore an N-file edit, by hand, across 157 files
+- nothing tells you when file 23 of 157 got missed
+- counters, navigation chains, feed items and sitemap URLs are hand-wired across files that never import one another
+- and every post is bilingual, so each prose edit has a mirror that can silently drift
 
-## At a glance
+**This repository answers that with a linter instead of a framework.** 62 cross-file integrity checks are the test suite, and the baseline of accepted debt is empty — so any violation printed is new.
 
-| | |
-|---|---|
-| **Pages** | Home · Tutorials (`/blog/`) · Thoughts (`/thoughts/`) · Publications · Books · Projects & Apps · News & Updates |
-| **Posts** | **145**, in 11 series across two catalogs, every one bilingual Thai/English |
-| **Files** | 157 HTML files on disk (156 enumerated by the linter; `404.html` is deliberately excluded) |
-| **Stack** | Plain HTML5 + CSS3, zero JavaScript. Google Fonts is the only external dependency |
-| **Hosting** | GitHub Pages (classic Jekyll build) on the custom domain `anirach.com`, fronted by Cloudflare |
-| **Build step** | None |
-| **Tests** | Four scripts, run before every push — `check_site.py` alone carries 62 cross-file integrity checks. This is the test suite |
+---
 
-## The seven pages
+## ✨ What This Repo Does Differently
+
+| Concern | The usual static-site answer | Here |
+|:---|:---|:---|
+| **Consistency across pages** | A template engine or partials | Nothing shared — but **62 checks** fail the build on drift, baseline empty since 2026-08-26 |
+| **Interactivity** | A framework, or at least some JS | **Zero executable JavaScript.** `INV-38` fails the build on any `<script>` that is not `application/ld+json` |
+| **Reveal animations, mobile menu** | IntersectionObserver + click handlers | Scroll-driven CSS (`animation-timeline: view()`), `:target`, and a checkbox toggle |
+| **Bilingual content** | An i18n library, or two URLs per page | One URL, two tracks, a pure-CSS `ไทย · English` switch — four CSS lines |
+| **Long series of posts** | Hand-copied templates that rot | **7 series are generated** from a manifest + per-post content sheets + a skeleton read at run time |
+| **Catalog pages** | Hand-ordered cards | `reindex_blog.py` regenerates both catalogs; re-run it rather than hand-fixing order |
+| **Feed and sitemap** | Hand-maintained, quietly stale | Generated on demand; `INV-31` / `INV-32` fail the build when either drifts |
+| **Image weight** | Ship the full cover everywhere | A 144px `-thumb.jpg` via `srcset` — the Tutorials catalog went 3.63 MB → 0.42 MB |
+| **Web fonts** | Request every weight | Variable **range** syntax (`wght@300..900`) — one file, not seven; 189 KB saved per page |
+| **Coding tutorials** | Code pasted into the lesson | Each series pairs with a runnable GitHub companion, pinned to a commit |
+| **Dated content** | Goes stale silently | A runbook names every file to revise when an announced event passes |
+
+---
+
+## 🗺️ Site Map
 
 | Page | What it holds |
-|---|---|
-| [`index.html`](index.html) | Single-scroll consultant profile: hero, at-a-glance stats, six services, engagement approach, selected work, about and career, research, free resources, latest news with the featured book, contact |
-| [`blog/`](blog/) | The **Tutorials** catalog — 106 cards in eight technical series, plus all 145 post files |
-| [`thoughts/`](thoughts/) | The **Thoughts** catalog — 39 essay cards in three series, each linking `../blog/<slug>.html` |
-| [`publications/`](publications/) | The academic record: the Springer book *Libraries in Transformation*, 8 book chapters, and a selected-publications table |
-| [`books/`](books/) | Books & writing: four works — *One Day of Light* (the free last-lecture event book, EN/TH editions with free PDF downloads served from `books/`), the published novel *Three Old Men: The Last Conversation*, and two complete bilingual manuscripts — each with its own detail page |
-| [`projects/`](projects/) | Live apps (each verified working before it ships) and research-code repositories |
-| [`news/`](news/) | Reverse-chronological timeline of publications, talks and appointments, plus a career timeline |
+|:---|:---|
+| [`index.html`](index.html) | Single-scroll **consultant profile**: hero, services, engagement approach, selected work, about and career, research, free library, latest news, contact |
+| [`blog/`](blog/) | The **Tutorials** catalog — 106 cards in 8 technical series, plus all 145 post files |
+| [`thoughts/`](thoughts/) | The **Thoughts** catalog — 39 essay cards in 3 series, each linking `../blog/<slug>.html` |
+| [`publications/`](publications/) | The academic record: the Springer book *Libraries in Transformation*, 8 book chapters, selected publications |
+| [`books/`](books/) | Four works, each with a detail page — *One Day of Light* (free EN/TH PDFs), the novel *Three Old Men*, and two complete bilingual manuscripts |
+| [`projects/`](projects/) | Live apps, each verified working before it ships, and research-code repositories |
+| [`news/`](news/) | Reverse-chronological timeline of publications, talks and appointments |
 
-**The posts never move.** Every post is `blog/<slug>.html`, including the 39 essays that `/thoughts/` catalogues — the 2026-09-08 split separated the two *catalogs*, not the files.
+> **The posts never move.** Every post is `blog/<slug>.html`, including the 39 essays that `/thoughts/` catalogues. The 2026-09-08 split separated the two *catalogs*, not the files.
 
-`books/` was one "Books & Writing" page until 2026-08-23, when it split: academic content moved to the new `publications/`, and `books/` became the fiction section with one detail page per book. On 2026-08-24 it gained a fourth work, the Last Lecture companion book *One Day of Light*, whose EN/TH PDFs are downloadable for free from `books/`.
+---
 
-`script.js` is gone — deleted 2026-08-26. **The site loads no executable JavaScript at all**, and `check_site.py` INV-38 fails the build on any `<script>` that is not `application/ld+json` (schema.org metadata, which the browser parses as data and never executes — 128 pages carry one). Each of the script's four jobs has a CSS replacement in `style.css`: the scroll-reveal and the nav scroll state are scroll-driven CSS animations (`animation-timeline: view()` / `scroll(root)`), the landing page's mobile menu is `.nav__links:target`, and anchor scrolling is native `scroll-behavior: smooth`. The other pages' mobile menu is a pure-CSS checkbox toggle — a second mechanism, also without JavaScript.
+## 📚 The Catalogs
 
-## The two catalogs
+**Tutorials — `/blog/`, hero reads `8 Series · 106 Articles`**
 
-Both are static, zero-JavaScript and **generated** by `scripts/reindex_blog.py` — re-run it rather than hand-ordering cards. Each is a hero, a sticky chip strip, a "Start here" feature, a row of series tiles, then one numbered-row-card section per series. There is no filtering, sorting or search UI.
+| Series | Posts | Navigation | Generated |
+|:---|:---:|:---|:---:|
+| 🧩 AI-Core Functional Workflows | 12 | chip strip | ✅ |
+| 🔬 AI-Core + Jev in Practice | 10 | chip strip | ✅ |
+| 🛡️ Engineering AI-Core Systems | 10 | chip strip | ✅ |
+| 💻 Hermes Desktop Hands-On | 7 | chip strip | ✅ |
+| 🧭 AI Transformation for Organizations | 20 | grouped chip strip (Reframe · Redesign · Engineer · Lead) | ✅ |
+| ⚡ Hermes Agent in Practice | 10 | chip strip | — |
+| 🤖 OpenClaw for Organizations | 13 | 7 numbered, 6 standalone with no nav | — |
+| 🔧 DevOps & Vibe Coding | 24 | a single prev/next chain | — |
 
-**Tutorials — `/blog/`, hero reads 8 Series · 106 Articles**
+**Thoughts — `/thoughts/`, hero reads `3 Series · 39 Essays`**
 
-| Series | Posts | Navigation |
-|---|---|---|
-| ⧉ AI-Core Functional Workflows | 12 | flat12-chip strip · local companion and exercises |
-| ◈ AI-Core + Jev in Practice | 10 | flat 10-chip strip · generated; offline-first support-ticket lab |
-| 🛡️ Engineering AI-Core Systems | 10 | chip strip · generated |
-| 💻 Hermes Desktop Hands-On | 7 | chip strip · generated |
-| 🧭 AI Transformation for Organizations | 20 | grouped chip strip (Reframe · Redesign · Engineer · Lead) · generated |
-| ⚡ Hermes Agent in Practice | 10 | chip strip |
-| 🤖 OpenClaw for Organizations | 13 | seven are a numbered chip-strip series; six stand alone with no nav |
-| 🔧 DevOps & Vibe Coding | 24 | a single prev/next chain |
+| Series | Essays | Shape | Generated |
+|:---|:---:|:---|:---:|
+| 🌱 Wisdom for a Good Life | 20 | four arcs of five — Self · Mind · Work · Others | ✅ |
+| 🧭 Working Philosophies | 10 | one working week, Monday to Friday | ✅ |
+| 🌅 Life Thought & Philosophy | 9 | one day in three parts — Morning · Noon · Twilight | — |
 
-**Thoughts — `/thoughts/`, hero reads 3 Series · 39 Essays**
+**All 145 posts are bilingual.** A `ไทย · English` pill swaps between two complete tracks of the same article. Thai is the default, there is no JavaScript, and the page-level `<html lang="th">` never changes — the English track is `lang="en"` inside it.
 
-| Series | Essays | Navigation |
-|---|---|---|
-| 🌱 Wisdom for a Good Life | 20 | grouped chip strip, four arcs of five (Self · Mind · Work · Others) · generated |
-| 🧭 Working Philosophies | 10 | chip strip, one working week Monday to Friday · generated |
-| 🌅 Life Thought & Philosophy | 9 | chip strip, one day in three parts (Morning · Noon · Twilight) |
+The Thoughts essays are written in a different register from the tutorials: literary Thai in the author's own voice, not code-switched technical prose. The brief, with ten rules and worked before/after pairs, is [`thai-essay-voice.md`](.claude/skills/blog-post/references/thai-essay-voice.md).
 
-**Seven of the eleven series are generated** from a manifest plus per-post content sheets: `python3 scripts/build_series.py --series <name>`, with manifests in `scripts/series/` (`ai-core-functional`, `ai-core-jev`, `ai-core`, `ai-transformation`, `good-life`, `hermes-desktop`, `working`). For those, the manifest and the sheets are the edit surface — never the emitted post.
+---
 
-**Every post is bilingual.** All 145 carry a pure-CSS Thai ⇄ English switch: a `ไทย · English` pill in the hero swaps between two complete tracks of the same article. Thai is the default, there is no JavaScript, and the page-level `<html lang="th">` never changes — the English track is `lang="en"` inside it. The seven top-level pages and the four book detail pages are `lang="en"` chrome and wrap their Thai passages in `<span lang="th">`.
+## 🏗️ Architecture
 
-The Thoughts essays are written in a different register from the tutorials — literary Thai in the author's own voice, not code-switched technical prose. The brief, with ten rules and worked before/after pairs, is [`.claude/skills/blog-post/references/thai-essay-voice.md`](.claude/skills/blog-post/references/thai-essay-voice.md).
-
-## Repository structure
-
-```
-.
-├── index.html          # Landing page — the ONLY file that loads style.css
-├── style.css           # Landing-page styles; carries the canonical :root token block
-├── _config.yml         # Jekyll: keeps internal working docs out of the published site
-├── CNAME               # anirach.com
-├── sitemap.xml         # 156 URLs, generated · feed.xml — 145 items, generated · llms.txt · robots.txt
-├── blog/               # index.html (the Tutorials catalog, 106 cards) + all 145 self-contained posts
-├── thoughts/           # index.html (the Thoughts catalog — 39 essay cards linking ../blog/)
-├── books/              # index.html + 4 per-book detail pages + 3 free PDFs, all self-contained
-├── publications/  projects/  news/   # one self-contained index.html each
-├── images/             # 431 files — 124 covers (800×800) + 8 book faces, 123 card thumbs (144×144),
-│                       #   130 share cards (1200×630), diagrams, series figures, posters, profile photo
-├── scripts/            # 13 generators and sweeps (build_series, reindex_blog, gen_feed, gen_sitemap,
-│                       #   make_cover, make_figure, bilingualize, check_visibility, …)
-├── docs/               # design spec, implementation plan, OpenClaw runbook (not published)
-└── .claude/skills/     # the four maintenance skills (not published)
-```
-
-### Architecture: every page is an island
+### Every page is an island
 
 The single most important fact before editing:
 
@@ -119,38 +116,211 @@ blog/<post>.html  ──▶ its own <style> block, no JS     × 145
 thoughts/ books/ (index + 4 detail) publications/ projects/ news/ 404.html ──▶ same   × 10
 ```
 
-Every page embeds its complete stylesheet. There is no shared partial, template engine or token file, so a "global" change means editing N files by hand — and nothing tells you when file 23 of 135 got missed. That is what the linter is for. The compensating upside: blast radius is exactly one file.
+Editing `style.css` affects **only** the landing page. Editing one post affects **only** that file. The upside of having no shared partial: blast radius is exactly one file. The cost: a change that should apply everywhere must be scripted, then verified.
 
-## Local development
+### By the numbers
 
-No install, no build. Serve the **repository root**:
+| | Count |
+|:---|---:|
+| HTML files on disk | 157 |
+| …enumerated by the linter (`404.html` is deliberately excluded) | 156 |
+| Blog posts, all bilingual | 145 |
+| Series across the two catalogs | 11 |
+| Images | 496 |
+| …covers (800×800) · book faces | 146 · 8 |
+| …card thumbs (144×144) · share cards (1200×630) · series figures | 145 · 149 · 37 |
+| Feed items · sitemap URLs | 145 · 156 |
+| Generator and sweep scripts | 15 |
+| Integrity checks | 62 (43 fail · 17 warn · 2 info) |
+
+---
+
+## 🔄 How It Works
+
+### Generated series
+
+Seven series are emitted whole rather than hand-copied. `scripts/build_series.py` takes three inputs:
+
+| Input | What it carries |
+|:---|:---|
+| **Manifest** — `scripts/series/<name>.json` | the fixed strings: numbers, slugs, chip labels, titles, hero subs, tags, read times, covers, figures |
+| **Content sheets** — `.bilingual/<slug>.{th,en}.html` | prose only, in the delimiter grammar `bilingualize.py` already uses |
+| **Skeleton** — a real post, read at **run time** | the `<style>` block, so it is a template rather than a copy that rots; `--check` diffs what it lifted |
 
 ```bash
+python3 scripts/build_series.py --series good-life --check          # manifest + skeleton sanity
+python3 scripts/build_series.py --series good-life --post <slug>    # emit one post
+python3 scripts/build_series.py --series good-life --restrip        # rewrite every chip strip
+python3 scripts/build_series.py --series good-life --sync-read-min  # read times from the prose
+```
+
+**The emitted posts are the committed truth; the sheets in `.bilingual/` are scratch** and are gitignored. For a generated series a prose edit goes through the sheet and `--post`, never through the emitted file.
+
+### The catalogs
+
+```bash
+python3 scripts/reindex_blog.py --repo . --out blog/index.html
+python3 scripts/reindex_blog.py --repo . --out thoughts/index.html --catalog thoughts
+```
+
+Both are idempotent. The Thoughts catalog **lifts its `<style>` from the blog catalog at run time**, so the two cannot drift apart — which also means a new series on `/blog/` brings its `:target` selectors across on the next regeneration.
+
+### Feed and sitemap
+
+```bash
+python3 scripts/gen_feed.py      # reads both catalogs
+python3 scripts/gen_sitemap.py   # lastmod from each file's last git commit
+```
+
+Run the sitemap in the commit **after** a content change, so the git dates exist.
+
+---
+
+## 🚀 Quick Start
+
+### Prerequisites
+
+Python 3, standard library only. No install, no package manager, no dependencies.
+
+```bash
+git clone https://github.com/Anirach/Anirach.github.io.git
+cd Anirach.github.io
 python3 -m http.server 8000     # → http://localhost:8000
 ```
 
-> **Serve the root, not `blog/`.** Every blog page references images as `../images/…`.
+> **Serve the repository root, not `blog/`.** Every blog page references images as `../images/…`.
 
-> **Known local-dev trap.** The eight chip-strip series — 93 posts in all — link to each other with root-absolute, extensionless URLs (`/blog/openclaw-101`). GitHub Pages resolves those; `http.server` does not and returns 404. That is not a regression.
+> **Known local-dev trap.** The chip-strip series link to each other with root-absolute, **extensionless** URLs (`/blog/openclaw-101`). GitHub Pages resolves those; `http.server` does not, and returns 404. That is not a regression.
 
-## Verification
+---
 
-Run all four from the repo root before pushing. All must pass:
+## ✅ Verification
+
+Run all four from the repository root before pushing. All must pass.
 
 ```bash
 python3 .claude/skills/site-check/scripts/check_site.py      # 62 cross-file integrity checks
-python3 scripts/check_visibility.py --strict                 # search/AI-visibility, JSON-LD, metadata
-python3 docs/openclaw/check-news-sync.py                     # news↔homepage sync, provenance, 4 counters
+python3 scripts/check_visibility.py --strict                 # search/AI visibility, JSON-LD, metadata
+python3 docs/openclaw/check-news-sync.py                     # news ↔ homepage sync, provenance, 4 counters
 python3 .claude/skills/blog-post/assets/verify-wiring.py     # blog post wiring
 ```
 
-`check_site.py` runs **62 checks — 43 fail-severity, 17 warn, 2 info** — and exits 0 when no fail-severity violation appears. Its baseline of pre-existing debt is **empty** since 2026-08-26 — the tree is clean (`0 new, 0 known`), so any violation it prints is new and any fail-severity one blocks the push. `INV-25` fails the build if a baseline entry is ever added and goes stale, so the safety net cannot silently rot. `INV-26` (added with the books split) ties every section-directory detail page to its own `index.html`: an orphan detail page, or an index card linking a file that does not exist, fails the build.
+| Gate | What only it catches |
+|:---|:---|
+| `check_site.py` | card ↔ post ↔ cover wiring, counters, chip strips, prev/next chains, hero gradients, social blocks, the zero-JS rule |
+| `check_visibility.py` | JSON-LD shape, `inLanguage` against the bilingual markup, `llms.txt` drift, heading ladders |
+| `check-news-sync.py` | the homepage strip mirrors the 3 newest news items, every item carries a `<!-- source: … -->` comment, and 4 hand-typed counters match |
+| `verify-wiring.py` | per-post navigation pattern, stale nav titles, broken links inside `blog/` |
 
-`check-news-sync.py` verifies the homepage strip mirrors the three newest news items, that every news item carries a `<!-- source: … -->` provenance comment, and that all **four** hand-typed counters match reality: `news/index.html` "7 updates", `publications/index.html` "8 chapters", and `books/index.html` "1 novel" and "2 complete" (it strips HTML comments first, so a commented-out card cannot satisfy a counter).
+`check_site.py` exits 0 when no fail-severity violation appears. **Its baseline of accepted debt is empty**, so any violation it prints is new, and `INV-25` fails the build if a baseline entry is ever added and goes stale.
 
-`feed.xml` and `sitemap.xml` are generated, not hand-written — `scripts/gen_feed.py` and `scripts/gen_sitemap.py`. INV-31 and INV-32 fail the build when either drifts from the catalogs. Run the sitemap in the commit *after* a content change, so the git `lastmod` dates exist.
+---
 
-## Deployment
+## 🧑‍💻 Development
+
+### Project structure
+
+```
+.
+├── index.html              # consultant profile — the ONLY file that loads style.css
+├── style.css               # landing-page styles + the canonical :root token block
+├── blog/                   # the Tutorials catalog + all 145 post files
+├── thoughts/               # the Thoughts catalog (39 cards → ../blog/)
+├── books/ publications/ projects/ news/     # one self-contained index.html each
+├── images/                 # 496 files — covers, thumbs, share cards, figures, posters
+├── examples/               # the two runnable tutorial labs (teaching source, not a site dependency)
+├── downloads/              # the reviewed lab ZIPs
+├── scripts/                # 15 generators and sweeps
+│   └── series/             # 7 manifests, one per generated series
+├── docs/                   # specs, plans, the news runbook + its gate (not published)
+├── .claude/skills/         # the four maintenance skills (not published)
+├── feed.xml  sitemap.xml  llms.txt  robots.txt
+└── CNAME                   # anirach.com
+```
+
+### Scripts
+
+| Script | Does |
+|:---|:---|
+| `build_series.py` | emits a whole generated series from manifest + sheets + skeleton |
+| `reindex_blog.py` | regenerates either catalog page |
+| `gen_feed.py` · `gen_sitemap.py` | regenerate `feed.xml` · `sitemap.xml` |
+| `bilingualize.py` | converts a post to two tracks, splices a translation, `--verify` per file |
+| `make_cover.py` | draws the 800×800 cover and the 1200×630 share card together |
+| `make_figure.py` | draws series figures as palette PNGs |
+| `check_visibility.py` | the search/AI-visibility scanner |
+| `retoken.py` · `reheroize.py` | sitewide palette and hero sweeps |
+
+### Maintenance skills
+
+Four skills in [`.claude/skills/`](.claude/skills/) carry the verified detail this README only summarises:
+
+| Skill | Covers |
+|:---|:---|
+| **page-design** | canonical tokens, type scale, component vocabulary, approved hero gradients, and the anti-patterns this repo has been burned by |
+| **blog-post** | adding, editing or removing a post without breaking the hand-wired navigation; plus the Thai essay voice brief |
+| **a11y-perf** | accessibility and performance rules with this site's real measured numbers |
+| **site-check** | the linter, what every check means, and how to repair each failure |
+
+> **Every number in those skills is load-bearing.** A change that invalidates one must update it in the same commit. A confidently wrong measurement is worse than none, because it gets acted on.
+
+---
+
+## 🧪 Tutorial Labs and Companions
+
+**Standing delivery default (owner preference, 2026-10-23).** A coding tutorial pairs the website lesson with a **runnable GitHub companion**. Each chapter links directly to its matching code files and tests. The companion README must cover prerequisites, exact commands, expected results, troubleshooting and lesson-to-code mapping; commands are verified from a clean copy, and secrets and generated output stay out of publication. Website and companion publication stay within the scope authorised for that task.
+
+| Series | Lessons | Status | Companion | Local mirror · ZIP |
+|:---|:---:|:---|:---|:---|
+| **AI-Core Functional Workflows** | 12 | **Published** | [`ai-core-functional-tutorial`](https://github.com/Anirach/ai-core-functional-tutorial), pinned at commit `869487af4cf0` | `examples/ai-core-functional-lab/` · `downloads/ai-core-functional-lab.zip` |
+| **AI-Core + Jev in Practice** | 10 | **Local draft — not published** | [`ai-core-jev-tutorial`](https://github.com/Anirach/ai-core-jev-tutorial) | `examples/ai-core-jev-lab/` · `downloads/ai-core-jev-lab.zip` |
+
+Both labs are **offline by default**: fixtures need no SDK, credentials, network or paid API call, and no paid live API call has been tested. All fixture metrics and most cost inputs are explicitly fictional. The Jev lab's optional live adapter pins `@typesafe-ai/sdk@0.7.0` / `jev-1.13.0` and is **not** live-verified. The labs are Node 22.18+ teaching material; the website pages still execute no JavaScript.
+
+> ⚠️ **The ten-part AI-Core + Jev series must not be included in a publication without separate approval.** It is currently wired into the catalog, feed and sitemap in this repository — decide whether to publish or unwire it before pushing.
+
+---
+
+## 🛠️ Common Workflows
+
+### Add a post
+
+A post is not one file. It is a file **plus** a cover, a share card, a thumb, a catalog card, counters, its neighbours' nav links, a feed item, a sitemap entry and an `llms.txt` line — **in two language tracks**, with no build step to catch a miss. The full recipe, including which of the four navigation patterns applies, is in [`blog-post/SKILL.md`](.claude/skills/blog-post/SKILL.md). Start from `.claude/skills/page-design/assets/post-template.html`, the repo's single canonical template.
+
+For one of the seven generated series, add a manifest row and run `build_series.py` instead. Never hand-edit a generated post.
+
+### Repair the counters
+
+```bash
+python3 .claude/skills/site-check/scripts/check_site.py --fix   # rewrites blog counters only
+python3 scripts/reindex_blog.py --repo . --out blog/index.html  # tiles and ordering
+```
+
+### Add a news item
+
+The runbook is [`latest-updates-runbook.md`](docs/openclaw/latest-updates-runbook.md), written for an autonomous agent. Its gate enforces that every news item carries a verified source — no structural check can tell a true item from an invented one, so instead an item cannot exist without a stated source.
+
+### Expire dated content
+
+When an announced event passes, nothing computes the copy for you. The same runbook names every file to revise, and records what the last expiry's checklist missed. The lesson it ends on: **grep for the dead call-to-action, not just for the date** — and remember that removing a CTA can orphan its image.
+
+---
+
+## ⚠️ Conventions and Gotchas
+
+- **The site loads no executable JavaScript, and that is enforced.** `script.js` was deleted 2026-08-26; `INV-38` fails the build on any `<script>` that is not `application/ld+json`. Each of the script's four jobs has a CSS replacement in `style.css`.
+- **The reveal keyframe has a `from` and deliberately no `to`.** An element at rest is therefore in its natural state, so a browser without `animation-timeline` simply shows the content. Never "complete" the keyframe, and never re-invert the default — before the fix, 53% of the landing page rendered as empty coloured bands with JS off.
+- **Sarabun keeps the semicolon font syntax on purpose.** Inter and JetBrains Mono use the variable range form (`wght@300..900`); Sarabun has no variable version and a range request returns **HTTP 400**. All five of its static weights are used, and an unrequested one gets faux-bolded, which smears Thai glyphs.
+- **`srcset` is a comma-separated candidate list, not a path.** Three link resolvers had to learn that when the catalog thumbs landed, or the site's first `srcset` reports 123 broken links.
+- **Card `src` stays the full cover.** `INV-07b` reads the `src` basename and requires it to equal the post's own cover; the thumb is offered as a `srcset` candidate, so a browser without support still gets a valid image.
+- **Navigation belongs to neither language track.** Chip strips, prev/next pairs and card titles stay monolingual, because the linters read them with regexes that would concatenate or truncate on a nested tag.
+- **The featured post is `class="feature"`, never `class="card"`.** Three separate regexes count `class="card"`; one extra match inflates every counter and duplicates a feed item.
+- **`.bilingual/` is gitignored and unversioned.** A botched content sheet has no history — back it up before a sweep.
+- **`404.html` is deliberately excluded** from the social block, the sitemap and the linter's enumeration. Do not "fix" it by adding one.
+
+---
+
+## 🚢 Deployment Notes
 
 ```bash
 git push origin main
@@ -160,73 +330,47 @@ That is the whole pipeline; GitHub Pages rebuilds in 1–3 minutes. `_config.yml
 
 > **Cloudflare caches HTML for 10 minutes and assets for 4 hours.** After a deploy, append `?cb=$RANDOM` to check the real state before diagnosing a problem that is not there — and remember your own browser holds its copy for the same 10 minutes, so a stale tab needs a hard reload rather than a bug report.
 
-## Performance notes
+Still the owner's, outside the repository: verifying a Search Console property, and a Rich-Results spot-check after structured-data changes.
 
-Two measured costs were paid down on 2026-09-10, and both are easy to reintroduce:
+---
 
-- **Fonts are requested with the variable *range* syntax.** `Inter:wght@300..900` gets one variable file; the semicolon form `Inter:wght@300;400;…;900` makes the API serve **one static file per weight** — 7 files and 331 KB for the latin subset against 1 file and 47 KB. Switching saved 189 KB per page, 56% of the font bytes. **Sarabun keeps the semicolon form**: it has no variable version, a range request returns HTTP 400, and all five of its static weights are used.
-- **Catalog cards ship a 144px derivative through `srcset`.** The row card renders its cover in a 72px box, so an 800×800 source was ~11× oversampled. `/blog/` went from 3.63 MB to 0.42 MB, `/thoughts/` from 2.11 MB to 0.38 MB.
+## 🔍 Troubleshooting
 
-Both are documented with their measurements in the **a11y-perf** skill (R8b and R1b).
+| Symptom | Likely cause | Suggested fix |
+|:---|:---|:---|
+| Chip-strip links 404 locally | `http.server` does not resolve extensionless URLs | Not a regression — GitHub Pages resolves them |
+| Images missing in the browser | Serving `blog/` instead of the repository root | Serve the root; posts reference `../images/…` |
+| A counter fails the build | A card was added without re-running the generator | `check_site.py --fix`, then `reindex_blog.py` |
+| `INV-06a` reports an orphan image | A removed block was the image's last reference | Delete the image, or restore the reference |
+| The feed looks empty | A heading level was re-cut and a parser hard-codes it | Grep for the class, never the level |
+| A generated post reverts after an edit | It was hand-edited instead of its sheet | Edit `.bilingual/<slug>.th.html`, then `--post` |
+| The live site shows old copy | Browser or edge cache | Hard reload, or `?cb=$RANDOM` to bypass |
 
-## The AI-Core + Jev lab (local draft)
+---
 
-The ten new posts use one downloadable Node 22.18+ project in
-`examples/ai-core-jev-lab/`, with the reviewed ZIP in `downloads/`. Offline fixtures
-need no SDK, credentials, network or paid API call. All fixture metrics and most
-cost inputs are explicitly fictional. The optional live adapter pins
-`@typesafe-ai/sdk@0.7.0` / `jev-1.13.0` and is not live-verified. See the project
-README for acceptance commands and limitations. Website pages still execute no
-JavaScript; the Node source is teaching material, not a browser dependency.
+## 🎯 Repository Intent
 
-## Adding a new blog post
+This repository is best understood as **a publishing system that happens to have no build step**:
 
-A post is not one file — it is a file plus a cover plus a share card plus a card plus counters plus its neighbours' nav links plus a feed item, a sitemap entry and an `llms.txt` line, **in two language tracks**, with no build step to catch a miss. The full recipe, including which of the four navigation patterns applies, is in [`.claude/skills/blog-post/SKILL.md`](.claude/skills/blog-post/SKILL.md). Start from `.claude/skills/page-design/assets/post-template.html` — the repo's single canonical template. For one of the seven generated series, add a manifest row and run `build_series.py` instead; never hand-edit those posts.
+- part consultant profile and professional front door
+- part bilingual technical library — 145 posts across 11 series
+- part generated-content pipeline — 7 series emitted from manifests
+- part self-checking test suite — 62 invariants standing in for the framework that is not there
 
-## Maintenance
+It is most valuable as a demonstration that **a site can stay consistent at this size without a build system, provided the consistency is measured rather than assumed.**
 
-Four skills in [`.claude/skills/`](.claude/skills/) carry the verified detail:
+---
 
-| Skill | Covers |
-|---|---|
-| **page-design** | The house visual system — canonical tokens, type scale, component vocabulary, approved hero gradients, and the anti-patterns this repo has been burned by |
-| **blog-post** | Adding, editing or removing a post without breaking the hand-wired navigation; plus the Thai essay voice brief |
-| **a11y-perf** | Accessibility and performance rules with this site's real measured numbers |
-| **site-check** | The linter, what every check means, and how to repair each failure |
-
-Every number in those skills is load-bearing: a change that invalidates one must update it in the same commit. A confidently wrong measurement is worse than none, because it gets acted on.
-
-News updates have their own runbook at [`docs/openclaw/latest-updates-runbook.md`](docs/openclaw/latest-updates-runbook.md), written for an autonomous agent. Its gate enforces that every news item carries a verified source — no structural check can tell a true item from an invented one, so instead an item cannot exist without a stated source.
-
-## Contact
+## 📬 Contact
 
 - 🎓 [Google Scholar](https://scholar.google.co.th/citations?user=htY3F_IAAAAJ&hl=en)
 - 💻 [GitHub @Anirach](https://github.com/Anirach)
 - 📘 [Facebook](https://www.facebook.com/anirach) · 📷 [Instagram](https://www.instagram.com/anirach/)
 
-> Open to research collaborations, speaking engagements, and academic partnerships.
+> Open to AI consulting engagements, research collaborations, speaking and workshops.
 
 ---
 
-*No `LICENSE` file is present. Content and code are © Anirach Mingkhwan; all rights reserved by default.*
+## 📄 License
 
-## Coding tutorial delivery default — user preference, 2026-10-23
-
-For future coding tutorials, pair the website lesson with a runnable GitHub
-companion by default. Each chapter must link directly to its matching code files
-and tests. The companion README must cover prerequisites, exact commands,
-expected results, troubleshooting and lesson-to-code mapping; verify commands
-from a clean copy and keep secrets and generated output out of publication.
-Keep website and companion publication within the scope authorized for that task.
-The AI-Core + Jev companion is https://github.com/Anirach/ai-core-jev-tutorial;
-its ten website lessons currently await publication.
-
-## AI-Core Functional Workflows — published tutorial and code
-
-The twelve bilingual lessons are published on Anirach.com with the matching
-[GitHub companion](https://github.com/Anirach/ai-core-functional-tutorial).
-The local source mirror remains `examples/ai-core-functional-lab/` and the exact
-release ZIP is `downloads/ai-core-functional-lab.zip`. Tutorial source links pin
-companion commit869487af4cf0bb30384ba125d0cb0a035cb7dbe2. The CLI stays offline by
-default; no paid live API call was tested. The earlier ten-part series remains
-local and must not be included in a publication without separate approval.
+No `LICENSE` file is present. Content and code are © Anirach Mingkhwan; all rights reserved by default.
