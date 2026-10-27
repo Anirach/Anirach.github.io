@@ -34,6 +34,19 @@ const HINTS = [
 
 // Module variables reset on a reload; the band lives in $.state.
 let home = ''
+
+// The user's home folder. A mod kept in a project's .claude/skills/ sits inside the
+// project, so the folder above its .claude/ is no home: session.start reads HOME first.
+const homeDir = ($: EngineInterface) => home || ($.plugin.root.split('/.claude/')[0] ?? '')
+
+async function readHome($: EngineInterface) {
+  try {
+    return (await $.env.get('HOME')) || homeDir($)
+  } catch {
+    return homeDir($)
+  }
+}
+
 // The rules_folder option from the config menu; empty means ask once and remember.
 let configured = ''
 let enabled = true
@@ -50,7 +63,7 @@ let off = false
 async function readSwitch($: EngineInterface) {
   let now = false
   try {
-    const path = `${$.plugin.root.split('/.claude/')[0] ?? ''}/.claude/mods/switches.json`
+    const path = `${homeDir($)}/.claude/mods/switches.json`
     if (await $.fs.exists(path)) {
       const json = JSON.parse(String(await $.fs.read(path))) as Record<string, unknown>
       now = json[NAME] === false
@@ -329,7 +342,7 @@ async function fail($: EngineInterface, b: Band, what: string, err: unknown) {
 export const register: Register = (on, options) => {
   configured = typeof options.rules_folder === 'string' ? options.rules_folder : ''
   on('session.start', async ($, e, next) => {
-    home = $.plugin.root.split('/.claude/')[0] ?? ''
+    home = await readHome($)
     await $.command.register({ name: 'reflect', description: 'Turn reflect on or off. /reflect folder forgets the remembered rules folder', argumentHint: '[folder]' })
     const saved = await $.store.get('enabled')
     enabled = saved !== false

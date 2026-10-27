@@ -140,6 +140,19 @@ let seats = 0
 let nextHue = 0
 let tickN = 0
 let home = ''
+
+// The user's home folder. A mod kept in a project's .claude/skills/ sits inside the
+// project, so the folder above its .claude/ is no home: session.start reads HOME first.
+const homeDir = ($: EngineInterface) => home || ($.plugin.root.split('/.claude/')[0] ?? '')
+
+async function readHome($: EngineInterface) {
+  try {
+    return (await $.env.get('HOME')) || homeDir($)
+  } catch {
+    return homeDir($)
+  }
+}
+
 let sessionId = ''
 let off = false
 // "helper-desk:hidden": true in switches.json closes the pane and stops it opening by itself.
@@ -937,7 +950,7 @@ ${body}
 
 export const register: Register = on => {
   on('session.start', async ($, e, next) => {
-    home = $.plugin.root.split('/.claude/')[0] ?? ''
+    home = await readHome($)
     sessionId = await $.session.id().catch(() => '')
     await $.command.register({ name: 'helpers', description: 'Show the Helper Desk: the task progress bar and one live card per subagent', immediate: true })
     await $.tool.register({

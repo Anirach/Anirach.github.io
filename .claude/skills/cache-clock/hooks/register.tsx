@@ -34,6 +34,19 @@ const COLD = '#2563eb'
 // Module variables reset on a reload; the clock itself lives in $.state.
 let sid = ''
 let home = ''
+
+// The user's home folder. A mod kept in a project's .claude/skills/ sits inside the
+// project, so the folder above its .claude/ is no home: session.start reads HOME first.
+const homeDir = ($: EngineInterface) => home || ($.plugin.root.split('/.claude/')[0] ?? '')
+
+async function readHome($: EngineInterface) {
+  try {
+    return (await $.env.get('HOME')) || homeDir($)
+  } catch {
+    return homeDir($)
+  }
+}
+
 let demo = false
 let detected: 'unknown' | '5m' | '1h' = 'unknown'
 let working = false
@@ -46,7 +59,7 @@ const HIDE_KEY = `${NAME}:hidden`
 let off = false
 let hidden = false
 
-const switchesPath = ($: EngineInterface) => `${$.plugin.root.split('/.claude/')[0] ?? ''}/.claude/mods/switches.json`
+const switchesPath = ($: EngineInterface) => `${homeDir($)}/.claude/mods/switches.json`
 
 async function readSwitches($: EngineInterface): Promise<Record<string, unknown>> {
   const path = switchesPath($)
@@ -293,7 +306,7 @@ async function handoff($: EngineInterface) {
 export const register: Register = on => {
   on('session.start', async ($, e, next) => {
     sid = await $.session.id()
-    home = $.plugin.root.split('/.claude/')[0] ?? ''
+    home = await readHome($)
     // The 60 s demo is for one chat only. Older versions saved it for every chat, so clear that.
     demo = false
     if ((await $.store.get('demo').catch(() => undefined)) === true) {

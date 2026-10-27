@@ -39,7 +39,28 @@ let cache: { at: number; rows: Row[] } | null = null
 
 const NOT_SWITCHABLE = 'Not switchable yet. Ask Claude: add the /mods switch to this mod.'
 
-const homeOf = ($: EngineInterface) => $.plugin.root.split('/.claude/')[0] ?? ''
+// The user's home folder. A mod kept in a project's .claude/skills/ sits inside the
+// project, so the folder above its .claude/ is no home: session.start reads HOME first.
+let envHome = ''
+const homeOf = ($: EngineInterface) => envHome || ($.plugin.root.split('/.claude/')[0] ?? '')
+
+async function readHome($: EngineInterface) {
+  try {
+    return (await $.env.get('HOME')) || homeOf($)
+  } catch {
+    return homeOf($)
+  }
+}
+
+// The folder this chat works in, whose .claude/skills/ may hold mods. '' when unknown.
+async function projectDir($: EngineInterface) {
+  try {
+    return await $.session.cwd()
+  } catch {
+    return ''
+  }
+}
+
 const switchesPath = ($: EngineInterface) => `${homeOf($)}/.claude/mods/switches.json`
 
 function cut(s: string, n: number) {
@@ -242,6 +263,10 @@ async function scan($: EngineInterface): Promise<Row[]> {
   for (const d of await listDirs($, `${home}/.claude/mods`)) dirs.push([d, false])
   for (const d of await envDirs($)) dirs.push([d, false])
   for (const d of await cacheDirs($, home)) dirs.push([d, false])
+  // Mods kept as plugins in a skills folder: the user's, then this project's.
+  for (const d of await listDirs($, `${home}/.claude/skills`)) dirs.push([d, false])
+  const project = await projectDir($)
+  if (project) for (const d of await listDirs($, `${project}/.claude/skills`)) dirs.push([d, false])
   if (sid) for (const d of await listDirs($, `${home}/.claude/dev-mods/${sid}`)) dirs.push([d, true])
   const seen = new Set<string>()
   for (const [dir, chatOnly] of dirs) {
@@ -296,6 +321,7 @@ export const register: Register = on => {
   on('session.start', async ($, e, next) => {
     try {
       sid = await $.session.id()
+      envHome = await readHome($)
       cache = null
       await $.command.register({ name: 'mods', description: 'Open the Mods pane: turn each mod on or off, or show or hide it, in every chat', immediate: true })
       lastRaw = await readRaw($)

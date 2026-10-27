@@ -64,6 +64,19 @@ const NOT_ARGS = new Set(['tool', 'tool_use_id', 'agentId', 'hook_event_name', '
 
 // Module variables reset on a reload; the lists live in $.state.
 let home = ''
+
+// The user's home folder. A mod kept in a project's .claude/skills/ sits inside the
+// project, so the folder above its .claude/ is no home: session.start reads HOME first.
+const homeDir = ($: EngineInterface) => home || ($.plugin.root.split('/.claude/')[0] ?? '')
+
+async function readHome($: EngineInterface) {
+  try {
+    return (await $.env.get('HOME')) || homeDir($)
+  } catch {
+    return homeDir($)
+  }
+}
+
 let seq = 0
 let autoOpened = false
 let off = false
@@ -600,7 +613,7 @@ const KNOWN_KEYS = [...new Set([...Object.keys(LOGOS), ...[...CONNECTOR_NAMES, .
 
 export const register: Register = on => {
   on('session.start', async ($, e, next) => {
-    home = $.plugin.root.split('/.claude/')[0] ?? ''
+    home = await readHome($)
     await $.command.register({ name: 'inventory', description: 'Show the connectors, files and skills this chat used', immediate: true })
     await readSwitch($)
     if (!switchTimer)

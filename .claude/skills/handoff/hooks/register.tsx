@@ -33,6 +33,19 @@ const LABELS = [
 // Module variables reset on a reload; the band itself lives in $.state.
 let sid = ''
 let home = ''
+
+// The user's home folder. A mod kept in a project's .claude/skills/ sits inside the
+// project, so the folder above its .claude/ is no home: session.start reads HOME first.
+const homeDir = ($: EngineInterface) => home || ($.plugin.root.split('/.claude/')[0] ?? '')
+
+async function readHome($: EngineInterface) {
+  try {
+    return (await $.env.get('HOME')) || homeDir($)
+  } catch {
+    return homeDir($)
+  }
+}
+
 let petDir = ''
 let busy = false
 // The model asked for a refresh in the middle of its turn: it starts when the turn ends,
@@ -57,7 +70,7 @@ let hidden = false
 // The offer was asked for (Show or /refresh): it stays whatever the token count.
 let forced = false
 
-const switchesPath = ($: EngineInterface) => `${$.plugin.root.split('/.claude/')[0] ?? ''}/.claude/mods/switches.json`
+const switchesPath = ($: EngineInterface) => `${homeDir($)}/.claude/mods/switches.json`
 
 async function readSwitches($: EngineInterface): Promise<Record<string, unknown>> {
   const path = switchesPath($)
@@ -556,7 +569,7 @@ function bar(progress: number, status: Step['status']) {
 export const register: Register = on => {
   on('session.start', async ($, e, next) => {
     sid = await $.session.id()
-    home = $.plugin.root.split('/.claude/')[0] ?? ''
+    home = await readHome($)
     petDir = `${home}/.claude/pet`
     await poll($).catch(() => undefined)
     $.clock.every(3000, () => {

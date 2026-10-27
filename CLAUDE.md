@@ -440,8 +440,12 @@ scroll sideways at 375px from 17 to 0 (and to 0 at 320px, the WCAG reflow width)
 `<name>@skills-dir` in every session opened on this repo (cloud sessions included), once the
 workspace is trusted. `/mods` switches each on or off. They change Claude Code's interface only
 and are never published (Jekyll drops every path starting with `.`). Several assume a Mac
-(`pbcopy`, `open`) and degrade in the Linux cloud container. Update one by replacing its folder
-from a newer pack; do not edit them by hand.
+(`pbcopy`, `open`) and degrade in the Linux cloud container. They carry one local patch over the
+pack: upstream derives the home folder from the mod's own path (the part before `/.claude/`),
+which here is the repo, so each mod reads `HOME` at session start instead, and `/mods` also
+scans `~/.claude/skills/` and the project's `.claude/skills/` (its test covers both). Updating
+from a newer pack means re-applying that patch — check with `grep -rn "plugin.root.split"
+.claude/skills` and `claude plugin test .claude/skills/<mod>`.
 
 News and the homepage "Latest updates" strip have a separate gate — `python3 docs/openclaw/check-news-sync.py` — which checks three things nothing else does: the strip lists the 3 newest news items in order, every news item carries a `<!-- source: … -->` provenance comment, and the four hand-typed counters match reality (`"N updates"` on news, `"N chapters"` on publications, `"N novel"` / `"N complete"` on books). The full procedure for adding news is `docs/openclaw/latest-updates-runbook.md`.
 

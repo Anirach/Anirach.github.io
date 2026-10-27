@@ -66,6 +66,18 @@ export type QA = { q: string; a: string | null }
 
 let home = ''
 
+// The user's home folder. A mod kept in a project's .claude/skills/ sits inside the
+// project, so the folder above its .claude/ is no home: session.start reads HOME first.
+const homeDir = ($: EngineInterface) => home || ($.plugin.root.split('/.claude/')[0] ?? '')
+
+async function readHome($: EngineInterface) {
+  try {
+    return (await $.env.get('HOME')) || homeDir($)
+  } catch {
+    return homeDir($)
+  }
+}
+
 // The /mods switchboard turns this mod off in every chat with switches.json.
 const NAME = 'brain-dump'
 let off = false
@@ -73,7 +85,7 @@ let off = false
 async function readSwitch($: EngineInterface) {
   let now = false
   try {
-    const path = `${$.plugin.root.split('/.claude/')[0] ?? ''}/.claude/mods/switches.json`
+    const path = `${homeDir($)}/.claude/mods/switches.json`
     if (await $.fs.exists(path)) {
       const json = JSON.parse(String(await $.fs.read(path))) as Record<string, unknown>
       now = json[NAME] === false
@@ -251,7 +263,7 @@ async function shape($: EngineInterface, dump: string, qa: QA[]): Promise<string
 export const register: Register = on => {
   on('session.start', async ($, e, next) => {
     const result = await next(e)
-    home = $.plugin.root.split('/.claude/')[0] ?? ''
+    home = await readHome($)
     await $.command.register({ name: CMD, description: 'Turn brain dump shaping on or off' })
     await $.state.set(ENABLED, await isOn($))
     await readSwitch($).catch(() => undefined)
