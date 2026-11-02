@@ -3913,6 +3913,8 @@ from jev_motifs import MOTIFS as JEV_MOTIFS
 MOTIFS.update(JEV_MOTIFS)
 from functional_motifs import MOTIFS as FUNCTIONAL_MOTIFS
 MOTIFS.update(FUNCTIONAL_MOTIFS)
+from engineering_motifs import MOTIFS as ENGINEERING_MOTIFS
+MOTIFS.update(ENGINEERING_MOTIFS)
 
 # --------------------------------------------------------------------------
 # the one renderer

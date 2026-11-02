@@ -5,7 +5,14 @@ description: Accessibility and performance rules for the anirach.com static site
 
 # Accessibility & performance for anirach.com
 
-> **Current local review inventory — 2026-10-24:**145 bilingual posts across11 series
+> **Current local review inventory — 2026-11-02:** 160 bilingual posts in 12 series
+> (9 Tutorials / 121 articles, 3 Thoughts / 39 essays), 172 public HTML files
+> (171 enumerated), 557 images, 160 feed items and 171 sitemap URLs.
+> The 15-part Software Engineering with AI-Core course has 16 architecture diagrams
+> and a separate public companion with 26 tests and 15 labs/exercises, pinned to
+> `3496e4c5eed84bd78ddbd1ac65a814c105ded719`. No paid live API call was made.
+>
+> **Historical local review inventory — 2026-10-24:**145 bilingual posts across11 series
 > (8 Tutorials /106 articles,3 Thoughts /39 essays),157 HTML files (156 enumerated),
 > 496 images,145 feed items and156 sitemap URLs. The new12-part **AI-Core Functional
 > Workflows** series has a distinct local companion,108 tests, twelve exercises and

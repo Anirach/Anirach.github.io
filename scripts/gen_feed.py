@@ -40,18 +40,24 @@ def text_of(fragment: str) -> str:
 
 
 def first_commit_date(rel: str) -> str:
+    # Imported drafts can enter Git after their declared publication date.
+    # Preserve the post's canonical day (INV-36), while retaining the original
+    # Git timestamp whenever it already agrees with that day.
+    import datetime
+    import email.utils
+    source = ROOT / rel
+    match = re.search(r'<meta property="article:published_time" content="(\d{4}-\d{2}-\d{2})',
+                      source.read_text(encoding="utf-8")) if source.exists() else None
     out = subprocess.run(
         ["git", "log", "--diff-filter=A", "--format=%ad",
          "--date=format:%a, %d %b %Y %H:%M:%S +0700", "--follow", "--", rel],
         cwd=ROOT, capture_output=True, text=True).stdout.strip()
     if out:
-        return out.split("\n")[-1]
+        stamp = out.split("\n")[-1]
+        if not match or email.utils.parsedate_to_datetime(stamp).date().isoformat() == match.group(1):
+            return stamp
     # A local draft may remain uncommitted for several days. Preserve its
     # recorded publication day rather than silently changing yesterday's feed.
-    import datetime
-    source = ROOT / rel
-    match = re.search(r'<meta property="article:published_time" content="(\d{4}-\d{2}-\d{2})',
-                      source.read_text(encoding="utf-8")) if source.exists() else None
     day = datetime.date.fromisoformat(match.group(1)) if match else datetime.date.today()
     date = datetime.datetime.combine(day, datetime.time(9),
         tzinfo=datetime.timezone(datetime.timedelta(hours=7)))

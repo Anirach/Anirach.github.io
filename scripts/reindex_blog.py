@@ -32,6 +32,7 @@ RE_EMOJI_TAIL = re.compile(r'\s*[\U0001F000-\U0001FAFF\u2300-\u23FF☀-➿⬀-�
 
 # ---------------------------------------------------------------- copy deck
 SERIES = {
+    "series-ai-engineering": ("AI-Core Engineering", "A 15-part architecture course for programmers: functions, Jev, reviewed skills, input checks, hard guardrails, output checks and independent quality gates.", "คอร์ส 15 ตอนสำหรับโปรแกรมเมอร์ เริ่มจาก function สู่ Jev, skill และด่านตรวจที่เห็นผลต่างชัด"),
     "series-ai-core-functional": ("Functions → AI-Core", "Build explicit input checks, policy, output validation and a separate quality gate, with a text-only offline companion.", "จากฟังก์ชันเดิมสู่ input check, guardrail, output check และ quality gate แบบลงมือทำ"),
     "series-ai-core-jev": ("AI-Core + Jev", "Build and test a support-ticket pipeline: quality, coverage, latency and complete cost, with offline fixtures first.", "คัดแยก ticket แบบลงมือจริง วัดคุณภาพ coverage เวลา และต้นทุนรวม เริ่มด้วย fixture ออฟไลน์"),
     # id: (chip label WITHOUT the "· N" suffix, EN description, TH description)
@@ -169,7 +170,7 @@ def rewrap_excerpt(ex):
 def ordinal_map(repo):
     """slug -> (n, group_key) from manifests, chip strips and the DevOps chain."""
     out = {}
-    for name in ("ai-core-functional", "ai-core-jev", "hermes-desktop", "ai-transformation", "ai-core", "working", "good-life"):
+    for name in ("ai-engineering", "ai-core-functional", "ai-core-jev", "hermes-desktop", "ai-transformation", "ai-core", "working", "good-life"):
         man = json.load(open(os.path.join(repo, "scripts", "series", name + ".json")))
         for p in man["posts"]:
             out[p["slug"]] = (p["n"], p.get("group") or p.get("day"))
@@ -566,7 +567,17 @@ def section_html(sec, ords, chain, order, groups):
         out.insert(-1, '      <p class="series-description"><a href="https://github.com/Anirach/ai-core-functional-tutorial">GitHub companion + detailed README</a> · <a href="../downloads/ai-core-functional-lab.zip">Download code, tests and exercises</a> · <span lang="th">อ่านบทเรียนคู่กับโค้ดและแบบฝึกใน GitHub</span></p>')
     if sec["id"] == "series-ai-core-jev":
         out.insert(-1, '      <p class="series-description"><a href="https://github.com/Anirach/ai-core-jev-tutorial">GitHub companion code + detailed README</a> · <span lang="th">โค้ดประกอบและคู่มือสำหรับลงมือทำทั้งสิบตอน</span></p>')
-    if sec["id"] == "series-ai-transformation":
+    if sec["id"] == "series-ai-engineering":
+        out.insert(-1, '      <p class="series-description"><a href="https://github.com/Anirach/ai-core-engineering-workbench">GitHub companion · 15 labs, exercises and tests</a> · <a href="https://github.com/Anirach/ai-core-engineering-workbench/archive/refs/tags/v1.0.0.zip">Download the tested code</a> · <span lang="th">อ่านภาพรวม แล้วรันและเปรียบเทียบผลในแต่ละตอน</span></p>')
+    if sec["id"] == "series-ai-engineering":
+        course_groups = json.load(open(os.path.join(_ROOT, "scripts", "series", "ai-engineering.json")))["groups"]
+        for g in course_groups:
+            en_l, th_l = g["label"].split(" · ", 1)
+            out.append('      <p class="blog-grid__label">%s · <span lang="th">%s</span></p>' % (en_l, th_l))
+            for c, num, gk in numbered:
+                if gk == g["key"]:
+                    out.append(card_html(c, num))
+    elif sec["id"] == "series-ai-transformation":
         for g in groups:
             en_l, th_l = g["label"].split(" · ", 1)
             out.append('      <p class="blog-grid__label">%s · <span lang="th">%s</span></p>' % (en_l, th_l))

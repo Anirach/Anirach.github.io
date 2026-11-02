@@ -2,7 +2,7 @@
   <img src="https://img.shields.io/badge/anirach.com-Live-1D4ED8?style=for-the-badge" alt="anirach.com live">
   <img src="https://img.shields.io/badge/Zero-JavaScript-111827?style=for-the-badge" alt="Zero JavaScript">
   <img src="https://img.shields.io/badge/Build_step-None-7C3AED?style=for-the-badge" alt="No build step">
-  <img src="https://img.shields.io/badge/Posts-145_bilingual-059669?style=for-the-badge" alt="145 bilingual posts">
+  <img src="https://img.shields.io/badge/Posts-160_bilingual-059669?style=for-the-badge" alt="160 bilingual posts">
   <img src="https://img.shields.io/badge/GitHub_Pages-Deploy_on_push-0EA5E9?style=for-the-badge&logo=github&logoColor=white" alt="GitHub Pages">
 </p>
 
@@ -11,7 +11,7 @@
 <p align="center">
   <strong>The personal site of Dr. Anirach Mingkhwan — independent AI consultant, author, and former Dean of FITM, KMUTNB.</strong>
   <br>
-  <em>A consultant profile, 145 bilingual Thai/English posts in 11 series, four books and an academic record — hand-written, zero-JavaScript, no build step.</em>
+  <em>A consultant profile, 160 bilingual Thai/English posts in 12 series, four books and an academic record — hand-written, zero-JavaScript, no build step.</em>
 </p>
 
 <p align="center">
@@ -30,8 +30,8 @@
 A static site with no build step buys simplicity and pays for it in one specific way: **nothing is shared, so nothing is enforced.**
 
 - every page embeds its own complete stylesheet — there is no partial, template engine or token file
-- a "global" change is therefore an N-file edit, by hand, across 157 files
-- nothing tells you when file 23 of 157 got missed
+- a "global" change is therefore an N-file edit, by hand, across 172 files
+- nothing tells you when file 23 of 172 got missed
 - counters, navigation chains, feed items and sitemap URLs are hand-wired across files that never import one another
 - and every post is bilingual, so each prose edit has a mirror that can silently drift
 
@@ -47,7 +47,7 @@ A static site with no build step buys simplicity and pays for it in one specific
 | **Interactivity** | A framework, or at least some JS | **Zero executable JavaScript.** `INV-38` fails the build on any `<script>` that is not `application/ld+json` |
 | **Reveal animations, mobile menu** | IntersectionObserver + click handlers | Scroll-driven CSS (`animation-timeline: view()`), `:target`, and a checkbox toggle |
 | **Bilingual content** | An i18n library, or two URLs per page | One URL, two tracks, a pure-CSS `ไทย · English` switch — four CSS lines |
-| **Long series of posts** | Hand-copied templates that rot | **7 series are generated** from a manifest + per-post content sheets + a skeleton read at run time |
+| **Long series of posts** | Hand-copied templates that rot | **8 series are generated** from a manifest + per-post content sheets + a skeleton read at run time |
 | **Catalog pages** | Hand-ordered cards | `reindex_blog.py` regenerates both catalogs; re-run it rather than hand-fixing order |
 | **Feed and sitemap** | Hand-maintained, quietly stale | Generated on demand; `INV-31` / `INV-32` fail the build when either drifts |
 | **Image weight** | Ship the full cover everywhere | A 144px `-thumb.jpg` via `srcset` — the Tutorials catalog went 3.63 MB → 0.42 MB |
@@ -62,7 +62,7 @@ A static site with no build step buys simplicity and pays for it in one specific
 | Page | What it holds |
 |:---|:---|
 | [`index.html`](index.html) | Single-scroll **consultant profile**: hero, services, engagement approach, selected work, about and career, research, free library, latest news, contact |
-| [`blog/`](blog/) | The **Tutorials** catalog — 106 cards in 8 technical series, plus all 145 post files |
+| [`blog/`](blog/) | The **Tutorials** catalog — 121 cards in 9 technical series, plus all 160 post files |
 | [`thoughts/`](thoughts/) | The **Thoughts** catalog — 39 essay cards in 3 series, each linking `../blog/<slug>.html` |
 | [`publications/`](publications/) | The academic record: the Springer book *Libraries in Transformation*, 8 book chapters, selected publications |
 | [`books/`](books/) | Four works, each with a detail page — *One Day of Light* (free EN/TH PDFs), the novel *Three Old Men*, and two complete bilingual manuscripts |
@@ -75,10 +75,11 @@ A static site with no build step buys simplicity and pays for it in one specific
 
 ## 📚 The Catalogs
 
-**Tutorials — `/blog/`, hero reads `8 Series · 106 Articles`**
+**Tutorials — `/blog/`, hero reads `9 Series · 121 Articles`**
 
 | Series | Posts | Navigation | Generated |
 |:---|:---:|:---|:---:|
+| ⌘ Software Engineering with AI-Core | 15 | grouped chip strip | ✅ |
 | 🧩 AI-Core Functional Workflows | 12 | chip strip | ✅ |
 | 🔬 AI-Core + Jev in Practice | 10 | chip strip | ✅ |
 | 🛡️ Engineering AI-Core Systems | 10 | chip strip | ✅ |
@@ -96,7 +97,7 @@ A static site with no build step buys simplicity and pays for it in one specific
 | 🧭 Working Philosophies | 10 | one working week, Monday to Friday | ✅ |
 | 🌅 Life Thought & Philosophy | 9 | one day in three parts — Morning · Noon · Twilight | — |
 
-**All 145 posts are bilingual.** A `ไทย · English` pill swaps between two complete tracks of the same article. Thai is the default, there is no JavaScript, and the page-level `<html lang="th">` never changes — the English track is `lang="en"` inside it.
+**All 160 posts are bilingual.** A `ไทย · English` pill swaps between two complete tracks of the same article. Thai is the default, there is no JavaScript, and the page-level `<html lang="th">` never changes — the English track is `lang="en"` inside it.
 
 The Thoughts essays are written in a different register from the tutorials: literary Thai in the author's own voice, not code-switched technical prose. The brief, with ten rules and worked before/after pairs, is [`thai-essay-voice.md`](.claude/skills/blog-post/references/thai-essay-voice.md).
 
@@ -112,7 +113,7 @@ The single most important fact before editing:
 index.html ──▶ style.css                 (the ONLY consumer of it)
 
 blog/index.html   ──▶ its own <style> block, no JS
-blog/<post>.html  ──▶ its own <style> block, no JS     × 145
+blog/<post>.html  ──▶ its own <style> block, no JS     × 160
 thoughts/ books/ (index + 4 detail) publications/ projects/ news/ 404.html ──▶ same   × 10
 ```
 
@@ -122,15 +123,15 @@ Editing `style.css` affects **only** the landing page. Editing one post affects 
 
 | | Count |
 |:---|---:|
-| HTML files on disk | 157 |
-| …enumerated by the linter (`404.html` is deliberately excluded) | 156 |
-| Blog posts, all bilingual | 145 |
-| Series across the two catalogs | 11 |
-| Images | 496 |
-| …covers (800×800) · book faces | 146 · 8 |
-| …card thumbs (144×144) · share cards (1200×630) · series figures | 145 · 149 · 37 |
-| Feed items · sitemap URLs | 145 · 156 |
-| Generator and sweep scripts | 15 |
+| HTML files on disk | 172 |
+| …enumerated by the linter (`404.html` is deliberately excluded) | 171 |
+| Blog posts, all bilingual | 160 |
+| Series across the two catalogs | 12 |
+| Images | 557 |
+| …covers (800×800) · book faces | 161 · 8 |
+| …card thumbs (144×144) · share cards (1200×630) · series figures | 160 · 167 · 53 |
+| Feed items · sitemap URLs | 160 · 171 |
+| Generator and sweep scripts | 17 |
 | Integrity checks | 62 (43 fail · 17 warn · 2 info) |
 
 ---
@@ -139,7 +140,7 @@ Editing `style.css` affects **only** the landing page. Editing one post affects 
 
 ### Generated series
 
-Seven series are emitted whole rather than hand-copied. `scripts/build_series.py` takes three inputs:
+Eight series are emitted whole rather than hand-copied. `scripts/build_series.py` takes three inputs:
 
 | Input | What it carries |
 |:---|:---|
@@ -224,10 +225,10 @@ python3 .claude/skills/blog-post/assets/verify-wiring.py     # blog post wiring
 .
 ├── index.html              # consultant profile — the ONLY file that loads style.css
 ├── style.css               # landing-page styles + the canonical :root token block
-├── blog/                   # the Tutorials catalog + all 145 post files
+├── blog/                   # the Tutorials catalog + all 160 post files
 ├── thoughts/               # the Thoughts catalog (39 cards → ../blog/)
 ├── books/ publications/ projects/ news/     # one self-contained index.html each
-├── images/                 # 496 files — covers, thumbs, share cards, figures, posters
+├── images/                 # 557 files — covers, thumbs, share cards, figures, posters
 ├── examples/               # the two runnable tutorial labs (teaching source, not a site dependency)
 ├── downloads/              # the reviewed lab ZIPs
 ├── scripts/                # 15 generators and sweeps
@@ -272,6 +273,7 @@ Four skills in [`.claude/skills/`](.claude/skills/) carry the verified detail th
 
 | Series | Lessons | Status | Companion | Local mirror · ZIP |
 |:---|:---:|:---|:---|:---|
+| **Software Engineering with AI-Core** | 15 | **Published** | [`ai-core-engineering-workbench`](https://github.com/Anirach/ai-core-engineering-workbench), pinned at `3496e4c5eed8` | Offline Python lab, 26 tests and 15 exercises |
 | **AI-Core Functional Workflows** | 12 | **Published** | [`ai-core-functional-tutorial`](https://github.com/Anirach/ai-core-functional-tutorial), pinned at commit `869487af4cf0` | `examples/ai-core-functional-lab/` · `downloads/ai-core-functional-lab.zip` |
 | **AI-Core + Jev in Practice** | 10 | **Local draft — not published** | [`ai-core-jev-tutorial`](https://github.com/Anirach/ai-core-jev-tutorial) | `examples/ai-core-jev-lab/` · `downloads/ai-core-jev-lab.zip` |
 
@@ -287,7 +289,7 @@ Both labs are **offline by default**: fixtures need no SDK, credentials, network
 
 A post is not one file. It is a file **plus** a cover, a share card, a thumb, a catalog card, counters, its neighbours' nav links, a feed item, a sitemap entry and an `llms.txt` line — **in two language tracks**, with no build step to catch a miss. The full recipe, including which of the four navigation patterns applies, is in [`blog-post/SKILL.md`](.claude/skills/blog-post/SKILL.md). Start from `.claude/skills/page-design/assets/post-template.html`, the repo's single canonical template.
 
-For one of the seven generated series, add a manifest row and run `build_series.py` instead. Never hand-edit a generated post.
+For one of the eight generated series, add a manifest row and run `build_series.py` instead. Never hand-edit a generated post.
 
 ### Repair the counters
 
@@ -353,8 +355,8 @@ Still the owner's, outside the repository: verifying a Search Console property, 
 This repository is best understood as **a publishing system that happens to have no build step**:
 
 - part consultant profile and professional front door
-- part bilingual technical library — 145 posts across 11 series
-- part generated-content pipeline — 7 series emitted from manifests
+- part bilingual technical library — 160 posts across 12 series
+- part generated-content pipeline — 8 series emitted from manifests
 - part self-checking test suite — 62 invariants standing in for the framework that is not there
 
 It is most valuable as a demonstration that **a site can stay consistent at this size without a build system, provided the consistency is measured rather than assumed.**

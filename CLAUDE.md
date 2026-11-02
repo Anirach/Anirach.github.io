@@ -16,18 +16,16 @@ python -m http.server 8000    # then open http://localhost:8000
 npx serve .
 ```
 
-> **Current inventory — re-measured 2026-10-27.** 145 bilingual posts across 11 series
-> (8 Tutorials / 106 articles, 3 Thoughts / 39 essays), 157 HTML files (156 enumerated
-> by `check_site.py`), 496 images, 145 feed items and 156 sitemap URLs. Every one of
-> those was verified against the tree on that date; re-derive rather than trust.
->
-> The 12-part **AI-Core Functional Workflows** series and its companion are published.
-> The earlier 10-part **AI-Core + Jev in Practice** series (`scripts/series/ai-core-jev.json`
-> plus paired `.bilingual/` sheets) is a separate, still-unpublished local draft, and so
-> is its companion; the lab is offline by default, and no paid API call or SDK install
-> has been verified. Both are distinct from the original Engineering AI-Core Systems
-> series. Dated measurements further down this file describe their own historical
-> snapshots — this block is the current one.
+> **Current inventory — re-measured 2026-11-02.** 160 bilingual posts across 12 series
+> (9 Tutorials / 121 articles, 3 Thoughts / 39 essays), 172 public HTML files
+> (171 enumerated by `check_site.py`), 557 images, 160 feed items and 171 sitemap URLs.
+> The new **Software Engineering with AI-Core** course has 15 parts, 16 diagrams,
+> and a separate public companion at https://github.com/Anirach/ai-core-engineering-workbench
+> pinned to `3496e4c5eed84bd78ddbd1ac65a814c105ded719` (26 tests, 15 labs/exercises).
+> Rebuild editorial sheets/figures with `python3 docs/ai-core-engineering/build.py`,
+> then `build_series.py --series ai-engineering --sync-read-min` and `--all`.
+> The companion is offline first; optional Jev HTTP calls were contract-tested with mocks,
+> not exercised against a paid live account. Older dated measurements below are historical.
 
 Deploy by pushing to `main` — GitHub Pages auto-deploys. There is no `.nojekyll`, so Jekyll's default processing applies; GitHub Pages also resolves extensionless URLs (`/blog/openclaw-101` → `openclaw-101.html`), which the eight chip-strip series rely on (93 posts across OpenClaw's numbered seven, Hermes, Hermes Desktop, AI Transformation, AI-Core, Life, Working Philosophies and Wisdom for a Good Life).
 
