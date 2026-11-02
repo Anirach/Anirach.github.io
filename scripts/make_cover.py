@@ -81,6 +81,7 @@ import math
 import pathlib
 import re
 import sys
+from image_assets import refresh_versions, versions
 
 import numpy as np
 from PIL import Image, ImageDraw, ImageFilter, ImageFont
@@ -4153,6 +4154,11 @@ def main():
     worst, total, fails = 0.0, 0.0, 0
     for r in todo:
         kb = save(render(r), OUT / r["out"], (FINAL, FINAL))
+        # Keep catalog derivatives in sync whenever the source cover changes.
+        thumb = OUT / (r["slug"] + "-thumb.jpg")
+        with Image.open(OUT / r["out"]) as original:
+            original.thumbnail((144,144))
+            original.save(thumb,"JPEG",quality=84,optimize=True)
         line = "%-42s %5.0f KB" % (r["out"], kb)
         if kb > KB_FAIL:
             line += "  OVER BUDGET"
@@ -4163,6 +4169,11 @@ def main():
             ogk = save(render(r, OG, og=True), OUT / (r["slug"] + "-og.jpg"), OG, quality=80)
             line += "   og %4.0f KB" % ogk
             total += ogk
+        revised=[OUT/r["out"],thumb]
+        if not a.no_og:revised.append(OUT/(r["slug"]+"-og.jpg"))
+        tracked=versions()
+        revised=[path for path in revised if path.name in tracked]
+        if revised:refresh_versions(revised)
         print(line)
         worst = max(worst, kb)
         total += kb

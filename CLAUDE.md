@@ -610,6 +610,17 @@ for f in blog/*.html; do [ "$(basename $f)" = index.html ] && continue; \
   echo "$(grep -c 'class="post-nav__link"' $f) $(grep -c 'class="series-nav"' $f) $(basename $f)"; done | sort
 ```
 
+## Tutorial image repairs — 2026-11-02
+
+Use `scripts/diagram_geometry.py` for cover connectors: attach named ports to
+node bounds, and inspect both square and landscape output. Nineteen repaired
+covers have content versions in `scripts/image-versions.json`; the post and
+catalog generators preserve those URLs through `scripts/image_assets.py`.
+`make_cover.py` refreshes thumbnails and tracked image hashes when it redraws a
+cover. After redrawing, re-emit the affected post/catalog markup so its query
+versions match. Run `docs/tutorial-image-audit-2026-11-02/check_repairs.py` and
+the existing integrity checks. Image query strings are not filesystem names.
+
 ## Coding tutorial delivery default — user preference, 2026-10-23
 
 For future coding tutorials, pair the website lesson with a runnable GitHub

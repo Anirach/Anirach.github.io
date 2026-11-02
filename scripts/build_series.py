@@ -44,6 +44,7 @@ import json
 import os
 import re
 import sys
+from image_assets import version_markup
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 BLOG = os.path.join(ROOT, "blog")
@@ -558,7 +559,7 @@ def build(man, post, sk):
            "title": title["th"], "sub": sub["th"], "footer": man["footer"]["th"],
            "toc": [{"id": k, "th": t} for k, t in th_toc],
            "sections": [{"id": k, "th": m} for k, m in th_sec]}
-    return head + body, job
+    return version_markup(head + body), job
 
 
 # ── commands ────────────────────────────────────────────────────────────────

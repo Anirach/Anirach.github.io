@@ -131,7 +131,7 @@ Editing `style.css` affects **only** the landing page. Editing one post affects 
 | …covers (800×800) · book faces | 161 · 8 |
 | …card thumbs (144×144) · share cards (1200×630) · series figures | 160 · 167 · 53 |
 | Feed items · sitemap URLs | 160 · 171 |
-| Generator and sweep scripts | 17 |
+| Generator and sweep scripts | 19 |
 | Integrity checks | 62 (43 fail · 17 warn · 2 info) |
 
 ---

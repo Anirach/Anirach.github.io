@@ -90,7 +90,7 @@ for i in range(1, len(chunks), 2):
     href, body = chunks[i], chunks[i + 1]
     cards.append(href)
     m = re.search(r'<img src="([^"]+)"', body)
-    card_img[href] = os.path.basename(m.group(1)) if m else None
+    card_img[href] = os.path.basename(m.group(1).split("?")[0].split("#")[0]) if m else None
     # Heading-level agnostic ON PURPOSE. Card titles were <h2> until Task 11
     # (635eb94/4a31036) re-cut the heading ladder and made them <h4>; a
     # hardcoded <h2> silently matched 0 of 37 cards and left card_title all
@@ -222,7 +222,7 @@ for f in sorted(nav):
 post_cover = {}
 for p in posts:
     s = read(os.path.join(BLOG, p))
-    found = [x for x in re.findall(r'src="\.\./images/([^"]+)"', s)
+    found = [x.split("?")[0].split("#")[0] for x in re.findall(r'src="\.\./images/([^"]+)"', s)
              + re.findall(r"url\(\s*['\"]?\.\./images/([^'\"\)]+)", s) if "-cover." in x]
     post_cover[p] = found[0] if found else None
     if not found:

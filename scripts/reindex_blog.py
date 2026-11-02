@@ -25,6 +25,8 @@ Every string a repo linter or generator reads is kept in its exact shape:
 Usage: reindex_blog.py --repo . --out blog/index.html [--order reading|newest]
 """
 import argparse, html as htmlmod, json, os, re, sys
+from urllib.parse import urlsplit
+from image_assets import version_markup
 
 RE_CARD = re.compile(r'<a href="([a-z0-9-]+\.html)" class="card">(.*?)</a>', re.S)
 RE_SECTION = re.compile(r'<section class="series-section" id="([^"]+)">(.*?)</section>', re.S)
@@ -495,6 +497,7 @@ def card_img_tag(cover):
     height stay the SOURCE size, per the house convention, so the intrinsic
     aspect ratio is right and nothing shifts on load.
     """
+    cover = urlsplit(cover).path
     attrs = 'alt="" width="800" height="800" loading="lazy" decoding="async"'
     stem, dot, ext = cover.rpartition(".")
     if stem.endswith("-cover"):
@@ -1040,7 +1043,7 @@ if __name__ == "__main__":
     ap.add_argument("--order", choices=["reading", "newest"], default="reading")
     ap.add_argument("--catalog", choices=["blog", "thoughts"], default="blog")
     a = ap.parse_args()
-    html_out = build_thoughts(a.repo) if a.catalog == "thoughts" else build(a.repo, a.order)
+    html_out = version_markup(build_thoughts(a.repo) if a.catalog == "thoughts" else build(a.repo, a.order))
     os.makedirs(os.path.dirname(a.out), exist_ok=True)
     open(a.out, "w", encoding="utf-8").write(html_out)
     n_cards = len(RE_CARD.findall(html_out)) + len(RE_CARD_T.findall(html_out))

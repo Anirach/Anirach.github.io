@@ -647,7 +647,7 @@ class Site(object):
                 # backreference so a re-cut can't
                 # silently zero out card_title and turn INV-10 into a no-op.
                 t = re.search(r'<(h[1-6]) class="card__title">(.*?)</\1>', p, re.S)
-                self.card_img[cur] = os.path.basename(im.group(1)) if im else None
+                self.card_img[cur] = os.path.basename(im.group(1).split("?")[0].split("#")[0]) if im else None
                 self.card_title[cur] = norm_title(t.group(2)) if t else None
                 cur = None
             offset += len(p)
@@ -1352,12 +1352,12 @@ def _images_used(site):
         s = site.text[rel]
         for u in (RE_IMG_REF.findall(s) + RE_URL_REF.findall(s)
                   + RE_META_IMG_REF.findall(s)):
-            used.add(os.path.basename(u))
+            used.add(os.path.basename(u.split("?")[0].split("#")[0]))
         for attr in RE_SRCSET.findall(s):
             for cand in attr.split(","):
                 url = cand.strip().split()[0] if cand.strip() else ""
                 if url and not url.startswith(("http://", "https://")):
-                    used.add(os.path.basename(url))
+                    used.add(os.path.basename(url.split("?")[0].split("#")[0]))
     return used
 
 
@@ -1400,7 +1400,7 @@ def _post_covers(site):
     cov = {}
     for f in site.posts:
         s = site.post(f)
-        names = [x for x in RE_POST_COVER_SRC.findall(s) + RE_POST_COVER_URL.findall(s)
+        names = [x.split("?")[0].split("#")[0] for x in RE_POST_COVER_SRC.findall(s) + RE_POST_COVER_URL.findall(s)
                  if "-cover." in x]
         cov[f] = names[0] if names else None
     return cov
