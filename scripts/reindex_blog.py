@@ -568,7 +568,7 @@ def section_html(sec, ords, chain, order, groups):
     if sec["id"] == "series-ai-core-jev":
         out.insert(-1, '      <p class="series-description"><a href="https://github.com/Anirach/ai-core-jev-tutorial">GitHub companion code + detailed README</a> · <span lang="th">โค้ดประกอบและคู่มือสำหรับลงมือทำทั้งสิบตอน</span></p>')
     if sec["id"] == "series-ai-engineering":
-        out.insert(-1, '      <p class="series-description"><a href="https://github.com/Anirach/ai-core-engineering-workbench">GitHub companion · 15 labs, exercises and tests</a> · <a href="https://github.com/Anirach/ai-core-engineering-workbench/archive/refs/tags/v1.0.0.zip">Download the tested code</a> · <span lang="th">อ่านภาพรวม แล้วรันและเปรียบเทียบผลในแต่ละตอน</span></p>')
+        out.insert(-1, '      <p class="series-description"><a href="https://github.com/Anirach/ai-core-engineering-workbench">GitHub companion · 15 labs, exercises and tests</a> · <a href="https://github.com/Anirach/ai-core-engineering-workbench/archive/refs/tags/v1.0.1.zip">Download the tested code</a> · <span lang="th">อ่านภาพรวม แล้วรันและเปรียบเทียบผลในแต่ละตอน</span></p>')
     if sec["id"] == "series-ai-engineering":
         course_groups = json.load(open(os.path.join(_ROOT, "scripts", "series", "ai-engineering.json")))["groups"]
         for g in course_groups:

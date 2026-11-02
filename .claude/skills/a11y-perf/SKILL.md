@@ -10,7 +10,7 @@ description: Accessibility and performance rules for the anirach.com static site
 > (171 enumerated), 557 images, 160 feed items and 171 sitemap URLs.
 > The 15-part Software Engineering with AI-Core course has 16 architecture diagrams
 > and a separate public companion with 26 tests and 15 labs/exercises, pinned to
-> `3496e4c5eed84bd78ddbd1ac65a814c105ded719`. No paid live API call was made.
+> `18cdfcd4156d3d02acb8badf3b3a0a823113e0ed`. No paid live API call was made.
 >
 > **Historical local review inventory — 2026-10-24:**145 bilingual posts across11 series
 > (8 Tutorials /106 articles,3 Thoughts /39 essays),157 HTML files (156 enumerated),

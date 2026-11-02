@@ -6,7 +6,7 @@ diagrams, one overview diagram, 15 covers, share cards and catalog thumbnails.
 
 The running example is a draft-only issue-to-patch workbench. The companion is
 https://github.com/Anirach/ai-core-engineering-workbench, pinned to
-`3496e4c5eed84bd78ddbd1ac65a814c105ded719` / tag `v1.0.0`.
+`18cdfcd4156d3d02acb8badf3b3a0a823113e0ed` / tag `v1.0.1`.
 
 ## Editorial architecture
 

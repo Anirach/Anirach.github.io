@@ -273,7 +273,7 @@ Four skills in [`.claude/skills/`](.claude/skills/) carry the verified detail th
 
 | Series | Lessons | Status | Companion | Local mirror · ZIP |
 |:---|:---:|:---|:---|:---|
-| **Software Engineering with AI-Core** | 15 | **Published** | [`ai-core-engineering-workbench`](https://github.com/Anirach/ai-core-engineering-workbench), pinned at `3496e4c5eed8` | Offline Python lab, 26 tests and 15 exercises |
+| **Software Engineering with AI-Core** | 15 | **Published** | [`ai-core-engineering-workbench`](https://github.com/Anirach/ai-core-engineering-workbench), pinned at `18cdfcd4156d3` | Offline Python lab, 26 tests and 15 exercises |
 | **AI-Core Functional Workflows** | 12 | **Published** | [`ai-core-functional-tutorial`](https://github.com/Anirach/ai-core-functional-tutorial), pinned at commit `869487af4cf0` | `examples/ai-core-functional-lab/` · `downloads/ai-core-functional-lab.zip` |
 | **AI-Core + Jev in Practice** | 10 | **Local draft — not published** | [`ai-core-jev-tutorial`](https://github.com/Anirach/ai-core-jev-tutorial) | `examples/ai-core-jev-lab/` · `downloads/ai-core-jev-lab.zip` |
 

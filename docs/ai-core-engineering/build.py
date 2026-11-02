@@ -19,7 +19,7 @@ ROOT = Path(__file__).resolve().parents[2]
 HERE = Path(__file__).resolve().parent
 COMPANION = Path('/Users/anirach/Projects/ai-core-engineering-workbench')
 PARTS = runpy.run_path(str(HERE/'course.py'))['PARTS']
-REV = os.environ.get('COMPANION_REV','3496e4c5eed84bd78ddbd1ac65a814c105ded719')
+REV = os.environ.get('COMPANION_REV','18cdfcd4156d3d02acb8badf3b3a0a823113e0ed')
 URL = 'https://github.com/Anirach/ai-core-engineering-workbench'
 sys.path.insert(0,str(COMPANION))
 from workbench import core, runtime

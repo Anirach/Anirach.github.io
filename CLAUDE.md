@@ -21,7 +21,7 @@ npx serve .
 > (171 enumerated by `check_site.py`), 557 images, 160 feed items and 171 sitemap URLs.
 > The new **Software Engineering with AI-Core** course has 15 parts, 16 diagrams,
 > and a separate public companion at https://github.com/Anirach/ai-core-engineering-workbench
-> pinned to `3496e4c5eed84bd78ddbd1ac65a814c105ded719` (26 tests, 15 labs/exercises).
+> pinned to `18cdfcd4156d3d02acb8badf3b3a0a823113e0ed` (26 tests, 15 labs/exercises).
 > Rebuild editorial sheets/figures with `python3 docs/ai-core-engineering/build.py`,
 > then `build_series.py --series ai-engineering --sync-read-min` and `--all`.
 > The companion is offline first; optional Jev HTTP calls were contract-tested with mocks,

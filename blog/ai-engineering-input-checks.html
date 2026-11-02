@@ -463,7 +463,11 @@
         return Gate(&quot;reject&quot;, &quot;input_schema&quot;)
     if not all(isinstance(x, str) for x in raw.values()):
         return Gate(&quot;reject&quot;, &quot;input_type&quot;)
-    if not 1 &lt;= len(raw[&quot;issue&quot;].encode()) &lt;= 4000 or not raw[&quot;id&quot;].strip():
+    try:
+        issue_bytes = raw[&quot;issue&quot;].encode(&quot;utf-8&quot;)
+    except UnicodeEncodeError:
+        return Gate(&quot;reject&quot;, &quot;input_encoding&quot;)
+    if not 1 &lt;= len(issue_bytes) &lt;= 4000 or not raw[&quot;id&quot;].strip():
         return Gate(&quot;reject&quot;, &quot;input_size&quot;)
     return Gate(&quot;pass&quot;, &quot;input_valid&quot;)</code></pre>
 <p>การ normalize ต้องมีร่องรอย การตัดช่องว่างหรือแปล issue ทำให้ค่าที่นำไปตัดสินเปลี่ยน จึงเก็บ id ต้นฉบับและบันทึก transformation ที่ใช้ เรื่องความลับต้องมีการควบคุมเฉพาะ ลดข้อมูลก่อนส่ง ใช้ redaction ที่ทีมตรวจเมื่อเหมาะสม และไม่ log issue ทั้งก้อนเป็นค่าเริ่มต้น regex ไม่กี่ตัวรับประกันว่าพบ credential ทุกชนิดไม่ได้ แยก validation ที่ตอบได้แน่นอนจาก semantic review เพื่อให้ผู้ใช้แก้ข้อมูลผิดรูปโดยไม่ต้องเรียกโมเดลซ้ำ</p>
@@ -477,9 +481,9 @@
 }</code></pre>
 
 <h2 id="th-practice">5. รัน ทำให้พัง และอธิบาย</h2>
-<p><a href="https://github.com/Anirach/ai-core-engineering-workbench/blob/3496e4c5eed84bd78ddbd1ac65a814c105ded719/lessons/part_04.py">Part 04 code</a> · <a href="https://github.com/Anirach/ai-core-engineering-workbench/blob/3496e4c5eed84bd78ddbd1ac65a814c105ded719/workbench/core.py">Implementation</a> · <a href="https://github.com/Anirach/ai-core-engineering-workbench/blob/3496e4c5eed84bd78ddbd1ac65a814c105ded719/tests/test_boundaries.py#L11">Tests: test_input_stops_before_inference</a> · <a href="https://github.com/Anirach/ai-core-engineering-workbench/blob/3496e4c5eed84bd78ddbd1ac65a814c105ded719/exercises/part_04.md">Exercise</a></p><pre><code>git clone https://github.com/Anirach/ai-core-engineering-workbench.git
+<p><a href="https://github.com/Anirach/ai-core-engineering-workbench/blob/18cdfcd4156d3d02acb8badf3b3a0a823113e0ed/lessons/part_04.py">Part 04 code</a> · <a href="https://github.com/Anirach/ai-core-engineering-workbench/blob/18cdfcd4156d3d02acb8badf3b3a0a823113e0ed/workbench/core.py">Implementation</a> · <a href="https://github.com/Anirach/ai-core-engineering-workbench/blob/18cdfcd4156d3d02acb8badf3b3a0a823113e0ed/tests/test_boundaries.py#L11">Tests: test_input_stops_before_inference</a> · <a href="https://github.com/Anirach/ai-core-engineering-workbench/blob/18cdfcd4156d3d02acb8badf3b3a0a823113e0ed/exercises/part_04.md">Exercise</a></p><pre><code>git clone https://github.com/Anirach/ai-core-engineering-workbench.git
 cd ai-core-engineering-workbench
-git checkout 3496e4c5eed84bd78ddbd1ac65a814c105ded719
+git checkout 18cdfcd4156d3d02acb8badf3b3a0a823113e0ed
 python3 -m workbench.lesson 4
 python3 -m unittest tests.test_boundaries.BoundaryTests.test_input_stops_before_inference -v</code></pre><h3>ลองทำด้วยตัวเอง</h3><p>เพิ่มกรณีข้อความไทยที่มี byte เกินขอบเขตเล็กน้อย แล้วตรวจว่า provider ไม่ถูกเรียก</p><p>สิ่งที่ต้องส่ง: input ที่ลอง สถานะและเหตุผลที่ได้ และคำอธิบายว่าด่านใดเป็นผู้รับผิดชอบ ห้ามแก้ expected result เพียงเพื่อให้ test ผ่าน</p>
 
@@ -510,7 +514,11 @@ python3 -m unittest tests.test_boundaries.BoundaryTests.test_input_stops_before_
         return Gate(&quot;reject&quot;, &quot;input_schema&quot;)
     if not all(isinstance(x, str) for x in raw.values()):
         return Gate(&quot;reject&quot;, &quot;input_type&quot;)
-    if not 1 &lt;= len(raw[&quot;issue&quot;].encode()) &lt;= 4000 or not raw[&quot;id&quot;].strip():
+    try:
+        issue_bytes = raw[&quot;issue&quot;].encode(&quot;utf-8&quot;)
+    except UnicodeEncodeError:
+        return Gate(&quot;reject&quot;, &quot;input_encoding&quot;)
+    if not 1 &lt;= len(issue_bytes) &lt;= 4000 or not raw[&quot;id&quot;].strip():
         return Gate(&quot;reject&quot;, &quot;input_size&quot;)
     return Gate(&quot;pass&quot;, &quot;input_valid&quot;)</code></pre>
 <p>Be careful about normalization. Trimming whitespace or translating an issue changes the value being evaluated; retain the original identifier and record any transformation you apply. Secret handling needs its own control: minimize what gets sent, use reviewed redaction where appropriate, and do not log entire issues by default. A few regular expressions cannot guarantee detection of every credential. Separate exact validation failures from semantic review so users can repair malformed input without repeatedly invoking the model.</p>
@@ -524,9 +532,9 @@ python3 -m unittest tests.test_boundaries.BoundaryTests.test_input_stops_before_
 }</code></pre>
 
 <h2 id="en-practice">5. Run, break, and explain</h2>
-<p><a href="https://github.com/Anirach/ai-core-engineering-workbench/blob/3496e4c5eed84bd78ddbd1ac65a814c105ded719/lessons/part_04.py">Part 04 code</a> · <a href="https://github.com/Anirach/ai-core-engineering-workbench/blob/3496e4c5eed84bd78ddbd1ac65a814c105ded719/workbench/core.py">Implementation</a> · <a href="https://github.com/Anirach/ai-core-engineering-workbench/blob/3496e4c5eed84bd78ddbd1ac65a814c105ded719/tests/test_boundaries.py#L11">Tests: test_input_stops_before_inference</a> · <a href="https://github.com/Anirach/ai-core-engineering-workbench/blob/3496e4c5eed84bd78ddbd1ac65a814c105ded719/exercises/part_04.md">Exercise</a></p><pre><code>git clone https://github.com/Anirach/ai-core-engineering-workbench.git
+<p><a href="https://github.com/Anirach/ai-core-engineering-workbench/blob/18cdfcd4156d3d02acb8badf3b3a0a823113e0ed/lessons/part_04.py">Part 04 code</a> · <a href="https://github.com/Anirach/ai-core-engineering-workbench/blob/18cdfcd4156d3d02acb8badf3b3a0a823113e0ed/workbench/core.py">Implementation</a> · <a href="https://github.com/Anirach/ai-core-engineering-workbench/blob/18cdfcd4156d3d02acb8badf3b3a0a823113e0ed/tests/test_boundaries.py#L11">Tests: test_input_stops_before_inference</a> · <a href="https://github.com/Anirach/ai-core-engineering-workbench/blob/18cdfcd4156d3d02acb8badf3b3a0a823113e0ed/exercises/part_04.md">Exercise</a></p><pre><code>git clone https://github.com/Anirach/ai-core-engineering-workbench.git
 cd ai-core-engineering-workbench
-git checkout 3496e4c5eed84bd78ddbd1ac65a814c105ded719
+git checkout 18cdfcd4156d3d02acb8badf3b3a0a823113e0ed
 python3 -m workbench.lesson 4
 python3 -m unittest tests.test_boundaries.BoundaryTests.test_input_stops_before_inference -v</code></pre><h3>Your turn</h3><p>Add a boundary case with Thai text and a byte length just above the limit. Confirm no provider call occurs.</p><p>Keep three artifacts: the input you tried, the resulting state and reason, and an explanation of which boundary owns that result. Do not change an expected result merely to make a test pass.</p>
 
