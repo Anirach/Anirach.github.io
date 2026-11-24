@@ -1,5 +1,13 @@
 # Component vocabulary — real markup
 
+**Current catalog navigation, 2026-11-24:** `.blog-jump` is a desktop grid of text
+links and quiet counts, with a separate RSS link. At ≤1024px it is an expandable
+index in normal flow, using `.blog-jump__switch` / `__label` / `__links`. Labels
+and counts live in `__name` / `__count`; `__links--short` fits the three Thoughts
+series. Generate both catalogs with `scripts/reindex_blog.py`. Do not restore
+the old clipped pill rail. See `docs/series-navigation.md` for the current
+interaction and validation record.
+
 Every snippet here is copied from a real file in this repo. Copy these; do not paraphrase them.
 Where a snippet is marked **NEW** or **still 0 uses**, it is a proposed SKILL.md §4 primitive that
 replaces a sprawl of one-off names — use it for new work, and migrate old names only when you are

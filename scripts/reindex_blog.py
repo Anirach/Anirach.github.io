@@ -136,6 +136,38 @@ def read_label(mins):
         return "%d h %d min" % (h, m)
     return "%d h" % h if h else "%d min" % m
 
+def series_index_markup(sections, deck, unit="articles"):
+    """One link per series, with quiet counts and a native mobile disclosure."""
+    links = []
+    for section in sections:
+        sid = section["id"]
+        label = htmlmod.escape(htmlmod.unescape(deck[sid][0]))
+        count = len(section["cards"])
+        accessible = htmlmod.escape("%s, %d %s" % (strip_tags(label), count, unit), quote=True)
+        links.append(
+            '          <a href="#%s" aria-label="%s"><span class="blog-jump__name">%s</span>'
+            '<span class="blog-jump__count" aria-hidden="true"><span class="blog-jump__separator"> · </span>%d</span></a>'
+            % (sid, accessible, label, count))
+    return '\n'.join([
+        '  <!-- SERIES INDEX — generated with one counted link per section.',
+        '       Desktop: an aligned index. Mobile: a native checkbox disclosure;',
+        '       the expanded index scrolls away when a destination is selected. -->',
+        '  <nav class="blog-jump" id="series-index" aria-label="Jump to a series">',
+        '    <div class="blog-jump__inner">',
+        '      <input class="blog-jump__switch" type="checkbox" id="seriesBrowse" aria-label="Show all %d series" aria-controls="seriesBrowseLinks">' % len(sections),
+        '      <div class="blog-jump__header">',
+        '        <p class="blog-jump__heading">Explore the series</p>',
+        '        <label class="blog-jump__label" for="seriesBrowse">Browse series <span>%d</span></label>' % len(sections),
+        '        <a class="blog-jump__rss" href="/feed.xml" aria-label="Subscribe to the RSS feed">RSS feed</a>',
+        '      </div>',
+        '      <div class="blog-jump__links%s" id="seriesBrowseLinks">' % (' blog-jump__links--short' if len(sections) <= 5 else ''),
+        '\n'.join(links),
+        '      </div>',
+        '    </div>',
+        '  </nav>',
+    ])
+
+
 # ---------------------------------------------------------------- helpers
 def read(p):
     return open(p, encoding="utf-8").read()
@@ -264,34 +296,38 @@ CSS_HERO = r"""
     .blog-hero__stat strong { color: var(--blue-dark); font-weight: 700; }
     .blog-hero__stat + .blog-hero__stat::before { content: "·"; margin-right: 0.6rem; opacity: 0.6; }
 
-    /* ── SERIES BAR ── the .blog-jump strip, now the site's first sticky element.
-       One row of short chips (no emoji — INV-02f reads chip text with [^<]* so an
-       aria-hidden span is illegal, and a bare pictograph is announced by name).
-       Opaque ground, no backdrop-filter: it is repainted on every scroll frame.
-       scroll-padding-top / scroll-margin-top below are raised to clear it. */
+    /* ── SERIES INDEX ── calm, aligned links rather than a clipped pill rail.
+       The desktop index stays visible in two rows; small screens disclose the
+       complete list in normal flow. No JavaScript or horizontal menu scroll. */
     .blog-jump {
       position: sticky; top: 64px; z-index: 90;
-      background: var(--bg); border-bottom: 1px solid rgba(17,48,75,0.08);
-      display: flex; justify-content: safe center; gap: 0.5rem;
-      /* Ten series must keep one row: wrapping made the sticky bar cover
-         destination headings while scroll-padding still assumed 56px. */
-      padding: 0.6rem 2.5rem; flex-wrap: nowrap; overflow-x: auto;
-      scrollbar-width: none; scroll-snap-type: x proximity;
-      -webkit-mask-image: linear-gradient(to right, #000 calc(100% - 28px), transparent);
-      mask-image: linear-gradient(to right, #000 calc(100% - 28px), transparent);
+      background: var(--bg); border-bottom: 1px solid rgba(17,48,75,0.12);
     }
-    .blog-jump::-webkit-scrollbar { display: none; }
-    .blog-jump a {
-      display: inline-flex; align-items: center; min-height: 36px; flex-shrink: 0;
-      scroll-snap-align: start;
-      font-size: 0.8rem; font-weight: 600; color: var(--blue-dark);
-      background: var(--white); border: 1px solid var(--blue-light);   /* borders-only token: 3.2:1 edge */
-      padding: 0.35rem 0.85rem; border-radius: 50px; white-space: nowrap;
-      text-decoration: none; transition: background-color var(--transition), color var(--transition);
+    .blog-jump__inner { max-width: 1200px; margin: 0 auto; padding: 0.4rem 2.5rem 0.65rem; }
+    .blog-jump__header { display: flex; align-items: center; justify-content: space-between; min-height: 36px; }
+    .blog-jump__heading { font-size: 0.75rem; font-weight: 600; color: var(--slate-light);
+                          letter-spacing: 0.1em; text-transform: uppercase; }
+    .blog-jump__rss { display: inline-flex; align-items: center; min-height: 36px;
+                     font-size: 0.8rem; color: var(--slate-light); text-underline-offset: 4px; }
+    .blog-jump__rss:hover { color: var(--blue); text-decoration: underline; }
+    .blog-jump__switch, .blog-jump__label { display: none; }
+    .blog-jump__links { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 0.2rem 0.7rem; }
+    .blog-jump__links--short { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+    @media (min-width: 1025px) {
+      html:has(.blog-jump__links--short) { scroll-padding-top: 11rem; }
     }
-    .blog-jump a:hover { background: var(--blue-dark); border-color: var(--blue-dark); color: #fff; }
-    .blog-jump a[href="/feed.xml"] { color: var(--gold-dark); border-color: var(--gold-dark); }  /* --gold is 2.21:1 on cream — fails the 3:1 edge */
-    .blog-jump a[href="/feed.xml"]:hover { background: var(--gold-dark); border-color: var(--gold-dark); color: #fff; }
+    .blog-jump__links a {
+      display: flex; align-items: center; justify-content: space-between; gap: 0.5rem;
+      min-height: 44px; padding: 0.55rem 0.65rem;
+      border-radius: 6px; color: var(--slate); font-size: 0.875rem; line-height: 1.4;
+      font-weight: 500; text-decoration: none;
+      transition: background-color var(--transition), color var(--transition), box-shadow var(--transition);
+    }
+    .blog-jump__links a:hover { background: var(--cloud); color: var(--navy); }
+    .blog-jump__count { flex: 0 0 auto; font-size: 0.75rem; font-weight: 500;
+                       font-variant-numeric: tabular-nums; color: var(--slate-light);
+                       min-width: 1.5rem; text-align: center; }
+    .blog-jump__separator { display: none; }
     /* After a chip jump the destination is :target — light the chip that got you
        there. Pure enhancement: nothing depends on :has(). */
     body:has(#series-quantum-programmers:target) .blog-jump a[href="#series-quantum-programmers"],
@@ -304,7 +340,14 @@ CSS_HERO = r"""
     body:has(#series-hermes:target)           .blog-jump a[href="#series-hermes"],
     body:has(#series-openclaw:target)         .blog-jump a[href="#series-openclaw"],
     body:has(#series-devops:target)           .blog-jump a[href="#series-devops"] {
-      background: var(--blue-dark); border-color: var(--blue-dark); color: #fff;
+      background: var(--cloud); box-shadow: inset 0 -2px 0 var(--blue);
+      color: var(--navy); font-weight: 700;
+    }
+    body:has(#series-good-life:target) .blog-jump a[href="#series-good-life"],
+    body:has(#series-working:target) .blog-jump a[href="#series-working"],
+    body:has(#series-life:target) .blog-jump a[href="#series-life"] {
+      background: var(--cloud); box-shadow: inset 0 -2px 0 var(--blue);
+      color: var(--navy); font-weight: 700;
     }
 
     /* ── LIST ── */
@@ -432,18 +475,29 @@ CSS_HERO = r"""
 """
 
 CSS_RESPONSIVE = r"""
-    /* ── ≤1024px: one centred chip row no longer fits (measured wrap at ~990px),
-       so the bar becomes a left-aligned scroller. 1024 is the house wide
-       breakpoint. The scrollbar is hidden; the right-edge fade + end padding
-       are the overflow affordance, and proximity snap lands whole chips. */
+    /* ── ≤1024px: disclose a complete two-column index in document flow.
+       After a link jump, only the fixed site header can obscure the target. */
     @media (max-width: 1024px) {
-      .blog-jump { justify-content: flex-start; flex-wrap: nowrap; overflow-x: auto;
-                   scrollbar-width: none; padding-inline-end: 2.25rem;
-                   scroll-snap-type: x proximity;
-                   -webkit-mask-image: linear-gradient(to right, #000 calc(100% - 28px), transparent);
-                   mask-image: linear-gradient(to right, #000 calc(100% - 28px), transparent); }
-      .blog-jump::-webkit-scrollbar { display: none; }
-      .blog-jump a { scroll-snap-align: start; }
+      .blog-jump { position: relative; top: auto; }
+      .blog-jump__inner { padding-block: 0.5rem; }
+      .blog-jump__header { min-height: 44px; }
+      .blog-jump__heading { display: none; }
+      .blog-jump__switch { display: block; position: absolute; width: 1px; height: 1px;
+                           padding: 0; border: 0; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+      .blog-jump__label { display: inline-flex; align-items: center; gap: 0.7rem; min-height: 44px;
+                          color: var(--navy); font-size: 0.875rem; font-weight: 600; cursor: pointer; }
+      .blog-jump__label span { color: var(--slate-light); font-size: 0.75rem; font-weight: 500; }
+      .blog-jump__label::after { content: ""; width: 7px; height: 7px; border-right: 1.5px solid;
+                               border-bottom: 1.5px solid; transform: translateY(-2px) rotate(45deg);
+                               transition: transform var(--transition); }
+      .blog-jump__switch:checked + .blog-jump__header .blog-jump__label::after { transform: translateY(2px) rotate(225deg); }
+      .blog-jump__switch:focus-visible + .blog-jump__header .blog-jump__label { outline: 2px solid var(--focus); outline-offset: 3px; }
+      .blog-jump__rss { min-height: 44px; }
+      .blog-jump__links { display: none; grid-template-columns: repeat(2, minmax(0, 1fr));
+                         gap: 0.25rem 0.75rem; padding-top: 0.5rem; margin-top: 0.3rem;
+                         border-top: 1px solid rgba(17,48,75,0.12); }
+      .blog-jump__switch:checked ~ .blog-jump__links { display: grid; }
+      .blog-jump__links a { min-height: 48px; }
       .catalog__grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
     }
     @media (max-width: 768px) {
@@ -452,8 +506,7 @@ CSS_RESPONSIVE = r"""
       html { scroll-behavior: auto; }
       .blog-hero { padding: 5rem 1.25rem 1.4rem; }
       .blog-hero__sub { font-size: 0.95rem; }
-      .blog-jump { padding: 0.5rem 2.25rem 0.5rem 1.25rem; gap: 0.45rem; }
-      .blog-jump a { min-height: 44px; padding: 0.5rem 0.9rem; }
+      .blog-jump__inner { padding-inline: 1.25rem; }
       .blog-list { padding: 1.5rem 1.25rem 4rem; }
       .spotlight { margin-bottom: 2rem; }
       .feature { grid-template-columns: 1fr; }
@@ -479,7 +532,7 @@ CSS_RESPONSIVE = r"""
       /* The truncated one-line excerpt mostly restates the Thai title at this
          width; the row keeps EN title / TH title / date · read time. */
       .card__excerpt { display: none; }
-      /* The count is already on the sticky chip ("DevOps · 24") and on the last
+      /* The count is already in the series index and on the last
          row's ordinal; hiding the pill stops it wrapping under every title.
          The span stays in the markup — RE_SERIES_COUNT reads the source. */
       .series-count { display: none; }
@@ -633,7 +686,9 @@ def build(repo, order):
     except ValueError:   # re-run on our own output: the PHONE block is gone
         takeover = block(style, "    /* ── RESPONSIVE ── */", "    /* ── ≤1024px:")
     tail = style[style.index("    :focus-visible {"):].rstrip() + "\n"
-    tail = tail.replace("html { scroll-padding-top: 5rem; }", "html { scroll-padding-top: 8.5rem; }   /* fixed nav (64) + sticky series bar (56) + 16 */")
+    tail = re.sub(r'(?m)^    html \{ scroll-padding-top: (?:5|8\.5)rem; \}[^\n]*',
+                  '    html { scroll-padding-top: 14rem; } /* fixed header + desktop series index */\n'
+                  '    @media (max-width: 1024px) { html { scroll-padding-top: 5rem; } }', tail)
     tail = tail.replace("[id] { scroll-margin-top: 5rem; }",
                         "/* no [id] scroll-margin-top here: it ADDS to scroll-padding-top, and the pair landed every chip jump 272px down */")
     tail = re.sub(r"    /\* Hover/focus parity:.*?\.card:focus-within \.card__read \{[^\n]*\n",
@@ -695,7 +750,7 @@ def build(repo, order):
         '    </section>',
         '',
     ])
-    chips = "\n".join('      <a href="#%s">%s · %d</a>' % (s["id"], SERIES[s["id"]][0], len(s["cards"])) for s in idx["sections"])
+    jump_index = series_index_markup(idx["sections"], SERIES)
     tiles = []
     for s in idx["sections"]:
         mins = sum(c["mins"] for c in s["cards"])
@@ -759,15 +814,7 @@ def build(repo, order):
     </p>
   </header>
 
-  <!-- SERIES BAR — sticky, between the hero and <main> so the skip link lands
-       on content rather than on a second navigation. One chip per section;
-       INV-02f checks each chip's "· N" against its section's card count. The
-       RSS link is not a section chip and is ignored by that check. The site
-       <nav> above must stay the FIRST nav in the document (INV-23). -->
-  <nav class="blog-jump" id="series-index" aria-label="Jump to a series">
-{chips}
-      <a href="/feed.xml">RSS</a>
-    </nav>
+{jump_index}
 
   <main id="main">
     <div class="blog-list">
@@ -949,7 +996,7 @@ def build_thoughts(repo):
         '    </section>',
         '',
     ])
-    chips = "\n".join('      <a href="#%s">%s · %d</a>' % (s_["id"], SERIES_T[s_["id"]][0], len(s_["cards"])) for s_ in idx["sections"])
+    jump_index = series_index_markup(idx["sections"], SERIES_T, unit="essays")
     tiles = []
     for s_ in idx["sections"]:
         mins = sum(c["mins"] for c in s_["cards"])
@@ -1020,12 +1067,7 @@ def build_thoughts(repo):
     </p>
   </header>
 
-  <!-- SERIES BAR — sticky, between the hero and <main>. One chip per section;
-       INV-02f checks each chip's "· N" against its section's card count. -->
-  <nav class="blog-jump" id="series-index" aria-label="Jump to a series">
-{chips}
-      <a href="/feed.xml">RSS</a>
-    </nav>
+{jump_index}
 
   <main id="main">
     <div class="blog-list">

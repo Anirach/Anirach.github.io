@@ -43,6 +43,15 @@ Deploy by pushing to `main` — GitHub Pages auto-deploys. There is no `.nojekyl
 
 ## Architecture
 
+**Catalog series navigation — redesigned 2026-11-24.** `reindex_blog.py` owns the
+`.blog-jump` component in both catalogs. It is a five-column desktop text index
+(three columns for Thoughts), with separate count spans and an RSS link. At
+1024px and below it becomes a native checkbox disclosure in normal document
+flow, so selecting a destination scrolls the index away. Keep 44px+ series
+targets, focus outlines, and the desktop/mobile anchor clearances. INV-02f
+normalizes nested span text and still rejects missing/duplicate links or false
+counts. Older references to a horizontally scrolling pill strip are historical.
+
 ```
 /
 ├── index.html          # Consultant landing page (2026-10-26 redesign) — the ONLY consumer of style.css.

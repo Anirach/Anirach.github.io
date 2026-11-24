@@ -77,6 +77,8 @@ A static site with no build step buys simplicity and pays for it in one specific
 
 **Tutorials — `/blog/`, hero reads `10 Series · 128 Articles`**
 
+The series navigation is an aligned text index with separate article counts and RSS. On desktop, all ten courses stay visible in two rows. On phones and tablets, “Browse series” opens the full index with native keyboard support; choosing a course moves to its heading. The Thoughts catalog uses the same component for its three series.
+
 | Series | Posts | Navigation | Generated |
 |:---|:---:|:---|:---:|
 | ψ Quantum Algorithms for Programmers | 7 | chip strip | ✅ |

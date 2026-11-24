@@ -892,7 +892,7 @@ def _(site):
 # ---------------------------------------------------------------------------
 # INV-03 — the 7-entry OpenClaw series-nav chip strip
 # ---------------------------------------------------------------------------
-@check("INV-02f", ".blog-jump chips match the series sections they anchor")
+@check("INV-02f", ".blog-jump links match the series sections they anchor")
 def _(site):
     """The jump strip is hand-maintained and was forgotten twice (dae4304).
     Nothing read it until now: it is not a card, not a counter and not a nav
@@ -906,7 +906,10 @@ def _(site):
             if rel == "blog/index.html":
                 out.append(Violation("blog-jump", "blog/index.html has no .blog-jump strip"))
             continue
-        chips = re.findall(r'<a href="#([^"]+)">([^<]*)</a>', m.group(1))
+        # Label/count spans are presentation; nested markup must not bypass
+        # the one-link-per-section and truthful-count contracts.
+        chips = [(sid, re.sub(r"<[^>]+>", "", body)) for sid, body in
+                 re.findall(r'<a href="#([^"]+)"[^>]*>(.*?)</a>', m.group(1), re.S)]
         have = {sid: len(RE_CARD.findall(body))
                 for sid, body, _o, r in site.sections if r == rel}
         seen = Counter(sid for sid, _t in chips)
