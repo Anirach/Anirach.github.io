@@ -18,6 +18,19 @@ ROOT=Path(__file__).resolve().parents[2]
 HERE=Path(__file__).resolve().parent
 URL='https://github.com/Anirach/quantum-algorithms-for-programmers'
 DATE='2026-11-24'
+GUIDE='quantum-algorithms-for-programmers.pdf'
+
+
+def downloads(lang):
+    title='ดาวน์โหลดประกอบซีรีส์' if lang=='th' else 'Download the series resources'
+    guide=('คู่มือฉบับเต็ม (PDF ภาษาอังกฤษ · 43 หน้า · 4.1 MB)' if lang=='th'
+           else 'Complete guide (English PDF · 43 pages · 4.1 MB)')
+    code='โค้ด ตัวอย่าง และแบบฝึก (ZIP)' if lang=='th' else 'Code, examples and exercises (ZIP)'
+    return (f'<blockquote><p><strong>{title}</strong></p>'
+            f'<p><a href="../downloads/{GUIDE}" download>{guide}</a><br>'
+            f'<a href="{URL}/archive/refs/tags/v1.0.1.zip">{code}</a></p></blockquote>\n')
+
+
 REFS={
  'bit-order':('IBM Quantum. Bit ordering in the Qiskit SDK.','https://quantum.cloud.ibm.com/docs/en/qiskit/bit-ordering'),
  'qiskit':('Javadi-Abhari et al. Quantum computing with Qiskit (2024).','https://arxiv.org/abs/2405.08810'),
@@ -87,6 +100,10 @@ def main():
     args=ap.parse_args();comp=args.companion.resolve();sys.path.insert(0,str(comp))
     rev=subprocess.check_output(['git','rev-parse','HEAD'],cwd=comp,text=True).strip()
     results=json.loads((HERE/'verified-results.json').read_text())
+    guide=ROOT/'downloads'/GUIDE
+    expected=json.loads((HERE/'source-figures.json').read_text())['source_sha256']
+    if not guide.is_file() or hashlib.sha256(guide.read_bytes()).hexdigest()!=expected:
+        raise SystemExit('The public guide must be an unchanged copy of the supplied PDF.')
     provenance=json.loads((HERE/'source-figures.json').read_text())['illustrations']
     posts=[];(ROOT/'.bilingual').mkdir(exist_ok=True)
     for p in PARTS:
@@ -107,6 +124,7 @@ def main():
                 if i==0:
                     source_pages={1:'5–8',2:'9–15',3:'16–23',4:'24–28',5:'29–34',6:'35',7:'36–40'}[p['n']]
                     body=('<p><strong>บทที่ '+str(p['n'])+'/7</strong> · ดัดแปลงจากเอกสาร Quantum Algorithms for Programmers, Edition 1.0 หน้า '+source_pages+' พร้อมโค้ดและคำอธิบายที่ตรวจซ้ำสำหรับเว็บ</p>' if lang=='th' else '<p><strong>Part '+str(p['n'])+'/7.</strong> Adapted from Quantum Algorithms for Programmers, Edition 1.0, pp. '+source_pages+', with web explanations and rerun code.</p>')+body
+                    body=downloads(lang)+body
                 if '<!--CODE-->' in body:
                     note=('ส่วนโค้ดสำหรับอ่านแนวคิด ใช้ไฟล์เต็มพร้อม imports จาก companion และคำสั่งใน Run &amp; explore ด้านล่าง' if lang=='th' else 'Implementation excerpt. Use the complete companion file with its imports and the Run and explore commands below.')
                     body=body.replace('<!--CODE-->','<p>'+note+'</p>\n<pre><code>'+html.escape(code)+'</code></pre>')

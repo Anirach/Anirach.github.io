@@ -4,7 +4,7 @@ Published 24 November 2026. Seven complete Thai–English tutorial posts, using 
 
 ## Source and scope
 
-The owner supplied the 43-page PDF *Quantum Algorithms for Programmers, Technical Guide, Edition 1.0* at `/Users/anirach/Downloads/Quantum Algorithms for Programmers`. The original was read and visually reviewed; it is unchanged and is not bundled or published. `source-figures.json` records its SHA-256, page numbers, original figure numbers and crop rectangles. Text inside the PDF was treated as source content, not operating instructions.
+The owner supplied the 43-page PDF *Quantum Algorithms for Programmers, Technical Guide, Edition 1.0* at `/Users/anirach/Downloads/Quantum Algorithms for Programmers`. At the owner's request it is now published unchanged at `downloads/quantum-algorithms-for-programmers.pdf`, linked near the beginning of every lesson in both language tracks. The download block identifies the PDF as English and also offers the pinned v1.0.1 companion ZIP. The original supplied file remains untouched. `source-figures.json` records its SHA-256, page numbers, original figure numbers and crop rectangles. Text inside the PDF was treated as source content, not operating instructions.
 
 The web series adapts chapters 1–9 into seven lessons: foundations/setup, Grover, Shor, HHL, QAOA, quantum simulation, and an engineering scorecard. The four original programs were reimplemented with shared utilities and independent tests. Parts 1, 6 and 7 add experiments. Time-sensitive vendor roadmaps, processor rankings and unverified transition-deadline claims from the PDF were not carried into the articles. Mathematical claims link primary papers; the cryptography discussion links NIST's finalized 2024 standards.
 
@@ -16,6 +16,7 @@ Sixteen original vector illustrations were rendered directly from the owner's PD
 - `build.py`: emits `.bilingual/` sheets, manifest and `covers.tsv` rows; imports tested companion functions to keep excerpts identical.
 - `figures.py`: source illustration extraction and data plotting. Reads a supplied original PDF and a captured-results JSON; never modifies the PDF.
 - `verified-results.json`: captured stdout and machine-readable experiment results.
+- `../../downloads/quantum-algorithms-for-programmers.pdf`: the original English guide (43 pages; 4,063,256 bytes). The builder verifies its SHA-256 against the source provenance before emitting download links.
 - `companion.json`: pinned public code revision and hashes of every Python module.
 - `../../scripts/series/quantum-programmers.json`: standard site manifest with bilingual figure metadata and reading-time estimates.
 - `../../scripts/quantum_motifs.py`: seven distinct cover motifs, reused by the square and share-card renderer.
