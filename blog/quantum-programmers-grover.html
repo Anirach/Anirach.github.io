@@ -1,0 +1,675 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Grover Search — ขยาย amplitude | Anirach Mingkhwan</title>
+  <meta name="description" content="สร้าง Grover oracle และ diffuser ค้นหา 1011 ด้วยสามรอบ ตรวจผล 4,096 shots และเห็นเหตุใดจำนวน query ที่ลดลงยังไม่ใช่ runtime ที่เร็วขึ้น">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300..900&family=Sarabun:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400..600&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      color-scheme: light;
+      /* ink */
+      --navy: #11304b; --slate: #334155; --slate-light: #526174; --gray: #94a3b8;
+      /* ground */
+      --bg: #faf7f0; --white: #ffffff; --code-bg: #1e293b;
+      /* accent */
+      --blue: #226299; --blue-dark: #1a4d7a; --blue-light: #4992b9;
+      /* brand — sampled from the book covers. --gold is decorative on light grounds (2.2:1); --gold-dark is its text form. */
+      --gold: #c4a46c; --gold-dark: #7a5f22; --cloud: #dee7e6; --parchment: #e9e1c4; --focus: #226299;
+      /* status — use only these six, never invent a seventh */
+      --green: #22c55e; --red: #ef4444; --amber: #f59e0b;
+      --cyan: #06b6d4; --purple: #226299; --purple-dark: #1a4d7a;
+      /* type */
+      --font: 'Inter', 'Sarabun', -apple-system, BlinkMacSystemFont, sans-serif;
+      --mono: 'JetBrains Mono', 'Fira Code', 'Sarabun', monospace;
+      /* form */
+      --radius: 12px; --radius-sm: 8px; --radius-lg: 16px;
+      --measure: 720px; --wide: 860px;
+      --transition: 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+    html { scroll-behavior: smooth; }
+    body { font-family: var(--font); font-size: 17px; line-height: 1.8; color: var(--slate); background: var(--bg); -webkit-font-smoothing: antialiased; }
+    .blog-nav { position: fixed; top: 0; left: 0; right: 0; z-index: 100; background: rgba(248,250,252,0.85); backdrop-filter: blur(20px); border-bottom: 1px solid rgba(0,0,0,0.05); }
+    .blog-nav__inner { max-width: 860px; margin: 0 auto; padding: 0 2rem; height: 56px; display: flex; align-items: center; justify-content: space-between; }
+    .blog-nav__back { font-size: 0.85rem; font-weight: 500; color: var(--blue); text-decoration: none; }
+    .blog-nav__back:hover { color: #1a4d7a; }
+    .blog-nav__title { font-size: 0.85rem; font-weight: 600; color: var(--navy); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 50%; }
+    /* ── HERO ── house .post-hero on the approved Deep Blue gradient (page-design
+       §5 / INV-28). Ink is inverted for the dark ground: white title/meta, tag
+       pills white on 18% white — the openclaw-production treatment. The
+       background value must stay byte-identical to the approved string. */
+    .post-hero { padding: 8rem 2rem 3rem; background: linear-gradient(135deg, #11304b 0%, #1a4d7a 45%, #226299 100%); color: #fff; text-align: center; }
+    .post-hero__tags { display: flex; gap: 0.5rem; justify-content: center; margin-bottom: 1.25rem; flex-wrap: wrap; }
+    .post-hero__tag { display: inline-block; font-size: 0.72rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.1em; color: #fff; background: rgba(255,255,255,0.18); padding: 0.35rem 0.9rem; border-radius: 20px; }
+    .post-hero__title { font-size: clamp(1.8rem, 5vw, 3rem); font-weight: 800; color: #fff; line-height: 1.2; margin-bottom: 1rem; max-width: 720px; margin-left: auto; margin-right: auto; }
+    .post-hero__sub { font-size: 1.05rem; max-width: 640px; margin: 0 auto 1.5rem; line-height: 1.7; color: #fff; }
+    .post-hero__meta { font-size: 0.85rem; color: #fff; display: flex; align-items: center; justify-content: center; gap: 1.5rem; flex-wrap: wrap; }
+    .post-hero__series { font-weight: 600; color: #fff; }
+    /* the switch pill and the focus ring both sit on the dark hero: the pill is
+       a light chip so its labels keep their light-ground colours, and --focus
+       re-points to gold here (blue collapses on blue — the footer/pre
+       precedent). */
+    .post-hero { --focus: var(--gold); }
+    .post-hero__cover {
+      aspect-ratio: 1 / 1;
+      max-width: 380px;
+      margin: 2.5rem auto 0;
+      border-radius: var(--radius-lg, 16px);
+      overflow: hidden;
+      box-shadow: 0 20px 60px rgba(17,48,75,0.14);
+    }
+    .post-hero__cover img { width: 100%; height: 100%; object-fit: cover; display: block; }
+    .post-body { max-width: 720px; margin: 0 auto; padding: 3rem 2rem 6rem; }
+    .post-body h2 { font-size: 1.6rem; font-weight: 800; color: var(--navy); margin: 3rem 0 1rem; padding-bottom: 0.5rem; border-bottom: 2px solid rgba(34,98,153,0.15); }
+    .post-body h3 { font-size: 1.25rem; font-weight: 700; color: var(--navy); margin: 2.25rem 0 0.75rem; }
+    .post-body p { margin-bottom: 1.25rem; }
+    .post-body strong { font-weight: 700; color: var(--navy); }
+    .post-body a { color: var(--blue); text-decoration: underline; text-decoration-thickness: 1px; text-underline-offset: 2px; }
+    .post-body ul, .post-body ol { margin: 0.5rem 0 1.25rem 1.5rem; }
+    .post-body li { margin-bottom: 0.4rem; }
+    .post-body blockquote { background: rgba(34,98,153,0.06); border-left: 4px solid var(--blue); padding: 1rem 1.25rem; border-radius: 0 10px 10px 0; margin: 1.25rem 0; font-size: 0.95rem; color: var(--navy); }
+    .post-body hr { border: none; height: 1px; background: linear-gradient(90deg, transparent, rgba(34,98,153,0.2), transparent); margin: 3rem 0; }
+    /* ── CODE ── */
+    .post-body pre { background: var(--code-bg); border-radius: 12px; padding: 1.5rem; margin: 1.25rem 0 1.5rem; overflow-x: auto; border: 1px solid rgba(255,255,255,0.05); }
+    .post-body pre code { font-family: var(--mono); font-size: 0.85rem; color: #e2e8f0; line-height: 1.7; background: none; padding: 0; white-space: pre-wrap; }
+    .post-body code { font-family: var(--mono); font-size: 0.88em; background: rgba(34,98,153,0.08); color: var(--blue-dark); padding: 0.15em 0.45em; border-radius: 5px; }
+    /* ── TABLES ── */
+    .table-wrapper { overflow-x: auto; margin: 1.5rem 0; border-radius: 0.5rem; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1); }
+    table { width: 100%; border-collapse: collapse; background: white; }
+    th { background: #226299; color: white; padding: 1rem; text-align: left; font-weight: 600; }
+    td { padding: 1rem; border-bottom: 1px solid #e5e7eb; }
+    .post-body table { display: block; width: 100%; overflow-x: auto; }
+    /* ── ALERTS ── */
+    .alert { background: #fef3cd; border: 1px solid #facc15; border-radius: 0.5rem; padding: 1rem; margin: 1.5rem 0; }
+    .alert.danger { background: #fee2e2; border-color: #ef4444; }
+    .alert.info { background: #e0f2fe; border-color: #06b6d4; }
+    .alert.success { background: #d1fae5; border-color: #10b981; }
+    /* ── KEY TAKEAWAYS ── */
+    .key-takeaways { background: linear-gradient(135deg, #f3f4f6 0%, #e5e7eb 100%); border-radius: 1rem; padding: 2rem; margin: 3rem 0; }
+    .key-takeaways h3 { color: #226299; margin-bottom: 1.5rem; }
+    .post-series-footer { text-align: center; font-size: 0.85rem; color: var(--slate-light); font-style: italic; margin-top: 2rem; padding-top: 2rem; border-top: 1px solid #e2e8f0; }
+    .blog-footer { background: var(--navy); padding: 2rem 0; text-align: center; }
+    .blog-footer a { color: var(--gold); text-decoration: none; font-weight: 600; font-size: 0.9rem; }
+    .blog-footer span { color: var(--gray); font-size: 0.8rem; display: block; margin-top: 0.4rem; }
+    @media (max-width: 600px) {
+      .post-hero { padding: 7rem 1.25rem 2.5rem; }
+      .post-body { padding: 2rem 1.25rem 4rem; }
+      .post-hero__meta { flex-direction: column; gap: 0.4rem; }
+      .post-body h2 { font-size: 1.4rem; }
+      .post-body h3 { font-size: 1.15rem; }
+      .post-body pre { padding: 1rem; border-radius: 8px; }
+    }
+
+    :focus-visible { outline: 2px solid var(--focus); outline-offset: 3px; border-radius: 2px; }
+    /* the ring sits on the page ground (3px offset). Inside the navy footers
+       and code blocks var(--blue) collapses to 2.12:1, so those scopes
+       re-point --focus to gold (5.73:1 on navy). */
+    .footer, .blog-footer, pre { --focus: var(--gold); }
+    :focus:not(:focus-visible) { outline: none; }
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after {
+        animation-duration: .01ms !important; animation-iteration-count: 1 !important;
+        transition-duration: .01ms !important; scroll-behavior: auto !important;
+      }
+    }
+    h1, h2, h3, .post-hero__title, .card__title { text-wrap: balance; }
+    .post-body { overflow-wrap: break-word; }   /* long URLs and inline code wrap instead of widening the page */
+
+    .post-body img, .post-body svg { max-width: 100%; height: auto; }
+
+    /* ── SKIP LINK ── a11y-perf R5: the link and the landmark it targets are a
+       pair — useless without both halves. Off-screen until focused, then the
+       first tab stop on every page. */
+    .skip-link { position: absolute; left: -9999px; }
+    .skip-link:focus {
+      left: 1rem; top: 1rem; z-index: 999;
+      background: var(--navy); color: #fff;
+      padding: 0.75rem 1.25rem; border-radius: var(--radius-sm);
+      font-weight: 600; text-decoration: none;
+    }
+
+    /* ── POST WAYFINDING ── the wordmark is the home link; the footer carries
+       the full destination row. */
+    .blog-nav__home {
+      font-size: 0.9rem; font-weight: 800; color: var(--navy);
+      text-decoration: none; margin-right: 1rem;
+    }
+    .blog-nav__home:hover { color: var(--blue); }
+    .blog-nav__inner > .blog-nav__back { margin-right: auto; }
+    .blog-footer__nav {
+      display: flex; flex-wrap: wrap; justify-content: center; gap: 0.35rem 1.25rem;
+      max-width: 860px; margin: 0 auto 1.25rem; padding: 0 2rem 1.25rem;
+      border-bottom: 1px solid rgba(255,255,255,0.12);
+    }
+    .blog-footer__nav a { color: var(--gold); font-size: 0.85rem; font-weight: 600; text-decoration: none; }
+    .blog-footer__nav a:hover { color: #fff; text-decoration: underline; }
+
+    html { scroll-padding-top: 5rem; }
+    [id] { scroll-margin-top: 5rem; }
+
+    /* Thai needs more room than Latin at the same nominal size. */
+    .post-body:lang(th) { font-size: 18px; line-height: 1.85; }
+    .post-body p, .post-body li, .post-body blockquote { text-wrap: pretty; }
+
+    /* ---- side-scroll affordance ----
+       pre blocks and tables can exceed 720px. These layers paint a shadow ONLY
+       where there is more content in that direction; when fully scrolled the
+       cover slides over the shadow and hides it. No JavaScript, no wrapper. */
+    .post-body pre, .post-body table {
+      overflow-x: auto;
+      background-image:
+        linear-gradient(to right, var(--code-bg, #0f172a) 30%, rgba(15,23,42,0)),
+        linear-gradient(to left, var(--code-bg, #0f172a) 30%, rgba(15,23,42,0)),
+        radial-gradient(farthest-side at 0 50%, rgba(0,0,0,.28), rgba(0,0,0,0)),
+        radial-gradient(farthest-side at 100% 50%, rgba(0,0,0,.28), rgba(0,0,0,0));
+      background-position: 0 0, 100% 0, 0 0, 100% 0;
+      background-repeat: no-repeat;
+      background-size: 40px 100%, 40px 100%, 14px 100%, 14px 100%;
+      background-attachment: local, local, scroll, scroll;
+    }
+    .post-body table {
+      background-image:
+        linear-gradient(to right, var(--white, #fff) 30%, rgba(255,255,255,0)),
+        linear-gradient(to left, var(--white, #fff) 30%, rgba(255,255,255,0)),
+        radial-gradient(farthest-side at 0 50%, rgba(17,48,75,.16), rgba(17,48,75,0)),
+        radial-gradient(farthest-side at 100% 50%, rgba(17,48,75,.16), rgba(17,48,75,0));
+      background-position: 0 0, 100% 0, 0 0, 100% 0;
+      background-repeat: no-repeat;
+      background-size: 40px 100%, 40px 100%, 14px 100%, 14px 100%;
+      background-attachment: local, local, scroll, scroll;
+    }
+
+    /* ---- table of contents ---- */
+    .post-toc {
+      max-width: 720px;
+      margin: 2rem auto 0;
+      padding: 1rem 1.25rem;
+      background: rgba(34,98,153,0.05);
+      border: 1px solid rgba(34,98,153,0.14);
+      border-left: 3px solid var(--gold, #c4a46c);
+      border-radius: 10px;
+      font-size: 0.92rem;
+    }
+    .post-toc > summary {
+      cursor: pointer;
+      font-weight: 700;
+      color: var(--navy);
+      list-style: none;
+    }
+    .post-toc > summary::-webkit-details-marker { display: none; }
+    .post-toc > summary::before {
+      content: "\25B8";
+      display: inline-block;
+      margin-right: 0.5rem;
+      transition: transform 0.2s ease;
+      color: var(--gold-dark, #7a5f22);
+    }
+    .post-toc[open] > summary::before { transform: rotate(90deg); }
+    .post-toc > summary:focus-visible { outline: 3px solid var(--focus, #226299); outline-offset: 3px; }
+    .post-toc ol { margin: 0.85rem 0 0.25rem; padding-left: 1.4rem; }
+    .post-toc li { margin-bottom: 0.4rem; line-height: 1.5; }
+    .post-toc a { color: var(--slate); text-decoration: none; }
+    .post-toc a:hover, .post-toc a:focus-visible { color: var(--blue-dark, #1a4d7a); text-decoration: underline; }
+    @media (max-width: 600px) { .post-toc { margin: 1.25rem 1rem 0; } }
+
+    /* ---- cross-document view transitions ---- */
+    @view-transition { navigation: auto; }
+    .nav, .blog-nav { view-transition-name: site-nav; }
+    .footer, .blog-footer { view-transition-name: site-footer; }
+    @media (prefers-reduced-motion: reduce) {
+      ::view-transition-group(*),
+      ::view-transition-old(*),
+      ::view-transition-new(*) { animation: none !important; }
+    }
+
+    /* ── SERIES STRIP — Hermes Agent in Practice ──
+       Same class and inner-wrapper shape as the OpenClaw strip because the
+       linter's RE_SNAV recognises exactly `series-nav` + a nested div; a
+       renamed strip would read as "no nav" and fail INV-08. All content
+       checks (INV-03 family) iterate the SERIES7 list only, so this strip's
+       labels are convention, not contract. House-styled, not the island CSS. */
+    .series-nav {
+      max-width: 720px; margin: 2rem auto 0; padding: 1.1rem 1.4rem;
+      background: rgba(255,255,255,0.75); border: 1px solid rgba(34,98,153,0.15);
+      border-left: 3px solid var(--gold); border-radius: 12px;
+    }
+    .series-nav h3 {
+      font-size: 0.78rem; font-weight: 700; text-transform: uppercase;
+      letter-spacing: 0.08em; color: var(--gold-dark); margin-bottom: 0.6rem;
+    }
+    .series-links { display: flex; flex-wrap: wrap; gap: 0.5rem; }
+    .series-links a, .series-links .current {
+      font-size: 0.82rem; font-weight: 600; padding: 0.35rem 0.8rem;
+      border-radius: 50px; text-decoration: none;
+    }
+    .series-links a { color: var(--blue-dark); background: rgba(34,98,153,0.08); }
+    .series-links a:hover { background: rgba(34,98,153,0.16); }
+    .series-links .current { color: #fff; background: var(--blue-dark); }
+    @media (max-width: 600px) { .series-nav { margin: 1.5rem 1rem 0; } }
+
+    /* ── FIGURE — the sanctioned diagram component (page-design §4 Content).
+       Diagrams are PNGs; this repo built them out of divs twice and reverted
+       twice. The image is wrapped in a link to itself so a phone can pinch a
+       1400px drawing without a line of JavaScript. */
+    .figure { margin: 2.5rem 0; }
+    .figure__img { width: 100%; height: auto; display: block;
+                   border-radius: var(--radius); border: 1px solid rgba(0,0,0,0.06); }
+    .figure__caption { font-size: 0.85rem; color: var(--slate-light);
+                       text-align: center; margin-top: 0.75rem; }
+
+    /* ── REFERENCES — every material number in this series carries its source.
+       The tags are the book's own four evidence labels. */
+    .references { margin-top: 3rem; padding-top: 2rem; border-top: 1px solid #e2e8f0; }
+    .references__note { font-size: 0.85rem; color: var(--slate-light); margin-bottom: 1rem; }
+    .references__list { padding-left: 1.4rem; font-size: 0.9rem; line-height: 1.75; }
+    .references__list li { margin-bottom: 0.7rem; }
+    .ref-tag { display: inline-block; font-size: 0.7rem; font-weight: 700;
+               letter-spacing: 0.06em; text-transform: uppercase; padding: 0.1rem 0.5rem;
+               border-radius: 50px; margin-right: 0.4rem; vertical-align: 0.05em;
+               background: rgba(34,98,153,0.1); color: var(--blue-dark); }
+    /* All four labels get a rule.  --standard and --study shipped without one
+       on 2026-09-05, so 158 of 306 tags fell through to the base blue and the
+       two labels were indistinguishable.  Ratios on --bg: 6.70 / 6.92 / 7.36 /
+       4.81:1, all AA at this size. */
+    .ref-tag--law { background: rgba(239,68,68,0.12); color: #991b1b; }
+    .ref-tag--standard { background: rgba(34,98,153,0.12); color: var(--blue-dark); }
+    .ref-tag--study { background: rgba(34,197,94,0.18); color: #14532d; }
+    .ref-tag--synthesis { background: rgba(196,164,108,0.22); color: var(--gold-dark); }
+    .ref-supports { display: block; color: var(--slate-light); font-size: 0.85rem; }
+
+    /* ── LANGUAGE SWITCH — pure CSS, zero JavaScript (INV-38) ──
+       One visually-hidden checkbox as a direct child of body, BEFORE the main landmark,
+       so `#langSwitch:checked ~ main …` reaches every content block. The two
+       tracks are paired blocks: .l-th (default) and .l-en (hidden until
+       checked; display:revert restores block for divs, inline for spans).
+       Naming stays clear of INV-12's menu-token regex (hamburger|burger|
+       nav__toggle|nav-toggle|navtoggle|menu-toggle|menu__toggle) — verified.
+       No JS also means no persistence across posts; each post opens in Thai. */
+    .lang-switch-box { position: absolute; left: -9999px; }
+    /* where anchor positioning exists the box sits on the pill, so focusing it scrolls the pill into view */
+    .lang-switch { anchor-name: --lang-switch; }
+    .lang-switch-box { position-anchor: --lang-switch; top: anchor(top); left: anchor(left); width: 1px; height: 1px; opacity: 0; pointer-events: none; }
+    .l-en { display: none; }
+    #langSwitch:checked ~ main .l-en { display: revert; }
+    #langSwitch:checked ~ main .l-th { display: none; }
+    .lang-switch {
+      display: inline-flex; align-items: center; gap: 0.55rem;
+      margin-top: 1.4rem; padding: 0.4rem 1.1rem; border-radius: 50px;
+      background: rgba(255,255,255,0.85); border: 1px solid rgba(255,255,255,0.4);
+      cursor: pointer; font-size: 0.85rem; user-select: none;
+    }
+    .lang-switch span { color: var(--slate-light); font-weight: 600; transition: color 0.2s; }
+    .lang-switch .lang-sep { color: var(--gray); font-weight: 400; }
+    .lang-switch .lang-th { color: var(--navy); font-weight: 800; }
+    #langSwitch:checked ~ main .lang-switch .lang-th { color: var(--slate-light); font-weight: 600; }
+    #langSwitch:checked ~ main .lang-switch .lang-en { color: var(--navy); font-weight: 800; }
+    .lang-switch:hover { border-color: #fff; }
+    #langSwitch:focus-visible ~ main .lang-switch {
+      outline: 2px solid var(--focus); outline-offset: 3px;
+    }
+  </style>
+  <!-- social -->
+  <link rel="canonical" href="https://anirach.com/blog/quantum-programmers-grover.html">
+  <meta property="og:type" content="article">
+  <meta property="og:url" content="https://anirach.com/blog/quantum-programmers-grover.html">
+  <meta property="og:site_name" content="Anirach Mingkhwan">
+  <meta property="og:locale" content="th_TH">
+  <meta property="og:locale:alternate" content="en_US">
+  <meta property="article:published_time" content="2026-11-24">
+  <meta property="article:author" content="https://anirach.com/">
+  <meta property="og:title" content="Grover Search — ขยาย amplitude">
+  <meta property="og:description" content="สร้าง Grover oracle และ diffuser ค้นหา 1011 ด้วยสามรอบ ตรวจผล 4,096 shots และเห็นเหตุใดจำนวน query ที่ลดลงยังไม่ใช่ runtime ที่เร็วขึ้น">
+  <meta property="og:image" content="https://anirach.com/images/quantum-programmers-grover-og.jpg">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
+  <meta property="og:image:alt" content="Grover Search — ขยาย amplitude">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:image" content="https://anirach.com/images/quantum-programmers-grover-og.jpg">
+  <meta name="twitter:image:alt" content="Grover Search — ขยาย amplitude">
+  <meta name="robots" content="max-image-preview:large">
+  <meta name="theme-color" content="#11304b">
+  <link rel="icon" href="/favicon.ico" sizes="any">
+  <link rel="apple-touch-icon" href="/apple-touch-icon.png">
+  <!-- /social -->
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "BlogPosting",
+    "headline": "Grover Search — ขยาย amplitude",
+    "author": {
+      "@type": "Person",
+      "@id": "https://anirach.com/#person",
+      "name": "Anirach Mingkhwan",
+      "url": "https://anirach.com/"
+    },
+    "datePublished": "2026-11-24",
+    "dateModified": "2026-11-24",
+    "image": "https://anirach.com/images/quantum-programmers-grover-og.jpg",
+    "inLanguage": [
+      "th",
+      "en"
+    ],
+    "mainEntityOfPage": "https://anirach.com/blog/quantum-programmers-grover.html"
+  }
+  </script>
+</head>
+<body>
+<a href="#main" class="skip-link">Skip to content</a>
+<input type="checkbox" id="langSwitch" class="lang-switch-box" aria-label="Switch language: Thai / English">
+
+  <nav class="blog-nav">
+    <div class="blog-nav__inner">
+      <a href="../index.html" class="blog-nav__home">Anirach</a>
+      <a href="./" class="blog-nav__back">‹ Tutorials</a>
+      <div class="blog-nav__title">Grover Search</div>
+    </div>
+  </nav>
+
+  <main id="main">
+
+  <header class="post-hero">
+    <div class="post-hero__tags">
+      <span class="post-hero__tag">Quantum Computing</span>
+      <span class="post-hero__tag">Qiskit</span>
+      <span class="post-hero__tag">Algorithms</span>
+    </div>
+    <h1 class="post-hero__title"><span class="l-th">Grover Search — ขยาย amplitude</span><span class="l-en" lang="en">Grover Search: Amplify the Answer and Know When to Stop</span></h1>
+    <p class="post-hero__sub"><span class="l-th">สร้าง phase oracle สำหรับ 1011 ตรวจ diffuser ด้วย linear algebra แล้วเปรียบเทียบจำนวน query โอกาสสำเร็จ และต้นทุนจริง</span><span class="l-en" lang="en">Build a phase oracle for 1011, check the diffuser with linear algebra, and distinguish query savings from total execution cost.</span></p>
+    <div class="post-hero__meta">
+      <span>By <strong>Anirach Mingkhwan</strong></span>
+      <span class="post-hero__series">Quantum Algorithms for Programmers 2026 • Post #2</span>
+      <span><time datetime="2026-11-24">24 Nov 2026</time></span>
+      <span>4 min read</span>
+    </div>
+    <label for="langSwitch" class="lang-switch" title="สลับภาษา · Switch language"><span class="lang-th">ไทย</span><span class="lang-sep">·</span><span class="lang-en" lang="en">English</span></label>
+    <div class="post-hero__cover">
+      <img src="../images/quantum-programmers-grover-cover.jpg" alt="Grover Search — ขยาย amplitude" width="800" height="800" loading="eager" fetchpriority="high" decoding="async">
+    </div>
+  </header>
+
+  <article class="post-body">
+
+    <details class="post-toc l-th" open>
+      <summary>ในบทความนี้</summary>
+      <ol>
+          <li><a href="#th-problem">Search contract — ค้นหาอะไรและนับอะไร</a></li>
+          <li><a href="#th-amplitude">Flip and reflect — probability ยังไม่เปลี่ยนหลัง oracle</a></li>
+          <li><a href="#th-geometry">Rotation — เหตุใดเพิ่มรอบแล้วแย่ลง</a></li>
+          <li><a href="#th-circuit">Implementation — เปิด oracle และ diffuser</a></li>
+          <li><a href="#th-results">Measured outcome — query saving ไม่ใช่ wall-clock saving</a></li>
+          <li><a href="#th-practice">Run & explore — ลงมือทดลอง</a></li>
+          <li><a href="#th-references">Sources & verification — แหล่งอ้างอิง</a></li>
+      </ol>
+    </details>
+    <details class="post-toc l-en" open>
+      <summary>In this post</summary>
+      <ol>
+          <li><a href="#en-problem">Search contract: define the task and the unit of cost</a></li>
+          <li><a href="#en-amplitude">Flip and reflect: the oracle alone changes no probability</a></li>
+          <li><a href="#en-geometry">Rotation: why additional rounds can hurt</a></li>
+          <li><a href="#en-circuit">Implementation: open the oracle and diffuser</a></li>
+          <li><a href="#en-results">Measured outcome: query savings versus wall-clock savings</a></li>
+          <li><a href="#en-practice">Run and explore</a></li>
+          <li><a href="#en-references">Sources and verification</a></li>
+      </ol>
+    </details>
+    <div class="l-th">
+
+<h2 id="th-problem">Search contract — ค้นหาอะไรและนับอะไร</h2>
+<p><strong>บทที่ 2/7</strong> · ดัดแปลงจากเอกสาร Quantum Algorithms for Programmers, Edition 1.0 หน้า 9–15 พร้อมโค้ดและคำอธิบายที่ตรวจซ้ำสำหรับเว็บ</p><p><strong>Grover’s algorithm</strong> หาคำตอบหนึ่งรายการจาก N candidates ที่ไม่มีโครงสร้างให้ใช้ โดยเรียก predicate f(x) ราว (π/4)√N ครั้ง เทียบกับ classical search ที่ใช้ Θ(N) queries นี่เป็น <strong>quadratic speedup</strong> ใน oracle model และเป็นขอบเขตที่ optimal สำหรับ unstructured search</p>
+ <p>สมมติเรามี candidate 16 รายการและคำตอบคือ <code>1011</code> ตัวอย่างจะสร้าง oracle ที่รู้ marked string นี้เพื่อให้ตรวจ circuit ได้ การรู้คำตอบล่วงหน้าเป็น fixture สำหรับการสอน ในโจทย์จริงเราต้องมี reversible predicate ที่ตรวจ candidate ได้โดยไม่ต้องรู้คำตอบก่อน เช่นวงจรตรวจเงื่อนไขที่ต้องการ</p>
+ <p>ผลเปรียบเทียบต้องนับงานเดียวกัน การอ่าน array ธรรมดา การค้นด้วย index และการคำนวณ reversible predicate มี cost ต่างกัน ถ้าข้อมูลมีโครงสร้างที่ classical algorithm ใช้ได้ เราต้องใช้ baseline นั้นแทนการบังคับให้ classical scan ทุกครั้ง</p><p>อ้างอิง: <a href="#th-ref-1">[1]</a> · <a href="#th-ref-2">[2]</a></p>
+
+<h2 id="th-amplitude">Flip and reflect — probability ยังไม่เปลี่ยนหลัง oracle</h2>
+<p>เริ่มด้วย H บน qubit ทั้งสี่ ได้ amplitude 1/√16 = 0.25 เท่ากันทุก state <strong>Phase oracle</strong> เปลี่ยนเฉพาะ amplitude ของ |1011⟩ เป็น −0.25 ขนาดกำลังสองยังเป็น 0.0625 เหมือนเดิม ถ้าวัดตรงนี้จะยังสุ่มเท่าเดิม</p>
+    <figure class="figure">
+      <a href="../images/quantum-amplitudes.png">
+        <img class="figure__img" src="../images/quantum-amplitudes.png" alt="N=16: oracle กลับเครื่องหมาย แล้ว diffuser ขยาย marked amplitude หลังสามรอบมีโอกาสสำเร็จ 96.13%" width="1464" height="519" loading="lazy" decoding="async">
+      </a>
+      <figcaption class="figure__caption">N=16: oracle กลับเครื่องหมาย แล้ว diffuser ขยาย marked amplitude หลังสามรอบมีโอกาสสำเร็จ 96.13% จากเอกสารผู้เขียน ภาพ 3.1 เปิดภาพเพื่อดูขนาดเต็ม</figcaption>
+    </figure>
+ <p>จากนั้น <strong>diffuser</strong> เปลี่ยน amplitude a<sub>x</sub> เป็น 2ā − a<sub>x</sub> โดย ā เป็นค่าเฉลี่ยหลัง oracle สำหรับรอบแรก ā = 0.21875 ทำให้ marked amplitude เป็น 0.6875 ส่วนรายการอื่นเป็น 0.1875 probability ของคำตอบจึงกลายเป็น 0.47265625</p>
+ <p>การกลับเครื่องหมายเป็นการ encode ส่วน diffuser ทำให้ phase ส่งผลต่อ measurement นี่คือรูปแบบเดียวกับ H–Z–H ในตอนแรก แต่ขยายจากสอง amplitudes เป็นสิบหก amplitudes</p>
+
+<h2 id="th-geometry">Rotation — เหตุใดเพิ่มรอบแล้วแย่ลง</h2>
+    <figure class="figure">
+      <a href="../images/quantum-rotation.png">
+        <img class="figure__img" src="../images/quantum-rotation.png" alt="reflection สองครั้งหมุน state ครั้งละ 2θ สำหรับ N=16 สามรอบหยุดเลยแกนคำตอบเล็กน้อย" width="1464" height="780" loading="lazy" decoding="async">
+      </a>
+      <figcaption class="figure__caption">reflection สองครั้งหมุน state ครั้งละ 2θ สำหรับ N=16 สามรอบหยุดเลยแกนคำตอบเล็กน้อย จากเอกสารผู้เขียน ภาพ 3.2 เปิดภาพเพื่อดูขนาดเต็ม</figcaption>
+    </figure>
+ <p>มอง state ในระนาบที่มีแกน “คำตอบ” และ “ผลรวม non-solutions” กำหนด θ = arcsin(1/√N) การทำ oracle และ diffuser คือ reflection สองครั้ง รวมเป็น rotation 2θ หลัง k รอบ success probability เท่ากับ sin²((2k+1)θ)</p>
+    <figure class="figure">
+      <a href="../images/quantum-overrotation.png">
+        <img class="figure__img" src="../images/quantum-overrotation.png" alt="โอกาสสำเร็จขึ้นลงตามจำนวนรอบ การรันเกิน stopping point ทำให้คำตอบแย่ลง" width="1464" height="729" loading="lazy" decoding="async">
+      </a>
+      <figcaption class="figure__caption">โอกาสสำเร็จขึ้นลงตามจำนวนรอบ การรันเกิน stopping point ทำให้คำตอบแย่ลง จากเอกสารผู้เขียน ภาพ 3.3 เปิดภาพเพื่อดูขนาดเต็ม</figcaption>
+    </figure>
+ <p>เลือกจำนวนรอบให้ (2k+1)θ ใกล้ π/2 สำหรับ N=16, θ ≈ 14.48° และ k=3 ให้โอกาส 96.13% แต่ k=5 เหลือ 12.55% อัลกอริทึมจึงต้องมี stopping rule สำหรับกรณีหนึ่งคำตอบในตัวอย่าง <code>floor((π/4)√N)</code> ให้สามรอบ หากมี M คำตอบ ให้แทน sin θ ด้วย √(M/N) และถ้าไม่ทราบ M ต้องใช้นโยบายค้นหาอีกแบบ</p>
+ <p>อย่านำ histogram รอบเดียวไปใช้เลือก stopping rule บนข้อมูลทดสอบแล้วอ้างความสำเร็จบนข้อมูลเดียวกัน เรามีทฤษฎีให้กำหนดจำนวนรอบก่อนรัน และมี statevector test ตรวจสูตรอย่างอิสระ</p>
+
+<h2 id="th-circuit">Implementation — เปิด oracle และ diffuser</h2>
+    <figure class="figure">
+      <a href="../images/quantum-grover-circuit.png">
+        <img class="figure__img" src="../images/quantum-grover-circuit.png" alt="สี่ qubits: เตรียมด้วย H ทำ oracle–diffuser สามคู่ แล้ววัดใน computational basis" width="1464" height="438" loading="lazy" decoding="async">
+      </a>
+      <figcaption class="figure__caption">สี่ qubits: เตรียมด้วย H ทำ oracle–diffuser สามคู่ แล้ววัดใน computational basis จากเอกสารผู้เขียน ภาพ 3.4 เปิดภาพเพื่อดูขนาดเต็ม</figcaption>
+    </figure>
+    <figure class="figure">
+      <a href="../images/quantum-oracle-diffuser.png">
+        <img class="figure__img" src="../images/quantum-oracle-diffuser.png" alt="oracle map 1011 ไป 1111 ก่อน controlled phase flip ส่วน diffuser ใช้ H และ X ครอบ phase flip อีกครั้ง" width="1464" height="519" loading="lazy" decoding="async">
+      </a>
+      <figcaption class="figure__caption">oracle map 1011 ไป 1111 ก่อน controlled phase flip ส่วน diffuser ใช้ H และ X ครอบ phase flip อีกครั้ง จากเอกสารผู้เขียน ภาพ 3.5 เปิดภาพเพื่อดูขนาดเต็ม</figcaption>
+    </figure>
+ <p>ส่วนโค้ดสำหรับอ่านแนวคิด ใช้ไฟล์เต็มพร้อม imports จาก companion และคำสั่งใน Run &amp; explore ด้านล่าง</p>
+<pre><code>def phase_oracle(n, marked):
+    if n &lt; 2 or len(marked) != n or set(marked) - {&quot;0&quot;, &quot;1&quot;}:
+        raise ValueError(&quot;Use n &gt;= 2 and an n-bit marked string&quot;)
+    qc = QuantumCircuit(n, name=&quot;Oracle&quot;)
+    zeros = [q for q, bit in enumerate(reversed(marked)) if bit == &quot;0&quot;]
+    for q in zeros:
+        qc.x(q)
+    qc.h(n - 1)
+    qc.mcx(list(range(n - 1)), n - 1)
+    qc.h(n - 1)
+    for q in zeros:
+        qc.x(q)
+    return qc
+
+def diffuser(n):
+    qc = QuantumCircuit(n, name=&quot;Diffuser&quot;)
+    qc.h(range(n))
+    qc.x(range(n))
+    qc.h(n - 1)
+    qc.mcx(list(range(n - 1)), n - 1)
+    qc.h(n - 1)
+    qc.x(range(n))
+    qc.h(range(n))
+    return qc</code></pre>
+ <p><code>reversed(marked)</code> เป็นเรื่องสำคัญ เพราะ qubit 0 อยู่ทางขวาสุดของ string เราใส่ X บนตำแหน่งที่ target เป็น 0 เพื่อ map marked state ไป |1111⟩ แล้ว H–MCX–H ทำ multi-controlled Z จากนั้น undo X ให้ basis กลับตำแหน่งเดิม</p>
+ <p>diffuser ใช้ H และ X ครอบ phase flip อีกชั้น วงจรนี้เท่ากับ negative ของ D = 2|s⟩⟨s| − I ซึ่งต่างกันเพียง global phase จึงวัดเหมือนกัน test ตรวจ matrix ทั้งก้อนโดยยอมรับ global phase นี้ ไม่ได้ตรวจแค่ outcome ที่โชคดีตัวเดียว</p>
+
+<h2 id="th-results">Measured outcome — query saving ไม่ใช่ wall-clock saving</h2>
+<p><strong>ผลรันที่บันทึก 24 November 2026</strong></p>
+<pre><code>N=16; marked=1011; iterations=3
+Theory=0.961319; statevector=0.961319
+Sampled hits=3928/4096
+Success by iterations 0..5: [0.0625, 0.4727, 0.9084, 0.9613, 0.5817, 0.1255]</code></pre>
+    <figure class="figure">
+      <a href="../images/quantum-grover-results.png">
+        <img class="figure__img" src="../images/quantum-grover-results.png" alt="ผลรันซ้ำ: ideal shots 3,928 จาก 4,096 ครั้งได้ 1011 สอดคล้องกับ exact probability 0.961319" width="1607" height="814" loading="lazy" decoding="async">
+      </a>
+      <figcaption class="figure__caption">ผลรันซ้ำ: ideal shots 3,928 จาก 4,096 ครั้งได้ 1011 สอดคล้องกับ exact probability 0.961319 สร้างจาก companion experiment หรือแบบจำลองเพื่อการสอน เปิดภาพเพื่อดูขนาดเต็ม</figcaption>
+    </figure>
+ <p>รันบน ideal Aer simulator 4,096 shots ได้คำตอบ 3,928 ครั้ง หรือ 95.90% เทียบกับ exact probability 96.13% ความต่างเป็น sampling noise ค่า standard error ตามทฤษฎีประมาณ 0.30 percentage points ตัวเลขนี้ไม่ใช่ hardware error rate และเวลาที่ simulator ใช้ไม่ใช่เวลา quantum computer</p>
+    <figure class="figure">
+      <a href="../images/quantum-queries.png">
+        <img class="figure__img" src="../images/quantum-queries.png" alt="นับเฉพาะ oracle queries: N และ N/2 เทียบกับประมาณ π√N/4 ยังไม่นับ gate ภายในและ data access" width="1464" height="678" loading="lazy" decoding="async">
+      </a>
+      <figcaption class="figure__caption">นับเฉพาะ oracle queries: N และ N/2 เทียบกับประมาณ π√N/4 ยังไม่นับ gate ภายในและ data access จากเอกสารผู้เขียน ภาพ 3.7 เปิดภาพเพื่อดูขนาดเต็ม</figcaption>
+    </figure>
+ <div class="table-wrapper"><table><thead><tr><th>N</th><th>Classical scan ≈ N/2</th><th>Grover queries ≈ π√N/4</th></tr></thead><tbody><tr><td>10³</td><td>500</td><td>24</td></tr><tr><td>10⁶</td><td>500,000</td><td>785</td></tr><tr><td>10⁹</td><td>500,000,000</td><td>24,836</td></tr></tbody></table></div>
+ <p>ตัวเลข classical เป็นค่าประมาณของการไล่ตรวจตำแหน่งแบบสุ่มเท่ากัน จำนวนจริงเฉลี่ย (N+1)/2 หากนับการตรวจที่พบด้วย ส่วน Grover นับ oracle calls เท่านั้น ต้นทุนต่อ call รวม reversible computation, ancilla และ error correction ได้มาก งานของ Babbush และคณะอธิบายว่าค่า overhead ทำให้ quadratic advantage เปลี่ยนเป็นประโยชน์จริงได้ยากบนเครื่อง fault-tolerant รุ่นแรก</p>
+ <blockquote><p>ผลที่บทนี้แสดงได้: circuit ขยาย probability ตามทฤษฎี ผลที่ยังสรุปไม่ได้: การค้นข้อมูลจริงเร็วกว่าระบบ classical ที่จัด index หรือทำ parallel search อย่างเหมาะสม</p></blockquote><p>อ้างอิง: <a href="#th-ref-3">[3]</a></p>
+
+<h2 id="th-practice">Run & explore — ลงมือทดลอง</h2>
+<p><a href="https://github.com/Anirach/quantum-algorithms-for-programmers/blob/0ad89867571639641f0b9fab28391e28dc584670/grover_search.py">Complete code</a> · <a href="https://github.com/Anirach/quantum-algorithms-for-programmers/blob/0ad89867571639641f0b9fab28391e28dc584670/tests/test_algorithms.py#L29">GroverTests</a> · <a href="https://github.com/Anirach/quantum-algorithms-for-programmers/blob/0ad89867571639641f0b9fab28391e28dc584670/exercises/02.md">Exercise</a> · <a href="https://github.com/Anirach/quantum-algorithms-for-programmers/blob/0ad89867571639641f0b9fab28391e28dc584670/README.md">Setup &amp; troubleshooting</a></p><p>ใช้ Python 3.12–3.13 และ virtual environment ตาม README ไม่ต้องใช้ API key หรือ quantum hardware หากยังไม่ติดตั้งให้ทำตามตอน 1 หรือ README</p><pre><code># From the companion root, with the virtual environment active
+python grover_search.py
+python -m unittest discover -s tests -p test_algorithms.py -k GroverTests -v</code></pre><h3>ลองต่อด้วยตัวเอง</h3><p>เปลี่ยน target เป็น 0010 และเปรียบเทียบ k=0, 1, 3, 5 ตรวจว่า oracle กลับ phase ของ state ที่ถูกต้อง แล้วอธิบายต้นทุนที่ query table ยังไม่นับ</p>
+
+<h2 id="th-references">Sources & verification — แหล่งอ้างอิง</h2>
+<section class="references" aria-labelledby="th-sources"><h3 id="th-sources">Primary sources และขอบเขตการตรวจ</h3><p class="references__note">เอกสารผู้เขียนเป็นต้นทางของคำอธิบายและภาพที่ระบุ ส่วนลิงก์ข้างล่างเป็นเอกสารวิจัยและมาตรฐานที่ใช้ตรวจข้ออ้าง โค้ดรันซ้ำบน Python 3.13, Qiskit 2.6.2, Aer 0.18.4, NumPy 2.5.5 และ SciPy 1.18.1 วันที่ 24 November 2026 ผลทั้งหมดเป็น local simulation หรือค่าตัวอย่างที่ระบุ ไม่มีการรัน hardware</p><ol><li id="th-ref-1"><a href="https://arxiv.org/abs/quant-ph/9605043">Grover. A fast quantum mechanical algorithm for database search (1996).</a></li><li id="th-ref-2"><a href="https://arxiv.org/abs/quant-ph/9711070">Zalka. Grover’s quantum searching algorithm is optimal (1999).</a></li><li id="th-ref-3"><a href="https://arxiv.org/abs/2011.04149">Babbush et al. Focus beyond quadratic speedups for error-corrected quantum advantage (2021).</a></li><li id="th-ref-4"><a href="https://quantum.cloud.ibm.com/docs/en/qiskit/bit-ordering">IBM Quantum. Bit ordering in the Qiskit SDK.</a></li></ol></section>
+    </div>
+
+    <div class="l-en" lang="en">
+
+<h2 id="en-problem">Search contract: define the task and the unit of cost</h2>
+<p><strong>Part 2/7.</strong> Adapted from Quantum Algorithms for Programmers, Edition 1.0, pp. 9–15, with web explanations and rerun code.</p><p><strong>Grover's algorithm</strong> finds one marked candidate among N unstructured possibilities using roughly (π/4)√N predicate queries. A classical search needs Θ(N) queries. This is a <strong>quadratic speedup</strong> in the oracle model, and the scaling is optimal for unstructured search.</p>
+ <p>Our search space has 16 items and the marked string is <code>1011</code>. The example deliberately knows this string to construct a testable oracle. That is a teaching fixture. In a real problem, you need an independently supplied reversible predicate that recognizes a valid candidate without already knowing the answer.</p>
+ <p>Compare equal tasks. Scanning ordinary memory, using an index, and computing a reversible predicate have different costs. If a classical method can exploit sorting, an index or other structure, that method belongs in the baseline.</p><p>Sources: <a href="#en-ref-1">[1]</a> · <a href="#en-ref-2">[2]</a></p>
+
+<h2 id="en-amplitude">Flip and reflect: the oracle alone changes no probability</h2>
+<p>Apply H to all four qubits. Every amplitude starts at 1/√16 = 0.25. The <strong>phase oracle</strong> changes only the |1011⟩ amplitude to −0.25. Its squared magnitude remains 0.0625, so immediate measurement is still uniform.</p>
+    <figure class="figure">
+      <a href="../images/quantum-amplitudes.png">
+        <img class="figure__img" src="../images/quantum-amplitudes.png" alt="For N=16, the oracle changes a sign; the diffuser raises the marked amplitude. Three rounds give 96.13% success." width="1464" height="519" loading="lazy" decoding="async">
+      </a>
+      <figcaption class="figure__caption">For N=16, the oracle changes a sign; the diffuser raises the marked amplitude. Three rounds give 96.13% success. Source: author’s guide, Figure 3.1. Open for full resolution.</figcaption>
+    </figure>
+ <p>The <strong>diffuser</strong> replaces amplitude a<sub>x</sub> by 2ā − a<sub>x</sub>, where ā is the mean after the oracle. In the first round, ā = 0.21875. The marked amplitude becomes 0.6875, and each other amplitude becomes 0.1875. Success probability is now 0.47265625.</p>
+ <p>The sign flip encodes the predicate; the diffuser makes that phase observable. This repeats the logic of H–Z–H from part 1, now across sixteen amplitudes.</p>
+
+<h2 id="en-geometry">Rotation: why additional rounds can hurt</h2>
+    <figure class="figure">
+      <a href="../images/quantum-rotation.png">
+        <img class="figure__img" src="../images/quantum-rotation.png" alt="Two reflections rotate by 2θ per round; three rounds at N=16 stop just beyond the solution axis." width="1464" height="780" loading="lazy" decoding="async">
+      </a>
+      <figcaption class="figure__caption">Two reflections rotate by 2θ per round; three rounds at N=16 stop just beyond the solution axis. Source: author’s guide, Figure 3.2. Open for full resolution.</figcaption>
+    </figure>
+ <p>View the state in the plane spanned by the solution and the uniform combination of non-solutions. Set θ = arcsin(1/√N). The oracle and diffuser are two reflections, producing a rotation by 2θ. After k rounds, success probability is sin²((2k+1)θ).</p>
+    <figure class="figure">
+      <a href="../images/quantum-overrotation.png">
+        <img class="figure__img" src="../images/quantum-overrotation.png" alt="Success oscillates with iteration count. Running beyond the chosen stopping point reduces success." width="1464" height="729" loading="lazy" decoding="async">
+      </a>
+      <figcaption class="figure__caption">Success oscillates with iteration count. Running beyond the chosen stopping point reduces success. Source: author’s guide, Figure 3.3. Open for full resolution.</figcaption>
+    </figure>
+ <p>Choose an integer k that brings (2k+1)θ close to π/2. For N=16, θ ≈ 14.48° and k=3 gives 96.13% success. At k=5 it falls to 12.55%. The one-solution rule <code>floor((π/4)√N)</code> gives three rounds here. With M solutions, sin θ becomes √(M/N); unknown M requires a different search schedule.</p>
+ <p>Do not choose a stopping rule from one test histogram and report success on the same data. Here theory sets the count before execution, and independent statevector checks verify the probability formula.</p>
+
+<h2 id="en-circuit">Implementation: open the oracle and diffuser</h2>
+    <figure class="figure">
+      <a href="../images/quantum-grover-circuit.png">
+        <img class="figure__img" src="../images/quantum-grover-circuit.png" alt="Four qubits: H preparation, three oracle–diffuser pairs, then computational-basis measurement." width="1464" height="438" loading="lazy" decoding="async">
+      </a>
+      <figcaption class="figure__caption">Four qubits: H preparation, three oracle–diffuser pairs, then computational-basis measurement. Source: author’s guide, Figure 3.4. Open for full resolution.</figcaption>
+    </figure>
+    <figure class="figure">
+      <a href="../images/quantum-oracle-diffuser.png">
+        <img class="figure__img" src="../images/quantum-oracle-diffuser.png" alt="The oracle maps target 1011 to 1111 before a controlled phase flip; the diffuser wraps another phase flip in H and X." width="1464" height="519" loading="lazy" decoding="async">
+      </a>
+      <figcaption class="figure__caption">The oracle maps target 1011 to 1111 before a controlled phase flip; the diffuser wraps another phase flip in H and X. Source: author’s guide, Figure 3.5. Open for full resolution.</figcaption>
+    </figure>
+ <p>Implementation excerpt. Use the complete companion file with its imports and the Run and explore commands below.</p>
+<pre><code>def phase_oracle(n, marked):
+    if n &lt; 2 or len(marked) != n or set(marked) - {&quot;0&quot;, &quot;1&quot;}:
+        raise ValueError(&quot;Use n &gt;= 2 and an n-bit marked string&quot;)
+    qc = QuantumCircuit(n, name=&quot;Oracle&quot;)
+    zeros = [q for q, bit in enumerate(reversed(marked)) if bit == &quot;0&quot;]
+    for q in zeros:
+        qc.x(q)
+    qc.h(n - 1)
+    qc.mcx(list(range(n - 1)), n - 1)
+    qc.h(n - 1)
+    for q in zeros:
+        qc.x(q)
+    return qc
+
+def diffuser(n):
+    qc = QuantumCircuit(n, name=&quot;Diffuser&quot;)
+    qc.h(range(n))
+    qc.x(range(n))
+    qc.h(n - 1)
+    qc.mcx(list(range(n - 1)), n - 1)
+    qc.h(n - 1)
+    qc.x(range(n))
+    qc.h(range(n))
+    return qc</code></pre>
+ <p><code>reversed(marked)</code> matters because qubit 0 is the rightmost character. X gates map zero positions in the target to ones. H–MCX–H implements a multi-controlled Z, and undoing X restores the original basis labels.</p>
+ <p>The diffuser wraps another phase flip in H and X layers. This circuit implements the negative of D = 2|s⟩⟨s| − I, differing only by a global phase. Measurement is unchanged. Our test checks the entire matrix with this global sign, rather than checking one fortunate sample.</p>
+
+<h2 id="en-results">Measured outcome: query savings versus wall-clock savings</h2>
+<p><strong>Captured run, 24 November 2026</strong></p>
+<pre><code>N=16; marked=1011; iterations=3
+Theory=0.961319; statevector=0.961319
+Sampled hits=3928/4096
+Success by iterations 0..5: [0.0625, 0.4727, 0.9084, 0.9613, 0.5817, 0.1255]</code></pre>
+    <figure class="figure">
+      <a href="../images/quantum-grover-results.png">
+        <img class="figure__img" src="../images/quantum-grover-results.png" alt="Rerun: 3,928 of 4,096 ideal shots measured 1011, consistent with the exact probability 0.961319." width="1607" height="814" loading="lazy" decoding="async">
+      </a>
+      <figcaption class="figure__caption">Rerun: 3,928 of 4,096 ideal shots measured 1011, consistent with the exact probability 0.961319. Generated from the companion experiment or teaching model. Open for full resolution.</figcaption>
+    </figure>
+ <p>The ideal Aer run produces 3,928 hits in 4,096 shots: 95.90%, compared with exact probability 96.13%. The theoretical standard error is about 0.30 percentage points. This difference is sampling noise, not a hardware error rate. Simulator execution time is not quantum-device runtime.</p>
+    <figure class="figure">
+      <a href="../images/quantum-queries.png">
+        <img class="figure__img" src="../images/quantum-queries.png" alt="Oracle-query scaling only: N and N/2 versus approximately π√N/4. Per-query gates and data access are excluded." width="1464" height="678" loading="lazy" decoding="async">
+      </a>
+      <figcaption class="figure__caption">Oracle-query scaling only: N and N/2 versus approximately π√N/4. Per-query gates and data access are excluded. Source: author’s guide, Figure 3.7. Open for full resolution.</figcaption>
+    </figure>
+ <div class="table-wrapper"><table><thead><tr><th>N</th><th>Classical scan ≈ N/2</th><th>Grover queries ≈ π√N/4</th></tr></thead><tbody><tr><td>10³</td><td>500</td><td>24</td></tr><tr><td>10⁶</td><td>500,000</td><td>785</td></tr><tr><td>10⁹</td><td>500,000,000</td><td>24,836</td></tr></tbody></table></div>
+ <p>The classical column approximates a uniformly located target in a sequential scan; the exact mean including the successful query is (N+1)/2. The quantum column counts only oracle calls. Each call can require substantial reversible computation, ancillas and error correction. Babbush and colleagues analyze why these overheads can make quadratic advantage difficult on early fault-tolerant devices.</p>
+ <blockquote><p>Established here: the circuit amplifies probability as predicted. Unestablished: faster real-world search than a suitably indexed or parallel classical system.</p></blockquote><p>Sources: <a href="#en-ref-3">[3]</a></p>
+
+<h2 id="en-practice">Run and explore</h2>
+<p><a href="https://github.com/Anirach/quantum-algorithms-for-programmers/blob/0ad89867571639641f0b9fab28391e28dc584670/grover_search.py">Complete code</a> · <a href="https://github.com/Anirach/quantum-algorithms-for-programmers/blob/0ad89867571639641f0b9fab28391e28dc584670/tests/test_algorithms.py#L29">GroverTests</a> · <a href="https://github.com/Anirach/quantum-algorithms-for-programmers/blob/0ad89867571639641f0b9fab28391e28dc584670/exercises/02.md">Exercise</a> · <a href="https://github.com/Anirach/quantum-algorithms-for-programmers/blob/0ad89867571639641f0b9fab28391e28dc584670/README.md">Setup &amp; troubleshooting</a></p><p>Use Python 3.12–3.13 and the README virtual environment. No API key or quantum hardware is required. If setup is incomplete, follow part 1 or the README.</p><pre><code># From the companion root, with the virtual environment active
+python grover_search.py
+python -m unittest discover -s tests -p test_algorithms.py -k GroverTests -v</code></pre><h3>Your experiment</h3><p>Change the target to 0010, compare k=0,1,3,5, verify the phase flip lands on the correct basis state, and list the costs omitted by the query table.</p>
+
+<h2 id="en-references">Sources and verification</h2>
+<section class="references" aria-labelledby="en-sources"><h3 id="en-sources">Primary sources and verification scope</h3><p class="references__note">The author’s guide supplies the credited explanations and illustrations. Linked papers and standards support the claims. Code was rerun locally on 24 November 2026 with Python 3.13, Qiskit 2.6.2, Aer 0.18.4, NumPy 2.5.5 and SciPy 1.18.1. Results are local simulations or explicitly hypothetical inputs; no quantum hardware was used.</p><ol><li id="en-ref-1"><a href="https://arxiv.org/abs/quant-ph/9605043">Grover. A fast quantum mechanical algorithm for database search (1996).</a></li><li id="en-ref-2"><a href="https://arxiv.org/abs/quant-ph/9711070">Zalka. Grover’s quantum searching algorithm is optimal (1999).</a></li><li id="en-ref-3"><a href="https://arxiv.org/abs/2011.04149">Babbush et al. Focus beyond quadratic speedups for error-corrected quantum advantage (2021).</a></li><li id="en-ref-4"><a href="https://quantum.cloud.ibm.com/docs/en/qiskit/bit-ordering">IBM Quantum. Bit ordering in the Qiskit SDK.</a></li></ol></section>
+    </div>
+
+    <div class="post-series-footer">
+      <span class="l-th">จากซีรีส์ Quantum Algorithms for Programmers</span><span class="l-en" lang="en">From Quantum Algorithms for Programmers</span>
+    </div>
+
+    <nav aria-label="Quantum Algorithms for Programmers">
+    <div class="series-nav">
+      <h3>Quantum Algorithms for Programmers · 7-Part Course</h3>
+      <div class="series-links">
+        <a href="/blog/quantum-programmers-foundations">#1 Amplitudes</a>
+        <span class="current" aria-current="page">#2 Grover Search</span>
+        <a href="/blog/quantum-programmers-shor">#3 Shor &amp; Periods</a>
+        <a href="/blog/quantum-programmers-hhl">#4 HHL &amp; Readout</a>
+        <a href="/blog/quantum-programmers-qaoa">#5 QAOA &amp; MaxCut</a>
+        <a href="/blog/quantum-programmers-simulation">#6 Simulate Physics</a>
+        <a href="/blog/quantum-programmers-scorecard">#7 Engineering Verdict</a>
+      </div>
+    </div>
+    </nav>
+
+  </article>
+
+  </main>
+
+  <footer class="blog-footer">
+    <nav class="blog-footer__nav" aria-label="Site">
+      <a href="../index.html">Home</a>
+      <a href="./">Tutorials</a>
+      <a href="../thoughts/">Thoughts</a>
+      <a href="../publications/">Publications</a>
+      <a href="../books/">Books</a>
+      <a href="../projects/">Projects</a>
+      <a href="../news/">News</a>
+      <a href="../index.html#contact">Contact</a>
+    </nav>
+    <a href="./">← Back to Tutorials</a>
+    <span>© 2026 Anirach Mingkhwan — Independent AI consultant</span>
+  </footer>
+
+</body>
+</html>

@@ -2,7 +2,7 @@
   <img src="https://img.shields.io/badge/anirach.com-Live-1D4ED8?style=for-the-badge" alt="anirach.com live">
   <img src="https://img.shields.io/badge/Zero-JavaScript-111827?style=for-the-badge" alt="Zero JavaScript">
   <img src="https://img.shields.io/badge/Build_step-None-7C3AED?style=for-the-badge" alt="No build step">
-  <img src="https://img.shields.io/badge/Posts-160_bilingual-059669?style=for-the-badge" alt="160 bilingual posts">
+  <img src="https://img.shields.io/badge/Posts-167_bilingual-059669?style=for-the-badge" alt="167 bilingual posts">
   <img src="https://img.shields.io/badge/GitHub_Pages-Deploy_on_push-0EA5E9?style=for-the-badge&logo=github&logoColor=white" alt="GitHub Pages">
 </p>
 
@@ -11,7 +11,7 @@
 <p align="center">
   <strong>The personal site of Dr. Anirach Mingkhwan — independent AI consultant, author, and former Dean of FITM, KMUTNB.</strong>
   <br>
-  <em>A consultant profile, 160 bilingual Thai/English posts in 12 series, four books and an academic record — hand-written, zero-JavaScript, no build step.</em>
+  <em>A consultant profile, 167 bilingual Thai/English posts in 13 series, four books and an academic record — hand-written, zero-JavaScript, no build step.</em>
 </p>
 
 <p align="center">
@@ -30,8 +30,8 @@
 A static site with no build step buys simplicity and pays for it in one specific way: **nothing is shared, so nothing is enforced.**
 
 - every page embeds its own complete stylesheet — there is no partial, template engine or token file
-- a "global" change is therefore an N-file edit, by hand, across 172 files
-- nothing tells you when file 23 of 172 got missed
+- a "global" change is therefore an N-file edit, by hand, across 179 files
+- nothing tells you when file 23 of 179 got missed
 - counters, navigation chains, feed items and sitemap URLs are hand-wired across files that never import one another
 - and every post is bilingual, so each prose edit has a mirror that can silently drift
 
@@ -47,7 +47,7 @@ A static site with no build step buys simplicity and pays for it in one specific
 | **Interactivity** | A framework, or at least some JS | **Zero executable JavaScript.** `INV-38` fails the build on any `<script>` that is not `application/ld+json` |
 | **Reveal animations, mobile menu** | IntersectionObserver + click handlers | Scroll-driven CSS (`animation-timeline: view()`), `:target`, and a checkbox toggle |
 | **Bilingual content** | An i18n library, or two URLs per page | One URL, two tracks, a pure-CSS `ไทย · English` switch — four CSS lines |
-| **Long series of posts** | Hand-copied templates that rot | **8 series are generated** from a manifest + per-post content sheets + a skeleton read at run time |
+| **Long series of posts** | Hand-copied templates that rot | **9 series are generated** from a manifest + per-post content sheets + a skeleton read at run time |
 | **Catalog pages** | Hand-ordered cards | `reindex_blog.py` regenerates both catalogs; re-run it rather than hand-fixing order |
 | **Feed and sitemap** | Hand-maintained, quietly stale | Generated on demand; `INV-31` / `INV-32` fail the build when either drifts |
 | **Image weight** | Ship the full cover everywhere | A 144px `-thumb.jpg` via `srcset` — the Tutorials catalog went 3.63 MB → 0.42 MB |
@@ -62,7 +62,7 @@ A static site with no build step buys simplicity and pays for it in one specific
 | Page | What it holds |
 |:---|:---|
 | [`index.html`](index.html) | Single-scroll **consultant profile**: hero, services, engagement approach, selected work, about and career, research, free library, latest news, contact |
-| [`blog/`](blog/) | The **Tutorials** catalog — 121 cards in 9 technical series, plus all 160 post files |
+| [`blog/`](blog/) | The **Tutorials** catalog — 128 cards in 10 technical series, plus all 167 post files |
 | [`thoughts/`](thoughts/) | The **Thoughts** catalog — 39 essay cards in 3 series, each linking `../blog/<slug>.html` |
 | [`publications/`](publications/) | The academic record: the Springer book *Libraries in Transformation*, 8 book chapters, selected publications |
 | [`books/`](books/) | Four works, each with a detail page — *One Day of Light* (free EN/TH PDFs), the novel *Three Old Men*, and two complete bilingual manuscripts |
@@ -75,10 +75,11 @@ A static site with no build step buys simplicity and pays for it in one specific
 
 ## 📚 The Catalogs
 
-**Tutorials — `/blog/`, hero reads `9 Series · 121 Articles`**
+**Tutorials — `/blog/`, hero reads `10 Series · 128 Articles`**
 
 | Series | Posts | Navigation | Generated |
 |:---|:---:|:---|:---:|
+| ψ Quantum Algorithms for Programmers | 7 | chip strip | ✅ |
 | ⌘ Software Engineering with AI-Core | 15 | grouped chip strip | ✅ |
 | 🧩 AI-Core Functional Workflows | 12 | chip strip | ✅ |
 | 🔬 AI-Core + Jev in Practice | 10 | chip strip | ✅ |
@@ -97,7 +98,7 @@ A static site with no build step buys simplicity and pays for it in one specific
 | 🧭 Working Philosophies | 10 | one working week, Monday to Friday | ✅ |
 | 🌅 Life Thought & Philosophy | 9 | one day in three parts — Morning · Noon · Twilight | — |
 
-**All 160 posts are bilingual.** A `ไทย · English` pill swaps between two complete tracks of the same article. Thai is the default, there is no JavaScript, and the page-level `<html lang="th">` never changes — the English track is `lang="en"` inside it.
+**All 167 posts are bilingual.** A `ไทย · English` pill swaps between two complete tracks of the same article. Thai is the default, there is no JavaScript, and the page-level `<html lang="th">` never changes — the English track is `lang="en"` inside it.
 
 The Thoughts essays are written in a different register from the tutorials: literary Thai in the author's own voice, not code-switched technical prose. The brief, with ten rules and worked before/after pairs, is [`thai-essay-voice.md`](.claude/skills/blog-post/references/thai-essay-voice.md).
 
@@ -225,13 +226,13 @@ python3 .claude/skills/blog-post/assets/verify-wiring.py     # blog post wiring
 .
 ├── index.html              # consultant profile — the ONLY file that loads style.css
 ├── style.css               # landing-page styles + the canonical :root token block
-├── blog/                   # the Tutorials catalog + all 160 post files
+├── blog/                   # the Tutorials catalog + all 167 post files
 ├── thoughts/               # the Thoughts catalog (39 cards → ../blog/)
 ├── books/ publications/ projects/ news/     # one self-contained index.html each
 ├── images/                 # 557 files — covers, thumbs, share cards, figures, posters
 ├── examples/               # the two runnable tutorial labs (teaching source, not a site dependency)
 ├── downloads/              # the reviewed lab ZIPs
-├── scripts/                # 15 generators and sweeps
+├── scripts/                # 20 generators, motif modules and sweeps
 │   └── series/             # 7 manifests, one per generated series
 ├── docs/                   # specs, plans, the news runbook + its gate (not published)
 ├── .claude/skills/         # the four maintenance skills (not published)
@@ -268,6 +269,8 @@ Four skills in [`.claude/skills/`](.claude/skills/) carry the verified detail th
 ---
 
 ## 🧪 Tutorial Labs and Companions
+
+**Quantum Algorithms for Programmers (2026-11-24).** Seven bilingual lessons adapted from the author's 43-page guide, with 16 preserved source illustrations and eight new experiment/engineering figures. The [public companion](https://github.com/Anirach/quantum-algorithms-for-programmers) contains seven programs, exercises, a detailed README and 26 independent checks. Published code links pin `0ad89867571639641f0b9fab28391e28dc584670` (v1.0.1). See [`docs/quantum-programmers/README.md`](docs/quantum-programmers/README.md) for source provenance, rebuilding and validation. The examples use local ideal simulation, not a QPU.
 
 **Standing delivery default (owner preference, 2026-10-23).** A coding tutorial pairs the website lesson with a **runnable GitHub companion**. Each chapter links directly to its matching code files and tests. The companion README must cover prerequisites, exact commands, expected results, troubleshooting and lesson-to-code mapping; commands are verified from a clean copy, and secrets and generated output stay out of publication. Website and companion publication stay within the scope authorised for that task.
 

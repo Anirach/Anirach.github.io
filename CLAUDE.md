@@ -16,7 +16,17 @@ python -m http.server 8000    # then open http://localhost:8000
 npx serve .
 ```
 
-> **Current inventory — re-measured 2026-11-02.** 160 bilingual posts across 12 series
+> **Current local review inventory — 2026-11-24:** 167 bilingual posts in 13 series
+> (10 Tutorials / 128 articles, 3 Thoughts / 39 essays), 179 public HTML files
+> (178 enumerated), 602 images, 167 feed items and 178 sitemap URLs.
+> The seven-part **Quantum Algorithms for Programmers** course has 24 figures,
+> seven original cover motifs and a public Python/Qiskit companion with 26 tests.
+> Editorial source: `docs/quantum-programmers/`; manifest: `scripts/series/quantum-programmers.json`.
+> Companion: https://github.com/Anirach/quantum-algorithms-for-programmers at
+> `0ad89867571639641f0b9fab28391e28dc584670` (v1.0.1). Python 3.12–3.13;
+> all results are local simulation or clearly labeled hypothetical examples.
+>
+> **Historical inventory — re-measured 2026-11-02.** 160 bilingual posts across 12 series
 > (9 Tutorials / 121 articles, 3 Thoughts / 39 essays), 172 public HTML files
 > (171 enumerated by `check_site.py`), 557 images, 160 feed items and 171 sitemap URLs.
 > The new **Software Engineering with AI-Core** course has 15 parts, 16 diagrams,

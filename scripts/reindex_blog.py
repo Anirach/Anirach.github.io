@@ -34,6 +34,7 @@ RE_EMOJI_TAIL = re.compile(r'\s*[\U0001F000-\U0001FAFF\u2300-\u23FF☀-➿⬀-�
 
 # ---------------------------------------------------------------- copy deck
 SERIES = {
+    "series-quantum-programmers": ("Quantum Algorithms", "Seven programmer-first lessons on Grover, Shor, HHL, QAOA and quantum simulation, with diagrams, verified Qiskit experiments and a GitHub companion.", "คอร์สเจ็ดตอนจากเอกสารผู้เขียน มีภาพอธิบาย โค้ด Qiskit และผลทดลองที่ตรวจซ้ำ"),
     "series-ai-engineering": ("AI-Core Engineering", "A 15-part architecture course for programmers: functions, Jev, reviewed skills, input checks, hard guardrails, output checks and independent quality gates.", "คอร์ส 15 ตอนสำหรับโปรแกรมเมอร์ เริ่มจาก function สู่ Jev, skill และด่านตรวจที่เห็นผลต่างชัด"),
     "series-ai-core-functional": ("Functions → AI-Core", "Build explicit input checks, policy, output validation and a separate quality gate, with a text-only offline companion.", "จากฟังก์ชันเดิมสู่ input check, guardrail, output check และ quality gate แบบลงมือทำ"),
     "series-ai-core-jev": ("AI-Core + Jev", "Build and test a support-ticket pipeline: quality, coverage, latency and complete cost, with offline fixtures first.", "คัดแยก ticket แบบลงมือจริง วัดคุณภาพ coverage เวลา และต้นทุนรวม เริ่มด้วย fixture ออฟไลน์"),
@@ -65,7 +66,7 @@ SERIES = {
     # "series-life" left this page on 2026-09-08: the nine Life essays are
     # catalogued on thoughts/index.html (hand-written; the series is complete).
 }
-NUM_WORD = {4: "four", 5: "five", 6: "six", 7: "seven", 8: "eight", 9: "nine"}
+NUM_WORD = {4: "four", 5: "five", 6: "six", 7: "seven", 8: "eight", 9: "nine", 10: "ten"}
 ICON_FIX = {"series-devops": "🚀"}   # chip said ⚙️, header says 🚀 — one glyph per series
 
 # ---------------------------------------------------------------- thoughts deck
@@ -119,11 +120,11 @@ FEATURE_DEFAULT_T = "good-life-examined-life"   # first build only; then parsed 
 
 HERO_LABEL = 'Anirach Mingkhwan · KMUTNB · <span lang="th">ไทย</span> ⇄ English'
 HERO_TITLE = 'Tutorials'
-HERO_SUB = ('{nseries} practical series on guarded functions, AI-Core + Jev, agents and DevOps — '
+HERO_SUB = ('{nseries} practical series on quantum algorithms, guarded functions, AI-Core + Jev, agents and DevOps — '
             'every post in Thai, with English one tap away. Essays on living well are in '
             '<a href="../thoughts/">Thoughts</a>.')
-META_DESC = ('{total} bilingual Thai/English tutorials in {nseries} series: functional workflows, AI-Core + Jev, '
-             'AI-Core Systems, Hermes, AI Transformation, OpenClaw and DevOps.')
+META_DESC = ('{total} Thai/English tutorials in {nseries} series: quantum algorithms, guarded functions, AI-Core + Jev, '
+             'agents, AI Transformation and DevOps. With runnable code.')
 PAGE_TITLE = 'Tutorials — Anirach Mingkhwan'
 
 
@@ -172,7 +173,7 @@ def rewrap_excerpt(ex):
 def ordinal_map(repo):
     """slug -> (n, group_key) from manifests, chip strips and the DevOps chain."""
     out = {}
-    for name in ("ai-engineering", "ai-core-functional", "ai-core-jev", "hermes-desktop", "ai-transformation", "ai-core", "working", "good-life"):
+    for name in ("quantum-programmers", "ai-engineering", "ai-core-functional", "ai-core-jev", "hermes-desktop", "ai-transformation", "ai-core", "working", "good-life"):
         man = json.load(open(os.path.join(repo, "scripts", "series", name + ".json")))
         for p in man["posts"]:
             out[p["slug"]] = (p["n"], p.get("group") or p.get("day"))
@@ -568,6 +569,8 @@ def section_html(sec, ords, chain, order, groups):
     ]
     if sec["id"] == "series-ai-core-functional":
         out.insert(-1, '      <p class="series-description"><a href="https://github.com/Anirach/ai-core-functional-tutorial">GitHub companion + detailed README</a> · <a href="../downloads/ai-core-functional-lab.zip">Download code, tests and exercises</a> · <span lang="th">อ่านบทเรียนคู่กับโค้ดและแบบฝึกใน GitHub</span></p>')
+    if sec["id"] == "series-quantum-programmers":
+        out.insert(-1, '      <p class="series-description"><a href="https://github.com/Anirach/quantum-algorithms-for-programmers">GitHub companion · 7 programs, exercises and 26 tests</a> · <a href="https://github.com/Anirach/quantum-algorithms-for-programmers/archive/refs/tags/v1.0.1.zip">Download the tested code</a> · <span lang="th">ภาพจากเอกสารผู้เขียน พร้อม experiment ที่รันซ้ำและ classical reference</span></p>')
     if sec["id"] == "series-ai-core-jev":
         out.insert(-1, '      <p class="series-description"><a href="https://github.com/Anirach/ai-core-jev-tutorial">GitHub companion code + detailed README</a> · <span lang="th">โค้ดประกอบและคู่มือสำหรับลงมือทำทั้งสิบตอน</span></p>')
     if sec["id"] == "series-ai-engineering":

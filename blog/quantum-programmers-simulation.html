@@ -1,0 +1,589 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Quantum Simulation — จำลอง physics | Anirach Mingkhwan</title>
+  <meta name="description" content="ทดลอง quantum simulation สอง qubits เปรียบเทียบ product formula กับ exact evolution วัด ZZ observable และแยก approximation error จาก hardware noise">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300..900&family=Sarabun:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400..600&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      color-scheme: light;
+      /* ink */
+      --navy: #11304b; --slate: #334155; --slate-light: #526174; --gray: #94a3b8;
+      /* ground */
+      --bg: #faf7f0; --white: #ffffff; --code-bg: #1e293b;
+      /* accent */
+      --blue: #226299; --blue-dark: #1a4d7a; --blue-light: #4992b9;
+      /* brand — sampled from the book covers. --gold is decorative on light grounds (2.2:1); --gold-dark is its text form. */
+      --gold: #c4a46c; --gold-dark: #7a5f22; --cloud: #dee7e6; --parchment: #e9e1c4; --focus: #226299;
+      /* status — use only these six, never invent a seventh */
+      --green: #22c55e; --red: #ef4444; --amber: #f59e0b;
+      --cyan: #06b6d4; --purple: #226299; --purple-dark: #1a4d7a;
+      /* type */
+      --font: 'Inter', 'Sarabun', -apple-system, BlinkMacSystemFont, sans-serif;
+      --mono: 'JetBrains Mono', 'Fira Code', 'Sarabun', monospace;
+      /* form */
+      --radius: 12px; --radius-sm: 8px; --radius-lg: 16px;
+      --measure: 720px; --wide: 860px;
+      --transition: 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+    html { scroll-behavior: smooth; }
+    body { font-family: var(--font); font-size: 17px; line-height: 1.8; color: var(--slate); background: var(--bg); -webkit-font-smoothing: antialiased; }
+    .blog-nav { position: fixed; top: 0; left: 0; right: 0; z-index: 100; background: rgba(248,250,252,0.85); backdrop-filter: blur(20px); border-bottom: 1px solid rgba(0,0,0,0.05); }
+    .blog-nav__inner { max-width: 860px; margin: 0 auto; padding: 0 2rem; height: 56px; display: flex; align-items: center; justify-content: space-between; }
+    .blog-nav__back { font-size: 0.85rem; font-weight: 500; color: var(--blue); text-decoration: none; }
+    .blog-nav__back:hover { color: #1a4d7a; }
+    .blog-nav__title { font-size: 0.85rem; font-weight: 600; color: var(--navy); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 50%; }
+    /* ── HERO ── house .post-hero on the approved Deep Blue gradient (page-design
+       §5 / INV-28). Ink is inverted for the dark ground: white title/meta, tag
+       pills white on 18% white — the openclaw-production treatment. The
+       background value must stay byte-identical to the approved string. */
+    .post-hero { padding: 8rem 2rem 3rem; background: linear-gradient(135deg, #11304b 0%, #1a4d7a 45%, #226299 100%); color: #fff; text-align: center; }
+    .post-hero__tags { display: flex; gap: 0.5rem; justify-content: center; margin-bottom: 1.25rem; flex-wrap: wrap; }
+    .post-hero__tag { display: inline-block; font-size: 0.72rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.1em; color: #fff; background: rgba(255,255,255,0.18); padding: 0.35rem 0.9rem; border-radius: 20px; }
+    .post-hero__title { font-size: clamp(1.8rem, 5vw, 3rem); font-weight: 800; color: #fff; line-height: 1.2; margin-bottom: 1rem; max-width: 720px; margin-left: auto; margin-right: auto; }
+    .post-hero__sub { font-size: 1.05rem; max-width: 640px; margin: 0 auto 1.5rem; line-height: 1.7; color: #fff; }
+    .post-hero__meta { font-size: 0.85rem; color: #fff; display: flex; align-items: center; justify-content: center; gap: 1.5rem; flex-wrap: wrap; }
+    .post-hero__series { font-weight: 600; color: #fff; }
+    /* the switch pill and the focus ring both sit on the dark hero: the pill is
+       a light chip so its labels keep their light-ground colours, and --focus
+       re-points to gold here (blue collapses on blue — the footer/pre
+       precedent). */
+    .post-hero { --focus: var(--gold); }
+    .post-hero__cover {
+      aspect-ratio: 1 / 1;
+      max-width: 380px;
+      margin: 2.5rem auto 0;
+      border-radius: var(--radius-lg, 16px);
+      overflow: hidden;
+      box-shadow: 0 20px 60px rgba(17,48,75,0.14);
+    }
+    .post-hero__cover img { width: 100%; height: 100%; object-fit: cover; display: block; }
+    .post-body { max-width: 720px; margin: 0 auto; padding: 3rem 2rem 6rem; }
+    .post-body h2 { font-size: 1.6rem; font-weight: 800; color: var(--navy); margin: 3rem 0 1rem; padding-bottom: 0.5rem; border-bottom: 2px solid rgba(34,98,153,0.15); }
+    .post-body h3 { font-size: 1.25rem; font-weight: 700; color: var(--navy); margin: 2.25rem 0 0.75rem; }
+    .post-body p { margin-bottom: 1.25rem; }
+    .post-body strong { font-weight: 700; color: var(--navy); }
+    .post-body a { color: var(--blue); text-decoration: underline; text-decoration-thickness: 1px; text-underline-offset: 2px; }
+    .post-body ul, .post-body ol { margin: 0.5rem 0 1.25rem 1.5rem; }
+    .post-body li { margin-bottom: 0.4rem; }
+    .post-body blockquote { background: rgba(34,98,153,0.06); border-left: 4px solid var(--blue); padding: 1rem 1.25rem; border-radius: 0 10px 10px 0; margin: 1.25rem 0; font-size: 0.95rem; color: var(--navy); }
+    .post-body hr { border: none; height: 1px; background: linear-gradient(90deg, transparent, rgba(34,98,153,0.2), transparent); margin: 3rem 0; }
+    /* ── CODE ── */
+    .post-body pre { background: var(--code-bg); border-radius: 12px; padding: 1.5rem; margin: 1.25rem 0 1.5rem; overflow-x: auto; border: 1px solid rgba(255,255,255,0.05); }
+    .post-body pre code { font-family: var(--mono); font-size: 0.85rem; color: #e2e8f0; line-height: 1.7; background: none; padding: 0; white-space: pre-wrap; }
+    .post-body code { font-family: var(--mono); font-size: 0.88em; background: rgba(34,98,153,0.08); color: var(--blue-dark); padding: 0.15em 0.45em; border-radius: 5px; }
+    /* ── TABLES ── */
+    .table-wrapper { overflow-x: auto; margin: 1.5rem 0; border-radius: 0.5rem; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1); }
+    table { width: 100%; border-collapse: collapse; background: white; }
+    th { background: #226299; color: white; padding: 1rem; text-align: left; font-weight: 600; }
+    td { padding: 1rem; border-bottom: 1px solid #e5e7eb; }
+    .post-body table { display: block; width: 100%; overflow-x: auto; }
+    /* ── ALERTS ── */
+    .alert { background: #fef3cd; border: 1px solid #facc15; border-radius: 0.5rem; padding: 1rem; margin: 1.5rem 0; }
+    .alert.danger { background: #fee2e2; border-color: #ef4444; }
+    .alert.info { background: #e0f2fe; border-color: #06b6d4; }
+    .alert.success { background: #d1fae5; border-color: #10b981; }
+    /* ── KEY TAKEAWAYS ── */
+    .key-takeaways { background: linear-gradient(135deg, #f3f4f6 0%, #e5e7eb 100%); border-radius: 1rem; padding: 2rem; margin: 3rem 0; }
+    .key-takeaways h3 { color: #226299; margin-bottom: 1.5rem; }
+    .post-series-footer { text-align: center; font-size: 0.85rem; color: var(--slate-light); font-style: italic; margin-top: 2rem; padding-top: 2rem; border-top: 1px solid #e2e8f0; }
+    .blog-footer { background: var(--navy); padding: 2rem 0; text-align: center; }
+    .blog-footer a { color: var(--gold); text-decoration: none; font-weight: 600; font-size: 0.9rem; }
+    .blog-footer span { color: var(--gray); font-size: 0.8rem; display: block; margin-top: 0.4rem; }
+    @media (max-width: 600px) {
+      .post-hero { padding: 7rem 1.25rem 2.5rem; }
+      .post-body { padding: 2rem 1.25rem 4rem; }
+      .post-hero__meta { flex-direction: column; gap: 0.4rem; }
+      .post-body h2 { font-size: 1.4rem; }
+      .post-body h3 { font-size: 1.15rem; }
+      .post-body pre { padding: 1rem; border-radius: 8px; }
+    }
+
+    :focus-visible { outline: 2px solid var(--focus); outline-offset: 3px; border-radius: 2px; }
+    /* the ring sits on the page ground (3px offset). Inside the navy footers
+       and code blocks var(--blue) collapses to 2.12:1, so those scopes
+       re-point --focus to gold (5.73:1 on navy). */
+    .footer, .blog-footer, pre { --focus: var(--gold); }
+    :focus:not(:focus-visible) { outline: none; }
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after {
+        animation-duration: .01ms !important; animation-iteration-count: 1 !important;
+        transition-duration: .01ms !important; scroll-behavior: auto !important;
+      }
+    }
+    h1, h2, h3, .post-hero__title, .card__title { text-wrap: balance; }
+    .post-body { overflow-wrap: break-word; }   /* long URLs and inline code wrap instead of widening the page */
+
+    .post-body img, .post-body svg { max-width: 100%; height: auto; }
+
+    /* ── SKIP LINK ── a11y-perf R5: the link and the landmark it targets are a
+       pair — useless without both halves. Off-screen until focused, then the
+       first tab stop on every page. */
+    .skip-link { position: absolute; left: -9999px; }
+    .skip-link:focus {
+      left: 1rem; top: 1rem; z-index: 999;
+      background: var(--navy); color: #fff;
+      padding: 0.75rem 1.25rem; border-radius: var(--radius-sm);
+      font-weight: 600; text-decoration: none;
+    }
+
+    /* ── POST WAYFINDING ── the wordmark is the home link; the footer carries
+       the full destination row. */
+    .blog-nav__home {
+      font-size: 0.9rem; font-weight: 800; color: var(--navy);
+      text-decoration: none; margin-right: 1rem;
+    }
+    .blog-nav__home:hover { color: var(--blue); }
+    .blog-nav__inner > .blog-nav__back { margin-right: auto; }
+    .blog-footer__nav {
+      display: flex; flex-wrap: wrap; justify-content: center; gap: 0.35rem 1.25rem;
+      max-width: 860px; margin: 0 auto 1.25rem; padding: 0 2rem 1.25rem;
+      border-bottom: 1px solid rgba(255,255,255,0.12);
+    }
+    .blog-footer__nav a { color: var(--gold); font-size: 0.85rem; font-weight: 600; text-decoration: none; }
+    .blog-footer__nav a:hover { color: #fff; text-decoration: underline; }
+
+    html { scroll-padding-top: 5rem; }
+    [id] { scroll-margin-top: 5rem; }
+
+    /* Thai needs more room than Latin at the same nominal size. */
+    .post-body:lang(th) { font-size: 18px; line-height: 1.85; }
+    .post-body p, .post-body li, .post-body blockquote { text-wrap: pretty; }
+
+    /* ---- side-scroll affordance ----
+       pre blocks and tables can exceed 720px. These layers paint a shadow ONLY
+       where there is more content in that direction; when fully scrolled the
+       cover slides over the shadow and hides it. No JavaScript, no wrapper. */
+    .post-body pre, .post-body table {
+      overflow-x: auto;
+      background-image:
+        linear-gradient(to right, var(--code-bg, #0f172a) 30%, rgba(15,23,42,0)),
+        linear-gradient(to left, var(--code-bg, #0f172a) 30%, rgba(15,23,42,0)),
+        radial-gradient(farthest-side at 0 50%, rgba(0,0,0,.28), rgba(0,0,0,0)),
+        radial-gradient(farthest-side at 100% 50%, rgba(0,0,0,.28), rgba(0,0,0,0));
+      background-position: 0 0, 100% 0, 0 0, 100% 0;
+      background-repeat: no-repeat;
+      background-size: 40px 100%, 40px 100%, 14px 100%, 14px 100%;
+      background-attachment: local, local, scroll, scroll;
+    }
+    .post-body table {
+      background-image:
+        linear-gradient(to right, var(--white, #fff) 30%, rgba(255,255,255,0)),
+        linear-gradient(to left, var(--white, #fff) 30%, rgba(255,255,255,0)),
+        radial-gradient(farthest-side at 0 50%, rgba(17,48,75,.16), rgba(17,48,75,0)),
+        radial-gradient(farthest-side at 100% 50%, rgba(17,48,75,.16), rgba(17,48,75,0));
+      background-position: 0 0, 100% 0, 0 0, 100% 0;
+      background-repeat: no-repeat;
+      background-size: 40px 100%, 40px 100%, 14px 100%, 14px 100%;
+      background-attachment: local, local, scroll, scroll;
+    }
+
+    /* ---- table of contents ---- */
+    .post-toc {
+      max-width: 720px;
+      margin: 2rem auto 0;
+      padding: 1rem 1.25rem;
+      background: rgba(34,98,153,0.05);
+      border: 1px solid rgba(34,98,153,0.14);
+      border-left: 3px solid var(--gold, #c4a46c);
+      border-radius: 10px;
+      font-size: 0.92rem;
+    }
+    .post-toc > summary {
+      cursor: pointer;
+      font-weight: 700;
+      color: var(--navy);
+      list-style: none;
+    }
+    .post-toc > summary::-webkit-details-marker { display: none; }
+    .post-toc > summary::before {
+      content: "\25B8";
+      display: inline-block;
+      margin-right: 0.5rem;
+      transition: transform 0.2s ease;
+      color: var(--gold-dark, #7a5f22);
+    }
+    .post-toc[open] > summary::before { transform: rotate(90deg); }
+    .post-toc > summary:focus-visible { outline: 3px solid var(--focus, #226299); outline-offset: 3px; }
+    .post-toc ol { margin: 0.85rem 0 0.25rem; padding-left: 1.4rem; }
+    .post-toc li { margin-bottom: 0.4rem; line-height: 1.5; }
+    .post-toc a { color: var(--slate); text-decoration: none; }
+    .post-toc a:hover, .post-toc a:focus-visible { color: var(--blue-dark, #1a4d7a); text-decoration: underline; }
+    @media (max-width: 600px) { .post-toc { margin: 1.25rem 1rem 0; } }
+
+    /* ---- cross-document view transitions ---- */
+    @view-transition { navigation: auto; }
+    .nav, .blog-nav { view-transition-name: site-nav; }
+    .footer, .blog-footer { view-transition-name: site-footer; }
+    @media (prefers-reduced-motion: reduce) {
+      ::view-transition-group(*),
+      ::view-transition-old(*),
+      ::view-transition-new(*) { animation: none !important; }
+    }
+
+    /* ── SERIES STRIP — Hermes Agent in Practice ──
+       Same class and inner-wrapper shape as the OpenClaw strip because the
+       linter's RE_SNAV recognises exactly `series-nav` + a nested div; a
+       renamed strip would read as "no nav" and fail INV-08. All content
+       checks (INV-03 family) iterate the SERIES7 list only, so this strip's
+       labels are convention, not contract. House-styled, not the island CSS. */
+    .series-nav {
+      max-width: 720px; margin: 2rem auto 0; padding: 1.1rem 1.4rem;
+      background: rgba(255,255,255,0.75); border: 1px solid rgba(34,98,153,0.15);
+      border-left: 3px solid var(--gold); border-radius: 12px;
+    }
+    .series-nav h3 {
+      font-size: 0.78rem; font-weight: 700; text-transform: uppercase;
+      letter-spacing: 0.08em; color: var(--gold-dark); margin-bottom: 0.6rem;
+    }
+    .series-links { display: flex; flex-wrap: wrap; gap: 0.5rem; }
+    .series-links a, .series-links .current {
+      font-size: 0.82rem; font-weight: 600; padding: 0.35rem 0.8rem;
+      border-radius: 50px; text-decoration: none;
+    }
+    .series-links a { color: var(--blue-dark); background: rgba(34,98,153,0.08); }
+    .series-links a:hover { background: rgba(34,98,153,0.16); }
+    .series-links .current { color: #fff; background: var(--blue-dark); }
+    @media (max-width: 600px) { .series-nav { margin: 1.5rem 1rem 0; } }
+
+    /* ── FIGURE — the sanctioned diagram component (page-design §4 Content).
+       Diagrams are PNGs; this repo built them out of divs twice and reverted
+       twice. The image is wrapped in a link to itself so a phone can pinch a
+       1400px drawing without a line of JavaScript. */
+    .figure { margin: 2.5rem 0; }
+    .figure__img { width: 100%; height: auto; display: block;
+                   border-radius: var(--radius); border: 1px solid rgba(0,0,0,0.06); }
+    .figure__caption { font-size: 0.85rem; color: var(--slate-light);
+                       text-align: center; margin-top: 0.75rem; }
+
+    /* ── REFERENCES — every material number in this series carries its source.
+       The tags are the book's own four evidence labels. */
+    .references { margin-top: 3rem; padding-top: 2rem; border-top: 1px solid #e2e8f0; }
+    .references__note { font-size: 0.85rem; color: var(--slate-light); margin-bottom: 1rem; }
+    .references__list { padding-left: 1.4rem; font-size: 0.9rem; line-height: 1.75; }
+    .references__list li { margin-bottom: 0.7rem; }
+    .ref-tag { display: inline-block; font-size: 0.7rem; font-weight: 700;
+               letter-spacing: 0.06em; text-transform: uppercase; padding: 0.1rem 0.5rem;
+               border-radius: 50px; margin-right: 0.4rem; vertical-align: 0.05em;
+               background: rgba(34,98,153,0.1); color: var(--blue-dark); }
+    /* All four labels get a rule.  --standard and --study shipped without one
+       on 2026-09-05, so 158 of 306 tags fell through to the base blue and the
+       two labels were indistinguishable.  Ratios on --bg: 6.70 / 6.92 / 7.36 /
+       4.81:1, all AA at this size. */
+    .ref-tag--law { background: rgba(239,68,68,0.12); color: #991b1b; }
+    .ref-tag--standard { background: rgba(34,98,153,0.12); color: var(--blue-dark); }
+    .ref-tag--study { background: rgba(34,197,94,0.18); color: #14532d; }
+    .ref-tag--synthesis { background: rgba(196,164,108,0.22); color: var(--gold-dark); }
+    .ref-supports { display: block; color: var(--slate-light); font-size: 0.85rem; }
+
+    /* ── LANGUAGE SWITCH — pure CSS, zero JavaScript (INV-38) ──
+       One visually-hidden checkbox as a direct child of body, BEFORE the main landmark,
+       so `#langSwitch:checked ~ main …` reaches every content block. The two
+       tracks are paired blocks: .l-th (default) and .l-en (hidden until
+       checked; display:revert restores block for divs, inline for spans).
+       Naming stays clear of INV-12's menu-token regex (hamburger|burger|
+       nav__toggle|nav-toggle|navtoggle|menu-toggle|menu__toggle) — verified.
+       No JS also means no persistence across posts; each post opens in Thai. */
+    .lang-switch-box { position: absolute; left: -9999px; }
+    /* where anchor positioning exists the box sits on the pill, so focusing it scrolls the pill into view */
+    .lang-switch { anchor-name: --lang-switch; }
+    .lang-switch-box { position-anchor: --lang-switch; top: anchor(top); left: anchor(left); width: 1px; height: 1px; opacity: 0; pointer-events: none; }
+    .l-en { display: none; }
+    #langSwitch:checked ~ main .l-en { display: revert; }
+    #langSwitch:checked ~ main .l-th { display: none; }
+    .lang-switch {
+      display: inline-flex; align-items: center; gap: 0.55rem;
+      margin-top: 1.4rem; padding: 0.4rem 1.1rem; border-radius: 50px;
+      background: rgba(255,255,255,0.85); border: 1px solid rgba(255,255,255,0.4);
+      cursor: pointer; font-size: 0.85rem; user-select: none;
+    }
+    .lang-switch span { color: var(--slate-light); font-weight: 600; transition: color 0.2s; }
+    .lang-switch .lang-sep { color: var(--gray); font-weight: 400; }
+    .lang-switch .lang-th { color: var(--navy); font-weight: 800; }
+    #langSwitch:checked ~ main .lang-switch .lang-th { color: var(--slate-light); font-weight: 600; }
+    #langSwitch:checked ~ main .lang-switch .lang-en { color: var(--navy); font-weight: 800; }
+    .lang-switch:hover { border-color: #fff; }
+    #langSwitch:focus-visible ~ main .lang-switch {
+      outline: 2px solid var(--focus); outline-offset: 3px;
+    }
+  </style>
+  <!-- social -->
+  <link rel="canonical" href="https://anirach.com/blog/quantum-programmers-simulation.html">
+  <meta property="og:type" content="article">
+  <meta property="og:url" content="https://anirach.com/blog/quantum-programmers-simulation.html">
+  <meta property="og:site_name" content="Anirach Mingkhwan">
+  <meta property="og:locale" content="th_TH">
+  <meta property="og:locale:alternate" content="en_US">
+  <meta property="article:published_time" content="2026-11-24">
+  <meta property="article:author" content="https://anirach.com/">
+  <meta property="og:title" content="Quantum Simulation — จำลอง physics">
+  <meta property="og:description" content="ทดลอง quantum simulation สอง qubits เปรียบเทียบ product formula กับ exact evolution วัด ZZ observable และแยก approximation error จาก hardware noise">
+  <meta property="og:image" content="https://anirach.com/images/quantum-programmers-simulation-og.jpg">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
+  <meta property="og:image:alt" content="Quantum Simulation — จำลอง physics">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:image" content="https://anirach.com/images/quantum-programmers-simulation-og.jpg">
+  <meta name="twitter:image:alt" content="Quantum Simulation — จำลอง physics">
+  <meta name="robots" content="max-image-preview:large">
+  <meta name="theme-color" content="#11304b">
+  <link rel="icon" href="/favicon.ico" sizes="any">
+  <link rel="apple-touch-icon" href="/apple-touch-icon.png">
+  <!-- /social -->
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "BlogPosting",
+    "headline": "Quantum Simulation — จำลอง physics",
+    "author": {
+      "@type": "Person",
+      "@id": "https://anirach.com/#person",
+      "name": "Anirach Mingkhwan",
+      "url": "https://anirach.com/"
+    },
+    "datePublished": "2026-11-24",
+    "dateModified": "2026-11-24",
+    "image": "https://anirach.com/images/quantum-programmers-simulation-og.jpg",
+    "inLanguage": [
+      "th",
+      "en"
+    ],
+    "mainEntityOfPage": "https://anirach.com/blog/quantum-programmers-simulation.html"
+  }
+  </script>
+</head>
+<body>
+<a href="#main" class="skip-link">Skip to content</a>
+<input type="checkbox" id="langSwitch" class="lang-switch-box" aria-label="Switch language: Thai / English">
+
+  <nav class="blog-nav">
+    <div class="blog-nav__inner">
+      <a href="../index.html" class="blog-nav__home">Anirach</a>
+      <a href="./" class="blog-nav__back">‹ Tutorials</a>
+      <div class="blog-nav__title">Simulate Physics</div>
+    </div>
+  </nav>
+
+  <main id="main">
+
+  <header class="post-hero">
+    <div class="post-hero__tags">
+      <span class="post-hero__tag">Quantum Computing</span>
+      <span class="post-hero__tag">Qiskit</span>
+      <span class="post-hero__tag">Algorithms</span>
+    </div>
+    <h1 class="post-hero__title"><span class="l-th">Quantum Simulation — จำลอง physics</span><span class="l-en" lang="en">Quantum Simulation: Simulate Physics and Measure an Observable</span></h1>
+    <p class="post-hero__sub"><span class="l-th">ต่อยอดบท quantum simulation ในเอกสารด้วย experiment สอง qubits เปรียบเทียบ exact evolution กับ product formula และเห็น trade-off ของความแม่นกับ depth</span><span class="l-en" lang="en">Extend the guide with a two-qubit experiment: compare exact evolution with a product formula and inspect the accuracy–depth trade-off.</span></p>
+    <div class="post-hero__meta">
+      <span>By <strong>Anirach Mingkhwan</strong></span>
+      <span class="post-hero__series">Quantum Algorithms for Programmers 2026 • Post #6</span>
+      <span><time datetime="2026-11-24">24 Nov 2026</time></span>
+      <span>4 min read</span>
+    </div>
+    <label for="langSwitch" class="lang-switch" title="สลับภาษา · Switch language"><span class="lang-th">ไทย</span><span class="lang-sep">·</span><span class="lang-en" lang="en">English</span></label>
+    <div class="post-hero__cover">
+      <img src="../images/quantum-programmers-simulation-cover.jpg" alt="Quantum Simulation — จำลอง physics" width="800" height="800" loading="eager" fetchpriority="high" decoding="async">
+    </div>
+  </header>
+
+  <article class="post-body">
+
+    <details class="post-toc l-th" open>
+      <summary>ในบทความนี้</summary>
+      <ol>
+          <li><a href="#th-task">Native problem — เลือกคำถามที่ output ไม่ใหญ่</a></li>
+          <li><a href="#th-model">Model — Hamiltonian และ observable คนละหน้าที่</a></li>
+          <li><a href="#th-formula">Product formula — noncommuting terms ต้องแบ่งเวลา</a></li>
+          <li><a href="#th-results">Convergence — ชัดเจนว่า approximation ดีขึ้น</a></li>
+          <li><a href="#th-scope">Why it matters — simulation ไม่ใช่ HHL</a></li>
+          <li><a href="#th-practice">Run & explore — ลงมือทดลอง</a></li>
+          <li><a href="#th-references">Sources & verification — แหล่งอ้างอิง</a></li>
+      </ol>
+    </details>
+    <details class="post-toc l-en" open>
+      <summary>In this post</summary>
+      <ol>
+          <li><a href="#en-task">Native problem: choose a compact output</a></li>
+          <li><a href="#en-model">Model: distinguish the Hamiltonian from the observable</a></li>
+          <li><a href="#en-formula">Product formula: split time for noncommuting terms</a></li>
+          <li><a href="#en-results">Convergence: make the approximation error visible</a></li>
+          <li><a href="#en-scope">Why it matters: simulation is distinct from HHL</a></li>
+          <li><a href="#en-practice">Run and explore</a></li>
+          <li><a href="#en-references">Sources and verification</a></li>
+      </ol>
+    </details>
+    <div class="l-th">
+
+<h2 id="th-task">Native problem — เลือกคำถามที่ output ไม่ใหญ่</h2>
+<p><strong>บทที่ 6/7</strong> · ดัดแปลงจากเอกสาร Quantum Algorithms for Programmers, Edition 1.0 หน้า 35 พร้อมโค้ดและคำอธิบายที่ตรวจซ้ำสำหรับเว็บ</p><p><strong>Quantum simulation</strong> ใช้ระบบ quantum จำลอง dynamics หรือคุณสมบัติของอีกระบบ quantum จุดเริ่มที่ Feynman เสนอคือ classical representation ของ many-body state อาจโตแบบ exponential ขณะที่ quantum processor ใช้ qubits เพื่อแทนระบบโดยตรง งานนี้จึงมีโครงสร้างที่สอดคล้องกับเครื่องมากกว่าการนำฐานข้อมูล classical ขนาดใหญ่มาโหลดทั้งหมด</p>
+ <p>โจทย์สำคัญใน chemistry และ materials เกี่ยวกับ Hamiltonian ซึ่งเป็น operator ที่บอก energy และ evolution แต่ไม่ได้แปลว่าทุก molecule ต้องใช้ quantum computer classical approximations และ tensor-network methods ทำงานได้ดีในหลาย regime การอ้าง advantage ต้องระบุว่า classical method ติดขัดตรงไหน</p>
+ <p>ในเอกสารต้นทางบทนี้เป็นภาพรวม เราเพิ่ม runnable experiment ใหม่: สอง qubits เริ่มที่ |00⟩ วิวัฒน์เวลา t=1 แล้วถามค่า <strong>⟨Z₀Z₁⟩</strong> ซึ่งเป็นตัวเลขเดียว ตัวอย่างเล็กนี้ไม่มี speedup แต่เปิดให้ตรวจทั้ง approximation และ output contract อย่างครบถ้วน</p><p>อ้างอิง: <a href="#th-ref-1">[1]</a> · <a href="#th-ref-2">[2]</a></p>
+
+<h2 id="th-model">Model — Hamiltonian และ observable คนละหน้าที่</h2>
+<p>ใช้ H = Z₀Z₁ + 0.7(X₀ + X₁) โดย X คือ bit-flip Pauli operator ส่วน Z ใส่เครื่องหมาย +1 บน |0⟩ และ −1 บน |1⟩ evolution ที่ต้องการคือ U(t)=exp(−iHt) เมื่อใช้หน่วยที่ ℏ=1 Hamiltonian บอกว่าจะ evolve อย่างไร ส่วน observable Z₀Z₁ บอกว่าจะวัดอะไร</p>
+    <figure class="figure">
+      <a href="../images/quantum-simulation-flow.png">
+        <img class="figure__img" src="../images/quantum-simulation-flow.png" alt="เลือก Hamiltonian, compile time evolution, เตรียม state แล้วประมาณ observable ที่กำหนด" width="1613" height="619" loading="lazy" decoding="async">
+      </a>
+      <figcaption class="figure__caption">เลือก Hamiltonian, compile time evolution, เตรียม state แล้วประมาณ observable ที่กำหนด สร้างจาก companion experiment หรือแบบจำลองเพื่อการสอน เปิดภาพเพื่อดูขนาดเต็ม</figcaption>
+    </figure>
+ <p>สำหรับสอง qubits เราสร้าง matrix 4×4 แล้วใช้ <code>scipy.linalg.expm</code> หาค่า exact เพื่อเป็น reference ได้ คำว่า exact ในที่นี้หมายถึงการ exponentiate matrix โดยตรงภายใน floating-point accuracy ไม่ได้หมายถึงผล hardware ไร้ error</p>
+ <p>เมื่อวัด qubits ทั้งสองใน Z basis outcome ที่ bits เหมือนกันให้ค่า ZZ=+1 และต่างกันให้ −1 ค่าเฉลี่ยของ shots จึงประมาณ ⟨ZZ⟩ ได้โดยไม่ต้อง reconstruct amplitudes ทั้งหมด หากใช้ S shots standard error ของ sample mean จะไม่เกิน 1/√S ในการสุ่มอิสระของ observable ±1 นี้</p>
+
+<h2 id="th-formula">Product formula — noncommuting terms ต้องแบ่งเวลา</h2>
+<p>terms ZZ และ X₀+X₁ ไม่ commute กัน จึงไม่สามารถแทน exp(−i(A+B)t) ด้วย exp(−iAt)exp(−iBt) เพียงครั้งเดียวแล้วอ้างว่าตรงได้ เราแบ่งเวลาเป็น m steps และทำ product formula ซ้ำ โดย dt=t/m แต่ละ step ใช้ RZZ(2dt) แล้ว RX(1.4dt) บนสอง qubits</p>
+ <p>ส่วนโค้ดสำหรับอ่านแนวคิด ใช้ไฟล์เต็มพร้อม imports จาก companion และคำสั่งใน Run &amp; explore ด้านล่าง</p>
+<pre><code>def trotter(steps, t=1.0):
+    if not isinstance(steps, int) or steps &lt; 1:
+        raise ValueError(&quot;steps must be a positive integer&quot;)
+    dt = t / steps
+    qc = QuantumCircuit(2)
+    for _ in range(steps):
+        qc.rzz(2 * dt, 0, 1)
+        qc.rx(1.4 * dt, [0, 1])
+    return qc</code></pre>
+ <p>ลำดับ gate ใน code ต้องอ่านให้ตรงกับ matrix multiplication: gate ที่ apply ก่อนอยู่ด้านขวาของ product เมื่อคูณ statevector ตัวทดสอบจึงเทียบ full circuit unitary กับ exp(−iHt) โดยตรงด้วย ไม่ได้เทียบแค่ observable ที่อาจบังข้อผิดพลาดบางอย่าง</p>
+ <p>first-order product formula มี error ที่ลดลงเมื่อเพิ่ม m สำหรับ fixed time และ Hamiltonian ที่เหมาะสม ในตัวอย่างนี้ state infidelity ลดใกล้ O(1/m²) แต่ scaling นี้เป็นผลของ metric และกรณีที่กำลังดู ไม่ควรใช้ตัวเลขเดียวนี้แทน complexity bound ของทุก quantum simulation</p>
+
+<h2 id="th-results">Convergence — ชัดเจนว่า approximation ดีขึ้น</h2>
+<p><strong>ผลรันที่บันทึก 24 November 2026</strong></p>
+<pre><code>Exact &lt;ZZ&gt; at t=1: 0.352560
+steps= 1; &lt;ZZ&gt;=0.028889; infidelity=0.351853
+steps= 2; &lt;ZZ&gt;=0.252098; infidelity=0.064421
+steps= 4; &lt;ZZ&gt;=0.327666; infidelity=0.014434
+steps= 8; &lt;ZZ&gt;=0.346365; infidelity=0.003487
+steps=16; &lt;ZZ&gt;=0.351014; infidelity=0.000862</code></pre>
+    <figure class="figure">
+      <a href="../images/quantum-simulation-results.png">
+        <img class="figure__img" src="../images/quantum-simulation-results.png" alt="experiment ใหม่: เพิ่ม product-formula steps ทำให้ค่า ZZ เข้าใกล้ exact และลด state infidelity ใน ideal circuit" width="1787" height="768" loading="lazy" decoding="async">
+      </a>
+      <figcaption class="figure__caption">experiment ใหม่: เพิ่ม product-formula steps ทำให้ค่า ZZ เข้าใกล้ exact และลด state infidelity ใน ideal circuit สร้างจาก companion experiment หรือแบบจำลองเพื่อการสอน เปิดภาพเพื่อดูขนาดเต็ม</figcaption>
+    </figure>
+ <p>exact expectation เท่ากับ 0.352560 สำหรับ m=1 ได้ 0.028889 ซึ่งยังห่างมาก เมื่อเพิ่มเป็น 16 steps ได้ 0.351014 และ infidelity เหลือ 0.000862 ผลนี้คำนวณจาก ideal statevector ไม่ได้เก็บ shots จึงไม่มี sampling uncertainty ใน plot มีเฉพาะ approximation และ floating-point error</p>
+ <div class="table-wrapper"><table><thead><tr><th>Steps m</th><th>Two-qubit RZZ gates</th><th>State infidelity</th></tr></thead><tbody><tr><td>1</td><td>1</td><td>0.351853</td></tr><tr><td>4</td><td>4</td><td>0.014434</td></tr><tr><td>16</td><td>16</td><td>0.000862</td></tr></tbody></table></div>
+ <p>ใน hardware การเพิ่ม steps เพิ่ม two-qubit gate count และอาจเพิ่ม routing gates ด้วย จึงมีจุดที่ approximation ดีขึ้นแต่ noise แย่ลง ต้องแยก error budget เป็น model error, product-formula error, gate/readout error และ sampling error ก่อนเลือก depth</p>
+
+<h2 id="th-scope">Why it matters — simulation ไม่ใช่ HHL</h2>
+<p>HHL ใช้ Hamiltonian evolution เป็น subroutine เพื่อ invert matrix แต่ chemistry simulation ใช้ evolution, energy estimation หรือ correlation measurements เป็นงานหลัก เป้าหมายและ output จึงต่างกัน แม้ใช้ phase estimation หรือเทคนิควงจรร่วมกันได้</p>
+ <p>การหา ground-state energy ยังมีโจทย์ state preparation และ spectral overlap เพิ่ม ไม่ใช่แค่เรียก QPE แล้วได้ ground state ทันที งาน resource estimate สำหรับ FeMoco ของ Reiher และคณะแสดงตัวอย่างการผูก scientific target เข้ากับความต้องการของ fault-tolerant machine อย่างเป็นรูปธรรม แต่ไม่ได้เป็นผลจำลอง molecule นั้นบน hardware ที่ใช้ได้ทั่วไปแล้ว</p>
+ <p>เมื่ออ่านคำอ้างเรื่อง quantum advantage ให้ระบุ observable, precision, verification method และ classical competitor ทุกครั้ง การจำลองระบบ quantum มีเหตุผลเชิงโครงสร้างที่แข็งแรง ส่วนความคุ้มค่าของ workload เฉพาะยังเป็นคำถามที่ต้องพิสูจน์ด้วย evidence</p><p>อ้างอิง: <a href="#th-ref-3">[3]</a> · <a href="#th-ref-4">[4]</a></p>
+
+<h2 id="th-practice">Run & explore — ลงมือทดลอง</h2>
+<p><a href="https://github.com/Anirach/quantum-algorithms-for-programmers/blob/0ad89867571639641f0b9fab28391e28dc584670/quantum_simulation.py">Complete code</a> · <a href="https://github.com/Anirach/quantum-algorithms-for-programmers/blob/0ad89867571639641f0b9fab28391e28dc584670/tests/test_algorithms.py#L131">SimulationTests</a> · <a href="https://github.com/Anirach/quantum-algorithms-for-programmers/blob/0ad89867571639641f0b9fab28391e28dc584670/exercises/06.md">Exercise</a> · <a href="https://github.com/Anirach/quantum-algorithms-for-programmers/blob/0ad89867571639641f0b9fab28391e28dc584670/README.md">Setup &amp; troubleshooting</a></p><p>ใช้ Python 3.12–3.13 และ virtual environment ตาม README ไม่ต้องใช้ API key หรือ quantum hardware หากยังไม่ติดตั้งให้ทำตามตอน 1 หรือ README</p><pre><code># From the companion root, with the virtual environment active
+python quantum_simulation.py
+python -m unittest discover -s tests -p test_algorithms.py -k SimulationTests -v</code></pre><h3>ลองต่อด้วยตัวเอง</h3><p>เปลี่ยน t เป็น 0 แล้วตรวจว่า unitary เป็น identity จากนั้นเพิ่มการสุ่มวัด ZZ และรายงาน confidence interval เปรียบเทียบ 100 กับ 10,000 shots แยก sampling error จาก product-formula error ให้ชัด</p>
+
+<h2 id="th-references">Sources & verification — แหล่งอ้างอิง</h2>
+<section class="references" aria-labelledby="th-sources"><h3 id="th-sources">Primary sources และขอบเขตการตรวจ</h3><p class="references__note">เอกสารผู้เขียนเป็นต้นทางของคำอธิบายและภาพที่ระบุ ส่วนลิงก์ข้างล่างเป็นเอกสารวิจัยและมาตรฐานที่ใช้ตรวจข้ออ้าง โค้ดรันซ้ำบน Python 3.13, Qiskit 2.6.2, Aer 0.18.4, NumPy 2.5.5 และ SciPy 1.18.1 วันที่ 24 November 2026 ผลทั้งหมดเป็น local simulation หรือค่าตัวอย่างที่ระบุ ไม่มีการรัน hardware</p><ol><li id="th-ref-1"><a href="https://doi.org/10.1007/BF02650179">Feynman. Simulating physics with computers (1982).</a></li><li id="th-ref-2"><a href="https://doi.org/10.1126/science.273.5278.1073">Lloyd. Universal quantum simulators (1996).</a></li><li id="th-ref-3"><a href="https://quantum.cloud.ibm.com/learning/en/courses/quantum-computing-in-practice/simulating-nature">IBM Quantum Learning. Simulating nature.</a></li><li id="th-ref-4"><a href="https://arxiv.org/abs/1605.03590">Reiher et al. Elucidating reaction mechanisms on quantum computers (2017).</a></li></ol></section>
+    </div>
+
+    <div class="l-en" lang="en">
+
+<h2 id="en-task">Native problem: choose a compact output</h2>
+<p><strong>Part 6/7.</strong> Adapted from Quantum Algorithms for Programmers, Edition 1.0, pp. 35, with web explanations and rerun code.</p><p><strong>Quantum simulation</strong> uses one quantum system to model the dynamics or properties of another. Feynman's motivating observation was that classical representations of many-body states can grow exponentially, whereas a quantum processor represents the system with qubits. This creates a natural structure without necessarily loading a large arbitrary classical dataset.</p>
+ <p>Chemistry and materials problems are expressed through Hamiltonians, operators describing energy and evolution. That does not make every molecule a quantum-computing target: classical approximations and tensor-network methods work well in many regimes. An advantage claim must identify where those methods fail.</p>
+ <p>The guide presents this topic as an overview. We add a new executable experiment: two qubits start in |00⟩, evolve to t=1, and return one number, <strong>⟨Z₀Z₁⟩</strong>. This small system offers no speedup, but exposes both approximation error and the output contract.</p><p>Sources: <a href="#en-ref-1">[1]</a> · <a href="#en-ref-2">[2]</a></p>
+
+<h2 id="en-model">Model: distinguish the Hamiltonian from the observable</h2>
+<p>Use H = Z₀Z₁ + 0.7(X₀ + X₁). X is the Pauli bit-flip operator; Z assigns +1 to |0⟩ and −1 to |1⟩. With ℏ=1, evolution is U(t)=exp(−iHt). The Hamiltonian specifies how the state evolves; the observable Z₀Z₁ specifies what we ask it to reveal.</p>
+    <figure class="figure">
+      <a href="../images/quantum-simulation-flow.png">
+        <img class="figure__img" src="../images/quantum-simulation-flow.png" alt="Choose a Hamiltonian, compile time evolution, prepare the state and estimate a specified observable." width="1613" height="619" loading="lazy" decoding="async">
+      </a>
+      <figcaption class="figure__caption">Choose a Hamiltonian, compile time evolution, prepare the state and estimate a specified observable. Generated from the companion experiment or teaching model. Open for full resolution.</figcaption>
+    </figure>
+ <p>At two qubits, a 4×4 matrix and <code>scipy.linalg.expm</code> provide a direct reference. Here “exact” means direct matrix exponentiation within floating-point accuracy, not an error-free hardware measurement.</p>
+ <p>Computational-basis outcomes with matching bits contribute ZZ=+1; differing bits contribute −1. Averaging shots estimates ⟨ZZ⟩ without reconstructing all amplitudes. For S independent ±1 measurements, the sample mean's standard error is at most 1/√S.</p>
+
+<h2 id="en-formula">Product formula: split time for noncommuting terms</h2>
+<p>ZZ and X₀+X₁ do not commute. A single exp(−iAt)exp(−iBt) therefore cannot be substituted for exp(−i(A+B)t) as an exact identity. Divide time into m steps with dt=t/m. Each step applies RZZ(2dt), then RX(1.4dt) on both qubits.</p>
+ <p>Implementation excerpt. Use the complete companion file with its imports and the Run and explore commands below.</p>
+<pre><code>def trotter(steps, t=1.0):
+    if not isinstance(steps, int) or steps &lt; 1:
+        raise ValueError(&quot;steps must be a positive integer&quot;)
+    dt = t / steps
+    qc = QuantumCircuit(2)
+    for _ in range(steps):
+        qc.rzz(2 * dt, 0, 1)
+        qc.rx(1.4 * dt, [0, 1])
+    return qc</code></pre>
+ <p>Match circuit order to matrix multiplication: the first applied gate sits on the right of the matrix product acting on a statevector. Our test compares the full circuit unitary with exp(−iHt), as well as inspecting an observable that might hide some errors.</p>
+ <p>For fixed time and a suitable Hamiltonian, first-order product-formula error decreases as m increases. State infidelity in this example falls approximately as O(1/m²). That observed metric is not a universal complexity bound for quantum simulation.</p>
+
+<h2 id="en-results">Convergence: make the approximation error visible</h2>
+<p><strong>Captured run, 24 November 2026</strong></p>
+<pre><code>Exact &lt;ZZ&gt; at t=1: 0.352560
+steps= 1; &lt;ZZ&gt;=0.028889; infidelity=0.351853
+steps= 2; &lt;ZZ&gt;=0.252098; infidelity=0.064421
+steps= 4; &lt;ZZ&gt;=0.327666; infidelity=0.014434
+steps= 8; &lt;ZZ&gt;=0.346365; infidelity=0.003487
+steps=16; &lt;ZZ&gt;=0.351014; infidelity=0.000862</code></pre>
+    <figure class="figure">
+      <a href="../images/quantum-simulation-results.png">
+        <img class="figure__img" src="../images/quantum-simulation-results.png" alt="New experiment: increasing product-formula steps approaches the exact ZZ expectation and reduces state infidelity in an ideal circuit." width="1787" height="768" loading="lazy" decoding="async">
+      </a>
+      <figcaption class="figure__caption">New experiment: increasing product-formula steps approaches the exact ZZ expectation and reduces state infidelity in an ideal circuit. Generated from the companion experiment or teaching model. Open for full resolution.</figcaption>
+    </figure>
+ <p>The direct reference is 0.352560. One step gives 0.028889, a large discrepancy. Sixteen steps give 0.351014 with state infidelity 0.000862. These are ideal statevector calculations, not shot samples; the chart contains approximation and floating-point error, without sampling uncertainty.</p>
+ <div class="table-wrapper"><table><thead><tr><th>Steps m</th><th>Two-qubit RZZ gates</th><th>State infidelity</th></tr></thead><tbody><tr><td>1</td><td>1</td><td>0.351853</td></tr><tr><td>4</td><td>4</td><td>0.014434</td></tr><tr><td>16</td><td>16</td><td>0.000862</td></tr></tbody></table></div>
+ <p>On hardware, extra steps add two-qubit gates and may require routing gates. Approximation can improve while noise worsens. Separate model error, product-formula error, gate/readout error and sampling error before choosing depth.</p>
+
+<h2 id="en-scope">Why it matters: simulation is distinct from HHL</h2>
+<p>HHL borrows Hamiltonian evolution to invert a matrix. Chemistry simulation uses evolution, energy estimation or correlation measurements as the task itself. The objectives and outputs differ even when they share phase-estimation machinery.</p>
+ <p>Ground-state energy estimation also needs suitable state preparation and spectral overlap. Calling QPE does not automatically prepare the ground state. Reiher and colleagues' FeMoco resource study illustrates how a scientific target can be translated into fault-tolerant resource requirements; it is not a completed general-purpose hardware simulation of that target.</p>
+ <p>For any advantage claim, specify the observable, precision, verification method and classical competitor. Quantum simulation has a strong structural motivation. Whether a particular workload is useful remains an evidence question.</p><p>Sources: <a href="#en-ref-3">[3]</a> · <a href="#en-ref-4">[4]</a></p>
+
+<h2 id="en-practice">Run and explore</h2>
+<p><a href="https://github.com/Anirach/quantum-algorithms-for-programmers/blob/0ad89867571639641f0b9fab28391e28dc584670/quantum_simulation.py">Complete code</a> · <a href="https://github.com/Anirach/quantum-algorithms-for-programmers/blob/0ad89867571639641f0b9fab28391e28dc584670/tests/test_algorithms.py#L131">SimulationTests</a> · <a href="https://github.com/Anirach/quantum-algorithms-for-programmers/blob/0ad89867571639641f0b9fab28391e28dc584670/exercises/06.md">Exercise</a> · <a href="https://github.com/Anirach/quantum-algorithms-for-programmers/blob/0ad89867571639641f0b9fab28391e28dc584670/README.md">Setup &amp; troubleshooting</a></p><p>Use Python 3.12–3.13 and the README virtual environment. No API key or quantum hardware is required. If setup is incomplete, follow part 1 or the README.</p><pre><code># From the companion root, with the virtual environment active
+python quantum_simulation.py
+python -m unittest discover -s tests -p test_algorithms.py -k SimulationTests -v</code></pre><h3>Your experiment</h3><p>Set t=0 and verify identity evolution. Then sample ZZ measurements, report an uncertainty interval for 100 versus 10,000 shots, and separate sampling error from product-formula error.</p>
+
+<h2 id="en-references">Sources and verification</h2>
+<section class="references" aria-labelledby="en-sources"><h3 id="en-sources">Primary sources and verification scope</h3><p class="references__note">The author’s guide supplies the credited explanations and illustrations. Linked papers and standards support the claims. Code was rerun locally on 24 November 2026 with Python 3.13, Qiskit 2.6.2, Aer 0.18.4, NumPy 2.5.5 and SciPy 1.18.1. Results are local simulations or explicitly hypothetical inputs; no quantum hardware was used.</p><ol><li id="en-ref-1"><a href="https://doi.org/10.1007/BF02650179">Feynman. Simulating physics with computers (1982).</a></li><li id="en-ref-2"><a href="https://doi.org/10.1126/science.273.5278.1073">Lloyd. Universal quantum simulators (1996).</a></li><li id="en-ref-3"><a href="https://quantum.cloud.ibm.com/learning/en/courses/quantum-computing-in-practice/simulating-nature">IBM Quantum Learning. Simulating nature.</a></li><li id="en-ref-4"><a href="https://arxiv.org/abs/1605.03590">Reiher et al. Elucidating reaction mechanisms on quantum computers (2017).</a></li></ol></section>
+    </div>
+
+    <div class="post-series-footer">
+      <span class="l-th">จากซีรีส์ Quantum Algorithms for Programmers</span><span class="l-en" lang="en">From Quantum Algorithms for Programmers</span>
+    </div>
+
+    <nav aria-label="Quantum Algorithms for Programmers">
+    <div class="series-nav">
+      <h3>Quantum Algorithms for Programmers · 7-Part Course</h3>
+      <div class="series-links">
+        <a href="/blog/quantum-programmers-foundations">#1 Amplitudes</a>
+        <a href="/blog/quantum-programmers-grover">#2 Grover Search</a>
+        <a href="/blog/quantum-programmers-shor">#3 Shor &amp; Periods</a>
+        <a href="/blog/quantum-programmers-hhl">#4 HHL &amp; Readout</a>
+        <a href="/blog/quantum-programmers-qaoa">#5 QAOA &amp; MaxCut</a>
+        <span class="current" aria-current="page">#6 Simulate Physics</span>
+        <a href="/blog/quantum-programmers-scorecard">#7 Engineering Verdict</a>
+      </div>
+    </div>
+    </nav>
+
+  </article>
+
+  </main>
+
+  <footer class="blog-footer">
+    <nav class="blog-footer__nav" aria-label="Site">
+      <a href="../index.html">Home</a>
+      <a href="./">Tutorials</a>
+      <a href="../thoughts/">Thoughts</a>
+      <a href="../publications/">Publications</a>
+      <a href="../books/">Books</a>
+      <a href="../projects/">Projects</a>
+      <a href="../news/">News</a>
+      <a href="../index.html#contact">Contact</a>
+    </nav>
+    <a href="./">← Back to Tutorials</a>
+    <span>© 2026 Anirach Mingkhwan — Independent AI consultant</span>
+  </footer>
+
+</body>
+</html>

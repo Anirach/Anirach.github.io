@@ -1,0 +1,601 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Quantum Engineering — ตรวจต้นทุน | Anirach Mingkhwan</title>
+  <meta name="description" content="สรุป quantum algorithms เป็น engineering scorecard ตรวจ input/output contract, classical baseline, logical resources และต้นทุน workflow ทั้งชุด">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300..900&family=Sarabun:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400..600&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      color-scheme: light;
+      /* ink */
+      --navy: #11304b; --slate: #334155; --slate-light: #526174; --gray: #94a3b8;
+      /* ground */
+      --bg: #faf7f0; --white: #ffffff; --code-bg: #1e293b;
+      /* accent */
+      --blue: #226299; --blue-dark: #1a4d7a; --blue-light: #4992b9;
+      /* brand — sampled from the book covers. --gold is decorative on light grounds (2.2:1); --gold-dark is its text form. */
+      --gold: #c4a46c; --gold-dark: #7a5f22; --cloud: #dee7e6; --parchment: #e9e1c4; --focus: #226299;
+      /* status — use only these six, never invent a seventh */
+      --green: #22c55e; --red: #ef4444; --amber: #f59e0b;
+      --cyan: #06b6d4; --purple: #226299; --purple-dark: #1a4d7a;
+      /* type */
+      --font: 'Inter', 'Sarabun', -apple-system, BlinkMacSystemFont, sans-serif;
+      --mono: 'JetBrains Mono', 'Fira Code', 'Sarabun', monospace;
+      /* form */
+      --radius: 12px; --radius-sm: 8px; --radius-lg: 16px;
+      --measure: 720px; --wide: 860px;
+      --transition: 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+    html { scroll-behavior: smooth; }
+    body { font-family: var(--font); font-size: 17px; line-height: 1.8; color: var(--slate); background: var(--bg); -webkit-font-smoothing: antialiased; }
+    .blog-nav { position: fixed; top: 0; left: 0; right: 0; z-index: 100; background: rgba(248,250,252,0.85); backdrop-filter: blur(20px); border-bottom: 1px solid rgba(0,0,0,0.05); }
+    .blog-nav__inner { max-width: 860px; margin: 0 auto; padding: 0 2rem; height: 56px; display: flex; align-items: center; justify-content: space-between; }
+    .blog-nav__back { font-size: 0.85rem; font-weight: 500; color: var(--blue); text-decoration: none; }
+    .blog-nav__back:hover { color: #1a4d7a; }
+    .blog-nav__title { font-size: 0.85rem; font-weight: 600; color: var(--navy); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 50%; }
+    /* ── HERO ── house .post-hero on the approved Deep Blue gradient (page-design
+       §5 / INV-28). Ink is inverted for the dark ground: white title/meta, tag
+       pills white on 18% white — the openclaw-production treatment. The
+       background value must stay byte-identical to the approved string. */
+    .post-hero { padding: 8rem 2rem 3rem; background: linear-gradient(135deg, #11304b 0%, #1a4d7a 45%, #226299 100%); color: #fff; text-align: center; }
+    .post-hero__tags { display: flex; gap: 0.5rem; justify-content: center; margin-bottom: 1.25rem; flex-wrap: wrap; }
+    .post-hero__tag { display: inline-block; font-size: 0.72rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.1em; color: #fff; background: rgba(255,255,255,0.18); padding: 0.35rem 0.9rem; border-radius: 20px; }
+    .post-hero__title { font-size: clamp(1.8rem, 5vw, 3rem); font-weight: 800; color: #fff; line-height: 1.2; margin-bottom: 1rem; max-width: 720px; margin-left: auto; margin-right: auto; }
+    .post-hero__sub { font-size: 1.05rem; max-width: 640px; margin: 0 auto 1.5rem; line-height: 1.7; color: #fff; }
+    .post-hero__meta { font-size: 0.85rem; color: #fff; display: flex; align-items: center; justify-content: center; gap: 1.5rem; flex-wrap: wrap; }
+    .post-hero__series { font-weight: 600; color: #fff; }
+    /* the switch pill and the focus ring both sit on the dark hero: the pill is
+       a light chip so its labels keep their light-ground colours, and --focus
+       re-points to gold here (blue collapses on blue — the footer/pre
+       precedent). */
+    .post-hero { --focus: var(--gold); }
+    .post-hero__cover {
+      aspect-ratio: 1 / 1;
+      max-width: 380px;
+      margin: 2.5rem auto 0;
+      border-radius: var(--radius-lg, 16px);
+      overflow: hidden;
+      box-shadow: 0 20px 60px rgba(17,48,75,0.14);
+    }
+    .post-hero__cover img { width: 100%; height: 100%; object-fit: cover; display: block; }
+    .post-body { max-width: 720px; margin: 0 auto; padding: 3rem 2rem 6rem; }
+    .post-body h2 { font-size: 1.6rem; font-weight: 800; color: var(--navy); margin: 3rem 0 1rem; padding-bottom: 0.5rem; border-bottom: 2px solid rgba(34,98,153,0.15); }
+    .post-body h3 { font-size: 1.25rem; font-weight: 700; color: var(--navy); margin: 2.25rem 0 0.75rem; }
+    .post-body p { margin-bottom: 1.25rem; }
+    .post-body strong { font-weight: 700; color: var(--navy); }
+    .post-body a { color: var(--blue); text-decoration: underline; text-decoration-thickness: 1px; text-underline-offset: 2px; }
+    .post-body ul, .post-body ol { margin: 0.5rem 0 1.25rem 1.5rem; }
+    .post-body li { margin-bottom: 0.4rem; }
+    .post-body blockquote { background: rgba(34,98,153,0.06); border-left: 4px solid var(--blue); padding: 1rem 1.25rem; border-radius: 0 10px 10px 0; margin: 1.25rem 0; font-size: 0.95rem; color: var(--navy); }
+    .post-body hr { border: none; height: 1px; background: linear-gradient(90deg, transparent, rgba(34,98,153,0.2), transparent); margin: 3rem 0; }
+    /* ── CODE ── */
+    .post-body pre { background: var(--code-bg); border-radius: 12px; padding: 1.5rem; margin: 1.25rem 0 1.5rem; overflow-x: auto; border: 1px solid rgba(255,255,255,0.05); }
+    .post-body pre code { font-family: var(--mono); font-size: 0.85rem; color: #e2e8f0; line-height: 1.7; background: none; padding: 0; white-space: pre-wrap; }
+    .post-body code { font-family: var(--mono); font-size: 0.88em; background: rgba(34,98,153,0.08); color: var(--blue-dark); padding: 0.15em 0.45em; border-radius: 5px; }
+    /* ── TABLES ── */
+    .table-wrapper { overflow-x: auto; margin: 1.5rem 0; border-radius: 0.5rem; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1); }
+    table { width: 100%; border-collapse: collapse; background: white; }
+    th { background: #226299; color: white; padding: 1rem; text-align: left; font-weight: 600; }
+    td { padding: 1rem; border-bottom: 1px solid #e5e7eb; }
+    .post-body table { display: block; width: 100%; overflow-x: auto; }
+    /* ── ALERTS ── */
+    .alert { background: #fef3cd; border: 1px solid #facc15; border-radius: 0.5rem; padding: 1rem; margin: 1.5rem 0; }
+    .alert.danger { background: #fee2e2; border-color: #ef4444; }
+    .alert.info { background: #e0f2fe; border-color: #06b6d4; }
+    .alert.success { background: #d1fae5; border-color: #10b981; }
+    /* ── KEY TAKEAWAYS ── */
+    .key-takeaways { background: linear-gradient(135deg, #f3f4f6 0%, #e5e7eb 100%); border-radius: 1rem; padding: 2rem; margin: 3rem 0; }
+    .key-takeaways h3 { color: #226299; margin-bottom: 1.5rem; }
+    .post-series-footer { text-align: center; font-size: 0.85rem; color: var(--slate-light); font-style: italic; margin-top: 2rem; padding-top: 2rem; border-top: 1px solid #e2e8f0; }
+    .blog-footer { background: var(--navy); padding: 2rem 0; text-align: center; }
+    .blog-footer a { color: var(--gold); text-decoration: none; font-weight: 600; font-size: 0.9rem; }
+    .blog-footer span { color: var(--gray); font-size: 0.8rem; display: block; margin-top: 0.4rem; }
+    @media (max-width: 600px) {
+      .post-hero { padding: 7rem 1.25rem 2.5rem; }
+      .post-body { padding: 2rem 1.25rem 4rem; }
+      .post-hero__meta { flex-direction: column; gap: 0.4rem; }
+      .post-body h2 { font-size: 1.4rem; }
+      .post-body h3 { font-size: 1.15rem; }
+      .post-body pre { padding: 1rem; border-radius: 8px; }
+    }
+
+    :focus-visible { outline: 2px solid var(--focus); outline-offset: 3px; border-radius: 2px; }
+    /* the ring sits on the page ground (3px offset). Inside the navy footers
+       and code blocks var(--blue) collapses to 2.12:1, so those scopes
+       re-point --focus to gold (5.73:1 on navy). */
+    .footer, .blog-footer, pre { --focus: var(--gold); }
+    :focus:not(:focus-visible) { outline: none; }
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after {
+        animation-duration: .01ms !important; animation-iteration-count: 1 !important;
+        transition-duration: .01ms !important; scroll-behavior: auto !important;
+      }
+    }
+    h1, h2, h3, .post-hero__title, .card__title { text-wrap: balance; }
+    .post-body { overflow-wrap: break-word; }   /* long URLs and inline code wrap instead of widening the page */
+
+    .post-body img, .post-body svg { max-width: 100%; height: auto; }
+
+    /* ── SKIP LINK ── a11y-perf R5: the link and the landmark it targets are a
+       pair — useless without both halves. Off-screen until focused, then the
+       first tab stop on every page. */
+    .skip-link { position: absolute; left: -9999px; }
+    .skip-link:focus {
+      left: 1rem; top: 1rem; z-index: 999;
+      background: var(--navy); color: #fff;
+      padding: 0.75rem 1.25rem; border-radius: var(--radius-sm);
+      font-weight: 600; text-decoration: none;
+    }
+
+    /* ── POST WAYFINDING ── the wordmark is the home link; the footer carries
+       the full destination row. */
+    .blog-nav__home {
+      font-size: 0.9rem; font-weight: 800; color: var(--navy);
+      text-decoration: none; margin-right: 1rem;
+    }
+    .blog-nav__home:hover { color: var(--blue); }
+    .blog-nav__inner > .blog-nav__back { margin-right: auto; }
+    .blog-footer__nav {
+      display: flex; flex-wrap: wrap; justify-content: center; gap: 0.35rem 1.25rem;
+      max-width: 860px; margin: 0 auto 1.25rem; padding: 0 2rem 1.25rem;
+      border-bottom: 1px solid rgba(255,255,255,0.12);
+    }
+    .blog-footer__nav a { color: var(--gold); font-size: 0.85rem; font-weight: 600; text-decoration: none; }
+    .blog-footer__nav a:hover { color: #fff; text-decoration: underline; }
+
+    html { scroll-padding-top: 5rem; }
+    [id] { scroll-margin-top: 5rem; }
+
+    /* Thai needs more room than Latin at the same nominal size. */
+    .post-body:lang(th) { font-size: 18px; line-height: 1.85; }
+    .post-body p, .post-body li, .post-body blockquote { text-wrap: pretty; }
+
+    /* ---- side-scroll affordance ----
+       pre blocks and tables can exceed 720px. These layers paint a shadow ONLY
+       where there is more content in that direction; when fully scrolled the
+       cover slides over the shadow and hides it. No JavaScript, no wrapper. */
+    .post-body pre, .post-body table {
+      overflow-x: auto;
+      background-image:
+        linear-gradient(to right, var(--code-bg, #0f172a) 30%, rgba(15,23,42,0)),
+        linear-gradient(to left, var(--code-bg, #0f172a) 30%, rgba(15,23,42,0)),
+        radial-gradient(farthest-side at 0 50%, rgba(0,0,0,.28), rgba(0,0,0,0)),
+        radial-gradient(farthest-side at 100% 50%, rgba(0,0,0,.28), rgba(0,0,0,0));
+      background-position: 0 0, 100% 0, 0 0, 100% 0;
+      background-repeat: no-repeat;
+      background-size: 40px 100%, 40px 100%, 14px 100%, 14px 100%;
+      background-attachment: local, local, scroll, scroll;
+    }
+    .post-body table {
+      background-image:
+        linear-gradient(to right, var(--white, #fff) 30%, rgba(255,255,255,0)),
+        linear-gradient(to left, var(--white, #fff) 30%, rgba(255,255,255,0)),
+        radial-gradient(farthest-side at 0 50%, rgba(17,48,75,.16), rgba(17,48,75,0)),
+        radial-gradient(farthest-side at 100% 50%, rgba(17,48,75,.16), rgba(17,48,75,0));
+      background-position: 0 0, 100% 0, 0 0, 100% 0;
+      background-repeat: no-repeat;
+      background-size: 40px 100%, 40px 100%, 14px 100%, 14px 100%;
+      background-attachment: local, local, scroll, scroll;
+    }
+
+    /* ---- table of contents ---- */
+    .post-toc {
+      max-width: 720px;
+      margin: 2rem auto 0;
+      padding: 1rem 1.25rem;
+      background: rgba(34,98,153,0.05);
+      border: 1px solid rgba(34,98,153,0.14);
+      border-left: 3px solid var(--gold, #c4a46c);
+      border-radius: 10px;
+      font-size: 0.92rem;
+    }
+    .post-toc > summary {
+      cursor: pointer;
+      font-weight: 700;
+      color: var(--navy);
+      list-style: none;
+    }
+    .post-toc > summary::-webkit-details-marker { display: none; }
+    .post-toc > summary::before {
+      content: "\25B8";
+      display: inline-block;
+      margin-right: 0.5rem;
+      transition: transform 0.2s ease;
+      color: var(--gold-dark, #7a5f22);
+    }
+    .post-toc[open] > summary::before { transform: rotate(90deg); }
+    .post-toc > summary:focus-visible { outline: 3px solid var(--focus, #226299); outline-offset: 3px; }
+    .post-toc ol { margin: 0.85rem 0 0.25rem; padding-left: 1.4rem; }
+    .post-toc li { margin-bottom: 0.4rem; line-height: 1.5; }
+    .post-toc a { color: var(--slate); text-decoration: none; }
+    .post-toc a:hover, .post-toc a:focus-visible { color: var(--blue-dark, #1a4d7a); text-decoration: underline; }
+    @media (max-width: 600px) { .post-toc { margin: 1.25rem 1rem 0; } }
+
+    /* ---- cross-document view transitions ---- */
+    @view-transition { navigation: auto; }
+    .nav, .blog-nav { view-transition-name: site-nav; }
+    .footer, .blog-footer { view-transition-name: site-footer; }
+    @media (prefers-reduced-motion: reduce) {
+      ::view-transition-group(*),
+      ::view-transition-old(*),
+      ::view-transition-new(*) { animation: none !important; }
+    }
+
+    /* ── SERIES STRIP — Hermes Agent in Practice ──
+       Same class and inner-wrapper shape as the OpenClaw strip because the
+       linter's RE_SNAV recognises exactly `series-nav` + a nested div; a
+       renamed strip would read as "no nav" and fail INV-08. All content
+       checks (INV-03 family) iterate the SERIES7 list only, so this strip's
+       labels are convention, not contract. House-styled, not the island CSS. */
+    .series-nav {
+      max-width: 720px; margin: 2rem auto 0; padding: 1.1rem 1.4rem;
+      background: rgba(255,255,255,0.75); border: 1px solid rgba(34,98,153,0.15);
+      border-left: 3px solid var(--gold); border-radius: 12px;
+    }
+    .series-nav h3 {
+      font-size: 0.78rem; font-weight: 700; text-transform: uppercase;
+      letter-spacing: 0.08em; color: var(--gold-dark); margin-bottom: 0.6rem;
+    }
+    .series-links { display: flex; flex-wrap: wrap; gap: 0.5rem; }
+    .series-links a, .series-links .current {
+      font-size: 0.82rem; font-weight: 600; padding: 0.35rem 0.8rem;
+      border-radius: 50px; text-decoration: none;
+    }
+    .series-links a { color: var(--blue-dark); background: rgba(34,98,153,0.08); }
+    .series-links a:hover { background: rgba(34,98,153,0.16); }
+    .series-links .current { color: #fff; background: var(--blue-dark); }
+    @media (max-width: 600px) { .series-nav { margin: 1.5rem 1rem 0; } }
+
+    /* ── FIGURE — the sanctioned diagram component (page-design §4 Content).
+       Diagrams are PNGs; this repo built them out of divs twice and reverted
+       twice. The image is wrapped in a link to itself so a phone can pinch a
+       1400px drawing without a line of JavaScript. */
+    .figure { margin: 2.5rem 0; }
+    .figure__img { width: 100%; height: auto; display: block;
+                   border-radius: var(--radius); border: 1px solid rgba(0,0,0,0.06); }
+    .figure__caption { font-size: 0.85rem; color: var(--slate-light);
+                       text-align: center; margin-top: 0.75rem; }
+
+    /* ── REFERENCES — every material number in this series carries its source.
+       The tags are the book's own four evidence labels. */
+    .references { margin-top: 3rem; padding-top: 2rem; border-top: 1px solid #e2e8f0; }
+    .references__note { font-size: 0.85rem; color: var(--slate-light); margin-bottom: 1rem; }
+    .references__list { padding-left: 1.4rem; font-size: 0.9rem; line-height: 1.75; }
+    .references__list li { margin-bottom: 0.7rem; }
+    .ref-tag { display: inline-block; font-size: 0.7rem; font-weight: 700;
+               letter-spacing: 0.06em; text-transform: uppercase; padding: 0.1rem 0.5rem;
+               border-radius: 50px; margin-right: 0.4rem; vertical-align: 0.05em;
+               background: rgba(34,98,153,0.1); color: var(--blue-dark); }
+    /* All four labels get a rule.  --standard and --study shipped without one
+       on 2026-09-05, so 158 of 306 tags fell through to the base blue and the
+       two labels were indistinguishable.  Ratios on --bg: 6.70 / 6.92 / 7.36 /
+       4.81:1, all AA at this size. */
+    .ref-tag--law { background: rgba(239,68,68,0.12); color: #991b1b; }
+    .ref-tag--standard { background: rgba(34,98,153,0.12); color: var(--blue-dark); }
+    .ref-tag--study { background: rgba(34,197,94,0.18); color: #14532d; }
+    .ref-tag--synthesis { background: rgba(196,164,108,0.22); color: var(--gold-dark); }
+    .ref-supports { display: block; color: var(--slate-light); font-size: 0.85rem; }
+
+    /* ── LANGUAGE SWITCH — pure CSS, zero JavaScript (INV-38) ──
+       One visually-hidden checkbox as a direct child of body, BEFORE the main landmark,
+       so `#langSwitch:checked ~ main …` reaches every content block. The two
+       tracks are paired blocks: .l-th (default) and .l-en (hidden until
+       checked; display:revert restores block for divs, inline for spans).
+       Naming stays clear of INV-12's menu-token regex (hamburger|burger|
+       nav__toggle|nav-toggle|navtoggle|menu-toggle|menu__toggle) — verified.
+       No JS also means no persistence across posts; each post opens in Thai. */
+    .lang-switch-box { position: absolute; left: -9999px; }
+    /* where anchor positioning exists the box sits on the pill, so focusing it scrolls the pill into view */
+    .lang-switch { anchor-name: --lang-switch; }
+    .lang-switch-box { position-anchor: --lang-switch; top: anchor(top); left: anchor(left); width: 1px; height: 1px; opacity: 0; pointer-events: none; }
+    .l-en { display: none; }
+    #langSwitch:checked ~ main .l-en { display: revert; }
+    #langSwitch:checked ~ main .l-th { display: none; }
+    .lang-switch {
+      display: inline-flex; align-items: center; gap: 0.55rem;
+      margin-top: 1.4rem; padding: 0.4rem 1.1rem; border-radius: 50px;
+      background: rgba(255,255,255,0.85); border: 1px solid rgba(255,255,255,0.4);
+      cursor: pointer; font-size: 0.85rem; user-select: none;
+    }
+    .lang-switch span { color: var(--slate-light); font-weight: 600; transition: color 0.2s; }
+    .lang-switch .lang-sep { color: var(--gray); font-weight: 400; }
+    .lang-switch .lang-th { color: var(--navy); font-weight: 800; }
+    #langSwitch:checked ~ main .lang-switch .lang-th { color: var(--slate-light); font-weight: 600; }
+    #langSwitch:checked ~ main .lang-switch .lang-en { color: var(--navy); font-weight: 800; }
+    .lang-switch:hover { border-color: #fff; }
+    #langSwitch:focus-visible ~ main .lang-switch {
+      outline: 2px solid var(--focus); outline-offset: 3px;
+    }
+  </style>
+  <!-- social -->
+  <link rel="canonical" href="https://anirach.com/blog/quantum-programmers-scorecard.html">
+  <meta property="og:type" content="article">
+  <meta property="og:url" content="https://anirach.com/blog/quantum-programmers-scorecard.html">
+  <meta property="og:site_name" content="Anirach Mingkhwan">
+  <meta property="og:locale" content="th_TH">
+  <meta property="og:locale:alternate" content="en_US">
+  <meta property="article:published_time" content="2026-11-24">
+  <meta property="article:author" content="https://anirach.com/">
+  <meta property="og:title" content="Quantum Engineering — ตรวจต้นทุน">
+  <meta property="og:description" content="สรุป quantum algorithms เป็น engineering scorecard ตรวจ input/output contract, classical baseline, logical resources และต้นทุน workflow ทั้งชุด">
+  <meta property="og:image" content="https://anirach.com/images/quantum-programmers-scorecard-og.jpg">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
+  <meta property="og:image:alt" content="Quantum Engineering — ตรวจต้นทุน">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:image" content="https://anirach.com/images/quantum-programmers-scorecard-og.jpg">
+  <meta name="twitter:image:alt" content="Quantum Engineering — ตรวจต้นทุน">
+  <meta name="robots" content="max-image-preview:large">
+  <meta name="theme-color" content="#11304b">
+  <link rel="icon" href="/favicon.ico" sizes="any">
+  <link rel="apple-touch-icon" href="/apple-touch-icon.png">
+  <!-- /social -->
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "BlogPosting",
+    "headline": "Quantum Engineering — ตรวจต้นทุน",
+    "author": {
+      "@type": "Person",
+      "@id": "https://anirach.com/#person",
+      "name": "Anirach Mingkhwan",
+      "url": "https://anirach.com/"
+    },
+    "datePublished": "2026-11-24",
+    "dateModified": "2026-11-24",
+    "image": "https://anirach.com/images/quantum-programmers-scorecard-og.jpg",
+    "inLanguage": [
+      "th",
+      "en"
+    ],
+    "mainEntityOfPage": "https://anirach.com/blog/quantum-programmers-scorecard.html"
+  }
+  </script>
+</head>
+<body>
+<a href="#main" class="skip-link">Skip to content</a>
+<input type="checkbox" id="langSwitch" class="lang-switch-box" aria-label="Switch language: Thai / English">
+
+  <nav class="blog-nav">
+    <div class="blog-nav__inner">
+      <a href="../index.html" class="blog-nav__home">Anirach</a>
+      <a href="./" class="blog-nav__back">‹ Tutorials</a>
+      <div class="blog-nav__title">Engineering Verdict</div>
+    </div>
+  </nav>
+
+  <main id="main">
+
+  <header class="post-hero">
+    <div class="post-hero__tags">
+      <span class="post-hero__tag">Quantum Computing</span>
+      <span class="post-hero__tag">Qiskit</span>
+      <span class="post-hero__tag">Algorithms</span>
+    </div>
+    <h1 class="post-hero__title"><span class="l-th">Quantum Engineering — ตรวจต้นทุน</span><span class="l-en" lang="en">Quantum Engineering: A Scorecard, a Cost Ledger and a Decision</span></h1>
+    <p class="post-hero__sub"><span class="l-th">รวมทั้งซีรีส์เป็น engineering decision ตรวจ input/output, oracle, logical qubits และ baseline ก่อนรับคำอ้างว่า quantum เร็วกว่า</span><span class="l-en" lang="en">Turn the series into an engineering decision: inspect input/output, oracles, logical resources and baselines before accepting a speedup claim.</span></p>
+    <div class="post-hero__meta">
+      <span>By <strong>Anirach Mingkhwan</strong></span>
+      <span class="post-hero__series">Quantum Algorithms for Programmers 2026 • Post #7</span>
+      <span><time datetime="2026-11-24">24 Nov 2026</time></span>
+      <span>4 min read</span>
+    </div>
+    <label for="langSwitch" class="lang-switch" title="สลับภาษา · Switch language"><span class="lang-th">ไทย</span><span class="lang-sep">·</span><span class="lang-en" lang="en">English</span></label>
+    <div class="post-hero__cover">
+      <img src="../images/quantum-programmers-scorecard-cover.jpg" alt="Quantum Engineering — ตรวจต้นทุน" width="800" height="800" loading="eager" fetchpriority="high" decoding="async">
+    </div>
+  </header>
+
+  <article class="post-body">
+
+    <details class="post-toc l-th" open>
+      <summary>ในบทความนี้</summary>
+      <ol>
+          <li><a href="#th-scorecard">Scorecard — สี่ algorithms แก้คนละโจทย์</a></li>
+          <li><a href="#th-architecture">System boundary — ให้ quantum kernel เป็นส่วนหนึ่ง</a></li>
+          <li><a href="#th-cost">Cost ledger — kernel เร็ว แต่ workflow ช้า</a></li>
+          <li><a href="#th-resources">Resources — physical และ logical qubits</a></li>
+          <li><a href="#th-decision">Decision — ใช้ทักษะนี้อย่างไรต่อ</a></li>
+          <li><a href="#th-practice">Run & explore — ลงมือทดลอง</a></li>
+          <li><a href="#th-references">Sources & verification — แหล่งอ้างอิง</a></li>
+      </ol>
+    </details>
+    <details class="post-toc l-en" open>
+      <summary>In this post</summary>
+      <ol>
+          <li><a href="#en-scorecard">Scorecard: four algorithms, four different contracts</a></li>
+          <li><a href="#en-architecture">System boundary: place the quantum kernel inside a workflow</a></li>
+          <li><a href="#en-cost">Cost ledger: a fast kernel can produce a slow workflow</a></li>
+          <li><a href="#en-resources">Resources: physical and logical qubits</a></li>
+          <li><a href="#en-decision">Decision: what to do with this knowledge</a></li>
+          <li><a href="#en-practice">Run and explore</a></li>
+          <li><a href="#en-references">Sources and verification</a></li>
+      </ol>
+    </details>
+    <div class="l-th">
+
+<h2 id="th-scorecard">Scorecard — สี่ algorithms แก้คนละโจทย์</h2>
+<p><strong>บทที่ 7/7</strong> · ดัดแปลงจากเอกสาร Quantum Algorithms for Programmers, Edition 1.0 หน้า 36–40 พร้อมโค้ดและคำอธิบายที่ตรวจซ้ำสำหรับเว็บ</p><p>หลังรันหกบทแรก เรามีวิธีอ่าน quantum algorithm เป็น software component: ระบุ input ที่เข้าถึงได้ operation ที่ทำได้ output ที่อ่าน และ cost model ที่นับ การพูดว่า “quantum เร็วกว่า” โดยไม่ระบุสี่อย่างนี้ยังไม่พอสำหรับ architecture decision</p>
+ <div class="table-wrapper"><table><thead><tr><th>Algorithm</th><th>Mathematical opportunity</th><th>Boundary to inspect</th><th>What our lab establishes</th></tr></thead><tbody><tr><td>Grover</td><td>Θ(√N) oracle queries</td><td>reversible predicate และ per-query cost</td><td>amplification และ over-rotation ตรงทฤษฎี</td></tr><tr><td>Shor</td><td>polynomial ใน bit length</td><td>scalable arithmetic และ fault tolerance</td><td>period 4 → factors 3,5 สำหรับ 15</td></tr><tr><td>HHL</td><td>dimension dependence ต่ำภายใต้เงื่อนไข</td><td>state preparation, κ, precision, readout</td><td>normalized solution state ของระบบ 2×2</td></tr><tr><td>QAOA</td><td>parameterized heuristic</td><td>training, noise, classical solver</td><td>distribution ดีขึ้นบน graph หก vertices</td></tr><tr><td>Simulation</td><td>quantum dynamics ที่มีโครงสร้าง</td><td>observable, preparation, error budget</td><td>product formula converge บนสอง qubits</td></tr></tbody></table></div>
+ <p>ไม่มีแล็บใดในซีรีส์นี้พิสูจน์ practical advantage และไม่มีข้อไหนบอกว่า simulation ที่ใช้ classical computer ทำงานเร็วกว่า classical computer ทุกกรณี สิ่งที่ได้คือพื้นฐานและการตรวจ implementation ที่ตรวจซ้ำได้</p>
+
+<h2 id="th-architecture">System boundary — ให้ quantum kernel เป็นส่วนหนึ่ง</h2>
+    <figure class="figure">
+      <a href="../images/quantum-engineering-flow.png">
+        <img class="figure__img" src="../images/quantum-engineering-flow.png" alt="นิยาม classical baseline, input contract, quantum resource budget และ output validation เป็นระบบเดียวกัน" width="1613" height="619" loading="lazy" decoding="async">
+      </a>
+      <figcaption class="figure__caption">นิยาม classical baseline, input contract, quantum resource budget และ output validation เป็นระบบเดียวกัน สร้างจาก companion experiment หรือแบบจำลองเพื่อการสอน เปิดภาพเพื่อดูขนาดเต็ม</figcaption>
+    </figure>
+ <p>ใน production quantum processor จะเป็น resource ที่ classical service เรียกใช้ โค้ดรอบนอกยังต้องจัด task schema, state preparation, circuit compilation, calibration assumptions, batching, shot allocation, retry และ validation ผล การมี quantum kernel ไม่ได้ลบความรับผิดชอบของ software engineering</p>
+ <p>กำหนด output ให้เทียบกันได้ เช่น observable หนึ่งตัวที่ additive error ε และ confidence ที่กำหนด หรือ cut ที่ถึง quality threshold ภายใต้งบเดียวกัน ถ้าฝั่ง quantum คืน quantum state แต่ฝั่ง classical คืน array ครบ การเทียบเวลาโดยตรงกำลังนับคนละ task</p>
+ <p>เก็บ experiment record อย่างน้อยเป็น problem instance, input access model, circuit/algorithm revision, parameter settings, backend และ compilation settings, shot budget, success criterion, raw measurements และ classical baseline revision ข้อมูลเหล่านี้ทำให้แยก algorithm effect ออกจากการเปลี่ยน environment ได้</p>
+
+<h2 id="th-cost">Cost ledger — kernel เร็ว แต่ workflow ช้า</h2>
+<p>ส่วนโค้ดสำหรับอ่านแนวคิด ใช้ไฟล์เต็มพร้อม imports จาก companion และคำสั่งใน Run &amp; explore ด้านล่าง</p>
+<pre><code>@dataclass(frozen=True)
+class Budget:
+    classical_seconds: float
+    prepare_seconds: float
+    quantum_seconds_per_attempt: float
+    attempts: int
+    postprocess_seconds: float
+
+    def total(self):
+        values = (self.classical_seconds, self.prepare_seconds,
+                  self.quantum_seconds_per_attempt, self.postprocess_seconds)
+        if any(not math.isfinite(v) or v &lt; 0 for v in values):
+            raise ValueError(&quot;Times must be finite and nonnegative&quot;)
+        if not isinstance(self.attempts, int) or self.attempts &lt; 1:
+            raise ValueError(&quot;Include at least one attempt&quot;)
+        return self.prepare_seconds + self.attempts * self.quantum_seconds_per_attempt + self.postprocess_seconds</code></pre>
+ <p><strong>ผลรันที่บันทึก 24 November 2026</strong></p>
+<pre><code>Hypothetical seconds; no hardware benchmark
+Classical baseline: 1.00
+Quantum workflow total: 1.50
+End-to-end speedup: 0.667x
+30-qubit complex128 statevector bytes: 17179869184</code></pre>
+    <figure class="figure">
+      <a href="../images/quantum-cost-ledger.png">
+        <img class="figure__img" src="../images/quantum-cost-ledger.png" alt="ตัวอย่างสมมติ: prepare 0.8 วินาที + ห้า attempts ครั้งละ 0.1 วินาที + postprocess 0.2 วินาที รวมช้ากว่า baseline หนึ่งวินาที" width="1799" height="811" loading="lazy" decoding="async">
+      </a>
+      <figcaption class="figure__caption">ตัวอย่างสมมติ: prepare 0.8 วินาที + ห้า attempts ครั้งละ 0.1 วินาที + postprocess 0.2 วินาที รวมช้ากว่า baseline หนึ่งวินาที สร้างจาก companion experiment หรือแบบจำลองเพื่อการสอน เปิดภาพเพื่อดูขนาดเต็ม</figcaption>
+    </figure>
+ <p>ตัวเลขนี้เป็น scenario ที่กำหนดเพื่อสอนการนับต้นทุน ไม่ใช่ benchmark ให้ classical baseline ใช้ 1 วินาที quantum kernel ใช้ 0.1 วินาทีต่อ attempt แต่ต้องมี preparation 0.8 วินาที ทำ 5 attempts และ postprocess อีก 0.2 วินาที จึงรวม 1.5 วินาที หรือ end-to-end speedup เพียง 0.667×</p>
+ <p>formula ของแล็บสมมติ preparation เกิดครั้งเดียว ถ้าต้องเตรียมใหม่ต่อ attempt ให้ย้ายต้นทุนส่วนนั้นเข้า per-attempt term สำหรับ QAOA ยังต้องรวม optimizer calls ทุก restart ส่วน HHL ต้องรวม post-selection failures และการประมาณ observable ด้วย</p>
+ <p>รายงานทั้งเวลารวม เวลา queue หากเป็น remote service ค่าใช้จ่าย และผลที่ยังไม่สำเร็จ จะใช้ค่าเฉลี่ยของ successful attempts อย่างเดียวไม่ได้เมื่อ failure probability ทำให้ต้องรันซ้ำหลายครั้ง</p>
+
+<h2 id="th-resources">Resources — physical และ logical qubits</h2>
+<p><strong>Physical qubit</strong> คืออุปกรณ์ที่มี error ส่วน <strong>logical qubit</strong> encode ข้อมูลด้วย error-correcting code บน physical qubits หลายตัว จำนวนที่ต้องใช้ขึ้นกับ code, error rates, target logical error และงานที่รัน ไม่มี conversion ratio เดียวที่ใช้ได้ทุก architecture</p>
+ <p>งานของ Google Quantum AI เรื่อง below-threshold surface-code error correction แสดงว่าการเพิ่ม code distance สามารถลด logical error ใน regime ที่ทดลองได้ เป็นหลักฐานด้าน error correction ที่สำคัญ แต่ไม่ได้ทำให้ every circuit fault-tolerant โดยอัตโนมัติ resource estimate ของ application ต้องรวม reliable gate count, logical depth และ overhead ที่ใช้จริง</p>
+ <p>simulator แบบ dense complex128 ต้องเก็บ state อย่างน้อย 16·2<sup>n</sup> bytes สำหรับ n=30 คือ 16 GiB ก่อน workspaces และสำเนา การเพิ่ม qubits บน simulator จึงไม่ใช่วิธีวัดว่า quantum hardware จะ scale ได้อย่างไร ส่วน roadmap ของ vendor เป็นแผนที่ควรติดตามแยกจากผลที่ตรวจซ้ำแล้ว</p><p>อ้างอิง: <a href="#th-ref-4">[4]</a></p>
+
+<h2 id="th-decision">Decision — ใช้ทักษะนี้อย่างไรต่อ</h2>
+<ol><li><strong>เลือก structure:</strong> มี hidden period, compact quantum dynamics หรือ predicate ที่เหมาะสมหรือไม่</li><li><strong>ตรึง input/output:</strong> เตรียม state ได้อย่างไร และต้องอ่านอะไรที่ precision เท่าใด</li><li><strong>ใช้ strong baseline:</strong> รวม indexing, sparse methods, preconditioning และ heuristic ที่ใช้จริงตามโจทย์</li><li><strong>เปิด cost ทั้งหมด:</strong> oracle gates, compilation, fault tolerance, training, shots, failures และ postprocessing</li><li><strong>แยกระดับ evidence:</strong> theorem → ideal simulation → noisy experiment → verified workload benefit</li></ol>
+ <p>สำหรับ programmer งานที่ทำได้ทันทีคือรักษา tests ที่ตรวจ amplitude, phase และ classical postprocessing แยกกัน ฝึกอ่าน complexity พร้อม assumptions และเริ่มทำ cryptography inventory กับทีมที่รับผิดชอบความปลอดภัย มาตรฐาน PQC เป็น classical algorithms ที่ใช้บนระบบปัจจุบัน ไม่ต้องซื้อ quantum computer ก่อน</p>
+ <p>เมื่อจบซีรีส์ควรอธิบายได้ว่า Grover ประหยัด queries, Shor ใช้ period, HHL คืน state, QAOA ปรับ distribution และ quantum simulation ถาม observable จาก physics ความเข้าใจที่แยกสิ่งเหล่านี้ได้จะช่วยเลือกงานและประเมินคำอ้างอย่างเป็นวิศวกร</p><p>อ้างอิง: <a href="#th-ref-5">[5]</a></p>
+
+<h2 id="th-practice">Run & explore — ลงมือทดลอง</h2>
+<p><a href="https://github.com/Anirach/quantum-algorithms-for-programmers/blob/0ad89867571639641f0b9fab28391e28dc584670/engineering_scorecard.py">Complete code</a> · <a href="https://github.com/Anirach/quantum-algorithms-for-programmers/blob/0ad89867571639641f0b9fab28391e28dc584670/tests/test_algorithms.py#L150">ScorecardTests</a> · <a href="https://github.com/Anirach/quantum-algorithms-for-programmers/blob/0ad89867571639641f0b9fab28391e28dc584670/exercises/07.md">Exercise</a> · <a href="https://github.com/Anirach/quantum-algorithms-for-programmers/blob/0ad89867571639641f0b9fab28391e28dc584670/README.md">Setup &amp; troubleshooting</a></p><p>ใช้ Python 3.12–3.13 และ virtual environment ตาม README ไม่ต้องใช้ API key หรือ quantum hardware หากยังไม่ติดตั้งให้ทำตามตอน 1 หรือ README</p><pre><code># From the companion root, with the virtual environment active
+python engineering_scorecard.py
+python -m unittest discover -s tests -p test_algorithms.py -k ScorecardTests -v</code></pre><h3>ลองต่อด้วยตัวเอง</h3><p>เลือก workload ที่รู้จักหนึ่งงาน เขียน input/output contract และ strong classical baseline แล้วเติม cost ledger ด้วยค่าที่วัดได้จริง เก็บค่าที่ไม่ทราบเป็น unknown และสรุปว่าหลักฐานที่มีรองรับการตัดสินใจระดับใด</p>
+
+<h2 id="th-references">Sources & verification — แหล่งอ้างอิง</h2>
+<section class="references" aria-labelledby="th-sources"><h3 id="th-sources">Primary sources และขอบเขตการตรวจ</h3><p class="references__note">เอกสารผู้เขียนเป็นต้นทางของคำอธิบายและภาพที่ระบุ ส่วนลิงก์ข้างล่างเป็นเอกสารวิจัยและมาตรฐานที่ใช้ตรวจข้ออ้าง โค้ดรันซ้ำบน Python 3.13, Qiskit 2.6.2, Aer 0.18.4, NumPy 2.5.5 และ SciPy 1.18.1 วันที่ 24 November 2026 ผลทั้งหมดเป็น local simulation หรือค่าตัวอย่างที่ระบุ ไม่มีการรัน hardware</p><ol><li id="th-ref-1"><a href="https://arxiv.org/abs/1511.04206">Montanaro. Quantum algorithms: an overview (2016).</a></li><li id="th-ref-2"><a href="https://arxiv.org/abs/2011.04149">Babbush et al. Focus beyond quadratic speedups for error-corrected quantum advantage (2021).</a></li><li id="th-ref-3"><a href="https://arxiv.org/abs/2505.15917">Gidney. How to factor 2048 bit RSA integers with less than a million noisy qubits (2025).</a></li><li id="th-ref-4"><a href="https://arxiv.org/abs/2408.13687">Google Quantum AI and collaborators. Quantum error correction below the surface code threshold (2024/2025).</a></li><li id="th-ref-5"><a href="https://www.nist.gov/news-events/news/2024/08/nist-releases-first-3-finalized-post-quantum-encryption-standards">NIST. First three finalized post-quantum cryptography standards (2024).</a></li></ol></section>
+    </div>
+
+    <div class="l-en" lang="en">
+
+<h2 id="en-scorecard">Scorecard: four algorithms, four different contracts</h2>
+<p><strong>Part 7/7.</strong> Adapted from Quantum Algorithms for Programmers, Edition 1.0, pp. 36–40, with web explanations and rerun code.</p><p>After six experiments, we can read a quantum algorithm as a software component: accessible inputs, permitted operations, readable outputs and a cost model. “Quantum is faster” without those contracts is insufficient for an architecture decision.</p>
+ <div class="table-wrapper"><table><thead><tr><th>Algorithm</th><th>Mathematical opportunity</th><th>Boundary to inspect</th><th>What our lab establishes</th></tr></thead><tbody><tr><td>Grover</td><td>Θ(√N) oracle queries</td><td>Reversible predicate and per-query cost</td><td>Predicted amplification and over-rotation</td></tr><tr><td>Shor</td><td>Polynomial in bit length</td><td>Scalable arithmetic and fault tolerance</td><td>Order 4 gives factors 3,5 for 15</td></tr><tr><td>HHL</td><td>Low dimension dependence under conditions</td><td>Preparation, κ, precision and readout</td><td>A normalized solution state for a 2×2 system</td></tr><tr><td>QAOA</td><td>Parameterized heuristic</td><td>Training, noise and classical solvers</td><td>Improved distribution on one six-node graph</td></tr><tr><td>Simulation</td><td>Structured quantum dynamics</td><td>Observable, preparation and error budget</td><td>Product-formula convergence on two qubits</td></tr></tbody></table></div>
+ <p>None of these labs demonstrates practical advantage. A classical simulation of a quantum algorithm does not establish that a quantum device beats classical computing. The deliverable is a reproducible foundation and a checked implementation.</p>
+
+<h2 id="en-architecture">System boundary: place the quantum kernel inside a workflow</h2>
+    <figure class="figure">
+      <a href="../images/quantum-engineering-flow.png">
+        <img class="figure__img" src="../images/quantum-engineering-flow.png" alt="Define the classical baseline, input contract, quantum resource budget and output validation as one system." width="1613" height="619" loading="lazy" decoding="async">
+      </a>
+      <figcaption class="figure__caption">Define the classical baseline, input contract, quantum resource budget and output validation as one system. Generated from the companion experiment or teaching model. Open for full resolution.</figcaption>
+    </figure>
+ <p>A production quantum processor is a resource called by a classical workflow. Surrounding code still owns task schemas, state preparation, compilation, calibration assumptions, batching, shot allocation, retries and validation. A quantum kernel retains the need for ordinary software engineering.</p>
+ <p>Specify comparable outputs: an observable to additive error ε and a stated confidence, or a cut meeting a quality threshold under a fixed budget. A quantum state and a complete classical array are different deliverables. Timing them without accounting for that difference compares different tasks.</p>
+ <p>Record the problem instance, input-access model, algorithm revision, parameters, backend and compiler settings, shots, success criterion, raw measurements and baseline revision. These records separate algorithm changes from environment changes.</p>
+
+<h2 id="en-cost">Cost ledger: a fast kernel can produce a slow workflow</h2>
+<p>Implementation excerpt. Use the complete companion file with its imports and the Run and explore commands below.</p>
+<pre><code>@dataclass(frozen=True)
+class Budget:
+    classical_seconds: float
+    prepare_seconds: float
+    quantum_seconds_per_attempt: float
+    attempts: int
+    postprocess_seconds: float
+
+    def total(self):
+        values = (self.classical_seconds, self.prepare_seconds,
+                  self.quantum_seconds_per_attempt, self.postprocess_seconds)
+        if any(not math.isfinite(v) or v &lt; 0 for v in values):
+            raise ValueError(&quot;Times must be finite and nonnegative&quot;)
+        if not isinstance(self.attempts, int) or self.attempts &lt; 1:
+            raise ValueError(&quot;Include at least one attempt&quot;)
+        return self.prepare_seconds + self.attempts * self.quantum_seconds_per_attempt + self.postprocess_seconds</code></pre>
+ <p><strong>Captured run, 24 November 2026</strong></p>
+<pre><code>Hypothetical seconds; no hardware benchmark
+Classical baseline: 1.00
+Quantum workflow total: 1.50
+End-to-end speedup: 0.667x
+30-qubit complex128 statevector bytes: 17179869184</code></pre>
+    <figure class="figure">
+      <a href="../images/quantum-cost-ledger.png">
+        <img class="figure__img" src="../images/quantum-cost-ledger.png" alt="Illustration: 0.8 seconds preparation + five 0.1-second attempts + 0.2 seconds postprocessing exceeds a one-second baseline." width="1799" height="811" loading="lazy" decoding="async">
+      </a>
+      <figcaption class="figure__caption">Illustration: 0.8 seconds preparation + five 0.1-second attempts + 0.2 seconds postprocessing exceeds a one-second baseline. Generated from the companion experiment or teaching model. Open for full resolution.</figcaption>
+    </figure>
+ <p>These are hypothetical inputs for teaching cost accounting. A classical baseline takes one second. A quantum kernel takes 0.1 seconds per attempt, but preparation adds 0.8 seconds, five attempts are needed, and postprocessing adds 0.2 seconds. Total time is 1.5 seconds: an end-to-end speedup of only 0.667×.</p>
+ <p>This ledger assumes preparation occurs once. If it repeats per attempt, move that work into the per-attempt term. For QAOA, include every optimizer restart. For HHL, include post-selection failures and observable estimation.</p>
+ <p>Report total elapsed time, remote queue time when applicable, cost and unresolved runs. Averaging only successful attempts hides the work needed to reach one accepted result.</p>
+
+<h2 id="en-resources">Resources: physical and logical qubits</h2>
+<p>A <strong>physical qubit</strong> is a noisy device. A <strong>logical qubit</strong> encodes information using an error-correcting code over multiple physical qubits. The ratio depends on the code, error rates, target logical error and workload; there is no universal conversion factor.</p>
+ <p>Google Quantum AI's below-threshold surface-code experiment demonstrates decreasing logical error as code distance increases in the tested regime. That is important error-correction evidence, not automatic fault tolerance for arbitrary application circuits. Application estimates also require reliable gate counts, logical depth and actual overheads.</p>
+ <p>A dense complex128 simulator stores at least 16·2<sup>n</sup> bytes for an n-qubit state. At n=30 that is 16 GiB before workspaces and copies. Simulator scaling is not a measure of quantum-hardware scaling. Vendor roadmaps should be tracked separately from reproduced results.</p><p>Sources: <a href="#en-ref-4">[4]</a></p>
+
+<h2 id="en-decision">Decision: what to do with this knowledge</h2>
+<ol><li><strong>Identify structure:</strong> is there a hidden period, compact quantum dynamics or a suitable predicate?</li><li><strong>Freeze input/output:</strong> how is the state prepared, and what must be read at what precision?</li><li><strong>Use a strong baseline:</strong> include indexing, sparse methods, preconditioning and practical heuristics where relevant.</li><li><strong>Expose full cost:</strong> oracle gates, compilation, fault tolerance, training, shots, failures and postprocessing.</li><li><strong>Separate evidence levels:</strong> theorem → ideal simulation → noisy experiment → verified workload benefit.</li></ol>
+ <p>Programmers can act now by preserving separate tests for amplitudes, phases and classical postprocessing, reading complexity together with its assumptions, and inventorying cryptography with the responsible security team. PQC standards describe classical algorithms deployable on existing systems; they do not require buying a quantum computer.</p>
+ <p>You should now be able to explain why Grover saves queries, Shor finds periods, HHL returns a state, QAOA shapes a distribution, and quantum simulation asks physics for an observable. Those distinctions make a quantum proposal concrete enough for engineering review.</p><p>Sources: <a href="#en-ref-5">[5]</a></p>
+
+<h2 id="en-practice">Run and explore</h2>
+<p><a href="https://github.com/Anirach/quantum-algorithms-for-programmers/blob/0ad89867571639641f0b9fab28391e28dc584670/engineering_scorecard.py">Complete code</a> · <a href="https://github.com/Anirach/quantum-algorithms-for-programmers/blob/0ad89867571639641f0b9fab28391e28dc584670/tests/test_algorithms.py#L150">ScorecardTests</a> · <a href="https://github.com/Anirach/quantum-algorithms-for-programmers/blob/0ad89867571639641f0b9fab28391e28dc584670/exercises/07.md">Exercise</a> · <a href="https://github.com/Anirach/quantum-algorithms-for-programmers/blob/0ad89867571639641f0b9fab28391e28dc584670/README.md">Setup &amp; troubleshooting</a></p><p>Use Python 3.12–3.13 and the README virtual environment. No API key or quantum hardware is required. If setup is incomplete, follow part 1 or the README.</p><pre><code># From the companion root, with the virtual environment active
+python engineering_scorecard.py
+python -m unittest discover -s tests -p test_algorithms.py -k ScorecardTests -v</code></pre><h3>Your experiment</h3><p>Choose one familiar workload, write its input/output contract and strong classical baseline, and fill a ledger with measured costs. Keep unmeasured values unknown and state which decision the available evidence supports.</p>
+
+<h2 id="en-references">Sources and verification</h2>
+<section class="references" aria-labelledby="en-sources"><h3 id="en-sources">Primary sources and verification scope</h3><p class="references__note">The author’s guide supplies the credited explanations and illustrations. Linked papers and standards support the claims. Code was rerun locally on 24 November 2026 with Python 3.13, Qiskit 2.6.2, Aer 0.18.4, NumPy 2.5.5 and SciPy 1.18.1. Results are local simulations or explicitly hypothetical inputs; no quantum hardware was used.</p><ol><li id="en-ref-1"><a href="https://arxiv.org/abs/1511.04206">Montanaro. Quantum algorithms: an overview (2016).</a></li><li id="en-ref-2"><a href="https://arxiv.org/abs/2011.04149">Babbush et al. Focus beyond quadratic speedups for error-corrected quantum advantage (2021).</a></li><li id="en-ref-3"><a href="https://arxiv.org/abs/2505.15917">Gidney. How to factor 2048 bit RSA integers with less than a million noisy qubits (2025).</a></li><li id="en-ref-4"><a href="https://arxiv.org/abs/2408.13687">Google Quantum AI and collaborators. Quantum error correction below the surface code threshold (2024/2025).</a></li><li id="en-ref-5"><a href="https://www.nist.gov/news-events/news/2024/08/nist-releases-first-3-finalized-post-quantum-encryption-standards">NIST. First three finalized post-quantum cryptography standards (2024).</a></li></ol></section>
+    </div>
+
+    <div class="post-series-footer">
+      <span class="l-th">จากซีรีส์ Quantum Algorithms for Programmers</span><span class="l-en" lang="en">From Quantum Algorithms for Programmers</span>
+    </div>
+
+    <nav aria-label="Quantum Algorithms for Programmers">
+    <div class="series-nav">
+      <h3>Quantum Algorithms for Programmers · 7-Part Course</h3>
+      <div class="series-links">
+        <a href="/blog/quantum-programmers-foundations">#1 Amplitudes</a>
+        <a href="/blog/quantum-programmers-grover">#2 Grover Search</a>
+        <a href="/blog/quantum-programmers-shor">#3 Shor &amp; Periods</a>
+        <a href="/blog/quantum-programmers-hhl">#4 HHL &amp; Readout</a>
+        <a href="/blog/quantum-programmers-qaoa">#5 QAOA &amp; MaxCut</a>
+        <a href="/blog/quantum-programmers-simulation">#6 Simulate Physics</a>
+        <span class="current" aria-current="page">#7 Engineering Verdict</span>
+      </div>
+    </div>
+    </nav>
+
+  </article>
+
+  </main>
+
+  <footer class="blog-footer">
+    <nav class="blog-footer__nav" aria-label="Site">
+      <a href="../index.html">Home</a>
+      <a href="./">Tutorials</a>
+      <a href="../thoughts/">Thoughts</a>
+      <a href="../publications/">Publications</a>
+      <a href="../books/">Books</a>
+      <a href="../projects/">Projects</a>
+      <a href="../news/">News</a>
+      <a href="../index.html#contact">Contact</a>
+    </nav>
+    <a href="./">← Back to Tutorials</a>
+    <span>© 2026 Anirach Mingkhwan — Independent AI consultant</span>
+  </footer>
+
+</body>
+</html>

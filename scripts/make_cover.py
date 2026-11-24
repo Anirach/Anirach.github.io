@@ -3916,6 +3916,8 @@ from functional_motifs import MOTIFS as FUNCTIONAL_MOTIFS
 MOTIFS.update(FUNCTIONAL_MOTIFS)
 from engineering_motifs import MOTIFS as ENGINEERING_MOTIFS
 MOTIFS.update(ENGINEERING_MOTIFS)
+from quantum_motifs import MOTIFS as QUANTUM_MOTIFS
+MOTIFS.update(QUANTUM_MOTIFS)
 
 # --------------------------------------------------------------------------
 # the one renderer
