@@ -17,7 +17,7 @@ npx serve .
 ```
 
 > **Current local review inventory — 2026-11-24:** 167 bilingual posts in 13 series
-> (10 Tutorials / 128 articles, 3 Thoughts / 39 essays), 179 public HTML files
+> (10 Tutorials / 128 articles, 3 Thoughts / 39 essays), 182 public HTML files
 > (178 enumerated), 602 images, 167 feed items and 178 sitemap URLs.
 > The seven-part **Quantum Algorithms for Programmers** course has 24 figures,
 > seven original cover motifs and a public Python/Qiskit companion with 26 tests.

@@ -6,7 +6,7 @@ description: Accessibility and performance rules for the anirach.com static site
 # Accessibility & performance for anirach.com
 
 > **Current local review inventory — 2026-11-24:** 167 bilingual posts in 13 series
-> (10 Tutorials / 128 articles, 3 Thoughts / 39 essays), 179 public HTML files
+> (10 Tutorials / 128 articles, 3 Thoughts / 39 essays), 182 public HTML files
 > (178 enumerated), 602 images, 167 feed items and 178 sitemap URLs.
 > The seven-part **Quantum Algorithms for Programmers** course has 24 figures,
 > seven original cover motifs and a public Python/Qiskit companion with 26 tests.
@@ -16,7 +16,7 @@ description: Accessibility and performance rules for the anirach.com static site
 > all results are local simulation or clearly labeled hypothetical examples.
 >
 > **Historical local review inventory — 2026-11-02:** 160 bilingual posts in 12 series
-> (9 Tutorials / 121 articles, 3 Thoughts / 39 essays), 172 public HTML files
+> (9 Tutorials / 121 articles, 3 Thoughts / 39 essays), 175 public HTML files
 > (171 enumerated), 557 images, 160 feed items and 171 sitemap URLs.
 > The 15-part Software Engineering with AI-Core course has 16 architecture diagrams
 > and a separate public companion with 26 tests and 15 labs/exercises, pinned to

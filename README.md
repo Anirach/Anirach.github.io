@@ -30,8 +30,8 @@
 A static site with no build step buys simplicity and pays for it in one specific way: **nothing is shared, so nothing is enforced.**
 
 - every page embeds its own complete stylesheet — there is no partial, template engine or token file
-- a "global" change is therefore an N-file edit, by hand, across 179 files
-- nothing tells you when file 23 of 179 got missed
+- a "global" change is therefore an N-file edit, by hand, across 182 files
+- nothing tells you when file 23 of 182 got missed
 - counters, navigation chains, feed items and sitemap URLs are hand-wired across files that never import one another
 - and every post is bilingual, so each prose edit has a mirror that can silently drift
 
