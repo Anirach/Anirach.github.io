@@ -43,6 +43,6 @@ python scripts/build_series.py --series quantum-programmers --check
 - GitHub Actions runs both tests and all seven scripts on Python 3.12 and 3.13. Tag v1.0.1 pins `0ad89867571639641f0b9fab28391e28dc584670`. Python 3.11 is excluded because the chosen NumPy pin requires 3.12+.
 - All seven bilingual verifiers pass; generated HTML reproduces byte-for-byte from the manifest and content sheets.
 - Browser checks: all seven posts in both languages at 375px, and parts 1/3/5/7 at 320px, 768px and 1440px. No document-level horizontal overflow. Tables/code keep their own scroll containers. All 24 figures were visually reviewed; one period-chart crop and a chart legend were adjusted before publication.
-- Standard release gates: 62 site integrity checks, wiring, strict search visibility, cover registry, feed and sitemap. Existing search advisory warnings are recorded separately from failures.
+- Standard release gates: 62 site integrity checks, wiring, strict search visibility, cover registry, feed and sitemap. The strict visibility report has zero failures and 129 existing advisory warnings; this series adds no new warnings.
 
 The examples are ideal local simulations; the cost ledger is hypothetical. No hardware benchmark, paid service call or quantum advantage is claimed. Dense Shor/HHL gates and statevector QAOA training are explicitly scoped as small educational constructions.
