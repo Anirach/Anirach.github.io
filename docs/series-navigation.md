@@ -12,6 +12,12 @@ The Thoughts catalog uses the same component with three desktop columns. Article
 
 ## Maintenance
 
+The Below Threshold launch on 25 November 2026 adds an eleventh Tutorials
+course. The five-column index now uses three rows; desktop anchor clearance is
+derived from the row count. At 1025px the destination heading clears the index,
+and the mobile disclosure continues to show all eleven destinations without
+horizontal scrolling.
+
 `scripts/reindex_blog.py` owns markup, CSS and responsive behavior. Run the Tutorials generator before Thoughts because Thoughts lifts its house styles from Tutorials:
 
 ```bash

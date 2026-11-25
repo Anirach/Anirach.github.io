@@ -1,0 +1,646 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Quantum Errors — ทำไม qubits ผิด | Anirach Mingkhwan</title>
+  <meta name="description" content="ตาม quantum error จาก physical noise ผ่าน parity checks สู่ logical failure เข้าใจ no-cloning และ phase error ด้วย Python แบบไม่ใช้ quantum hardware">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300..900&family=Sarabun:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400..600&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      color-scheme: light;
+      /* ink */
+      --navy: #11304b; --slate: #334155; --slate-light: #526174; --gray: #94a3b8;
+      /* ground */
+      --bg: #faf7f0; --white: #ffffff; --code-bg: #1e293b;
+      /* accent */
+      --blue: #226299; --blue-dark: #1a4d7a; --blue-light: #4992b9;
+      /* brand — sampled from the book covers. --gold is decorative on light grounds (2.2:1); --gold-dark is its text form. */
+      --gold: #c4a46c; --gold-dark: #7a5f22; --cloud: #dee7e6; --parchment: #e9e1c4; --focus: #226299;
+      /* status — use only these six, never invent a seventh */
+      --green: #22c55e; --red: #ef4444; --amber: #f59e0b;
+      --cyan: #06b6d4; --purple: #226299; --purple-dark: #1a4d7a;
+      /* type */
+      --font: 'Inter', 'Sarabun', -apple-system, BlinkMacSystemFont, sans-serif;
+      --mono: 'JetBrains Mono', 'Fira Code', 'Sarabun', monospace;
+      /* form */
+      --radius: 12px; --radius-sm: 8px; --radius-lg: 16px;
+      --measure: 720px; --wide: 860px;
+      --transition: 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+    html { scroll-behavior: smooth; }
+    body { font-family: var(--font); font-size: 17px; line-height: 1.8; color: var(--slate); background: var(--bg); -webkit-font-smoothing: antialiased; }
+    .blog-nav { position: fixed; top: 0; left: 0; right: 0; z-index: 100; background: rgba(248,250,252,0.85); backdrop-filter: blur(20px); border-bottom: 1px solid rgba(0,0,0,0.05); }
+    .blog-nav__inner { max-width: 860px; margin: 0 auto; padding: 0 2rem; height: 56px; display: flex; align-items: center; justify-content: space-between; }
+    .blog-nav__back { font-size: 0.85rem; font-weight: 500; color: var(--blue); text-decoration: none; }
+    .blog-nav__back:hover { color: #1a4d7a; }
+    .blog-nav__title { font-size: 0.85rem; font-weight: 600; color: var(--navy); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 50%; }
+    /* ── HERO ── house .post-hero on the approved Deep Blue gradient (page-design
+       §5 / INV-28). Ink is inverted for the dark ground: white title/meta, tag
+       pills white on 18% white — the openclaw-production treatment. The
+       background value must stay byte-identical to the approved string. */
+    .post-hero { padding: 8rem 2rem 3rem; background: linear-gradient(135deg, #11304b 0%, #1a4d7a 45%, #226299 100%); color: #fff; text-align: center; }
+    .post-hero__tags { display: flex; gap: 0.5rem; justify-content: center; margin-bottom: 1.25rem; flex-wrap: wrap; }
+    .post-hero__tag { display: inline-block; font-size: 0.72rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.1em; color: #fff; background: rgba(255,255,255,0.18); padding: 0.35rem 0.9rem; border-radius: 20px; }
+    .post-hero__title { font-size: clamp(1.8rem, 5vw, 3rem); font-weight: 800; color: #fff; line-height: 1.2; margin-bottom: 1rem; max-width: 720px; margin-left: auto; margin-right: auto; }
+    .post-hero__sub { font-size: 1.05rem; max-width: 640px; margin: 0 auto 1.5rem; line-height: 1.7; color: #fff; }
+    .post-hero__meta { font-size: 0.85rem; color: #fff; display: flex; align-items: center; justify-content: center; gap: 1.5rem; flex-wrap: wrap; }
+    .post-hero__series { font-weight: 600; color: #fff; }
+    /* the switch pill and the focus ring both sit on the dark hero: the pill is
+       a light chip so its labels keep their light-ground colours, and --focus
+       re-points to gold here (blue collapses on blue — the footer/pre
+       precedent). */
+    .post-hero { --focus: var(--gold); }
+    .post-hero__cover {
+      aspect-ratio: 1 / 1;
+      max-width: 380px;
+      margin: 2.5rem auto 0;
+      border-radius: var(--radius-lg, 16px);
+      overflow: hidden;
+      box-shadow: 0 20px 60px rgba(17,48,75,0.14);
+    }
+    .post-hero__cover img { width: 100%; height: 100%; object-fit: cover; display: block; }
+    .post-body { max-width: 720px; margin: 0 auto; padding: 3rem 2rem 6rem; }
+    .post-body h2 { font-size: 1.6rem; font-weight: 800; color: var(--navy); margin: 3rem 0 1rem; padding-bottom: 0.5rem; border-bottom: 2px solid rgba(34,98,153,0.15); }
+    .post-body h3 { font-size: 1.25rem; font-weight: 700; color: var(--navy); margin: 2.25rem 0 0.75rem; }
+    .post-body p { margin-bottom: 1.25rem; }
+    .post-body strong { font-weight: 700; color: var(--navy); }
+    .post-body a { color: var(--blue); text-decoration: underline; text-decoration-thickness: 1px; text-underline-offset: 2px; }
+    .post-body ul, .post-body ol { margin: 0.5rem 0 1.25rem 1.5rem; }
+    .post-body li { margin-bottom: 0.4rem; }
+    .post-body blockquote { background: rgba(34,98,153,0.06); border-left: 4px solid var(--blue); padding: 1rem 1.25rem; border-radius: 0 10px 10px 0; margin: 1.25rem 0; font-size: 0.95rem; color: var(--navy); }
+    .post-body hr { border: none; height: 1px; background: linear-gradient(90deg, transparent, rgba(34,98,153,0.2), transparent); margin: 3rem 0; }
+    /* ── CODE ── */
+    .post-body pre { background: var(--code-bg); border-radius: 12px; padding: 1.5rem; margin: 1.25rem 0 1.5rem; overflow-x: auto; border: 1px solid rgba(255,255,255,0.05); }
+    .post-body pre code { font-family: var(--mono); font-size: 0.85rem; color: #e2e8f0; line-height: 1.7; background: none; padding: 0; white-space: pre-wrap; }
+    .post-body code { font-family: var(--mono); font-size: 0.88em; background: rgba(34,98,153,0.08); color: var(--blue-dark); padding: 0.15em 0.45em; border-radius: 5px; }
+    /* ── TABLES ── */
+    .table-wrapper { overflow-x: auto; margin: 1.5rem 0; border-radius: 0.5rem; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1); }
+    table { width: 100%; border-collapse: collapse; background: white; }
+    th { background: #226299; color: white; padding: 1rem; text-align: left; font-weight: 600; }
+    td { padding: 1rem; border-bottom: 1px solid #e5e7eb; }
+    .post-body table { display: block; width: 100%; overflow-x: auto; }
+    /* ── ALERTS ── */
+    .alert { background: #fef3cd; border: 1px solid #facc15; border-radius: 0.5rem; padding: 1rem; margin: 1.5rem 0; }
+    .alert.danger { background: #fee2e2; border-color: #ef4444; }
+    .alert.info { background: #e0f2fe; border-color: #06b6d4; }
+    .alert.success { background: #d1fae5; border-color: #10b981; }
+    /* ── KEY TAKEAWAYS ── */
+    .key-takeaways { background: linear-gradient(135deg, #f3f4f6 0%, #e5e7eb 100%); border-radius: 1rem; padding: 2rem; margin: 3rem 0; }
+    .key-takeaways h3 { color: #226299; margin-bottom: 1.5rem; }
+    .post-series-footer { text-align: center; font-size: 0.85rem; color: var(--slate-light); font-style: italic; margin-top: 2rem; padding-top: 2rem; border-top: 1px solid #e2e8f0; }
+    .blog-footer { background: var(--navy); padding: 2rem 0; text-align: center; }
+    .blog-footer a { color: var(--gold); text-decoration: none; font-weight: 600; font-size: 0.9rem; }
+    .blog-footer span { color: var(--gray); font-size: 0.8rem; display: block; margin-top: 0.4rem; }
+    @media (max-width: 600px) {
+      .post-hero { padding: 7rem 1.25rem 2.5rem; }
+      .post-body { padding: 2rem 1.25rem 4rem; }
+      .post-hero__meta { flex-direction: column; gap: 0.4rem; }
+      .post-body h2 { font-size: 1.4rem; }
+      .post-body h3 { font-size: 1.15rem; }
+      .post-body pre { padding: 1rem; border-radius: 8px; }
+    }
+
+    :focus-visible { outline: 2px solid var(--focus); outline-offset: 3px; border-radius: 2px; }
+    /* the ring sits on the page ground (3px offset). Inside the navy footers
+       and code blocks var(--blue) collapses to 2.12:1, so those scopes
+       re-point --focus to gold (5.73:1 on navy). */
+    .footer, .blog-footer, pre { --focus: var(--gold); }
+    :focus:not(:focus-visible) { outline: none; }
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after {
+        animation-duration: .01ms !important; animation-iteration-count: 1 !important;
+        transition-duration: .01ms !important; scroll-behavior: auto !important;
+      }
+    }
+    h1, h2, h3, .post-hero__title, .card__title { text-wrap: balance; }
+    .post-body { overflow-wrap: break-word; }   /* long URLs and inline code wrap instead of widening the page */
+
+    .post-body img, .post-body svg { max-width: 100%; height: auto; }
+
+    /* ── SKIP LINK ── a11y-perf R5: the link and the landmark it targets are a
+       pair — useless without both halves. Off-screen until focused, then the
+       first tab stop on every page. */
+    .skip-link { position: absolute; left: -9999px; }
+    .skip-link:focus {
+      left: 1rem; top: 1rem; z-index: 999;
+      background: var(--navy); color: #fff;
+      padding: 0.75rem 1.25rem; border-radius: var(--radius-sm);
+      font-weight: 600; text-decoration: none;
+    }
+
+    /* ── POST WAYFINDING ── the wordmark is the home link; the footer carries
+       the full destination row. */
+    .blog-nav__home {
+      font-size: 0.9rem; font-weight: 800; color: var(--navy);
+      text-decoration: none; margin-right: 1rem;
+    }
+    .blog-nav__home:hover { color: var(--blue); }
+    .blog-nav__inner > .blog-nav__back { margin-right: auto; }
+    .blog-footer__nav {
+      display: flex; flex-wrap: wrap; justify-content: center; gap: 0.35rem 1.25rem;
+      max-width: 860px; margin: 0 auto 1.25rem; padding: 0 2rem 1.25rem;
+      border-bottom: 1px solid rgba(255,255,255,0.12);
+    }
+    .blog-footer__nav a { color: var(--gold); font-size: 0.85rem; font-weight: 600; text-decoration: none; }
+    .blog-footer__nav a:hover { color: #fff; text-decoration: underline; }
+
+    html { scroll-padding-top: 5rem; }
+    [id] { scroll-margin-top: 5rem; }
+
+    /* Thai needs more room than Latin at the same nominal size. */
+    .post-body:lang(th) { font-size: 18px; line-height: 1.85; }
+    .post-body p, .post-body li, .post-body blockquote { text-wrap: pretty; }
+
+    /* ---- side-scroll affordance ----
+       pre blocks and tables can exceed 720px. These layers paint a shadow ONLY
+       where there is more content in that direction; when fully scrolled the
+       cover slides over the shadow and hides it. No JavaScript, no wrapper. */
+    .post-body pre, .post-body table {
+      overflow-x: auto;
+      background-image:
+        linear-gradient(to right, var(--code-bg, #0f172a) 30%, rgba(15,23,42,0)),
+        linear-gradient(to left, var(--code-bg, #0f172a) 30%, rgba(15,23,42,0)),
+        radial-gradient(farthest-side at 0 50%, rgba(0,0,0,.28), rgba(0,0,0,0)),
+        radial-gradient(farthest-side at 100% 50%, rgba(0,0,0,.28), rgba(0,0,0,0));
+      background-position: 0 0, 100% 0, 0 0, 100% 0;
+      background-repeat: no-repeat;
+      background-size: 40px 100%, 40px 100%, 14px 100%, 14px 100%;
+      background-attachment: local, local, scroll, scroll;
+    }
+    .post-body table {
+      background-image:
+        linear-gradient(to right, var(--white, #fff) 30%, rgba(255,255,255,0)),
+        linear-gradient(to left, var(--white, #fff) 30%, rgba(255,255,255,0)),
+        radial-gradient(farthest-side at 0 50%, rgba(17,48,75,.16), rgba(17,48,75,0)),
+        radial-gradient(farthest-side at 100% 50%, rgba(17,48,75,.16), rgba(17,48,75,0));
+      background-position: 0 0, 100% 0, 0 0, 100% 0;
+      background-repeat: no-repeat;
+      background-size: 40px 100%, 40px 100%, 14px 100%, 14px 100%;
+      background-attachment: local, local, scroll, scroll;
+    }
+
+    /* ---- table of contents ---- */
+    .post-toc {
+      max-width: 720px;
+      margin: 2rem auto 0;
+      padding: 1rem 1.25rem;
+      background: rgba(34,98,153,0.05);
+      border: 1px solid rgba(34,98,153,0.14);
+      border-left: 3px solid var(--gold, #c4a46c);
+      border-radius: 10px;
+      font-size: 0.92rem;
+    }
+    .post-toc > summary {
+      cursor: pointer;
+      font-weight: 700;
+      color: var(--navy);
+      list-style: none;
+    }
+    .post-toc > summary::-webkit-details-marker { display: none; }
+    .post-toc > summary::before {
+      content: "\25B8";
+      display: inline-block;
+      margin-right: 0.5rem;
+      transition: transform 0.2s ease;
+      color: var(--gold-dark, #7a5f22);
+    }
+    .post-toc[open] > summary::before { transform: rotate(90deg); }
+    .post-toc > summary:focus-visible { outline: 3px solid var(--focus, #226299); outline-offset: 3px; }
+    .post-toc ol { margin: 0.85rem 0 0.25rem; padding-left: 1.4rem; }
+    .post-toc li { margin-bottom: 0.4rem; line-height: 1.5; }
+    .post-toc a { color: var(--slate); text-decoration: none; }
+    .post-toc a:hover, .post-toc a:focus-visible { color: var(--blue-dark, #1a4d7a); text-decoration: underline; }
+    @media (max-width: 600px) { .post-toc { margin: 1.25rem 1rem 0; } }
+
+    /* ---- cross-document view transitions ---- */
+    @view-transition { navigation: auto; }
+    .nav, .blog-nav { view-transition-name: site-nav; }
+    .footer, .blog-footer { view-transition-name: site-footer; }
+    @media (prefers-reduced-motion: reduce) {
+      ::view-transition-group(*),
+      ::view-transition-old(*),
+      ::view-transition-new(*) { animation: none !important; }
+    }
+
+    /* ── SERIES STRIP — Hermes Agent in Practice ──
+       Same class and inner-wrapper shape as the OpenClaw strip because the
+       linter's RE_SNAV recognises exactly `series-nav` + a nested div; a
+       renamed strip would read as "no nav" and fail INV-08. All content
+       checks (INV-03 family) iterate the SERIES7 list only, so this strip's
+       labels are convention, not contract. House-styled, not the island CSS. */
+    .series-nav {
+      max-width: 720px; margin: 2rem auto 0; padding: 1.1rem 1.4rem;
+      background: rgba(255,255,255,0.75); border: 1px solid rgba(34,98,153,0.15);
+      border-left: 3px solid var(--gold); border-radius: 12px;
+    }
+    .series-nav h3 {
+      font-size: 0.78rem; font-weight: 700; text-transform: uppercase;
+      letter-spacing: 0.08em; color: var(--gold-dark); margin-bottom: 0.6rem;
+    }
+    .series-links { display: flex; flex-wrap: wrap; gap: 0.5rem; }
+    .series-links a, .series-links .current {
+      font-size: 0.82rem; font-weight: 600; padding: 0.35rem 0.8rem;
+      border-radius: 50px; text-decoration: none;
+    }
+    .series-links a { color: var(--blue-dark); background: rgba(34,98,153,0.08); }
+    .series-links a:hover { background: rgba(34,98,153,0.16); }
+    .series-links .current { color: #fff; background: var(--blue-dark); }
+    @media (max-width: 600px) { .series-nav { margin: 1.5rem 1rem 0; } }
+
+    /* ── FIGURE — the sanctioned diagram component (page-design §4 Content).
+       Diagrams are PNGs; this repo built them out of divs twice and reverted
+       twice. The image is wrapped in a link to itself so a phone can pinch a
+       1400px drawing without a line of JavaScript. */
+    .figure { margin: 2.5rem 0; }
+    .figure__img { width: 100%; height: auto; display: block;
+                   border-radius: var(--radius); border: 1px solid rgba(0,0,0,0.06); }
+    .figure__caption { font-size: 0.85rem; color: var(--slate-light);
+                       text-align: center; margin-top: 0.75rem; }
+
+    /* ── REFERENCES — every material number in this series carries its source.
+       The tags are the book's own four evidence labels. */
+    .references { margin-top: 3rem; padding-top: 2rem; border-top: 1px solid #e2e8f0; }
+    .references__note { font-size: 0.85rem; color: var(--slate-light); margin-bottom: 1rem; }
+    .references__list { padding-left: 1.4rem; font-size: 0.9rem; line-height: 1.75; }
+    .references__list li { margin-bottom: 0.7rem; }
+    .ref-tag { display: inline-block; font-size: 0.7rem; font-weight: 700;
+               letter-spacing: 0.06em; text-transform: uppercase; padding: 0.1rem 0.5rem;
+               border-radius: 50px; margin-right: 0.4rem; vertical-align: 0.05em;
+               background: rgba(34,98,153,0.1); color: var(--blue-dark); }
+    /* All four labels get a rule.  --standard and --study shipped without one
+       on 2026-09-05, so 158 of 306 tags fell through to the base blue and the
+       two labels were indistinguishable.  Ratios on --bg: 6.70 / 6.92 / 7.36 /
+       4.81:1, all AA at this size. */
+    .ref-tag--law { background: rgba(239,68,68,0.12); color: #991b1b; }
+    .ref-tag--standard { background: rgba(34,98,153,0.12); color: var(--blue-dark); }
+    .ref-tag--study { background: rgba(34,197,94,0.18); color: #14532d; }
+    .ref-tag--synthesis { background: rgba(196,164,108,0.22); color: var(--gold-dark); }
+    .ref-supports { display: block; color: var(--slate-light); font-size: 0.85rem; }
+
+    /* ── LANGUAGE SWITCH — pure CSS, zero JavaScript (INV-38) ──
+       One visually-hidden checkbox as a direct child of body, BEFORE the main landmark,
+       so `#langSwitch:checked ~ main …` reaches every content block. The two
+       tracks are paired blocks: .l-th (default) and .l-en (hidden until
+       checked; display:revert restores block for divs, inline for spans).
+       Naming stays clear of INV-12's menu-token regex (hamburger|burger|
+       nav__toggle|nav-toggle|navtoggle|menu-toggle|menu__toggle) — verified.
+       No JS also means no persistence across posts; each post opens in Thai. */
+    .lang-switch-box { position: absolute; left: -9999px; }
+    /* where anchor positioning exists the box sits on the pill, so focusing it scrolls the pill into view */
+    .lang-switch { anchor-name: --lang-switch; }
+    .lang-switch-box { position-anchor: --lang-switch; top: anchor(top); left: anchor(left); width: 1px; height: 1px; opacity: 0; pointer-events: none; }
+    .l-en { display: none; }
+    #langSwitch:checked ~ main .l-en { display: revert; }
+    #langSwitch:checked ~ main .l-th { display: none; }
+    .lang-switch {
+      display: inline-flex; align-items: center; gap: 0.55rem;
+      margin-top: 1.4rem; padding: 0.4rem 1.1rem; border-radius: 50px;
+      background: rgba(255,255,255,0.85); border: 1px solid rgba(255,255,255,0.4);
+      cursor: pointer; font-size: 0.85rem; user-select: none;
+    }
+    .lang-switch span { color: var(--slate-light); font-weight: 600; transition: color 0.2s; }
+    .lang-switch .lang-sep { color: var(--gray); font-weight: 400; }
+    .lang-switch .lang-th { color: var(--navy); font-weight: 800; }
+    #langSwitch:checked ~ main .lang-switch .lang-th { color: var(--slate-light); font-weight: 600; }
+    #langSwitch:checked ~ main .lang-switch .lang-en { color: var(--navy); font-weight: 800; }
+    .lang-switch:hover { border-color: #fff; }
+    #langSwitch:focus-visible ~ main .lang-switch {
+      outline: 2px solid var(--focus); outline-offset: 3px;
+    }
+  </style>
+  <!-- social -->
+  <link rel="canonical" href="https://anirach.com/blog/below-threshold-quantum-errors.html">
+  <meta property="og:type" content="article">
+  <meta property="og:url" content="https://anirach.com/blog/below-threshold-quantum-errors.html">
+  <meta property="og:site_name" content="Anirach Mingkhwan">
+  <meta property="og:locale" content="th_TH">
+  <meta property="og:locale:alternate" content="en_US">
+  <meta property="article:published_time" content="2026-11-25">
+  <meta property="article:author" content="https://anirach.com/">
+  <meta property="og:title" content="Quantum Errors — ทำไม qubits ผิด">
+  <meta property="og:description" content="ตาม quantum error จาก physical noise ผ่าน parity checks สู่ logical failure เข้าใจ no-cloning และ phase error ด้วย Python แบบไม่ใช้ quantum hardware">
+  <meta property="og:image" content="https://anirach.com/images/below-threshold-quantum-errors-og.jpg">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
+  <meta property="og:image:alt" content="Quantum Errors — ทำไม qubits ผิด">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:image" content="https://anirach.com/images/below-threshold-quantum-errors-og.jpg">
+  <meta name="twitter:image:alt" content="Quantum Errors — ทำไม qubits ผิด">
+  <meta name="robots" content="max-image-preview:large">
+  <meta name="theme-color" content="#11304b">
+  <link rel="icon" href="/favicon.ico" sizes="any">
+  <link rel="apple-touch-icon" href="/apple-touch-icon.png">
+  <!-- /social -->
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "BlogPosting",
+    "headline": "Quantum Errors — ทำไม qubits ผิด",
+    "author": {
+      "@type": "Person",
+      "@id": "https://anirach.com/#person",
+      "name": "Anirach Mingkhwan",
+      "url": "https://anirach.com/"
+    },
+    "datePublished": "2026-11-25",
+    "dateModified": "2026-11-25",
+    "image": "https://anirach.com/images/below-threshold-quantum-errors-og.jpg",
+    "inLanguage": [
+      "th",
+      "en"
+    ],
+    "mainEntityOfPage": "https://anirach.com/blog/below-threshold-quantum-errors.html"
+  }
+  </script>
+</head>
+<body>
+<a href="#main" class="skip-link">Skip to content</a>
+<input type="checkbox" id="langSwitch" class="lang-switch-box" aria-label="Switch language: Thai / English">
+
+  <nav class="blog-nav">
+    <div class="blog-nav__inner">
+      <a href="../index.html" class="blog-nav__home">Anirach</a>
+      <a href="./" class="blog-nav__back">‹ Tutorials</a>
+      <div class="blog-nav__title">Quantum Errors</div>
+    </div>
+  </nav>
+
+  <main id="main">
+
+  <header class="post-hero">
+    <div class="post-hero__tags">
+      <span class="post-hero__tag">Quantum Computing</span>
+      <span class="post-hero__tag">AI Engineering</span>
+      <span class="post-hero__tag">Python</span>
+    </div>
+    <h1 class="post-hero__title"><span class="l-th">Quantum Errors — ทำไม qubits ผิด</span><span class="l-en" lang="en">Quantum Errors: Follow a Hidden Phase Fault to a Wrong Answer</span></h1>
+    <p class="post-hero__sub"><span class="l-th">เข้าใจ X, Y, Z, การวัดและ no-cloning แล้วตาม fault ผ่าน checks และ decoder พร้อมทดลอง phase error ที่ histogram ซ่อนไว้</span><span class="l-en" lang="en">Understand X, Y, Z, measurement and no-cloning, then follow faults through checks and decoding with a hidden-phase experiment.</span></p>
+    <div class="post-hero__meta">
+      <span>By <strong>Anirach Mingkhwan</strong></span>
+      <span class="post-hero__series">Below Threshold 2026 • Chapter #2</span>
+      <span><time datetime="2026-11-25">25 Nov 2026</time></span>
+      <span>5 min read</span>
+    </div>
+    <label for="langSwitch" class="lang-switch" title="สลับภาษา · Switch language"><span class="lang-th">ไทย</span><span class="lang-sep">·</span><span class="lang-en" lang="en">English</span></label>
+    <div class="post-hero__cover">
+      <img src="../images/below-threshold-quantum-errors-cover.jpg" alt="Quantum Errors — ทำไม qubits ผิด" width="800" height="800" loading="eager" fetchpriority="high" decoding="async">
+    </div>
+  </header>
+
+  <article class="post-body">
+
+    <details class="post-toc l-th" open>
+      <summary>ในบทความนี้</summary>
+      <ol>
+          <li><a href="#th-start">เริ่มที่ output — histogram บอกทุกอย่างหรือไม่</a></li>
+          <li><a href="#th-paulis">X, Z, Y — สร้างศัพท์ error ที่ตรวจได้</a></li>
+          <li><a href="#th-phase">ลงมือ — เปิดเผย phase error ด้วย H</a></li>
+          <li><a href="#th-cloning">เหตุใด copy แล้ว vote จึงยังไม่พอ</a></li>
+          <li><a href="#th-path">ตาม error path — fault ไม่เท่ากับ failure</a></li>
+          <li><a href="#th-noise">เลือก noise model — อย่าทิ้ง correlation</a></li>
+          <li><a href="#th-exercise">แบบฝึก — เพิ่มการวัดให้ตรงกับ failure</a></li>
+          <li><a href="#th-resources">Run & check — รันตัวอย่างด้วยตัวเอง</a></li>
+          <li><a href="#th-references">Sources & scope — แหล่งอ้างอิงและขอบเขต</a></li>
+      </ol>
+    </details>
+    <details class="post-toc l-en" open>
+      <summary>In this post</summary>
+      <ol>
+          <li><a href="#en-start">A histogram does not describe the whole state</a></li>
+          <li><a href="#en-paulis">X, Z and Y give us an error vocabulary</a></li>
+          <li><a href="#en-phase">Run the phase error that one readout hides</a></li>
+          <li><a href="#en-cloning">Why the classical copy-and-vote fix fails</a></li>
+          <li><a href="#en-path">Trace the error path from fault to failure</a></li>
+          <li><a href="#en-noise">Choose a noise model that preserves the hard part</a></li>
+          <li><a href="#en-exercise">Exercise: make the observation match the failure</a></li>
+          <li><a href="#en-resources">Run and check the example</a></li>
+          <li><a href="#en-references">Sources and scope</a></li>
+      </ol>
+    </details>
+    <div class="l-th">
+
+<h2 id="th-start">เริ่มที่ output — histogram บอกทุกอย่างหรือไม่</h2>
+<blockquote><p><strong>ดาวน์โหลดหนังสือและโค้ดประกอบ</strong></p><p><a href="https://drive.google.com/uc?export=download&amp;id=1iG7oSWLC9UI91VsPOzqcxk3_evH8Sn3b">ดาวน์โหลด Below Threshold ฉบับเต็ม (PDF ภาษาอังกฤษ · 104 หน้า · 5.4 MB)</a><br><a href="https://drive.google.com/file/d/1iG7oSWLC9UI91VsPOzqcxk3_evH8Sn3b/view?usp=sharing">อ่านบน Google Drive</a> · <a href="../downloads/below-threshold-tutorial-examples.zip" download>ดาวน์โหลดตัวอย่าง Python ทั้งสิบบท (ZIP)</a></p></blockquote>
+<p><strong>บทที่ 2/10</strong> · บทเรียนดัดแปลงจาก <em>Below Threshold: AI, Quantum Errors and Better Code</em> ฉบับ 1.0 บทที่ 2 หน้า 9–12</p><p>programmer คุ้นกับการ print ตัวแปรแล้วเห็น state ของโปรแกรม แต่ qubit ไม่ได้เปิดข้อมูลทั้งหมดจากการวัดครั้งเดียว pure state เขียนเป็น |ψ⟩ = α|0⟩ + β|1⟩ โดย α และ β เป็น complex amplitudes และ |α|² + |β|² = 1 การวัดใน Z basis ให้ 0 หรือ 1 ตามขนาดกำลังสอง ไม่ได้บอก relative phase</p>
+<p>บทนี้ใช้ Python และ vector สองสมาชิกจากบทพื้นฐาน เป้าหมายคือแยก bit flip ออกจาก phase flip อธิบายว่าทำไม copy แล้ว vote แบบ classical ใช้กับ unknown quantum state ไม่ได้ และไล่ได้ว่า physical fault เดินทางถึงผลลัพธ์อย่างไร</p>
+<p>ข้อควรจำคือ measurement basis เป็นส่วนหนึ่งของ output contract หาก circuit สองตัวให้ histogram เหมือนกันใน basis เดียว ยังสรุปไม่ได้ว่าทั้งสองเตรียม state เดียวกัน หรือจะให้ผลเหมือนกันเมื่อมี gates ถัดไป</p>
+
+<h2 id="th-paulis">X, Z, Y — สร้างศัพท์ error ที่ตรวจได้</h2>
+<p><strong>X</strong> สลับ amplitude ของ |0⟩ กับ |1⟩ จึงเรียก bit flip ส่วน <strong>Z</strong> กลับเครื่องหมาย amplitude ของ |1⟩ จึงเรียก phase flip และ <strong>Y</strong> รวมการเปลี่ยนทั้งสองแบบโดยมี phase ประกอบ I, X, Y, Z เป็น basis สำหรับ operator บน qubit เดียว นี่คือเหตุผลทาง linear algebra ที่ทำให้เราวิเคราะห์ noise ต่อเนื่องด้วยชนิด error ที่ไม่ต่อเนื่องได้</p>
+<p>ใน stabilizer code การวัด syndrome ทำให้ส่วนของ error ที่แยกแยะได้ด้วย checks ให้ผลแบบไม่ต่อเนื่อง แต่ไม่ควรอ่านว่า “ทุก physical fault ถูกแปลงเป็น random Pauli ที่เป็นอิสระกันอย่างสมบูรณ์” coherent noise, leakage และ correlation ยังเป็นประเด็นที่ noise model ต้องจัดการ</p>
+<p>แบบจำลอง depolarizing ที่หนังสือใช้เป็นจุดเริ่มต้น กำหนดให้เกิด X, Y หรือ Z ด้วย probability p/3 อย่างละชนิด แต่จะใช้พารามิเตอร์ p ใด ต้องอ่าน convention ของ implementation เพราะ library แต่ละตัวอาจใช้ชื่อเดียวกันกับพารามิเตอร์คนละนิยาม</p>
+
+<h2 id="th-phase">ลงมือ — เปิดเผย phase error ด้วย H</h2>
+<p>โค้ดนี้เป็นตัวอย่างใหม่ ใช้ matrix 2×2 คำนวณ state แบบ exact โดยไม่มี hardware noise เริ่มจาก |0⟩ แล้วใช้ H ได้ |+⟩ = (|0⟩ + |1⟩)/√2 ถ้าแทรก Z จะได้ |−⟩ = (|0⟩ − |1⟩)/√2 ทั้งสองให้ probability (0.5, 0.5) หากวัดทันทีใน Z basis</p>
+<pre><code>&quot;&quot;&quot;Exact two-amplitude teaching model: a phase error can hide in Z readout.&quot;&quot;&quot;
+from math import isclose, sqrt
+
+
+def apply(gate, state):
+    return tuple(sum(gate[i][j] * state[j] for j in range(2)) for i in range(2))
+
+
+def probabilities(state):
+    return tuple(round(abs(a) ** 2, 6) for a in state)
+
+
+r = 1 / sqrt(2)
+H = ((r, r), (r, -r))
+X = ((0, 1), (1, 0))
+Z = ((1, 0), (0, -1))
+Y = ((0, -1j), (1j, 0))
+zero = (1 + 0j, 0j)
+plus = apply(H, zero)
+minus = apply(Z, plus)
+print(&quot;|+&gt;, measured in Z:&quot;, probabilities(plus))
+print(&quot;Z|+&gt;, measured in Z:&quot;, probabilities(minus))
+print(&quot;H|+&gt;, measured in Z:&quot;, probabilities(apply(H, plus)))
+print(&quot;HZ|+&gt;, measured in Z:&quot;, probabilities(apply(H, minus)))
+print(&quot;X|0&gt;, measured in Z:&quot;, probabilities(apply(X, zero)))
+print(&quot;Y|0&gt;, measured in Z:&quot;, probabilities(apply(Y, zero)))
+
+assert probabilities(plus) == probabilities(minus)
+assert probabilities(apply(H, plus)) == (1.0, 0.0)
+assert probabilities(apply(H, minus)) == (0.0, 1.0)
+for gate in (H, X, Y, Z):
+    assert isclose(sum(abs(a) ** 2 for a in apply(gate, plus)), 1.0)
+print(&quot;Checks passed: normalization and a hidden phase revealed by H&quot;)</code></pre><pre><code>|+&gt;, measured in Z: (0.5, 0.5)
+Z|+&gt;, measured in Z: (0.5, 0.5)
+H|+&gt;, measured in Z: (1.0, 0.0)
+HZ|+&gt;, measured in Z: (0.0, 1.0)
+X|0&gt;, measured in Z: (0.0, 1.0)
+Y|0&gt;, measured in Z: (0.0, 1.0)
+Checks passed: normalization and a hidden phase revealed by H</code></pre>
+<p>H ตัวสุดท้ายทำให้ความต่างปรากฏ: H|+⟩ ให้ 0 แน่นอน ขณะที่ HZ|+⟩ ให้ 1 แน่นอน จึงตรวจ phase ผ่านการแปลง basis ได้ ไม่ได้ต้องอ่าน amplitude ทั้งหมดจากเครื่องจริง ส่วน X|0⟩ และ Y|0⟩ ให้ histogram เหมือนกัน เพราะ phase รวมของ state วัดไม่เห็นจาก probability</p>
+<p>ผลที่พิมพ์เป็น exact probabilities ที่ปัดทศนิยม ไม่ใช่ counts จาก shots ถ้ารัน circuit เดียวกันบน sampler ให้เปรียบเทียบ distribution พร้อม sampling uncertainty และหากใช้ hardware ต้องเพิ่ม noise และ readout calibration แยกต่างหาก</p>
+
+<h2 id="th-cloning">เหตุใด copy แล้ว vote จึงยังไม่พอ</h2>
+<p><a href="https://doi.org/10.1038/299802a0">No-cloning theorem ของ Wootters และ Zurek</a> ห้าม operation เดียวที่สร้างสำเนา state ที่ไม่ทราบค่าได้อย่างถูกต้องสำหรับทุก state ไม่ได้ห้ามการ copy classical bit ที่ทราบ basis และไม่ได้ห้ามการเตรียม state เดิมซ้ำจากขั้นตอนที่เรารู้</p>
+<p>ลองใช้ CNOT โดยมี unknown qubit α|0⟩ + β|1⟩ เป็น control และ |0⟩ เป็น target ผลคือ α|00⟩ + β|11⟩ ไม่ใช่ (α|0⟩ + β|1⟩)⊗(α|0⟩ + β|1⟩) โดยทั่วไป ผลแรกเป็น encoding ที่มี entanglement ส่วนผลหลังคือสำเนาที่ theorem ไม่อนุญาตให้สร้างแบบ universal</p>
+<p>Quantum error correction จึงเข้ารหัสข้อมูลร่วมกัน แล้วอ่าน parity หรือ stabilizer checks ที่ไม่แยกแยะ logical 0 กับ logical 1 การวัด data qubits ทุกตัวเพื่อ “ดูว่าถูกไหม” ทำให้ข้อมูล phase ที่ต้องรักษาหายได้ บท 3 จะสร้าง checks จากตัวอย่าง classical ที่ตรวจด้วยมือได้ก่อน</p>
+
+<h2 id="th-path">ตาม error path — fault ไม่เท่ากับ failure</h2>
+    <figure class="figure">
+      <a href="../images/below-threshold-error-path.png">
+        <img class="figure__img" src="../images/below-threshold-error-path.png" alt="Error path จากโปรแกรมและ physical faults ผ่าน detection events และ decoder ไปถึง logical answer" width="1544" height="739" loading="lazy" decoding="async">
+      </a>
+      <figcaption class="figure__caption">Error path จากโปรแกรมและ physical faults ผ่าน detection events และ decoder ไปถึง logical answer ภาพ 2.1 จากหนังสือ Below Threshold ของผู้เขียน เปิดภาพเพื่อดูขนาดเต็ม</figcaption>
+    </figure>
+<p>อ่านภาพจาก program ไป compiled gates แล้วจึงถึง physical fault เช่น gate pulse ผิดหรือ readout รายงานผิด fault อาจกระจายผ่าน two-qubit gates และเปลี่ยนผล checks ระบบสร้าง <strong>detection events</strong> จากความเปลี่ยนแปลงของ checks ตามเวลา แล้วส่งให้ decoder</p>
+<p>decoder อาจเก็บ correction ไว้ใน <strong>Pauli frame</strong> โดยไม่ส่ง gate เพิ่มทุกครั้ง สิ่งสำคัญคือ logical interpretation ของ state ถ้า correction กับ error จริงต่างกันเพียง stabilizer ข้อมูล logical ยังถูก ถ้าต่างกันด้วย logical operator ผลลัพธ์ผิด แม้ syndrome จะกลับมาดูสะอาดแล้วก็ตาม</p>
+<p>นี่คือความต่างระหว่างการ detect กับการ correct การรู้ว่า checks ผิดบางจุดไม่ได้แปลว่ารู้ error ที่เกิดขึ้นแน่นอน decoder ต้องอนุมานจากข้อมูลที่มีพร้อม prior ของ noise model ในบท 4 เราจะดูว่า learned decoder ช่วยเมื่อ prior แบบง่ายไม่พออย่างไร</p>
+
+<h2 id="th-noise">เลือก noise model — อย่าทิ้ง correlation</h2>
+<p>relaxation ทำให้ |1⟩ decay ไป |0⟩, dephasing ลด phase coherence, leakage พา state ออกจาก computational subspace ส่วน crosstalk ทำให้ operation บน qubit หนึ่งรบกวนอีก qubit หนึ่ง ทั้งหมดอาจให้ histogram บางส่วนคล้ายกัน แต่ตอบสนองต่อ checks และเวลาไม่เหมือนกัน</p>
+<p>แบบจำลอง error ที่เป็นอิสระเหมาะสำหรับเริ่มเรียน แต่ correlation อาจทำให้ redundancy ที่เพิ่มมาช่วยน้อยกว่าที่คิด การวัด decoder จึงต้องระบุ data-generating process, รูปแบบ drift, จำนวน rounds และ logical observable ไม่ใช่บันทึกแค่จำนวน qubits</p>
+<p>ใน <a href="https://www.nature.com/articles/s41586-024-08449-y">รายงาน Willow</a> logical error ต่อ cycle ผูกกับ memory experiment และ decoder ที่ระบุ ไม่ควรนำไปแทน application-wide success หรือเทียบ platform ที่ cycle time ต่างกันโดยตรง ภาพในบทนี้เป็นแผนผังจากหนังสือ ไม่ใช่ผล hardware ใหม่</p>
+
+<h2 id="th-exercise">แบบฝึก — เพิ่มการวัดให้ตรงกับ failure</h2>
+<p>เพิ่ม identity gate และเปรียบเทียบทุก Pauli บน |0⟩ และ |+⟩ ทั้งก่อนและหลัง H ตัวสุดท้าย invariant คือ normalization ต้องเท่ากับหนึ่งเสมอ และ H สองครั้งต้องคืน state เดิมภายใน floating-point tolerance</p>
+<p>เขียน test ที่ใช้เฉพาะ Z probabilities แล้วแสดงว่ามันพลาด phase flip บน |+⟩ จากนั้นเพิ่ม basis change เพื่อแยกสองกรณี อธิบายให้ได้ว่าทำไม test ใหม่ตรวจ state ที่เตรียมซ้ำได้ แต่ไม่ใช่วิธีอ่าน amplitude ทุกตัวจาก unknown state สำเนาเดียว</p>
+<p>ผลการเรียนรู้ที่ต้องได้คือเลือก measurement ตาม property ที่ต้องรักษา ไม่ใช่ดู histogram ที่สวยแล้วสรุปว่าไม่มี error บทถัดไปเปลี่ยนการสังเกตแบบนี้ให้เป็น syndrome และกฎ correction ที่ตรวจครบทุก single flip ได้</p>
+
+<h2 id="th-resources">Run & check — รันตัวอย่างด้วยตัวเอง</h2>
+<p>ตัวอย่างสำหรับสอนนี้ใช้ Python standard library เท่านั้น บันทึก <a href="../examples/below-threshold/ch02.py" download>ch02.py</a> แล้วรันด้วย Python 3.10 ขึ้นไป โดย assertions ตรวจ invariant ที่อธิบายในบท</p><pre><code>python3 ch02.py</code></pre><p><a href="../downloads/below-threshold-tutorial-examples.zip" download>ตัวอย่างทั้งสิบบทและผลลัพธ์ที่คาดหวัง (ZIP)</a> · <a href="https://github.com/Anirach/Anirach.github.io/tree/main/examples/below-threshold">อ่าน source บน GitHub</a></p>
+
+<h2 id="th-references">Sources & scope — แหล่งอ้างอิงและขอบเขต</h2>
+<section class="references" aria-labelledby="th-sources"><h3 id="th-sources">เอกสารและหลักฐาน</h3><p class="references__note">โครงบท ภาพที่ให้เครดิต และผล lab ที่รายงานมาจากหนังสือของผู้เขียน ณ November 2026 ตัวอย่างสั้นที่ใช้ standard library รันเพื่อตรวจบทเรียนเว็บวันที่ 25 November 2026 เป็นแบบจำลองเพื่อสอน ไม่ได้รันซ้ำการทดลอง Stim, neural network, mitigation หรือ LLM ฉบับเต็มในหนังสือ ข้ออ้าง hardware, simulator, preprint และบริษัทคงขอบเขตตามที่ระบุ</p><ol><li><a href="https://drive.google.com/file/d/1iG7oSWLC9UI91VsPOzqcxk3_evH8Sn3b/view?usp=sharing">Anirach Mingkhwan. Below Threshold: AI, Quantum Errors and Better Code. Edition 1.0 (November 2026), Chapter 2, pp. 9–12.</a></li><li id="th-ref-1"><a href="https://doi.org/10.1038/299802a0">Wootters and Zurek. A single quantum cannot be cloned (1982).</a></li><li id="th-ref-2"><a href="https://arxiv.org/abs/quant-ph/9705052">Gottesman. Stabilizer Codes and Quantum Error Correction (1997).</a></li><li id="th-ref-3"><a href="https://www.nature.com/articles/s41586-024-08449-y">Google Quantum AI and collaborators. Quantum error correction below the surface code threshold (online 2024; Nature 2025).</a></li></ol></section>
+    </div>
+
+    <div class="l-en" lang="en">
+
+<h2 id="en-start">A histogram does not describe the whole state</h2>
+<blockquote><p><strong>Download the book and examples</strong></p><p><a href="https://drive.google.com/uc?export=download&amp;id=1iG7oSWLC9UI91VsPOzqcxk3_evH8Sn3b">Download the complete Below Threshold book (English PDF · 104 pages · 5.4 MB)</a><br><a href="https://drive.google.com/file/d/1iG7oSWLC9UI91VsPOzqcxk3_evH8Sn3b/view?usp=sharing">Read on Google Drive</a> · <a href="../downloads/below-threshold-tutorial-examples.zip" download>Download all ten Python examples (ZIP)</a></p></blockquote>
+<p><strong>Chapter 2/10.</strong> A tutorial adaptation of <em>Below Threshold: AI, Quantum Errors and Better Code</em>, Edition 1.0, Chapter 2, pp. 9–12.</p><p>Programmers expect to print a variable and inspect its value. One qubit measurement does not expose the complete quantum state. A pure state is |ψ⟩ = α|0⟩ + β|1⟩, where α and β are complex amplitudes and |α|² + |β|² = 1. A Z-basis measurement samples their squared magnitudes; it does not reveal their relative phase.</p>
+<p>This lesson needs Python and two-element vectors. Its goals are to distinguish a bit flip from a phase flip, explain why copying an unknown quantum state and taking a classical vote fails, and trace a physical fault to an incorrect logical answer.</p>
+<p>The measurement basis belongs in the output contract. Matching histograms in one basis do not establish that two circuits prepare the same state or that later gates will produce the same result.</p>
+
+<h2 id="en-paulis">X, Z and Y give us an error vocabulary</h2>
+<p><strong>X</strong> swaps the amplitudes of |0⟩ and |1⟩: a bit flip. <strong>Z</strong> changes the sign of the |1⟩ amplitude: a phase flip. <strong>Y</strong> combines both transformations, with a phase factor. I, X, Y and Z form a basis for single-qubit operators. This linear-algebra fact lets error-correction theory analyse continuous disturbances through discrete error components.</p>
+<p>In a stabilizer code, syndrome measurement separates error components distinguishable by the checks. Do not read this as a claim that every physical fault becomes a perfectly independent random Pauli. Coherent noise, leakage and correlations still matter to the model and implementation.</p>
+<p>The book introduces depolarizing noise with X, Y and Z each occurring with probability p/3. Read a library’s parameter convention before comparing p values: similarly named channels can use different numerical parameterizations.</p>
+
+<h2 id="en-phase">Run the phase error that one readout hides</h2>
+<p>This new example multiplies exact 2×2 matrices; it includes no hardware noise. H maps |0⟩ to |+⟩ = (|0⟩ + |1⟩)/√2. Inserting Z produces |−⟩ = (|0⟩ − |1⟩)/√2. Both have probabilities (0.5, 0.5) if measured immediately in the Z basis.</p>
+<pre><code>&quot;&quot;&quot;Exact two-amplitude teaching model: a phase error can hide in Z readout.&quot;&quot;&quot;
+from math import isclose, sqrt
+
+
+def apply(gate, state):
+    return tuple(sum(gate[i][j] * state[j] for j in range(2)) for i in range(2))
+
+
+def probabilities(state):
+    return tuple(round(abs(a) ** 2, 6) for a in state)
+
+
+r = 1 / sqrt(2)
+H = ((r, r), (r, -r))
+X = ((0, 1), (1, 0))
+Z = ((1, 0), (0, -1))
+Y = ((0, -1j), (1j, 0))
+zero = (1 + 0j, 0j)
+plus = apply(H, zero)
+minus = apply(Z, plus)
+print(&quot;|+&gt;, measured in Z:&quot;, probabilities(plus))
+print(&quot;Z|+&gt;, measured in Z:&quot;, probabilities(minus))
+print(&quot;H|+&gt;, measured in Z:&quot;, probabilities(apply(H, plus)))
+print(&quot;HZ|+&gt;, measured in Z:&quot;, probabilities(apply(H, minus)))
+print(&quot;X|0&gt;, measured in Z:&quot;, probabilities(apply(X, zero)))
+print(&quot;Y|0&gt;, measured in Z:&quot;, probabilities(apply(Y, zero)))
+
+assert probabilities(plus) == probabilities(minus)
+assert probabilities(apply(H, plus)) == (1.0, 0.0)
+assert probabilities(apply(H, minus)) == (0.0, 1.0)
+for gate in (H, X, Y, Z):
+    assert isclose(sum(abs(a) ** 2 for a in apply(gate, plus)), 1.0)
+print(&quot;Checks passed: normalization and a hidden phase revealed by H&quot;)</code></pre><pre><code>|+&gt;, measured in Z: (0.5, 0.5)
+Z|+&gt;, measured in Z: (0.5, 0.5)
+H|+&gt;, measured in Z: (1.0, 0.0)
+HZ|+&gt;, measured in Z: (0.0, 1.0)
+X|0&gt;, measured in Z: (0.0, 1.0)
+Y|0&gt;, measured in Z: (0.0, 1.0)
+Checks passed: normalization and a hidden phase revealed by H</code></pre>
+<p>The final H reveals the difference: H|+⟩ gives 0 with certainty, whereas HZ|+⟩ gives 1. A change of basis exposes a phase fault without granting direct access to every amplitude. X|0⟩ and Y|0⟩ also have identical histograms; their overall state phase does not affect probabilities.</p>
+<p>The script prints rounded exact probabilities, not sampled shot counts. A sampler version needs a distribution comparison with sampling uncertainty. A hardware version additionally needs a noise and readout-calibration analysis.</p>
+
+<h2 id="en-cloning">Why the classical copy-and-vote fix fails</h2>
+<p>The <a href="https://doi.org/10.1038/299802a0">Wootters–Zurek no-cloning theorem</a> forbids a universal operation that perfectly copies every unknown quantum state. It does not forbid copying classical bits in a known basis or repeatedly preparing a state using a known recipe.</p>
+<p>Apply CNOT to an unknown control α|0⟩ + β|1⟩ and a target |0⟩. The result is α|00⟩ + β|11⟩. It is generally not (α|0⟩ + β|1⟩)⊗(α|0⟩ + β|1⟩). The first expression is an entangled encoding; the second would be two independent copies of the unknown state.</p>
+<p>Quantum error correction encodes information jointly and measures parity or stabilizer checks that do not distinguish logical zero from logical one. Reading every data qubit to “check the answer” can destroy the phase information being protected. Chapter 3 begins with a classical parity example you can verify by hand.</p>
+
+<h2 id="en-path">Trace the error path from fault to failure</h2>
+    <figure class="figure">
+      <a href="../images/below-threshold-error-path.png">
+        <img class="figure__img" src="../images/below-threshold-error-path.png" alt="The error path runs from a program and physical faults through detection events and decoding to the logical answer." width="1544" height="739" loading="lazy" decoding="async">
+      </a>
+      <figcaption class="figure__caption">The error path runs from a program and physical faults through detection events and decoding to the logical answer. Author’s book, Figure 2.1. Open for full resolution.</figcaption>
+    </figure>
+<p>Read the diagram from program to compiled gates, then to a physical fault such as a faulty pulse or incorrect readout. Later two-qubit gates can spread its effects. Changes in repeated check results become <strong>detection events</strong>, which enter the decoder.</p>
+<p>A correction can be tracked in a <strong>Pauli frame</strong> rather than applied as an extra gate each time. What matters is the logical interpretation. If the actual error and chosen correction differ only by a stabilizer, logical information is intact. If they differ by a logical operator, the answer can be wrong even after all checks look clean.</p>
+<p>Detection and correction are therefore different achievements. A nonzero syndrome does not uniquely identify a physical history. Decoding combines available observations with a noise-model prior. Chapter 4 asks when a learned decoder improves on a simplified prior.</p>
+
+<h2 id="en-noise">Choose a noise model that preserves the hard part</h2>
+<p>Relaxation moves excited-state population toward |0⟩. Dephasing reduces phase coherence. Leakage leaves the computational subspace. Crosstalk lets an operation on one qubit disturb another. Some measurements can look similar even though these mechanisms interact differently with checks and time.</p>
+<p>Independent-error models make a useful starting point, but correlations can undermine the benefit of additional redundancy. A decoder experiment must specify the data-generating process, drift assumptions, number of rounds and logical observable. The qubit count alone is insufficient.</p>
+<p>The <a href="https://www.nature.com/articles/s41586-024-08449-y">Willow report</a> attaches its logical error per cycle to a particular memory experiment and decoder. It is not application-wide success, and platforms with different cycle times need additional comparison. This lesson’s diagram comes from the book; it is not a new hardware result.</p>
+
+<h2 id="en-exercise">Exercise: make the observation match the failure</h2>
+<p>Add the identity gate. Compare every Pauli on |0⟩ and |+⟩, both before and after a final H. Normalization must remain one, and two H gates must return the initial state within floating-point tolerance.</p>
+<p>Write a test using only Z probabilities and show that it misses a phase flip on |+⟩. Add a basis change to separate the cases. Explain why this can test repeatedly prepared states but does not read every amplitude from one copy of an arbitrary unknown state.</p>
+<p>The expected outcome is a measurement chosen for the property you need to preserve. A plausible histogram is insufficient evidence of a clean state. Next we turn that observation principle into syndromes and a correction rule that can be exhaustively checked for single flips.</p>
+
+<h2 id="en-resources">Run and check the example</h2>
+<p>This complete teaching example uses only the Python standard library. Save <a href="../examples/below-threshold/ch02.py" download>ch02.py</a>, then run it with Python 3.10 or later. Its assertions check the stated invariants.</p><pre><code>python3 ch02.py</code></pre><p><a href="../downloads/below-threshold-tutorial-examples.zip" download>All ten examples and expected output (ZIP)</a> · <a href="https://github.com/Anirach/Anirach.github.io/tree/main/examples/below-threshold">Browse example source on GitHub</a></p>
+
+<h2 id="en-references">Sources and scope</h2>
+<section class="references" aria-labelledby="en-sources"><h3 id="en-sources">Reading and evidence</h3><p class="references__note">The author’s book is the source of the chapter structure, credited diagrams and reported lab results (November 2026 snapshot). The short standard-library example above was executed for this web lesson on 25 November 2026. It is a teaching model; the book’s full Stim, neural-network, mitigation and LLM experiments were not rerun for these posts. Hardware, simulator, preprint and company claims retain their stated scope.</p><ol><li><a href="https://drive.google.com/file/d/1iG7oSWLC9UI91VsPOzqcxk3_evH8Sn3b/view?usp=sharing">Anirach Mingkhwan. Below Threshold: AI, Quantum Errors and Better Code. Edition 1.0 (November 2026), Chapter 2, pp. 9–12.</a></li><li id="en-ref-1"><a href="https://doi.org/10.1038/299802a0">Wootters and Zurek. A single quantum cannot be cloned (1982).</a></li><li id="en-ref-2"><a href="https://arxiv.org/abs/quant-ph/9705052">Gottesman. Stabilizer Codes and Quantum Error Correction (1997).</a></li><li id="en-ref-3"><a href="https://www.nature.com/articles/s41586-024-08449-y">Google Quantum AI and collaborators. Quantum error correction below the surface code threshold (online 2024; Nature 2025).</a></li></ol></section>
+    </div>
+
+    <div class="post-series-footer">
+      <span class="l-th">จากซีรีส์ Below Threshold</span><span class="l-en" lang="en">From Below Threshold</span>
+    </div>
+
+    <nav aria-label="Below Threshold">
+    <div class="series-nav">
+      <h3>Below Threshold · 10-Chapter Course</h3>
+      <div class="series-links">
+        <a href="/blog/below-threshold-overview">#1 The Three Bridges</a>
+        <span class="current" aria-current="page">#2 Quantum Errors</span>
+        <a href="/blog/below-threshold-error-correction">#3 Checks and Thresholds</a>
+        <a href="/blog/below-threshold-ai-decoders">#4 AI Decoders</a>
+        <a href="/blog/below-threshold-error-path">#5 Error Path</a>
+        <a href="/blog/below-threshold-circuit-synthesis">#6 Circuit Synthesis</a>
+        <a href="/blog/below-threshold-ai-workflow">#7 AI Workflow</a>
+        <a href="/blog/below-threshold-quantum-inspired">#8 Quantum-Inspired</a>
+        <a href="/blog/below-threshold-syndrome-driven-development">#9 Syndrome-Driven Code</a>
+        <a href="/blog/below-threshold-playbook">#10 Engineering Playbook</a>
+      </div>
+    </div>
+    </nav>
+
+  </article>
+
+  </main>
+
+  <footer class="blog-footer">
+    <nav class="blog-footer__nav" aria-label="Site">
+      <a href="../index.html">Home</a>
+      <a href="./">Tutorials</a>
+      <a href="../thoughts/">Thoughts</a>
+      <a href="../publications/">Publications</a>
+      <a href="../books/">Books</a>
+      <a href="../projects/">Projects</a>
+      <a href="../news/">News</a>
+      <a href="../index.html#contact">Contact</a>
+    </nav>
+    <a href="./">← Back to Tutorials</a>
+    <span>© 2026 Anirach Mingkhwan — Independent AI consultant</span>
+  </footer>
+
+</body>
+</html>

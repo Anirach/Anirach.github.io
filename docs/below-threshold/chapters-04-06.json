@@ -1,0 +1,347 @@
+[
+  {
+    "n": 4,
+    "slug": "below-threshold-ai-decoders",
+    "short": "AI Decoders",
+    "title": {
+      "th": "AI Decoders — เรียนรู้ syndrome",
+      "en": "AI as the Decoder: Learn the Noise, Measure the Limits"
+    },
+    "sub": {
+      "th": "เปลี่ยน parity checks ให้เป็นการตัดสินใจ เปรียบเทียบ matching กับ learned decoder และแยกความแม่นยำ throughput และ latency ให้ชัด",
+      "en": "Turn parity checks into decisions, compare matching with learned decoding, and keep accuracy, throughput and latency separate."
+    },
+    "description": "เรียนรู้ AI decoder จาก syndrome ทดลอง lookup table ที่มี ambiguity เปรียบเทียบผลกับ matching พร้อมอ่านผล Lab 2 และขอบเขต real-time อย่างถูกต้อง",
+    "source_pages": "21–29",
+    "figures": [
+      {
+        "name": "qec-cycle",
+        "file": "below-threshold-qec-cycle.png",
+        "alt": {
+          "th": "วงรอบตรวจ syndrome ส่งเข้า decoder และปรับ Pauli frame ก่อนทำงานต่อ",
+          "en": "Repeated syndrome extraction feeds a decoder and a Pauli-frame update."
+        },
+        "caption": {
+          "th": "ภาพ 4.1 จากหนังสือ: decoder อยู่ในวงรอบของเครื่อง ต้องตามอัตราข้อมูลให้ทันและส่งผลกลับก่อนคำสั่งที่ต้องพึ่งผลนั้น",
+          "en": "Book Figure 4.1. A decoder must keep pace with the syndrome stream and return decisions before dependent operations need them."
+        }
+      },
+      {
+        "name": "decoders",
+        "file": "below-threshold-decoders.png",
+        "alt": {
+          "th": "ผล Lab 2 เปรียบเทียบ matching lookup table และ neural network ภายใต้ noise สองแบบ",
+          "en": "Book Lab 2 compares matching, a lookup table and a neural network under two noise models."
+        },
+        "caption": {
+          "th": "ภาพ 4.2 จากหนังสือ: บน crosstalk model learned decoders ผิดประมาณ 2.28% ต่อ shot เทียบกับ textbook matching 3.49% เป็นผล simulation ที่บันทึกในหนังสือ",
+          "en": "Book Figure 4.2. Under the simulated crosstalk model, learned decoders fail on about 2.28% of shots versus 3.49% for textbook matching. These are the book’s recorded results."
+        }
+      }
+    ],
+    "refs": [
+      {
+        "title": "Bausch et al. Learning high-accuracy error decoding for quantum processors. Nature (2024).",
+        "url": "https://www.nature.com/articles/s41586-024-08148-8"
+      },
+      {
+        "title": "Senior et al. A scalable and real-time neural decoder for topological quantum codes. Preprint, v2 (2026).",
+        "url": "https://arxiv.org/abs/2512.07737v2"
+      },
+      {
+        "title": "PyMatching documentation: Matching.add_edge and parallel-edge merge strategies.",
+        "url": "https://pymatching.readthedocs.io/en/stable/api.html#pymatching.Matching.add_edge"
+      }
+    ],
+    "sections": [
+      {
+        "key": "start",
+        "heading": {
+          "th": "โจทย์ของบทนี้ — เลือก logical correction จากข้อมูลที่ไม่สมบูรณ์",
+          "en": "The task: infer a logical correction from incomplete evidence"
+        },
+        "body": {
+          "th": "<p>บทที่ 3 ให้เราเห็นว่า syndrome บอกความไม่สอดคล้องของ parity checks แต่ไม่ได้บอก error ทุกตัวโดยตรง บทนี้เปลี่ยนมุมมองเป็นปัญหา inference: เมื่อเห็น detection events ชุด D เราควรปรับ logical state แบบใดจึงจะผิดน้อยที่สุด?</p><p>พื้นฐานที่ใช้คือ XOR, probability และ Python dictionaries เป้าหมายไม่ใช่สร้าง AlphaQubit บน laptop แต่เข้าใจว่า learned decoder ชนะได้เมื่อใด และเหตุใดแม้โมเดลที่ดีที่สุดก็ยังผิดได้ เราจะรัน lookup table ขนาดเล็ก อ่านผล Lab 2 จากหนังสือ และแยกสามเกณฑ์ที่ต้องวัด: logical failure rate, throughput และ latency</p><p>สำหรับ programmer ให้คิดว่า decoder เป็น service ที่รับ stream ของ checks แล้วตัดสินใจภายใต้ข้อจำกัดด้านเวลา การเพิ่มความแม่นยำมีประโยชน์ต่อระบบก็ต่อเมื่อ service ตามข้อมูลทันและตัดสินใจได้ก่อนส่วนถัดไปต้องใช้ผล</p>",
+          "en": "<p>Chapter 3 showed that a syndrome reports disagreements between parity checks, rather than a complete list of errors. This chapter turns that observation into an inference problem: given detection events D, which logical correction makes the fewest wrong decisions?</p><p>You need XOR, conditional probability and Python dictionaries. Our goal is to understand when a learned decoder helps and why even the best possible decoder can still fail. We will run a tiny lookup decoder, interpret the book’s larger Lab 2, and separate three measurements that a deployment needs: logical failure rate, throughput and latency.</p><p>Think of the decoder as a service consuming a stream of checks. A more accurate decision is useful to the whole machine only when the service keeps up and returns the decision before a dependent operation needs it.</p>"
+        }
+      },
+      {
+        "key": "inference",
+        "heading": {
+          "th": "โมเดลของ noise — สิ่งที่ matching รู้ และสิ่งที่ข้อมูลสอนได้",
+          "en": "The noise model: what matching assumes and data can teach"
+        },
+        "body": {
+          "th": "<p>Matching decoder สร้างกราฟจากแบบจำลอง faults แล้วหาคำอธิบายที่มีต้นทุนต่ำสำหรับ detection events ต้นทุนมักสัมพันธ์กับความน่าจะเป็นของ error วิธีนี้เร็วและเป็น baseline ที่แข็งแรง แต่ถ้า noise จริงมี leakage, crosstalk หรือ drift ที่โมเดลอธิบายไม่ครบ การตัดสินใจอาจลำเอียงอย่างเป็นระบบ</p><p>Learned decoder ประมาณ P(logical flip | D) จากตัวอย่างที่มี label โดยตรง ข้อมูลจึงอาจสอนความสัมพันธ์ที่กราฟแบบง่ายไม่ได้เก็บไว้ ขั้นแรกต้องนิยาม label ให้ตรงกับ logical observable ที่วัด ไม่ใช่พยายามทำนายทุก physical error เพราะ errors หลายแบบมี logical effect เดียวกันได้</p><p><a href=\"https://www.nature.com/articles/s41586-024-08148-8\">งาน AlphaQubit</a> เป็นตัวอย่างจริงของ recurrent neural decoding ที่ใช้ทั้ง simulated data และ processor data ส่วนใน tutorial นี้ lookup table ช่วยเปิดการตัดสินใจให้เห็นทุกแถว ซึ่งทำให้ตรวจเหตุผลได้ง่ายกว่าเริ่มด้วย neural network</p><p>อย่าสรุปว่า neural network จำเป็นเสมอไป ถ้าโมเดล noise ตรงและ matching แม่นอยู่แล้ว learning อาจเพิ่มเพียงต้นทุน ต้องเปรียบเทียบกับ baseline ที่ใช้ข้อมูลเดียวกันเสมอ</p>",
+          "en": "<p>A matching decoder builds a graph of possible faults and searches for a low-cost explanation of the observed detection events. Edge costs reflect assumed error probabilities. This is a strong, fast baseline. The problem arises when real leakage, crosstalk or drift violates the simplified model: the decoder can make a systematic mistake even while solving its graph problem correctly.</p><p>A learned decoder instead estimates P(logical flip | D) from labelled examples. It can learn correlations omitted by the graph representation. Define the target label carefully: predict the effect on the chosen logical observable, rather than demanding an exact reconstruction of every physical fault. Different physical errors can belong to the same logical class.</p><p><a href=\"https://www.nature.com/articles/s41586-024-08148-8\">AlphaQubit</a> demonstrates recurrent neural decoding with simulated and experimental training data. Our lookup table makes the same decision problem inspectable, row by row. It is a teaching model, rather than a reproduction of that architecture.</p><p>Learning adds no automatic benefit when the baseline already models the noise well. Always compare on the same evaluation distribution and retain the simpler decoder when it satisfies the engineering contract.</p>"
+        }
+      },
+      {
+        "key": "clock",
+        "heading": {
+          "th": "วงรอบของเครื่อง — throughput ไม่ใช่ latency",
+          "en": "The machine clock: throughput and latency are different"
+        },
+        "body": {
+          "th": "<!--FIGURE:qec-cycle--><p><strong>Throughput</strong> คือจำนวน rounds ที่ประมวลผลได้ต่อเวลา ถ้าเครื่องส่งข้อมูลเร็วกว่าที่ decoder รับไหว queue จะโตขึ้นเรื่อย ๆ ส่วน <strong>latency</strong> คือเวลาตั้งแต่รับข้อมูลจนคำตอบพร้อมใช้ ระบบที่ทำ pipeline อาจรับงานใหม่ได้ทุก microsecond แต่แต่ละงานรอผลนานกว่านั้นมาก</p><p>อย่านำเวลาต่อ shot จาก batch ขนาดใหญ่ไปเรียกว่าเวลา feedback บน hardware ในหนังสือ network ใช้ 0.57 µs ต่อ shot ใน batch บน laptop แต่ matching ใช้ 0.04 µs ตัวเลขนี้ยังไม่นับการรับผลวัด การส่งข้อมูล หรือ deadline ของ operation ถัดไป</p><p><a href=\"https://arxiv.org/abs/2512.07737v2\">AlphaQubit 2 ฉบับ preprint</a> รายงานการ decode ต่ำกว่า 1 µs ต่อ cycle บน commercial accelerators ถึง surface-code distance 11 หนังสือระบุว่าการจับเวลาใช้ simulated streams และไม่รวม measurement/communication latency จึงควรอ่านว่าเป็นผลด้าน throughput ที่มีขอบเขตชัดเจน</p><p>สำหรับระบบจริงให้บันทึกทั้งอัตรารับเข้า เวลารอ queue และ latency ช่วงท้ายของ distribution ค่าเฉลี่ยดีเพียงค่าเดียวอาจซ่อน deadline ที่พลาดได้</p>",
+          "en": "<!--FIGURE:qec-cycle--><p><strong>Throughput</strong> measures how many rounds a decoder can process per unit time. If rounds arrive faster than the decoder can consume them, the queue keeps growing. <strong>Latency</strong> measures how long one decision takes to become available. A pipeline can accept a new item every microsecond while each item spends much longer inside it.</p><p>Do not relabel large-batch time per shot as hardware feedback latency. The book reports 0.57 µs per shot for its laptop network in large batches, versus 0.04 µs for matching. Neither number includes a processor’s measurement interface, communication delays or the deadline of a dependent operation.</p><p>The <a href=\"https://arxiv.org/abs/2512.07737v2\">AlphaQubit 2 preprint</a> reports decoding faster than 1 µs per cycle on commercial accelerators through surface-code distance 11. The book notes that timing uses simulated streams and excludes measurement and communication latency. Keep that scope attached to the claim.</p><p>For an implementation, log arrival rate, queue age and tail latency as well as the average service rate. A single favourable average can conceal missed deadlines.</p>"
+        }
+      },
+      {
+        "key": "example",
+        "heading": {
+          "th": "ลงมือเขียน — syndrome เดียวกัน แต่ logical effect คนละแบบ",
+          "en": "Write the decoder: one syndrome, two logical effects"
+        },
+        "body": {
+          "th": "<p>ตัวอย่างนี้ใช้ repetition code สามบิตเพื่อให้ไล่ทุกเหตุการณ์ได้ กำหนด syndrome เป็น (e₀ XOR e₁, e₁ XOR e₂) และ logical label เป็น e₀ ดังนั้น <code>001</code> กับ <code>110</code> ให้ syndrome (0, 1) เหมือนกัน แต่ label ตรงข้ามกัน</p><p>เราสร้าง training histogram สมมติและ deployment distribution แยกกัน ตัวเลขถูกกำหนดไว้โดยตั้งใจเพื่อสาธิต crosstalk-like correlations ไม่ใช่ข้อมูลจาก quantum processor จากนั้นเปรียบเทียบ minimum-weight rule กับการเลือก label ที่พบมากกว่าใน training histogram</p><!--EXAMPLE--><!--EXAMPLE_OUTPUT--><p>กฎ minimum weight ผิด 4.5% ส่วน lookup ผิด 3.5% lookup เลือก logical class ถูกกว่าเมื่อ pair error พบได้มากกว่า single error อย่างไรก็ตามข้อมูล syndrome แยกทั้งคู่ไม่ได้ จึงยังมี failure floor 3.5% การเพิ่มขนาด neural network ไม่สามารถสร้างข้อมูลที่ checks ไม่ได้เก็บมาให้ได้</p>",
+          "en": "<p>We use a three-bit repetition-code model so that every event is enumerable. Define the syndrome as (e₀ XOR e₁, e₁ XOR e₂), and the logical label as e₀. Errors <code>001</code> and <code>110</code> therefore produce the same syndrome (0, 1), with opposite labels.</p><p>The synthetic training histogram and the separately specified deployment distribution deliberately include a correlated pair error. These numbers are assumptions of the teaching model, not processor measurements. Compare a minimum-weight rule with a lookup rule choosing the more frequent training label.</p><!--EXAMPLE--><!--EXAMPLE_OUTPUT--><p>The minimum-weight rule fails 4.5% of the time; the lookup fails 3.5%. The lookup chooses the better logical class when the pair error is more likely than its single-error alternative. Yet syndrome ambiguity leaves a 3.5% information-limited floor. A bigger neural network cannot manufacture evidence that the checks never collected.</p>"
+        }
+      },
+      {
+        "key": "lab",
+        "heading": {
+          "th": "อ่าน Lab 2 — ชนะ baseline แล้วก็ยังมี floor",
+          "en": "Read Lab 2: a baseline win still leaves a floor"
+        },
+        "body": {
+          "th": "<!--FIGURE:decoders--><p>ผลต่อไปนี้ <strong>บันทึกไว้ในหนังสือ</strong> ไม่ใช่ผลรันซ้ำจาก toy script ข้างบน Lab 2 จำลอง distance-3 surface-code memory สาม rounds ใช้ circuit noise p=0.1% และเพิ่ม correlated XX errors q=0.2% ต่อคู่ต่อ round ใน Device B แต่ละวิธีทดสอบกับสองล้าน fresh shots โดย learned methods เรียนจากอีกสองล้าน shots</p><div class=\"table-wrapper\"><table><thead><tr><th>วิธี</th><th>Device A: textbook noise</th><th>Device B: เพิ่ม crosstalk</th></tr></thead><tbody><tr><td>Textbook matching</td><td>0.077%</td><td>3.491%</td></tr><tr><td>Matching ที่เพิ่ม crosstalk ในกราฟ</td><td>0.077%</td><td>3.596%</td></tr><tr><td>Correlated matching</td><td>0.113%</td><td>3.671%</td></tr><tr><td>Lookup / neural network</td><td>ประมาณ 0.071%</td><td>ประมาณ 2.284%</td></tr></tbody></table></div><p>Device A มีช่องให้ปรับปรุงน้อย ส่วน Device B learned methods ลด failures ประมาณ 35% เทียบกับ textbook matching แต่การเพิ่ม crosstalk ลงกราฟไม่ได้ช่วย เพราะ parallel edges ใน representation นี้มี endpoints เดียวกันและ logical effects ต่างกัน การ merge จึงไม่เก็บความแตกต่างที่จำเป็นไว้ครบ</p><p>Lookup กับ network ให้ผลใกล้กันมาก แปลว่า representation ของข้อมูลมีความสำคัญกว่า architecture ที่ซับซ้อนในโจทย์เล็กนี้ แต่ไม่ได้พิสูจน์ว่า lookup จะขยายไปยัง code distance สูงได้</p>",
+          "en": "<!--FIGURE:decoders--><p>These are <strong>results recorded in the book</strong>, not a rerun of the toy script. Lab 2 simulates a distance-3 surface-code memory for three rounds at circuit noise p=0.1%. Device B adds correlated XX faults with q=0.2% per neighbouring pair per round. Each decoder sees two million fresh test shots; learned methods use a separate two million training shots.</p><div class=\"table-wrapper\"><table><thead><tr><th>Decoder</th><th>Device A: textbook noise</th><th>Device B: crosstalk added</th></tr></thead><tbody><tr><td>Textbook matching</td><td>0.077%</td><td>3.491%</td></tr><tr><td>Matching with crosstalk in graph</td><td>0.077%</td><td>3.596%</td></tr><tr><td>Correlated matching</td><td>0.113%</td><td>3.671%</td></tr><tr><td>Lookup / neural network</td><td>about 0.071%</td><td>about 2.284%</td></tr></tbody></table></div><p>Device A leaves little room for improvement. On Device B, learned methods reduce failures by about 35% relative to textbook matching. Merely adding the crosstalk into this matching graph does not help: parallel edges share endpoints but carry opposing logical effects, and their merge loses a distinction needed by this example.</p><p>The network nearly matches the lookup table. For this small problem, the information representation matters more than a complicated architecture. That does not establish that a lookup table can scale to large code distances.</p>"
+        }
+      },
+      {
+        "key": "practice",
+        "heading": {
+          "th": "ออกแบบการทดลองถัดไป — ทดสอบ drift และ information loss",
+          "en": "Your experiment: test drift and information loss"
+        },
+        "body": {
+          "th": "<p>รัน <code>python3 ch04.py</code> แล้วลดความน่าจะเป็นของ <code>110</code> ใน deployment distribution พร้อมเพิ่ม <code>000</code> ให้ผลรวมยังเป็นหนึ่ง อย่าแก้ training histogram เป้าหมายคือหาจุดที่ lookup จากข้อมูลเก่าแพ้ minimum weight นี่คือ drift ในรูปที่ตรวจด้วยมือได้</p><p>Invariant ที่ต้องรักษา: <code>001</code> กับ <code>110</code> ให้ syndrome เดิมเสมอ และ failure rate ของ decoder ใดต้องไม่ต่ำกว่า Bayes floor สำหรับ deployment distribution นั้น อย่ากำหนด target ด้วยคำตอบในชุดทดสอบแล้วเรียกว่า trained performance</p><p>เมื่อไปทำระบบจริง แบ่ง training/validation/test ตามเวลาหรืออุปกรณ์ให้เหมาะกับสิ่งที่จะ deploy ตรวจ rare syndromes และ fallback แยกจาก cases ที่พบมาก และเก็บ matching baseline ไว้ หาก ambiguity floor สูงเกินเป้าหมาย ให้กลับไปแก้ hardware, schedule หรือ code design ตามบทถัดไป</p>",
+          "en": "<p>Run <code>python3 ch04.py</code>, then lower the deployment probability of <code>110</code>, transferring the removed mass to <code>000</code>. Keep the training histogram unchanged. Find the point where a lookup trained on yesterday’s ordering loses to minimum weight. This is a hand-checkable distribution-drift experiment.</p><p>Preserve two invariants: <code>001</code> and <code>110</code> always share their syndrome, and no decoder can beat the Bayes floor of the specified deployment distribution. Choosing labels from test answers would invalidate a claim of learned generalization.</p><p>For a real experiment, split training, validation and test data according to the time or device shift expected at deployment. Score unseen syndromes and fallback behaviour separately from frequent cases. Retain a matching baseline. If the ambiguity floor remains too high, change the hardware, schedule or code design; the next chapter examines those earlier insertion points.</p>"
+        }
+      }
+    ]
+  },
+  {
+    "n": 5,
+    "slug": "below-threshold-error-path",
+    "short": "Error Path",
+    "title": {
+      "th": "Error Path — ใช้ AI ตรงจุด",
+      "en": "AI Along the Error Path: Improve the Estimator and Count the Cost"
+    },
+    "sub": {
+      "th": "แยก calibration, code design และ mitigation ทดลองเรียนรู้ correction map แล้วเปรียบเทียบความแม่นยำกับต้นทุน training และ runtime",
+      "en": "Separate calibration, code design and mitigation. Learn a correction map, then account for accuracy, training and runtime shots."
+    },
+    "description": "สำรวจจุดที่ AI ช่วยลด quantum errors ทดลอง affine mitigation อ่านผล Lab 3 เทียบ ZNE และ CDR พร้อมนับ training shots แยกจาก runtime ให้ครบ",
+    "source_pages": "30–37",
+    "figures": [
+      {
+        "name": "mitigation",
+        "file": "below-threshold-mitigation.png",
+        "alt": {
+          "th": "กราฟเปรียบเทียบ error mitigation ห้าวิธีด้วย runtime shots เท่ากันและ error ที่เปลี่ยนตาม circuit depth",
+          "en": "Five mitigation methods are compared at equal runtime shots and across circuit depths."
+        },
+        "caption": {
+          "th": "ภาพ 5.1 จากหนังสือ: Lab 3 ใช้ 12,000 shots ต่อ test circuit เท่ากัน ML ลด mean absolute error จาก 0.0796 เป็น 0.0214 แต่ยังมี training shots อีก 3.6 ล้านที่ต้องนับแยก",
+          "en": "Book Figure 5.1. Lab 3 gives each test circuit 12,000 shots. ML reduces mean absolute error from 0.0796 to 0.0214, with a separate 3.6-million-shot training cost."
+        }
+      }
+    ],
+    "refs": [
+      {
+        "title": "Liao et al. Machine learning for practical quantum error mitigation. Nature Machine Intelligence (2024).",
+        "url": "https://www.nature.com/articles/s42256-024-00927-2"
+      },
+      {
+        "title": "Temme, Bravyi and Gambetta. Error mitigation for short-depth quantum circuits. Physical Review Letters (2017).",
+        "url": "https://arxiv.org/abs/1612.02058"
+      },
+      {
+        "title": "Czarnik et al. Error mitigation with Clifford quantum-circuit data. Quantum (2021).",
+        "url": "https://quantum-journal.org/papers/q-2021-11-26-592/"
+      }
+    ],
+    "sections": [
+      {
+        "key": "start",
+        "heading": {
+          "th": "เลือกจุดแก้ — ก่อนเกิด fault หรือหลังวัดผล",
+          "en": "Choose the intervention: before the fault or after readout"
+        },
+        "body": {
+          "th": "<p>เมื่อ learned decoder ยังมี failure floor เราอาจต้องแก้ปัญหาก่อนข้อมูลเข้า decoder บทนี้อธิบาย Chapter 5 ของหนังสือผ่านคำถามของ engineer: จะปรับ control, เปลี่ยน code หรือปรับ estimator ของผลวัด และจะรู้ได้อย่างไรว่าคุ้มต้นทุน?</p><p>พื้นฐานคือค่าเฉลี่ย, variance และ linear regression เราจะสร้าง correction map แบบง่ายด้วย Python โดยไม่ต้องติดตั้ง quantum SDK แล้วอ่านผล Lab 3 ที่เปรียบเทียบ mitigation หลายวิธีบน noise model เดียวกัน เป้าหมายคือแยก bias, sampling error และต้นทุนข้อมูลออกจากกัน</p><p>ให้เริ่มจาก output contract หากต้องการรักษา logical state ระหว่างคำนวณ นั่นคือโจทย์ error correction แต่หากต้องการประมาณ observable ของ circuit ให้แม่นขึ้นจาก shots หลายครั้ง นั่นอาจเป็นโจทย์ error mitigation ทั้งคู่ช่วยเรื่อง noise แต่รับประกันผลคนละแบบ</p>",
+          "en": "<p>When a decoder reaches an information floor, improving the network may be the wrong intervention. Chapter 5 asks where to act earlier: tune the controls, redesign the code, or improve the estimator built from noisy measurements. For an engineer, the next question is whether the accuracy improvement justifies its data and runtime cost.</p><p>You need averages, variance and elementary linear regression. We will build a correction map with standard-library Python, then interpret the book’s Lab 3 comparison under a specified noise model. The aim is to separate bias, sampling error and the cost of obtaining training data.</p><p>Start from the output contract. Preserving an evolving logical state is an error-correction task. Estimating a circuit observable more accurately from many executions can be an error-mitigation task. Both address noise, but they provide different kinds of protection.</p>"
+        }
+      },
+      {
+        "key": "map",
+        "heading": {
+          "th": "เจ็ดจุดที่ AI ช่วยได้ — และสิ่งที่ต้องตรวจ",
+          "en": "Seven insertion points and the check each one needs"
+        },
+        "body": {
+          "th": "<p>หนังสือแบ่ง error path เป็นเจ็ดจุด ตารางนี้แปลให้เป็นงานที่มอบหมายและหลักฐานที่ใช้ตัดสินผล โดยไม่ถือว่าความสำเร็จที่จุดหนึ่งเท่ากับแก้ทั้งระบบแล้ว</p><div class=\"table-wrapper\"><table><thead><tr><th>จุดที่ปรับ</th><th>สิ่งที่ต้องตรวจ</th></tr></thead><tbody><tr><td>Coding assistant</td><td>Specification และ tests ของโปรแกรมที่สร้าง</td></tr><tr><td>Compilation / synthesis</td><td>Equivalence, gates, depth และ compile time</td></tr><tr><td>Calibration / control</td><td>Fidelity และ logical error ขณะเกิด drift</td></tr><tr><td>Noise learning</td><td>Prediction บนข้อมูลใหม่ ไม่ใช่เฉพาะ fit เดิม</td></tr><tr><td>Code design</td><td>Checks, overhead และ circuit-level faults</td></tr><tr><td>Decoding</td><td>Logical failures, throughput และ latency</td></tr><tr><td>Mitigation</td><td>Estimator error, shots และ training cost</td></tr></tbody></table></div><p>Calibration ปรับ pulse amplitudes, frequencies และ timings ที่ drift ได้ ส่วน code design เปลี่ยน redundancy และ checks ทั้งสองวิธีเปลี่ยนโจทย์ที่ decoder ต้องรับ ไม่ใช่เพียงเปลี่ยนการคาดเดาภายหลัง</p><p>Programmer ควรนิยาม metric ก่อนเลือก AI model ตัวอย่างเช่นลด training loss ของ noise model ยังไม่พอ ต้องแสดงว่าความผิดพลาดของ observable หรือ logical operation ที่สนใจลดลงจริงบนข้อมูลที่ไม่ใช้ฝึก</p>",
+          "en": "<p>The book identifies seven insertion points. Translate each into a delegated task and a measurable acceptance check, rather than treating a successful component as evidence that the whole machine is repaired.</p><div class=\"table-wrapper\"><table><thead><tr><th>Intervention</th><th>Acceptance evidence</th></tr></thead><tbody><tr><td>Coding assistant</td><td>Specification and tests for generated code</td></tr><tr><td>Compilation / synthesis</td><td>Equivalence, gates, depth and compile time</td></tr><tr><td>Calibration / control</td><td>Fidelity and logical errors under drift</td></tr><tr><td>Noise learning</td><td>Predictions on fresh observations</td></tr><tr><td>Code design</td><td>Checks, overhead and circuit-level faults</td></tr><tr><td>Decoding</td><td>Logical failures, throughput and latency</td></tr><tr><td>Mitigation</td><td>Estimator error, shots and training cost</td></tr></tbody></table></div><p>Calibration changes pulse amplitudes, frequencies and timing as a device drifts. Code design changes redundancy and the checks available to reveal faults. Both modify the problem presented to the decoder, rather than merely changing its later guess.</p><p>Define the metric before choosing a learning architecture. A lower noise-model training loss is insufficient: show that the observable or logical operation you care about improves on data withheld from fitting.</p>"
+        }
+      },
+      {
+        "key": "estimators",
+        "heading": {
+          "th": "Mitigation — ลด bias โดยยอมจ่าย variance และข้อมูล",
+          "en": "Mitigation: reduce bias while paying for variance and data"
+        },
+        "body": {
+          "th": "<p>ถ้าวัด Pauli observable แต่ละครั้ง ผลเป็น +1 หรือ −1 ค่าเฉลี่ยของ shots ประมาณ expectation value แต่ noise อาจดึงค่าเข้าใกล้ศูนย์หรือเพิ่ม offset การเก็บ shots เพิ่มช่วยลด sampling error แต่ไม่ลบ bias ที่เป็นระบบนี้โดยอัตโนมัติ</p><p>Zero-noise extrapolation (ZNE) รัน circuit ที่ noise ถูกขยายหลายระดับแล้ว extrapolate กลับไปที่ศูนย์ เช่นสมมติความสัมพันธ์เชิงเส้น ระดับ 1 และ 3 ให้ estimator 1.5E₁ − 0.5E₃ น้ำหนักที่มากกว่า 1 และติดลบทำให้ variance เพิ่มได้ จึงต้องเทียบด้วย shot budget เท่ากัน</p><p>Clifford data regression (CDR) เรียน map จาก noisy values ไปยัง ideal values บน near-Clifford training circuits ที่ยังคำนวณค่าจริงได้ ส่วน ML-QEM อาจใช้ model ร่วมสำหรับหลาย circuits และ observables <a href=\"https://www.nature.com/articles/s42256-024-00927-2\">งานของ Liao และคณะ</a> ศึกษาวิธีนี้และการเรียนเลียนแบบ mitigation ที่แพงกว่าเพื่อให้ runtime ถูกลง</p><p>ถ้า target labels มาจาก ZNE โมเดลเรียนให้คล้าย ZNE ไม่ใช่ได้รับคำตอบ ideal เพิ่มมาอย่างอิสระ ต้องระบุที่มาของ labels ทุกครั้ง</p>",
+          "en": "<p>A Pauli measurement produces +1 or −1. Averaging shots estimates its expectation value, but noise can shrink the value toward zero or introduce an offset. More shots reduce sampling error; they do not automatically remove that systematic bias.</p><p>Zero-noise extrapolation (ZNE) executes circuits at amplified noise levels and extrapolates to zero noise. Under a linear model, measurements at scales 1 and 3 give the estimator 1.5E₁ − 0.5E₃. The large and negative weights can amplify variance. Compare methods at an equal shot budget, rather than giving each extra circuit an uncounted allocation.</p><p>Clifford data regression (CDR) learns a map from noisy to ideal values on near-Clifford training circuits whose targets can be computed classically. ML-QEM can share a learned model across circuits and observables. <a href=\"https://www.nature.com/articles/s42256-024-00927-2\">Liao and colleagues</a> study such models and learning to imitate a more costly mitigation procedure with less runtime overhead.</p><p>If ZNE supplies the labels, the learned target is ZNE, not independent access to the ideal answer. Always disclose where target values came from.</p>"
+        }
+      },
+      {
+        "key": "example",
+        "heading": {
+          "th": "ลงมือเขียน — correction map ที่ตรวจ training และ test แยกกัน",
+          "en": "Write a correction map with separate training and scoring"
+        },
+        "body": {
+          "th": "<p>กำหนด noise channel สมมติว่า noisy = 0.8 × ideal + 0.05 ใช้ ideal values ห้าค่าเพื่อ fit เส้นตรง แล้ววัด error บนอีกสี่ค่าที่ไม่ปรากฏใน training set ไม่มี shot noise หรือ drift ในส่วนนี้ จึงควรแก้ bias ได้พอดีตามสมมติฐาน ไม่ใช่ความสำเร็จที่คาดหวังจากข้อมูล hardware ทุกชุด</p><!--EXAMPLE--><!--EXAMPLE_OUTPUT--><p>โมเดลเรียน inverse เป็น ideal = 1.25 × noisy − 0.0625 และลด held-out MAE จาก 0.1150 เป็นศูนย์ในขอบเขต floating-point ผลนี้สอนวิธีแยก fit กับ score มากกว่าสาธิต quantum advantage</p><p>ส่วน SD bounds ใช้ outcomes ±1 ที่เป็นอิสระและ variance ไม่เกินหนึ่ง เมื่อแบ่ง total shots เท่ากันให้ ZNE สองระดับ bound สูงกว่า raw mean ตัวเลขเป็น upper bounds ภายใต้สมมติฐาน ไม่ใช่ error bars ของ Lab 3 และยังไม่รวม uncertainty ใน correction map ที่เรียนมา</p>",
+          "en": "<p>Assume a synthetic channel noisy = 0.8 × ideal + 0.05. Fit an affine inverse on five known target values, then score four different values absent from training. This part includes no shot noise or drift, so the affine correction should exactly remove the assumed bias. That is a model property, not an accuracy promise for hardware.</p><!--EXAMPLE--><!--EXAMPLE_OUTPUT--><p>The fit learns ideal = 1.25 × noisy − 0.0625 and reduces held-out MAE from 0.1150 to floating-point zero. It demonstrates the separation between fitting and scoring, rather than quantum advantage.</p><p>The standard-deviation bounds assume independent ±1 outcomes with variance at most one. Splitting a fixed shot budget between the two ZNE noise scales yields a larger bound than the raw mean. These are model-based upper bounds, not Lab 3 error bars. They also exclude uncertainty in the fitted correction map.</p>"
+        }
+      },
+      {
+        "key": "lab",
+        "heading": {
+          "th": "อ่าน Lab 3 — ความแม่นยำที่ดีขึ้นมีต้นทุนใดซ่อนอยู่",
+          "en": "Read Lab 3: what the accuracy gain costs"
+        },
+        "body": {
+          "th": "<!--FIGURE:mitigation--><p>Lab 3 ในหนังสือจำลอง 8-qubit Ising Trotter circuits จำนวน 1–6 steps ใช้ depolarizing, relaxation และ readout noise ตามที่กำหนดไว้ ทดสอบ 120 circuits × 8 observables รวม 960 ค่า แต่ละ test circuit ใช้ 12,000 shots เท่ากัน ผลนี้มาจาก output ที่บันทึกในหนังสือ ไม่ใช่ toy rerun ข้างบน</p><div class=\"table-wrapper\"><table><thead><tr><th>วิธี</th><th>Mean absolute error</th><th>Noise levels ต่อ test circuit</th></tr></thead><tbody><tr><td>Raw</td><td>0.0796</td><td>1</td></tr><tr><td>Linear ZNE</td><td>0.0488</td><td>3</td></tr><tr><td>Richardson ZNE</td><td>0.0348</td><td>3</td></tr><tr><td>CDR</td><td>0.0389</td><td>1</td></tr><tr><td>Gradient boosting</td><td>0.0214</td><td>1</td></tr></tbody></table></div><p>ML ลด mean error ได้ 3.72 เท่าเทียบกับ raw และดีที่สุดโดยรวม แต่ที่ depth สาม steps CDR ดีกว่าเล็กน้อย CDR ที่ใช้ใน lab เป็น map ร่วมหนึ่งตัว ไม่ใช่ fit แยกต่อ circuit/observable ตาม CDR มาตรฐาน</p><p>Training ใช้อีก 300 near-Clifford circuits × 12,000 shots = 3.6 ล้าน shots ทั้ง ML และ CDR จึงใช้ shots รวมมากกว่า ZNE การเปรียบเทียบนี้เท่ากันเฉพาะ runtime และได้ประโยชน์มากขึ้นเมื่อ reuse model หลายครั้งภายใต้ distribution เดิม</p>",
+          "en": "<!--FIGURE:mitigation--><p>The book’s Lab 3 simulates eight-qubit Ising Trotter circuits at one to six steps, with specified depolarizing, relaxation and readout noise. It scores 120 circuits × eight observables, or 960 values, using 12,000 shots per test circuit for every method. The following comes from the book’s captured output, not the toy rerun above.</p><div class=\"table-wrapper\"><table><thead><tr><th>Estimator</th><th>Mean absolute error</th><th>Test noise levels</th></tr></thead><tbody><tr><td>Raw</td><td>0.0796</td><td>1</td></tr><tr><td>Linear ZNE</td><td>0.0488</td><td>3</td></tr><tr><td>Richardson ZNE</td><td>0.0348</td><td>3</td></tr><tr><td>CDR</td><td>0.0389</td><td>1</td></tr><tr><td>Gradient boosting</td><td>0.0214</td><td>1</td></tr></tbody></table></div><p>ML reduces mean error 3.72-fold relative to raw results and wins overall. CDR is slightly better at three steps. The lab’s CDR uses one shared linear map; standard CDR instead fits a circuit and observable separately.</p><p>Training adds 300 near-Clifford circuits × 12,000 shots, or 3.6 million shots, for the learned methods. Their total shot usage therefore exceeds ZNE here. The comparison is equal at runtime, with reuse across later circuits needed to amortize training.</p>"
+        }
+      },
+      {
+        "key": "practice",
+        "heading": {
+          "th": "ทดลองต่อ — ทำให้สมมติฐานเสีย แล้ววัดใหม่",
+          "en": "Your experiment: break the assumption and measure again"
+        },
+        "body": {
+          "th": "<p>รัน <code>python3 ch05.py</code> จากนั้นเปลี่ยนเฉพาะ deployment channel ให้ slope เป็น 0.7 โดยคง training channel เดิม ต้องแยก function ฝั่ง training กับ scoring ก่อนเพื่อไม่ให้แก้ทั้งสองพร้อมกัน วัดว่า MAE หลัง correction ยังดีกว่า raw หรือไม่ นี่เป็นการทดลอง drift ที่ระบุสาเหตุได้</p><p>Invariant: training และ held-out inputs ต้องไม่ซ้ำกัน และ exact test targets ใช้เพื่อ score เท่านั้น ไม่ใช่เลือก correction coefficients จากนั้นลองเพิ่ม nonlinear term แล้วดูว่า affine model ยังมี bias เหลือเท่าใด</p><p>Shot ledger แสดงการเฉลี่ย training cost ไปยังงานในอนาคต แต่ไม่ได้พิสูจน์ว่า ML ใช้ shots น้อยกว่า baseline ในตัวอย่าง เพราะทั้งคู่มี runtime shots เท่ากัน จึงยังมี training overhead เพิ่มเสมอ หากจะอ้างประหยัดทรัพยากร ต้องกำหนด accuracy target แล้ววัดจำนวน shots ที่แต่ละวิธีต้องใช้เพื่อไปถึงเป้านั้น</p><p>Mitigation ช่วยประมาณ observable ไม่ได้สร้าง protected logical state และไม่ใช่สิ่งแทน error correction ในการขยายระบบ</p>",
+          "en": "<p>Run <code>python3 ch05.py</code>, then change only the deployment channel’s slope to 0.7 while retaining the training channel. First split the shared function into training and scoring functions, so that you do not accidentally change both. Does correction still beat the raw MAE? This is a controlled drift experiment with a known cause.</p><p>Preserve disjoint training and held-out inputs. Use exact test targets only for scoring, never to select correction coefficients. Next add a nonlinear term and measure the residual bias an affine model cannot express.</p><p>The shot ledger amortizes training across future work; it does not prove fewer total shots here. Both alternatives use equal runtime shots, so learning retains extra training overhead. To claim resource savings, fix an accuracy target and measure the shots each method needs to reach it.</p><p>Mitigation improves an observable estimate. It does not create a protected logical state or replace error correction as the system scales.</p>"
+        }
+      }
+    ]
+  },
+  {
+    "n": 6,
+    "slug": "below-threshold-circuit-synthesis",
+    "short": "Circuit Synthesis",
+    "title": {
+      "th": "Circuit Synthesis — ลด gate อย่างถูกต้อง",
+      "en": "AI for Circuit Synthesis: Search for Fewer Gates, Verify Every Candidate"
+    },
+    "sub": {
+      "th": "มอง CNOT เป็น row operation บน GF(2) หา optimum ด้วย BFS แล้วอ่านผล learned search โดยไม่ลืม compile time และขอบเขตห้า qubits",
+      "en": "Treat CNOTs as GF(2) row operations, find an exact optimum with BFS, and evaluate learned search alongside compile time and scale."
+    },
+    "description": "เรียน circuit synthesis ผ่าน GF(2) และ CNOT รัน exact search ตรวจทุก input เปรียบเทียบผล Lab 4 ระหว่าง PMH กับ learned beam search พร้อมขอบเขตต้นทุน",
+    "source_pages": "38–45",
+    "figures": [
+      {
+        "name": "synthesis",
+        "file": "below-threshold-synthesis.png",
+        "alt": {
+          "th": "จำนวน CNOT ของ PMH และ learned beam search เทียบ optimum ใน 2,000 unseen matrices",
+          "en": "CNOT counts for PMH and learned beam search are compared with exact optima on 2,000 unseen matrices."
+        },
+        "caption": {
+          "th": "ภาพ 6.1 จากหนังสือ: beam 64 พบ optimum ใน 1,999 จาก 2,000 กรณี ลด CNOT รวม 27.8% จาก PMH แต่ compile ช้ากว่า เป็นผลบน linear reversible circuits ห้า qubits",
+          "en": "Book Figure 6.1. Beam 64 reaches the optimum on 1,999 of 2,000 cases and uses 27.8% fewer total CNOTs than PMH, at higher compile time. The benchmark is five-qubit linear reversible synthesis."
+        }
+      }
+    ],
+    "refs": [
+      {
+        "title": "Ruiz et al. Quantum circuit optimization with AlphaTensor. Nature Machine Intelligence (2025).",
+        "url": "https://www.nature.com/articles/s42256-025-01001-1"
+      },
+      {
+        "title": "Patel, Markov and Hayes. Optimal synthesis of linear reversible circuits. Quantum Information and Computation (2008).",
+        "url": "https://arxiv.org/abs/quant-ph/0302002"
+      },
+      {
+        "title": "Zen et al. Reusability report: Optimizing T count in general quantum circuits with AlphaTensor-Quantum. Nature Machine Intelligence (2026).",
+        "url": "https://www.nature.com/articles/s42256-025-01166-9"
+      }
+    ],
+    "sections": [
+      {
+        "key": "start",
+        "heading": {
+          "th": "เป้าหมายของ compiler — เปลี่ยนวิธีทำ โดยคงฟังก์ชันเดิม",
+          "en": "The compiler contract: change the implementation, preserve the function"
+        },
+        "body": {
+          "th": "<p>บทก่อนพยายามแก้ผลจาก noisy execution ส่วนบทนี้ลดโอกาสเกิด error ตั้งแต่ต้น ด้วยการเปลี่ยน circuit ให้ใช้ทรัพยากรน้อยลงโดยยังคำนวณ transformation เดิม Chapter 6 ของหนังสือเรียกสิ่งนี้ว่า AI ช่วยแก้คณิตศาสตร์ภายในโปรแกรม</p><p>พื้นฐานที่ใช้คือ binary matrices, XOR และ graph search เราจะเขียน exact synthesizer สามบิตที่ตรวจทุกคำตอบได้ แล้วใช้มันเป็นฐานทำความเข้าใจ learned search ใน Lab 4 ที่มีขนาดใหญ่กว่า เป้าหมายสำคัญกว่าคำว่า AI คือการมี evaluator ที่ตรวจ semantic equivalence ได้อย่างอิสระ</p><p>สำหรับ classical programmer ให้มองว่าเรากำลัง optimize intermediate representation แต่ทุก rewrite ต้องรักษา specification Gate count เป็น objective หนึ่ง ส่วน correctness เป็น constraint ถาวร การได้ circuit สั้นลงแต่คำนวณผิดเป็นผลที่ใช้งานไม่ได้</p>",
+          "en": "<p>The previous chapter corrected estimates after noisy execution. Here we reduce opportunities for errors earlier, by finding a cheaper circuit that implements the same transformation. Chapter 6 calls this AI improving the mathematics inside the program.</p><p>You need binary matrices, XOR and graph search. We will write an exact three-bit synthesizer whose answers can be checked exhaustively, then use it to understand the larger learned-search experiment in Lab 4. The essential ingredient is an evaluator that checks semantic equivalence independently of the search.</p><p>For a classical programmer, this resembles optimizing an intermediate representation. Every rewrite must preserve the specification. Gate count is an objective; correctness is a permanent constraint. A shorter circuit that implements the wrong transformation is not an acceptable optimization, regardless of how promising its search score looks.</p>"
+        }
+      },
+      {
+        "key": "objective",
+        "heading": {
+          "th": "เลือก cost ให้ตรงเครื่อง — CNOT, depth และ T gates",
+          "en": "Choose the cost for the machine: CNOTs, depth and T gates"
+        },
+        "body": {
+          "th": "<p>การนับ gates ทั้งหมดเท่ากันอาจผิดเป้าหมาย บนเครื่องที่มี noise สูง two-qubit gates และ depth มักเป็นสิ่งที่ compiler ต้องลด แต่ connectivity อาจบังคับให้เพิ่ม SWAPs หากวาง logical qubits ผิดตำแหน่ง วงจรที่สั้นบน abstract all-to-all device อาจแพงเมื่อลงเครื่องจริง</p><p>ใน fault-tolerant architecture หลายแบบ T gates มีต้นทุนจาก magic-state preparation จึงเกิดงาน T-count optimization ที่มี objective ต่างจาก CNOT synthesis <a href=\"https://www.nature.com/articles/s42256-025-01001-1\">AlphaTensor-Quantum</a> ใช้ reinforcement learning กับ tensor decomposition เพื่อหาการลด T-count บน benchmark circuits</p><p>อย่าสลับความหมายของผลลัพธ์: ลด CNOT 27.8% ใน lab ไม่เท่ากับลด T-count 27.8% หรือทำให้ application เร็วขึ้นเท่ากัน กำหนด native gate set, connectivity, ancillas และสิ่งที่ต้องรักษาไว้ใน specification ก่อนวัด</p><p>Compiler ควรรายงานทั้งค่า cost หลัง mapping และเวลาที่ใช้ค้นหา หาก compile ใช้เวลานานมากแต่ circuit รันครั้งเดียว การ optimize เชิงรุกอาจไม่คุ้ม ตรงกันข้าม circuit ที่ reuse หลายล้านครั้งอาจยอมจ่าย search ล่วงหน้าได้</p>",
+          "en": "<p>Counting all gates equally can optimize the wrong quantity. On noisy devices, two-qubit gates and depth are often central compiler costs. Connectivity can force extra SWAPs when logical qubits are poorly placed: a short circuit for an abstract all-to-all device may become costly on a particular chip.</p><p>In many fault-tolerant architectures, T gates require expensive magic-state preparation. T-count optimization therefore has a different objective from CNOT synthesis. <a href=\"https://www.nature.com/articles/s42256-025-01001-1\">AlphaTensor-Quantum</a> uses reinforcement learning and tensor decomposition to reduce T counts on benchmark circuits.</p><p>Keep the units attached to every result. A 27.8% CNOT reduction in a lab is not a 27.8% T-count reduction or an equal application speedup. Specify native gates, connectivity, available ancillas and the required semantics before measuring.</p><p>Report both the mapped circuit cost and the time spent searching. Aggressive optimization can be wasteful for a circuit executed once, yet worthwhile for a circuit reused millions of times.</p>"
+        }
+      },
+      {
+        "key": "algebra",
+        "heading": {
+          "th": "GF(2) — เปลี่ยน circuit เป็นกราฟที่ตรวจได้แน่นอน",
+          "en": "GF(2): turn synthesis into a graph with exact semantics"
+        },
+        "body": {
+          "th": "<p>Linear reversible circuit คำนวณ y=Ax บน GF(2) ซึ่งบวกเท่ากับ XOR และคูณด้วย binary values Matrix A ต้อง invertible เพื่อให้แปลงกลับได้ การทำ CNOT จาก control c ไป target t เปลี่ยน target output เป็น xₜ XOR x꜀ จึงแทนด้วยการ XOR row c เข้า row t</p><p>เริ่มจาก identity matrix แล้วใช้ CNOT ทุกคู่ที่อนุญาต แต่ละ matrix ที่ไปถึงเป็น node และ CNOT เป็น edge ถ้า edges มี cost เท่ากัน breadth-first search (BFS) จะพบ shortest path เมื่อค้นพบ node ครั้งแรก เพราะสำรวจตามจำนวน gates ที่เพิ่มขึ้นทีละหนึ่ง</p><p>ตัวอย่างของเราใช้สามบิต มี invertible matrices ทั้งหมด (8−1)(8−2)(8−4)=168 แบบ จึงไล่ได้ครบ จำนวนนี้เล็กพอจะเป็น exact oracle สำหรับให้คะแนน ไม่ต้องใช้ model ทำนายระยะทาง</p><p>ขอบเขตสำคัญ: ตัวอย่างนี้มีเฉพาะ CNOT ที่ทำ linear map ไม่มี phase gates, arbitrary rotations, hardware noise หรือ topology restrictions การตรวจ basis inputs ครบจึงเพียงพอสำหรับฟังก์ชันในคลาสนี้ แต่ไม่พอสำหรับ quantum circuit ทั่วไปที่อาจต่างกันเฉพาะ relative phase</p>",
+          "en": "<p>A linear reversible circuit computes y=Ax over GF(2), where addition is XOR and A must be invertible. A CNOT from control c to target t replaces the target output with its XOR with the control. On the matrix representation, this is row t XOR row c.</p><p>Start at the identity matrix. Every reachable matrix is a graph node, and every allowed CNOT is an edge. With equal edge costs, breadth-first search (BFS) finds a shortest circuit when it first discovers a node: it explores one additional gate at a time.</p><p>Our three-bit space contains (8−1)(8−2)(8−4)=168 invertible matrices. Enumerating the entire space is cheap enough to provide an exact scoring oracle, without a model predicting the remaining distance.</p><p>The scope is deliberately narrow: CNOT-only linear maps, without phases, arbitrary rotations, noise or connectivity restrictions. Exhaustive basis-input checks establish equivalence for this class. They would not suffice for general quantum circuits, which may differ only in relative phase.</p>"
+        }
+      },
+      {
+        "key": "example",
+        "heading": {
+          "th": "ลงมือเขียน — shortest path และการตรวจ inverse",
+          "en": "Write the exact search and verify its inverse"
+        },
+        "body": {
+          "th": "<p>เราแทนแต่ละ matrix row ด้วย integer bit mask การทำ CNOT จึงเป็น XOR เพียงหนึ่งครั้ง ให้ target circuit เริ่มจากห้า gates ที่มีคู่ gates หักล้างกัน แล้วให้ BFS หา shortest circuit โดยไม่ต้องใส่กฎ cancellation เป็นพิเศษ</p><!--EXAMPLE--><!--EXAMPLE_OUTPUT--><p>ผลลัพธ์ลดจากห้าเป็นสาม CNOTs และตรวจ semantic equivalence ครบแปด input strings จากนั้นรัน shortest circuit แล้วย้อน gates กลับเพื่อเช็ก inverse เพราะ CNOT เป็น inverse ของตัวเอง จึงกลับลำดับ gates เพื่อ invert ทั้ง circuit ได้</p><p>เก็บ verifier นี้แยกจาก logic ของ search การแค่ตรวจว่าจำนวน gates ลดลงยังไม่บอกว่าฟังก์ชันเดิมถูกเก็บไว้ หากในอนาคตเปลี่ยน BFS เป็น neural heuristic verifier ต้องทำงานเหมือนเดิม และ candidate ที่ไม่ผ่านต้องถูกปฏิเสธก่อนรายงาน cost gain</p>",
+          "en": "<p>Represent each matrix row with an integer bit mask, making a CNOT update a single XOR. Our target circuit starts with five gates, including a cancelling pair. BFS finds a shortest implementation without needing an explicit cancellation rewrite.</p><!--EXAMPLE--><!--EXAMPLE_OUTPUT--><p>The result uses three CNOTs instead of five. The program verifies semantic equivalence on all eight input strings, then runs the shortest circuit followed by its reverse to check the inverse. Each CNOT is self-inverse, so reversing the gate order inverts the entire circuit.</p><p>Keep this verifier independent of search logic. A lower count alone does not show that the function was preserved. If a future implementation replaces BFS with a learned heuristic, the verifier should remain unchanged. Reject an incorrect candidate before reporting any cost improvement.</p>"
+        }
+      },
+      {
+        "key": "lab",
+        "heading": {
+          "th": "อ่าน Lab 4 — learned search เทียบ optimum และ PMH",
+          "en": "Read Lab 4: learned search against the optimum and PMH"
+        },
+        "body": {
+          "th": "<!--FIGURE:synthesis--><p>ตัวเลขต่อไปนี้เป็น <strong>ผลที่บันทึกในหนังสือ</strong> Lab 4 หา optimum ด้วย BFS บน GL(5,2) ทั้ง 9,999,360 matrices ฝึก value network จาก 5% ของกลุ่มเพื่อทำนาย CNOTs ที่ยังต้องใช้ แล้วทดสอบ 2,000 unseen matrices โดยตรวจ circuit ทุกตัวด้วย Qiskit LinearFunction</p><div class=\"table-wrapper\"><table><thead><tr><th>วิธี</th><th>Mean CNOTs</th><th>พบ optimum</th></tr></thead><tbody><tr><td>Exact BFS</td><td>8.20</td><td>2,000 / 2,000</td></tr><tr><td>PMH</td><td>11.35</td><td>129 / 2,000</td></tr><tr><td>Learned greedy</td><td>8.61</td><td>1,344 / 2,000</td></tr><tr><td>Learned beam 8</td><td>8.21</td><td>1,968 / 2,000</td></tr><tr><td>Learned beam 64</td><td>8.20</td><td>1,999 / 2,000</td></tr></tbody></table></div><p>Beam 64 ลด CNOT รวม 27.8% เทียบ PMH แต่ Python search ใช้ประมาณ 6 ms ต่อ matrix เทียบกับ PMH ที่รัน compiled Rust ต่ำกว่า 0.1 ms ต้องรายงาน cost ทั้งสองด้านควบคู่กัน</p><p>PMH ออกแบบมาเพื่อ asymptotic scaling ไม่ใช่ shortest circuit สำหรับห้า qubits การชนะ benchmark นี้จึงสาธิตประโยชน์ของ learned heuristic กับ search ไม่ใช่พิสูจน์ว่า PMH อ่อนแอหรือว่า neural network ทำนาย optimum ได้ทุกครั้ง</p>",
+          "en": "<!--FIGURE:synthesis--><p>These are <strong>results recorded in the book</strong>. Lab 4 computes exact BFS optima across all 9,999,360 elements of GL(5,2). A value network trains on 5% of the group to predict remaining CNOTs. Search is evaluated on 2,000 unseen matrices, with every circuit checked using Qiskit LinearFunction.</p><div class=\"table-wrapper\"><table><thead><tr><th>Method</th><th>Mean CNOTs</th><th>Optimal cases</th></tr></thead><tbody><tr><td>Exact BFS</td><td>8.20</td><td>2,000 / 2,000</td></tr><tr><td>PMH</td><td>11.35</td><td>129 / 2,000</td></tr><tr><td>Learned greedy</td><td>8.61</td><td>1,344 / 2,000</td></tr><tr><td>Learned beam 8</td><td>8.21</td><td>1,968 / 2,000</td></tr><tr><td>Learned beam 64</td><td>8.20</td><td>1,999 / 2,000</td></tr></tbody></table></div><p>Beam 64 saves 27.8% of total CNOTs relative to PMH. Its Python search takes about 6 ms per matrix, compared with under 0.1 ms for PMH in compiled Rust. Report both sides of that trade-off.</p><p>PMH targets asymptotic scaling, not shortest five-qubit circuits. This benchmark demonstrates a useful learned heuristic plus search; it does not establish that PMH is weak or that a network predicts every optimum correctly.</p>"
+        }
+      },
+      {
+        "key": "practice",
+        "heading": {
+          "th": "ทดลองต่อ — เปลี่ยน gate set แล้วเก็บ verifier ไว้",
+          "en": "Your experiment: change the gate set, keep the verifier"
+        },
+        "body": {
+          "th": "<p>รัน <code>python3 ch06.py</code> แล้วเพิ่ม gates ลงใน original circuit โดยให้ input dimension เท่าเดิม ตรวจว่า BFS ยังหา circuit ที่ไม่ยาวกว่า original และ equivalence ผ่านทุก input จากนั้นอนุญาตเพียง nearest-neighbour CNOTs และรันใหม่ เปรียบเทียบความยาวของ implementation เดียวกันภายใต้ connectivity ต่างกัน</p><p>Invariant: target function ต้องไม่เปลี่ยน และทุก candidate ต้องผ่าน verifier เดิม หาก search graph ไม่เชื่อมถึง target ให้รายงานว่าไม่มีคำตอบใน gate set นั้น แทนการคืน circuit ที่ใกล้เคียงโดยไม่มีสัญญาณเตือน</p><p>เมื่อขยายขนาด exact labels จะเป็น bottleneck หนังสือระบุว่า GL(6,2) มีประมาณสองหมื่นล้าน matrices การย้ายไป learned search หรือ reinforcement learning จึงต้องประเมินทั้งคุณภาพข้อมูล การค้นหา และ correctness gate</p><p>หลักการที่ส่งต่อไปงาน AI-written code คือ generator เสนอได้อิสระ แต่ evaluator ต้องมี authority ที่ชัดเจน บทที่ 9 จะใช้รูปแบบนี้เมื่อเราไม่มี exact oracle สำหรับโปรแกรมทั่วไป</p><p>บันทึกคู่ control–target ที่อนุญาตไว้กับผลทุกครั้ง เพื่อให้ programmer อีกคนทำการเปรียบเทียบซ้ำได้ตรงกัน</p>",
+          "en": "<p>Run <code>python3 ch06.py</code>, then add gates to the original circuit without changing the input dimension. Check that BFS finds a circuit no longer than that original and that every input passes equivalence. Next restrict allowed CNOTs to neighbouring bits and rerun. Compare the same target under different connectivity.</p><p>Preserve the target function and the independent verifier. If the target is unreachable in the allowed gate set, report that fact rather than silently returning an approximation.</p><p>Exact labels become the scaling bottleneck: the book notes that GL(6,2) has roughly twenty billion matrices. Moving to learned search or reinforcement learning changes the search and data requirements, while correctness verification remains necessary.</p><p>The lesson for AI-written software is a generator paired with an authoritative evaluator. Chapter 9 applies that pattern when general programs lack an exact oracle.</p><p>Record the allowed gate pairs alongside every result so that another programmer can reproduce the comparison.</p>"
+        }
+      }
+    ]
+  }
+]

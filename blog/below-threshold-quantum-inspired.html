@@ -1,0 +1,600 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Quantum-Inspired — ปรับโปรแกรม classical | Anirach Mingkhwan</title>
+  <meta name="description" content="ใช้แนวคิด quantum บน CPU เรียน MaxCut, simulated bifurcation และ tensor trains พร้อมตัวอย่าง Python แยก memory savings จาก speedup จริง">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300..900&family=Sarabun:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400..600&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      color-scheme: light;
+      /* ink */
+      --navy: #11304b; --slate: #334155; --slate-light: #526174; --gray: #94a3b8;
+      /* ground */
+      --bg: #faf7f0; --white: #ffffff; --code-bg: #1e293b;
+      /* accent */
+      --blue: #226299; --blue-dark: #1a4d7a; --blue-light: #4992b9;
+      /* brand — sampled from the book covers. --gold is decorative on light grounds (2.2:1); --gold-dark is its text form. */
+      --gold: #c4a46c; --gold-dark: #7a5f22; --cloud: #dee7e6; --parchment: #e9e1c4; --focus: #226299;
+      /* status — use only these six, never invent a seventh */
+      --green: #22c55e; --red: #ef4444; --amber: #f59e0b;
+      --cyan: #06b6d4; --purple: #226299; --purple-dark: #1a4d7a;
+      /* type */
+      --font: 'Inter', 'Sarabun', -apple-system, BlinkMacSystemFont, sans-serif;
+      --mono: 'JetBrains Mono', 'Fira Code', 'Sarabun', monospace;
+      /* form */
+      --radius: 12px; --radius-sm: 8px; --radius-lg: 16px;
+      --measure: 720px; --wide: 860px;
+      --transition: 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+    html { scroll-behavior: smooth; }
+    body { font-family: var(--font); font-size: 17px; line-height: 1.8; color: var(--slate); background: var(--bg); -webkit-font-smoothing: antialiased; }
+    .blog-nav { position: fixed; top: 0; left: 0; right: 0; z-index: 100; background: rgba(248,250,252,0.85); backdrop-filter: blur(20px); border-bottom: 1px solid rgba(0,0,0,0.05); }
+    .blog-nav__inner { max-width: 860px; margin: 0 auto; padding: 0 2rem; height: 56px; display: flex; align-items: center; justify-content: space-between; }
+    .blog-nav__back { font-size: 0.85rem; font-weight: 500; color: var(--blue); text-decoration: none; }
+    .blog-nav__back:hover { color: #1a4d7a; }
+    .blog-nav__title { font-size: 0.85rem; font-weight: 600; color: var(--navy); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 50%; }
+    /* ── HERO ── house .post-hero on the approved Deep Blue gradient (page-design
+       §5 / INV-28). Ink is inverted for the dark ground: white title/meta, tag
+       pills white on 18% white — the openclaw-production treatment. The
+       background value must stay byte-identical to the approved string. */
+    .post-hero { padding: 8rem 2rem 3rem; background: linear-gradient(135deg, #11304b 0%, #1a4d7a 45%, #226299 100%); color: #fff; text-align: center; }
+    .post-hero__tags { display: flex; gap: 0.5rem; justify-content: center; margin-bottom: 1.25rem; flex-wrap: wrap; }
+    .post-hero__tag { display: inline-block; font-size: 0.72rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.1em; color: #fff; background: rgba(255,255,255,0.18); padding: 0.35rem 0.9rem; border-radius: 20px; }
+    .post-hero__title { font-size: clamp(1.8rem, 5vw, 3rem); font-weight: 800; color: #fff; line-height: 1.2; margin-bottom: 1rem; max-width: 720px; margin-left: auto; margin-right: auto; }
+    .post-hero__sub { font-size: 1.05rem; max-width: 640px; margin: 0 auto 1.5rem; line-height: 1.7; color: #fff; }
+    .post-hero__meta { font-size: 0.85rem; color: #fff; display: flex; align-items: center; justify-content: center; gap: 1.5rem; flex-wrap: wrap; }
+    .post-hero__series { font-weight: 600; color: #fff; }
+    /* the switch pill and the focus ring both sit on the dark hero: the pill is
+       a light chip so its labels keep their light-ground colours, and --focus
+       re-points to gold here (blue collapses on blue — the footer/pre
+       precedent). */
+    .post-hero { --focus: var(--gold); }
+    .post-hero__cover {
+      aspect-ratio: 1 / 1;
+      max-width: 380px;
+      margin: 2.5rem auto 0;
+      border-radius: var(--radius-lg, 16px);
+      overflow: hidden;
+      box-shadow: 0 20px 60px rgba(17,48,75,0.14);
+    }
+    .post-hero__cover img { width: 100%; height: 100%; object-fit: cover; display: block; }
+    .post-body { max-width: 720px; margin: 0 auto; padding: 3rem 2rem 6rem; }
+    .post-body h2 { font-size: 1.6rem; font-weight: 800; color: var(--navy); margin: 3rem 0 1rem; padding-bottom: 0.5rem; border-bottom: 2px solid rgba(34,98,153,0.15); }
+    .post-body h3 { font-size: 1.25rem; font-weight: 700; color: var(--navy); margin: 2.25rem 0 0.75rem; }
+    .post-body p { margin-bottom: 1.25rem; }
+    .post-body strong { font-weight: 700; color: var(--navy); }
+    .post-body a { color: var(--blue); text-decoration: underline; text-decoration-thickness: 1px; text-underline-offset: 2px; }
+    .post-body ul, .post-body ol { margin: 0.5rem 0 1.25rem 1.5rem; }
+    .post-body li { margin-bottom: 0.4rem; }
+    .post-body blockquote { background: rgba(34,98,153,0.06); border-left: 4px solid var(--blue); padding: 1rem 1.25rem; border-radius: 0 10px 10px 0; margin: 1.25rem 0; font-size: 0.95rem; color: var(--navy); }
+    .post-body hr { border: none; height: 1px; background: linear-gradient(90deg, transparent, rgba(34,98,153,0.2), transparent); margin: 3rem 0; }
+    /* ── CODE ── */
+    .post-body pre { background: var(--code-bg); border-radius: 12px; padding: 1.5rem; margin: 1.25rem 0 1.5rem; overflow-x: auto; border: 1px solid rgba(255,255,255,0.05); }
+    .post-body pre code { font-family: var(--mono); font-size: 0.85rem; color: #e2e8f0; line-height: 1.7; background: none; padding: 0; white-space: pre-wrap; }
+    .post-body code { font-family: var(--mono); font-size: 0.88em; background: rgba(34,98,153,0.08); color: var(--blue-dark); padding: 0.15em 0.45em; border-radius: 5px; }
+    /* ── TABLES ── */
+    .table-wrapper { overflow-x: auto; margin: 1.5rem 0; border-radius: 0.5rem; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1); }
+    table { width: 100%; border-collapse: collapse; background: white; }
+    th { background: #226299; color: white; padding: 1rem; text-align: left; font-weight: 600; }
+    td { padding: 1rem; border-bottom: 1px solid #e5e7eb; }
+    .post-body table { display: block; width: 100%; overflow-x: auto; }
+    /* ── ALERTS ── */
+    .alert { background: #fef3cd; border: 1px solid #facc15; border-radius: 0.5rem; padding: 1rem; margin: 1.5rem 0; }
+    .alert.danger { background: #fee2e2; border-color: #ef4444; }
+    .alert.info { background: #e0f2fe; border-color: #06b6d4; }
+    .alert.success { background: #d1fae5; border-color: #10b981; }
+    /* ── KEY TAKEAWAYS ── */
+    .key-takeaways { background: linear-gradient(135deg, #f3f4f6 0%, #e5e7eb 100%); border-radius: 1rem; padding: 2rem; margin: 3rem 0; }
+    .key-takeaways h3 { color: #226299; margin-bottom: 1.5rem; }
+    .post-series-footer { text-align: center; font-size: 0.85rem; color: var(--slate-light); font-style: italic; margin-top: 2rem; padding-top: 2rem; border-top: 1px solid #e2e8f0; }
+    .blog-footer { background: var(--navy); padding: 2rem 0; text-align: center; }
+    .blog-footer a { color: var(--gold); text-decoration: none; font-weight: 600; font-size: 0.9rem; }
+    .blog-footer span { color: var(--gray); font-size: 0.8rem; display: block; margin-top: 0.4rem; }
+    @media (max-width: 600px) {
+      .post-hero { padding: 7rem 1.25rem 2.5rem; }
+      .post-body { padding: 2rem 1.25rem 4rem; }
+      .post-hero__meta { flex-direction: column; gap: 0.4rem; }
+      .post-body h2 { font-size: 1.4rem; }
+      .post-body h3 { font-size: 1.15rem; }
+      .post-body pre { padding: 1rem; border-radius: 8px; }
+    }
+
+    :focus-visible { outline: 2px solid var(--focus); outline-offset: 3px; border-radius: 2px; }
+    /* the ring sits on the page ground (3px offset). Inside the navy footers
+       and code blocks var(--blue) collapses to 2.12:1, so those scopes
+       re-point --focus to gold (5.73:1 on navy). */
+    .footer, .blog-footer, pre { --focus: var(--gold); }
+    :focus:not(:focus-visible) { outline: none; }
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after {
+        animation-duration: .01ms !important; animation-iteration-count: 1 !important;
+        transition-duration: .01ms !important; scroll-behavior: auto !important;
+      }
+    }
+    h1, h2, h3, .post-hero__title, .card__title { text-wrap: balance; }
+    .post-body { overflow-wrap: break-word; }   /* long URLs and inline code wrap instead of widening the page */
+
+    .post-body img, .post-body svg { max-width: 100%; height: auto; }
+
+    /* ── SKIP LINK ── a11y-perf R5: the link and the landmark it targets are a
+       pair — useless without both halves. Off-screen until focused, then the
+       first tab stop on every page. */
+    .skip-link { position: absolute; left: -9999px; }
+    .skip-link:focus {
+      left: 1rem; top: 1rem; z-index: 999;
+      background: var(--navy); color: #fff;
+      padding: 0.75rem 1.25rem; border-radius: var(--radius-sm);
+      font-weight: 600; text-decoration: none;
+    }
+
+    /* ── POST WAYFINDING ── the wordmark is the home link; the footer carries
+       the full destination row. */
+    .blog-nav__home {
+      font-size: 0.9rem; font-weight: 800; color: var(--navy);
+      text-decoration: none; margin-right: 1rem;
+    }
+    .blog-nav__home:hover { color: var(--blue); }
+    .blog-nav__inner > .blog-nav__back { margin-right: auto; }
+    .blog-footer__nav {
+      display: flex; flex-wrap: wrap; justify-content: center; gap: 0.35rem 1.25rem;
+      max-width: 860px; margin: 0 auto 1.25rem; padding: 0 2rem 1.25rem;
+      border-bottom: 1px solid rgba(255,255,255,0.12);
+    }
+    .blog-footer__nav a { color: var(--gold); font-size: 0.85rem; font-weight: 600; text-decoration: none; }
+    .blog-footer__nav a:hover { color: #fff; text-decoration: underline; }
+
+    html { scroll-padding-top: 5rem; }
+    [id] { scroll-margin-top: 5rem; }
+
+    /* Thai needs more room than Latin at the same nominal size. */
+    .post-body:lang(th) { font-size: 18px; line-height: 1.85; }
+    .post-body p, .post-body li, .post-body blockquote { text-wrap: pretty; }
+
+    /* ---- side-scroll affordance ----
+       pre blocks and tables can exceed 720px. These layers paint a shadow ONLY
+       where there is more content in that direction; when fully scrolled the
+       cover slides over the shadow and hides it. No JavaScript, no wrapper. */
+    .post-body pre, .post-body table {
+      overflow-x: auto;
+      background-image:
+        linear-gradient(to right, var(--code-bg, #0f172a) 30%, rgba(15,23,42,0)),
+        linear-gradient(to left, var(--code-bg, #0f172a) 30%, rgba(15,23,42,0)),
+        radial-gradient(farthest-side at 0 50%, rgba(0,0,0,.28), rgba(0,0,0,0)),
+        radial-gradient(farthest-side at 100% 50%, rgba(0,0,0,.28), rgba(0,0,0,0));
+      background-position: 0 0, 100% 0, 0 0, 100% 0;
+      background-repeat: no-repeat;
+      background-size: 40px 100%, 40px 100%, 14px 100%, 14px 100%;
+      background-attachment: local, local, scroll, scroll;
+    }
+    .post-body table {
+      background-image:
+        linear-gradient(to right, var(--white, #fff) 30%, rgba(255,255,255,0)),
+        linear-gradient(to left, var(--white, #fff) 30%, rgba(255,255,255,0)),
+        radial-gradient(farthest-side at 0 50%, rgba(17,48,75,.16), rgba(17,48,75,0)),
+        radial-gradient(farthest-side at 100% 50%, rgba(17,48,75,.16), rgba(17,48,75,0));
+      background-position: 0 0, 100% 0, 0 0, 100% 0;
+      background-repeat: no-repeat;
+      background-size: 40px 100%, 40px 100%, 14px 100%, 14px 100%;
+      background-attachment: local, local, scroll, scroll;
+    }
+
+    /* ---- table of contents ---- */
+    .post-toc {
+      max-width: 720px;
+      margin: 2rem auto 0;
+      padding: 1rem 1.25rem;
+      background: rgba(34,98,153,0.05);
+      border: 1px solid rgba(34,98,153,0.14);
+      border-left: 3px solid var(--gold, #c4a46c);
+      border-radius: 10px;
+      font-size: 0.92rem;
+    }
+    .post-toc > summary {
+      cursor: pointer;
+      font-weight: 700;
+      color: var(--navy);
+      list-style: none;
+    }
+    .post-toc > summary::-webkit-details-marker { display: none; }
+    .post-toc > summary::before {
+      content: "\25B8";
+      display: inline-block;
+      margin-right: 0.5rem;
+      transition: transform 0.2s ease;
+      color: var(--gold-dark, #7a5f22);
+    }
+    .post-toc[open] > summary::before { transform: rotate(90deg); }
+    .post-toc > summary:focus-visible { outline: 3px solid var(--focus, #226299); outline-offset: 3px; }
+    .post-toc ol { margin: 0.85rem 0 0.25rem; padding-left: 1.4rem; }
+    .post-toc li { margin-bottom: 0.4rem; line-height: 1.5; }
+    .post-toc a { color: var(--slate); text-decoration: none; }
+    .post-toc a:hover, .post-toc a:focus-visible { color: var(--blue-dark, #1a4d7a); text-decoration: underline; }
+    @media (max-width: 600px) { .post-toc { margin: 1.25rem 1rem 0; } }
+
+    /* ---- cross-document view transitions ---- */
+    @view-transition { navigation: auto; }
+    .nav, .blog-nav { view-transition-name: site-nav; }
+    .footer, .blog-footer { view-transition-name: site-footer; }
+    @media (prefers-reduced-motion: reduce) {
+      ::view-transition-group(*),
+      ::view-transition-old(*),
+      ::view-transition-new(*) { animation: none !important; }
+    }
+
+    /* ── SERIES STRIP — Hermes Agent in Practice ──
+       Same class and inner-wrapper shape as the OpenClaw strip because the
+       linter's RE_SNAV recognises exactly `series-nav` + a nested div; a
+       renamed strip would read as "no nav" and fail INV-08. All content
+       checks (INV-03 family) iterate the SERIES7 list only, so this strip's
+       labels are convention, not contract. House-styled, not the island CSS. */
+    .series-nav {
+      max-width: 720px; margin: 2rem auto 0; padding: 1.1rem 1.4rem;
+      background: rgba(255,255,255,0.75); border: 1px solid rgba(34,98,153,0.15);
+      border-left: 3px solid var(--gold); border-radius: 12px;
+    }
+    .series-nav h3 {
+      font-size: 0.78rem; font-weight: 700; text-transform: uppercase;
+      letter-spacing: 0.08em; color: var(--gold-dark); margin-bottom: 0.6rem;
+    }
+    .series-links { display: flex; flex-wrap: wrap; gap: 0.5rem; }
+    .series-links a, .series-links .current {
+      font-size: 0.82rem; font-weight: 600; padding: 0.35rem 0.8rem;
+      border-radius: 50px; text-decoration: none;
+    }
+    .series-links a { color: var(--blue-dark); background: rgba(34,98,153,0.08); }
+    .series-links a:hover { background: rgba(34,98,153,0.16); }
+    .series-links .current { color: #fff; background: var(--blue-dark); }
+    @media (max-width: 600px) { .series-nav { margin: 1.5rem 1rem 0; } }
+
+    /* ── FIGURE — the sanctioned diagram component (page-design §4 Content).
+       Diagrams are PNGs; this repo built them out of divs twice and reverted
+       twice. The image is wrapped in a link to itself so a phone can pinch a
+       1400px drawing without a line of JavaScript. */
+    .figure { margin: 2.5rem 0; }
+    .figure__img { width: 100%; height: auto; display: block;
+                   border-radius: var(--radius); border: 1px solid rgba(0,0,0,0.06); }
+    .figure__caption { font-size: 0.85rem; color: var(--slate-light);
+                       text-align: center; margin-top: 0.75rem; }
+
+    /* ── REFERENCES — every material number in this series carries its source.
+       The tags are the book's own four evidence labels. */
+    .references { margin-top: 3rem; padding-top: 2rem; border-top: 1px solid #e2e8f0; }
+    .references__note { font-size: 0.85rem; color: var(--slate-light); margin-bottom: 1rem; }
+    .references__list { padding-left: 1.4rem; font-size: 0.9rem; line-height: 1.75; }
+    .references__list li { margin-bottom: 0.7rem; }
+    .ref-tag { display: inline-block; font-size: 0.7rem; font-weight: 700;
+               letter-spacing: 0.06em; text-transform: uppercase; padding: 0.1rem 0.5rem;
+               border-radius: 50px; margin-right: 0.4rem; vertical-align: 0.05em;
+               background: rgba(34,98,153,0.1); color: var(--blue-dark); }
+    /* All four labels get a rule.  --standard and --study shipped without one
+       on 2026-09-05, so 158 of 306 tags fell through to the base blue and the
+       two labels were indistinguishable.  Ratios on --bg: 6.70 / 6.92 / 7.36 /
+       4.81:1, all AA at this size. */
+    .ref-tag--law { background: rgba(239,68,68,0.12); color: #991b1b; }
+    .ref-tag--standard { background: rgba(34,98,153,0.12); color: var(--blue-dark); }
+    .ref-tag--study { background: rgba(34,197,94,0.18); color: #14532d; }
+    .ref-tag--synthesis { background: rgba(196,164,108,0.22); color: var(--gold-dark); }
+    .ref-supports { display: block; color: var(--slate-light); font-size: 0.85rem; }
+
+    /* ── LANGUAGE SWITCH — pure CSS, zero JavaScript (INV-38) ──
+       One visually-hidden checkbox as a direct child of body, BEFORE the main landmark,
+       so `#langSwitch:checked ~ main …` reaches every content block. The two
+       tracks are paired blocks: .l-th (default) and .l-en (hidden until
+       checked; display:revert restores block for divs, inline for spans).
+       Naming stays clear of INV-12's menu-token regex (hamburger|burger|
+       nav__toggle|nav-toggle|navtoggle|menu-toggle|menu__toggle) — verified.
+       No JS also means no persistence across posts; each post opens in Thai. */
+    .lang-switch-box { position: absolute; left: -9999px; }
+    /* where anchor positioning exists the box sits on the pill, so focusing it scrolls the pill into view */
+    .lang-switch { anchor-name: --lang-switch; }
+    .lang-switch-box { position-anchor: --lang-switch; top: anchor(top); left: anchor(left); width: 1px; height: 1px; opacity: 0; pointer-events: none; }
+    .l-en { display: none; }
+    #langSwitch:checked ~ main .l-en { display: revert; }
+    #langSwitch:checked ~ main .l-th { display: none; }
+    .lang-switch {
+      display: inline-flex; align-items: center; gap: 0.55rem;
+      margin-top: 1.4rem; padding: 0.4rem 1.1rem; border-radius: 50px;
+      background: rgba(255,255,255,0.85); border: 1px solid rgba(255,255,255,0.4);
+      cursor: pointer; font-size: 0.85rem; user-select: none;
+    }
+    .lang-switch span { color: var(--slate-light); font-weight: 600; transition: color 0.2s; }
+    .lang-switch .lang-sep { color: var(--gray); font-weight: 400; }
+    .lang-switch .lang-th { color: var(--navy); font-weight: 800; }
+    #langSwitch:checked ~ main .lang-switch .lang-th { color: var(--slate-light); font-weight: 600; }
+    #langSwitch:checked ~ main .lang-switch .lang-en { color: var(--navy); font-weight: 800; }
+    .lang-switch:hover { border-color: #fff; }
+    #langSwitch:focus-visible ~ main .lang-switch {
+      outline: 2px solid var(--focus); outline-offset: 3px;
+    }
+  </style>
+  <!-- social -->
+  <link rel="canonical" href="https://anirach.com/blog/below-threshold-quantum-inspired.html">
+  <meta property="og:type" content="article">
+  <meta property="og:url" content="https://anirach.com/blog/below-threshold-quantum-inspired.html">
+  <meta property="og:site_name" content="Anirach Mingkhwan">
+  <meta property="og:locale" content="th_TH">
+  <meta property="og:locale:alternate" content="en_US">
+  <meta property="article:published_time" content="2026-11-25">
+  <meta property="article:author" content="https://anirach.com/">
+  <meta property="og:title" content="Quantum-Inspired — ปรับโปรแกรม classical">
+  <meta property="og:description" content="ใช้แนวคิด quantum บน CPU เรียน MaxCut, simulated bifurcation และ tensor trains พร้อมตัวอย่าง Python แยก memory savings จาก speedup จริง">
+  <meta property="og:image" content="https://anirach.com/images/below-threshold-quantum-inspired-og.jpg">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
+  <meta property="og:image:alt" content="Quantum-Inspired — ปรับโปรแกรม classical">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:image" content="https://anirach.com/images/below-threshold-quantum-inspired-og.jpg">
+  <meta name="twitter:image:alt" content="Quantum-Inspired — ปรับโปรแกรม classical">
+  <meta name="robots" content="max-image-preview:large">
+  <meta name="theme-color" content="#11304b">
+  <link rel="icon" href="/favicon.ico" sizes="any">
+  <link rel="apple-touch-icon" href="/apple-touch-icon.png">
+  <!-- /social -->
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "BlogPosting",
+    "headline": "Quantum-Inspired — ปรับโปรแกรม classical",
+    "author": {
+      "@type": "Person",
+      "@id": "https://anirach.com/#person",
+      "name": "Anirach Mingkhwan",
+      "url": "https://anirach.com/"
+    },
+    "datePublished": "2026-11-25",
+    "dateModified": "2026-11-25",
+    "image": "https://anirach.com/images/below-threshold-quantum-inspired-og.jpg",
+    "inLanguage": [
+      "th",
+      "en"
+    ],
+    "mainEntityOfPage": "https://anirach.com/blog/below-threshold-quantum-inspired.html"
+  }
+  </script>
+</head>
+<body>
+<a href="#main" class="skip-link">Skip to content</a>
+<input type="checkbox" id="langSwitch" class="lang-switch-box" aria-label="Switch language: Thai / English">
+
+  <nav class="blog-nav">
+    <div class="blog-nav__inner">
+      <a href="../index.html" class="blog-nav__home">Anirach</a>
+      <a href="./" class="blog-nav__back">‹ Tutorials</a>
+      <div class="blog-nav__title">Quantum-Inspired</div>
+    </div>
+  </nav>
+
+  <main id="main">
+
+  <header class="post-hero">
+    <div class="post-hero__tags">
+      <span class="post-hero__tag">Quantum Computing</span>
+      <span class="post-hero__tag">AI Engineering</span>
+      <span class="post-hero__tag">Python</span>
+    </div>
+    <h1 class="post-hero__title"><span class="l-th">Quantum-Inspired — ปรับโปรแกรม classical</span><span class="l-en" lang="en">Quantum-Inspired Programming: Better Optimization and Smaller Models on a CPU</span></h1>
+    <p class="post-hero__sub"><span class="l-th">เรียน simulated bifurcation, tensor trains และ stabilizer simulation พร้อมแยกคุณภาพคำตอบ การประหยัด memory และ runtime ที่วัดได้จริง</span><span class="l-en" lang="en">Learn simulated bifurcation, tensor trains and stabilizer simulation while separating solution quality, memory savings and actual runtime.</span></p>
+    <div class="post-hero__meta">
+      <span>By <strong>Anirach Mingkhwan</strong></span>
+      <span class="post-hero__series">Below Threshold 2026 • Chapter #8</span>
+      <span><time datetime="2026-11-25">25 Nov 2026</time></span>
+      <span>5 min read</span>
+    </div>
+    <label for="langSwitch" class="lang-switch" title="สลับภาษา · Switch language"><span class="lang-th">ไทย</span><span class="lang-sep">·</span><span class="lang-en" lang="en">English</span></label>
+    <div class="post-hero__cover">
+      <img src="../images/below-threshold-quantum-inspired-cover.jpg" alt="Quantum-Inspired — ปรับโปรแกรม classical" width="800" height="800" loading="eager" fetchpriority="high" decoding="async">
+    </div>
+  </header>
+
+  <article class="post-body">
+
+    <details class="post-toc l-th" open>
+      <summary>ในบทความนี้</summary>
+      <ol>
+          <li><a href="#th-start">เริ่มจาก bottleneck แล้วจึงเลือกคณิตศาสตร์</a></li>
+          <li><a href="#th-bifurcation">Simulated bifurcation: ใช้ dynamics แบบขนานค้นหา cut</a></li>
+          <li><a href="#th-baseline">โค้ด: ใช้ exact baseline ขนาดเล็กเป็นผู้ตัดสิน</a></li>
+          <li><a href="#th-tensors">Tensor trains: ย่อ representation แล้วจึงวัดผล</a></li>
+          <li><a href="#th-structure">Stabilizers และ dequantization: ตรวจ assumptions ให้ครบ</a></li>
+          <li><a href="#th-practice">เลือกผลดีที่วัดได้หนึ่งเรื่อง</a></li>
+          <li><a href="#th-resources">Run & check — รันตัวอย่างด้วยตัวเอง</a></li>
+          <li><a href="#th-references">Sources & scope — แหล่งอ้างอิงและขอบเขต</a></li>
+      </ol>
+    </details>
+    <details class="post-toc l-en" open>
+      <summary>In this post</summary>
+      <ol>
+          <li><a href="#en-start">Start with the bottleneck, then choose the mathematics</a></li>
+          <li><a href="#en-bifurcation">Simulated bifurcation: parallel dynamics search for a cut</a></li>
+          <li><a href="#en-baseline">Code: make the small exact baseline your judge</a></li>
+          <li><a href="#en-tensors">Tensor trains: compress the representation, then measure</a></li>
+          <li><a href="#en-structure">Stabilizers and dequantization: inspect the assumptions</a></li>
+          <li><a href="#en-practice">Choose one measurable win</a></li>
+          <li><a href="#en-resources">Run and check the example</a></li>
+          <li><a href="#en-references">Sources and scope</a></li>
+      </ol>
+    </details>
+    <div class="l-th">
+
+<h2 id="th-start">เริ่มจาก bottleneck แล้วจึงเลือกคณิตศาสตร์</h2>
+<blockquote><p><strong>ดาวน์โหลดหนังสือและโค้ดประกอบ</strong></p><p><a href="https://drive.google.com/uc?export=download&amp;id=1iG7oSWLC9UI91VsPOzqcxk3_evH8Sn3b">ดาวน์โหลด Below Threshold ฉบับเต็ม (PDF ภาษาอังกฤษ · 104 หน้า · 5.4 MB)</a><br><a href="https://drive.google.com/file/d/1iG7oSWLC9UI91VsPOzqcxk3_evH8Sn3b/view?usp=sharing">อ่านบน Google Drive</a> · <a href="../downloads/below-threshold-tutorial-examples.zip" download>ดาวน์โหลดตัวอย่าง Python ทั้งสิบบท (ZIP)</a></p></blockquote>
+<p><strong>บทที่ 8/10</strong> · บทเรียนดัดแปลงจาก <em>Below Threshold: AI, Quantum Errors and Better Code</em> ฉบับ 1.0 บทที่ 8 หน้า 50–60</p><p>พื้นฐานที่ใช้คือ loops, arrays, graphs และแนวคิด matrix product เป้าหมายของบทนี้คือมองเห็นโอกาสสามแบบ: หาคำตอบเชิงจัดหมู่ที่ดีขึ้น, แทน object ใหญ่ด้วย memory น้อยลง และใช้โครงสร้างพิเศษของ circuit family เพื่อจำลองได้เร็วขึ้น ทั้งสามแบบไม่ต้องมี quantum processor</p><p>คำว่า “quantum-inspired” บอกที่มาของวิธี execution อาจเป็น classical ทั้งหมด คำถามที่มีประโยชน์คือโครงสร้างคณิตศาสตร์ตรงกับโจทย์หรือไม่ optimization heuristic อาจให้ cut ดีขึ้นแต่ไม่รับรอง optimality tensor representation อาจเก็บ weights น้อยลงแต่คำนวณมากขึ้น stabilizer simulator เร็วเพราะใช้โครงสร้างที่วงจรทั่วไปไม่มี</p><p>เขียน target metric ก่อนเลือกวิธี สำหรับ scheduling อาจเป็น objective value ภายใต้งบเวลาคงที่ สำหรับโมเดลที่ใส่ในอุปกรณ์ไม่ได้ memory อาจสำคัญที่สุด การกำหนดเช่นนี้ช่วยไม่ให้นำจำนวน parameters ที่ลดลงไปอ้างเป็น runtime improvement ซึ่งยังไม่มีใครวัด</p>
+
+<h2 id="th-bifurcation">Simulated bifurcation: ใช้ dynamics แบบขนานค้นหา cut</h2>
+    <figure class="figure">
+      <a href="../images/below-threshold-sb.png">
+        <img class="figure__img" src="../images/below-threshold-sb.png" alt="Lab 5 ในหนังสือใช้เครื่องหมาย oscillator กำหนด cut และ distributions ของ seeded runs แยกคุณภาพเฉลี่ยจากค่า best-known ของ G1" width="1461" height="579" loading="lazy" decoding="async">
+      </a>
+      <figcaption class="figure__caption">Lab 5 ในหนังสือใช้เครื่องหมาย oscillator กำหนด cut และ distributions ของ seeded runs แยกคุณภาพเฉลี่ยจากค่า best-known ของ G1 จากหนังสือ Below Threshold ภาพ 8.1 เปิดดูภาพขนาดเต็มได้ เปิดภาพเพื่อดูขนาดเต็ม</figcaption>
+    </figure><p>MaxCut กำหนดให้แต่ละ vertex อยู่หนึ่งในสองฝั่ง แล้วนับ edges ที่ข้ามฝั่ง เมื่อแทนด้วย spins s<sub>i</sub> = ±1 แต่ละ edge มีส่วน (1 − s<sub>i</sub>s<sub>j</sub>)/2 simulated bifurcation ผูก position และ momentum เข้ากับแต่ละ spin จากนั้นเพิ่ม pump เพื่อแยก oscillator positions ไปยังผนังบวกหรือลบ เครื่องหมายสุดท้ายกำหนด candidate partition</p><p>coupling คำนวณด้วย matrix-vector product จึงอัปเดตหลาย coordinates พร้อมกันได้ นี่คือเหตุผลที่น่าสำรวจ implementation บน CPU, GPU หรือ FPGA แบบขนาน แต่ไม่ได้ทำให้ search กลายเป็น exact <a href="https://doi.org/10.1126/sciadv.aav2372">บทความ simulated bifurcation ต้นฉบับ</a> และ <a href="https://doi.org/10.1126/sciadv.abe7953">รุ่น ballistic/discrete</a> วางวิธีไว้ ส่วนตัวเลขเฉพาะ graph ในภาพมาจากการทดลองที่บันทึกในหนังสือ</p><p>Lab 5 รายงานว่า ballistic SB 1,000 steps ให้ crossing edges เฉลี่ย 11,606.7 บน G1 เทียบกับ 11,549.8 ของ annealing 200 sweeps ทุกวิธีได้ 64 seeded runs ค่าอ้างอิง G1 ที่ 11,624 เป็น best-known value ไม่ใช่ optimum ที่พิสูจน์แล้ว เวลาที่รายงานเปรียบเทียบ implementations ในหนังสือบน laptop เครื่องเดียว และ annealer ไม่ใช่โค้ด C ที่ปรับแต่งเต็มที่</p>
+
+<h2 id="th-baseline">โค้ด: ใช้ exact baseline ขนาดเล็กเป็นผู้ตัดสิน</h2>
+<p>ตัวอย่างสอนใหม่นี้ตั้งใจใช้ greedy one-vertex flips แทน simulated bifurcation เพื่อสร้าง evaluator ก่อนลอง search ที่ซับซ้อนกว่า บนหก vertices เราลองครบ 64 partitions ได้ จึงหาคำตอบ exact มาเป็นตัวตัดสิน</p><pre><code>&quot;&quot;&quot;Toy MaxCut: compare a local optimum with an exact small-instance answer.&quot;&quot;&quot;
+from itertools import product
+
+EDGES = [(0, 1), (0, 5), (1, 2), (2, 4), (3, 4), (3, 5), (4, 5)]
+
+
+def cut(bits):
+    return sum(bits[a] != bits[b] for a, b in EDGES)
+
+
+def greedy(bits):
+    while True:
+        neighbours = [bits[:i] + (1 - bits[i],) + bits[i + 1:]
+                      for i in range(len(bits))]
+        candidate = max(neighbours, key=cut)
+        if cut(candidate) &lt;= cut(bits):
+            return bits
+        bits = candidate
+
+
+local = greedy((0,) * 6)
+exact = max(product((0, 1), repeat=6), key=cut)
+print(f&quot;greedy: cut={cut(local)}/{len(EDGES)}, partition={local}&quot;)
+print(f&quot;exact:  cut={cut(exact)}/{len(EDGES)}, partition={exact}&quot;)
+print(f&quot;greedy relative gap={(cut(exact) - cut(local)) / cut(exact):.2%}&quot;)
+assert 0 &lt;= cut(local) &lt;= cut(exact) &lt;= len(EDGES)
+assert cut(local) == cut(tuple(1 - x for x in local))
+assert all(cut(local[:i] + (1-local[i],) + local[i+1:]) &lt;= cut(local)
+           for i in range(6))</code></pre><pre><code>greedy: cut=5/7, partition=(1, 0, 0, 0, 1, 0)
+exact:  cut=6/7, partition=(0, 1, 0, 0, 1, 1)
+greedy relative gap=16.67%</code></pre><p>greedy หยุดที่ห้า crossing edges เพราะการ flip ทีละ vertex ไม่ทำให้ดีขึ้น แต่ exact search พบหก relative gap จึงเป็น 1/6 หรือ 16.67% เงื่อนไขหยุดแบบ local ไม่ได้รับรอง global optimum การกลับ bits ทุกตัวพร้อมกันรักษาค่า cut เดิมไว้ เป็น invariant อิสระสำหรับตรวจ evaluator</p><p>เมื่อ graph ใหญ่ขึ้น enumeration โตแบบ exponential เราอาจมีเพียง bound หรือ best-known reference ต้องระบุความเปลี่ยนแปลงนี้ให้ชัด รายงาน distributions หลาย seeds และ budgets แทนการเลือก run ที่โชคดีเพียงครั้งเดียว heuristic ใหม่ควรใช้ <code>cut()</code> ตัวเดิม พร้อม input graph, stopping rule และวิธีนับ preprocessing เดียวกัน</p>
+
+<h2 id="th-tensors">Tensor trains: ย่อ representation แล้วจึงวัดผล</h2>
+    <figure class="figure">
+      <a href="../images/below-threshold-tt.png">
+        <img class="figure__img" src="../images/below-threshold-tt.png" alt="Lab 6 ในหนังสือแสดงว่า fine-tuning กู้ accuracy หลัง compression ได้ แต่ weights ที่ลดลงอาจต้องใช้ arithmetic มากขึ้น" width="1482" height="546" loading="lazy" decoding="async">
+      </a>
+      <figcaption class="figure__caption">Lab 6 ในหนังสือแสดงว่า fine-tuning กู้ accuracy หลัง compression ได้ แต่ weights ที่ลดลงอาจต้องใช้ arithmetic มากขึ้น จากหนังสือ Below Threshold ภาพ 8.2 เปิดดูภาพขนาดเต็มได้ เปิดภาพเพื่อดูขนาดเต็ม</figcaption>
+    </figure><p>tensor train แทน array ใหญ่ด้วย chain ของ cores เล็กที่เชื่อมกันผ่าน bond indices ค่า bond rank ควบคุมโครงสร้างที่ chain แทนได้ <a href="https://doi.org/10.1137/090752286">TT decomposition</a> ให้ numerical format ส่วน <a href="https://arxiv.org/abs/1509.06569">Tensorizing Neural Networks</a> นำแนวคิดไปใช้กับ dense layers</p><p>Lab 6 ในหนังสือแทน hidden layer ขนาด 1024 × 1024 ที่ rank 16 จำนวน weights ลดจาก 1,048,576 เหลือ 33,280 หรือประมาณ 32 เท่า หลัง fine-tuning เพิ่มอีกหนึ่ง epoch ค่า test accuracy ที่บันทึกคือ 98.03% เทียบกับ 97.98% ของโมเดลเดิม การฝึกเพิ่มสำคัญมาก เพราะ decomposition อย่างเดียวที่ rank นี้ได้เพียง 47.10%</p><p>การแทน layer เดียวกันเพิ่ม arithmetic ต่อ input จากประมาณ 2.10 เป็น 8.65 ล้าน FLOPs และ tensor-train ทุก variant ในการทดลอง CPU นี้ช้ากว่า dense layer ผลที่กล่าวได้คือ layer ใช้ storage ลดลงและกู้ accuracy กลับมาได้ ไม่ใช่ speedup ทั่วไป หลักฐานมาจาก dataset, seed และ CPU อย่างละหนึ่งชุด ต้องวัด latency และ memory ของโมเดลทั้งตัวบน deployment hardware จริง</p>
+
+<h2 id="th-structure">Stabilizers และ dequantization: ตรวจ assumptions ให้ครบ</h2>
+<p>อีกทางที่คณิตศาสตร์ quantum ช่วย classical code คือเลือก representation ให้ถูก วงจร Clifford จำลองด้วย stabilizer methods ได้โดยไม่เก็บ statevector เต็ม <a href="https://arxiv.org/abs/2103.02202">Stim</a> ทำให้โครงสร้างนี้ใช้สุ่ม error-correction circuits และสร้างข้อมูลฝึก decoder ได้จริง การเพิ่ม non-Clifford operations ทั่วไปเปลี่ยนความยากของปัญหา ผล stabilizer ที่เร็วจึงไม่ได้รับรองการจำลอง quantum circuits ทุกชนิด</p><p>dequantization ถามกลับว่า classical method ใช้โครงสร้าง input เดียวกับ quantum algorithm ที่เสนอได้หรือไม่ <a href="https://arxiv.org/abs/1807.04271">ผลเรื่อง recommendation system ของ Tang</a> แสดงว่า data-access model ต้องอยู่ในการเปรียบเทียบ เพราะ sampling access และ low-rank assumptions อาจทำงานสำคัญให้เสร็จไปมากแล้วก่อนเริ่ม algorithm ใด</p><p>สำหรับ simulated bifurcation ยังมี assumption ด้าน numerical stability การทดลอง G1 ในหนังสือพบว่า step size 1.25 ทำให้ cut ยุบเป็นศูนย์ ขณะที่ stability limit ที่คำนวณได้ประมาณ 0.94 การทดลองหลักใช้ 0.5 วิธีที่มีเหตุผลทางคณิตศาสตร์ก็ยังต้องมี numerical checks แบบวิศวกรรมทั่วไป</p>
+
+<h2 id="th-practice">เลือกผลดีที่วัดได้หนึ่งเรื่อง</h2>
+<p>เปลี่ยน edge หนึ่งเส้นใน toy graph แล้วรันทั้งสองวิธี รักษา invariants สองข้อ: greedy result ต้องไม่เกิน exact optimum และการกลับ partition ทุก bits ต้องไม่เปลี่ยน cut หา graph ที่ greedy สำเร็จ แล้วหา graph ที่มันพลาด อธิบายว่าทำไมความสำเร็จบน graph แรกยังเป็นหลักฐานไม่เพียงพอ</p><p>สำหรับโครงการตัวเอง สร้างสามคอลัมน์: bottleneck, representation หรือ search ที่จะลอง และ measurement ที่ใช้ตัดสินนำไปใช้ หากติด memory ให้รายงาน bytes, accuracy และ latency หากติดคุณภาพ optimization ให้รายงาน time-to-target กับสถานะของค่าอ้างอิง หากเป็น simulation ให้ระบุ gates ที่อนุญาต การทดลอง quantum-inspired ที่มีประโยชน์จบด้วยข้ออ้างที่จำกัดอยู่ภายใต้เงื่อนไขเหล่านี้</p>
+
+<h2 id="th-resources">Run & check — รันตัวอย่างด้วยตัวเอง</h2>
+<p>ตัวอย่างสำหรับสอนนี้ใช้ Python standard library เท่านั้น บันทึก <a href="../examples/below-threshold/ch08.py" download>ch08.py</a> แล้วรันด้วย Python 3.10 ขึ้นไป โดย assertions ตรวจ invariant ที่อธิบายในบท</p><pre><code>python3 ch08.py</code></pre><p><a href="../downloads/below-threshold-tutorial-examples.zip" download>ตัวอย่างทั้งสิบบทและผลลัพธ์ที่คาดหวัง (ZIP)</a> · <a href="https://github.com/Anirach/Anirach.github.io/tree/main/examples/below-threshold">อ่าน source บน GitHub</a></p>
+
+<h2 id="th-references">Sources & scope — แหล่งอ้างอิงและขอบเขต</h2>
+<section class="references" aria-labelledby="th-sources"><h3 id="th-sources">เอกสารและหลักฐาน</h3><p class="references__note">โครงบท ภาพที่ให้เครดิต และผล lab ที่รายงานมาจากหนังสือของผู้เขียน ณ November 2026 ตัวอย่างสั้นที่ใช้ standard library รันเพื่อตรวจบทเรียนเว็บวันที่ 25 November 2026 เป็นแบบจำลองเพื่อสอน ไม่ได้รันซ้ำการทดลอง Stim, neural network, mitigation หรือ LLM ฉบับเต็มในหนังสือ ข้ออ้าง hardware, simulator, preprint และบริษัทคงขอบเขตตามที่ระบุ</p><ol><li><a href="https://drive.google.com/file/d/1iG7oSWLC9UI91VsPOzqcxk3_evH8Sn3b/view?usp=sharing">Anirach Mingkhwan. Below Threshold: AI, Quantum Errors and Better Code. Edition 1.0 (November 2026), Chapter 8, pp. 50–60.</a></li><li id="th-ref-1"><a href="https://doi.org/10.1126/sciadv.aav2372">Goto, Tatsumura &amp; Dixon. Combinatorial optimization by simulating adiabatic bifurcations in nonlinear Hamiltonian systems (2019).</a></li><li id="th-ref-2"><a href="https://doi.org/10.1126/sciadv.abe7953">Goto et al. High-performance combinatorial optimization based on classical mechanics (2021).</a></li><li id="th-ref-3"><a href="https://doi.org/10.1137/090752286">Oseledets. Tensor-Train Decomposition (2011).</a></li><li id="th-ref-4"><a href="https://arxiv.org/abs/1509.06569">Novikov et al. Tensorizing Neural Networks (2015).</a></li><li id="th-ref-5"><a href="https://arxiv.org/abs/1807.04271">Tang. A quantum-inspired classical algorithm for recommendation systems (2019).</a></li><li id="th-ref-6"><a href="https://arxiv.org/abs/2103.02202">Gidney. Stim: a fast stabilizer circuit simulator (2021).</a></li></ol></section>
+    </div>
+
+    <div class="l-en" lang="en">
+
+<h2 id="en-start">Start with the bottleneck, then choose the mathematics</h2>
+<blockquote><p><strong>Download the book and examples</strong></p><p><a href="https://drive.google.com/uc?export=download&amp;id=1iG7oSWLC9UI91VsPOzqcxk3_evH8Sn3b">Download the complete Below Threshold book (English PDF · 104 pages · 5.4 MB)</a><br><a href="https://drive.google.com/file/d/1iG7oSWLC9UI91VsPOzqcxk3_evH8Sn3b/view?usp=sharing">Read on Google Drive</a> · <a href="../downloads/below-threshold-tutorial-examples.zip" download>Download all ten Python examples (ZIP)</a></p></blockquote>
+<p><strong>Chapter 8/10.</strong> A tutorial adaptation of <em>Below Threshold: AI, Quantum Errors and Better Code</em>, Edition 1.0, Chapter 8, pp. 50–60.</p><p>Prerequisites: loops, arrays, graphs and the idea of a matrix product. This chapter’s goal is to recognize three different opportunities: finding a better discrete solution, representing a large object with less memory, and exploiting a restricted circuit family for efficient simulation. None requires a quantum processor.</p><p>“Quantum-inspired” describes the origin of a method. Its execution can be entirely classical. The useful question is whether its mathematical structure matches your problem. An optimization heuristic may improve a cut without certifying optimality. A tensor representation may store fewer weights while doing more arithmetic. A stabilizer simulator gains speed by exploiting structure absent from general circuits.</p><p>Write the target metric before choosing the method. For a scheduling problem, it might be objective value at a fixed time budget. For a model that does not fit on a device, memory could dominate. This prevents a reduction in parameters from being presented as a runtime improvement that nobody measured.</p>
+
+<h2 id="en-bifurcation">Simulated bifurcation: parallel dynamics search for a cut</h2>
+    <figure class="figure">
+      <a href="../images/below-threshold-sb.png">
+        <img class="figure__img" src="../images/below-threshold-sb.png" alt="Book Lab 5: oscillator signs define cuts; seeded run distributions distinguish mean quality from the best-known G1 reference." width="1461" height="579" loading="lazy" decoding="async">
+      </a>
+      <figcaption class="figure__caption">Book Lab 5: oscillator signs define cuts; seeded run distributions distinguish mean quality from the best-known G1 reference. Source: Below Threshold, Figure 8.1. Open for full resolution.</figcaption>
+    </figure><p>In MaxCut, assign each vertex to one of two sides and count crossing edges. With spins s<sub>i</sub> = ±1, an edge contributes (1 − s<sub>i</sub>s<sub>j</sub>)/2. Simulated bifurcation associates a position and momentum with each spin. A rising pump separates oscillator positions toward positive and negative walls; their final signs define a candidate partition.</p><p>The coupling uses a matrix-vector product, so many coordinates can update together. This is the reason to investigate parallel CPU, GPU or FPGA implementations. It does not make the search exact. The <a href="https://doi.org/10.1126/sciadv.aav2372">original simulated-bifurcation paper</a> and <a href="https://doi.org/10.1126/sciadv.abe7953">ballistic/discrete variants</a> establish the method; the graph-specific figures here are the book’s recorded experiment.</p><p>In Lab 5, ballistic SB with 1,000 steps averaged 11,606.7 crossing edges on G1, against 11,549.8 for 200-sweep annealing. All methods received 64 seeded runs. G1’s reference of 11,624 is a best-known value, not a proof of the optimum. The timings compare the book’s implementations on one laptop, including an annealer that was not tuned C code.</p>
+
+<h2 id="en-baseline">Code: make the small exact baseline your judge</h2>
+<p>This new teaching example deliberately implements greedy one-vertex flips rather than simulated bifurcation. Its purpose is to build the evaluator before trying a more elaborate search. On six vertices, enumerating all 64 partitions is cheap enough to establish the exact answer.</p><pre><code>&quot;&quot;&quot;Toy MaxCut: compare a local optimum with an exact small-instance answer.&quot;&quot;&quot;
+from itertools import product
+
+EDGES = [(0, 1), (0, 5), (1, 2), (2, 4), (3, 4), (3, 5), (4, 5)]
+
+
+def cut(bits):
+    return sum(bits[a] != bits[b] for a, b in EDGES)
+
+
+def greedy(bits):
+    while True:
+        neighbours = [bits[:i] + (1 - bits[i],) + bits[i + 1:]
+                      for i in range(len(bits))]
+        candidate = max(neighbours, key=cut)
+        if cut(candidate) &lt;= cut(bits):
+            return bits
+        bits = candidate
+
+
+local = greedy((0,) * 6)
+exact = max(product((0, 1), repeat=6), key=cut)
+print(f&quot;greedy: cut={cut(local)}/{len(EDGES)}, partition={local}&quot;)
+print(f&quot;exact:  cut={cut(exact)}/{len(EDGES)}, partition={exact}&quot;)
+print(f&quot;greedy relative gap={(cut(exact) - cut(local)) / cut(exact):.2%}&quot;)
+assert 0 &lt;= cut(local) &lt;= cut(exact) &lt;= len(EDGES)
+assert cut(local) == cut(tuple(1 - x for x in local))
+assert all(cut(local[:i] + (1-local[i],) + local[i+1:]) &lt;= cut(local)
+           for i in range(6))</code></pre><pre><code>greedy: cut=5/7, partition=(1, 0, 0, 0, 1, 0)
+exact:  cut=6/7, partition=(0, 1, 0, 0, 1, 1)
+greedy relative gap=16.67%</code></pre><p>Greedy stops at five crossing edges because no single flip improves its cut. Exact search finds six. Its relative gap is 1/6, or 16.67%. A local stopping condition therefore does not establish a global optimum. Complementing all bits preserves the cut, which supplies an independent invariant for the evaluator.</p><p>For a large graph, enumeration becomes exponential, so you may only have a bound or best-known reference. Report that change explicitly. Compare distributions across seeds and budgets rather than selecting one lucky run. A new heuristic belongs behind the same <code>cut()</code> function, with the same input graph, stopping rule and accounting of preprocessing.</p>
+
+<h2 id="en-tensors">Tensor trains: compress the representation, then measure</h2>
+    <figure class="figure">
+      <a href="../images/below-threshold-tt.png">
+        <img class="figure__img" src="../images/below-threshold-tt.png" alt="Book Lab 6: fine-tuning recovers accuracy after compression, while reduced weights can require more arithmetic." width="1482" height="546" loading="lazy" decoding="async">
+      </a>
+      <figcaption class="figure__caption">Book Lab 6: fine-tuning recovers accuracy after compression, while reduced weights can require more arithmetic. Source: Below Threshold, Figure 8.2. Open for full resolution.</figcaption>
+    </figure><p>A tensor train replaces one large array with a chain of smaller cores connected by bond indices. Bond rank controls how much structure the chain can represent. <a href="https://doi.org/10.1137/090752286">TT decomposition</a> supplies the numerical format, while <a href="https://arxiv.org/abs/1509.06569">Tensorizing Neural Networks</a> applies it to dense layers.</p><p>The book’s Lab 6 replaces a 1024 × 1024 hidden layer. At rank 16, its stored weights fall from 1,048,576 to 33,280, about a 32-fold reduction. After an extra fine-tuning epoch, recorded test accuracy is 98.03%, against 97.98% for the original model. The extra training matters: decomposition alone at this rank gave 47.10%.</p><p>The same replacement raises arithmetic per input from about 2.10 to 8.65 million FLOPs, and every tensor-train variant in that CPU experiment ran slower than the dense layer. The defensible outcome is reduced layer storage with recovered accuracy, not a general speedup. It is one dataset, seed and CPU; assess the complete model’s latency and memory on your deployment hardware.</p>
+
+<h2 id="en-structure">Stabilizers and dequantization: inspect the assumptions</h2>
+<p>There is another way quantum mathematics improves classical code: choose the right representation. Clifford circuits can be simulated with stabilizer methods without storing a full statevector. <a href="https://arxiv.org/abs/2103.02202">Stim</a> makes this structure useful for sampling error-correction circuits and generating decoder data. Adding general non-Clifford operations changes the problem, so a fast stabilizer result does not promise fast arbitrary quantum simulation.</p><p>Dequantization asks the converse question: can a classical method exploit the same input structure as a proposed quantum algorithm? <a href="https://arxiv.org/abs/1807.04271">Tang’s recommendation-system result</a> demonstrated why the data-access model belongs inside the comparison. Sampling access and low-rank assumptions can do substantial work before either algorithm begins.</p><p>For simulated bifurcation, numerical stability is another assumption. The book’s G1 experiment found that a step size of 1.25 collapsed the cut to zero, while its calculated stability limit was about 0.94; it used 0.5 for the main runs. A mathematically motivated method still needs ordinary numerical checks.</p>
+
+<h2 id="en-practice">Choose one measurable win</h2>
+<p>Change one edge in the toy graph and rerun both methods. Keep two invariants: the greedy result cannot exceed the exact optimum, and complementing a partition cannot change its cut. Find a graph on which greedy succeeds, then one on which it fails; explain why success on the first was insufficient evidence.</p><p>For your own project, create three columns: the bottleneck, the candidate representation or search, and the measurement that would justify adopting it. If the bottleneck is memory, report bytes and accuracy as well as latency. If it is optimization quality, report time-to-target and the reference’s status. If it is simulation, state the allowed gates. A useful quantum-inspired experiment ends with a bounded claim tied to those conditions.</p>
+
+<h2 id="en-resources">Run and check the example</h2>
+<p>This complete teaching example uses only the Python standard library. Save <a href="../examples/below-threshold/ch08.py" download>ch08.py</a>, then run it with Python 3.10 or later. Its assertions check the stated invariants.</p><pre><code>python3 ch08.py</code></pre><p><a href="../downloads/below-threshold-tutorial-examples.zip" download>All ten examples and expected output (ZIP)</a> · <a href="https://github.com/Anirach/Anirach.github.io/tree/main/examples/below-threshold">Browse example source on GitHub</a></p>
+
+<h2 id="en-references">Sources and scope</h2>
+<section class="references" aria-labelledby="en-sources"><h3 id="en-sources">Reading and evidence</h3><p class="references__note">The author’s book is the source of the chapter structure, credited diagrams and reported lab results (November 2026 snapshot). The short standard-library example above was executed for this web lesson on 25 November 2026. It is a teaching model; the book’s full Stim, neural-network, mitigation and LLM experiments were not rerun for these posts. Hardware, simulator, preprint and company claims retain their stated scope.</p><ol><li><a href="https://drive.google.com/file/d/1iG7oSWLC9UI91VsPOzqcxk3_evH8Sn3b/view?usp=sharing">Anirach Mingkhwan. Below Threshold: AI, Quantum Errors and Better Code. Edition 1.0 (November 2026), Chapter 8, pp. 50–60.</a></li><li id="en-ref-1"><a href="https://doi.org/10.1126/sciadv.aav2372">Goto, Tatsumura &amp; Dixon. Combinatorial optimization by simulating adiabatic bifurcations in nonlinear Hamiltonian systems (2019).</a></li><li id="en-ref-2"><a href="https://doi.org/10.1126/sciadv.abe7953">Goto et al. High-performance combinatorial optimization based on classical mechanics (2021).</a></li><li id="en-ref-3"><a href="https://doi.org/10.1137/090752286">Oseledets. Tensor-Train Decomposition (2011).</a></li><li id="en-ref-4"><a href="https://arxiv.org/abs/1509.06569">Novikov et al. Tensorizing Neural Networks (2015).</a></li><li id="en-ref-5"><a href="https://arxiv.org/abs/1807.04271">Tang. A quantum-inspired classical algorithm for recommendation systems (2019).</a></li><li id="en-ref-6"><a href="https://arxiv.org/abs/2103.02202">Gidney. Stim: a fast stabilizer circuit simulator (2021).</a></li></ol></section>
+    </div>
+
+    <div class="post-series-footer">
+      <span class="l-th">จากซีรีส์ Below Threshold</span><span class="l-en" lang="en">From Below Threshold</span>
+    </div>
+
+    <nav aria-label="Below Threshold">
+    <div class="series-nav">
+      <h3>Below Threshold · 10-Chapter Course</h3>
+      <div class="series-links">
+        <a href="/blog/below-threshold-overview">#1 The Three Bridges</a>
+        <a href="/blog/below-threshold-quantum-errors">#2 Quantum Errors</a>
+        <a href="/blog/below-threshold-error-correction">#3 Checks and Thresholds</a>
+        <a href="/blog/below-threshold-ai-decoders">#4 AI Decoders</a>
+        <a href="/blog/below-threshold-error-path">#5 Error Path</a>
+        <a href="/blog/below-threshold-circuit-synthesis">#6 Circuit Synthesis</a>
+        <a href="/blog/below-threshold-ai-workflow">#7 AI Workflow</a>
+        <span class="current" aria-current="page">#8 Quantum-Inspired</span>
+        <a href="/blog/below-threshold-syndrome-driven-development">#9 Syndrome-Driven Code</a>
+        <a href="/blog/below-threshold-playbook">#10 Engineering Playbook</a>
+      </div>
+    </div>
+    </nav>
+
+  </article>
+
+  </main>
+
+  <footer class="blog-footer">
+    <nav class="blog-footer__nav" aria-label="Site">
+      <a href="../index.html">Home</a>
+      <a href="./">Tutorials</a>
+      <a href="../thoughts/">Thoughts</a>
+      <a href="../publications/">Publications</a>
+      <a href="../books/">Books</a>
+      <a href="../projects/">Projects</a>
+      <a href="../news/">News</a>
+      <a href="../index.html#contact">Contact</a>
+    </nav>
+    <a href="./">← Back to Tutorials</a>
+    <span>© 2026 Anirach Mingkhwan — Independent AI consultant</span>
+  </footer>
+
+</body>
+</html>

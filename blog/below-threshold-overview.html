@@ -1,0 +1,612 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Below Threshold — สามสะพาน | Anirach Mingkhwan</title>
+  <meta name="description" content="เริ่ม Below Threshold ด้วยสามสะพานระหว่าง AI, quantum error correction และโค้ดที่เชื่อถือได้ พร้อม Python คำนวณ error budget และอ่านผลอย่างมีขอบเขต">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300..900&family=Sarabun:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400..600&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      color-scheme: light;
+      /* ink */
+      --navy: #11304b; --slate: #334155; --slate-light: #526174; --gray: #94a3b8;
+      /* ground */
+      --bg: #faf7f0; --white: #ffffff; --code-bg: #1e293b;
+      /* accent */
+      --blue: #226299; --blue-dark: #1a4d7a; --blue-light: #4992b9;
+      /* brand — sampled from the book covers. --gold is decorative on light grounds (2.2:1); --gold-dark is its text form. */
+      --gold: #c4a46c; --gold-dark: #7a5f22; --cloud: #dee7e6; --parchment: #e9e1c4; --focus: #226299;
+      /* status — use only these six, never invent a seventh */
+      --green: #22c55e; --red: #ef4444; --amber: #f59e0b;
+      --cyan: #06b6d4; --purple: #226299; --purple-dark: #1a4d7a;
+      /* type */
+      --font: 'Inter', 'Sarabun', -apple-system, BlinkMacSystemFont, sans-serif;
+      --mono: 'JetBrains Mono', 'Fira Code', 'Sarabun', monospace;
+      /* form */
+      --radius: 12px; --radius-sm: 8px; --radius-lg: 16px;
+      --measure: 720px; --wide: 860px;
+      --transition: 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+    html { scroll-behavior: smooth; }
+    body { font-family: var(--font); font-size: 17px; line-height: 1.8; color: var(--slate); background: var(--bg); -webkit-font-smoothing: antialiased; }
+    .blog-nav { position: fixed; top: 0; left: 0; right: 0; z-index: 100; background: rgba(248,250,252,0.85); backdrop-filter: blur(20px); border-bottom: 1px solid rgba(0,0,0,0.05); }
+    .blog-nav__inner { max-width: 860px; margin: 0 auto; padding: 0 2rem; height: 56px; display: flex; align-items: center; justify-content: space-between; }
+    .blog-nav__back { font-size: 0.85rem; font-weight: 500; color: var(--blue); text-decoration: none; }
+    .blog-nav__back:hover { color: #1a4d7a; }
+    .blog-nav__title { font-size: 0.85rem; font-weight: 600; color: var(--navy); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 50%; }
+    /* ── HERO ── house .post-hero on the approved Deep Blue gradient (page-design
+       §5 / INV-28). Ink is inverted for the dark ground: white title/meta, tag
+       pills white on 18% white — the openclaw-production treatment. The
+       background value must stay byte-identical to the approved string. */
+    .post-hero { padding: 8rem 2rem 3rem; background: linear-gradient(135deg, #11304b 0%, #1a4d7a 45%, #226299 100%); color: #fff; text-align: center; }
+    .post-hero__tags { display: flex; gap: 0.5rem; justify-content: center; margin-bottom: 1.25rem; flex-wrap: wrap; }
+    .post-hero__tag { display: inline-block; font-size: 0.72rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.1em; color: #fff; background: rgba(255,255,255,0.18); padding: 0.35rem 0.9rem; border-radius: 20px; }
+    .post-hero__title { font-size: clamp(1.8rem, 5vw, 3rem); font-weight: 800; color: #fff; line-height: 1.2; margin-bottom: 1rem; max-width: 720px; margin-left: auto; margin-right: auto; }
+    .post-hero__sub { font-size: 1.05rem; max-width: 640px; margin: 0 auto 1.5rem; line-height: 1.7; color: #fff; }
+    .post-hero__meta { font-size: 0.85rem; color: #fff; display: flex; align-items: center; justify-content: center; gap: 1.5rem; flex-wrap: wrap; }
+    .post-hero__series { font-weight: 600; color: #fff; }
+    /* the switch pill and the focus ring both sit on the dark hero: the pill is
+       a light chip so its labels keep their light-ground colours, and --focus
+       re-points to gold here (blue collapses on blue — the footer/pre
+       precedent). */
+    .post-hero { --focus: var(--gold); }
+    .post-hero__cover {
+      aspect-ratio: 1 / 1;
+      max-width: 380px;
+      margin: 2.5rem auto 0;
+      border-radius: var(--radius-lg, 16px);
+      overflow: hidden;
+      box-shadow: 0 20px 60px rgba(17,48,75,0.14);
+    }
+    .post-hero__cover img { width: 100%; height: 100%; object-fit: cover; display: block; }
+    .post-body { max-width: 720px; margin: 0 auto; padding: 3rem 2rem 6rem; }
+    .post-body h2 { font-size: 1.6rem; font-weight: 800; color: var(--navy); margin: 3rem 0 1rem; padding-bottom: 0.5rem; border-bottom: 2px solid rgba(34,98,153,0.15); }
+    .post-body h3 { font-size: 1.25rem; font-weight: 700; color: var(--navy); margin: 2.25rem 0 0.75rem; }
+    .post-body p { margin-bottom: 1.25rem; }
+    .post-body strong { font-weight: 700; color: var(--navy); }
+    .post-body a { color: var(--blue); text-decoration: underline; text-decoration-thickness: 1px; text-underline-offset: 2px; }
+    .post-body ul, .post-body ol { margin: 0.5rem 0 1.25rem 1.5rem; }
+    .post-body li { margin-bottom: 0.4rem; }
+    .post-body blockquote { background: rgba(34,98,153,0.06); border-left: 4px solid var(--blue); padding: 1rem 1.25rem; border-radius: 0 10px 10px 0; margin: 1.25rem 0; font-size: 0.95rem; color: var(--navy); }
+    .post-body hr { border: none; height: 1px; background: linear-gradient(90deg, transparent, rgba(34,98,153,0.2), transparent); margin: 3rem 0; }
+    /* ── CODE ── */
+    .post-body pre { background: var(--code-bg); border-radius: 12px; padding: 1.5rem; margin: 1.25rem 0 1.5rem; overflow-x: auto; border: 1px solid rgba(255,255,255,0.05); }
+    .post-body pre code { font-family: var(--mono); font-size: 0.85rem; color: #e2e8f0; line-height: 1.7; background: none; padding: 0; white-space: pre-wrap; }
+    .post-body code { font-family: var(--mono); font-size: 0.88em; background: rgba(34,98,153,0.08); color: var(--blue-dark); padding: 0.15em 0.45em; border-radius: 5px; }
+    /* ── TABLES ── */
+    .table-wrapper { overflow-x: auto; margin: 1.5rem 0; border-radius: 0.5rem; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1); }
+    table { width: 100%; border-collapse: collapse; background: white; }
+    th { background: #226299; color: white; padding: 1rem; text-align: left; font-weight: 600; }
+    td { padding: 1rem; border-bottom: 1px solid #e5e7eb; }
+    .post-body table { display: block; width: 100%; overflow-x: auto; }
+    /* ── ALERTS ── */
+    .alert { background: #fef3cd; border: 1px solid #facc15; border-radius: 0.5rem; padding: 1rem; margin: 1.5rem 0; }
+    .alert.danger { background: #fee2e2; border-color: #ef4444; }
+    .alert.info { background: #e0f2fe; border-color: #06b6d4; }
+    .alert.success { background: #d1fae5; border-color: #10b981; }
+    /* ── KEY TAKEAWAYS ── */
+    .key-takeaways { background: linear-gradient(135deg, #f3f4f6 0%, #e5e7eb 100%); border-radius: 1rem; padding: 2rem; margin: 3rem 0; }
+    .key-takeaways h3 { color: #226299; margin-bottom: 1.5rem; }
+    .post-series-footer { text-align: center; font-size: 0.85rem; color: var(--slate-light); font-style: italic; margin-top: 2rem; padding-top: 2rem; border-top: 1px solid #e2e8f0; }
+    .blog-footer { background: var(--navy); padding: 2rem 0; text-align: center; }
+    .blog-footer a { color: var(--gold); text-decoration: none; font-weight: 600; font-size: 0.9rem; }
+    .blog-footer span { color: var(--gray); font-size: 0.8rem; display: block; margin-top: 0.4rem; }
+    @media (max-width: 600px) {
+      .post-hero { padding: 7rem 1.25rem 2.5rem; }
+      .post-body { padding: 2rem 1.25rem 4rem; }
+      .post-hero__meta { flex-direction: column; gap: 0.4rem; }
+      .post-body h2 { font-size: 1.4rem; }
+      .post-body h3 { font-size: 1.15rem; }
+      .post-body pre { padding: 1rem; border-radius: 8px; }
+    }
+
+    :focus-visible { outline: 2px solid var(--focus); outline-offset: 3px; border-radius: 2px; }
+    /* the ring sits on the page ground (3px offset). Inside the navy footers
+       and code blocks var(--blue) collapses to 2.12:1, so those scopes
+       re-point --focus to gold (5.73:1 on navy). */
+    .footer, .blog-footer, pre { --focus: var(--gold); }
+    :focus:not(:focus-visible) { outline: none; }
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after {
+        animation-duration: .01ms !important; animation-iteration-count: 1 !important;
+        transition-duration: .01ms !important; scroll-behavior: auto !important;
+      }
+    }
+    h1, h2, h3, .post-hero__title, .card__title { text-wrap: balance; }
+    .post-body { overflow-wrap: break-word; }   /* long URLs and inline code wrap instead of widening the page */
+
+    .post-body img, .post-body svg { max-width: 100%; height: auto; }
+
+    /* ── SKIP LINK ── a11y-perf R5: the link and the landmark it targets are a
+       pair — useless without both halves. Off-screen until focused, then the
+       first tab stop on every page. */
+    .skip-link { position: absolute; left: -9999px; }
+    .skip-link:focus {
+      left: 1rem; top: 1rem; z-index: 999;
+      background: var(--navy); color: #fff;
+      padding: 0.75rem 1.25rem; border-radius: var(--radius-sm);
+      font-weight: 600; text-decoration: none;
+    }
+
+    /* ── POST WAYFINDING ── the wordmark is the home link; the footer carries
+       the full destination row. */
+    .blog-nav__home {
+      font-size: 0.9rem; font-weight: 800; color: var(--navy);
+      text-decoration: none; margin-right: 1rem;
+    }
+    .blog-nav__home:hover { color: var(--blue); }
+    .blog-nav__inner > .blog-nav__back { margin-right: auto; }
+    .blog-footer__nav {
+      display: flex; flex-wrap: wrap; justify-content: center; gap: 0.35rem 1.25rem;
+      max-width: 860px; margin: 0 auto 1.25rem; padding: 0 2rem 1.25rem;
+      border-bottom: 1px solid rgba(255,255,255,0.12);
+    }
+    .blog-footer__nav a { color: var(--gold); font-size: 0.85rem; font-weight: 600; text-decoration: none; }
+    .blog-footer__nav a:hover { color: #fff; text-decoration: underline; }
+
+    html { scroll-padding-top: 5rem; }
+    [id] { scroll-margin-top: 5rem; }
+
+    /* Thai needs more room than Latin at the same nominal size. */
+    .post-body:lang(th) { font-size: 18px; line-height: 1.85; }
+    .post-body p, .post-body li, .post-body blockquote { text-wrap: pretty; }
+
+    /* ---- side-scroll affordance ----
+       pre blocks and tables can exceed 720px. These layers paint a shadow ONLY
+       where there is more content in that direction; when fully scrolled the
+       cover slides over the shadow and hides it. No JavaScript, no wrapper. */
+    .post-body pre, .post-body table {
+      overflow-x: auto;
+      background-image:
+        linear-gradient(to right, var(--code-bg, #0f172a) 30%, rgba(15,23,42,0)),
+        linear-gradient(to left, var(--code-bg, #0f172a) 30%, rgba(15,23,42,0)),
+        radial-gradient(farthest-side at 0 50%, rgba(0,0,0,.28), rgba(0,0,0,0)),
+        radial-gradient(farthest-side at 100% 50%, rgba(0,0,0,.28), rgba(0,0,0,0));
+      background-position: 0 0, 100% 0, 0 0, 100% 0;
+      background-repeat: no-repeat;
+      background-size: 40px 100%, 40px 100%, 14px 100%, 14px 100%;
+      background-attachment: local, local, scroll, scroll;
+    }
+    .post-body table {
+      background-image:
+        linear-gradient(to right, var(--white, #fff) 30%, rgba(255,255,255,0)),
+        linear-gradient(to left, var(--white, #fff) 30%, rgba(255,255,255,0)),
+        radial-gradient(farthest-side at 0 50%, rgba(17,48,75,.16), rgba(17,48,75,0)),
+        radial-gradient(farthest-side at 100% 50%, rgba(17,48,75,.16), rgba(17,48,75,0));
+      background-position: 0 0, 100% 0, 0 0, 100% 0;
+      background-repeat: no-repeat;
+      background-size: 40px 100%, 40px 100%, 14px 100%, 14px 100%;
+      background-attachment: local, local, scroll, scroll;
+    }
+
+    /* ---- table of contents ---- */
+    .post-toc {
+      max-width: 720px;
+      margin: 2rem auto 0;
+      padding: 1rem 1.25rem;
+      background: rgba(34,98,153,0.05);
+      border: 1px solid rgba(34,98,153,0.14);
+      border-left: 3px solid var(--gold, #c4a46c);
+      border-radius: 10px;
+      font-size: 0.92rem;
+    }
+    .post-toc > summary {
+      cursor: pointer;
+      font-weight: 700;
+      color: var(--navy);
+      list-style: none;
+    }
+    .post-toc > summary::-webkit-details-marker { display: none; }
+    .post-toc > summary::before {
+      content: "\25B8";
+      display: inline-block;
+      margin-right: 0.5rem;
+      transition: transform 0.2s ease;
+      color: var(--gold-dark, #7a5f22);
+    }
+    .post-toc[open] > summary::before { transform: rotate(90deg); }
+    .post-toc > summary:focus-visible { outline: 3px solid var(--focus, #226299); outline-offset: 3px; }
+    .post-toc ol { margin: 0.85rem 0 0.25rem; padding-left: 1.4rem; }
+    .post-toc li { margin-bottom: 0.4rem; line-height: 1.5; }
+    .post-toc a { color: var(--slate); text-decoration: none; }
+    .post-toc a:hover, .post-toc a:focus-visible { color: var(--blue-dark, #1a4d7a); text-decoration: underline; }
+    @media (max-width: 600px) { .post-toc { margin: 1.25rem 1rem 0; } }
+
+    /* ---- cross-document view transitions ---- */
+    @view-transition { navigation: auto; }
+    .nav, .blog-nav { view-transition-name: site-nav; }
+    .footer, .blog-footer { view-transition-name: site-footer; }
+    @media (prefers-reduced-motion: reduce) {
+      ::view-transition-group(*),
+      ::view-transition-old(*),
+      ::view-transition-new(*) { animation: none !important; }
+    }
+
+    /* ── SERIES STRIP — Hermes Agent in Practice ──
+       Same class and inner-wrapper shape as the OpenClaw strip because the
+       linter's RE_SNAV recognises exactly `series-nav` + a nested div; a
+       renamed strip would read as "no nav" and fail INV-08. All content
+       checks (INV-03 family) iterate the SERIES7 list only, so this strip's
+       labels are convention, not contract. House-styled, not the island CSS. */
+    .series-nav {
+      max-width: 720px; margin: 2rem auto 0; padding: 1.1rem 1.4rem;
+      background: rgba(255,255,255,0.75); border: 1px solid rgba(34,98,153,0.15);
+      border-left: 3px solid var(--gold); border-radius: 12px;
+    }
+    .series-nav h3 {
+      font-size: 0.78rem; font-weight: 700; text-transform: uppercase;
+      letter-spacing: 0.08em; color: var(--gold-dark); margin-bottom: 0.6rem;
+    }
+    .series-links { display: flex; flex-wrap: wrap; gap: 0.5rem; }
+    .series-links a, .series-links .current {
+      font-size: 0.82rem; font-weight: 600; padding: 0.35rem 0.8rem;
+      border-radius: 50px; text-decoration: none;
+    }
+    .series-links a { color: var(--blue-dark); background: rgba(34,98,153,0.08); }
+    .series-links a:hover { background: rgba(34,98,153,0.16); }
+    .series-links .current { color: #fff; background: var(--blue-dark); }
+    @media (max-width: 600px) { .series-nav { margin: 1.5rem 1rem 0; } }
+
+    /* ── FIGURE — the sanctioned diagram component (page-design §4 Content).
+       Diagrams are PNGs; this repo built them out of divs twice and reverted
+       twice. The image is wrapped in a link to itself so a phone can pinch a
+       1400px drawing without a line of JavaScript. */
+    .figure { margin: 2.5rem 0; }
+    .figure__img { width: 100%; height: auto; display: block;
+                   border-radius: var(--radius); border: 1px solid rgba(0,0,0,0.06); }
+    .figure__caption { font-size: 0.85rem; color: var(--slate-light);
+                       text-align: center; margin-top: 0.75rem; }
+
+    /* ── REFERENCES — every material number in this series carries its source.
+       The tags are the book's own four evidence labels. */
+    .references { margin-top: 3rem; padding-top: 2rem; border-top: 1px solid #e2e8f0; }
+    .references__note { font-size: 0.85rem; color: var(--slate-light); margin-bottom: 1rem; }
+    .references__list { padding-left: 1.4rem; font-size: 0.9rem; line-height: 1.75; }
+    .references__list li { margin-bottom: 0.7rem; }
+    .ref-tag { display: inline-block; font-size: 0.7rem; font-weight: 700;
+               letter-spacing: 0.06em; text-transform: uppercase; padding: 0.1rem 0.5rem;
+               border-radius: 50px; margin-right: 0.4rem; vertical-align: 0.05em;
+               background: rgba(34,98,153,0.1); color: var(--blue-dark); }
+    /* All four labels get a rule.  --standard and --study shipped without one
+       on 2026-09-05, so 158 of 306 tags fell through to the base blue and the
+       two labels were indistinguishable.  Ratios on --bg: 6.70 / 6.92 / 7.36 /
+       4.81:1, all AA at this size. */
+    .ref-tag--law { background: rgba(239,68,68,0.12); color: #991b1b; }
+    .ref-tag--standard { background: rgba(34,98,153,0.12); color: var(--blue-dark); }
+    .ref-tag--study { background: rgba(34,197,94,0.18); color: #14532d; }
+    .ref-tag--synthesis { background: rgba(196,164,108,0.22); color: var(--gold-dark); }
+    .ref-supports { display: block; color: var(--slate-light); font-size: 0.85rem; }
+
+    /* ── LANGUAGE SWITCH — pure CSS, zero JavaScript (INV-38) ──
+       One visually-hidden checkbox as a direct child of body, BEFORE the main landmark,
+       so `#langSwitch:checked ~ main …` reaches every content block. The two
+       tracks are paired blocks: .l-th (default) and .l-en (hidden until
+       checked; display:revert restores block for divs, inline for spans).
+       Naming stays clear of INV-12's menu-token regex (hamburger|burger|
+       nav__toggle|nav-toggle|navtoggle|menu-toggle|menu__toggle) — verified.
+       No JS also means no persistence across posts; each post opens in Thai. */
+    .lang-switch-box { position: absolute; left: -9999px; }
+    /* where anchor positioning exists the box sits on the pill, so focusing it scrolls the pill into view */
+    .lang-switch { anchor-name: --lang-switch; }
+    .lang-switch-box { position-anchor: --lang-switch; top: anchor(top); left: anchor(left); width: 1px; height: 1px; opacity: 0; pointer-events: none; }
+    .l-en { display: none; }
+    #langSwitch:checked ~ main .l-en { display: revert; }
+    #langSwitch:checked ~ main .l-th { display: none; }
+    .lang-switch {
+      display: inline-flex; align-items: center; gap: 0.55rem;
+      margin-top: 1.4rem; padding: 0.4rem 1.1rem; border-radius: 50px;
+      background: rgba(255,255,255,0.85); border: 1px solid rgba(255,255,255,0.4);
+      cursor: pointer; font-size: 0.85rem; user-select: none;
+    }
+    .lang-switch span { color: var(--slate-light); font-weight: 600; transition: color 0.2s; }
+    .lang-switch .lang-sep { color: var(--gray); font-weight: 400; }
+    .lang-switch .lang-th { color: var(--navy); font-weight: 800; }
+    #langSwitch:checked ~ main .lang-switch .lang-th { color: var(--slate-light); font-weight: 600; }
+    #langSwitch:checked ~ main .lang-switch .lang-en { color: var(--navy); font-weight: 800; }
+    .lang-switch:hover { border-color: #fff; }
+    #langSwitch:focus-visible ~ main .lang-switch {
+      outline: 2px solid var(--focus); outline-offset: 3px;
+    }
+  </style>
+  <!-- social -->
+  <link rel="canonical" href="https://anirach.com/blog/below-threshold-overview.html">
+  <meta property="og:type" content="article">
+  <meta property="og:url" content="https://anirach.com/blog/below-threshold-overview.html">
+  <meta property="og:site_name" content="Anirach Mingkhwan">
+  <meta property="og:locale" content="th_TH">
+  <meta property="og:locale:alternate" content="en_US">
+  <meta property="article:published_time" content="2026-11-25">
+  <meta property="article:author" content="https://anirach.com/">
+  <meta property="og:title" content="Below Threshold — สามสะพาน">
+  <meta property="og:description" content="เริ่ม Below Threshold ด้วยสามสะพานระหว่าง AI, quantum error correction และโค้ดที่เชื่อถือได้ พร้อม Python คำนวณ error budget และอ่านผลอย่างมีขอบเขต">
+  <meta property="og:image" content="https://anirach.com/images/below-threshold-overview-og.jpg">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
+  <meta property="og:image:alt" content="Below Threshold — สามสะพาน">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:image" content="https://anirach.com/images/below-threshold-overview-og.jpg">
+  <meta name="twitter:image:alt" content="Below Threshold — สามสะพาน">
+  <meta name="robots" content="max-image-preview:large">
+  <meta name="theme-color" content="#11304b">
+  <link rel="icon" href="/favicon.ico" sizes="any">
+  <link rel="apple-touch-icon" href="/apple-touch-icon.png">
+  <!-- /social -->
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "BlogPosting",
+    "headline": "Below Threshold — สามสะพาน",
+    "author": {
+      "@type": "Person",
+      "@id": "https://anirach.com/#person",
+      "name": "Anirach Mingkhwan",
+      "url": "https://anirach.com/"
+    },
+    "datePublished": "2026-11-25",
+    "dateModified": "2026-11-25",
+    "image": "https://anirach.com/images/below-threshold-overview-og.jpg",
+    "inLanguage": [
+      "th",
+      "en"
+    ],
+    "mainEntityOfPage": "https://anirach.com/blog/below-threshold-overview.html"
+  }
+  </script>
+</head>
+<body>
+<a href="#main" class="skip-link">Skip to content</a>
+<input type="checkbox" id="langSwitch" class="lang-switch-box" aria-label="Switch language: Thai / English">
+
+  <nav class="blog-nav">
+    <div class="blog-nav__inner">
+      <a href="../index.html" class="blog-nav__home">Anirach</a>
+      <a href="./" class="blog-nav__back">‹ Tutorials</a>
+      <div class="blog-nav__title">The Three Bridges</div>
+    </div>
+  </nav>
+
+  <main id="main">
+
+  <header class="post-hero">
+    <div class="post-hero__tags">
+      <span class="post-hero__tag">Quantum Computing</span>
+      <span class="post-hero__tag">AI Engineering</span>
+      <span class="post-hero__tag">Python</span>
+    </div>
+    <h1 class="post-hero__title"><span class="l-th">Below Threshold — สามสะพาน</span><span class="l-en" lang="en">Below Threshold: Three Bridges Between AI, Quantum Errors and Better Code</span></h1>
+    <p class="post-hero__sub"><span class="l-th">แยกโจทย์แก้ noise ลดต้นทุน circuit และสร้างโค้ดที่ไว้ใจได้ พร้อมคำนวณ error budget ด้วย Python ก่อนเลือกเทคนิค</span><span class="l-en" lang="en">Separate noise inference, circuit cost and software reliability, then calculate an error budget before choosing a technique.</span></p>
+    <div class="post-hero__meta">
+      <span>By <strong>Anirach Mingkhwan</strong></span>
+      <span class="post-hero__series">Below Threshold 2026 • Chapter #1</span>
+      <span><time datetime="2026-11-25">25 Nov 2026</time></span>
+      <span>4 min read</span>
+    </div>
+    <label for="langSwitch" class="lang-switch" title="สลับภาษา · Switch language"><span class="lang-th">ไทย</span><span class="lang-sep">·</span><span class="lang-en" lang="en">English</span></label>
+    <div class="post-hero__cover">
+      <img src="../images/below-threshold-overview-cover.jpg" alt="Below Threshold — สามสะพาน" width="800" height="800" loading="eager" fetchpriority="high" decoding="async">
+    </div>
+  </header>
+
+  <article class="post-body">
+
+    <details class="post-toc l-th" open>
+      <summary>ในบทความนี้</summary>
+      <ol>
+          <li><a href="#th-start">เริ่มที่โจทย์ — เราจะปรับปรุงอะไร</a></li>
+          <li><a href="#th-bridges">สามสะพาน — อ่านภาพเป็นสถาปัตยกรรม</a></li>
+          <li><a href="#th-layers">Physical กับ logical — กำหนดชั้นของความผิดพลาด</a></li>
+          <li><a href="#th-budget">ลงมือ — คำนวณโอกาสสะสม error</a></li>
+          <li><a href="#th-evidence">อ่านผล Labs — แยกหลักฐานให้ถูก</a></li>
+          <li><a href="#th-exercise">แบบฝึก — เขียน contract ก่อนเลือก AI</a></li>
+          <li><a href="#th-resources">Run & check — รันตัวอย่างด้วยตัวเอง</a></li>
+          <li><a href="#th-references">Sources & scope — แหล่งอ้างอิงและขอบเขต</a></li>
+      </ol>
+    </details>
+    <details class="post-toc l-en" open>
+      <summary>In this post</summary>
+      <ol>
+          <li><a href="#en-start">Start with a problem you can measure</a></li>
+          <li><a href="#en-bridges">Read the three bridges as an architecture</a></li>
+          <li><a href="#en-layers">Physical faults and logical failures need different metrics</a></li>
+          <li><a href="#en-budget">Run a small independent-error budget</a></li>
+          <li><a href="#en-evidence">Read the labs as bounded evidence</a></li>
+          <li><a href="#en-exercise">Exercise: write a contract before choosing AI</a></li>
+          <li><a href="#en-resources">Run and check the example</a></li>
+          <li><a href="#en-references">Sources and scope</a></li>
+      </ol>
+    </details>
+    <div class="l-th">
+
+<h2 id="th-start">เริ่มที่โจทย์ — เราจะปรับปรุงอะไร</h2>
+<blockquote><p><strong>ดาวน์โหลดหนังสือและโค้ดประกอบ</strong></p><p><a href="https://drive.google.com/uc?export=download&amp;id=1iG7oSWLC9UI91VsPOzqcxk3_evH8Sn3b">ดาวน์โหลด Below Threshold ฉบับเต็ม (PDF ภาษาอังกฤษ · 104 หน้า · 5.4 MB)</a><br><a href="https://drive.google.com/file/d/1iG7oSWLC9UI91VsPOzqcxk3_evH8Sn3b/view?usp=sharing">อ่านบน Google Drive</a> · <a href="../downloads/below-threshold-tutorial-examples.zip" download>ดาวน์โหลดตัวอย่าง Python ทั้งสิบบท (ZIP)</a></p></blockquote>
+<p><strong>บทที่ 1/10</strong> · บทเรียนดัดแปลงจาก <em>Below Threshold: AI, Quantum Errors and Better Code</em> ฉบับ 1.0 บทที่ 1 หน้า 5–8</p><p>หนังสือ <strong>Below Threshold: AI, Quantum Errors and Better Code</strong> ถามว่า AI ช่วย quantum computer ได้อย่างไร และ programmer นำบทเรียนกลับมาใช้กับงานประจำวันได้หรือไม่ คำตอบมีหลายทาง แต่แต่ละทางต้องกำหนด input, output และตัววัดให้ชัด บทแรกนี้สร้างแผนที่ก่อนลงรายละเอียด</p>
+<p>ใช้พื้นฐาน Python, probability และ vector เล็กน้อย ไม่ต้องมี quantum hardware หรือ API key เมื่ออ่านจบ คุณควรแยกได้ว่าโครงการหนึ่งกำลังลด physical noise ลด logical failure ลดจำนวน gates หรือช่วยเลือกโปรแกรมที่ผ่าน checks ทั้งสี่อย่างส่งผลต่อ reliability แต่เป็นผลลัพธ์คนละระดับ</p>
+<p>ลองตั้งโจทย์เหมือนงาน backend: “ลดคำตอบผิดจาก 1 ใน 100 ให้เหลือ 1 ใน 1,000 โดยใช้เวลารวมเท่าเดิม” ชัดกว่า “ใช้ AI ให้ดีขึ้น” เพราะเริ่มวาง baseline และ acceptance criterion ได้ทันที ซีรีส์นี้จะถามเช่นนี้ทุกบท</p>
+
+<h2 id="th-bridges">สามสะพาน — อ่านภาพเป็นสถาปัตยกรรม</h2>
+    <figure class="figure">
+      <a href="../images/below-threshold-bridges.png">
+        <img class="figure__img" src="../images/below-threshold-bridges.png" alt="สามสะพาน: AI ช่วย error path ช่วยออกแบบ circuit และนำแนวคิด quantum กลับมาปรับปรุงโปรแกรม" width="1427" height="937" loading="lazy" decoding="async">
+      </a>
+      <figcaption class="figure__caption">สามสะพาน: AI ช่วย error path ช่วยออกแบบ circuit และนำแนวคิด quantum กลับมาปรับปรุงโปรแกรม ภาพ 1.1 จากหนังสือ Below Threshold ของผู้เขียน เปิดภาพเพื่อดูขนาดเต็ม</figcaption>
+    </figure>
+<p><strong>สะพานแรก: error path</strong> ข้อมูลจาก parity checks เข้าสู่ decoder ซึ่งอนุมานผลของ error ที่เกิดขึ้น AI อาจช่วยเรียนรู้ noise ที่ model แบบง่ายตกหล่น รวมถึงช่วย calibration หรือ mitigation แต่ต้องทดสอบบนข้อมูลที่ไม่ได้ใช้ฝึก</p>
+<p><strong>สะพานที่สอง: mathematics ของ circuit</strong> compiler หรือ search เลือกการแปลงที่ใช้ gates น้อยลง โดยยังคง operation เดิม เป้าหมายคือผลเทียบเท่ากันด้วยต้นทุนต่ำลง ไม่ใช่เพียงได้ circuit ที่หน้าตาสั้นกว่า บท 6 จะตรวจความเทียบเท่าและเปรียบเทียบกับ baseline</p>
+<p><strong>สะพานที่สาม: โปรแกรมที่ดีขึ้น</strong> มีทั้ง workflow ใช้ AI เขียน quantum code อัลกอริทึม quantum-inspired ที่รันบน classical hardware และ Syndrome-Driven Development สำหรับคัดเลือกโค้ด AI สะพานนี้นำแนวคิดมาใช้ ไม่ได้ทำให้ Python กลายเป็น quantum computer</p>
+
+<h2 id="th-layers">Physical กับ logical — กำหนดชั้นของความผิดพลาด</h2>
+<p><strong>Physical qubit</strong> คืออุปกรณ์ที่เกิด noise จริง ส่วน <strong>logical qubit</strong> คือข้อมูลที่เข้ารหัสร่วมกันในหลาย physical qubits ระบบอ่าน checks ซ้ำและให้ classical decoder ตัดสินใจว่าจะชดเชยอย่างไร เป้าหมายของ QEC คือให้ logical information อยู่รอด แม้บางส่วนของอุปกรณ์จะผิดพลาด</p>
+<p>แนวคิด stabilizer ที่ <a href="https://arxiv.org/abs/quant-ph/9705052">Gottesman อธิบาย</a> ทำให้ checks เปิดเผย error โดยไม่อ่านคำตอบที่เก็บอยู่ ส่วน <a href="https://www.nature.com/articles/s41586-024-08449-y">การทดลอง below-threshold บน Willow</a> แสดงว่าภายใต้เงื่อนไขที่ทดลอง การเพิ่ม code distance ลด logical error ลงได้ คำว่า below threshold จึงบอกความสัมพันธ์ระหว่างขนาด code กับ error ไม่ใช่ error เท่ากับศูนย์</p>
+<p>อย่าเอา failure ต่อ gate ต่อ shot และต่อ cycle มาเรียงแข่งกันตรง ๆ และอย่าสับสนว่า memory ที่ดีขึ้นเท่ากับ application ที่ชนะ classical baseline แล้ว ต้องระบุหน่วย งานที่ทำ และเวลาไว้คู่กับทุกตัวเลข</p>
+
+<h2 id="th-budget">ลงมือ — คำนวณโอกาสสะสม error</h2>
+<p>ตัวอย่างเว็บนี้เป็น <strong>แบบจำลองสมมติเพื่อการสอน</strong> ไม่ใช่การจำลอง device หรือ Lab ของหนังสือ สมมติว่ามี N โอกาสเกิด error ที่เป็นอิสระกัน แต่ละโอกาสมี probability p ดังนั้น P(เกิดอย่างน้อยหนึ่งครั้ง) = 1 − (1 − p)<sup>N</sup> ทั้งนี้ “มี physical error” ยังไม่เท่ากับ “คำตอบผิด” เพราะ error correction หรือโครงสร้างงานอาจทำให้ fault ไม่กระทบผล</p>
+<pre><code>&quot;&quot;&quot;Illustrative independent-opportunity error budget; not a device model.&quot;&quot;&quot;
+from math import expm1, isclose, log1p
+
+
+def any_failure(per_operation, operations):
+    if not 0 &lt;= per_operation &lt; 1 or operations &lt; 0:
+        raise ValueError(&quot;Use 0 &lt;= p &lt; 1 and a nonnegative operation count&quot;)
+    return -expm1(operations * log1p(-per_operation))
+
+
+scenarios = [
+    (&quot;baseline&quot;, 0.001, 1000),
+    (&quot;halve physical error&quot;, 0.0005, 1000),
+    (&quot;halve operation count&quot;, 0.001, 500),
+    (&quot;hypothetical logical layer&quot;, 0.00001, 1000),
+]
+for label, p, count in scenarios:
+    print(f&quot;{label:26s} p={p:.5f} N={count:4d} P(any)={any_failure(p, count):.6f}&quot;)
+
+assert any_failure(0, 1000) == 0
+assert any_failure(0.001, 0) == 0
+assert isclose(any_failure(0.1, 2), 0.19)
+assert any_failure(0.001, 500) &lt; any_failure(0.001, 1000)
+assert any_failure(0.0005, 1000) &lt; any_failure(0.001, 1000)
+print(&quot;Checks passed: zero-risk cases and monotonic improvements&quot;)</code></pre><pre><code>baseline                   p=0.00100 N=1000 P(any)=0.632305
+halve physical error       p=0.00050 N=1000 P(any)=0.393545
+halve operation count      p=0.00100 N= 500 P(any)=0.393621
+hypothetical logical layer p=0.00001 N=1000 P(any)=0.009950
+Checks passed: zero-risk cases and monotonic improvements</code></pre>
+<p>baseline มี p = 0.001 จำนวน 1,000 ครั้ง โอกาสมีอย่างน้อยหนึ่ง error ประมาณ 63.23% ลด p ครึ่งหนึ่งเหลือประมาณ 39.35% หรือลดจำนวน operation ครึ่งหนึ่งเหลือประมาณ 39.36% สองทางนี้จึงให้ผลใกล้กันภายใต้สมมติฐานที่ตั้งไว้ ส่วน logical layer สมมติที่ p = 0.00001 เหลือประมาณ 1% ต้องไม่ตีความว่าตัวเลขนี้มาจาก hardware</p>
+<p><code>log1p</code> กับ <code>expm1</code> ช่วยคำนวณกรณี probability เล็กโดยไม่ลบตัวเลขใกล้หนึ่งโดยตรง ความหมายสำคัญกว่ารูปแบบ implementation: error budget ต้องมีทั้งความถี่ต่อ operation และจำนวนโอกาสที่ error จะเกิด</p>
+
+<h2 id="th-evidence">อ่านผล Labs — แยกหลักฐานให้ถูก</h2>
+<p>หนังสือมีแปด Labs ตั้งแต่ surface-code threshold และ learned decoder ไปถึง circuit synthesis, simulated bifurcation, tensor-train compression และการคัดเลือกโปรแกรมจาก LLM ผลที่รายงานมาจากโจทย์ code และ environment ที่ระบุในหนังสือ ไม่ใช่การรับประกันผลบนระบบของผู้อ่าน</p>
+<p>ใช้ตารางเปรียบเทียบสั้น ๆ ทุกครั้ง: baseline ทำงานเดียวกันหรือไม่ ใช้ shot หรือ compute budget เท่ากันหรือไม่ มี training cost เท่าไร ข้อมูล test ถูกกันออกจริงหรือไม่ และความต่างเกิน sampling uncertainty หรือไม่ ความแม่นยำที่สูงขึ้นแต่ช้าจนสะสม backlog อาจใช้ใน real-time decoder ไม่ได้</p>
+<p>ในซีรีส์นี้ ภาพผลทดลองจะระบุว่าเป็นผลที่หนังสือรายงาน ส่วน Python ขนาดเล็กเป็นตัวอย่างใหม่ที่รันเพื่อตรวจแนวคิด แยกหลักฐานสองระดับนี้ก่อนตัดสินใจเลือก library หรือวาง production architecture</p>
+
+<h2 id="th-exercise">แบบฝึก — เขียน contract ก่อนเลือก AI</h2>
+<p>แก้ <code>scenarios</code> ให้มีการปรับ p และ N พร้อมกัน แล้วตรวจว่าเมื่อ p คงเดิมแต่ N เพิ่ม probability ต้องไม่ลดลง และเมื่อ N คงเดิมแต่ p ลด probability ต้องไม่เพิ่ม หากผลผิด invariant ให้แก้ implementation ก่อนอภิปรายผลของ AI</p>
+<p>จากนั้นเลือกปัญหาจริงหนึ่งเรื่อง เขียน input, output, baseline, budget และ acceptance criterion อย่างละประโยค จัดเข้าหนึ่งในสามสะพาน แล้วเขียนหลักฐานที่ยังขาดหนึ่งข้อ หาก fault มี correlation สูตรในบทนี้ยังใช้ตรง ๆ ไม่ได้ ให้ระบุข้อจำกัดนั้นใน contract ด้วย บทถัดไปจะดูว่า quantum error มีหน้าตาอย่างไร ก่อนสร้าง checks ในบท 3</p>
+
+<h2 id="th-resources">Run & check — รันตัวอย่างด้วยตัวเอง</h2>
+<p>ตัวอย่างสำหรับสอนนี้ใช้ Python standard library เท่านั้น บันทึก <a href="../examples/below-threshold/ch01.py" download>ch01.py</a> แล้วรันด้วย Python 3.10 ขึ้นไป โดย assertions ตรวจ invariant ที่อธิบายในบท</p><pre><code>python3 ch01.py</code></pre><p><a href="../downloads/below-threshold-tutorial-examples.zip" download>ตัวอย่างทั้งสิบบทและผลลัพธ์ที่คาดหวัง (ZIP)</a> · <a href="https://github.com/Anirach/Anirach.github.io/tree/main/examples/below-threshold">อ่าน source บน GitHub</a></p>
+
+<h2 id="th-references">Sources & scope — แหล่งอ้างอิงและขอบเขต</h2>
+<section class="references" aria-labelledby="th-sources"><h3 id="th-sources">เอกสารและหลักฐาน</h3><p class="references__note">โครงบท ภาพที่ให้เครดิต และผล lab ที่รายงานมาจากหนังสือของผู้เขียน ณ November 2026 ตัวอย่างสั้นที่ใช้ standard library รันเพื่อตรวจบทเรียนเว็บวันที่ 25 November 2026 เป็นแบบจำลองเพื่อสอน ไม่ได้รันซ้ำการทดลอง Stim, neural network, mitigation หรือ LLM ฉบับเต็มในหนังสือ ข้ออ้าง hardware, simulator, preprint และบริษัทคงขอบเขตตามที่ระบุ</p><ol><li><a href="https://drive.google.com/file/d/1iG7oSWLC9UI91VsPOzqcxk3_evH8Sn3b/view?usp=sharing">Anirach Mingkhwan. Below Threshold: AI, Quantum Errors and Better Code. Edition 1.0 (November 2026), Chapter 1, pp. 5–8.</a></li><li id="th-ref-1"><a href="https://arxiv.org/abs/quant-ph/9705052">Gottesman. Stabilizer Codes and Quantum Error Correction (1997).</a></li><li id="th-ref-2"><a href="https://www.nature.com/articles/s41586-024-08449-y">Google Quantum AI and collaborators. Quantum error correction below the surface code threshold (online 2024; Nature 2025).</a></li></ol></section>
+    </div>
+
+    <div class="l-en" lang="en">
+
+<h2 id="en-start">Start with a problem you can measure</h2>
+<blockquote><p><strong>Download the book and examples</strong></p><p><a href="https://drive.google.com/uc?export=download&amp;id=1iG7oSWLC9UI91VsPOzqcxk3_evH8Sn3b">Download the complete Below Threshold book (English PDF · 104 pages · 5.4 MB)</a><br><a href="https://drive.google.com/file/d/1iG7oSWLC9UI91VsPOzqcxk3_evH8Sn3b/view?usp=sharing">Read on Google Drive</a> · <a href="../downloads/below-threshold-tutorial-examples.zip" download>Download all ten Python examples (ZIP)</a></p></blockquote>
+<p><strong>Chapter 1/10.</strong> A tutorial adaptation of <em>Below Threshold: AI, Quantum Errors and Better Code</em>, Edition 1.0, Chapter 1, pp. 5–8.</p><p><strong>Below Threshold: AI, Quantum Errors and Better Code</strong> asks how AI can help a quantum computer, and what programmers can carry back into everyday software. There are several answers. Each needs a defined input, output and measurement. This opening lesson builds a map before asking you to implement a decoder or train a model.</p>
+<p>You need Python, elementary probability and a little vector intuition. You do not need quantum hardware or an API key. By the end, you should distinguish reducing physical noise, reducing logical failure, reducing gate count, and selecting a program that passes checks. All affect reliability, but they measure different layers.</p>
+<p>Frame the objective as you would a backend change: “reduce wrong answers from one in a hundred to one in a thousand at the same total latency.” That gives you a baseline and an acceptance criterion. “Make it better with AI” does not yet specify an experiment.</p>
+
+<h2 id="en-bridges">Read the three bridges as an architecture</h2>
+    <figure class="figure">
+      <a href="../images/below-threshold-bridges.png">
+        <img class="figure__img" src="../images/below-threshold-bridges.png" alt="Three bridges: AI improves the error path, improves circuit mathematics, and brings quantum ideas back to programs." width="1427" height="937" loading="lazy" decoding="async">
+      </a>
+      <figcaption class="figure__caption">Three bridges: AI improves the error path, improves circuit mathematics, and brings quantum ideas back to programs. Author’s book, Figure 1.1. Open for full resolution.</figcaption>
+    </figure>
+<p><strong>Bridge one is the error path.</strong> Parity-check data enters a decoder that infers the logical effect of errors. Learning can capture noise statistics omitted by a simple model. AI can also help calibration or mitigation. The validation question is whether the improvement survives on data excluded from training.</p>
+<p><strong>Bridge two is circuit mathematics.</strong> A compiler or search procedure finds a cheaper implementation of the same operation. Fewer gates can reduce error opportunities, but equivalence must be checked. Chapter 6 compares synthesis methods against both a practical baseline and a small exact optimum.</p>
+<p><strong>Bridge three returns to programs.</strong> It includes an AI-assisted quantum workflow, quantum-inspired methods running on classical hardware, and the book’s Syndrome-Driven Development proposal for AI-written software. Borrowing these ideas changes how you design and validate a program; it does not turn Python into a quantum processor.</p>
+
+<h2 id="en-layers">Physical faults and logical failures need different metrics</h2>
+<p>A <strong>physical qubit</strong> is a noisy device. A <strong>logical qubit</strong> is information encoded across several devices. Repeated checks and a classical decoder protect that information. The goal of error correction is that the logical information survives even when some physical components fail.</p>
+<p>The <a href="https://arxiv.org/abs/quant-ph/9705052">stabilizer formalism</a> gives checks that reveal errors without revealing the stored answer. The <a href="https://www.nature.com/articles/s41586-024-08449-y">Willow below-threshold experiment</a> demonstrates logical error suppression as code distance increases under its experimental conditions. Below threshold describes this scaling behaviour. It does not mean that the memory has become error-free.</p>
+<p>Keep the denominator attached to the number: failure per gate, per shot and per cycle are different metrics. A better quantum memory also does not establish an application advantage over a classical baseline. Specify the unit, task and elapsed time before comparing results.</p>
+
+<h2 id="en-budget">Run a small independent-error budget</h2>
+<p>This new web example is an <strong>illustrative teaching model</strong>, not a device simulation or a rerun of a book lab. Assume N independent error opportunities, each with probability p. Then P(at least one error) = 1 − (1 − p)<sup>N</sup>. A physical fault is not automatically a wrong final answer: correction and application structure can prevent it from reaching the output.</p>
+<pre><code>&quot;&quot;&quot;Illustrative independent-opportunity error budget; not a device model.&quot;&quot;&quot;
+from math import expm1, isclose, log1p
+
+
+def any_failure(per_operation, operations):
+    if not 0 &lt;= per_operation &lt; 1 or operations &lt; 0:
+        raise ValueError(&quot;Use 0 &lt;= p &lt; 1 and a nonnegative operation count&quot;)
+    return -expm1(operations * log1p(-per_operation))
+
+
+scenarios = [
+    (&quot;baseline&quot;, 0.001, 1000),
+    (&quot;halve physical error&quot;, 0.0005, 1000),
+    (&quot;halve operation count&quot;, 0.001, 500),
+    (&quot;hypothetical logical layer&quot;, 0.00001, 1000),
+]
+for label, p, count in scenarios:
+    print(f&quot;{label:26s} p={p:.5f} N={count:4d} P(any)={any_failure(p, count):.6f}&quot;)
+
+assert any_failure(0, 1000) == 0
+assert any_failure(0.001, 0) == 0
+assert isclose(any_failure(0.1, 2), 0.19)
+assert any_failure(0.001, 500) &lt; any_failure(0.001, 1000)
+assert any_failure(0.0005, 1000) &lt; any_failure(0.001, 1000)
+print(&quot;Checks passed: zero-risk cases and monotonic improvements&quot;)</code></pre><pre><code>baseline                   p=0.00100 N=1000 P(any)=0.632305
+halve physical error       p=0.00050 N=1000 P(any)=0.393545
+halve operation count      p=0.00100 N= 500 P(any)=0.393621
+hypothetical logical layer p=0.00001 N=1000 P(any)=0.009950
+Checks passed: zero-risk cases and monotonic improvements</code></pre>
+<p>At p = 0.001 over 1,000 opportunities, the chance of at least one fault is about 63.23%. Halving p gives about 39.35%; halving the count gives about 39.36%. These two interventions look similar only under the stated assumptions. The hypothetical logical layer reaches about 1%; that number is an input to our illustration, not a hardware result.</p>
+<p><code>log1p</code> and <code>expm1</code> improve numerical behaviour for small probabilities. The engineering point is simpler than the implementation: an error budget needs both a rate per opportunity and the number of opportunities.</p>
+
+<h2 id="en-evidence">Read the labs as bounded evidence</h2>
+<p>The book’s eight labs range from surface-code thresholds and learned decoding to circuit synthesis, simulated bifurcation, tensor-train compression and LLM-program selection. Their recorded results belong to the specified problems, implementations and environments. They are not guarantees for a reader’s workload.</p>
+<p>Ask the same comparison questions every time. Does the baseline solve the same task? Are shot and compute budgets equal? What did training cost? Was test data withheld? Is the difference larger than sampling uncertainty? An accurate decoder that accumulates an ever-growing backlog may still miss the system requirement.</p>
+<p>This series labels the book’s experimental plots as recorded book results. Its small Python examples are newly executed teaching models. Keep those two levels of evidence separate when choosing a library or designing a production system.</p>
+
+<h2 id="en-exercise">Exercise: write a contract before choosing AI</h2>
+<p>Change <code>scenarios</code> to improve p and N together. Check two invariants: increasing N at fixed p cannot reduce the probability, and decreasing p at fixed N cannot increase it. Repair the implementation before interpreting an apparent AI improvement if either invariant fails.</p>
+<p>Then choose one real problem. Write one sentence each for its input, output, baseline, budget and acceptance criterion. Place it on one of the three bridges and name one missing piece of evidence. If faults are correlated, our formula no longer applies directly; record that limitation in the contract. Next we examine what quantum errors actually look like before building checks in Chapter 3.</p>
+
+<h2 id="en-resources">Run and check the example</h2>
+<p>This complete teaching example uses only the Python standard library. Save <a href="../examples/below-threshold/ch01.py" download>ch01.py</a>, then run it with Python 3.10 or later. Its assertions check the stated invariants.</p><pre><code>python3 ch01.py</code></pre><p><a href="../downloads/below-threshold-tutorial-examples.zip" download>All ten examples and expected output (ZIP)</a> · <a href="https://github.com/Anirach/Anirach.github.io/tree/main/examples/below-threshold">Browse example source on GitHub</a></p>
+
+<h2 id="en-references">Sources and scope</h2>
+<section class="references" aria-labelledby="en-sources"><h3 id="en-sources">Reading and evidence</h3><p class="references__note">The author’s book is the source of the chapter structure, credited diagrams and reported lab results (November 2026 snapshot). The short standard-library example above was executed for this web lesson on 25 November 2026. It is a teaching model; the book’s full Stim, neural-network, mitigation and LLM experiments were not rerun for these posts. Hardware, simulator, preprint and company claims retain their stated scope.</p><ol><li><a href="https://drive.google.com/file/d/1iG7oSWLC9UI91VsPOzqcxk3_evH8Sn3b/view?usp=sharing">Anirach Mingkhwan. Below Threshold: AI, Quantum Errors and Better Code. Edition 1.0 (November 2026), Chapter 1, pp. 5–8.</a></li><li id="en-ref-1"><a href="https://arxiv.org/abs/quant-ph/9705052">Gottesman. Stabilizer Codes and Quantum Error Correction (1997).</a></li><li id="en-ref-2"><a href="https://www.nature.com/articles/s41586-024-08449-y">Google Quantum AI and collaborators. Quantum error correction below the surface code threshold (online 2024; Nature 2025).</a></li></ol></section>
+    </div>
+
+    <div class="post-series-footer">
+      <span class="l-th">จากซีรีส์ Below Threshold</span><span class="l-en" lang="en">From Below Threshold</span>
+    </div>
+
+    <nav aria-label="Below Threshold">
+    <div class="series-nav">
+      <h3>Below Threshold · 10-Chapter Course</h3>
+      <div class="series-links">
+        <span class="current" aria-current="page">#1 The Three Bridges</span>
+        <a href="/blog/below-threshold-quantum-errors">#2 Quantum Errors</a>
+        <a href="/blog/below-threshold-error-correction">#3 Checks and Thresholds</a>
+        <a href="/blog/below-threshold-ai-decoders">#4 AI Decoders</a>
+        <a href="/blog/below-threshold-error-path">#5 Error Path</a>
+        <a href="/blog/below-threshold-circuit-synthesis">#6 Circuit Synthesis</a>
+        <a href="/blog/below-threshold-ai-workflow">#7 AI Workflow</a>
+        <a href="/blog/below-threshold-quantum-inspired">#8 Quantum-Inspired</a>
+        <a href="/blog/below-threshold-syndrome-driven-development">#9 Syndrome-Driven Code</a>
+        <a href="/blog/below-threshold-playbook">#10 Engineering Playbook</a>
+      </div>
+    </div>
+    </nav>
+
+  </article>
+
+  </main>
+
+  <footer class="blog-footer">
+    <nav class="blog-footer__nav" aria-label="Site">
+      <a href="../index.html">Home</a>
+      <a href="./">Tutorials</a>
+      <a href="../thoughts/">Thoughts</a>
+      <a href="../publications/">Publications</a>
+      <a href="../books/">Books</a>
+      <a href="../projects/">Projects</a>
+      <a href="../news/">News</a>
+      <a href="../index.html#contact">Contact</a>
+    </nav>
+    <a href="./">← Back to Tutorials</a>
+    <span>© 2026 Anirach Mingkhwan — Independent AI consultant</span>
+  </footer>
+
+</body>
+</html>

@@ -5,7 +5,17 @@ description: Runs the cross-file integrity linter for the anirach.com static sit
 
 # site-check — the site's only test suite
 
-> **Current local review inventory — 2026-11-24:** 167 bilingual posts in 13 series
+> **Current local review inventory — 2026-11-25:** 177 bilingual posts in 14 series
+> (11 Tutorials / 138 articles, 3 Thoughts / 39 essays), 192 public HTML files
+> (188 enumerated), 649 images, 177 feed items and 188 sitemap URLs.
+> The ten-part **Below Threshold** series follows the book’s ten numbered chapters,
+> reuses its 17 credited figures, and includes ten executed standard-library examples.
+> Each language view links to the owner’s public 104-page English book on Drive.
+> Editorial source: `docs/below-threshold/`; manifest: `scripts/series/below-threshold.json`.
+> Examples: `examples/below-threshold/`, with an offline ZIP in `downloads/`.
+> Full book experiments are attributed rather than claimed as rerun for the web series.
+>
+> **Historical local review inventory — 2026-11-24:** 167 bilingual posts in 13 series
 > (10 Tutorials / 128 articles, 3 Thoughts / 39 essays), 182 public HTML files
 > (178 enumerated), 602 images, 167 feed items and 178 sitemap URLs.
 > The seven-part **Quantum Algorithms for Programmers** course has 24 figures,

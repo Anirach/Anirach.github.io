@@ -1,0 +1,624 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AI Decoders — เรียนรู้ syndrome | Anirach Mingkhwan</title>
+  <meta name="description" content="เรียนรู้ AI decoder จาก syndrome ทดลอง lookup table ที่มี ambiguity เปรียบเทียบผลกับ matching พร้อมอ่านผล Lab 2 และขอบเขต real-time อย่างถูกต้อง">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300..900&family=Sarabun:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400..600&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      color-scheme: light;
+      /* ink */
+      --navy: #11304b; --slate: #334155; --slate-light: #526174; --gray: #94a3b8;
+      /* ground */
+      --bg: #faf7f0; --white: #ffffff; --code-bg: #1e293b;
+      /* accent */
+      --blue: #226299; --blue-dark: #1a4d7a; --blue-light: #4992b9;
+      /* brand — sampled from the book covers. --gold is decorative on light grounds (2.2:1); --gold-dark is its text form. */
+      --gold: #c4a46c; --gold-dark: #7a5f22; --cloud: #dee7e6; --parchment: #e9e1c4; --focus: #226299;
+      /* status — use only these six, never invent a seventh */
+      --green: #22c55e; --red: #ef4444; --amber: #f59e0b;
+      --cyan: #06b6d4; --purple: #226299; --purple-dark: #1a4d7a;
+      /* type */
+      --font: 'Inter', 'Sarabun', -apple-system, BlinkMacSystemFont, sans-serif;
+      --mono: 'JetBrains Mono', 'Fira Code', 'Sarabun', monospace;
+      /* form */
+      --radius: 12px; --radius-sm: 8px; --radius-lg: 16px;
+      --measure: 720px; --wide: 860px;
+      --transition: 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+    html { scroll-behavior: smooth; }
+    body { font-family: var(--font); font-size: 17px; line-height: 1.8; color: var(--slate); background: var(--bg); -webkit-font-smoothing: antialiased; }
+    .blog-nav { position: fixed; top: 0; left: 0; right: 0; z-index: 100; background: rgba(248,250,252,0.85); backdrop-filter: blur(20px); border-bottom: 1px solid rgba(0,0,0,0.05); }
+    .blog-nav__inner { max-width: 860px; margin: 0 auto; padding: 0 2rem; height: 56px; display: flex; align-items: center; justify-content: space-between; }
+    .blog-nav__back { font-size: 0.85rem; font-weight: 500; color: var(--blue); text-decoration: none; }
+    .blog-nav__back:hover { color: #1a4d7a; }
+    .blog-nav__title { font-size: 0.85rem; font-weight: 600; color: var(--navy); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 50%; }
+    /* ── HERO ── house .post-hero on the approved Deep Blue gradient (page-design
+       §5 / INV-28). Ink is inverted for the dark ground: white title/meta, tag
+       pills white on 18% white — the openclaw-production treatment. The
+       background value must stay byte-identical to the approved string. */
+    .post-hero { padding: 8rem 2rem 3rem; background: linear-gradient(135deg, #11304b 0%, #1a4d7a 45%, #226299 100%); color: #fff; text-align: center; }
+    .post-hero__tags { display: flex; gap: 0.5rem; justify-content: center; margin-bottom: 1.25rem; flex-wrap: wrap; }
+    .post-hero__tag { display: inline-block; font-size: 0.72rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.1em; color: #fff; background: rgba(255,255,255,0.18); padding: 0.35rem 0.9rem; border-radius: 20px; }
+    .post-hero__title { font-size: clamp(1.8rem, 5vw, 3rem); font-weight: 800; color: #fff; line-height: 1.2; margin-bottom: 1rem; max-width: 720px; margin-left: auto; margin-right: auto; }
+    .post-hero__sub { font-size: 1.05rem; max-width: 640px; margin: 0 auto 1.5rem; line-height: 1.7; color: #fff; }
+    .post-hero__meta { font-size: 0.85rem; color: #fff; display: flex; align-items: center; justify-content: center; gap: 1.5rem; flex-wrap: wrap; }
+    .post-hero__series { font-weight: 600; color: #fff; }
+    /* the switch pill and the focus ring both sit on the dark hero: the pill is
+       a light chip so its labels keep their light-ground colours, and --focus
+       re-points to gold here (blue collapses on blue — the footer/pre
+       precedent). */
+    .post-hero { --focus: var(--gold); }
+    .post-hero__cover {
+      aspect-ratio: 1 / 1;
+      max-width: 380px;
+      margin: 2.5rem auto 0;
+      border-radius: var(--radius-lg, 16px);
+      overflow: hidden;
+      box-shadow: 0 20px 60px rgba(17,48,75,0.14);
+    }
+    .post-hero__cover img { width: 100%; height: 100%; object-fit: cover; display: block; }
+    .post-body { max-width: 720px; margin: 0 auto; padding: 3rem 2rem 6rem; }
+    .post-body h2 { font-size: 1.6rem; font-weight: 800; color: var(--navy); margin: 3rem 0 1rem; padding-bottom: 0.5rem; border-bottom: 2px solid rgba(34,98,153,0.15); }
+    .post-body h3 { font-size: 1.25rem; font-weight: 700; color: var(--navy); margin: 2.25rem 0 0.75rem; }
+    .post-body p { margin-bottom: 1.25rem; }
+    .post-body strong { font-weight: 700; color: var(--navy); }
+    .post-body a { color: var(--blue); text-decoration: underline; text-decoration-thickness: 1px; text-underline-offset: 2px; }
+    .post-body ul, .post-body ol { margin: 0.5rem 0 1.25rem 1.5rem; }
+    .post-body li { margin-bottom: 0.4rem; }
+    .post-body blockquote { background: rgba(34,98,153,0.06); border-left: 4px solid var(--blue); padding: 1rem 1.25rem; border-radius: 0 10px 10px 0; margin: 1.25rem 0; font-size: 0.95rem; color: var(--navy); }
+    .post-body hr { border: none; height: 1px; background: linear-gradient(90deg, transparent, rgba(34,98,153,0.2), transparent); margin: 3rem 0; }
+    /* ── CODE ── */
+    .post-body pre { background: var(--code-bg); border-radius: 12px; padding: 1.5rem; margin: 1.25rem 0 1.5rem; overflow-x: auto; border: 1px solid rgba(255,255,255,0.05); }
+    .post-body pre code { font-family: var(--mono); font-size: 0.85rem; color: #e2e8f0; line-height: 1.7; background: none; padding: 0; white-space: pre-wrap; }
+    .post-body code { font-family: var(--mono); font-size: 0.88em; background: rgba(34,98,153,0.08); color: var(--blue-dark); padding: 0.15em 0.45em; border-radius: 5px; }
+    /* ── TABLES ── */
+    .table-wrapper { overflow-x: auto; margin: 1.5rem 0; border-radius: 0.5rem; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1); }
+    table { width: 100%; border-collapse: collapse; background: white; }
+    th { background: #226299; color: white; padding: 1rem; text-align: left; font-weight: 600; }
+    td { padding: 1rem; border-bottom: 1px solid #e5e7eb; }
+    .post-body table { display: block; width: 100%; overflow-x: auto; }
+    /* ── ALERTS ── */
+    .alert { background: #fef3cd; border: 1px solid #facc15; border-radius: 0.5rem; padding: 1rem; margin: 1.5rem 0; }
+    .alert.danger { background: #fee2e2; border-color: #ef4444; }
+    .alert.info { background: #e0f2fe; border-color: #06b6d4; }
+    .alert.success { background: #d1fae5; border-color: #10b981; }
+    /* ── KEY TAKEAWAYS ── */
+    .key-takeaways { background: linear-gradient(135deg, #f3f4f6 0%, #e5e7eb 100%); border-radius: 1rem; padding: 2rem; margin: 3rem 0; }
+    .key-takeaways h3 { color: #226299; margin-bottom: 1.5rem; }
+    .post-series-footer { text-align: center; font-size: 0.85rem; color: var(--slate-light); font-style: italic; margin-top: 2rem; padding-top: 2rem; border-top: 1px solid #e2e8f0; }
+    .blog-footer { background: var(--navy); padding: 2rem 0; text-align: center; }
+    .blog-footer a { color: var(--gold); text-decoration: none; font-weight: 600; font-size: 0.9rem; }
+    .blog-footer span { color: var(--gray); font-size: 0.8rem; display: block; margin-top: 0.4rem; }
+    @media (max-width: 600px) {
+      .post-hero { padding: 7rem 1.25rem 2.5rem; }
+      .post-body { padding: 2rem 1.25rem 4rem; }
+      .post-hero__meta { flex-direction: column; gap: 0.4rem; }
+      .post-body h2 { font-size: 1.4rem; }
+      .post-body h3 { font-size: 1.15rem; }
+      .post-body pre { padding: 1rem; border-radius: 8px; }
+    }
+
+    :focus-visible { outline: 2px solid var(--focus); outline-offset: 3px; border-radius: 2px; }
+    /* the ring sits on the page ground (3px offset). Inside the navy footers
+       and code blocks var(--blue) collapses to 2.12:1, so those scopes
+       re-point --focus to gold (5.73:1 on navy). */
+    .footer, .blog-footer, pre { --focus: var(--gold); }
+    :focus:not(:focus-visible) { outline: none; }
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after {
+        animation-duration: .01ms !important; animation-iteration-count: 1 !important;
+        transition-duration: .01ms !important; scroll-behavior: auto !important;
+      }
+    }
+    h1, h2, h3, .post-hero__title, .card__title { text-wrap: balance; }
+    .post-body { overflow-wrap: break-word; }   /* long URLs and inline code wrap instead of widening the page */
+
+    .post-body img, .post-body svg { max-width: 100%; height: auto; }
+
+    /* ── SKIP LINK ── a11y-perf R5: the link and the landmark it targets are a
+       pair — useless without both halves. Off-screen until focused, then the
+       first tab stop on every page. */
+    .skip-link { position: absolute; left: -9999px; }
+    .skip-link:focus {
+      left: 1rem; top: 1rem; z-index: 999;
+      background: var(--navy); color: #fff;
+      padding: 0.75rem 1.25rem; border-radius: var(--radius-sm);
+      font-weight: 600; text-decoration: none;
+    }
+
+    /* ── POST WAYFINDING ── the wordmark is the home link; the footer carries
+       the full destination row. */
+    .blog-nav__home {
+      font-size: 0.9rem; font-weight: 800; color: var(--navy);
+      text-decoration: none; margin-right: 1rem;
+    }
+    .blog-nav__home:hover { color: var(--blue); }
+    .blog-nav__inner > .blog-nav__back { margin-right: auto; }
+    .blog-footer__nav {
+      display: flex; flex-wrap: wrap; justify-content: center; gap: 0.35rem 1.25rem;
+      max-width: 860px; margin: 0 auto 1.25rem; padding: 0 2rem 1.25rem;
+      border-bottom: 1px solid rgba(255,255,255,0.12);
+    }
+    .blog-footer__nav a { color: var(--gold); font-size: 0.85rem; font-weight: 600; text-decoration: none; }
+    .blog-footer__nav a:hover { color: #fff; text-decoration: underline; }
+
+    html { scroll-padding-top: 5rem; }
+    [id] { scroll-margin-top: 5rem; }
+
+    /* Thai needs more room than Latin at the same nominal size. */
+    .post-body:lang(th) { font-size: 18px; line-height: 1.85; }
+    .post-body p, .post-body li, .post-body blockquote { text-wrap: pretty; }
+
+    /* ---- side-scroll affordance ----
+       pre blocks and tables can exceed 720px. These layers paint a shadow ONLY
+       where there is more content in that direction; when fully scrolled the
+       cover slides over the shadow and hides it. No JavaScript, no wrapper. */
+    .post-body pre, .post-body table {
+      overflow-x: auto;
+      background-image:
+        linear-gradient(to right, var(--code-bg, #0f172a) 30%, rgba(15,23,42,0)),
+        linear-gradient(to left, var(--code-bg, #0f172a) 30%, rgba(15,23,42,0)),
+        radial-gradient(farthest-side at 0 50%, rgba(0,0,0,.28), rgba(0,0,0,0)),
+        radial-gradient(farthest-side at 100% 50%, rgba(0,0,0,.28), rgba(0,0,0,0));
+      background-position: 0 0, 100% 0, 0 0, 100% 0;
+      background-repeat: no-repeat;
+      background-size: 40px 100%, 40px 100%, 14px 100%, 14px 100%;
+      background-attachment: local, local, scroll, scroll;
+    }
+    .post-body table {
+      background-image:
+        linear-gradient(to right, var(--white, #fff) 30%, rgba(255,255,255,0)),
+        linear-gradient(to left, var(--white, #fff) 30%, rgba(255,255,255,0)),
+        radial-gradient(farthest-side at 0 50%, rgba(17,48,75,.16), rgba(17,48,75,0)),
+        radial-gradient(farthest-side at 100% 50%, rgba(17,48,75,.16), rgba(17,48,75,0));
+      background-position: 0 0, 100% 0, 0 0, 100% 0;
+      background-repeat: no-repeat;
+      background-size: 40px 100%, 40px 100%, 14px 100%, 14px 100%;
+      background-attachment: local, local, scroll, scroll;
+    }
+
+    /* ---- table of contents ---- */
+    .post-toc {
+      max-width: 720px;
+      margin: 2rem auto 0;
+      padding: 1rem 1.25rem;
+      background: rgba(34,98,153,0.05);
+      border: 1px solid rgba(34,98,153,0.14);
+      border-left: 3px solid var(--gold, #c4a46c);
+      border-radius: 10px;
+      font-size: 0.92rem;
+    }
+    .post-toc > summary {
+      cursor: pointer;
+      font-weight: 700;
+      color: var(--navy);
+      list-style: none;
+    }
+    .post-toc > summary::-webkit-details-marker { display: none; }
+    .post-toc > summary::before {
+      content: "\25B8";
+      display: inline-block;
+      margin-right: 0.5rem;
+      transition: transform 0.2s ease;
+      color: var(--gold-dark, #7a5f22);
+    }
+    .post-toc[open] > summary::before { transform: rotate(90deg); }
+    .post-toc > summary:focus-visible { outline: 3px solid var(--focus, #226299); outline-offset: 3px; }
+    .post-toc ol { margin: 0.85rem 0 0.25rem; padding-left: 1.4rem; }
+    .post-toc li { margin-bottom: 0.4rem; line-height: 1.5; }
+    .post-toc a { color: var(--slate); text-decoration: none; }
+    .post-toc a:hover, .post-toc a:focus-visible { color: var(--blue-dark, #1a4d7a); text-decoration: underline; }
+    @media (max-width: 600px) { .post-toc { margin: 1.25rem 1rem 0; } }
+
+    /* ---- cross-document view transitions ---- */
+    @view-transition { navigation: auto; }
+    .nav, .blog-nav { view-transition-name: site-nav; }
+    .footer, .blog-footer { view-transition-name: site-footer; }
+    @media (prefers-reduced-motion: reduce) {
+      ::view-transition-group(*),
+      ::view-transition-old(*),
+      ::view-transition-new(*) { animation: none !important; }
+    }
+
+    /* ── SERIES STRIP — Hermes Agent in Practice ──
+       Same class and inner-wrapper shape as the OpenClaw strip because the
+       linter's RE_SNAV recognises exactly `series-nav` + a nested div; a
+       renamed strip would read as "no nav" and fail INV-08. All content
+       checks (INV-03 family) iterate the SERIES7 list only, so this strip's
+       labels are convention, not contract. House-styled, not the island CSS. */
+    .series-nav {
+      max-width: 720px; margin: 2rem auto 0; padding: 1.1rem 1.4rem;
+      background: rgba(255,255,255,0.75); border: 1px solid rgba(34,98,153,0.15);
+      border-left: 3px solid var(--gold); border-radius: 12px;
+    }
+    .series-nav h3 {
+      font-size: 0.78rem; font-weight: 700; text-transform: uppercase;
+      letter-spacing: 0.08em; color: var(--gold-dark); margin-bottom: 0.6rem;
+    }
+    .series-links { display: flex; flex-wrap: wrap; gap: 0.5rem; }
+    .series-links a, .series-links .current {
+      font-size: 0.82rem; font-weight: 600; padding: 0.35rem 0.8rem;
+      border-radius: 50px; text-decoration: none;
+    }
+    .series-links a { color: var(--blue-dark); background: rgba(34,98,153,0.08); }
+    .series-links a:hover { background: rgba(34,98,153,0.16); }
+    .series-links .current { color: #fff; background: var(--blue-dark); }
+    @media (max-width: 600px) { .series-nav { margin: 1.5rem 1rem 0; } }
+
+    /* ── FIGURE — the sanctioned diagram component (page-design §4 Content).
+       Diagrams are PNGs; this repo built them out of divs twice and reverted
+       twice. The image is wrapped in a link to itself so a phone can pinch a
+       1400px drawing without a line of JavaScript. */
+    .figure { margin: 2.5rem 0; }
+    .figure__img { width: 100%; height: auto; display: block;
+                   border-radius: var(--radius); border: 1px solid rgba(0,0,0,0.06); }
+    .figure__caption { font-size: 0.85rem; color: var(--slate-light);
+                       text-align: center; margin-top: 0.75rem; }
+
+    /* ── REFERENCES — every material number in this series carries its source.
+       The tags are the book's own four evidence labels. */
+    .references { margin-top: 3rem; padding-top: 2rem; border-top: 1px solid #e2e8f0; }
+    .references__note { font-size: 0.85rem; color: var(--slate-light); margin-bottom: 1rem; }
+    .references__list { padding-left: 1.4rem; font-size: 0.9rem; line-height: 1.75; }
+    .references__list li { margin-bottom: 0.7rem; }
+    .ref-tag { display: inline-block; font-size: 0.7rem; font-weight: 700;
+               letter-spacing: 0.06em; text-transform: uppercase; padding: 0.1rem 0.5rem;
+               border-radius: 50px; margin-right: 0.4rem; vertical-align: 0.05em;
+               background: rgba(34,98,153,0.1); color: var(--blue-dark); }
+    /* All four labels get a rule.  --standard and --study shipped without one
+       on 2026-09-05, so 158 of 306 tags fell through to the base blue and the
+       two labels were indistinguishable.  Ratios on --bg: 6.70 / 6.92 / 7.36 /
+       4.81:1, all AA at this size. */
+    .ref-tag--law { background: rgba(239,68,68,0.12); color: #991b1b; }
+    .ref-tag--standard { background: rgba(34,98,153,0.12); color: var(--blue-dark); }
+    .ref-tag--study { background: rgba(34,197,94,0.18); color: #14532d; }
+    .ref-tag--synthesis { background: rgba(196,164,108,0.22); color: var(--gold-dark); }
+    .ref-supports { display: block; color: var(--slate-light); font-size: 0.85rem; }
+
+    /* ── LANGUAGE SWITCH — pure CSS, zero JavaScript (INV-38) ──
+       One visually-hidden checkbox as a direct child of body, BEFORE the main landmark,
+       so `#langSwitch:checked ~ main …` reaches every content block. The two
+       tracks are paired blocks: .l-th (default) and .l-en (hidden until
+       checked; display:revert restores block for divs, inline for spans).
+       Naming stays clear of INV-12's menu-token regex (hamburger|burger|
+       nav__toggle|nav-toggle|navtoggle|menu-toggle|menu__toggle) — verified.
+       No JS also means no persistence across posts; each post opens in Thai. */
+    .lang-switch-box { position: absolute; left: -9999px; }
+    /* where anchor positioning exists the box sits on the pill, so focusing it scrolls the pill into view */
+    .lang-switch { anchor-name: --lang-switch; }
+    .lang-switch-box { position-anchor: --lang-switch; top: anchor(top); left: anchor(left); width: 1px; height: 1px; opacity: 0; pointer-events: none; }
+    .l-en { display: none; }
+    #langSwitch:checked ~ main .l-en { display: revert; }
+    #langSwitch:checked ~ main .l-th { display: none; }
+    .lang-switch {
+      display: inline-flex; align-items: center; gap: 0.55rem;
+      margin-top: 1.4rem; padding: 0.4rem 1.1rem; border-radius: 50px;
+      background: rgba(255,255,255,0.85); border: 1px solid rgba(255,255,255,0.4);
+      cursor: pointer; font-size: 0.85rem; user-select: none;
+    }
+    .lang-switch span { color: var(--slate-light); font-weight: 600; transition: color 0.2s; }
+    .lang-switch .lang-sep { color: var(--gray); font-weight: 400; }
+    .lang-switch .lang-th { color: var(--navy); font-weight: 800; }
+    #langSwitch:checked ~ main .lang-switch .lang-th { color: var(--slate-light); font-weight: 600; }
+    #langSwitch:checked ~ main .lang-switch .lang-en { color: var(--navy); font-weight: 800; }
+    .lang-switch:hover { border-color: #fff; }
+    #langSwitch:focus-visible ~ main .lang-switch {
+      outline: 2px solid var(--focus); outline-offset: 3px;
+    }
+  </style>
+  <!-- social -->
+  <link rel="canonical" href="https://anirach.com/blog/below-threshold-ai-decoders.html">
+  <meta property="og:type" content="article">
+  <meta property="og:url" content="https://anirach.com/blog/below-threshold-ai-decoders.html">
+  <meta property="og:site_name" content="Anirach Mingkhwan">
+  <meta property="og:locale" content="th_TH">
+  <meta property="og:locale:alternate" content="en_US">
+  <meta property="article:published_time" content="2026-11-25">
+  <meta property="article:author" content="https://anirach.com/">
+  <meta property="og:title" content="AI Decoders — เรียนรู้ syndrome">
+  <meta property="og:description" content="เรียนรู้ AI decoder จาก syndrome ทดลอง lookup table ที่มี ambiguity เปรียบเทียบผลกับ matching พร้อมอ่านผล Lab 2 และขอบเขต real-time อย่างถูกต้อง">
+  <meta property="og:image" content="https://anirach.com/images/below-threshold-ai-decoders-og.jpg">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
+  <meta property="og:image:alt" content="AI Decoders — เรียนรู้ syndrome">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:image" content="https://anirach.com/images/below-threshold-ai-decoders-og.jpg">
+  <meta name="twitter:image:alt" content="AI Decoders — เรียนรู้ syndrome">
+  <meta name="robots" content="max-image-preview:large">
+  <meta name="theme-color" content="#11304b">
+  <link rel="icon" href="/favicon.ico" sizes="any">
+  <link rel="apple-touch-icon" href="/apple-touch-icon.png">
+  <!-- /social -->
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "BlogPosting",
+    "headline": "AI Decoders — เรียนรู้ syndrome",
+    "author": {
+      "@type": "Person",
+      "@id": "https://anirach.com/#person",
+      "name": "Anirach Mingkhwan",
+      "url": "https://anirach.com/"
+    },
+    "datePublished": "2026-11-25",
+    "dateModified": "2026-11-25",
+    "image": "https://anirach.com/images/below-threshold-ai-decoders-og.jpg",
+    "inLanguage": [
+      "th",
+      "en"
+    ],
+    "mainEntityOfPage": "https://anirach.com/blog/below-threshold-ai-decoders.html"
+  }
+  </script>
+</head>
+<body>
+<a href="#main" class="skip-link">Skip to content</a>
+<input type="checkbox" id="langSwitch" class="lang-switch-box" aria-label="Switch language: Thai / English">
+
+  <nav class="blog-nav">
+    <div class="blog-nav__inner">
+      <a href="../index.html" class="blog-nav__home">Anirach</a>
+      <a href="./" class="blog-nav__back">‹ Tutorials</a>
+      <div class="blog-nav__title">AI Decoders</div>
+    </div>
+  </nav>
+
+  <main id="main">
+
+  <header class="post-hero">
+    <div class="post-hero__tags">
+      <span class="post-hero__tag">Quantum Computing</span>
+      <span class="post-hero__tag">AI Engineering</span>
+      <span class="post-hero__tag">Python</span>
+    </div>
+    <h1 class="post-hero__title"><span class="l-th">AI Decoders — เรียนรู้ syndrome</span><span class="l-en" lang="en">AI as the Decoder: Learn the Noise, Measure the Limits</span></h1>
+    <p class="post-hero__sub"><span class="l-th">เปลี่ยน parity checks ให้เป็นการตัดสินใจ เปรียบเทียบ matching กับ learned decoder และแยกความแม่นยำ throughput และ latency ให้ชัด</span><span class="l-en" lang="en">Turn parity checks into decisions, compare matching with learned decoding, and keep accuracy, throughput and latency separate.</span></p>
+    <div class="post-hero__meta">
+      <span>By <strong>Anirach Mingkhwan</strong></span>
+      <span class="post-hero__series">Below Threshold 2026 • Chapter #4</span>
+      <span><time datetime="2026-11-25">25 Nov 2026</time></span>
+      <span>5 min read</span>
+    </div>
+    <label for="langSwitch" class="lang-switch" title="สลับภาษา · Switch language"><span class="lang-th">ไทย</span><span class="lang-sep">·</span><span class="lang-en" lang="en">English</span></label>
+    <div class="post-hero__cover">
+      <img src="../images/below-threshold-ai-decoders-cover.jpg" alt="AI Decoders — เรียนรู้ syndrome" width="800" height="800" loading="eager" fetchpriority="high" decoding="async">
+    </div>
+  </header>
+
+  <article class="post-body">
+
+    <details class="post-toc l-th" open>
+      <summary>ในบทความนี้</summary>
+      <ol>
+          <li><a href="#th-start">โจทย์ของบทนี้ — เลือก logical correction จากข้อมูลที่ไม่สมบูรณ์</a></li>
+          <li><a href="#th-inference">โมเดลของ noise — สิ่งที่ matching รู้ และสิ่งที่ข้อมูลสอนได้</a></li>
+          <li><a href="#th-clock">วงรอบของเครื่อง — throughput ไม่ใช่ latency</a></li>
+          <li><a href="#th-example">ลงมือเขียน — syndrome เดียวกัน แต่ logical effect คนละแบบ</a></li>
+          <li><a href="#th-lab">อ่าน Lab 2 — ชนะ baseline แล้วก็ยังมี floor</a></li>
+          <li><a href="#th-practice">ออกแบบการทดลองถัดไป — ทดสอบ drift และ information loss</a></li>
+          <li><a href="#th-resources">Run & check — รันตัวอย่างด้วยตัวเอง</a></li>
+          <li><a href="#th-references">Sources & scope — แหล่งอ้างอิงและขอบเขต</a></li>
+      </ol>
+    </details>
+    <details class="post-toc l-en" open>
+      <summary>In this post</summary>
+      <ol>
+          <li><a href="#en-start">The task: infer a logical correction from incomplete evidence</a></li>
+          <li><a href="#en-inference">The noise model: what matching assumes and data can teach</a></li>
+          <li><a href="#en-clock">The machine clock: throughput and latency are different</a></li>
+          <li><a href="#en-example">Write the decoder: one syndrome, two logical effects</a></li>
+          <li><a href="#en-lab">Read Lab 2: a baseline win still leaves a floor</a></li>
+          <li><a href="#en-practice">Your experiment: test drift and information loss</a></li>
+          <li><a href="#en-resources">Run and check the example</a></li>
+          <li><a href="#en-references">Sources and scope</a></li>
+      </ol>
+    </details>
+    <div class="l-th">
+
+<h2 id="th-start">โจทย์ของบทนี้ — เลือก logical correction จากข้อมูลที่ไม่สมบูรณ์</h2>
+<blockquote><p><strong>ดาวน์โหลดหนังสือและโค้ดประกอบ</strong></p><p><a href="https://drive.google.com/uc?export=download&amp;id=1iG7oSWLC9UI91VsPOzqcxk3_evH8Sn3b">ดาวน์โหลด Below Threshold ฉบับเต็ม (PDF ภาษาอังกฤษ · 104 หน้า · 5.4 MB)</a><br><a href="https://drive.google.com/file/d/1iG7oSWLC9UI91VsPOzqcxk3_evH8Sn3b/view?usp=sharing">อ่านบน Google Drive</a> · <a href="../downloads/below-threshold-tutorial-examples.zip" download>ดาวน์โหลดตัวอย่าง Python ทั้งสิบบท (ZIP)</a></p></blockquote>
+<p><strong>บทที่ 4/10</strong> · บทเรียนดัดแปลงจาก <em>Below Threshold: AI, Quantum Errors and Better Code</em> ฉบับ 1.0 บทที่ 4 หน้า 21–29</p><p>บทที่ 3 ให้เราเห็นว่า syndrome บอกความไม่สอดคล้องของ parity checks แต่ไม่ได้บอก error ทุกตัวโดยตรง บทนี้เปลี่ยนมุมมองเป็นปัญหา inference: เมื่อเห็น detection events ชุด D เราควรปรับ logical state แบบใดจึงจะผิดน้อยที่สุด?</p><p>พื้นฐานที่ใช้คือ XOR, probability และ Python dictionaries เป้าหมายไม่ใช่สร้าง AlphaQubit บน laptop แต่เข้าใจว่า learned decoder ชนะได้เมื่อใด และเหตุใดแม้โมเดลที่ดีที่สุดก็ยังผิดได้ เราจะรัน lookup table ขนาดเล็ก อ่านผล Lab 2 จากหนังสือ และแยกสามเกณฑ์ที่ต้องวัด: logical failure rate, throughput และ latency</p><p>สำหรับ programmer ให้คิดว่า decoder เป็น service ที่รับ stream ของ checks แล้วตัดสินใจภายใต้ข้อจำกัดด้านเวลา การเพิ่มความแม่นยำมีประโยชน์ต่อระบบก็ต่อเมื่อ service ตามข้อมูลทันและตัดสินใจได้ก่อนส่วนถัดไปต้องใช้ผล</p>
+
+<h2 id="th-inference">โมเดลของ noise — สิ่งที่ matching รู้ และสิ่งที่ข้อมูลสอนได้</h2>
+<p>Matching decoder สร้างกราฟจากแบบจำลอง faults แล้วหาคำอธิบายที่มีต้นทุนต่ำสำหรับ detection events ต้นทุนมักสัมพันธ์กับความน่าจะเป็นของ error วิธีนี้เร็วและเป็น baseline ที่แข็งแรง แต่ถ้า noise จริงมี leakage, crosstalk หรือ drift ที่โมเดลอธิบายไม่ครบ การตัดสินใจอาจลำเอียงอย่างเป็นระบบ</p><p>Learned decoder ประมาณ P(logical flip | D) จากตัวอย่างที่มี label โดยตรง ข้อมูลจึงอาจสอนความสัมพันธ์ที่กราฟแบบง่ายไม่ได้เก็บไว้ ขั้นแรกต้องนิยาม label ให้ตรงกับ logical observable ที่วัด ไม่ใช่พยายามทำนายทุก physical error เพราะ errors หลายแบบมี logical effect เดียวกันได้</p><p><a href="https://www.nature.com/articles/s41586-024-08148-8">งาน AlphaQubit</a> เป็นตัวอย่างจริงของ recurrent neural decoding ที่ใช้ทั้ง simulated data และ processor data ส่วนใน tutorial นี้ lookup table ช่วยเปิดการตัดสินใจให้เห็นทุกแถว ซึ่งทำให้ตรวจเหตุผลได้ง่ายกว่าเริ่มด้วย neural network</p><p>อย่าสรุปว่า neural network จำเป็นเสมอไป ถ้าโมเดล noise ตรงและ matching แม่นอยู่แล้ว learning อาจเพิ่มเพียงต้นทุน ต้องเปรียบเทียบกับ baseline ที่ใช้ข้อมูลเดียวกันเสมอ</p>
+
+<h2 id="th-clock">วงรอบของเครื่อง — throughput ไม่ใช่ latency</h2>
+    <figure class="figure">
+      <a href="../images/below-threshold-qec-cycle.png">
+        <img class="figure__img" src="../images/below-threshold-qec-cycle.png" alt="วงรอบตรวจ syndrome ส่งเข้า decoder และปรับ Pauli frame ก่อนทำงานต่อ" width="1544" height="724" loading="lazy" decoding="async">
+      </a>
+      <figcaption class="figure__caption">ภาพ 4.1 จากหนังสือ: decoder อยู่ในวงรอบของเครื่อง ต้องตามอัตราข้อมูลให้ทันและส่งผลกลับก่อนคำสั่งที่ต้องพึ่งผลนั้น เปิดภาพเพื่อดูขนาดเต็ม</figcaption>
+    </figure><p><strong>Throughput</strong> คือจำนวน rounds ที่ประมวลผลได้ต่อเวลา ถ้าเครื่องส่งข้อมูลเร็วกว่าที่ decoder รับไหว queue จะโตขึ้นเรื่อย ๆ ส่วน <strong>latency</strong> คือเวลาตั้งแต่รับข้อมูลจนคำตอบพร้อมใช้ ระบบที่ทำ pipeline อาจรับงานใหม่ได้ทุก microsecond แต่แต่ละงานรอผลนานกว่านั้นมาก</p><p>อย่านำเวลาต่อ shot จาก batch ขนาดใหญ่ไปเรียกว่าเวลา feedback บน hardware ในหนังสือ network ใช้ 0.57 µs ต่อ shot ใน batch บน laptop แต่ matching ใช้ 0.04 µs ตัวเลขนี้ยังไม่นับการรับผลวัด การส่งข้อมูล หรือ deadline ของ operation ถัดไป</p><p><a href="https://arxiv.org/abs/2512.07737v2">AlphaQubit 2 ฉบับ preprint</a> รายงานการ decode ต่ำกว่า 1 µs ต่อ cycle บน commercial accelerators ถึง surface-code distance 11 หนังสือระบุว่าการจับเวลาใช้ simulated streams และไม่รวม measurement/communication latency จึงควรอ่านว่าเป็นผลด้าน throughput ที่มีขอบเขตชัดเจน</p><p>สำหรับระบบจริงให้บันทึกทั้งอัตรารับเข้า เวลารอ queue และ latency ช่วงท้ายของ distribution ค่าเฉลี่ยดีเพียงค่าเดียวอาจซ่อน deadline ที่พลาดได้</p>
+
+<h2 id="th-example">ลงมือเขียน — syndrome เดียวกัน แต่ logical effect คนละแบบ</h2>
+<p>ตัวอย่างนี้ใช้ repetition code สามบิตเพื่อให้ไล่ทุกเหตุการณ์ได้ กำหนด syndrome เป็น (e₀ XOR e₁, e₁ XOR e₂) และ logical label เป็น e₀ ดังนั้น <code>001</code> กับ <code>110</code> ให้ syndrome (0, 1) เหมือนกัน แต่ label ตรงข้ามกัน</p><p>เราสร้าง training histogram สมมติและ deployment distribution แยกกัน ตัวเลขถูกกำหนดไว้โดยตั้งใจเพื่อสาธิต crosstalk-like correlations ไม่ใช่ข้อมูลจาก quantum processor จากนั้นเปรียบเทียบ minimum-weight rule กับการเลือก label ที่พบมากกว่าใน training histogram</p><pre><code>&quot;&quot;&quot;Enumerated toy decoder: the same syndrome can hide opposite logical effects.&quot;&quot;&quot;
+from collections import defaultdict
+from math import isclose
+
+# Synthetic training histogram, not samples from a quantum processor.
+training = {&quot;000&quot;: 1800, &quot;100&quot;: 40, &quot;010&quot;: 40, &quot;001&quot;: 40,
+            &quot;110&quot;: 50, &quot;101&quot;: 10, &quot;011&quot;: 10, &quot;111&quot;: 10}
+# A separately specified deployment distribution, with the same ordering.
+deployment = {&quot;000&quot;: .895, &quot;100&quot;: .020, &quot;010&quot;: .020, &quot;001&quot;: .020,
+              &quot;110&quot;: .030, &quot;101&quot;: .005, &quot;011&quot;: .005, &quot;111&quot;: .005}
+
+def syndrome(error):
+    a, b, c = map(int, error)
+    return (a ^ b, b ^ c)
+
+counts = defaultdict(lambda: [0, 0])
+for error, count in training.items():
+    counts[syndrome(error)][int(error[0])] += count
+learned = {s: int(n[1] &gt; n[0]) for s, n in counts.items()}
+# Minimum-weight correction: first-bit effect of the lightest error.
+lightest = {}
+for error in sorted(training, key=lambda e: (e.count(&quot;1&quot;), e)):
+    lightest.setdefault(syndrome(error), int(error[0]))
+
+def risk(decoder):
+    return sum(p for e, p in deployment.items()
+               if decoder[syndrome(e)] != int(e[0]))
+
+assert isclose(sum(deployment.values()), 1)
+assert syndrome(&quot;001&quot;) == syndrome(&quot;110&quot;) == (0, 1)
+assert learned[(0, 1)] == 1 and lightest[(0, 1)] == 0
+floor = sum(min(sum(p for e, p in deployment.items()
+                    if syndrome(e) == s and int(e[0]) == y)
+                for y in (0, 1)) for s in counts)
+# Drift may make the training-derived lookup worse than the deployment optimum.
+assert risk(learned) &gt;= floor - 1e-12
+print(&quot;Ambiguous syndrome:&quot;, syndrome(&quot;001&quot;))
+print(f&quot;Minimum-weight failure: {risk(lightest):.3%}&quot;)
+print(f&quot;Learned lookup failure: {risk(learned):.3%}&quot;)
+print(f&quot;Information-limited floor: {floor:.3%}&quot;)</code></pre><pre><code>Ambiguous syndrome: (0, 1)
+Minimum-weight failure: 4.500%
+Learned lookup failure: 3.500%
+Information-limited floor: 3.500%</code></pre><p>กฎ minimum weight ผิด 4.5% ส่วน lookup ผิด 3.5% lookup เลือก logical class ถูกกว่าเมื่อ pair error พบได้มากกว่า single error อย่างไรก็ตามข้อมูล syndrome แยกทั้งคู่ไม่ได้ จึงยังมี failure floor 3.5% การเพิ่มขนาด neural network ไม่สามารถสร้างข้อมูลที่ checks ไม่ได้เก็บมาให้ได้</p>
+
+<h2 id="th-lab">อ่าน Lab 2 — ชนะ baseline แล้วก็ยังมี floor</h2>
+    <figure class="figure">
+      <a href="../images/below-threshold-decoders.png">
+        <img class="figure__img" src="../images/below-threshold-decoders.png" alt="ผล Lab 2 เปรียบเทียบ matching lookup table และ neural network ภายใต้ noise สองแบบ" width="1557" height="535" loading="lazy" decoding="async">
+      </a>
+      <figcaption class="figure__caption">ภาพ 4.2 จากหนังสือ: บน crosstalk model learned decoders ผิดประมาณ 2.28% ต่อ shot เทียบกับ textbook matching 3.49% เป็นผล simulation ที่บันทึกในหนังสือ เปิดภาพเพื่อดูขนาดเต็ม</figcaption>
+    </figure><p>ผลต่อไปนี้ <strong>บันทึกไว้ในหนังสือ</strong> ไม่ใช่ผลรันซ้ำจาก toy script ข้างบน Lab 2 จำลอง distance-3 surface-code memory สาม rounds ใช้ circuit noise p=0.1% และเพิ่ม correlated XX errors q=0.2% ต่อคู่ต่อ round ใน Device B แต่ละวิธีทดสอบกับสองล้าน fresh shots โดย learned methods เรียนจากอีกสองล้าน shots</p><div class="table-wrapper"><table><thead><tr><th>วิธี</th><th>Device A: textbook noise</th><th>Device B: เพิ่ม crosstalk</th></tr></thead><tbody><tr><td>Textbook matching</td><td>0.077%</td><td>3.491%</td></tr><tr><td>Matching ที่เพิ่ม crosstalk ในกราฟ</td><td>0.077%</td><td>3.596%</td></tr><tr><td>Correlated matching</td><td>0.113%</td><td>3.671%</td></tr><tr><td>Lookup / neural network</td><td>ประมาณ 0.071%</td><td>ประมาณ 2.284%</td></tr></tbody></table></div><p>Device A มีช่องให้ปรับปรุงน้อย ส่วน Device B learned methods ลด failures ประมาณ 35% เทียบกับ textbook matching แต่การเพิ่ม crosstalk ลงกราฟไม่ได้ช่วย เพราะ parallel edges ใน representation นี้มี endpoints เดียวกันและ logical effects ต่างกัน การ merge จึงไม่เก็บความแตกต่างที่จำเป็นไว้ครบ</p><p>Lookup กับ network ให้ผลใกล้กันมาก แปลว่า representation ของข้อมูลมีความสำคัญกว่า architecture ที่ซับซ้อนในโจทย์เล็กนี้ แต่ไม่ได้พิสูจน์ว่า lookup จะขยายไปยัง code distance สูงได้</p>
+
+<h2 id="th-practice">ออกแบบการทดลองถัดไป — ทดสอบ drift และ information loss</h2>
+<p>รัน <code>python3 ch04.py</code> แล้วลดความน่าจะเป็นของ <code>110</code> ใน deployment distribution พร้อมเพิ่ม <code>000</code> ให้ผลรวมยังเป็นหนึ่ง อย่าแก้ training histogram เป้าหมายคือหาจุดที่ lookup จากข้อมูลเก่าแพ้ minimum weight นี่คือ drift ในรูปที่ตรวจด้วยมือได้</p><p>Invariant ที่ต้องรักษา: <code>001</code> กับ <code>110</code> ให้ syndrome เดิมเสมอ และ failure rate ของ decoder ใดต้องไม่ต่ำกว่า Bayes floor สำหรับ deployment distribution นั้น อย่ากำหนด target ด้วยคำตอบในชุดทดสอบแล้วเรียกว่า trained performance</p><p>เมื่อไปทำระบบจริง แบ่ง training/validation/test ตามเวลาหรืออุปกรณ์ให้เหมาะกับสิ่งที่จะ deploy ตรวจ rare syndromes และ fallback แยกจาก cases ที่พบมาก และเก็บ matching baseline ไว้ หาก ambiguity floor สูงเกินเป้าหมาย ให้กลับไปแก้ hardware, schedule หรือ code design ตามบทถัดไป</p>
+
+<h2 id="th-resources">Run & check — รันตัวอย่างด้วยตัวเอง</h2>
+<p>ตัวอย่างสำหรับสอนนี้ใช้ Python standard library เท่านั้น บันทึก <a href="../examples/below-threshold/ch04.py" download>ch04.py</a> แล้วรันด้วย Python 3.10 ขึ้นไป โดย assertions ตรวจ invariant ที่อธิบายในบท</p><pre><code>python3 ch04.py</code></pre><p><a href="../downloads/below-threshold-tutorial-examples.zip" download>ตัวอย่างทั้งสิบบทและผลลัพธ์ที่คาดหวัง (ZIP)</a> · <a href="https://github.com/Anirach/Anirach.github.io/tree/main/examples/below-threshold">อ่าน source บน GitHub</a></p>
+
+<h2 id="th-references">Sources & scope — แหล่งอ้างอิงและขอบเขต</h2>
+<section class="references" aria-labelledby="th-sources"><h3 id="th-sources">เอกสารและหลักฐาน</h3><p class="references__note">โครงบท ภาพที่ให้เครดิต และผล lab ที่รายงานมาจากหนังสือของผู้เขียน ณ November 2026 ตัวอย่างสั้นที่ใช้ standard library รันเพื่อตรวจบทเรียนเว็บวันที่ 25 November 2026 เป็นแบบจำลองเพื่อสอน ไม่ได้รันซ้ำการทดลอง Stim, neural network, mitigation หรือ LLM ฉบับเต็มในหนังสือ ข้ออ้าง hardware, simulator, preprint และบริษัทคงขอบเขตตามที่ระบุ</p><ol><li><a href="https://drive.google.com/file/d/1iG7oSWLC9UI91VsPOzqcxk3_evH8Sn3b/view?usp=sharing">Anirach Mingkhwan. Below Threshold: AI, Quantum Errors and Better Code. Edition 1.0 (November 2026), Chapter 4, pp. 21–29.</a></li><li id="th-ref-1"><a href="https://www.nature.com/articles/s41586-024-08148-8">Bausch et al. Learning high-accuracy error decoding for quantum processors. Nature (2024).</a></li><li id="th-ref-2"><a href="https://arxiv.org/abs/2512.07737v2">Senior et al. A scalable and real-time neural decoder for topological quantum codes. Preprint, v2 (2026).</a></li><li id="th-ref-3"><a href="https://pymatching.readthedocs.io/en/stable/api.html#pymatching.Matching.add_edge">PyMatching documentation: Matching.add_edge and parallel-edge merge strategies.</a></li></ol></section>
+    </div>
+
+    <div class="l-en" lang="en">
+
+<h2 id="en-start">The task: infer a logical correction from incomplete evidence</h2>
+<blockquote><p><strong>Download the book and examples</strong></p><p><a href="https://drive.google.com/uc?export=download&amp;id=1iG7oSWLC9UI91VsPOzqcxk3_evH8Sn3b">Download the complete Below Threshold book (English PDF · 104 pages · 5.4 MB)</a><br><a href="https://drive.google.com/file/d/1iG7oSWLC9UI91VsPOzqcxk3_evH8Sn3b/view?usp=sharing">Read on Google Drive</a> · <a href="../downloads/below-threshold-tutorial-examples.zip" download>Download all ten Python examples (ZIP)</a></p></blockquote>
+<p><strong>Chapter 4/10.</strong> A tutorial adaptation of <em>Below Threshold: AI, Quantum Errors and Better Code</em>, Edition 1.0, Chapter 4, pp. 21–29.</p><p>Chapter 3 showed that a syndrome reports disagreements between parity checks, rather than a complete list of errors. This chapter turns that observation into an inference problem: given detection events D, which logical correction makes the fewest wrong decisions?</p><p>You need XOR, conditional probability and Python dictionaries. Our goal is to understand when a learned decoder helps and why even the best possible decoder can still fail. We will run a tiny lookup decoder, interpret the book’s larger Lab 2, and separate three measurements that a deployment needs: logical failure rate, throughput and latency.</p><p>Think of the decoder as a service consuming a stream of checks. A more accurate decision is useful to the whole machine only when the service keeps up and returns the decision before a dependent operation needs it.</p>
+
+<h2 id="en-inference">The noise model: what matching assumes and data can teach</h2>
+<p>A matching decoder builds a graph of possible faults and searches for a low-cost explanation of the observed detection events. Edge costs reflect assumed error probabilities. This is a strong, fast baseline. The problem arises when real leakage, crosstalk or drift violates the simplified model: the decoder can make a systematic mistake even while solving its graph problem correctly.</p><p>A learned decoder instead estimates P(logical flip | D) from labelled examples. It can learn correlations omitted by the graph representation. Define the target label carefully: predict the effect on the chosen logical observable, rather than demanding an exact reconstruction of every physical fault. Different physical errors can belong to the same logical class.</p><p><a href="https://www.nature.com/articles/s41586-024-08148-8">AlphaQubit</a> demonstrates recurrent neural decoding with simulated and experimental training data. Our lookup table makes the same decision problem inspectable, row by row. It is a teaching model, rather than a reproduction of that architecture.</p><p>Learning adds no automatic benefit when the baseline already models the noise well. Always compare on the same evaluation distribution and retain the simpler decoder when it satisfies the engineering contract.</p>
+
+<h2 id="en-clock">The machine clock: throughput and latency are different</h2>
+    <figure class="figure">
+      <a href="../images/below-threshold-qec-cycle.png">
+        <img class="figure__img" src="../images/below-threshold-qec-cycle.png" alt="Repeated syndrome extraction feeds a decoder and a Pauli-frame update." width="1544" height="724" loading="lazy" decoding="async">
+      </a>
+      <figcaption class="figure__caption">Book Figure 4.1. A decoder must keep pace with the syndrome stream and return decisions before dependent operations need them. Open for full resolution.</figcaption>
+    </figure><p><strong>Throughput</strong> measures how many rounds a decoder can process per unit time. If rounds arrive faster than the decoder can consume them, the queue keeps growing. <strong>Latency</strong> measures how long one decision takes to become available. A pipeline can accept a new item every microsecond while each item spends much longer inside it.</p><p>Do not relabel large-batch time per shot as hardware feedback latency. The book reports 0.57 µs per shot for its laptop network in large batches, versus 0.04 µs for matching. Neither number includes a processor’s measurement interface, communication delays or the deadline of a dependent operation.</p><p>The <a href="https://arxiv.org/abs/2512.07737v2">AlphaQubit 2 preprint</a> reports decoding faster than 1 µs per cycle on commercial accelerators through surface-code distance 11. The book notes that timing uses simulated streams and excludes measurement and communication latency. Keep that scope attached to the claim.</p><p>For an implementation, log arrival rate, queue age and tail latency as well as the average service rate. A single favourable average can conceal missed deadlines.</p>
+
+<h2 id="en-example">Write the decoder: one syndrome, two logical effects</h2>
+<p>We use a three-bit repetition-code model so that every event is enumerable. Define the syndrome as (e₀ XOR e₁, e₁ XOR e₂), and the logical label as e₀. Errors <code>001</code> and <code>110</code> therefore produce the same syndrome (0, 1), with opposite labels.</p><p>The synthetic training histogram and the separately specified deployment distribution deliberately include a correlated pair error. These numbers are assumptions of the teaching model, not processor measurements. Compare a minimum-weight rule with a lookup rule choosing the more frequent training label.</p><pre><code>&quot;&quot;&quot;Enumerated toy decoder: the same syndrome can hide opposite logical effects.&quot;&quot;&quot;
+from collections import defaultdict
+from math import isclose
+
+# Synthetic training histogram, not samples from a quantum processor.
+training = {&quot;000&quot;: 1800, &quot;100&quot;: 40, &quot;010&quot;: 40, &quot;001&quot;: 40,
+            &quot;110&quot;: 50, &quot;101&quot;: 10, &quot;011&quot;: 10, &quot;111&quot;: 10}
+# A separately specified deployment distribution, with the same ordering.
+deployment = {&quot;000&quot;: .895, &quot;100&quot;: .020, &quot;010&quot;: .020, &quot;001&quot;: .020,
+              &quot;110&quot;: .030, &quot;101&quot;: .005, &quot;011&quot;: .005, &quot;111&quot;: .005}
+
+def syndrome(error):
+    a, b, c = map(int, error)
+    return (a ^ b, b ^ c)
+
+counts = defaultdict(lambda: [0, 0])
+for error, count in training.items():
+    counts[syndrome(error)][int(error[0])] += count
+learned = {s: int(n[1] &gt; n[0]) for s, n in counts.items()}
+# Minimum-weight correction: first-bit effect of the lightest error.
+lightest = {}
+for error in sorted(training, key=lambda e: (e.count(&quot;1&quot;), e)):
+    lightest.setdefault(syndrome(error), int(error[0]))
+
+def risk(decoder):
+    return sum(p for e, p in deployment.items()
+               if decoder[syndrome(e)] != int(e[0]))
+
+assert isclose(sum(deployment.values()), 1)
+assert syndrome(&quot;001&quot;) == syndrome(&quot;110&quot;) == (0, 1)
+assert learned[(0, 1)] == 1 and lightest[(0, 1)] == 0
+floor = sum(min(sum(p for e, p in deployment.items()
+                    if syndrome(e) == s and int(e[0]) == y)
+                for y in (0, 1)) for s in counts)
+# Drift may make the training-derived lookup worse than the deployment optimum.
+assert risk(learned) &gt;= floor - 1e-12
+print(&quot;Ambiguous syndrome:&quot;, syndrome(&quot;001&quot;))
+print(f&quot;Minimum-weight failure: {risk(lightest):.3%}&quot;)
+print(f&quot;Learned lookup failure: {risk(learned):.3%}&quot;)
+print(f&quot;Information-limited floor: {floor:.3%}&quot;)</code></pre><pre><code>Ambiguous syndrome: (0, 1)
+Minimum-weight failure: 4.500%
+Learned lookup failure: 3.500%
+Information-limited floor: 3.500%</code></pre><p>The minimum-weight rule fails 4.5% of the time; the lookup fails 3.5%. The lookup chooses the better logical class when the pair error is more likely than its single-error alternative. Yet syndrome ambiguity leaves a 3.5% information-limited floor. A bigger neural network cannot manufacture evidence that the checks never collected.</p>
+
+<h2 id="en-lab">Read Lab 2: a baseline win still leaves a floor</h2>
+    <figure class="figure">
+      <a href="../images/below-threshold-decoders.png">
+        <img class="figure__img" src="../images/below-threshold-decoders.png" alt="Book Lab 2 compares matching, a lookup table and a neural network under two noise models." width="1557" height="535" loading="lazy" decoding="async">
+      </a>
+      <figcaption class="figure__caption">Book Figure 4.2. Under the simulated crosstalk model, learned decoders fail on about 2.28% of shots versus 3.49% for textbook matching. These are the book’s recorded results. Open for full resolution.</figcaption>
+    </figure><p>These are <strong>results recorded in the book</strong>, not a rerun of the toy script. Lab 2 simulates a distance-3 surface-code memory for three rounds at circuit noise p=0.1%. Device B adds correlated XX faults with q=0.2% per neighbouring pair per round. Each decoder sees two million fresh test shots; learned methods use a separate two million training shots.</p><div class="table-wrapper"><table><thead><tr><th>Decoder</th><th>Device A: textbook noise</th><th>Device B: crosstalk added</th></tr></thead><tbody><tr><td>Textbook matching</td><td>0.077%</td><td>3.491%</td></tr><tr><td>Matching with crosstalk in graph</td><td>0.077%</td><td>3.596%</td></tr><tr><td>Correlated matching</td><td>0.113%</td><td>3.671%</td></tr><tr><td>Lookup / neural network</td><td>about 0.071%</td><td>about 2.284%</td></tr></tbody></table></div><p>Device A leaves little room for improvement. On Device B, learned methods reduce failures by about 35% relative to textbook matching. Merely adding the crosstalk into this matching graph does not help: parallel edges share endpoints but carry opposing logical effects, and their merge loses a distinction needed by this example.</p><p>The network nearly matches the lookup table. For this small problem, the information representation matters more than a complicated architecture. That does not establish that a lookup table can scale to large code distances.</p>
+
+<h2 id="en-practice">Your experiment: test drift and information loss</h2>
+<p>Run <code>python3 ch04.py</code>, then lower the deployment probability of <code>110</code>, transferring the removed mass to <code>000</code>. Keep the training histogram unchanged. Find the point where a lookup trained on yesterday’s ordering loses to minimum weight. This is a hand-checkable distribution-drift experiment.</p><p>Preserve two invariants: <code>001</code> and <code>110</code> always share their syndrome, and no decoder can beat the Bayes floor of the specified deployment distribution. Choosing labels from test answers would invalidate a claim of learned generalization.</p><p>For a real experiment, split training, validation and test data according to the time or device shift expected at deployment. Score unseen syndromes and fallback behaviour separately from frequent cases. Retain a matching baseline. If the ambiguity floor remains too high, change the hardware, schedule or code design; the next chapter examines those earlier insertion points.</p>
+
+<h2 id="en-resources">Run and check the example</h2>
+<p>This complete teaching example uses only the Python standard library. Save <a href="../examples/below-threshold/ch04.py" download>ch04.py</a>, then run it with Python 3.10 or later. Its assertions check the stated invariants.</p><pre><code>python3 ch04.py</code></pre><p><a href="../downloads/below-threshold-tutorial-examples.zip" download>All ten examples and expected output (ZIP)</a> · <a href="https://github.com/Anirach/Anirach.github.io/tree/main/examples/below-threshold">Browse example source on GitHub</a></p>
+
+<h2 id="en-references">Sources and scope</h2>
+<section class="references" aria-labelledby="en-sources"><h3 id="en-sources">Reading and evidence</h3><p class="references__note">The author’s book is the source of the chapter structure, credited diagrams and reported lab results (November 2026 snapshot). The short standard-library example above was executed for this web lesson on 25 November 2026. It is a teaching model; the book’s full Stim, neural-network, mitigation and LLM experiments were not rerun for these posts. Hardware, simulator, preprint and company claims retain their stated scope.</p><ol><li><a href="https://drive.google.com/file/d/1iG7oSWLC9UI91VsPOzqcxk3_evH8Sn3b/view?usp=sharing">Anirach Mingkhwan. Below Threshold: AI, Quantum Errors and Better Code. Edition 1.0 (November 2026), Chapter 4, pp. 21–29.</a></li><li id="en-ref-1"><a href="https://www.nature.com/articles/s41586-024-08148-8">Bausch et al. Learning high-accuracy error decoding for quantum processors. Nature (2024).</a></li><li id="en-ref-2"><a href="https://arxiv.org/abs/2512.07737v2">Senior et al. A scalable and real-time neural decoder for topological quantum codes. Preprint, v2 (2026).</a></li><li id="en-ref-3"><a href="https://pymatching.readthedocs.io/en/stable/api.html#pymatching.Matching.add_edge">PyMatching documentation: Matching.add_edge and parallel-edge merge strategies.</a></li></ol></section>
+    </div>
+
+    <div class="post-series-footer">
+      <span class="l-th">จากซีรีส์ Below Threshold</span><span class="l-en" lang="en">From Below Threshold</span>
+    </div>
+
+    <nav aria-label="Below Threshold">
+    <div class="series-nav">
+      <h3>Below Threshold · 10-Chapter Course</h3>
+      <div class="series-links">
+        <a href="/blog/below-threshold-overview">#1 The Three Bridges</a>
+        <a href="/blog/below-threshold-quantum-errors">#2 Quantum Errors</a>
+        <a href="/blog/below-threshold-error-correction">#3 Checks and Thresholds</a>
+        <span class="current" aria-current="page">#4 AI Decoders</span>
+        <a href="/blog/below-threshold-error-path">#5 Error Path</a>
+        <a href="/blog/below-threshold-circuit-synthesis">#6 Circuit Synthesis</a>
+        <a href="/blog/below-threshold-ai-workflow">#7 AI Workflow</a>
+        <a href="/blog/below-threshold-quantum-inspired">#8 Quantum-Inspired</a>
+        <a href="/blog/below-threshold-syndrome-driven-development">#9 Syndrome-Driven Code</a>
+        <a href="/blog/below-threshold-playbook">#10 Engineering Playbook</a>
+      </div>
+    </div>
+    </nav>
+
+  </article>
+
+  </main>
+
+  <footer class="blog-footer">
+    <nav class="blog-footer__nav" aria-label="Site">
+      <a href="../index.html">Home</a>
+      <a href="./">Tutorials</a>
+      <a href="../thoughts/">Thoughts</a>
+      <a href="../publications/">Publications</a>
+      <a href="../books/">Books</a>
+      <a href="../projects/">Projects</a>
+      <a href="../news/">News</a>
+      <a href="../index.html#contact">Contact</a>
+    </nav>
+    <a href="./">← Back to Tutorials</a>
+    <span>© 2026 Anirach Mingkhwan — Independent AI consultant</span>
+  </footer>
+
+</body>
+</html>

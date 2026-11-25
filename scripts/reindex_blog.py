@@ -34,6 +34,7 @@ RE_EMOJI_TAIL = re.compile(r'\s*[\U0001F000-\U0001FAFF\u2300-\u23FF☀-➿⬀-�
 
 # ---------------------------------------------------------------- copy deck
 SERIES = {
+    "series-below-threshold": ("Below Threshold", "Ten chapter-by-chapter tutorials on quantum errors, AI decoders and more reliable code, with the book’s diagrams and runnable Python examples.", "บทเรียนสิบตอนตามบทในหนังสือ จาก quantum errors สู่ AI decoder และโค้ดที่ตรวจสอบได้ พร้อมดาวน์โหลดหนังสือทุกตอน"),
     "series-quantum-programmers": ("Quantum Algorithms", "Seven programmer-first lessons on Grover, Shor, HHL, QAOA and quantum simulation, with diagrams, verified Qiskit experiments and a GitHub companion.", "คอร์สเจ็ดตอนจากเอกสารผู้เขียน มีภาพอธิบาย โค้ด Qiskit และผลทดลองที่ตรวจซ้ำ"),
     "series-ai-engineering": ("AI-Core Engineering", "A 15-part architecture course for programmers: functions, Jev, reviewed skills, input checks, hard guardrails, output checks and independent quality gates.", "คอร์ส 15 ตอนสำหรับโปรแกรมเมอร์ เริ่มจาก function สู่ Jev, skill และด่านตรวจที่เห็นผลต่างชัด"),
     "series-ai-core-functional": ("Functions → AI-Core", "Build explicit input checks, policy, output validation and a separate quality gate, with a text-only offline companion.", "จากฟังก์ชันเดิมสู่ input check, guardrail, output check และ quality gate แบบลงมือทำ"),
@@ -120,10 +121,10 @@ FEATURE_DEFAULT_T = "good-life-examined-life"   # first build only; then parsed 
 
 HERO_LABEL = 'Anirach Mingkhwan · KMUTNB · <span lang="th">ไทย</span> ⇄ English'
 HERO_TITLE = 'Tutorials'
-HERO_SUB = ('{nseries} practical series on quantum algorithms, guarded functions, AI-Core + Jev, agents and DevOps — '
+HERO_SUB = ('{nseries} practical series on quantum computing, AI-assisted engineering, agents and DevOps — '
             'every post in Thai, with English one tap away. Essays on living well are in '
             '<a href="../thoughts/">Thoughts</a>.')
-META_DESC = ('{total} Thai/English tutorials in {nseries} series: quantum algorithms, guarded functions, AI-Core + Jev, '
+META_DESC = ('{total} Thai/English tutorials in {nseries} series: quantum errors, algorithms, guarded functions, AI-Core + Jev, '
              'agents, AI Transformation and DevOps. With runnable code.')
 PAGE_TITLE = 'Tutorials — Anirach Mingkhwan'
 
@@ -205,7 +206,7 @@ def rewrap_excerpt(ex):
 def ordinal_map(repo):
     """slug -> (n, group_key) from manifests, chip strips and the DevOps chain."""
     out = {}
-    for name in ("quantum-programmers", "ai-engineering", "ai-core-functional", "ai-core-jev", "hermes-desktop", "ai-transformation", "ai-core", "working", "good-life"):
+    for name in ("below-threshold", "quantum-programmers", "ai-engineering", "ai-core-functional", "ai-core-jev", "hermes-desktop", "ai-transformation", "ai-core", "working", "good-life"):
         man = json.load(open(os.path.join(repo, "scripts", "series", name + ".json")))
         for p in man["posts"]:
             out[p["slug"]] = (p["n"], p.get("group") or p.get("day"))
@@ -330,6 +331,7 @@ CSS_HERO = r"""
     .blog-jump__separator { display: none; }
     /* After a chip jump the destination is :target — light the chip that got you
        there. Pure enhancement: nothing depends on :has(). */
+    body:has(#series-below-threshold:target) .blog-jump a[href="#series-below-threshold"],
     body:has(#series-quantum-programmers:target) .blog-jump a[href="#series-quantum-programmers"],
     body:has(#series-ai-engineering:target) .blog-jump a[href="#series-ai-engineering"],
     body:has(#series-ai-core-functional:target) .blog-jump a[href="#series-ai-core-functional"],
@@ -629,6 +631,8 @@ def section_html(sec, ords, chain, order, groups):
         '      <p class="series-description">%s <span lang="th">%s</span></p>' % (desc_en, desc_th),
         '      <div class="blog-grid">',
     ]
+    if sec["id"] == "series-below-threshold":
+        out.insert(-1, '      <p class="series-description"><a href="https://drive.google.com/uc?export=download&amp;id=1iG7oSWLC9UI91VsPOzqcxk3_evH8Sn3b">Download the book · English PDF · 104 pages</a> · <a href="../downloads/below-threshold-tutorial-examples.zip" download>Ten Python examples (ZIP)</a> · <span lang="th">ดาวน์โหลดหนังสือและตัวอย่างประกอบบทเรียน</span></p>')
     if sec["id"] == "series-ai-core-functional":
         out.insert(-1, '      <p class="series-description"><a href="https://github.com/Anirach/ai-core-functional-tutorial">GitHub companion + detailed README</a> · <a href="../downloads/ai-core-functional-lab.zip">Download code, tests and exercises</a> · <span lang="th">อ่านบทเรียนคู่กับโค้ดและแบบฝึกใน GitHub</span></p>')
     if sec["id"] == "series-quantum-programmers":
@@ -686,9 +690,11 @@ def build(repo, order):
     except ValueError:   # re-run on our own output: the PHONE block is gone
         takeover = block(style, "    /* ── RESPONSIVE ── */", "    /* ── ≤1024px:")
     tail = style[style.index("    :focus-visible {"):].rstrip() + "\n"
-    tail = re.sub(r'(?m)^    html \{ scroll-padding-top: (?:5|8\.5)rem; \}[^\n]*',
-                  '    html { scroll-padding-top: 14rem; } /* fixed header + desktop series index */\n'
-                  '    @media (max-width: 1024px) { html { scroll-padding-top: 5rem; } }', tail)
+    desktop_padding = 8 + 3 * ((len(idx["sections"]) + 4) // 5)
+    tail = re.sub(r'(?m)^    html \{ scroll-padding-top: [\d.]+rem; \}[^\n]*'
+                  r'(?:\n    @media \(max-width: 1024px\) \{ html \{ scroll-padding-top: 5rem; \} \})?',
+                  '    html { scroll-padding-top: %drem; } /* fixed header + desktop series index */\n'
+                  '    @media (max-width: 1024px) { html { scroll-padding-top: 5rem; } }' % desktop_padding, tail)
     tail = tail.replace("[id] { scroll-margin-top: 5rem; }",
                         "/* no [id] scroll-margin-top here: it ADDS to scroll-padding-top, and the pair landed every chip jump 272px down */")
     tail = re.sub(r"    /\* Hover/focus parity:.*?\.card:focus-within \.card__read \{[^\n]*\n",

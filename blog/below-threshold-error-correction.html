@@ -1,0 +1,680 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Error Correction — จาก parity สู่ QEC | Anirach Mingkhwan</title>
+  <meta name="description" content="สร้าง repetition decoder ด้วย Python เข้าใจ syndrome, stabilizer และ surface code อ่าน logical error กับ suppression factor โดยแยก toy model จากผล Lab ในหนังสือ">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300..900&family=Sarabun:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400..600&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      color-scheme: light;
+      /* ink */
+      --navy: #11304b; --slate: #334155; --slate-light: #526174; --gray: #94a3b8;
+      /* ground */
+      --bg: #faf7f0; --white: #ffffff; --code-bg: #1e293b;
+      /* accent */
+      --blue: #226299; --blue-dark: #1a4d7a; --blue-light: #4992b9;
+      /* brand — sampled from the book covers. --gold is decorative on light grounds (2.2:1); --gold-dark is its text form. */
+      --gold: #c4a46c; --gold-dark: #7a5f22; --cloud: #dee7e6; --parchment: #e9e1c4; --focus: #226299;
+      /* status — use only these six, never invent a seventh */
+      --green: #22c55e; --red: #ef4444; --amber: #f59e0b;
+      --cyan: #06b6d4; --purple: #226299; --purple-dark: #1a4d7a;
+      /* type */
+      --font: 'Inter', 'Sarabun', -apple-system, BlinkMacSystemFont, sans-serif;
+      --mono: 'JetBrains Mono', 'Fira Code', 'Sarabun', monospace;
+      /* form */
+      --radius: 12px; --radius-sm: 8px; --radius-lg: 16px;
+      --measure: 720px; --wide: 860px;
+      --transition: 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+    html { scroll-behavior: smooth; }
+    body { font-family: var(--font); font-size: 17px; line-height: 1.8; color: var(--slate); background: var(--bg); -webkit-font-smoothing: antialiased; }
+    .blog-nav { position: fixed; top: 0; left: 0; right: 0; z-index: 100; background: rgba(248,250,252,0.85); backdrop-filter: blur(20px); border-bottom: 1px solid rgba(0,0,0,0.05); }
+    .blog-nav__inner { max-width: 860px; margin: 0 auto; padding: 0 2rem; height: 56px; display: flex; align-items: center; justify-content: space-between; }
+    .blog-nav__back { font-size: 0.85rem; font-weight: 500; color: var(--blue); text-decoration: none; }
+    .blog-nav__back:hover { color: #1a4d7a; }
+    .blog-nav__title { font-size: 0.85rem; font-weight: 600; color: var(--navy); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 50%; }
+    /* ── HERO ── house .post-hero on the approved Deep Blue gradient (page-design
+       §5 / INV-28). Ink is inverted for the dark ground: white title/meta, tag
+       pills white on 18% white — the openclaw-production treatment. The
+       background value must stay byte-identical to the approved string. */
+    .post-hero { padding: 8rem 2rem 3rem; background: linear-gradient(135deg, #11304b 0%, #1a4d7a 45%, #226299 100%); color: #fff; text-align: center; }
+    .post-hero__tags { display: flex; gap: 0.5rem; justify-content: center; margin-bottom: 1.25rem; flex-wrap: wrap; }
+    .post-hero__tag { display: inline-block; font-size: 0.72rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.1em; color: #fff; background: rgba(255,255,255,0.18); padding: 0.35rem 0.9rem; border-radius: 20px; }
+    .post-hero__title { font-size: clamp(1.8rem, 5vw, 3rem); font-weight: 800; color: #fff; line-height: 1.2; margin-bottom: 1rem; max-width: 720px; margin-left: auto; margin-right: auto; }
+    .post-hero__sub { font-size: 1.05rem; max-width: 640px; margin: 0 auto 1.5rem; line-height: 1.7; color: #fff; }
+    .post-hero__meta { font-size: 0.85rem; color: #fff; display: flex; align-items: center; justify-content: center; gap: 1.5rem; flex-wrap: wrap; }
+    .post-hero__series { font-weight: 600; color: #fff; }
+    /* the switch pill and the focus ring both sit on the dark hero: the pill is
+       a light chip so its labels keep their light-ground colours, and --focus
+       re-points to gold here (blue collapses on blue — the footer/pre
+       precedent). */
+    .post-hero { --focus: var(--gold); }
+    .post-hero__cover {
+      aspect-ratio: 1 / 1;
+      max-width: 380px;
+      margin: 2.5rem auto 0;
+      border-radius: var(--radius-lg, 16px);
+      overflow: hidden;
+      box-shadow: 0 20px 60px rgba(17,48,75,0.14);
+    }
+    .post-hero__cover img { width: 100%; height: 100%; object-fit: cover; display: block; }
+    .post-body { max-width: 720px; margin: 0 auto; padding: 3rem 2rem 6rem; }
+    .post-body h2 { font-size: 1.6rem; font-weight: 800; color: var(--navy); margin: 3rem 0 1rem; padding-bottom: 0.5rem; border-bottom: 2px solid rgba(34,98,153,0.15); }
+    .post-body h3 { font-size: 1.25rem; font-weight: 700; color: var(--navy); margin: 2.25rem 0 0.75rem; }
+    .post-body p { margin-bottom: 1.25rem; }
+    .post-body strong { font-weight: 700; color: var(--navy); }
+    .post-body a { color: var(--blue); text-decoration: underline; text-decoration-thickness: 1px; text-underline-offset: 2px; }
+    .post-body ul, .post-body ol { margin: 0.5rem 0 1.25rem 1.5rem; }
+    .post-body li { margin-bottom: 0.4rem; }
+    .post-body blockquote { background: rgba(34,98,153,0.06); border-left: 4px solid var(--blue); padding: 1rem 1.25rem; border-radius: 0 10px 10px 0; margin: 1.25rem 0; font-size: 0.95rem; color: var(--navy); }
+    .post-body hr { border: none; height: 1px; background: linear-gradient(90deg, transparent, rgba(34,98,153,0.2), transparent); margin: 3rem 0; }
+    /* ── CODE ── */
+    .post-body pre { background: var(--code-bg); border-radius: 12px; padding: 1.5rem; margin: 1.25rem 0 1.5rem; overflow-x: auto; border: 1px solid rgba(255,255,255,0.05); }
+    .post-body pre code { font-family: var(--mono); font-size: 0.85rem; color: #e2e8f0; line-height: 1.7; background: none; padding: 0; white-space: pre-wrap; }
+    .post-body code { font-family: var(--mono); font-size: 0.88em; background: rgba(34,98,153,0.08); color: var(--blue-dark); padding: 0.15em 0.45em; border-radius: 5px; }
+    /* ── TABLES ── */
+    .table-wrapper { overflow-x: auto; margin: 1.5rem 0; border-radius: 0.5rem; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1); }
+    table { width: 100%; border-collapse: collapse; background: white; }
+    th { background: #226299; color: white; padding: 1rem; text-align: left; font-weight: 600; }
+    td { padding: 1rem; border-bottom: 1px solid #e5e7eb; }
+    .post-body table { display: block; width: 100%; overflow-x: auto; }
+    /* ── ALERTS ── */
+    .alert { background: #fef3cd; border: 1px solid #facc15; border-radius: 0.5rem; padding: 1rem; margin: 1.5rem 0; }
+    .alert.danger { background: #fee2e2; border-color: #ef4444; }
+    .alert.info { background: #e0f2fe; border-color: #06b6d4; }
+    .alert.success { background: #d1fae5; border-color: #10b981; }
+    /* ── KEY TAKEAWAYS ── */
+    .key-takeaways { background: linear-gradient(135deg, #f3f4f6 0%, #e5e7eb 100%); border-radius: 1rem; padding: 2rem; margin: 3rem 0; }
+    .key-takeaways h3 { color: #226299; margin-bottom: 1.5rem; }
+    .post-series-footer { text-align: center; font-size: 0.85rem; color: var(--slate-light); font-style: italic; margin-top: 2rem; padding-top: 2rem; border-top: 1px solid #e2e8f0; }
+    .blog-footer { background: var(--navy); padding: 2rem 0; text-align: center; }
+    .blog-footer a { color: var(--gold); text-decoration: none; font-weight: 600; font-size: 0.9rem; }
+    .blog-footer span { color: var(--gray); font-size: 0.8rem; display: block; margin-top: 0.4rem; }
+    @media (max-width: 600px) {
+      .post-hero { padding: 7rem 1.25rem 2.5rem; }
+      .post-body { padding: 2rem 1.25rem 4rem; }
+      .post-hero__meta { flex-direction: column; gap: 0.4rem; }
+      .post-body h2 { font-size: 1.4rem; }
+      .post-body h3 { font-size: 1.15rem; }
+      .post-body pre { padding: 1rem; border-radius: 8px; }
+    }
+
+    :focus-visible { outline: 2px solid var(--focus); outline-offset: 3px; border-radius: 2px; }
+    /* the ring sits on the page ground (3px offset). Inside the navy footers
+       and code blocks var(--blue) collapses to 2.12:1, so those scopes
+       re-point --focus to gold (5.73:1 on navy). */
+    .footer, .blog-footer, pre { --focus: var(--gold); }
+    :focus:not(:focus-visible) { outline: none; }
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after {
+        animation-duration: .01ms !important; animation-iteration-count: 1 !important;
+        transition-duration: .01ms !important; scroll-behavior: auto !important;
+      }
+    }
+    h1, h2, h3, .post-hero__title, .card__title { text-wrap: balance; }
+    .post-body { overflow-wrap: break-word; }   /* long URLs and inline code wrap instead of widening the page */
+
+    .post-body img, .post-body svg { max-width: 100%; height: auto; }
+
+    /* ── SKIP LINK ── a11y-perf R5: the link and the landmark it targets are a
+       pair — useless without both halves. Off-screen until focused, then the
+       first tab stop on every page. */
+    .skip-link { position: absolute; left: -9999px; }
+    .skip-link:focus {
+      left: 1rem; top: 1rem; z-index: 999;
+      background: var(--navy); color: #fff;
+      padding: 0.75rem 1.25rem; border-radius: var(--radius-sm);
+      font-weight: 600; text-decoration: none;
+    }
+
+    /* ── POST WAYFINDING ── the wordmark is the home link; the footer carries
+       the full destination row. */
+    .blog-nav__home {
+      font-size: 0.9rem; font-weight: 800; color: var(--navy);
+      text-decoration: none; margin-right: 1rem;
+    }
+    .blog-nav__home:hover { color: var(--blue); }
+    .blog-nav__inner > .blog-nav__back { margin-right: auto; }
+    .blog-footer__nav {
+      display: flex; flex-wrap: wrap; justify-content: center; gap: 0.35rem 1.25rem;
+      max-width: 860px; margin: 0 auto 1.25rem; padding: 0 2rem 1.25rem;
+      border-bottom: 1px solid rgba(255,255,255,0.12);
+    }
+    .blog-footer__nav a { color: var(--gold); font-size: 0.85rem; font-weight: 600; text-decoration: none; }
+    .blog-footer__nav a:hover { color: #fff; text-decoration: underline; }
+
+    html { scroll-padding-top: 5rem; }
+    [id] { scroll-margin-top: 5rem; }
+
+    /* Thai needs more room than Latin at the same nominal size. */
+    .post-body:lang(th) { font-size: 18px; line-height: 1.85; }
+    .post-body p, .post-body li, .post-body blockquote { text-wrap: pretty; }
+
+    /* ---- side-scroll affordance ----
+       pre blocks and tables can exceed 720px. These layers paint a shadow ONLY
+       where there is more content in that direction; when fully scrolled the
+       cover slides over the shadow and hides it. No JavaScript, no wrapper. */
+    .post-body pre, .post-body table {
+      overflow-x: auto;
+      background-image:
+        linear-gradient(to right, var(--code-bg, #0f172a) 30%, rgba(15,23,42,0)),
+        linear-gradient(to left, var(--code-bg, #0f172a) 30%, rgba(15,23,42,0)),
+        radial-gradient(farthest-side at 0 50%, rgba(0,0,0,.28), rgba(0,0,0,0)),
+        radial-gradient(farthest-side at 100% 50%, rgba(0,0,0,.28), rgba(0,0,0,0));
+      background-position: 0 0, 100% 0, 0 0, 100% 0;
+      background-repeat: no-repeat;
+      background-size: 40px 100%, 40px 100%, 14px 100%, 14px 100%;
+      background-attachment: local, local, scroll, scroll;
+    }
+    .post-body table {
+      background-image:
+        linear-gradient(to right, var(--white, #fff) 30%, rgba(255,255,255,0)),
+        linear-gradient(to left, var(--white, #fff) 30%, rgba(255,255,255,0)),
+        radial-gradient(farthest-side at 0 50%, rgba(17,48,75,.16), rgba(17,48,75,0)),
+        radial-gradient(farthest-side at 100% 50%, rgba(17,48,75,.16), rgba(17,48,75,0));
+      background-position: 0 0, 100% 0, 0 0, 100% 0;
+      background-repeat: no-repeat;
+      background-size: 40px 100%, 40px 100%, 14px 100%, 14px 100%;
+      background-attachment: local, local, scroll, scroll;
+    }
+
+    /* ---- table of contents ---- */
+    .post-toc {
+      max-width: 720px;
+      margin: 2rem auto 0;
+      padding: 1rem 1.25rem;
+      background: rgba(34,98,153,0.05);
+      border: 1px solid rgba(34,98,153,0.14);
+      border-left: 3px solid var(--gold, #c4a46c);
+      border-radius: 10px;
+      font-size: 0.92rem;
+    }
+    .post-toc > summary {
+      cursor: pointer;
+      font-weight: 700;
+      color: var(--navy);
+      list-style: none;
+    }
+    .post-toc > summary::-webkit-details-marker { display: none; }
+    .post-toc > summary::before {
+      content: "\25B8";
+      display: inline-block;
+      margin-right: 0.5rem;
+      transition: transform 0.2s ease;
+      color: var(--gold-dark, #7a5f22);
+    }
+    .post-toc[open] > summary::before { transform: rotate(90deg); }
+    .post-toc > summary:focus-visible { outline: 3px solid var(--focus, #226299); outline-offset: 3px; }
+    .post-toc ol { margin: 0.85rem 0 0.25rem; padding-left: 1.4rem; }
+    .post-toc li { margin-bottom: 0.4rem; line-height: 1.5; }
+    .post-toc a { color: var(--slate); text-decoration: none; }
+    .post-toc a:hover, .post-toc a:focus-visible { color: var(--blue-dark, #1a4d7a); text-decoration: underline; }
+    @media (max-width: 600px) { .post-toc { margin: 1.25rem 1rem 0; } }
+
+    /* ---- cross-document view transitions ---- */
+    @view-transition { navigation: auto; }
+    .nav, .blog-nav { view-transition-name: site-nav; }
+    .footer, .blog-footer { view-transition-name: site-footer; }
+    @media (prefers-reduced-motion: reduce) {
+      ::view-transition-group(*),
+      ::view-transition-old(*),
+      ::view-transition-new(*) { animation: none !important; }
+    }
+
+    /* ── SERIES STRIP — Hermes Agent in Practice ──
+       Same class and inner-wrapper shape as the OpenClaw strip because the
+       linter's RE_SNAV recognises exactly `series-nav` + a nested div; a
+       renamed strip would read as "no nav" and fail INV-08. All content
+       checks (INV-03 family) iterate the SERIES7 list only, so this strip's
+       labels are convention, not contract. House-styled, not the island CSS. */
+    .series-nav {
+      max-width: 720px; margin: 2rem auto 0; padding: 1.1rem 1.4rem;
+      background: rgba(255,255,255,0.75); border: 1px solid rgba(34,98,153,0.15);
+      border-left: 3px solid var(--gold); border-radius: 12px;
+    }
+    .series-nav h3 {
+      font-size: 0.78rem; font-weight: 700; text-transform: uppercase;
+      letter-spacing: 0.08em; color: var(--gold-dark); margin-bottom: 0.6rem;
+    }
+    .series-links { display: flex; flex-wrap: wrap; gap: 0.5rem; }
+    .series-links a, .series-links .current {
+      font-size: 0.82rem; font-weight: 600; padding: 0.35rem 0.8rem;
+      border-radius: 50px; text-decoration: none;
+    }
+    .series-links a { color: var(--blue-dark); background: rgba(34,98,153,0.08); }
+    .series-links a:hover { background: rgba(34,98,153,0.16); }
+    .series-links .current { color: #fff; background: var(--blue-dark); }
+    @media (max-width: 600px) { .series-nav { margin: 1.5rem 1rem 0; } }
+
+    /* ── FIGURE — the sanctioned diagram component (page-design §4 Content).
+       Diagrams are PNGs; this repo built them out of divs twice and reverted
+       twice. The image is wrapped in a link to itself so a phone can pinch a
+       1400px drawing without a line of JavaScript. */
+    .figure { margin: 2.5rem 0; }
+    .figure__img { width: 100%; height: auto; display: block;
+                   border-radius: var(--radius); border: 1px solid rgba(0,0,0,0.06); }
+    .figure__caption { font-size: 0.85rem; color: var(--slate-light);
+                       text-align: center; margin-top: 0.75rem; }
+
+    /* ── REFERENCES — every material number in this series carries its source.
+       The tags are the book's own four evidence labels. */
+    .references { margin-top: 3rem; padding-top: 2rem; border-top: 1px solid #e2e8f0; }
+    .references__note { font-size: 0.85rem; color: var(--slate-light); margin-bottom: 1rem; }
+    .references__list { padding-left: 1.4rem; font-size: 0.9rem; line-height: 1.75; }
+    .references__list li { margin-bottom: 0.7rem; }
+    .ref-tag { display: inline-block; font-size: 0.7rem; font-weight: 700;
+               letter-spacing: 0.06em; text-transform: uppercase; padding: 0.1rem 0.5rem;
+               border-radius: 50px; margin-right: 0.4rem; vertical-align: 0.05em;
+               background: rgba(34,98,153,0.1); color: var(--blue-dark); }
+    /* All four labels get a rule.  --standard and --study shipped without one
+       on 2026-09-05, so 158 of 306 tags fell through to the base blue and the
+       two labels were indistinguishable.  Ratios on --bg: 6.70 / 6.92 / 7.36 /
+       4.81:1, all AA at this size. */
+    .ref-tag--law { background: rgba(239,68,68,0.12); color: #991b1b; }
+    .ref-tag--standard { background: rgba(34,98,153,0.12); color: var(--blue-dark); }
+    .ref-tag--study { background: rgba(34,197,94,0.18); color: #14532d; }
+    .ref-tag--synthesis { background: rgba(196,164,108,0.22); color: var(--gold-dark); }
+    .ref-supports { display: block; color: var(--slate-light); font-size: 0.85rem; }
+
+    /* ── LANGUAGE SWITCH — pure CSS, zero JavaScript (INV-38) ──
+       One visually-hidden checkbox as a direct child of body, BEFORE the main landmark,
+       so `#langSwitch:checked ~ main …` reaches every content block. The two
+       tracks are paired blocks: .l-th (default) and .l-en (hidden until
+       checked; display:revert restores block for divs, inline for spans).
+       Naming stays clear of INV-12's menu-token regex (hamburger|burger|
+       nav__toggle|nav-toggle|navtoggle|menu-toggle|menu__toggle) — verified.
+       No JS also means no persistence across posts; each post opens in Thai. */
+    .lang-switch-box { position: absolute; left: -9999px; }
+    /* where anchor positioning exists the box sits on the pill, so focusing it scrolls the pill into view */
+    .lang-switch { anchor-name: --lang-switch; }
+    .lang-switch-box { position-anchor: --lang-switch; top: anchor(top); left: anchor(left); width: 1px; height: 1px; opacity: 0; pointer-events: none; }
+    .l-en { display: none; }
+    #langSwitch:checked ~ main .l-en { display: revert; }
+    #langSwitch:checked ~ main .l-th { display: none; }
+    .lang-switch {
+      display: inline-flex; align-items: center; gap: 0.55rem;
+      margin-top: 1.4rem; padding: 0.4rem 1.1rem; border-radius: 50px;
+      background: rgba(255,255,255,0.85); border: 1px solid rgba(255,255,255,0.4);
+      cursor: pointer; font-size: 0.85rem; user-select: none;
+    }
+    .lang-switch span { color: var(--slate-light); font-weight: 600; transition: color 0.2s; }
+    .lang-switch .lang-sep { color: var(--gray); font-weight: 400; }
+    .lang-switch .lang-th { color: var(--navy); font-weight: 800; }
+    #langSwitch:checked ~ main .lang-switch .lang-th { color: var(--slate-light); font-weight: 600; }
+    #langSwitch:checked ~ main .lang-switch .lang-en { color: var(--navy); font-weight: 800; }
+    .lang-switch:hover { border-color: #fff; }
+    #langSwitch:focus-visible ~ main .lang-switch {
+      outline: 2px solid var(--focus); outline-offset: 3px;
+    }
+  </style>
+  <!-- social -->
+  <link rel="canonical" href="https://anirach.com/blog/below-threshold-error-correction.html">
+  <meta property="og:type" content="article">
+  <meta property="og:url" content="https://anirach.com/blog/below-threshold-error-correction.html">
+  <meta property="og:site_name" content="Anirach Mingkhwan">
+  <meta property="og:locale" content="th_TH">
+  <meta property="og:locale:alternate" content="en_US">
+  <meta property="article:published_time" content="2026-11-25">
+  <meta property="article:author" content="https://anirach.com/">
+  <meta property="og:title" content="Error Correction — จาก parity สู่ QEC">
+  <meta property="og:description" content="สร้าง repetition decoder ด้วย Python เข้าใจ syndrome, stabilizer และ surface code อ่าน logical error กับ suppression factor โดยแยก toy model จากผล Lab ในหนังสือ">
+  <meta property="og:image" content="https://anirach.com/images/below-threshold-error-correction-og.jpg">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
+  <meta property="og:image:alt" content="Error Correction — จาก parity สู่ QEC">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:image" content="https://anirach.com/images/below-threshold-error-correction-og.jpg">
+  <meta name="twitter:image:alt" content="Error Correction — จาก parity สู่ QEC">
+  <meta name="robots" content="max-image-preview:large">
+  <meta name="theme-color" content="#11304b">
+  <link rel="icon" href="/favicon.ico" sizes="any">
+  <link rel="apple-touch-icon" href="/apple-touch-icon.png">
+  <!-- /social -->
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "BlogPosting",
+    "headline": "Error Correction — จาก parity สู่ QEC",
+    "author": {
+      "@type": "Person",
+      "@id": "https://anirach.com/#person",
+      "name": "Anirach Mingkhwan",
+      "url": "https://anirach.com/"
+    },
+    "datePublished": "2026-11-25",
+    "dateModified": "2026-11-25",
+    "image": "https://anirach.com/images/below-threshold-error-correction-og.jpg",
+    "inLanguage": [
+      "th",
+      "en"
+    ],
+    "mainEntityOfPage": "https://anirach.com/blog/below-threshold-error-correction.html"
+  }
+  </script>
+</head>
+<body>
+<a href="#main" class="skip-link">Skip to content</a>
+<input type="checkbox" id="langSwitch" class="lang-switch-box" aria-label="Switch language: Thai / English">
+
+  <nav class="blog-nav">
+    <div class="blog-nav__inner">
+      <a href="../index.html" class="blog-nav__home">Anirach</a>
+      <a href="./" class="blog-nav__back">‹ Tutorials</a>
+      <div class="blog-nav__title">Checks and Thresholds</div>
+    </div>
+  </nav>
+
+  <main id="main">
+
+  <header class="post-hero">
+    <div class="post-hero__tags">
+      <span class="post-hero__tag">Quantum Computing</span>
+      <span class="post-hero__tag">AI Engineering</span>
+      <span class="post-hero__tag">Python</span>
+    </div>
+    <h1 class="post-hero__title"><span class="l-th">Error Correction — จาก parity สู่ QEC</span><span class="l-en" lang="en">Quantum Error Correction: Build a Syndrome and Understand Below Threshold</span></h1>
+    <p class="post-hero__sub"><span class="l-th">เริ่มจาก parity สองตัวที่แก้ single flip ได้ ไปสู่ stabilizer, surface code และการอ่าน threshold plot โดยไม่ปะปน noise model</span><span class="l-en" lang="en">Build a two-check decoder for single flips, then connect stabilizers, surface codes and threshold plots without mixing noise models.</span></p>
+    <div class="post-hero__meta">
+      <span>By <strong>Anirach Mingkhwan</strong></span>
+      <span class="post-hero__series">Below Threshold 2026 • Chapter #3</span>
+      <span><time datetime="2026-11-25">25 Nov 2026</time></span>
+      <span>5 min read</span>
+    </div>
+    <label for="langSwitch" class="lang-switch" title="สลับภาษา · Switch language"><span class="lang-th">ไทย</span><span class="lang-sep">·</span><span class="lang-en" lang="en">English</span></label>
+    <div class="post-hero__cover">
+      <img src="../images/below-threshold-error-correction-cover.jpg" alt="Error Correction — จาก parity สู่ QEC" width="800" height="800" loading="eager" fetchpriority="high" decoding="async">
+    </div>
+  </header>
+
+  <article class="post-body">
+
+    <details class="post-toc l-th" open>
+      <summary>ในบทความนี้</summary>
+      <ol>
+          <li><a href="#th-start">ตั้งเป้า — ตรวจ error โดยไม่อ่านคำตอบ</a></li>
+          <li><a href="#th-parity">Parity — ข้อมูลของ error ที่ไม่บอก logical bit</a></li>
+          <li><a href="#th-exact">ลงมือ — ตรวจทุก single flip และคำนวณ tail</a></li>
+          <li><a href="#th-stabilizers">จาก bits สู่ qubits — stabilizers และ distance</a></li>
+          <li><a href="#th-detectors">Checks มี noise — จึงต้องดูทั้ง space และ time</a></li>
+          <li><a href="#th-threshold">อ่านกราฟ — Λ มากกว่า 1 จึงคุ้มที่จะขยาย code</a></li>
+          <li><a href="#th-exercise">แบบฝึก — ตรวจ assumptions ก่อนเพิ่ม redundancy</a></li>
+          <li><a href="#th-resources">Run & check — รันตัวอย่างด้วยตัวเอง</a></li>
+          <li><a href="#th-references">Sources & scope — แหล่งอ้างอิงและขอบเขต</a></li>
+      </ol>
+    </details>
+    <details class="post-toc l-en" open>
+      <summary>In this post</summary>
+      <ol>
+          <li><a href="#en-start">Goal: learn about the error without reading the answer</a></li>
+          <li><a href="#en-parity">Parity checks reveal location, not logical value</a></li>
+          <li><a href="#en-exact">Run exhaustive single-flip checks and exact failure tails</a></li>
+          <li><a href="#en-stabilizers">From bits to qubits: stabilizers and code distance</a></li>
+          <li><a href="#en-detectors">Noisy checks turn decoding into a space–time problem</a></li>
+          <li><a href="#en-threshold">Read the threshold plot through suppression Λ</a></li>
+          <li><a href="#en-exercise">Exercise: test assumptions before adding redundancy</a></li>
+          <li><a href="#en-resources">Run and check the example</a></li>
+          <li><a href="#en-references">Sources and scope</a></li>
+      </ol>
+    </details>
+    <div class="l-th">
+
+<h2 id="th-start">ตั้งเป้า — ตรวจ error โดยไม่อ่านคำตอบ</h2>
+<blockquote><p><strong>ดาวน์โหลดหนังสือและโค้ดประกอบ</strong></p><p><a href="https://drive.google.com/uc?export=download&amp;id=1iG7oSWLC9UI91VsPOzqcxk3_evH8Sn3b">ดาวน์โหลด Below Threshold ฉบับเต็ม (PDF ภาษาอังกฤษ · 104 หน้า · 5.4 MB)</a><br><a href="https://drive.google.com/file/d/1iG7oSWLC9UI91VsPOzqcxk3_evH8Sn3b/view?usp=sharing">อ่านบน Google Drive</a> · <a href="../downloads/below-threshold-tutorial-examples.zip" download>ดาวน์โหลดตัวอย่าง Python ทั้งสิบบท (ZIP)</a></p></blockquote>
+<p><strong>บทที่ 3/10</strong> · บทเรียนดัดแปลงจาก <em>Below Threshold: AI, Quantum Errors and Better Code</em> ฉบับ 1.0 บทที่ 3 หน้า 13–20</p><p>บทก่อนอธิบายว่าทำไม unknown quantum state copy แบบทั่วไปไม่ได้ บทนี้สร้างทางเลือก: <strong>checks → syndrome → decoder → logical result</strong> เริ่มจาก classical repetition code ที่ใช้ Python และ XOR ตรวจได้ครบทุกกรณี แล้วเชื่อมไป quantum stabilizers และ surface code</p>
+<p>เมื่อจบบท คุณควรอ่าน syndrome เป็นข้อมูลเกี่ยวกับ error แยก physical error ออกจาก logical failure และบอกได้ว่าคำว่า “below threshold” ต้องมี code, noise model และ decoder กำกับ ไม่ต้องติดตั้ง Stim เพื่อรันตัวอย่างเล็ก ส่วน Lab 1 ฉบับเต็มอยู่ในหนังสือพร้อม simulation และผลที่บันทึกไว้</p>
+<p>มุมมอง programmer คือ decoder เป็น function ที่มี contract ชัดเจน: input เป็น check outcomes หรือ detection events, output เป็น correction หรือ logical-class prediction แต่ contract ไม่ควรสัญญาว่าแก้ arbitrary error ได้ทุกแบบ ต้องบอกขอบเขตที่ code รองรับ</p>
+
+<h2 id="th-parity">Parity — ข้อมูลของ error ที่ไม่บอก logical bit</h2>
+<p>เก็บ logical bit เป็น 000 หรือ 111 แล้วคำนวณ s₁ = b₁ XOR b₂ และ s₂ = b₂ XOR b₃ ทั้ง codewords ให้ syndrome 00 จึงยังไม่รู้ logical value หาก bit แรก flip จะได้ 10, bit กลางได้ 11 และ bit สุดท้ายได้ 01 สองบิตของ syndrome จึงชี้ตำแหน่ง single flip ได้</p>
+    <figure class="figure">
+      <a href="../images/below-threshold-repetition.png">
+        <img class="figure__img" src="../images/below-threshold-repetition.png" alt="Parity สองตัวชี้ตำแหน่ง single bit flip โดยไม่เปิดเผยว่าค่า logical เป็น 0 หรือ 1" width="1544" height="572" loading="lazy" decoding="async">
+      </a>
+      <figcaption class="figure__caption">Parity สองตัวชี้ตำแหน่ง single bit flip โดยไม่เปิดเผยว่าค่า logical เป็น 0 หรือ 1 ภาพ 3.1 จากหนังสือ Below Threshold ของผู้เขียน เปิดภาพเพื่อดูขนาดเต็ม</figcaption>
+    </figure>
+<p>decoder ใช้ตารางนี้กลับ bit ที่คาดว่าผิด หากตั้งสมมติฐานว่าเกิดไม่เกินหนึ่ง flip จะกู้ codeword ถูกทุกครั้ง แต่ error 100 และ 011 ให้ syndrome เดียวกัน สมมติเราเริ่มจาก 000 แล้วเกิด error 011 decoder ที่เลือก single flip จะเปลี่ยนผลเป็น 111 ซึ่งเป็น logical failure แม้ syndrome หลัง correction จะเป็น 00</p>
+<p>กรณีนี้สำคัญกว่าการจำตาราง: <strong>syndrome เป็นหลักฐานที่ไม่ครบทุกอย่าง</strong> decoder ต้องเลือกจาก error ที่เป็นไปได้ และ prior ที่ไม่ตรงกับ noise จริงทำให้ตัดสินใจผิดได้ การเพิ่ม AI เปลี่ยนวิธีอนุมาน แต่ไม่สร้างข้อมูลที่ checks ไม่เคยวัด</p>
+
+<h2 id="th-exact">ลงมือ — ตรวจทุก single flip และคำนวณ tail</h2>
+<p>สำหรับ independent flips ที่มี probability p repetition code ระยะ 3 ล้มเหลวเมื่อเกิดสองหรือสาม flips: P<sub>L</sub> = 3p²(1 − p) + p³ ถ้าระยะ d เป็นเลขคี่ ให้รวม binomial probability ตั้งแต่ (d + 1)/2 ถึง d ตัวอย่างเว็บนี้คำนวณ exact tail ของ <strong>classical repetition code</strong> ไม่ใช่ surface-code threshold simulation</p>
+<pre><code>&quot;&quot;&quot;Classical repetition code: exact tails, parity decoding and aliasing.&quot;&quot;&quot;
+from math import comb, isclose
+
+
+def syndrome(bits):
+    a, b, c = bits
+    return (a ^ b, b ^ c)
+
+
+def correct(bits):
+    result = list(bits)
+    location = {(1, 0): 0, (1, 1): 1, (0, 1): 2}.get(syndrome(bits))
+    if location is not None:
+        result[location] ^= 1
+    return tuple(result)
+
+
+def majority_failure(p, distance):
+    if distance &lt; 1 or distance % 2 != 1 or not 0 &lt;= p &lt;= 1:
+        raise ValueError(&quot;Use odd positive distance and 0 &lt;= p &lt;= 1&quot;)
+    return sum(comb(distance, k) * p ** k * (1 - p) ** (distance - k)
+               for k in range(distance // 2 + 1, distance + 1))
+
+
+for bit in (0, 1):
+    encoded = (bit,) * 3
+    for position in range(3):
+        noisy = list(encoded)
+        noisy[position] ^= 1
+        assert correct(noisy) == encoded
+print(&quot;Single-flip syndrome map: 10 -&gt; first; 11 -&gt; middle; 01 -&gt; last&quot;)
+for p in (0.1, 0.5, 0.6):
+    row = [majority_failure(p, d) for d in (1, 3, 5, 7)]
+    print(f&quot;p={p:.1f}: &quot; + &quot; &quot;.join(f&quot;d={d}: {v:.6f}&quot; for d, v in zip((1, 3, 5, 7), row)))
+
+assert isclose(majority_failure(0.1, 3), 0.028)
+assert all(isclose(majority_failure(0.5, d), 0.5) for d in (1, 3, 5, 7))
+assert syndrome((1, 0, 0)) == syndrome((0, 1, 1))
+assert correct((0, 1, 1)) == (1, 1, 1)
+print(&quot;Alias: errors 100 and 011 share syndrome 10; the assumed single-flip decoder fails on 011&quot;)</code></pre><pre><code>Single-flip syndrome map: 10 -&gt; first; 11 -&gt; middle; 01 -&gt; last
+p=0.1: d=1: 0.100000 d=3: 0.028000 d=5: 0.008560 d=7: 0.002728
+p=0.5: d=1: 0.500000 d=3: 0.500000 d=5: 0.500000 d=7: 0.500000
+p=0.6: d=1: 0.600000 d=3: 0.648000 d=5: 0.682560 d=7: 0.710208
+Alias: errors 100 and 011 share syndrome 10; the assumed single-flip decoder fails on 011</code></pre>
+<p>ที่ p = 0.1 ระยะ 3 ลด failure จาก 10% เหลือ 2.8% และระยะ 7 เหลือประมาณ 0.273% แต่ที่ p = 0.6 ระยะ 7 กลับเพิ่ม failure เป็นประมาณ 71.02% เพราะเสียงข้างมากมักผิด threshold ของแบบจำลองนี้คือ 50% ซึ่งไม่ใช่ค่าประมาณ 1.2% ของ surface-code Lab</p>
+<p>assertions ตรวจทั้ง logical 0 และ 1 ทุกตำแหน่ง single flip แล้วจงใจแสดง double-flip alias การทดสอบจึงมีทั้งกรณีที่ contract รับประกันและกรณีที่อยู่นอกขอบเขต ไม่ใช้ผลสุ่มที่โชคดีเป็นหลักฐานว่า decoder ถูก</p>
+
+<h2 id="th-stabilizers">จาก bits สู่ qubits — stabilizers และ distance</h2>
+<p>quantum stabilizer คือ Pauli product ที่คง encoded state ไว้ และ checks ทุกตัวที่วัดร่วมกันต้อง commute กัน ถ้า error anticommute กับ check ใด ผล check นั้นเปลี่ยนเครื่องหมาย ข้อมูลเครื่องหมายเหล่านี้คือ syndrome แนวคิดนี้พัฒนารายละเอียดใน <a href="https://arxiv.org/abs/quant-ph/9705052">Gottesman’s stabilizer formalism</a></p>
+<p>สัญลักษณ์ [[n, k, d]] บอกว่าใช้ physical qubits n ตัวเก็บ logical qubits k ตัว มี minimum nontrivial logical Pauli weight เท่ากับ d จึงแก้ arbitrary errors ได้ไม่เกิน floor((d − 1)/2) ตัว ภายใต้ ideal syndrome assumptions อย่าเอาขอบเขตนี้ไปใช้กับจำนวน faulty circuit locations โดยไม่วิเคราะห์ propagation และ noisy checks</p>
+    <figure class="figure">
+      <a href="../images/below-threshold-surface-code.png">
+        <img class="figure__img" src="../images/below-threshold-surface-code.png" alt="Rotated surface code ระยะ 3 มี data qubits เก้าตัวและ checks แปดตัว ส่วน correlated errors อาจให้ syndrome เดียวกันแต่มี logical effect ต่างกัน" width="1682" height="694" loading="lazy" decoding="async">
+      </a>
+      <figcaption class="figure__caption">Rotated surface code ระยะ 3 มี data qubits เก้าตัวและ checks แปดตัว ส่วน correlated errors อาจให้ syndrome เดียวกันแต่มี logical effect ต่างกัน ภาพ 3.2 จากหนังสือ Below Threshold ของผู้เขียน เปิดภาพเพื่อดูขนาดเต็ม</figcaption>
+    </figure>
+<p>rotated surface-code patch ระยะ d ใช้ data qubits d² และ check qubits d² − 1 โดย X-type กับ Z-type checks ตรวจ phase และ bit faults ร่วมกัน ระยะ 3 จึงมี 9 + 8 = 17 qubits ภาพของหนังสือแสดงด้วยว่า correlated errors บางคู่มี syndrome เหมือนกันแต่ผลต่อ logical information ต่างกัน</p>
+
+<h2 id="th-detectors">Checks มี noise — จึงต้องดูทั้ง space และ time</h2>
+<p>ถ้า measurement ผิดได้ syndrome รอบเดียวไม่พอ ให้ทำ checks ซ้ำและเปรียบเทียบกับรอบก่อน <strong>detection event</strong> คือความเปลี่ยนแปลงที่ควรไม่เกิด ในภาพอย่างง่าย data fault ทำให้ detectors ใกล้กันใน space เปลี่ยน ส่วน measurement fault ให้รูปแบบสัมพันธ์กันตาม time รายละเอียด boundary ขึ้นกับ circuit</p>
+<p><strong>Detector error model (DEM)</strong> ระบุว่า fault mechanisms แต่ละตัว flip detectors ใด และอาจ flip logical observable ใดด้วย <a href="https://quantum-journal.org/papers/q-2021-07-06-497/">Stim</a> สร้าง model และ samples สำหรับ stabilizer circuits ได้ ส่วน PyMatching ใช้ graph เพื่อประมาณการ decode นี่คือการแบ่งหน้าที่ simulator กับ inference engine ใน Lab 1</p>
+<p>decoder ไม่จำเป็นต้องกู้ physical history ที่เกิดจริงทุกจุด เพียงเลือก correction ที่รวมกับ error จริงแล้วอยู่ใน logical class ที่ถูกต้อง การเลือกเส้นทางที่เบาที่สุดเส้นเดียวกับการรวม probability ของทุก error ใน class ไม่ใช่โจทย์เดียวกัน ความต่างนี้อธิบายว่าทำไม practical decoders จึงมี accuracy/cost trade-off</p>
+
+<h2 id="th-threshold">อ่านกราฟ — Λ มากกว่า 1 จึงคุ้มที่จะขยาย code</h2>
+    <figure class="figure">
+      <a href="../images/below-threshold-threshold.png">
+        <img class="figure__img" src="../images/below-threshold-threshold.png" alt="ผล Lab 1 ที่หนังสือรายงาน: logical-error curves ตัดใกล้ 1.2% ใน noise model ที่กำหนด และ Λ เปลี่ยนตาม physical error" width="1493" height="601" loading="lazy" decoding="async">
+      </a>
+      <figcaption class="figure__caption">ผล Lab 1 ที่หนังสือรายงาน: logical-error curves ตัดใกล้ 1.2% ใน noise model ที่กำหนด และ Λ เปลี่ยนตาม physical error ภาพ 3.3 จากหนังสือ Below Threshold ของผู้เขียน เปิดภาพเพื่อดูขนาดเต็ม</figcaption>
+    </figure>
+<p>ภาพนี้คือ <strong>ผล Lab 1 ที่หนังสือรายงาน</strong> จาก rotated surface-code memories ระยะ 3, 5, 7 ภายใต้ circuit noise ที่ระบุ ไม่ใช่การรันซ้ำใหม่ของบทความ curves ตัดกันใกล้ 1.2% สำหรับ model นี้ ด้านที่ physical error ต่ำกว่า crossing การเพิ่ม distance ช่วยลด logical error ส่วนอีกด้านอาจทำให้แย่ลงเพราะเพิ่มทั้ง redundancy และ faulty components</p>
+<p>กำหนด Λ = ε<sub>d</sub>/ε<sub>d+2</sub> เมื่อ Λ &gt; 1 logical error ลดทุกครั้งที่เพิ่ม distance สองหน่วย หนังสือรายงาน Λ ประมาณ 2 ที่ p = 0.5% แต่ค่านี้เปลี่ยนตาม noise และ finite-size effects ค่า threshold ไม่มีเลขเดียวที่ใช้กับทุก code และทุกเครื่อง</p>
+<p><a href="https://www.nature.com/articles/s41586-024-08449-y">รายงาน Willow</a> ให้ Λ = 2.14 ± 0.02 ภายใต้ hardware experiment และ neural decoder ที่ระบุ โดยผล headline ใช้ offline decoding อย่านำความใกล้เคียงกับ Lab ไปสรุปว่า noise model เหมือนกัน หรือว่า Python batch timing เท่ากับ end-to-end real-time latency</p>
+
+<h2 id="th-exercise">แบบฝึก — ตรวจ assumptions ก่อนเพิ่ม redundancy</h2>
+<p>เพิ่มระยะ 9 และ 11 ในตาราง exact tail ของตัวอย่าง ค่าที่ p = 0.5 ต้องยังเป็น 0.5 ทุกระยะ สำหรับ p = 0.1 failure ต้องลดเมื่อระยะเพิ่ม และสำหรับ p = 0.6 ต้องเพิ่ม อย่าใช้ numerical underflow เป็นเหตุผลอ้างว่า failure เป็นศูนย์แน่นอน</p>
+<p>ต่อมาแจกแจง errors 8 แบบของ repetition code ระยะ 3 แล้วจัดกลุ่มด้วย syndrome คุณควรได้สอง errors ต่อ syndrome และคู่ในแต่ละกลุ่มเป็น bitwise complement กัน อธิบายว่าเหตุใด prior แบบ independent p &lt; 0.5 จึงเลือก error ที่มีน้ำหนักต่ำกว่าได้สมเหตุสมผล</p>
+<p>รายงานผลด้วยตารางสามแถว: สิ่งที่ exact toy model พิสูจน์, สิ่งที่ surface-code Lab สังเกต และสิ่งที่ hardware experiment รายงาน ขอบเขตที่แยกกันชัดนี้เป็นพื้นฐานก่อนถามในบท 4 ว่า learned decoder ชนะ matching เพราะอะไร</p>
+
+<h2 id="th-resources">Run & check — รันตัวอย่างด้วยตัวเอง</h2>
+<p>ตัวอย่างสำหรับสอนนี้ใช้ Python standard library เท่านั้น บันทึก <a href="../examples/below-threshold/ch03.py" download>ch03.py</a> แล้วรันด้วย Python 3.10 ขึ้นไป โดย assertions ตรวจ invariant ที่อธิบายในบท</p><pre><code>python3 ch03.py</code></pre><p><a href="../downloads/below-threshold-tutorial-examples.zip" download>ตัวอย่างทั้งสิบบทและผลลัพธ์ที่คาดหวัง (ZIP)</a> · <a href="https://github.com/Anirach/Anirach.github.io/tree/main/examples/below-threshold">อ่าน source บน GitHub</a></p>
+
+<h2 id="th-references">Sources & scope — แหล่งอ้างอิงและขอบเขต</h2>
+<section class="references" aria-labelledby="th-sources"><h3 id="th-sources">เอกสารและหลักฐาน</h3><p class="references__note">โครงบท ภาพที่ให้เครดิต และผล lab ที่รายงานมาจากหนังสือของผู้เขียน ณ November 2026 ตัวอย่างสั้นที่ใช้ standard library รันเพื่อตรวจบทเรียนเว็บวันที่ 25 November 2026 เป็นแบบจำลองเพื่อสอน ไม่ได้รันซ้ำการทดลอง Stim, neural network, mitigation หรือ LLM ฉบับเต็มในหนังสือ ข้ออ้าง hardware, simulator, preprint และบริษัทคงขอบเขตตามที่ระบุ</p><ol><li><a href="https://drive.google.com/file/d/1iG7oSWLC9UI91VsPOzqcxk3_evH8Sn3b/view?usp=sharing">Anirach Mingkhwan. Below Threshold: AI, Quantum Errors and Better Code. Edition 1.0 (November 2026), Chapter 3, pp. 13–20.</a></li><li id="th-ref-1"><a href="https://arxiv.org/abs/quant-ph/9705052">Gottesman. Stabilizer Codes and Quantum Error Correction (1997).</a></li><li id="th-ref-2"><a href="https://quantum-journal.org/papers/q-2021-07-06-497/">Gidney. Stim: a fast stabilizer circuit simulator (2021).</a></li><li id="th-ref-3"><a href="https://www.nature.com/articles/s41586-024-08449-y">Google Quantum AI and collaborators. Quantum error correction below the surface code threshold (online 2024; Nature 2025).</a></li></ol></section>
+    </div>
+
+    <div class="l-en" lang="en">
+
+<h2 id="en-start">Goal: learn about the error without reading the answer</h2>
+<blockquote><p><strong>Download the book and examples</strong></p><p><a href="https://drive.google.com/uc?export=download&amp;id=1iG7oSWLC9UI91VsPOzqcxk3_evH8Sn3b">Download the complete Below Threshold book (English PDF · 104 pages · 5.4 MB)</a><br><a href="https://drive.google.com/file/d/1iG7oSWLC9UI91VsPOzqcxk3_evH8Sn3b/view?usp=sharing">Read on Google Drive</a> · <a href="../downloads/below-threshold-tutorial-examples.zip" download>Download all ten Python examples (ZIP)</a></p></blockquote>
+<p><strong>Chapter 3/10.</strong> A tutorial adaptation of <em>Below Threshold: AI, Quantum Errors and Better Code</em>, Edition 1.0, Chapter 3, pp. 13–20.</p><p>The previous lesson explains why an unknown quantum state cannot simply be copied. Now build the alternative: <strong>checks → syndrome → decoder → logical result</strong>. Start with a classical repetition code that Python and XOR can exhaustively test, then connect the mechanism to quantum stabilizers and the surface code.</p>
+<p>By the end, you should interpret a syndrome as evidence about errors, distinguish a physical error from a logical failure, and attach a code, noise model and decoder to every threshold claim. The small example needs no Stim installation. The book contains the full Lab 1 simulation and its recorded results.</p>
+<p>A programmer can view a decoder as a function with a contract: check outcomes or detection events enter; a correction or logical-class prediction leaves. The contract must also say which errors the code can correct. It cannot promise recovery from arbitrary damage.</p>
+
+<h2 id="en-parity">Parity checks reveal location, not logical value</h2>
+<p>Encode a logical bit as 000 or 111. Compute s₁ = b₁ XOR b₂ and s₂ = b₂ XOR b₃. Both codewords give syndrome 00, so the checks do not identify the logical value. A first-bit flip gives 10, a middle-bit flip gives 11, and a last-bit flip gives 01.</p>
+    <figure class="figure">
+      <a href="../images/below-threshold-repetition.png">
+        <img class="figure__img" src="../images/below-threshold-repetition.png" alt="Two parity checks locate a single bit flip without revealing whether the logical value is zero or one." width="1544" height="572" loading="lazy" decoding="async">
+      </a>
+      <figcaption class="figure__caption">Two parity checks locate a single bit flip without revealing whether the logical value is zero or one. Author’s book, Figure 3.1. Open for full resolution.</figcaption>
+    </figure>
+<p>The decoder uses that table to flip the suspected bit. Under an at-most-one-flip assumption, it always recovers the codeword. But errors 100 and 011 share a syndrome. Starting from 000, error 011 followed by the single-flip correction produces 111: a logical failure, despite a clean final syndrome.</p>
+<p>The essential lesson is that <strong>a syndrome is incomplete evidence</strong>. Decoding selects among possible errors using a prior. A prior that misses the actual noise can select the wrong answer. Learning changes the inference rule; it cannot create an observation the checks never made.</p>
+
+<h2 id="en-exact">Run exhaustive single-flip checks and exact failure tails</h2>
+<p>With independent flips of probability p, distance three fails on two or three flips: P<sub>L</sub> = 3p²(1 − p) + p³. For odd distance d, sum the binomial probabilities from (d + 1)/2 through d. This web example computes an exact tail for a <strong>classical repetition code</strong>; it is not a surface-code threshold simulation.</p>
+<pre><code>&quot;&quot;&quot;Classical repetition code: exact tails, parity decoding and aliasing.&quot;&quot;&quot;
+from math import comb, isclose
+
+
+def syndrome(bits):
+    a, b, c = bits
+    return (a ^ b, b ^ c)
+
+
+def correct(bits):
+    result = list(bits)
+    location = {(1, 0): 0, (1, 1): 1, (0, 1): 2}.get(syndrome(bits))
+    if location is not None:
+        result[location] ^= 1
+    return tuple(result)
+
+
+def majority_failure(p, distance):
+    if distance &lt; 1 or distance % 2 != 1 or not 0 &lt;= p &lt;= 1:
+        raise ValueError(&quot;Use odd positive distance and 0 &lt;= p &lt;= 1&quot;)
+    return sum(comb(distance, k) * p ** k * (1 - p) ** (distance - k)
+               for k in range(distance // 2 + 1, distance + 1))
+
+
+for bit in (0, 1):
+    encoded = (bit,) * 3
+    for position in range(3):
+        noisy = list(encoded)
+        noisy[position] ^= 1
+        assert correct(noisy) == encoded
+print(&quot;Single-flip syndrome map: 10 -&gt; first; 11 -&gt; middle; 01 -&gt; last&quot;)
+for p in (0.1, 0.5, 0.6):
+    row = [majority_failure(p, d) for d in (1, 3, 5, 7)]
+    print(f&quot;p={p:.1f}: &quot; + &quot; &quot;.join(f&quot;d={d}: {v:.6f}&quot; for d, v in zip((1, 3, 5, 7), row)))
+
+assert isclose(majority_failure(0.1, 3), 0.028)
+assert all(isclose(majority_failure(0.5, d), 0.5) for d in (1, 3, 5, 7))
+assert syndrome((1, 0, 0)) == syndrome((0, 1, 1))
+assert correct((0, 1, 1)) == (1, 1, 1)
+print(&quot;Alias: errors 100 and 011 share syndrome 10; the assumed single-flip decoder fails on 011&quot;)</code></pre><pre><code>Single-flip syndrome map: 10 -&gt; first; 11 -&gt; middle; 01 -&gt; last
+p=0.1: d=1: 0.100000 d=3: 0.028000 d=5: 0.008560 d=7: 0.002728
+p=0.5: d=1: 0.500000 d=3: 0.500000 d=5: 0.500000 d=7: 0.500000
+p=0.6: d=1: 0.600000 d=3: 0.648000 d=5: 0.682560 d=7: 0.710208
+Alias: errors 100 and 011 share syndrome 10; the assumed single-flip decoder fails on 011</code></pre>
+<p>At p = 0.1, distance three reduces failure from 10% to 2.8%; distance seven reaches about 0.273%. At p = 0.6, distance seven instead increases failure to about 71.02%, because the majority is usually wrong. This model’s 50% threshold is not the surface-code lab’s approximately 1.2% crossing.</p>
+<p>The assertions cover both logical values and every single-flip location, then deliberately expose a double-flip alias. Verification covers the promised operating region and an explicit failure outside it. It does not rely on a fortunate random sample.</p>
+
+<h2 id="en-stabilizers">From bits to qubits: stabilizers and code distance</h2>
+<p>A quantum stabilizer is a Pauli product that leaves the encoded state unchanged; the jointly measured checks commute. An error that anticommutes with a check reverses its sign. These signs form a syndrome. The formal construction appears in <a href="https://arxiv.org/abs/quant-ph/9705052">Gottesman’s stabilizer treatment</a>.</p>
+<p>The notation [[n, k, d]] means n physical qubits encode k logical qubits with minimum nontrivial logical Pauli weight d. It corrects up to floor((d − 1)/2) arbitrary qubit errors under ideal syndrome assumptions. Do not equate that bound with the number of faulty circuit locations without analysing propagation and noisy checks.</p>
+    <figure class="figure">
+      <a href="../images/below-threshold-surface-code.png">
+        <img class="figure__img" src="../images/below-threshold-surface-code.png" alt="The distance-3 rotated surface code uses nine data qubits and eight checks; correlated faults can share a syndrome while differing logically." width="1682" height="694" loading="lazy" decoding="async">
+      </a>
+      <figcaption class="figure__caption">The distance-3 rotated surface code uses nine data qubits and eight checks; correlated faults can share a syndrome while differing logically. Author’s book, Figure 3.2. Open for full resolution.</figcaption>
+    </figure>
+<p>A distance-d rotated surface-code patch uses d² data qubits and d² − 1 check qubits. Its X-type and Z-type checks jointly detect phase and bit faults. Distance three therefore uses 9 + 8 = 17 qubits. The book’s diagram also shows how correlated errors can share a syndrome but differ in their logical effect.</p>
+
+<h2 id="en-detectors">Noisy checks turn decoding into a space–time problem</h2>
+<p>If measurements can fail, one syndrome round is insufficient. Repeat checks and compare them across rounds. A <strong>detection event</strong> is a change where stability was expected. In a simple picture, a data fault creates nearby spatial events; a measurement fault creates a temporal pattern. Boundary details depend on the circuit.</p>
+<p>A <strong>detector error model (DEM)</strong> lists which detectors each fault mechanism flips and whether it changes a logical observable. <a href="https://quantum-journal.org/papers/q-2021-07-06-497/">Stim</a> derives models and samples for stabilizer circuits. PyMatching performs graph-based approximate decoding. Lab 1 separates simulation from inference in this way.</p>
+<p>The decoder need not recover every detail of the actual physical history. Its correction must land in the right logical class when combined with the true error. Choosing one lightest path and summing probabilities over all errors in a class are different problems, creating an accuracy-versus-cost trade-off for practical decoders.</p>
+
+<h2 id="en-threshold">Read the threshold plot through suppression Λ</h2>
+    <figure class="figure">
+      <a href="../images/below-threshold-threshold.png">
+        <img class="figure__img" src="../images/below-threshold-threshold.png" alt="Book-reported Lab 1 results: logical-error curves cross near 1.2% in the specified noise model, and suppression Λ varies with physical error." width="1493" height="601" loading="lazy" decoding="async">
+      </a>
+      <figcaption class="figure__caption">Book-reported Lab 1 results: logical-error curves cross near 1.2% in the specified noise model, and suppression Λ varies with physical error. Author’s book, Figure 3.3. Open for full resolution.</figcaption>
+    </figure>
+<p>This is the <strong>book-reported Lab 1 result</strong> for distance-3, 5 and 7 rotated surface-code memories under its specified circuit noise. It is not a fresh article rerun. The curves cross near 1.2% in this model. Below the crossing, increasing distance helps. Above it, adding redundancy also adds faulty components and can hurt.</p>
+<p>Define Λ = ε<sub>d</sub>/ε<sub>d+2</sub>. If Λ &gt; 1, logical error falls as distance increases by two. The book reports Λ around two at p = 0.5%, but noise assumptions and finite-size effects change the value. There is no universal threshold number for all codes and devices.</p>
+<p>The <a href="https://www.nature.com/articles/s41586-024-08449-y">Willow paper</a> reports Λ = 2.14 ± 0.02 under its hardware experiment, with the headline result using an offline neural decoder. Numerical proximity to the lab does not make the noise models identical. Python batch throughput likewise does not establish end-to-end real-time latency.</p>
+
+<h2 id="en-exercise">Exercise: test assumptions before adding redundancy</h2>
+<p>Add distances nine and eleven to the exact-tail table. At p = 0.5, failure must remain 0.5 for every distance. At p = 0.1 it must decrease with distance; at p = 0.6 it must increase. Numerical underflow is not evidence that a failure probability is exactly zero.</p>
+<p>Then enumerate all eight distance-three error strings and group them by syndrome. Expect two errors per syndrome, with each pair related by bitwise complement. Explain why an independent-flip prior with p &lt; 0.5 reasonably favours the lower-weight member.</p>
+<p>Report three separate rows: what the exact toy model proves, what the surface-code lab observes, and what the hardware experiment reports. Keeping these scopes clear prepares the next question: why can a learned decoder outperform matching?</p>
+
+<h2 id="en-resources">Run and check the example</h2>
+<p>This complete teaching example uses only the Python standard library. Save <a href="../examples/below-threshold/ch03.py" download>ch03.py</a>, then run it with Python 3.10 or later. Its assertions check the stated invariants.</p><pre><code>python3 ch03.py</code></pre><p><a href="../downloads/below-threshold-tutorial-examples.zip" download>All ten examples and expected output (ZIP)</a> · <a href="https://github.com/Anirach/Anirach.github.io/tree/main/examples/below-threshold">Browse example source on GitHub</a></p>
+
+<h2 id="en-references">Sources and scope</h2>
+<section class="references" aria-labelledby="en-sources"><h3 id="en-sources">Reading and evidence</h3><p class="references__note">The author’s book is the source of the chapter structure, credited diagrams and reported lab results (November 2026 snapshot). The short standard-library example above was executed for this web lesson on 25 November 2026. It is a teaching model; the book’s full Stim, neural-network, mitigation and LLM experiments were not rerun for these posts. Hardware, simulator, preprint and company claims retain their stated scope.</p><ol><li><a href="https://drive.google.com/file/d/1iG7oSWLC9UI91VsPOzqcxk3_evH8Sn3b/view?usp=sharing">Anirach Mingkhwan. Below Threshold: AI, Quantum Errors and Better Code. Edition 1.0 (November 2026), Chapter 3, pp. 13–20.</a></li><li id="en-ref-1"><a href="https://arxiv.org/abs/quant-ph/9705052">Gottesman. Stabilizer Codes and Quantum Error Correction (1997).</a></li><li id="en-ref-2"><a href="https://quantum-journal.org/papers/q-2021-07-06-497/">Gidney. Stim: a fast stabilizer circuit simulator (2021).</a></li><li id="en-ref-3"><a href="https://www.nature.com/articles/s41586-024-08449-y">Google Quantum AI and collaborators. Quantum error correction below the surface code threshold (online 2024; Nature 2025).</a></li></ol></section>
+    </div>
+
+    <div class="post-series-footer">
+      <span class="l-th">จากซีรีส์ Below Threshold</span><span class="l-en" lang="en">From Below Threshold</span>
+    </div>
+
+    <nav aria-label="Below Threshold">
+    <div class="series-nav">
+      <h3>Below Threshold · 10-Chapter Course</h3>
+      <div class="series-links">
+        <a href="/blog/below-threshold-overview">#1 The Three Bridges</a>
+        <a href="/blog/below-threshold-quantum-errors">#2 Quantum Errors</a>
+        <span class="current" aria-current="page">#3 Checks and Thresholds</span>
+        <a href="/blog/below-threshold-ai-decoders">#4 AI Decoders</a>
+        <a href="/blog/below-threshold-error-path">#5 Error Path</a>
+        <a href="/blog/below-threshold-circuit-synthesis">#6 Circuit Synthesis</a>
+        <a href="/blog/below-threshold-ai-workflow">#7 AI Workflow</a>
+        <a href="/blog/below-threshold-quantum-inspired">#8 Quantum-Inspired</a>
+        <a href="/blog/below-threshold-syndrome-driven-development">#9 Syndrome-Driven Code</a>
+        <a href="/blog/below-threshold-playbook">#10 Engineering Playbook</a>
+      </div>
+    </div>
+    </nav>
+
+  </article>
+
+  </main>
+
+  <footer class="blog-footer">
+    <nav class="blog-footer__nav" aria-label="Site">
+      <a href="../index.html">Home</a>
+      <a href="./">Tutorials</a>
+      <a href="../thoughts/">Thoughts</a>
+      <a href="../publications/">Publications</a>
+      <a href="../books/">Books</a>
+      <a href="../projects/">Projects</a>
+      <a href="../news/">News</a>
+      <a href="../index.html#contact">Contact</a>
+    </nav>
+    <a href="./">← Back to Tutorials</a>
+    <span>© 2026 Anirach Mingkhwan — Independent AI consultant</span>
+  </footer>
+
+</body>
+</html>

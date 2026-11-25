@@ -3918,6 +3918,8 @@ from engineering_motifs import MOTIFS as ENGINEERING_MOTIFS
 MOTIFS.update(ENGINEERING_MOTIFS)
 from quantum_motifs import MOTIFS as QUANTUM_MOTIFS
 MOTIFS.update(QUANTUM_MOTIFS)
+from threshold_motifs import MOTIFS as THRESHOLD_MOTIFS
+MOTIFS.update(THRESHOLD_MOTIFS)
 
 # --------------------------------------------------------------------------
 # the one renderer

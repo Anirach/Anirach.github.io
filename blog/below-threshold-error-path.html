@@ -1,0 +1,598 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Error Path — ใช้ AI ตรงจุด | Anirach Mingkhwan</title>
+  <meta name="description" content="สำรวจจุดที่ AI ช่วยลด quantum errors ทดลอง affine mitigation อ่านผล Lab 3 เทียบ ZNE และ CDR พร้อมนับ training shots แยกจาก runtime ให้ครบ">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300..900&family=Sarabun:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400..600&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      color-scheme: light;
+      /* ink */
+      --navy: #11304b; --slate: #334155; --slate-light: #526174; --gray: #94a3b8;
+      /* ground */
+      --bg: #faf7f0; --white: #ffffff; --code-bg: #1e293b;
+      /* accent */
+      --blue: #226299; --blue-dark: #1a4d7a; --blue-light: #4992b9;
+      /* brand — sampled from the book covers. --gold is decorative on light grounds (2.2:1); --gold-dark is its text form. */
+      --gold: #c4a46c; --gold-dark: #7a5f22; --cloud: #dee7e6; --parchment: #e9e1c4; --focus: #226299;
+      /* status — use only these six, never invent a seventh */
+      --green: #22c55e; --red: #ef4444; --amber: #f59e0b;
+      --cyan: #06b6d4; --purple: #226299; --purple-dark: #1a4d7a;
+      /* type */
+      --font: 'Inter', 'Sarabun', -apple-system, BlinkMacSystemFont, sans-serif;
+      --mono: 'JetBrains Mono', 'Fira Code', 'Sarabun', monospace;
+      /* form */
+      --radius: 12px; --radius-sm: 8px; --radius-lg: 16px;
+      --measure: 720px; --wide: 860px;
+      --transition: 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+    html { scroll-behavior: smooth; }
+    body { font-family: var(--font); font-size: 17px; line-height: 1.8; color: var(--slate); background: var(--bg); -webkit-font-smoothing: antialiased; }
+    .blog-nav { position: fixed; top: 0; left: 0; right: 0; z-index: 100; background: rgba(248,250,252,0.85); backdrop-filter: blur(20px); border-bottom: 1px solid rgba(0,0,0,0.05); }
+    .blog-nav__inner { max-width: 860px; margin: 0 auto; padding: 0 2rem; height: 56px; display: flex; align-items: center; justify-content: space-between; }
+    .blog-nav__back { font-size: 0.85rem; font-weight: 500; color: var(--blue); text-decoration: none; }
+    .blog-nav__back:hover { color: #1a4d7a; }
+    .blog-nav__title { font-size: 0.85rem; font-weight: 600; color: var(--navy); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 50%; }
+    /* ── HERO ── house .post-hero on the approved Deep Blue gradient (page-design
+       §5 / INV-28). Ink is inverted for the dark ground: white title/meta, tag
+       pills white on 18% white — the openclaw-production treatment. The
+       background value must stay byte-identical to the approved string. */
+    .post-hero { padding: 8rem 2rem 3rem; background: linear-gradient(135deg, #11304b 0%, #1a4d7a 45%, #226299 100%); color: #fff; text-align: center; }
+    .post-hero__tags { display: flex; gap: 0.5rem; justify-content: center; margin-bottom: 1.25rem; flex-wrap: wrap; }
+    .post-hero__tag { display: inline-block; font-size: 0.72rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.1em; color: #fff; background: rgba(255,255,255,0.18); padding: 0.35rem 0.9rem; border-radius: 20px; }
+    .post-hero__title { font-size: clamp(1.8rem, 5vw, 3rem); font-weight: 800; color: #fff; line-height: 1.2; margin-bottom: 1rem; max-width: 720px; margin-left: auto; margin-right: auto; }
+    .post-hero__sub { font-size: 1.05rem; max-width: 640px; margin: 0 auto 1.5rem; line-height: 1.7; color: #fff; }
+    .post-hero__meta { font-size: 0.85rem; color: #fff; display: flex; align-items: center; justify-content: center; gap: 1.5rem; flex-wrap: wrap; }
+    .post-hero__series { font-weight: 600; color: #fff; }
+    /* the switch pill and the focus ring both sit on the dark hero: the pill is
+       a light chip so its labels keep their light-ground colours, and --focus
+       re-points to gold here (blue collapses on blue — the footer/pre
+       precedent). */
+    .post-hero { --focus: var(--gold); }
+    .post-hero__cover {
+      aspect-ratio: 1 / 1;
+      max-width: 380px;
+      margin: 2.5rem auto 0;
+      border-radius: var(--radius-lg, 16px);
+      overflow: hidden;
+      box-shadow: 0 20px 60px rgba(17,48,75,0.14);
+    }
+    .post-hero__cover img { width: 100%; height: 100%; object-fit: cover; display: block; }
+    .post-body { max-width: 720px; margin: 0 auto; padding: 3rem 2rem 6rem; }
+    .post-body h2 { font-size: 1.6rem; font-weight: 800; color: var(--navy); margin: 3rem 0 1rem; padding-bottom: 0.5rem; border-bottom: 2px solid rgba(34,98,153,0.15); }
+    .post-body h3 { font-size: 1.25rem; font-weight: 700; color: var(--navy); margin: 2.25rem 0 0.75rem; }
+    .post-body p { margin-bottom: 1.25rem; }
+    .post-body strong { font-weight: 700; color: var(--navy); }
+    .post-body a { color: var(--blue); text-decoration: underline; text-decoration-thickness: 1px; text-underline-offset: 2px; }
+    .post-body ul, .post-body ol { margin: 0.5rem 0 1.25rem 1.5rem; }
+    .post-body li { margin-bottom: 0.4rem; }
+    .post-body blockquote { background: rgba(34,98,153,0.06); border-left: 4px solid var(--blue); padding: 1rem 1.25rem; border-radius: 0 10px 10px 0; margin: 1.25rem 0; font-size: 0.95rem; color: var(--navy); }
+    .post-body hr { border: none; height: 1px; background: linear-gradient(90deg, transparent, rgba(34,98,153,0.2), transparent); margin: 3rem 0; }
+    /* ── CODE ── */
+    .post-body pre { background: var(--code-bg); border-radius: 12px; padding: 1.5rem; margin: 1.25rem 0 1.5rem; overflow-x: auto; border: 1px solid rgba(255,255,255,0.05); }
+    .post-body pre code { font-family: var(--mono); font-size: 0.85rem; color: #e2e8f0; line-height: 1.7; background: none; padding: 0; white-space: pre-wrap; }
+    .post-body code { font-family: var(--mono); font-size: 0.88em; background: rgba(34,98,153,0.08); color: var(--blue-dark); padding: 0.15em 0.45em; border-radius: 5px; }
+    /* ── TABLES ── */
+    .table-wrapper { overflow-x: auto; margin: 1.5rem 0; border-radius: 0.5rem; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1); }
+    table { width: 100%; border-collapse: collapse; background: white; }
+    th { background: #226299; color: white; padding: 1rem; text-align: left; font-weight: 600; }
+    td { padding: 1rem; border-bottom: 1px solid #e5e7eb; }
+    .post-body table { display: block; width: 100%; overflow-x: auto; }
+    /* ── ALERTS ── */
+    .alert { background: #fef3cd; border: 1px solid #facc15; border-radius: 0.5rem; padding: 1rem; margin: 1.5rem 0; }
+    .alert.danger { background: #fee2e2; border-color: #ef4444; }
+    .alert.info { background: #e0f2fe; border-color: #06b6d4; }
+    .alert.success { background: #d1fae5; border-color: #10b981; }
+    /* ── KEY TAKEAWAYS ── */
+    .key-takeaways { background: linear-gradient(135deg, #f3f4f6 0%, #e5e7eb 100%); border-radius: 1rem; padding: 2rem; margin: 3rem 0; }
+    .key-takeaways h3 { color: #226299; margin-bottom: 1.5rem; }
+    .post-series-footer { text-align: center; font-size: 0.85rem; color: var(--slate-light); font-style: italic; margin-top: 2rem; padding-top: 2rem; border-top: 1px solid #e2e8f0; }
+    .blog-footer { background: var(--navy); padding: 2rem 0; text-align: center; }
+    .blog-footer a { color: var(--gold); text-decoration: none; font-weight: 600; font-size: 0.9rem; }
+    .blog-footer span { color: var(--gray); font-size: 0.8rem; display: block; margin-top: 0.4rem; }
+    @media (max-width: 600px) {
+      .post-hero { padding: 7rem 1.25rem 2.5rem; }
+      .post-body { padding: 2rem 1.25rem 4rem; }
+      .post-hero__meta { flex-direction: column; gap: 0.4rem; }
+      .post-body h2 { font-size: 1.4rem; }
+      .post-body h3 { font-size: 1.15rem; }
+      .post-body pre { padding: 1rem; border-radius: 8px; }
+    }
+
+    :focus-visible { outline: 2px solid var(--focus); outline-offset: 3px; border-radius: 2px; }
+    /* the ring sits on the page ground (3px offset). Inside the navy footers
+       and code blocks var(--blue) collapses to 2.12:1, so those scopes
+       re-point --focus to gold (5.73:1 on navy). */
+    .footer, .blog-footer, pre { --focus: var(--gold); }
+    :focus:not(:focus-visible) { outline: none; }
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after {
+        animation-duration: .01ms !important; animation-iteration-count: 1 !important;
+        transition-duration: .01ms !important; scroll-behavior: auto !important;
+      }
+    }
+    h1, h2, h3, .post-hero__title, .card__title { text-wrap: balance; }
+    .post-body { overflow-wrap: break-word; }   /* long URLs and inline code wrap instead of widening the page */
+
+    .post-body img, .post-body svg { max-width: 100%; height: auto; }
+
+    /* ── SKIP LINK ── a11y-perf R5: the link and the landmark it targets are a
+       pair — useless without both halves. Off-screen until focused, then the
+       first tab stop on every page. */
+    .skip-link { position: absolute; left: -9999px; }
+    .skip-link:focus {
+      left: 1rem; top: 1rem; z-index: 999;
+      background: var(--navy); color: #fff;
+      padding: 0.75rem 1.25rem; border-radius: var(--radius-sm);
+      font-weight: 600; text-decoration: none;
+    }
+
+    /* ── POST WAYFINDING ── the wordmark is the home link; the footer carries
+       the full destination row. */
+    .blog-nav__home {
+      font-size: 0.9rem; font-weight: 800; color: var(--navy);
+      text-decoration: none; margin-right: 1rem;
+    }
+    .blog-nav__home:hover { color: var(--blue); }
+    .blog-nav__inner > .blog-nav__back { margin-right: auto; }
+    .blog-footer__nav {
+      display: flex; flex-wrap: wrap; justify-content: center; gap: 0.35rem 1.25rem;
+      max-width: 860px; margin: 0 auto 1.25rem; padding: 0 2rem 1.25rem;
+      border-bottom: 1px solid rgba(255,255,255,0.12);
+    }
+    .blog-footer__nav a { color: var(--gold); font-size: 0.85rem; font-weight: 600; text-decoration: none; }
+    .blog-footer__nav a:hover { color: #fff; text-decoration: underline; }
+
+    html { scroll-padding-top: 5rem; }
+    [id] { scroll-margin-top: 5rem; }
+
+    /* Thai needs more room than Latin at the same nominal size. */
+    .post-body:lang(th) { font-size: 18px; line-height: 1.85; }
+    .post-body p, .post-body li, .post-body blockquote { text-wrap: pretty; }
+
+    /* ---- side-scroll affordance ----
+       pre blocks and tables can exceed 720px. These layers paint a shadow ONLY
+       where there is more content in that direction; when fully scrolled the
+       cover slides over the shadow and hides it. No JavaScript, no wrapper. */
+    .post-body pre, .post-body table {
+      overflow-x: auto;
+      background-image:
+        linear-gradient(to right, var(--code-bg, #0f172a) 30%, rgba(15,23,42,0)),
+        linear-gradient(to left, var(--code-bg, #0f172a) 30%, rgba(15,23,42,0)),
+        radial-gradient(farthest-side at 0 50%, rgba(0,0,0,.28), rgba(0,0,0,0)),
+        radial-gradient(farthest-side at 100% 50%, rgba(0,0,0,.28), rgba(0,0,0,0));
+      background-position: 0 0, 100% 0, 0 0, 100% 0;
+      background-repeat: no-repeat;
+      background-size: 40px 100%, 40px 100%, 14px 100%, 14px 100%;
+      background-attachment: local, local, scroll, scroll;
+    }
+    .post-body table {
+      background-image:
+        linear-gradient(to right, var(--white, #fff) 30%, rgba(255,255,255,0)),
+        linear-gradient(to left, var(--white, #fff) 30%, rgba(255,255,255,0)),
+        radial-gradient(farthest-side at 0 50%, rgba(17,48,75,.16), rgba(17,48,75,0)),
+        radial-gradient(farthest-side at 100% 50%, rgba(17,48,75,.16), rgba(17,48,75,0));
+      background-position: 0 0, 100% 0, 0 0, 100% 0;
+      background-repeat: no-repeat;
+      background-size: 40px 100%, 40px 100%, 14px 100%, 14px 100%;
+      background-attachment: local, local, scroll, scroll;
+    }
+
+    /* ---- table of contents ---- */
+    .post-toc {
+      max-width: 720px;
+      margin: 2rem auto 0;
+      padding: 1rem 1.25rem;
+      background: rgba(34,98,153,0.05);
+      border: 1px solid rgba(34,98,153,0.14);
+      border-left: 3px solid var(--gold, #c4a46c);
+      border-radius: 10px;
+      font-size: 0.92rem;
+    }
+    .post-toc > summary {
+      cursor: pointer;
+      font-weight: 700;
+      color: var(--navy);
+      list-style: none;
+    }
+    .post-toc > summary::-webkit-details-marker { display: none; }
+    .post-toc > summary::before {
+      content: "\25B8";
+      display: inline-block;
+      margin-right: 0.5rem;
+      transition: transform 0.2s ease;
+      color: var(--gold-dark, #7a5f22);
+    }
+    .post-toc[open] > summary::before { transform: rotate(90deg); }
+    .post-toc > summary:focus-visible { outline: 3px solid var(--focus, #226299); outline-offset: 3px; }
+    .post-toc ol { margin: 0.85rem 0 0.25rem; padding-left: 1.4rem; }
+    .post-toc li { margin-bottom: 0.4rem; line-height: 1.5; }
+    .post-toc a { color: var(--slate); text-decoration: none; }
+    .post-toc a:hover, .post-toc a:focus-visible { color: var(--blue-dark, #1a4d7a); text-decoration: underline; }
+    @media (max-width: 600px) { .post-toc { margin: 1.25rem 1rem 0; } }
+
+    /* ---- cross-document view transitions ---- */
+    @view-transition { navigation: auto; }
+    .nav, .blog-nav { view-transition-name: site-nav; }
+    .footer, .blog-footer { view-transition-name: site-footer; }
+    @media (prefers-reduced-motion: reduce) {
+      ::view-transition-group(*),
+      ::view-transition-old(*),
+      ::view-transition-new(*) { animation: none !important; }
+    }
+
+    /* ── SERIES STRIP — Hermes Agent in Practice ──
+       Same class and inner-wrapper shape as the OpenClaw strip because the
+       linter's RE_SNAV recognises exactly `series-nav` + a nested div; a
+       renamed strip would read as "no nav" and fail INV-08. All content
+       checks (INV-03 family) iterate the SERIES7 list only, so this strip's
+       labels are convention, not contract. House-styled, not the island CSS. */
+    .series-nav {
+      max-width: 720px; margin: 2rem auto 0; padding: 1.1rem 1.4rem;
+      background: rgba(255,255,255,0.75); border: 1px solid rgba(34,98,153,0.15);
+      border-left: 3px solid var(--gold); border-radius: 12px;
+    }
+    .series-nav h3 {
+      font-size: 0.78rem; font-weight: 700; text-transform: uppercase;
+      letter-spacing: 0.08em; color: var(--gold-dark); margin-bottom: 0.6rem;
+    }
+    .series-links { display: flex; flex-wrap: wrap; gap: 0.5rem; }
+    .series-links a, .series-links .current {
+      font-size: 0.82rem; font-weight: 600; padding: 0.35rem 0.8rem;
+      border-radius: 50px; text-decoration: none;
+    }
+    .series-links a { color: var(--blue-dark); background: rgba(34,98,153,0.08); }
+    .series-links a:hover { background: rgba(34,98,153,0.16); }
+    .series-links .current { color: #fff; background: var(--blue-dark); }
+    @media (max-width: 600px) { .series-nav { margin: 1.5rem 1rem 0; } }
+
+    /* ── FIGURE — the sanctioned diagram component (page-design §4 Content).
+       Diagrams are PNGs; this repo built them out of divs twice and reverted
+       twice. The image is wrapped in a link to itself so a phone can pinch a
+       1400px drawing without a line of JavaScript. */
+    .figure { margin: 2.5rem 0; }
+    .figure__img { width: 100%; height: auto; display: block;
+                   border-radius: var(--radius); border: 1px solid rgba(0,0,0,0.06); }
+    .figure__caption { font-size: 0.85rem; color: var(--slate-light);
+                       text-align: center; margin-top: 0.75rem; }
+
+    /* ── REFERENCES — every material number in this series carries its source.
+       The tags are the book's own four evidence labels. */
+    .references { margin-top: 3rem; padding-top: 2rem; border-top: 1px solid #e2e8f0; }
+    .references__note { font-size: 0.85rem; color: var(--slate-light); margin-bottom: 1rem; }
+    .references__list { padding-left: 1.4rem; font-size: 0.9rem; line-height: 1.75; }
+    .references__list li { margin-bottom: 0.7rem; }
+    .ref-tag { display: inline-block; font-size: 0.7rem; font-weight: 700;
+               letter-spacing: 0.06em; text-transform: uppercase; padding: 0.1rem 0.5rem;
+               border-radius: 50px; margin-right: 0.4rem; vertical-align: 0.05em;
+               background: rgba(34,98,153,0.1); color: var(--blue-dark); }
+    /* All four labels get a rule.  --standard and --study shipped without one
+       on 2026-09-05, so 158 of 306 tags fell through to the base blue and the
+       two labels were indistinguishable.  Ratios on --bg: 6.70 / 6.92 / 7.36 /
+       4.81:1, all AA at this size. */
+    .ref-tag--law { background: rgba(239,68,68,0.12); color: #991b1b; }
+    .ref-tag--standard { background: rgba(34,98,153,0.12); color: var(--blue-dark); }
+    .ref-tag--study { background: rgba(34,197,94,0.18); color: #14532d; }
+    .ref-tag--synthesis { background: rgba(196,164,108,0.22); color: var(--gold-dark); }
+    .ref-supports { display: block; color: var(--slate-light); font-size: 0.85rem; }
+
+    /* ── LANGUAGE SWITCH — pure CSS, zero JavaScript (INV-38) ──
+       One visually-hidden checkbox as a direct child of body, BEFORE the main landmark,
+       so `#langSwitch:checked ~ main …` reaches every content block. The two
+       tracks are paired blocks: .l-th (default) and .l-en (hidden until
+       checked; display:revert restores block for divs, inline for spans).
+       Naming stays clear of INV-12's menu-token regex (hamburger|burger|
+       nav__toggle|nav-toggle|navtoggle|menu-toggle|menu__toggle) — verified.
+       No JS also means no persistence across posts; each post opens in Thai. */
+    .lang-switch-box { position: absolute; left: -9999px; }
+    /* where anchor positioning exists the box sits on the pill, so focusing it scrolls the pill into view */
+    .lang-switch { anchor-name: --lang-switch; }
+    .lang-switch-box { position-anchor: --lang-switch; top: anchor(top); left: anchor(left); width: 1px; height: 1px; opacity: 0; pointer-events: none; }
+    .l-en { display: none; }
+    #langSwitch:checked ~ main .l-en { display: revert; }
+    #langSwitch:checked ~ main .l-th { display: none; }
+    .lang-switch {
+      display: inline-flex; align-items: center; gap: 0.55rem;
+      margin-top: 1.4rem; padding: 0.4rem 1.1rem; border-radius: 50px;
+      background: rgba(255,255,255,0.85); border: 1px solid rgba(255,255,255,0.4);
+      cursor: pointer; font-size: 0.85rem; user-select: none;
+    }
+    .lang-switch span { color: var(--slate-light); font-weight: 600; transition: color 0.2s; }
+    .lang-switch .lang-sep { color: var(--gray); font-weight: 400; }
+    .lang-switch .lang-th { color: var(--navy); font-weight: 800; }
+    #langSwitch:checked ~ main .lang-switch .lang-th { color: var(--slate-light); font-weight: 600; }
+    #langSwitch:checked ~ main .lang-switch .lang-en { color: var(--navy); font-weight: 800; }
+    .lang-switch:hover { border-color: #fff; }
+    #langSwitch:focus-visible ~ main .lang-switch {
+      outline: 2px solid var(--focus); outline-offset: 3px;
+    }
+  </style>
+  <!-- social -->
+  <link rel="canonical" href="https://anirach.com/blog/below-threshold-error-path.html">
+  <meta property="og:type" content="article">
+  <meta property="og:url" content="https://anirach.com/blog/below-threshold-error-path.html">
+  <meta property="og:site_name" content="Anirach Mingkhwan">
+  <meta property="og:locale" content="th_TH">
+  <meta property="og:locale:alternate" content="en_US">
+  <meta property="article:published_time" content="2026-11-25">
+  <meta property="article:author" content="https://anirach.com/">
+  <meta property="og:title" content="Error Path — ใช้ AI ตรงจุด">
+  <meta property="og:description" content="สำรวจจุดที่ AI ช่วยลด quantum errors ทดลอง affine mitigation อ่านผล Lab 3 เทียบ ZNE และ CDR พร้อมนับ training shots แยกจาก runtime ให้ครบ">
+  <meta property="og:image" content="https://anirach.com/images/below-threshold-error-path-og.jpg">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
+  <meta property="og:image:alt" content="Error Path — ใช้ AI ตรงจุด">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:image" content="https://anirach.com/images/below-threshold-error-path-og.jpg">
+  <meta name="twitter:image:alt" content="Error Path — ใช้ AI ตรงจุด">
+  <meta name="robots" content="max-image-preview:large">
+  <meta name="theme-color" content="#11304b">
+  <link rel="icon" href="/favicon.ico" sizes="any">
+  <link rel="apple-touch-icon" href="/apple-touch-icon.png">
+  <!-- /social -->
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "BlogPosting",
+    "headline": "Error Path — ใช้ AI ตรงจุด",
+    "author": {
+      "@type": "Person",
+      "@id": "https://anirach.com/#person",
+      "name": "Anirach Mingkhwan",
+      "url": "https://anirach.com/"
+    },
+    "datePublished": "2026-11-25",
+    "dateModified": "2026-11-25",
+    "image": "https://anirach.com/images/below-threshold-error-path-og.jpg",
+    "inLanguage": [
+      "th",
+      "en"
+    ],
+    "mainEntityOfPage": "https://anirach.com/blog/below-threshold-error-path.html"
+  }
+  </script>
+</head>
+<body>
+<a href="#main" class="skip-link">Skip to content</a>
+<input type="checkbox" id="langSwitch" class="lang-switch-box" aria-label="Switch language: Thai / English">
+
+  <nav class="blog-nav">
+    <div class="blog-nav__inner">
+      <a href="../index.html" class="blog-nav__home">Anirach</a>
+      <a href="./" class="blog-nav__back">‹ Tutorials</a>
+      <div class="blog-nav__title">Error Path</div>
+    </div>
+  </nav>
+
+  <main id="main">
+
+  <header class="post-hero">
+    <div class="post-hero__tags">
+      <span class="post-hero__tag">Quantum Computing</span>
+      <span class="post-hero__tag">AI Engineering</span>
+      <span class="post-hero__tag">Python</span>
+    </div>
+    <h1 class="post-hero__title"><span class="l-th">Error Path — ใช้ AI ตรงจุด</span><span class="l-en" lang="en">AI Along the Error Path: Improve the Estimator and Count the Cost</span></h1>
+    <p class="post-hero__sub"><span class="l-th">แยก calibration, code design และ mitigation ทดลองเรียนรู้ correction map แล้วเปรียบเทียบความแม่นยำกับต้นทุน training และ runtime</span><span class="l-en" lang="en">Separate calibration, code design and mitigation. Learn a correction map, then account for accuracy, training and runtime shots.</span></p>
+    <div class="post-hero__meta">
+      <span>By <strong>Anirach Mingkhwan</strong></span>
+      <span class="post-hero__series">Below Threshold 2026 • Chapter #5</span>
+      <span><time datetime="2026-11-25">25 Nov 2026</time></span>
+      <span>5 min read</span>
+    </div>
+    <label for="langSwitch" class="lang-switch" title="สลับภาษา · Switch language"><span class="lang-th">ไทย</span><span class="lang-sep">·</span><span class="lang-en" lang="en">English</span></label>
+    <div class="post-hero__cover">
+      <img src="../images/below-threshold-error-path-cover.jpg" alt="Error Path — ใช้ AI ตรงจุด" width="800" height="800" loading="eager" fetchpriority="high" decoding="async">
+    </div>
+  </header>
+
+  <article class="post-body">
+
+    <details class="post-toc l-th" open>
+      <summary>ในบทความนี้</summary>
+      <ol>
+          <li><a href="#th-start">เลือกจุดแก้ — ก่อนเกิด fault หรือหลังวัดผล</a></li>
+          <li><a href="#th-map">เจ็ดจุดที่ AI ช่วยได้ — และสิ่งที่ต้องตรวจ</a></li>
+          <li><a href="#th-estimators">Mitigation — ลด bias โดยยอมจ่าย variance และข้อมูล</a></li>
+          <li><a href="#th-example">ลงมือเขียน — correction map ที่ตรวจ training และ test แยกกัน</a></li>
+          <li><a href="#th-lab">อ่าน Lab 3 — ความแม่นยำที่ดีขึ้นมีต้นทุนใดซ่อนอยู่</a></li>
+          <li><a href="#th-practice">ทดลองต่อ — ทำให้สมมติฐานเสีย แล้ววัดใหม่</a></li>
+          <li><a href="#th-resources">Run & check — รันตัวอย่างด้วยตัวเอง</a></li>
+          <li><a href="#th-references">Sources & scope — แหล่งอ้างอิงและขอบเขต</a></li>
+      </ol>
+    </details>
+    <details class="post-toc l-en" open>
+      <summary>In this post</summary>
+      <ol>
+          <li><a href="#en-start">Choose the intervention: before the fault or after readout</a></li>
+          <li><a href="#en-map">Seven insertion points and the check each one needs</a></li>
+          <li><a href="#en-estimators">Mitigation: reduce bias while paying for variance and data</a></li>
+          <li><a href="#en-example">Write a correction map with separate training and scoring</a></li>
+          <li><a href="#en-lab">Read Lab 3: what the accuracy gain costs</a></li>
+          <li><a href="#en-practice">Your experiment: break the assumption and measure again</a></li>
+          <li><a href="#en-resources">Run and check the example</a></li>
+          <li><a href="#en-references">Sources and scope</a></li>
+      </ol>
+    </details>
+    <div class="l-th">
+
+<h2 id="th-start">เลือกจุดแก้ — ก่อนเกิด fault หรือหลังวัดผล</h2>
+<blockquote><p><strong>ดาวน์โหลดหนังสือและโค้ดประกอบ</strong></p><p><a href="https://drive.google.com/uc?export=download&amp;id=1iG7oSWLC9UI91VsPOzqcxk3_evH8Sn3b">ดาวน์โหลด Below Threshold ฉบับเต็ม (PDF ภาษาอังกฤษ · 104 หน้า · 5.4 MB)</a><br><a href="https://drive.google.com/file/d/1iG7oSWLC9UI91VsPOzqcxk3_evH8Sn3b/view?usp=sharing">อ่านบน Google Drive</a> · <a href="../downloads/below-threshold-tutorial-examples.zip" download>ดาวน์โหลดตัวอย่าง Python ทั้งสิบบท (ZIP)</a></p></blockquote>
+<p><strong>บทที่ 5/10</strong> · บทเรียนดัดแปลงจาก <em>Below Threshold: AI, Quantum Errors and Better Code</em> ฉบับ 1.0 บทที่ 5 หน้า 30–37</p><p>เมื่อ learned decoder ยังมี failure floor เราอาจต้องแก้ปัญหาก่อนข้อมูลเข้า decoder บทนี้อธิบาย Chapter 5 ของหนังสือผ่านคำถามของ engineer: จะปรับ control, เปลี่ยน code หรือปรับ estimator ของผลวัด และจะรู้ได้อย่างไรว่าคุ้มต้นทุน?</p><p>พื้นฐานคือค่าเฉลี่ย, variance และ linear regression เราจะสร้าง correction map แบบง่ายด้วย Python โดยไม่ต้องติดตั้ง quantum SDK แล้วอ่านผล Lab 3 ที่เปรียบเทียบ mitigation หลายวิธีบน noise model เดียวกัน เป้าหมายคือแยก bias, sampling error และต้นทุนข้อมูลออกจากกัน</p><p>ให้เริ่มจาก output contract หากต้องการรักษา logical state ระหว่างคำนวณ นั่นคือโจทย์ error correction แต่หากต้องการประมาณ observable ของ circuit ให้แม่นขึ้นจาก shots หลายครั้ง นั่นอาจเป็นโจทย์ error mitigation ทั้งคู่ช่วยเรื่อง noise แต่รับประกันผลคนละแบบ</p>
+
+<h2 id="th-map">เจ็ดจุดที่ AI ช่วยได้ — และสิ่งที่ต้องตรวจ</h2>
+<p>หนังสือแบ่ง error path เป็นเจ็ดจุด ตารางนี้แปลให้เป็นงานที่มอบหมายและหลักฐานที่ใช้ตัดสินผล โดยไม่ถือว่าความสำเร็จที่จุดหนึ่งเท่ากับแก้ทั้งระบบแล้ว</p><div class="table-wrapper"><table><thead><tr><th>จุดที่ปรับ</th><th>สิ่งที่ต้องตรวจ</th></tr></thead><tbody><tr><td>Coding assistant</td><td>Specification และ tests ของโปรแกรมที่สร้าง</td></tr><tr><td>Compilation / synthesis</td><td>Equivalence, gates, depth และ compile time</td></tr><tr><td>Calibration / control</td><td>Fidelity และ logical error ขณะเกิด drift</td></tr><tr><td>Noise learning</td><td>Prediction บนข้อมูลใหม่ ไม่ใช่เฉพาะ fit เดิม</td></tr><tr><td>Code design</td><td>Checks, overhead และ circuit-level faults</td></tr><tr><td>Decoding</td><td>Logical failures, throughput และ latency</td></tr><tr><td>Mitigation</td><td>Estimator error, shots และ training cost</td></tr></tbody></table></div><p>Calibration ปรับ pulse amplitudes, frequencies และ timings ที่ drift ได้ ส่วน code design เปลี่ยน redundancy และ checks ทั้งสองวิธีเปลี่ยนโจทย์ที่ decoder ต้องรับ ไม่ใช่เพียงเปลี่ยนการคาดเดาภายหลัง</p><p>Programmer ควรนิยาม metric ก่อนเลือก AI model ตัวอย่างเช่นลด training loss ของ noise model ยังไม่พอ ต้องแสดงว่าความผิดพลาดของ observable หรือ logical operation ที่สนใจลดลงจริงบนข้อมูลที่ไม่ใช้ฝึก</p>
+
+<h2 id="th-estimators">Mitigation — ลด bias โดยยอมจ่าย variance และข้อมูล</h2>
+<p>ถ้าวัด Pauli observable แต่ละครั้ง ผลเป็น +1 หรือ −1 ค่าเฉลี่ยของ shots ประมาณ expectation value แต่ noise อาจดึงค่าเข้าใกล้ศูนย์หรือเพิ่ม offset การเก็บ shots เพิ่มช่วยลด sampling error แต่ไม่ลบ bias ที่เป็นระบบนี้โดยอัตโนมัติ</p><p>Zero-noise extrapolation (ZNE) รัน circuit ที่ noise ถูกขยายหลายระดับแล้ว extrapolate กลับไปที่ศูนย์ เช่นสมมติความสัมพันธ์เชิงเส้น ระดับ 1 และ 3 ให้ estimator 1.5E₁ − 0.5E₃ น้ำหนักที่มากกว่า 1 และติดลบทำให้ variance เพิ่มได้ จึงต้องเทียบด้วย shot budget เท่ากัน</p><p>Clifford data regression (CDR) เรียน map จาก noisy values ไปยัง ideal values บน near-Clifford training circuits ที่ยังคำนวณค่าจริงได้ ส่วน ML-QEM อาจใช้ model ร่วมสำหรับหลาย circuits และ observables <a href="https://www.nature.com/articles/s42256-024-00927-2">งานของ Liao และคณะ</a> ศึกษาวิธีนี้และการเรียนเลียนแบบ mitigation ที่แพงกว่าเพื่อให้ runtime ถูกลง</p><p>ถ้า target labels มาจาก ZNE โมเดลเรียนให้คล้าย ZNE ไม่ใช่ได้รับคำตอบ ideal เพิ่มมาอย่างอิสระ ต้องระบุที่มาของ labels ทุกครั้ง</p>
+
+<h2 id="th-example">ลงมือเขียน — correction map ที่ตรวจ training และ test แยกกัน</h2>
+<p>กำหนด noise channel สมมติว่า noisy = 0.8 × ideal + 0.05 ใช้ ideal values ห้าค่าเพื่อ fit เส้นตรง แล้ววัด error บนอีกสี่ค่าที่ไม่ปรากฏใน training set ไม่มี shot noise หรือ drift ในส่วนนี้ จึงควรแก้ bias ได้พอดีตามสมมติฐาน ไม่ใช่ความสำเร็จที่คาดหวังจากข้อมูล hardware ทุกชุด</p><pre><code>&quot;&quot;&quot;Toy affine mitigation: held-out scoring and a transparent shot ledger.&quot;&quot;&quot;
+from math import isclose, sqrt
+
+# Known synthetic noise channel; exact targets are available in this toy only.
+noisy = lambda ideal: .8 * ideal + .05
+training_ideal = [-1, -.5, 0, .5, 1]
+training = [(noisy(x), x) for x in training_ideal]
+xbar = sum(x for x, _ in training) / len(training)
+ybar = sum(y for _, y in training) / len(training)
+slope = sum((x-xbar)*(y-ybar) for x, y in training) / sum(
+    (x-xbar)**2 for x, _ in training)
+intercept = ybar - slope*xbar
+held_out = [-.8, -.2, .4, .9]
+raw_mae = sum(abs(noisy(x)-x) for x in held_out) / len(held_out)
+fixed_mae = sum(abs(slope*noisy(x)+intercept-x)
+                for x in held_out) / len(held_out)
+assert set(held_out).isdisjoint(training_ideal)
+assert isclose(slope, 1.25) and isclose(intercept, -.0625)
+assert fixed_mae &lt; 1e-12
+# Two-point linear ZNE: estimate = 1.5*E(scale=1) - .5*E(scale=3).
+# Independent +/-1 outcomes with worst-case variance 1, equal total shots.
+shots = 12000
+zne_sd_bound = sqrt((1.5**2 + .5**2) / (shots/2))
+raw_sd_bound = sqrt(1/shots)
+print(f&quot;Learned map: ideal = {slope:.4f}*noisy {intercept:+.4f}&quot;)
+print(f&quot;Held-out MAE: raw={raw_mae:.4f}, corrected={fixed_mae:.4f}&quot;)
+print(f&quot;Worst-case SD bounds: raw={raw_sd_bound:.4f}, ZNE={zne_sd_bound:.4f}&quot;)
+for runs in (10, 1000):
+    training_shots = 300 * shots
+    print(f&quot;{runs} later circuits: ML ledger={training_shots+runs*shots:,} shots; &quot;
+          f&quot;no-training ledger={runs*shots:,} shots&quot;)</code></pre><pre><code>Learned map: ideal = 1.2500*noisy -0.0625
+Held-out MAE: raw=0.1150, corrected=0.0000
+Worst-case SD bounds: raw=0.0091, ZNE=0.0204
+10 later circuits: ML ledger=3,720,000 shots; no-training ledger=120,000 shots
+1000 later circuits: ML ledger=15,600,000 shots; no-training ledger=12,000,000 shots</code></pre><p>โมเดลเรียน inverse เป็น ideal = 1.25 × noisy − 0.0625 และลด held-out MAE จาก 0.1150 เป็นศูนย์ในขอบเขต floating-point ผลนี้สอนวิธีแยก fit กับ score มากกว่าสาธิต quantum advantage</p><p>ส่วน SD bounds ใช้ outcomes ±1 ที่เป็นอิสระและ variance ไม่เกินหนึ่ง เมื่อแบ่ง total shots เท่ากันให้ ZNE สองระดับ bound สูงกว่า raw mean ตัวเลขเป็น upper bounds ภายใต้สมมติฐาน ไม่ใช่ error bars ของ Lab 3 และยังไม่รวม uncertainty ใน correction map ที่เรียนมา</p>
+
+<h2 id="th-lab">อ่าน Lab 3 — ความแม่นยำที่ดีขึ้นมีต้นทุนใดซ่อนอยู่</h2>
+    <figure class="figure">
+      <a href="../images/below-threshold-mitigation.png">
+        <img class="figure__img" src="../images/below-threshold-mitigation.png" alt="กราฟเปรียบเทียบ error mitigation ห้าวิธีด้วย runtime shots เท่ากันและ error ที่เปลี่ยนตาม circuit depth" width="1480" height="566" loading="lazy" decoding="async">
+      </a>
+      <figcaption class="figure__caption">ภาพ 5.1 จากหนังสือ: Lab 3 ใช้ 12,000 shots ต่อ test circuit เท่ากัน ML ลด mean absolute error จาก 0.0796 เป็น 0.0214 แต่ยังมี training shots อีก 3.6 ล้านที่ต้องนับแยก เปิดภาพเพื่อดูขนาดเต็ม</figcaption>
+    </figure><p>Lab 3 ในหนังสือจำลอง 8-qubit Ising Trotter circuits จำนวน 1–6 steps ใช้ depolarizing, relaxation และ readout noise ตามที่กำหนดไว้ ทดสอบ 120 circuits × 8 observables รวม 960 ค่า แต่ละ test circuit ใช้ 12,000 shots เท่ากัน ผลนี้มาจาก output ที่บันทึกในหนังสือ ไม่ใช่ toy rerun ข้างบน</p><div class="table-wrapper"><table><thead><tr><th>วิธี</th><th>Mean absolute error</th><th>Noise levels ต่อ test circuit</th></tr></thead><tbody><tr><td>Raw</td><td>0.0796</td><td>1</td></tr><tr><td>Linear ZNE</td><td>0.0488</td><td>3</td></tr><tr><td>Richardson ZNE</td><td>0.0348</td><td>3</td></tr><tr><td>CDR</td><td>0.0389</td><td>1</td></tr><tr><td>Gradient boosting</td><td>0.0214</td><td>1</td></tr></tbody></table></div><p>ML ลด mean error ได้ 3.72 เท่าเทียบกับ raw และดีที่สุดโดยรวม แต่ที่ depth สาม steps CDR ดีกว่าเล็กน้อย CDR ที่ใช้ใน lab เป็น map ร่วมหนึ่งตัว ไม่ใช่ fit แยกต่อ circuit/observable ตาม CDR มาตรฐาน</p><p>Training ใช้อีก 300 near-Clifford circuits × 12,000 shots = 3.6 ล้าน shots ทั้ง ML และ CDR จึงใช้ shots รวมมากกว่า ZNE การเปรียบเทียบนี้เท่ากันเฉพาะ runtime และได้ประโยชน์มากขึ้นเมื่อ reuse model หลายครั้งภายใต้ distribution เดิม</p>
+
+<h2 id="th-practice">ทดลองต่อ — ทำให้สมมติฐานเสีย แล้ววัดใหม่</h2>
+<p>รัน <code>python3 ch05.py</code> จากนั้นเปลี่ยนเฉพาะ deployment channel ให้ slope เป็น 0.7 โดยคง training channel เดิม ต้องแยก function ฝั่ง training กับ scoring ก่อนเพื่อไม่ให้แก้ทั้งสองพร้อมกัน วัดว่า MAE หลัง correction ยังดีกว่า raw หรือไม่ นี่เป็นการทดลอง drift ที่ระบุสาเหตุได้</p><p>Invariant: training และ held-out inputs ต้องไม่ซ้ำกัน และ exact test targets ใช้เพื่อ score เท่านั้น ไม่ใช่เลือก correction coefficients จากนั้นลองเพิ่ม nonlinear term แล้วดูว่า affine model ยังมี bias เหลือเท่าใด</p><p>Shot ledger แสดงการเฉลี่ย training cost ไปยังงานในอนาคต แต่ไม่ได้พิสูจน์ว่า ML ใช้ shots น้อยกว่า baseline ในตัวอย่าง เพราะทั้งคู่มี runtime shots เท่ากัน จึงยังมี training overhead เพิ่มเสมอ หากจะอ้างประหยัดทรัพยากร ต้องกำหนด accuracy target แล้ววัดจำนวน shots ที่แต่ละวิธีต้องใช้เพื่อไปถึงเป้านั้น</p><p>Mitigation ช่วยประมาณ observable ไม่ได้สร้าง protected logical state และไม่ใช่สิ่งแทน error correction ในการขยายระบบ</p>
+
+<h2 id="th-resources">Run & check — รันตัวอย่างด้วยตัวเอง</h2>
+<p>ตัวอย่างสำหรับสอนนี้ใช้ Python standard library เท่านั้น บันทึก <a href="../examples/below-threshold/ch05.py" download>ch05.py</a> แล้วรันด้วย Python 3.10 ขึ้นไป โดย assertions ตรวจ invariant ที่อธิบายในบท</p><pre><code>python3 ch05.py</code></pre><p><a href="../downloads/below-threshold-tutorial-examples.zip" download>ตัวอย่างทั้งสิบบทและผลลัพธ์ที่คาดหวัง (ZIP)</a> · <a href="https://github.com/Anirach/Anirach.github.io/tree/main/examples/below-threshold">อ่าน source บน GitHub</a></p>
+
+<h2 id="th-references">Sources & scope — แหล่งอ้างอิงและขอบเขต</h2>
+<section class="references" aria-labelledby="th-sources"><h3 id="th-sources">เอกสารและหลักฐาน</h3><p class="references__note">โครงบท ภาพที่ให้เครดิต และผล lab ที่รายงานมาจากหนังสือของผู้เขียน ณ November 2026 ตัวอย่างสั้นที่ใช้ standard library รันเพื่อตรวจบทเรียนเว็บวันที่ 25 November 2026 เป็นแบบจำลองเพื่อสอน ไม่ได้รันซ้ำการทดลอง Stim, neural network, mitigation หรือ LLM ฉบับเต็มในหนังสือ ข้ออ้าง hardware, simulator, preprint และบริษัทคงขอบเขตตามที่ระบุ</p><ol><li><a href="https://drive.google.com/file/d/1iG7oSWLC9UI91VsPOzqcxk3_evH8Sn3b/view?usp=sharing">Anirach Mingkhwan. Below Threshold: AI, Quantum Errors and Better Code. Edition 1.0 (November 2026), Chapter 5, pp. 30–37.</a></li><li id="th-ref-1"><a href="https://www.nature.com/articles/s42256-024-00927-2">Liao et al. Machine learning for practical quantum error mitigation. Nature Machine Intelligence (2024).</a></li><li id="th-ref-2"><a href="https://arxiv.org/abs/1612.02058">Temme, Bravyi and Gambetta. Error mitigation for short-depth quantum circuits. Physical Review Letters (2017).</a></li><li id="th-ref-3"><a href="https://quantum-journal.org/papers/q-2021-11-26-592/">Czarnik et al. Error mitigation with Clifford quantum-circuit data. Quantum (2021).</a></li></ol></section>
+    </div>
+
+    <div class="l-en" lang="en">
+
+<h2 id="en-start">Choose the intervention: before the fault or after readout</h2>
+<blockquote><p><strong>Download the book and examples</strong></p><p><a href="https://drive.google.com/uc?export=download&amp;id=1iG7oSWLC9UI91VsPOzqcxk3_evH8Sn3b">Download the complete Below Threshold book (English PDF · 104 pages · 5.4 MB)</a><br><a href="https://drive.google.com/file/d/1iG7oSWLC9UI91VsPOzqcxk3_evH8Sn3b/view?usp=sharing">Read on Google Drive</a> · <a href="../downloads/below-threshold-tutorial-examples.zip" download>Download all ten Python examples (ZIP)</a></p></blockquote>
+<p><strong>Chapter 5/10.</strong> A tutorial adaptation of <em>Below Threshold: AI, Quantum Errors and Better Code</em>, Edition 1.0, Chapter 5, pp. 30–37.</p><p>When a decoder reaches an information floor, improving the network may be the wrong intervention. Chapter 5 asks where to act earlier: tune the controls, redesign the code, or improve the estimator built from noisy measurements. For an engineer, the next question is whether the accuracy improvement justifies its data and runtime cost.</p><p>You need averages, variance and elementary linear regression. We will build a correction map with standard-library Python, then interpret the book’s Lab 3 comparison under a specified noise model. The aim is to separate bias, sampling error and the cost of obtaining training data.</p><p>Start from the output contract. Preserving an evolving logical state is an error-correction task. Estimating a circuit observable more accurately from many executions can be an error-mitigation task. Both address noise, but they provide different kinds of protection.</p>
+
+<h2 id="en-map">Seven insertion points and the check each one needs</h2>
+<p>The book identifies seven insertion points. Translate each into a delegated task and a measurable acceptance check, rather than treating a successful component as evidence that the whole machine is repaired.</p><div class="table-wrapper"><table><thead><tr><th>Intervention</th><th>Acceptance evidence</th></tr></thead><tbody><tr><td>Coding assistant</td><td>Specification and tests for generated code</td></tr><tr><td>Compilation / synthesis</td><td>Equivalence, gates, depth and compile time</td></tr><tr><td>Calibration / control</td><td>Fidelity and logical errors under drift</td></tr><tr><td>Noise learning</td><td>Predictions on fresh observations</td></tr><tr><td>Code design</td><td>Checks, overhead and circuit-level faults</td></tr><tr><td>Decoding</td><td>Logical failures, throughput and latency</td></tr><tr><td>Mitigation</td><td>Estimator error, shots and training cost</td></tr></tbody></table></div><p>Calibration changes pulse amplitudes, frequencies and timing as a device drifts. Code design changes redundancy and the checks available to reveal faults. Both modify the problem presented to the decoder, rather than merely changing its later guess.</p><p>Define the metric before choosing a learning architecture. A lower noise-model training loss is insufficient: show that the observable or logical operation you care about improves on data withheld from fitting.</p>
+
+<h2 id="en-estimators">Mitigation: reduce bias while paying for variance and data</h2>
+<p>A Pauli measurement produces +1 or −1. Averaging shots estimates its expectation value, but noise can shrink the value toward zero or introduce an offset. More shots reduce sampling error; they do not automatically remove that systematic bias.</p><p>Zero-noise extrapolation (ZNE) executes circuits at amplified noise levels and extrapolates to zero noise. Under a linear model, measurements at scales 1 and 3 give the estimator 1.5E₁ − 0.5E₃. The large and negative weights can amplify variance. Compare methods at an equal shot budget, rather than giving each extra circuit an uncounted allocation.</p><p>Clifford data regression (CDR) learns a map from noisy to ideal values on near-Clifford training circuits whose targets can be computed classically. ML-QEM can share a learned model across circuits and observables. <a href="https://www.nature.com/articles/s42256-024-00927-2">Liao and colleagues</a> study such models and learning to imitate a more costly mitigation procedure with less runtime overhead.</p><p>If ZNE supplies the labels, the learned target is ZNE, not independent access to the ideal answer. Always disclose where target values came from.</p>
+
+<h2 id="en-example">Write a correction map with separate training and scoring</h2>
+<p>Assume a synthetic channel noisy = 0.8 × ideal + 0.05. Fit an affine inverse on five known target values, then score four different values absent from training. This part includes no shot noise or drift, so the affine correction should exactly remove the assumed bias. That is a model property, not an accuracy promise for hardware.</p><pre><code>&quot;&quot;&quot;Toy affine mitigation: held-out scoring and a transparent shot ledger.&quot;&quot;&quot;
+from math import isclose, sqrt
+
+# Known synthetic noise channel; exact targets are available in this toy only.
+noisy = lambda ideal: .8 * ideal + .05
+training_ideal = [-1, -.5, 0, .5, 1]
+training = [(noisy(x), x) for x in training_ideal]
+xbar = sum(x for x, _ in training) / len(training)
+ybar = sum(y for _, y in training) / len(training)
+slope = sum((x-xbar)*(y-ybar) for x, y in training) / sum(
+    (x-xbar)**2 for x, _ in training)
+intercept = ybar - slope*xbar
+held_out = [-.8, -.2, .4, .9]
+raw_mae = sum(abs(noisy(x)-x) for x in held_out) / len(held_out)
+fixed_mae = sum(abs(slope*noisy(x)+intercept-x)
+                for x in held_out) / len(held_out)
+assert set(held_out).isdisjoint(training_ideal)
+assert isclose(slope, 1.25) and isclose(intercept, -.0625)
+assert fixed_mae &lt; 1e-12
+# Two-point linear ZNE: estimate = 1.5*E(scale=1) - .5*E(scale=3).
+# Independent +/-1 outcomes with worst-case variance 1, equal total shots.
+shots = 12000
+zne_sd_bound = sqrt((1.5**2 + .5**2) / (shots/2))
+raw_sd_bound = sqrt(1/shots)
+print(f&quot;Learned map: ideal = {slope:.4f}*noisy {intercept:+.4f}&quot;)
+print(f&quot;Held-out MAE: raw={raw_mae:.4f}, corrected={fixed_mae:.4f}&quot;)
+print(f&quot;Worst-case SD bounds: raw={raw_sd_bound:.4f}, ZNE={zne_sd_bound:.4f}&quot;)
+for runs in (10, 1000):
+    training_shots = 300 * shots
+    print(f&quot;{runs} later circuits: ML ledger={training_shots+runs*shots:,} shots; &quot;
+          f&quot;no-training ledger={runs*shots:,} shots&quot;)</code></pre><pre><code>Learned map: ideal = 1.2500*noisy -0.0625
+Held-out MAE: raw=0.1150, corrected=0.0000
+Worst-case SD bounds: raw=0.0091, ZNE=0.0204
+10 later circuits: ML ledger=3,720,000 shots; no-training ledger=120,000 shots
+1000 later circuits: ML ledger=15,600,000 shots; no-training ledger=12,000,000 shots</code></pre><p>The fit learns ideal = 1.25 × noisy − 0.0625 and reduces held-out MAE from 0.1150 to floating-point zero. It demonstrates the separation between fitting and scoring, rather than quantum advantage.</p><p>The standard-deviation bounds assume independent ±1 outcomes with variance at most one. Splitting a fixed shot budget between the two ZNE noise scales yields a larger bound than the raw mean. These are model-based upper bounds, not Lab 3 error bars. They also exclude uncertainty in the fitted correction map.</p>
+
+<h2 id="en-lab">Read Lab 3: what the accuracy gain costs</h2>
+    <figure class="figure">
+      <a href="../images/below-threshold-mitigation.png">
+        <img class="figure__img" src="../images/below-threshold-mitigation.png" alt="Five mitigation methods are compared at equal runtime shots and across circuit depths." width="1480" height="566" loading="lazy" decoding="async">
+      </a>
+      <figcaption class="figure__caption">Book Figure 5.1. Lab 3 gives each test circuit 12,000 shots. ML reduces mean absolute error from 0.0796 to 0.0214, with a separate 3.6-million-shot training cost. Open for full resolution.</figcaption>
+    </figure><p>The book’s Lab 3 simulates eight-qubit Ising Trotter circuits at one to six steps, with specified depolarizing, relaxation and readout noise. It scores 120 circuits × eight observables, or 960 values, using 12,000 shots per test circuit for every method. The following comes from the book’s captured output, not the toy rerun above.</p><div class="table-wrapper"><table><thead><tr><th>Estimator</th><th>Mean absolute error</th><th>Test noise levels</th></tr></thead><tbody><tr><td>Raw</td><td>0.0796</td><td>1</td></tr><tr><td>Linear ZNE</td><td>0.0488</td><td>3</td></tr><tr><td>Richardson ZNE</td><td>0.0348</td><td>3</td></tr><tr><td>CDR</td><td>0.0389</td><td>1</td></tr><tr><td>Gradient boosting</td><td>0.0214</td><td>1</td></tr></tbody></table></div><p>ML reduces mean error 3.72-fold relative to raw results and wins overall. CDR is slightly better at three steps. The lab’s CDR uses one shared linear map; standard CDR instead fits a circuit and observable separately.</p><p>Training adds 300 near-Clifford circuits × 12,000 shots, or 3.6 million shots, for the learned methods. Their total shot usage therefore exceeds ZNE here. The comparison is equal at runtime, with reuse across later circuits needed to amortize training.</p>
+
+<h2 id="en-practice">Your experiment: break the assumption and measure again</h2>
+<p>Run <code>python3 ch05.py</code>, then change only the deployment channel’s slope to 0.7 while retaining the training channel. First split the shared function into training and scoring functions, so that you do not accidentally change both. Does correction still beat the raw MAE? This is a controlled drift experiment with a known cause.</p><p>Preserve disjoint training and held-out inputs. Use exact test targets only for scoring, never to select correction coefficients. Next add a nonlinear term and measure the residual bias an affine model cannot express.</p><p>The shot ledger amortizes training across future work; it does not prove fewer total shots here. Both alternatives use equal runtime shots, so learning retains extra training overhead. To claim resource savings, fix an accuracy target and measure the shots each method needs to reach it.</p><p>Mitigation improves an observable estimate. It does not create a protected logical state or replace error correction as the system scales.</p>
+
+<h2 id="en-resources">Run and check the example</h2>
+<p>This complete teaching example uses only the Python standard library. Save <a href="../examples/below-threshold/ch05.py" download>ch05.py</a>, then run it with Python 3.10 or later. Its assertions check the stated invariants.</p><pre><code>python3 ch05.py</code></pre><p><a href="../downloads/below-threshold-tutorial-examples.zip" download>All ten examples and expected output (ZIP)</a> · <a href="https://github.com/Anirach/Anirach.github.io/tree/main/examples/below-threshold">Browse example source on GitHub</a></p>
+
+<h2 id="en-references">Sources and scope</h2>
+<section class="references" aria-labelledby="en-sources"><h3 id="en-sources">Reading and evidence</h3><p class="references__note">The author’s book is the source of the chapter structure, credited diagrams and reported lab results (November 2026 snapshot). The short standard-library example above was executed for this web lesson on 25 November 2026. It is a teaching model; the book’s full Stim, neural-network, mitigation and LLM experiments were not rerun for these posts. Hardware, simulator, preprint and company claims retain their stated scope.</p><ol><li><a href="https://drive.google.com/file/d/1iG7oSWLC9UI91VsPOzqcxk3_evH8Sn3b/view?usp=sharing">Anirach Mingkhwan. Below Threshold: AI, Quantum Errors and Better Code. Edition 1.0 (November 2026), Chapter 5, pp. 30–37.</a></li><li id="en-ref-1"><a href="https://www.nature.com/articles/s42256-024-00927-2">Liao et al. Machine learning for practical quantum error mitigation. Nature Machine Intelligence (2024).</a></li><li id="en-ref-2"><a href="https://arxiv.org/abs/1612.02058">Temme, Bravyi and Gambetta. Error mitigation for short-depth quantum circuits. Physical Review Letters (2017).</a></li><li id="en-ref-3"><a href="https://quantum-journal.org/papers/q-2021-11-26-592/">Czarnik et al. Error mitigation with Clifford quantum-circuit data. Quantum (2021).</a></li></ol></section>
+    </div>
+
+    <div class="post-series-footer">
+      <span class="l-th">จากซีรีส์ Below Threshold</span><span class="l-en" lang="en">From Below Threshold</span>
+    </div>
+
+    <nav aria-label="Below Threshold">
+    <div class="series-nav">
+      <h3>Below Threshold · 10-Chapter Course</h3>
+      <div class="series-links">
+        <a href="/blog/below-threshold-overview">#1 The Three Bridges</a>
+        <a href="/blog/below-threshold-quantum-errors">#2 Quantum Errors</a>
+        <a href="/blog/below-threshold-error-correction">#3 Checks and Thresholds</a>
+        <a href="/blog/below-threshold-ai-decoders">#4 AI Decoders</a>
+        <span class="current" aria-current="page">#5 Error Path</span>
+        <a href="/blog/below-threshold-circuit-synthesis">#6 Circuit Synthesis</a>
+        <a href="/blog/below-threshold-ai-workflow">#7 AI Workflow</a>
+        <a href="/blog/below-threshold-quantum-inspired">#8 Quantum-Inspired</a>
+        <a href="/blog/below-threshold-syndrome-driven-development">#9 Syndrome-Driven Code</a>
+        <a href="/blog/below-threshold-playbook">#10 Engineering Playbook</a>
+      </div>
+    </div>
+    </nav>
+
+  </article>
+
+  </main>
+
+  <footer class="blog-footer">
+    <nav class="blog-footer__nav" aria-label="Site">
+      <a href="../index.html">Home</a>
+      <a href="./">Tutorials</a>
+      <a href="../thoughts/">Thoughts</a>
+      <a href="../publications/">Publications</a>
+      <a href="../books/">Books</a>
+      <a href="../projects/">Projects</a>
+      <a href="../news/">News</a>
+      <a href="../index.html#contact">Contact</a>
+    </nav>
+    <a href="./">← Back to Tutorials</a>
+    <span>© 2026 Anirach Mingkhwan — Independent AI consultant</span>
+  </footer>
+
+</body>
+</html>

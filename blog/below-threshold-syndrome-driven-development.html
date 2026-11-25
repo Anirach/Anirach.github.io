@@ -1,0 +1,680 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Syndrome-Driven Code — เลือกด้วย checks | Anirach Mingkhwan</title>
+  <meta name="description" content="เรียน Syndrome-Driven Development ใช้ checks เลือกโค้ดจากหลาย candidates ทดลอง median พร้อมอธิบาย voting, correlated errors และการยกระดับเมื่อไม่ผ่าน">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300..900&family=Sarabun:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400..600&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      color-scheme: light;
+      /* ink */
+      --navy: #11304b; --slate: #334155; --slate-light: #526174; --gray: #94a3b8;
+      /* ground */
+      --bg: #faf7f0; --white: #ffffff; --code-bg: #1e293b;
+      /* accent */
+      --blue: #226299; --blue-dark: #1a4d7a; --blue-light: #4992b9;
+      /* brand — sampled from the book covers. --gold is decorative on light grounds (2.2:1); --gold-dark is its text form. */
+      --gold: #c4a46c; --gold-dark: #7a5f22; --cloud: #dee7e6; --parchment: #e9e1c4; --focus: #226299;
+      /* status — use only these six, never invent a seventh */
+      --green: #22c55e; --red: #ef4444; --amber: #f59e0b;
+      --cyan: #06b6d4; --purple: #226299; --purple-dark: #1a4d7a;
+      /* type */
+      --font: 'Inter', 'Sarabun', -apple-system, BlinkMacSystemFont, sans-serif;
+      --mono: 'JetBrains Mono', 'Fira Code', 'Sarabun', monospace;
+      /* form */
+      --radius: 12px; --radius-sm: 8px; --radius-lg: 16px;
+      --measure: 720px; --wide: 860px;
+      --transition: 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+    html { scroll-behavior: smooth; }
+    body { font-family: var(--font); font-size: 17px; line-height: 1.8; color: var(--slate); background: var(--bg); -webkit-font-smoothing: antialiased; }
+    .blog-nav { position: fixed; top: 0; left: 0; right: 0; z-index: 100; background: rgba(248,250,252,0.85); backdrop-filter: blur(20px); border-bottom: 1px solid rgba(0,0,0,0.05); }
+    .blog-nav__inner { max-width: 860px; margin: 0 auto; padding: 0 2rem; height: 56px; display: flex; align-items: center; justify-content: space-between; }
+    .blog-nav__back { font-size: 0.85rem; font-weight: 500; color: var(--blue); text-decoration: none; }
+    .blog-nav__back:hover { color: #1a4d7a; }
+    .blog-nav__title { font-size: 0.85rem; font-weight: 600; color: var(--navy); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 50%; }
+    /* ── HERO ── house .post-hero on the approved Deep Blue gradient (page-design
+       §5 / INV-28). Ink is inverted for the dark ground: white title/meta, tag
+       pills white on 18% white — the openclaw-production treatment. The
+       background value must stay byte-identical to the approved string. */
+    .post-hero { padding: 8rem 2rem 3rem; background: linear-gradient(135deg, #11304b 0%, #1a4d7a 45%, #226299 100%); color: #fff; text-align: center; }
+    .post-hero__tags { display: flex; gap: 0.5rem; justify-content: center; margin-bottom: 1.25rem; flex-wrap: wrap; }
+    .post-hero__tag { display: inline-block; font-size: 0.72rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.1em; color: #fff; background: rgba(255,255,255,0.18); padding: 0.35rem 0.9rem; border-radius: 20px; }
+    .post-hero__title { font-size: clamp(1.8rem, 5vw, 3rem); font-weight: 800; color: #fff; line-height: 1.2; margin-bottom: 1rem; max-width: 720px; margin-left: auto; margin-right: auto; }
+    .post-hero__sub { font-size: 1.05rem; max-width: 640px; margin: 0 auto 1.5rem; line-height: 1.7; color: #fff; }
+    .post-hero__meta { font-size: 0.85rem; color: #fff; display: flex; align-items: center; justify-content: center; gap: 1.5rem; flex-wrap: wrap; }
+    .post-hero__series { font-weight: 600; color: #fff; }
+    /* the switch pill and the focus ring both sit on the dark hero: the pill is
+       a light chip so its labels keep their light-ground colours, and --focus
+       re-points to gold here (blue collapses on blue — the footer/pre
+       precedent). */
+    .post-hero { --focus: var(--gold); }
+    .post-hero__cover {
+      aspect-ratio: 1 / 1;
+      max-width: 380px;
+      margin: 2.5rem auto 0;
+      border-radius: var(--radius-lg, 16px);
+      overflow: hidden;
+      box-shadow: 0 20px 60px rgba(17,48,75,0.14);
+    }
+    .post-hero__cover img { width: 100%; height: 100%; object-fit: cover; display: block; }
+    .post-body { max-width: 720px; margin: 0 auto; padding: 3rem 2rem 6rem; }
+    .post-body h2 { font-size: 1.6rem; font-weight: 800; color: var(--navy); margin: 3rem 0 1rem; padding-bottom: 0.5rem; border-bottom: 2px solid rgba(34,98,153,0.15); }
+    .post-body h3 { font-size: 1.25rem; font-weight: 700; color: var(--navy); margin: 2.25rem 0 0.75rem; }
+    .post-body p { margin-bottom: 1.25rem; }
+    .post-body strong { font-weight: 700; color: var(--navy); }
+    .post-body a { color: var(--blue); text-decoration: underline; text-decoration-thickness: 1px; text-underline-offset: 2px; }
+    .post-body ul, .post-body ol { margin: 0.5rem 0 1.25rem 1.5rem; }
+    .post-body li { margin-bottom: 0.4rem; }
+    .post-body blockquote { background: rgba(34,98,153,0.06); border-left: 4px solid var(--blue); padding: 1rem 1.25rem; border-radius: 0 10px 10px 0; margin: 1.25rem 0; font-size: 0.95rem; color: var(--navy); }
+    .post-body hr { border: none; height: 1px; background: linear-gradient(90deg, transparent, rgba(34,98,153,0.2), transparent); margin: 3rem 0; }
+    /* ── CODE ── */
+    .post-body pre { background: var(--code-bg); border-radius: 12px; padding: 1.5rem; margin: 1.25rem 0 1.5rem; overflow-x: auto; border: 1px solid rgba(255,255,255,0.05); }
+    .post-body pre code { font-family: var(--mono); font-size: 0.85rem; color: #e2e8f0; line-height: 1.7; background: none; padding: 0; white-space: pre-wrap; }
+    .post-body code { font-family: var(--mono); font-size: 0.88em; background: rgba(34,98,153,0.08); color: var(--blue-dark); padding: 0.15em 0.45em; border-radius: 5px; }
+    /* ── TABLES ── */
+    .table-wrapper { overflow-x: auto; margin: 1.5rem 0; border-radius: 0.5rem; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1); }
+    table { width: 100%; border-collapse: collapse; background: white; }
+    th { background: #226299; color: white; padding: 1rem; text-align: left; font-weight: 600; }
+    td { padding: 1rem; border-bottom: 1px solid #e5e7eb; }
+    .post-body table { display: block; width: 100%; overflow-x: auto; }
+    /* ── ALERTS ── */
+    .alert { background: #fef3cd; border: 1px solid #facc15; border-radius: 0.5rem; padding: 1rem; margin: 1.5rem 0; }
+    .alert.danger { background: #fee2e2; border-color: #ef4444; }
+    .alert.info { background: #e0f2fe; border-color: #06b6d4; }
+    .alert.success { background: #d1fae5; border-color: #10b981; }
+    /* ── KEY TAKEAWAYS ── */
+    .key-takeaways { background: linear-gradient(135deg, #f3f4f6 0%, #e5e7eb 100%); border-radius: 1rem; padding: 2rem; margin: 3rem 0; }
+    .key-takeaways h3 { color: #226299; margin-bottom: 1.5rem; }
+    .post-series-footer { text-align: center; font-size: 0.85rem; color: var(--slate-light); font-style: italic; margin-top: 2rem; padding-top: 2rem; border-top: 1px solid #e2e8f0; }
+    .blog-footer { background: var(--navy); padding: 2rem 0; text-align: center; }
+    .blog-footer a { color: var(--gold); text-decoration: none; font-weight: 600; font-size: 0.9rem; }
+    .blog-footer span { color: var(--gray); font-size: 0.8rem; display: block; margin-top: 0.4rem; }
+    @media (max-width: 600px) {
+      .post-hero { padding: 7rem 1.25rem 2.5rem; }
+      .post-body { padding: 2rem 1.25rem 4rem; }
+      .post-hero__meta { flex-direction: column; gap: 0.4rem; }
+      .post-body h2 { font-size: 1.4rem; }
+      .post-body h3 { font-size: 1.15rem; }
+      .post-body pre { padding: 1rem; border-radius: 8px; }
+    }
+
+    :focus-visible { outline: 2px solid var(--focus); outline-offset: 3px; border-radius: 2px; }
+    /* the ring sits on the page ground (3px offset). Inside the navy footers
+       and code blocks var(--blue) collapses to 2.12:1, so those scopes
+       re-point --focus to gold (5.73:1 on navy). */
+    .footer, .blog-footer, pre { --focus: var(--gold); }
+    :focus:not(:focus-visible) { outline: none; }
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after {
+        animation-duration: .01ms !important; animation-iteration-count: 1 !important;
+        transition-duration: .01ms !important; scroll-behavior: auto !important;
+      }
+    }
+    h1, h2, h3, .post-hero__title, .card__title { text-wrap: balance; }
+    .post-body { overflow-wrap: break-word; }   /* long URLs and inline code wrap instead of widening the page */
+
+    .post-body img, .post-body svg { max-width: 100%; height: auto; }
+
+    /* ── SKIP LINK ── a11y-perf R5: the link and the landmark it targets are a
+       pair — useless without both halves. Off-screen until focused, then the
+       first tab stop on every page. */
+    .skip-link { position: absolute; left: -9999px; }
+    .skip-link:focus {
+      left: 1rem; top: 1rem; z-index: 999;
+      background: var(--navy); color: #fff;
+      padding: 0.75rem 1.25rem; border-radius: var(--radius-sm);
+      font-weight: 600; text-decoration: none;
+    }
+
+    /* ── POST WAYFINDING ── the wordmark is the home link; the footer carries
+       the full destination row. */
+    .blog-nav__home {
+      font-size: 0.9rem; font-weight: 800; color: var(--navy);
+      text-decoration: none; margin-right: 1rem;
+    }
+    .blog-nav__home:hover { color: var(--blue); }
+    .blog-nav__inner > .blog-nav__back { margin-right: auto; }
+    .blog-footer__nav {
+      display: flex; flex-wrap: wrap; justify-content: center; gap: 0.35rem 1.25rem;
+      max-width: 860px; margin: 0 auto 1.25rem; padding: 0 2rem 1.25rem;
+      border-bottom: 1px solid rgba(255,255,255,0.12);
+    }
+    .blog-footer__nav a { color: var(--gold); font-size: 0.85rem; font-weight: 600; text-decoration: none; }
+    .blog-footer__nav a:hover { color: #fff; text-decoration: underline; }
+
+    html { scroll-padding-top: 5rem; }
+    [id] { scroll-margin-top: 5rem; }
+
+    /* Thai needs more room than Latin at the same nominal size. */
+    .post-body:lang(th) { font-size: 18px; line-height: 1.85; }
+    .post-body p, .post-body li, .post-body blockquote { text-wrap: pretty; }
+
+    /* ---- side-scroll affordance ----
+       pre blocks and tables can exceed 720px. These layers paint a shadow ONLY
+       where there is more content in that direction; when fully scrolled the
+       cover slides over the shadow and hides it. No JavaScript, no wrapper. */
+    .post-body pre, .post-body table {
+      overflow-x: auto;
+      background-image:
+        linear-gradient(to right, var(--code-bg, #0f172a) 30%, rgba(15,23,42,0)),
+        linear-gradient(to left, var(--code-bg, #0f172a) 30%, rgba(15,23,42,0)),
+        radial-gradient(farthest-side at 0 50%, rgba(0,0,0,.28), rgba(0,0,0,0)),
+        radial-gradient(farthest-side at 100% 50%, rgba(0,0,0,.28), rgba(0,0,0,0));
+      background-position: 0 0, 100% 0, 0 0, 100% 0;
+      background-repeat: no-repeat;
+      background-size: 40px 100%, 40px 100%, 14px 100%, 14px 100%;
+      background-attachment: local, local, scroll, scroll;
+    }
+    .post-body table {
+      background-image:
+        linear-gradient(to right, var(--white, #fff) 30%, rgba(255,255,255,0)),
+        linear-gradient(to left, var(--white, #fff) 30%, rgba(255,255,255,0)),
+        radial-gradient(farthest-side at 0 50%, rgba(17,48,75,.16), rgba(17,48,75,0)),
+        radial-gradient(farthest-side at 100% 50%, rgba(17,48,75,.16), rgba(17,48,75,0));
+      background-position: 0 0, 100% 0, 0 0, 100% 0;
+      background-repeat: no-repeat;
+      background-size: 40px 100%, 40px 100%, 14px 100%, 14px 100%;
+      background-attachment: local, local, scroll, scroll;
+    }
+
+    /* ---- table of contents ---- */
+    .post-toc {
+      max-width: 720px;
+      margin: 2rem auto 0;
+      padding: 1rem 1.25rem;
+      background: rgba(34,98,153,0.05);
+      border: 1px solid rgba(34,98,153,0.14);
+      border-left: 3px solid var(--gold, #c4a46c);
+      border-radius: 10px;
+      font-size: 0.92rem;
+    }
+    .post-toc > summary {
+      cursor: pointer;
+      font-weight: 700;
+      color: var(--navy);
+      list-style: none;
+    }
+    .post-toc > summary::-webkit-details-marker { display: none; }
+    .post-toc > summary::before {
+      content: "\25B8";
+      display: inline-block;
+      margin-right: 0.5rem;
+      transition: transform 0.2s ease;
+      color: var(--gold-dark, #7a5f22);
+    }
+    .post-toc[open] > summary::before { transform: rotate(90deg); }
+    .post-toc > summary:focus-visible { outline: 3px solid var(--focus, #226299); outline-offset: 3px; }
+    .post-toc ol { margin: 0.85rem 0 0.25rem; padding-left: 1.4rem; }
+    .post-toc li { margin-bottom: 0.4rem; line-height: 1.5; }
+    .post-toc a { color: var(--slate); text-decoration: none; }
+    .post-toc a:hover, .post-toc a:focus-visible { color: var(--blue-dark, #1a4d7a); text-decoration: underline; }
+    @media (max-width: 600px) { .post-toc { margin: 1.25rem 1rem 0; } }
+
+    /* ---- cross-document view transitions ---- */
+    @view-transition { navigation: auto; }
+    .nav, .blog-nav { view-transition-name: site-nav; }
+    .footer, .blog-footer { view-transition-name: site-footer; }
+    @media (prefers-reduced-motion: reduce) {
+      ::view-transition-group(*),
+      ::view-transition-old(*),
+      ::view-transition-new(*) { animation: none !important; }
+    }
+
+    /* ── SERIES STRIP — Hermes Agent in Practice ──
+       Same class and inner-wrapper shape as the OpenClaw strip because the
+       linter's RE_SNAV recognises exactly `series-nav` + a nested div; a
+       renamed strip would read as "no nav" and fail INV-08. All content
+       checks (INV-03 family) iterate the SERIES7 list only, so this strip's
+       labels are convention, not contract. House-styled, not the island CSS. */
+    .series-nav {
+      max-width: 720px; margin: 2rem auto 0; padding: 1.1rem 1.4rem;
+      background: rgba(255,255,255,0.75); border: 1px solid rgba(34,98,153,0.15);
+      border-left: 3px solid var(--gold); border-radius: 12px;
+    }
+    .series-nav h3 {
+      font-size: 0.78rem; font-weight: 700; text-transform: uppercase;
+      letter-spacing: 0.08em; color: var(--gold-dark); margin-bottom: 0.6rem;
+    }
+    .series-links { display: flex; flex-wrap: wrap; gap: 0.5rem; }
+    .series-links a, .series-links .current {
+      font-size: 0.82rem; font-weight: 600; padding: 0.35rem 0.8rem;
+      border-radius: 50px; text-decoration: none;
+    }
+    .series-links a { color: var(--blue-dark); background: rgba(34,98,153,0.08); }
+    .series-links a:hover { background: rgba(34,98,153,0.16); }
+    .series-links .current { color: #fff; background: var(--blue-dark); }
+    @media (max-width: 600px) { .series-nav { margin: 1.5rem 1rem 0; } }
+
+    /* ── FIGURE — the sanctioned diagram component (page-design §4 Content).
+       Diagrams are PNGs; this repo built them out of divs twice and reverted
+       twice. The image is wrapped in a link to itself so a phone can pinch a
+       1400px drawing without a line of JavaScript. */
+    .figure { margin: 2.5rem 0; }
+    .figure__img { width: 100%; height: auto; display: block;
+                   border-radius: var(--radius); border: 1px solid rgba(0,0,0,0.06); }
+    .figure__caption { font-size: 0.85rem; color: var(--slate-light);
+                       text-align: center; margin-top: 0.75rem; }
+
+    /* ── REFERENCES — every material number in this series carries its source.
+       The tags are the book's own four evidence labels. */
+    .references { margin-top: 3rem; padding-top: 2rem; border-top: 1px solid #e2e8f0; }
+    .references__note { font-size: 0.85rem; color: var(--slate-light); margin-bottom: 1rem; }
+    .references__list { padding-left: 1.4rem; font-size: 0.9rem; line-height: 1.75; }
+    .references__list li { margin-bottom: 0.7rem; }
+    .ref-tag { display: inline-block; font-size: 0.7rem; font-weight: 700;
+               letter-spacing: 0.06em; text-transform: uppercase; padding: 0.1rem 0.5rem;
+               border-radius: 50px; margin-right: 0.4rem; vertical-align: 0.05em;
+               background: rgba(34,98,153,0.1); color: var(--blue-dark); }
+    /* All four labels get a rule.  --standard and --study shipped without one
+       on 2026-09-05, so 158 of 306 tags fell through to the base blue and the
+       two labels were indistinguishable.  Ratios on --bg: 6.70 / 6.92 / 7.36 /
+       4.81:1, all AA at this size. */
+    .ref-tag--law { background: rgba(239,68,68,0.12); color: #991b1b; }
+    .ref-tag--standard { background: rgba(34,98,153,0.12); color: var(--blue-dark); }
+    .ref-tag--study { background: rgba(34,197,94,0.18); color: #14532d; }
+    .ref-tag--synthesis { background: rgba(196,164,108,0.22); color: var(--gold-dark); }
+    .ref-supports { display: block; color: var(--slate-light); font-size: 0.85rem; }
+
+    /* ── LANGUAGE SWITCH — pure CSS, zero JavaScript (INV-38) ──
+       One visually-hidden checkbox as a direct child of body, BEFORE the main landmark,
+       so `#langSwitch:checked ~ main …` reaches every content block. The two
+       tracks are paired blocks: .l-th (default) and .l-en (hidden until
+       checked; display:revert restores block for divs, inline for spans).
+       Naming stays clear of INV-12's menu-token regex (hamburger|burger|
+       nav__toggle|nav-toggle|navtoggle|menu-toggle|menu__toggle) — verified.
+       No JS also means no persistence across posts; each post opens in Thai. */
+    .lang-switch-box { position: absolute; left: -9999px; }
+    /* where anchor positioning exists the box sits on the pill, so focusing it scrolls the pill into view */
+    .lang-switch { anchor-name: --lang-switch; }
+    .lang-switch-box { position-anchor: --lang-switch; top: anchor(top); left: anchor(left); width: 1px; height: 1px; opacity: 0; pointer-events: none; }
+    .l-en { display: none; }
+    #langSwitch:checked ~ main .l-en { display: revert; }
+    #langSwitch:checked ~ main .l-th { display: none; }
+    .lang-switch {
+      display: inline-flex; align-items: center; gap: 0.55rem;
+      margin-top: 1.4rem; padding: 0.4rem 1.1rem; border-radius: 50px;
+      background: rgba(255,255,255,0.85); border: 1px solid rgba(255,255,255,0.4);
+      cursor: pointer; font-size: 0.85rem; user-select: none;
+    }
+    .lang-switch span { color: var(--slate-light); font-weight: 600; transition: color 0.2s; }
+    .lang-switch .lang-sep { color: var(--gray); font-weight: 400; }
+    .lang-switch .lang-th { color: var(--navy); font-weight: 800; }
+    #langSwitch:checked ~ main .lang-switch .lang-th { color: var(--slate-light); font-weight: 600; }
+    #langSwitch:checked ~ main .lang-switch .lang-en { color: var(--navy); font-weight: 800; }
+    .lang-switch:hover { border-color: #fff; }
+    #langSwitch:focus-visible ~ main .lang-switch {
+      outline: 2px solid var(--focus); outline-offset: 3px;
+    }
+  </style>
+  <!-- social -->
+  <link rel="canonical" href="https://anirach.com/blog/below-threshold-syndrome-driven-development.html">
+  <meta property="og:type" content="article">
+  <meta property="og:url" content="https://anirach.com/blog/below-threshold-syndrome-driven-development.html">
+  <meta property="og:site_name" content="Anirach Mingkhwan">
+  <meta property="og:locale" content="th_TH">
+  <meta property="og:locale:alternate" content="en_US">
+  <meta property="article:published_time" content="2026-11-25">
+  <meta property="article:author" content="https://anirach.com/">
+  <meta property="og:title" content="Syndrome-Driven Code — เลือกด้วย checks">
+  <meta property="og:description" content="เรียน Syndrome-Driven Development ใช้ checks เลือกโค้ดจากหลาย candidates ทดลอง median พร้อมอธิบาย voting, correlated errors และการยกระดับเมื่อไม่ผ่าน">
+  <meta property="og:image" content="https://anirach.com/images/below-threshold-syndrome-driven-development-og.jpg">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
+  <meta property="og:image:alt" content="Syndrome-Driven Code — เลือกด้วย checks">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:image" content="https://anirach.com/images/below-threshold-syndrome-driven-development-og.jpg">
+  <meta name="twitter:image:alt" content="Syndrome-Driven Code — เลือกด้วย checks">
+  <meta name="robots" content="max-image-preview:large">
+  <meta name="theme-color" content="#11304b">
+  <link rel="icon" href="/favicon.ico" sizes="any">
+  <link rel="apple-touch-icon" href="/apple-touch-icon.png">
+  <!-- /social -->
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "BlogPosting",
+    "headline": "Syndrome-Driven Code — เลือกด้วย checks",
+    "author": {
+      "@type": "Person",
+      "@id": "https://anirach.com/#person",
+      "name": "Anirach Mingkhwan",
+      "url": "https://anirach.com/"
+    },
+    "datePublished": "2026-11-25",
+    "dateModified": "2026-11-25",
+    "image": "https://anirach.com/images/below-threshold-syndrome-driven-development-og.jpg",
+    "inLanguage": [
+      "th",
+      "en"
+    ],
+    "mainEntityOfPage": "https://anirach.com/blog/below-threshold-syndrome-driven-development.html"
+  }
+  </script>
+</head>
+<body>
+<a href="#main" class="skip-link">Skip to content</a>
+<input type="checkbox" id="langSwitch" class="lang-switch-box" aria-label="Switch language: Thai / English">
+
+  <nav class="blog-nav">
+    <div class="blog-nav__inner">
+      <a href="../index.html" class="blog-nav__home">Anirach</a>
+      <a href="./" class="blog-nav__back">‹ Tutorials</a>
+      <div class="blog-nav__title">Syndrome-Driven Code</div>
+    </div>
+  </nav>
+
+  <main id="main">
+
+  <header class="post-hero">
+    <div class="post-hero__tags">
+      <span class="post-hero__tag">Quantum Computing</span>
+      <span class="post-hero__tag">AI Engineering</span>
+      <span class="post-hero__tag">Python</span>
+    </div>
+    <h1 class="post-hero__title"><span class="l-th">Syndrome-Driven Code — เลือกด้วย checks</span><span class="l-en" lang="en">Syndrome-Driven Development: Select AI-Written Code with Checks, Not Confidence</span></h1>
+    <p class="post-hero__sub"><span class="l-th">ใช้คณิตศาสตร์ error correction อธิบาย voting, bugs ที่เกิดซ้ำ, tests ที่ผิดได้ และ escalation ก่อนทดลองเลือก median implementation ที่ถูกต้อง</span><span class="l-en" lang="en">Use the mathematics of error correction to understand voting, shared bugs, imperfect tests and escalation, then decode a tiny set of median implementations.</span></p>
+    <div class="post-hero__meta">
+      <span>By <strong>Anirach Mingkhwan</strong></span>
+      <span class="post-hero__series">Below Threshold 2026 • Chapter #9</span>
+      <span><time datetime="2026-11-25">25 Nov 2026</time></span>
+      <span>6 min read</span>
+    </div>
+    <label for="langSwitch" class="lang-switch" title="สลับภาษา · Switch language"><span class="lang-th">ไทย</span><span class="lang-sep">·</span><span class="lang-en" lang="en">English</span></label>
+    <div class="post-hero__cover">
+      <img src="../images/below-threshold-syndrome-driven-development-cover.jpg" alt="Syndrome-Driven Code — เลือกด้วย checks" width="800" height="800" loading="eager" fetchpriority="high" decoding="async">
+    </div>
+  </header>
+
+  <article class="post-body">
+
+    <details class="post-toc l-th" open>
+      <summary>ในบทความนี้</summary>
+      <ol>
+          <li><a href="#th-start">คำถามคือควรส่งมอบโปรแกรมตัวไหน</a></li>
+          <li><a href="#th-threshold">Voting ขยายพฤติกรรมที่มีเสียงมากกว่า</a></li>
+          <li><a href="#th-median">โค้ด: bug ของ median ที่เกิดซ้ำชนะ plain vote</a></li>
+          <li><a href="#th-checks">Checks เพิ่มข้อมูล และ checks ก็ผิดได้</a></li>
+          <li><a href="#th-evidence">อ่านผลศึกษาโมเดลในหนังสือพร้อม protocol</a></li>
+          <li><a href="#th-pipeline">จากการทดลองสู่ pipeline ที่ปฏิเสธได้</a></li>
+          <li><a href="#th-practice">ลบ check ที่สำคัญแล้วทำนายความล้มเหลว</a></li>
+          <li><a href="#th-resources">Run & check — รันตัวอย่างด้วยตัวเอง</a></li>
+          <li><a href="#th-references">Sources & scope — แหล่งอ้างอิงและขอบเขต</a></li>
+      </ol>
+    </details>
+    <details class="post-toc l-en" open>
+      <summary>In this post</summary>
+      <ol>
+          <li><a href="#en-start">The question is which program to ship</a></li>
+          <li><a href="#en-threshold">Voting amplifies the dominant behaviour</a></li>
+          <li><a href="#en-median">Code: a shared median bug wins the plain vote</a></li>
+          <li><a href="#en-checks">Checks add information, and checks can be wrong</a></li>
+          <li><a href="#en-evidence">Read the book’s model study with its protocol</a></li>
+          <li><a href="#en-pipeline">From experiment to a pipeline that can refuse</a></li>
+          <li><a href="#en-practice">Remove the decisive check and predict the failure</a></li>
+          <li><a href="#en-resources">Run and check the example</a></li>
+          <li><a href="#en-references">Sources and scope</a></li>
+      </ol>
+    </details>
+    <div class="l-th">
+
+<h2 id="th-start">คำถามคือควรส่งมอบโปรแกรมตัวไหน</h2>
+<blockquote><p><strong>ดาวน์โหลดหนังสือและโค้ดประกอบ</strong></p><p><a href="https://drive.google.com/uc?export=download&amp;id=1iG7oSWLC9UI91VsPOzqcxk3_evH8Sn3b">ดาวน์โหลด Below Threshold ฉบับเต็ม (PDF ภาษาอังกฤษ · 104 หน้า · 5.4 MB)</a><br><a href="https://drive.google.com/file/d/1iG7oSWLC9UI91VsPOzqcxk3_evH8Sn3b/view?usp=sharing">อ่านบน Google Drive</a> · <a href="../downloads/below-threshold-tutorial-examples.zip" download>ดาวน์โหลดตัวอย่าง Python ทั้งสิบบท (ZIP)</a></p></blockquote>
+<p><strong>บทที่ 9/10</strong> · บทเรียนดัดแปลงจาก <em>Below Threshold: AI, Quantum Errors and Better Code</em> ฉบับ 1.0 บทที่ 9 หน้า 61–77</p><p>พื้นฐานที่ใช้คือ Python functions, tests และแนวคิด syndrome จากบท 3 เป้าหมายคือแยก “มี candidate ที่ถูกอยู่ใน pool” ออกจาก “เลือก candidate ที่ถูกได้อย่างเชื่อถือได้” ทั้งสองเป็นความสำเร็จเชิงวิศวกรรมคนละเรื่อง การสร้างห้าคำตอบแล้วเลือกตัวที่อธิบายมั่นใจที่สุดยังไม่ได้แก้ปัญหาข้อที่สอง</p><p>บท 9 เสนอ <strong>Syndrome-Driven Development</strong> หรือ SDD โดยมอง candidate program เป็น noisy copy การ crash หรือ load ไม่สำเร็จเป็น erasure เวกเตอร์ของ checks ที่ไม่ผ่านเป็น syndrome และ decoder ใช้ข้อมูลเหล่านี้เลือก candidate ส่วน bug ที่หลุดไปในโปรแกรมที่ส่งมอบเป็น logical error นี่เป็น analogy สำหรับจัดระบบความคิด ไม่ใช่ข้ออ้างว่าโปรแกรมมีพฤติกรรมเป็น quantum state จริง</p><p>แนวทางนี้ต่อยอดจาก redundant software, ระบบ sample-and-filter และ property-based tests หนังสือเสนอการรวมแนวคิดด้วยกรอบ error correction โดยไม่อ้างสิทธิ์ความใหม่เหนือเทคนิคเดิม คุณค่าทางปฏิบัติคือทำ assumptions เรื่อง independence, คุณภาพหลักฐาน และวิธี selection ให้ชัดเจน</p>
+
+<h2 id="th-threshold">Voting ขยายพฤติกรรมที่มีเสียงมากกว่า</h2>
+    <figure class="figure">
+      <a href="../images/below-threshold-voting.png">
+        <img class="figure__img" src="../images/below-threshold-voting.png" alt="Lab 7 ในหนังสือแสดง threshold ของ independent voting, floor จาก common-mode failures และประโยชน์ของ checks ที่ให้ข้อมูล" width="1481" height="502" loading="lazy" decoding="async">
+      </a>
+      <figcaption class="figure__caption">Lab 7 ในหนังสือแสดง threshold ของ independent voting, floor จาก common-mode failures และประโยชน์ของ checks ที่ให้ข้อมูล จากหนังสือ Below Threshold ภาพ 9.1 เปิดดูภาพขนาดเต็มได้ เปิดภาพเพื่อดูขนาดเต็ม</figcaption>
+    </figure><p>เมื่อมี copies จำนวนคี่ n ตัวที่อิสระ แต่ละตัวผิดด้วย probability p การ vote แบบสองคำตอบในโมเดลที่ระวังไว้ก่อนล้มเหลวด้วย binomial tail เหนือ n/2 เมื่อ p ต่ำกว่า 1/2 การเพิ่ม copies ช่วยได้ แต่เมื่อสูงกว่า 1/2 vote จะเลือกคำตอบผิดมากขึ้น ที่ p = 0.1 โมเดล exact ในหนังสือลด error เหลือประมาณ 0.86% เมื่อมีห้า copies นี่เป็นการคำนวณในโมเดล ไม่ใช่คำรับรองสำหรับ LLM samples</p><p>assumption ที่เปราะบางคือ independence หลายโปรแกรมอาจใช้ off-by-one rule เดียวกันเพราะ specification ชวนให้ตีความเช่นนั้น ใน common-mode mixture ของหนังสือ มีโอกาส ρ ที่ทุก copy ทำตาม shared draw เดียวกัน จึงเกิด failure floor ที่ ρp ไม่ว่าจะเพิ่ม sample count เท่าไร การเพิ่ม drafts ที่แทบเหมือนกันไม่เติมข้อมูลที่ขาด</p><p>ข้อสรุปเรื่อง threshold สมมติว่า copies ที่ผิดเห็นตรงกันและ copies ที่ถูกเห็นตรงกัน โปรแกรมที่ผิดจริงอาจให้คนละคำตอบ plurality จึงอาจสำเร็จแม้ candidates ที่ถูกมีไม่ถึงครึ่ง pipeline จึงต้องวัด behaviour, check coverage และ correlations บนงานของตน แทนการใช้ binomial formula เพียงตัวเดียวตัดสินทุกอย่าง</p>
+
+<h2 id="th-median">โค้ด: bug ของ median ที่เกิดซ้ำชนะ plain vote</h2>
+<p>teaching model นี้ใช้ functions ที่เขียนไว้ให้อ่าน ไม่ได้รัน source ที่ดาวน์โหลดหรือสร้างใหม่ A, B และ C มี bug เดียวกันคือคืน upper-middle สำหรับ list ความยาวคู่ ส่วน D กับ E คำนวณ median ถูกต้อง F ใช้ <code>None</code> แทน erasure ที่ทราบตำแหน่ง examples ที่มองเห็นสองข้อกำหนด syndrome และ probe inputs อีกชุดกำหนด behavioural clusters</p><pre><code>&quot;&quot;&quot;Toy SDD with handwritten functions; no generated source is executed.&quot;&quot;&quot;
+from collections import Counter
+from statistics import median
+
+
+def upper(xs):
+    return sorted(xs)[len(xs) // 2]
+
+
+def correct(xs):
+    ys = sorted(xs)
+    m = len(ys) // 2
+    return ys[m] if len(ys) % 2 else (ys[m - 1] + ys[m]) / 2
+
+
+candidates = {&quot;A&quot;: upper, &quot;B&quot;: upper, &quot;C&quot;: upper,
+              &quot;D&quot;: correct, &quot;E&quot;: correct, &quot;F&quot;: None}
+visible = [([3, 1, 2], 2), ([4, 1, 3, 2], 2.5)]
+probes = [[9], [1, 2], [2, 8, 4], [7, 1, 9, 3]]
+live = [n for n, f in candidates.items() if f is not None]
+syndrome = {n: tuple(int(candidates[n](x) != y) for x, y in visible)
+            for n in live}
+signature = {n: tuple(candidates[n](x) for x in probes) for n in live}
+
+
+def vote(names):
+    if not names:
+        return None
+    counts = Counter(signature[n] for n in names)
+    return max(names, key=lambda n: counts[signature[n]])
+
+
+def checked_vote(names):
+    survivors = [n for n in names if not any(syndrome[n])]
+    return vote(survivors) if survivors else None
+
+
+plain = vote(live)
+decoded = checked_vote(live)
+for n in candidates:
+    print(n, &quot;erasure&quot; if candidates[n] is None else &quot;syndrome=&quot; + str(syndrome[n]))
+print(f&quot;plain vote={plain or &#x27;ESCALATE&#x27;}; checked vote={decoded or &#x27;ESCALATE&#x27;}&quot;)
+# This held-out oracle scores choices only after selection.
+held_out = [[-10, 4, 6, 1000, 10, 20], [-2, 4], [1, 1, 7]]
+for name in (plain, decoded):
+    if name is None:
+        print(&quot;ESCALATE: no candidate to score&quot;)
+        continue
+    score = sum(candidates[name](x) == median(x) for x in held_out)
+    print(f&quot;{name}: held-out {score}/{len(held_out)}&quot;)
+assert decoded is None or not any(syndrome[decoded])
+assert checked_vote([n for n in live if any(syndrome[n])]) is None
+assert vote([]) is None and checked_vote([]) is None
+assert correct(held_out[0]) == 8 and upper(held_out[0]) == 10</code></pre><pre><code>A syndrome=(0, 1)
+B syndrome=(0, 1)
+C syndrome=(0, 1)
+D syndrome=(0, 0)
+E syndrome=(0, 0)
+F erasure
+plain vote=A; checked vote=D
+A: held-out 1/3
+D: held-out 3/3</code></pre><p>plain vote เลือก A เพราะมีสาม copies ที่ทำงานเหมือนกัน example ความยาวคู่ให้ syndrome <code>(0, 1)</code> กับ candidates ที่ผิดทั้งสาม เมื่อกรองเฉพาะ all-clear syndrome จะเหลือ D และ E จึงเลือก D held-out examples สามข้อถูกใช้หลังทั้งสอง selections เสร็จแล้วเท่านั้น โดยให้ A ได้ 1/3 และ D ได้ 3/3</p><p>evaluation สาม cases แสดงกลไก ไม่ใช่ค่าประมาณ reliability ตัวอย่าง median ฉบับเต็มในหนังสือมีสี่ checks และ hidden cases 1,000 ชุด โค้ดที่นี่ตั้งใจไม่ใช้ <code>exec</code> หรือ external models เพื่อให้ตรวจ selection logic ได้โดยไม่ต้องสร้าง execution sandbox</p>
+
+<h2 id="th-checks">Checks เพิ่มข้อมูล และ checks ก็ผิดได้</h2>
+<p>check มีประโยชน์ต่อ fault ที่เปลี่ยนพฤติกรรมซึ่งมันสังเกตเท่านั้น ข้อกำหนดว่า “median อยู่ระหว่างค่าต่ำสุดกับสูงสุด” จับ upper-middle bug ไม่ได้ การกลับลำดับ input ก็จับไม่ได้ แต่ example ความยาวคู่จับได้ จึงควรเพิ่ม targeted examples ควบคู่กับ properties และตรวจ expected answers ด้วย reference ที่เชื่อถือได้</p><p><a href="https://doi.org/10.1145/351240.351266">Property-based testing</a> เป็นวิธีที่มีมาก่อนสำหรับเปลี่ยน specification ให้เป็น checks จำนวนมาก ส่วน mutation testing ถามว่า checks เหล่านั้นจับ faults ที่ตั้งใจใส่เข้าไปได้หรือไม่ ทั้งสองไม่ได้พิสูจน์โปรแกรมทั่วไปว่าถูกต้อง แต่ช่วยเปิดเผย suite ที่ทดสอบเฉพาะ happy paths</p><p>tests ที่ผิดเป็น faulty measurements หนังสือพบ examples ที่ขัดกับคำตอบอ้างอิงสี่ข้อใน HumanEval checks ที่สกัดมา example median ของ <code>[-10, 4, 6, 1000, 10, 20]</code> ควรได้ 8.0 ไม่ใช่ 15.0 หาก tests และ implementation เกิดจากการตีความผิดแบบเดียวกัน suite ที่เขียวอาจตอกย้ำ error จึงควร review contract และ expected values อย่างอิสระก่อน optimize selector</p>
+
+<h2 id="th-evidence">อ่านผลศึกษาโมเดลในหนังสือพร้อม protocol</h2>
+    <figure class="figure">
+      <a href="../images/below-threshold-codegen.png">
+        <img class="figure__img" src="../images/below-threshold-codegen.png" alt="Lab 8 ในหนังสือให้คะแนน selectors บน HumanEval 164 tasks โดย oracle เป็น upper bound สำหรับ selection ไม่ใช่ decoder ที่ deploy" width="1648" height="546" loading="lazy" decoding="async">
+      </a>
+      <figcaption class="figure__caption">Lab 8 ในหนังสือให้คะแนน selectors บน HumanEval 164 tasks โดย oracle เป็น upper bound สำหรับ selection ไม่ใช่ decoder ที่ deploy จากหนังสือ Below Threshold ภาพ 9.2 เปิดดูภาพขนาดเต็มได้ เปิดภาพเพื่อดูขนาดเต็ม</figcaption>
+    </figure><p>Lab 8 บันทึกผล local models สามตัวบน HumanEval 164 tasks แต่ละ task มีห้า samples รวม 2,460 โปรแกรม syndrome selector แก้ tasks ได้ 64.0%, 86.0% และ 71.3% สำหรับ model configurations ทั้งสาม เทียบกับ 55.5%, 78.0% และ 62.2% ของ behavioural voting ตัวเลขเป็น stored results ในหนังสือ ไม่ใช่ benchmark run ใหม่สำหรับ tutorial นี้ และไม่ใช่การจัดอันดับโมเดลปัจจุบัน</p><p>oracle แบบ “มี sample ที่ผ่านอย่างน้อยหนึ่งในห้า” เป็น upper bound ของ selection ไม่ใช่กฎที่ใช้ deploy ได้ hidden expected outputs ต้องใช้ให้คะแนน selectors โดยไม่เลือกผู้ชนะ ในการศึกษาของหนังสือ behavioural grouping มองเห็น test inputs ของ benchmark แต่ไม่เห็น expected outputs workflow จริงต้องสร้าง probes แยกเอง เช่นใน toy example นี้</p><p>ข้อจำกัดอื่นคือใช้ raw completion prompts, sampling configuration เดียว, benchmark เดียวที่มี functions สั้น และ visible checks ที่ใช้ได้เพียง 341 ข้อใน 123 tasks งานที่ไม่มี checks ใช้ voting แทน ใน candidates ที่มี all-clear syndrome ยังมี 9.4% ที่ไม่ผ่าน hidden tests syndrome ที่ผ่านจึงเป็นหลักฐาน ไม่ใช่ proof</p>
+
+<h2 id="th-pipeline">จากการทดลองสู่ pipeline ที่ปฏิเสธได้</h2>
+    <figure class="figure">
+      <a href="../images/below-threshold-sdd.png">
+        <img class="figure__img" src="../images/below-threshold-sdd.png" alt="เขียน checks ก่อน generation ใช้ syndromes ช่วย selection และเปลี่ยน defects ที่หลุดเป็น checks ในรอบถัดไป" width="1544" height="815" loading="lazy" decoding="async">
+      </a>
+      <figcaption class="figure__caption">เขียน checks ก่อน generation ใช้ syndromes ช่วย selection และเปลี่ยน defects ที่หลุดเป็น checks ในรอบถัดไป จากหนังสือ Below Threshold ภาพ 9.3 เปิดดูภาพขนาดเต็มได้ เปิดภาพเพื่อดูขนาดเต็ม</figcaption>
+    </figure><p>เริ่มจากเขียนและตรวจ checks สร้าง candidates ภายใน budget จากนั้นใช้ isolated execution environment สกัด check results และ behavioural signatures ตัด candidates ที่ load ไม่ได้, crash หรือ timeout ใน candidates ที่ผ่าน acceptance checks ให้ใช้ tie-breaker ที่ประกาศไว้ เช่น behavioural agreement พร้อมเก็บหลักฐานที่ใช้ตัดสิน</p><p>กฎสำหรับ deploy ควร escalate เมื่อไม่มีใครผ่าน benchmark selector ของหนังสือบางครั้งส่ง candidate ที่แย่น้อยที่สุดเพื่อให้ทุกกรณีมีคะแนน แต่มีเพียงสามจาก 53 model-task cases ลักษณะนี้ที่ผ่าน hidden tests กฎเชิงทดลองนี้มีประโยชน์ต่อ analysis แต่ไม่เหมาะเป็น default สำหรับส่งมอบ toy example จึงคืน <code>ESCALATE</code> ชัดเจนเมื่อ survivor set ว่าง</p><p>โปรแกรมที่สร้างขึ้นต้องมี sandbox จริงพร้อม resource limits และ restricted access การแยก Python function หรือ subprocess เพียงอย่างเดียวไม่ใช่ security boundary ควรติดตาม generation cost, execution cost, rejection rate, defects ที่หลุด และ failure ที่หนึ่ง สาม และห้า samples หากกราฟเริ่มราบ ให้ปรับ checks หรือ candidates ก่อนจ่ายเพิ่มเพื่อ samples ที่แทบเหมือนเดิม</p>
+
+<h2 id="th-practice">ลบ check ที่สำคัญแล้วทำนายความล้มเหลว</h2>
+<p>ลบ visible example ความยาวคู่แล้วรันใหม่ live candidates ทุกตัวจะผ่าน check ที่เหลือ และ behavioural voting จะกลับไปเลือก shared bug คืน example นั้น แล้วแทน correct candidates ทุกตัวด้วย <code>upper</code> checked selection ต้อง escalate การเปลี่ยนสองแบบนี้เปิดเผยว่า implementation ใช้หลักฐานจริงหรือเพียงคืนชื่อที่เราชอบอยู่แล้ว</p><p>เพิ่ม properties สองข้อที่ review แล้ว พร้อม hidden cases อีกชุด เก็บ expected hidden outputs ไว้นอก selection ระบุ policy สำหรับ invalid หรือ empty inputs เพราะ correctness ของ median ขึ้นกับ contract นี้ด้วย invariant ที่ต้องรักษาคือ candidate ที่ไม่ผ่าน required acceptance check ต้องไม่ถูกส่งมอบอัตโนมัติ ไม่ว่าจะมี candidates อื่นที่ทำงานเหมือนมันมากเท่าไร</p>
+
+<h2 id="th-resources">Run & check — รันตัวอย่างด้วยตัวเอง</h2>
+<p>ตัวอย่างสำหรับสอนนี้ใช้ Python standard library เท่านั้น บันทึก <a href="../examples/below-threshold/ch09.py" download>ch09.py</a> แล้วรันด้วย Python 3.10 ขึ้นไป โดย assertions ตรวจ invariant ที่อธิบายในบท</p><pre><code>python3 ch09.py</code></pre><p><a href="../downloads/below-threshold-tutorial-examples.zip" download>ตัวอย่างทั้งสิบบทและผลลัพธ์ที่คาดหวัง (ZIP)</a> · <a href="https://github.com/Anirach/Anirach.github.io/tree/main/examples/below-threshold">อ่าน source บน GitHub</a></p>
+
+<h2 id="th-references">Sources & scope — แหล่งอ้างอิงและขอบเขต</h2>
+<section class="references" aria-labelledby="th-sources"><h3 id="th-sources">เอกสารและหลักฐาน</h3><p class="references__note">โครงบท ภาพที่ให้เครดิต และผล lab ที่รายงานมาจากหนังสือของผู้เขียน ณ November 2026 ตัวอย่างสั้นที่ใช้ standard library รันเพื่อตรวจบทเรียนเว็บวันที่ 25 November 2026 เป็นแบบจำลองเพื่อสอน ไม่ได้รันซ้ำการทดลอง Stim, neural network, mitigation หรือ LLM ฉบับเต็มในหนังสือ ข้ออ้าง hardware, simulator, preprint และบริษัทคงขอบเขตตามที่ระบุ</p><ol><li><a href="https://drive.google.com/file/d/1iG7oSWLC9UI91VsPOzqcxk3_evH8Sn3b/view?usp=sharing">Anirach Mingkhwan. Below Threshold: AI, Quantum Errors and Better Code. Edition 1.0 (November 2026), Chapter 9, pp. 61–77.</a></li><li id="th-ref-1"><a href="https://arxiv.org/abs/2107.03374">Chen et al. Evaluating Large Language Models Trained on Code (2021, preprint).</a></li><li id="th-ref-2"><a href="https://github.com/openai/human-eval">HumanEval: official benchmark and execution guidance.</a></li><li id="th-ref-3"><a href="https://doi.org/10.1145/351240.351266">Claessen &amp; Hughes. QuickCheck: a lightweight tool for random testing of Haskell programs (2000).</a></li><li id="th-ref-4"><a href="https://doi.org/10.1109/TSE.1986.6312924">Knight &amp; Leveson. An experimental evaluation of the assumption of independence in multiversion programming (1986).</a></li></ol></section>
+    </div>
+
+    <div class="l-en" lang="en">
+
+<h2 id="en-start">The question is which program to ship</h2>
+<blockquote><p><strong>Download the book and examples</strong></p><p><a href="https://drive.google.com/uc?export=download&amp;id=1iG7oSWLC9UI91VsPOzqcxk3_evH8Sn3b">Download the complete Below Threshold book (English PDF · 104 pages · 5.4 MB)</a><br><a href="https://drive.google.com/file/d/1iG7oSWLC9UI91VsPOzqcxk3_evH8Sn3b/view?usp=sharing">Read on Google Drive</a> · <a href="../downloads/below-threshold-tutorial-examples.zip" download>Download all ten Python examples (ZIP)</a></p></blockquote>
+<p><strong>Chapter 9/10.</strong> A tutorial adaptation of <em>Below Threshold: AI, Quantum Errors and Better Code</em>, Edition 1.0, Chapter 9, pp. 61–77.</p><p>Prerequisites: Python functions, tests and Chapter 3’s idea of a syndrome. The goal is to distinguish having a correct candidate somewhere in a sample pool from reliably selecting that candidate. Those are different engineering achievements. Generating five answers and choosing the most confident one leaves the second problem unsolved.</p><p>Chapter 9 proposes <strong>Syndrome-Driven Development</strong> (SDD). A candidate program is a noisy copy. A crash or load failure is an erasure. A vector of failed checks is its syndrome. A decoder uses these observations to select a candidate; an escaped bug in the shipped program is a logical error. This is an organizing analogy, not a claim that a program literally behaves as a quantum state.</p><p>The approach builds on redundant software, sample-and-filter systems and property-based tests. The book presents the combined error-correction framing as its proposal, without claiming priority over those established techniques. Its practical contribution is to make assumptions about independence, evidence quality and selection explicit.</p>
+
+<h2 id="en-threshold">Voting amplifies the dominant behaviour</h2>
+    <figure class="figure">
+      <a href="../images/below-threshold-voting.png">
+        <img class="figure__img" src="../images/below-threshold-voting.png" alt="Book Lab 7: independent voting has a threshold; common-mode failures set a floor; informative checks improve selection." width="1481" height="502" loading="lazy" decoding="async">
+      </a>
+      <figcaption class="figure__caption">Book Lab 7: independent voting has a threshold; common-mode failures set a floor; informative checks improve selection. Source: Below Threshold, Figure 9.1. Open for full resolution.</figcaption>
+    </figure><p>For an odd number n of independent copies, each wrong with probability p, a pessimistic two-outcome vote fails with the binomial tail above n/2. Below p = 1/2, adding copies helps; above it, voting increasingly selects the wrong answer. At p = 0.1, the book’s exact model reduces error to about 0.86% with five copies. This is a model calculation, not a guarantee for LLM samples.</p><p>Independence is the fragile assumption. Several programs can share the same off-by-one rule because the input specification encourages it. In the book’s common-mode mixture, with probability ρ all copies repeat one shared draw, giving a failure floor of ρp regardless of sample count. Adding more nearly identical drafts cannot supply missing information.</p><p>The threshold statement assumes all wrong copies agree and correct copies agree. Real wrong programs may disagree, so a plurality can sometimes succeed with fewer than half the candidates correct. That is why your pipeline must measure behaviour, check coverage and correlations on its own tasks rather than substitute a single binomial formula for evaluation.</p>
+
+<h2 id="en-median">Code: a shared median bug wins the plain vote</h2>
+<p>This safe teaching model uses handwritten functions, not downloaded or generated source. A, B and C share an upper-middle bug on even-length lists; D and E calculate the median correctly. F is represented by <code>None</code> to model a known erasure. Two visible examples define the syndrome, and independent probe inputs define behavioural clusters.</p><pre><code>&quot;&quot;&quot;Toy SDD with handwritten functions; no generated source is executed.&quot;&quot;&quot;
+from collections import Counter
+from statistics import median
+
+
+def upper(xs):
+    return sorted(xs)[len(xs) // 2]
+
+
+def correct(xs):
+    ys = sorted(xs)
+    m = len(ys) // 2
+    return ys[m] if len(ys) % 2 else (ys[m - 1] + ys[m]) / 2
+
+
+candidates = {&quot;A&quot;: upper, &quot;B&quot;: upper, &quot;C&quot;: upper,
+              &quot;D&quot;: correct, &quot;E&quot;: correct, &quot;F&quot;: None}
+visible = [([3, 1, 2], 2), ([4, 1, 3, 2], 2.5)]
+probes = [[9], [1, 2], [2, 8, 4], [7, 1, 9, 3]]
+live = [n for n, f in candidates.items() if f is not None]
+syndrome = {n: tuple(int(candidates[n](x) != y) for x, y in visible)
+            for n in live}
+signature = {n: tuple(candidates[n](x) for x in probes) for n in live}
+
+
+def vote(names):
+    if not names:
+        return None
+    counts = Counter(signature[n] for n in names)
+    return max(names, key=lambda n: counts[signature[n]])
+
+
+def checked_vote(names):
+    survivors = [n for n in names if not any(syndrome[n])]
+    return vote(survivors) if survivors else None
+
+
+plain = vote(live)
+decoded = checked_vote(live)
+for n in candidates:
+    print(n, &quot;erasure&quot; if candidates[n] is None else &quot;syndrome=&quot; + str(syndrome[n]))
+print(f&quot;plain vote={plain or &#x27;ESCALATE&#x27;}; checked vote={decoded or &#x27;ESCALATE&#x27;}&quot;)
+# This held-out oracle scores choices only after selection.
+held_out = [[-10, 4, 6, 1000, 10, 20], [-2, 4], [1, 1, 7]]
+for name in (plain, decoded):
+    if name is None:
+        print(&quot;ESCALATE: no candidate to score&quot;)
+        continue
+    score = sum(candidates[name](x) == median(x) for x in held_out)
+    print(f&quot;{name}: held-out {score}/{len(held_out)}&quot;)
+assert decoded is None or not any(syndrome[decoded])
+assert checked_vote([n for n in live if any(syndrome[n])]) is None
+assert vote([]) is None and checked_vote([]) is None
+assert correct(held_out[0]) == 8 and upper(held_out[0]) == 10</code></pre><pre><code>A syndrome=(0, 1)
+B syndrome=(0, 1)
+C syndrome=(0, 1)
+D syndrome=(0, 0)
+E syndrome=(0, 0)
+F erasure
+plain vote=A; checked vote=D
+A: held-out 1/3
+D: held-out 3/3</code></pre><p>The plain vote selects A because three copies share its behaviour. The even-length example produces syndrome <code>(0, 1)</code> for all three wrong candidates. Filtering for an all-clear syndrome leaves D and E, so the checked vote selects D. The three held-out examples are consulted only after both selections; they score A at 1/3 and D at 3/3.</p><p>Those three evaluation cases illustrate the mechanism; they are not a reliability estimate. The book’s larger median example has four checks and 1,000 hidden cases. Here the code deliberately avoids <code>exec</code> and external models so you can inspect the selection logic without an execution sandbox.</p>
+
+<h2 id="en-checks">Checks add information, and checks can be wrong</h2>
+<p>A check is useful only against faults that change the behaviour it observes. “The median lies between the minimum and maximum” does not catch the upper-middle bug. Reversing the input does not catch it either. The even-length example does. Add targeted examples alongside properties and verify their expected answers with a trusted reference.</p><p><a href="https://doi.org/10.1145/351240.351266">Property-based testing</a> is an established way to turn specifications into many checks. Mutation testing asks whether those checks catch deliberately introduced faults. Neither technique proves a general program correct, but both help expose a suite that only tests happy paths.</p><p>Incorrect tests are faulty measurements. The book found four contradictory examples among the HumanEval checks it extracted. Its median example should give 8.0 for <code>[-10, 4, 6, 1000, 10, 20]</code>, rather than 15.0. If tests and implementation come from the same mistaken interpretation, a green suite can reinforce the error. Independently review the contract and expected values before optimizing the selector.</p>
+
+<h2 id="en-evidence">Read the book’s model study with its protocol</h2>
+    <figure class="figure">
+      <a href="../images/below-threshold-codegen.png">
+        <img class="figure__img" src="../images/below-threshold-codegen.png" alt="Book Lab 8: selectors are scored on 164 HumanEval tasks; the oracle is an unattainable selection upper bound, not the deployed decoder." width="1648" height="546" loading="lazy" decoding="async">
+      </a>
+      <figcaption class="figure__caption">Book Lab 8: selectors are scored on 164 HumanEval tasks; the oracle is an unattainable selection upper bound, not the deployed decoder. Source: Below Threshold, Figure 9.2. Open for full resolution.</figcaption>
+    </figure><p>Lab 8 records three local models solving 164 HumanEval tasks with five samples each: 2,460 programs in total. The syndrome selector solved 64.0%, 86.0% and 71.3% of tasks for the three model configurations, compared with 55.5%, 78.0% and 62.2% for behavioural voting. These are the book’s stored results, not a new benchmark run for this tutorial or a ranking of current models.</p><p>The oracle “any of five samples passes” is an upper bound on selection, not an available deployment rule. Hidden expected outputs score the selectors and must never choose the winner. In the book’s study, behavioural grouping did see the benchmark’s test inputs, though not their expected outputs. A real workflow needs independently generated probes, as this toy example does.</p><p>Other limits matter: raw completion prompts, one sampling configuration, one benchmark of short functions, and only 341 usable visible checks across 123 tasks. On tasks without checks the selector fell back to voting. Among all-clear candidates, 9.4% still failed hidden tests. A passing syndrome is evidence, not proof.</p>
+
+<h2 id="en-pipeline">From experiment to a pipeline that can refuse</h2>
+    <figure class="figure">
+      <a href="../images/below-threshold-sdd.png">
+        <img class="figure__img" src="../images/below-threshold-sdd.png" alt="Checks precede generation; syndromes guide selection; escaped defects become new checks in the next cycle." width="1544" height="815" loading="lazy" decoding="async">
+      </a>
+      <figcaption class="figure__caption">Checks precede generation; syndromes guide selection; escaped defects become new checks in the next cycle. Source: Below Threshold, Figure 9.3. Open for full resolution.</figcaption>
+    </figure><p>Write and validate checks first. Generate candidates within a budget. In an isolated execution environment, extract check results and behavioural signatures; discard candidates that fail to load, crash or time out. Among candidates passing the acceptance checks, use a declared tie-breaker such as behavioural agreement. Retain the evidence used for that choice.</p><p>The deployment rule should escalate when nobody passes. The book’s benchmark selector sometimes shipped the least-bad candidate to make every case scoreable; only three of 53 such model-task cases passed hidden tests. That experimental rule is useful for analysis, but it is a poor default for shipping. The toy example explicitly returns <code>ESCALATE</code> when the survivor set is empty.</p><p>Generated programs require an actual sandbox with resource limits and restricted access; a separate Python function or subprocess alone is not a security boundary. Track generation cost, execution cost, rejection rate, escaped defects and how failure changes at one, three and five samples. If the curve flattens, improve checks or candidates before buying more nearly identical samples.</p>
+
+<h2 id="en-practice">Remove the decisive check and predict the failure</h2>
+<p>Delete the even-length visible example and rerun. All live candidates now pass the remaining check, so behavioural voting again favours the shared bug. Restore the example, then replace every correct candidate with <code>upper</code>. The checked selection must escalate. These changes reveal whether your implementation truly uses evidence or merely returns a preferred name.</p><p>Add two reviewed properties and a separate set of hidden cases. Keep expected hidden outputs outside selection. State a policy for invalid or empty inputs, since median correctness depends on that contract too. The invariant to preserve is simple: a candidate that fails a required acceptance check cannot be shipped automatically, however many other candidates share its behaviour.</p>
+
+<h2 id="en-resources">Run and check the example</h2>
+<p>This complete teaching example uses only the Python standard library. Save <a href="../examples/below-threshold/ch09.py" download>ch09.py</a>, then run it with Python 3.10 or later. Its assertions check the stated invariants.</p><pre><code>python3 ch09.py</code></pre><p><a href="../downloads/below-threshold-tutorial-examples.zip" download>All ten examples and expected output (ZIP)</a> · <a href="https://github.com/Anirach/Anirach.github.io/tree/main/examples/below-threshold">Browse example source on GitHub</a></p>
+
+<h2 id="en-references">Sources and scope</h2>
+<section class="references" aria-labelledby="en-sources"><h3 id="en-sources">Reading and evidence</h3><p class="references__note">The author’s book is the source of the chapter structure, credited diagrams and reported lab results (November 2026 snapshot). The short standard-library example above was executed for this web lesson on 25 November 2026. It is a teaching model; the book’s full Stim, neural-network, mitigation and LLM experiments were not rerun for these posts. Hardware, simulator, preprint and company claims retain their stated scope.</p><ol><li><a href="https://drive.google.com/file/d/1iG7oSWLC9UI91VsPOzqcxk3_evH8Sn3b/view?usp=sharing">Anirach Mingkhwan. Below Threshold: AI, Quantum Errors and Better Code. Edition 1.0 (November 2026), Chapter 9, pp. 61–77.</a></li><li id="en-ref-1"><a href="https://arxiv.org/abs/2107.03374">Chen et al. Evaluating Large Language Models Trained on Code (2021, preprint).</a></li><li id="en-ref-2"><a href="https://github.com/openai/human-eval">HumanEval: official benchmark and execution guidance.</a></li><li id="en-ref-3"><a href="https://doi.org/10.1145/351240.351266">Claessen &amp; Hughes. QuickCheck: a lightweight tool for random testing of Haskell programs (2000).</a></li><li id="en-ref-4"><a href="https://doi.org/10.1109/TSE.1986.6312924">Knight &amp; Leveson. An experimental evaluation of the assumption of independence in multiversion programming (1986).</a></li></ol></section>
+    </div>
+
+    <div class="post-series-footer">
+      <span class="l-th">จากซีรีส์ Below Threshold</span><span class="l-en" lang="en">From Below Threshold</span>
+    </div>
+
+    <nav aria-label="Below Threshold">
+    <div class="series-nav">
+      <h3>Below Threshold · 10-Chapter Course</h3>
+      <div class="series-links">
+        <a href="/blog/below-threshold-overview">#1 The Three Bridges</a>
+        <a href="/blog/below-threshold-quantum-errors">#2 Quantum Errors</a>
+        <a href="/blog/below-threshold-error-correction">#3 Checks and Thresholds</a>
+        <a href="/blog/below-threshold-ai-decoders">#4 AI Decoders</a>
+        <a href="/blog/below-threshold-error-path">#5 Error Path</a>
+        <a href="/blog/below-threshold-circuit-synthesis">#6 Circuit Synthesis</a>
+        <a href="/blog/below-threshold-ai-workflow">#7 AI Workflow</a>
+        <a href="/blog/below-threshold-quantum-inspired">#8 Quantum-Inspired</a>
+        <span class="current" aria-current="page">#9 Syndrome-Driven Code</span>
+        <a href="/blog/below-threshold-playbook">#10 Engineering Playbook</a>
+      </div>
+    </div>
+    </nav>
+
+  </article>
+
+  </main>
+
+  <footer class="blog-footer">
+    <nav class="blog-footer__nav" aria-label="Site">
+      <a href="../index.html">Home</a>
+      <a href="./">Tutorials</a>
+      <a href="../thoughts/">Thoughts</a>
+      <a href="../publications/">Publications</a>
+      <a href="../books/">Books</a>
+      <a href="../projects/">Projects</a>
+      <a href="../news/">News</a>
+      <a href="../index.html#contact">Contact</a>
+    </nav>
+    <a href="./">← Back to Tutorials</a>
+    <span>© 2026 Anirach Mingkhwan — Independent AI consultant</span>
+  </footer>
+
+</body>
+</html>
